@@ -62,7 +62,7 @@ namespace Raven.Database.Linq
 			return output.Text;
 		}
 
-		public static string ToText(AbstractNode node)
+		public static string ToText(INode node)
 		{
 			var output = new CSharpOutputVisitor();
 			node.AcceptVisitor(output, null);
@@ -106,6 +106,7 @@ namespace Raven.Database.Linq
 
 			variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
 			variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
+			variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
 			return variable;
 		}
 
@@ -143,6 +144,7 @@ namespace Raven.Database.Linq
 
 			variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
 			variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
+			variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
 
 			var expressionBody = GetAnonymousCreateExpression(lambdaExpression.ExpressionBody);
 

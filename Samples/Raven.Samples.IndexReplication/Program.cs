@@ -9,7 +9,6 @@ using System.Configuration;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 

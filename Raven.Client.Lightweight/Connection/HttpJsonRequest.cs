@@ -15,6 +15,7 @@ using System.Threading;
 #if !NET_3_5
 using System.Threading.Tasks;
 #endif
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
@@ -289,6 +290,32 @@ namespace Raven.Client.Connection
 						PostedData = postedData
 					});
 
+					RavenJObject ravenJObject;
+					try
+					{
+						ravenJObject = RavenJObject.Parse(readToEnd);
+					}
+					catch (Exception )
+					{
+						throw new InvalidOperationException(readToEnd, e);
+					}
+
+					if(ravenJObject.ContainsKey("Error"))
+					{
+						var sb = new StringBuilder();
+						foreach (var prop in ravenJObject)
+						{
+							if(prop.Key == "Error")
+								continue;
+
+							sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
+						}
+
+						sb.AppendLine()
+							.AppendLine(ravenJObject.Value<string>("Error"));
+
+						throw new InvalidOperationException(sb.ToString());
+					}
 					throw new InvalidOperationException(readToEnd, e);
 				}
 			}

@@ -46,7 +46,7 @@ namespace Raven.Client.Linq
 		public string CurrentPath { get { return currentPath; } }
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor{T}"/> class.
 		/// </summary>
 		/// <param name="queryGenerator">The document query generator.</param>
 		/// <param name="customizeQuery">The customize query.</param>
@@ -855,7 +855,7 @@ namespace Raven.Client.Linq
 					MemberExpression memberExpression = ((MemberExpression)body);
 					AddToFieldsToFetch(memberExpression.Member.Name, memberExpression.Member.Name) ;
 					break;
-				//Anonomyous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
+				//Anonymous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
 				//See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
 				case ExpressionType.New:
 					var newExpression = ((NewExpression)body);

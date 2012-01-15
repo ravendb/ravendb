@@ -1195,9 +1195,7 @@ namespace Raven.Client.Indexes
 				{
 					Out(", ");
 				}
-				MaybeAddCastingToLambdaExpression(node, num2);
 				Visit(node.Arguments[num2]);
-				MaybeCloseCastingForLambdaExpression(node, num2);
 				num2++;
 			}
 			Out(node.Method.Name != "get_Item" ? ")" : "]");
@@ -1228,100 +1226,11 @@ namespace Raven.Client.Indexes
 					case "Last":
 					case "LastOrDefault":
 					case "Sum":
+					case "Reverse":
 						return true;
 				}
 				return false;
 			}
-			return true;
-		}
-
-		private void MaybeCloseCastingForLambdaExpression(MethodCallExpression node, int argPos)
-		{
-#if !SILVERLIGHT
-			var lambdaExpression = node.Arguments[argPos] as LambdaExpression;
-			if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
-			{
-				Out(")");
-			}
-			else if (lambdaExpression != null && node.Method.DeclaringType == typeof(Enumerable))
-			{
-				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
-				if (ShouldAvoidCastingToLambda(expression))
-					return;
-
-				switch (node.Method.Name)
-				{
-					case "Select":
-					case "SelectMany":
-					case "First":
-					case "FirstOrDefault":
-					case "Single":
-					case "Count":
-					case "Where":
-					case "Sum":
-					case "Any":
-					case "SingleOrDefault":
-						Out(")");
-						break;
-				}
-			}
-#endif
-		}
-
-		private void MaybeAddCastingToLambdaExpression(MethodCallExpression node, int argPos)
-		{
-#if !SILVERLIGHT
-			var lambdaExpression = node.Arguments[argPos] as LambdaExpression;
-			if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
-			{
-				Out("(Func<dynamic, dynamic>)(");
-			}
-			else if (lambdaExpression != null && node.Method.DeclaringType == typeof(Enumerable))
-			{
-				if (argPos == 0)
-					return;
-				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
-				if (ShouldAvoidCastingToLambda(expression))
-					return;
-				switch (node.Method.Name)
-				{
-					case "Sum":
-						Out("(Func<dynamic, decimal>)(");
-						break;
-					case "Select":
-						Out("(Func<dynamic, dynamic>)(");
-						break;
-					case "SelectMany":
-						Out("(Func<dynamic, IEnumerable<dynamic>>)(");
-						break;
-					case "Any":
-					case "First":
-					case "FirstOrDefault":
-					case "Single":
-					case "Where":
-					case "Count":
-					case "SingleOrDefault":
-						Out("(Func<dynamic, bool>)(");
-						break;
-				}
-			}
-#endif
-		}
-
-		private static bool ShouldAvoidCastingToLambda(Expression expression)
-		{
-			if (expression.NodeType == ExpressionType.Parameter)
-				return true;
-
-			if (expression.NodeType == ExpressionType.MemberAccess)
-				return false;
-
-			if (expression.NodeType == ExpressionType.Call)
-			{
-				var name = ((MethodCallExpression)expression).Method.Name;
-				return name != "Select";
-			}
-
 			return true;
 		}
 

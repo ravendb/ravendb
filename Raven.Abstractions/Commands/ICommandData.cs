@@ -19,18 +19,29 @@ namespace Raven.Abstractions.Commands
 		/// </summary>
 		/// <value>The key.</value>
 		string Key { get; }
+
 		/// <summary>
 		/// Gets the method.
 		/// </summary>
 		/// <value>The method.</value>
 		string Method { get; }
+
 		/// <summary>
 		/// Gets the etag.
 		/// </summary>
 		/// <value>The etag.</value>
 		Guid? Etag { get; }
 
+		/// <summary>
+		/// Gets the transaction information.
+		/// </summary>
+		/// <value>The transaction information.</value>
 		TransactionInformation TransactionInformation { get; set; }
+
+		/// <summary>
+		/// Gets the metadata.
+		/// </summary>
+		/// <value>The metadata.</value>
 		RavenJObject Metadata { get; }
 
 		/// <summary>

@@ -52,10 +52,9 @@ task Clean {
 
 task Init -depends Verify40, Clean {
 
-  if($env:BUILD_NUMBER -ne $null) {
-    $env:buildlabel  = $env:BUILD_NUMBER
+	if($env:BUILD_NUMBER -ne $null) {
+		$env:buildlabel  = $env:BUILD_NUMBER
 	}
-	
 	if($env:buildlabel -eq $null) {
 		$env:buildlabel = "13"
 	}
@@ -75,7 +74,7 @@ task Init -depends Verify40, Clean {
 		$clsComliant = "true"
 		
 		if([System.Array]::IndexOf($notclsCompliant, $projectName) -ne -1) {
-      $clsComliant = "false"
+			$clsComliant = "false"
 		}
 		
 		Generate-Assembly-Info `
@@ -86,8 +85,10 @@ task Init -depends Verify40, Clean {
 			-product "RavenDB $version.0.0" `
 			-version "$version.0" `
 			-fileversion "$version.$env:buildlabel.0" `
-			-copyright "Copyright © Hibernating Rhinos and Ayende Rahien 2004 - 2010" `
+			-copyright "Copyright © Hibernating Rhinos 2004 - $((Get-Date).Year)" `
 			-clsCompliant $clsComliant
+		
+		git update-index --assume-unchanged $asmInfo
 	}
 	
 	new-item $release_dir -itemType directory -ErrorAction SilentlyContinue

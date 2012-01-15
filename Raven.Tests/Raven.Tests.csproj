@@ -83,11 +83,11 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE\ReferenceAssemblies\v2.0\Microsoft.VisualStudio.DebuggerVisualizers.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\SharedLibs\Newtonsoft.Json\Net\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.4.0.5\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
-      <HintPath>..\SharedLibs\NLog.dll</HintPath>
+      <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
     </Reference>
     <Reference Include="Rhino.Mocks">
       <HintPath>..\SharedLibs\Rhino.Mocks.dll</HintPath>
@@ -171,6 +171,7 @@
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\CompiledIndexesNhsevidence.cs" />
+    <Compile Include="Bugs\ComplexIndexes.cs" />
     <Compile Include="Bugs\ConflictsWithIIS.cs" />
     <Compile Include="Bugs\ConflictsWithRemote.cs" />
     <Compile Include="Bugs\CreatingIndexes.cs" />
@@ -454,6 +455,7 @@
     <Compile Include="Bugs\Stacey\InServerDatabase.cs" />
     <Compile Include="Bugs\Stacey\Models.cs" />
     <Compile Include="Bugs\Stacey\Aspects.cs" />
+    <Compile Include="Bugs\tmp.cs" />
     <Compile Include="Bugs\TransformResults\SortHintTester.cs" />
     <Compile Include="Bugs\SortingById.cs" />
     <Compile Include="Bugs\SortingOnLong.cs" />
@@ -574,6 +576,7 @@
     <Compile Include="MailingList\IndexMetadata.cs" />
     <Compile Include="MailingList\JBA.cs" />
     <Compile Include="MailingList\JohanNilsson.cs" />
+    <Compile Include="MailingList\Justin.cs" />
     <Compile Include="MailingList\ListCount.cs" />
     <Compile Include="MailingList\MapReduceIssue\CanPageThroughReduceResults.cs" />
     <Compile Include="MailingList\DynamicQueryIndexSelection.cs" />
@@ -793,6 +796,7 @@
     </None>
     <EmbeddedResource Include="DefaultLogging.config" />
     <EmbeddedResource Include="MailingList\MapReduceIssue\MvcMusicStore_Dump.json" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
