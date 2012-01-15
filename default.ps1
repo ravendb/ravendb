@@ -133,14 +133,15 @@ task Init -depends Verify40, Clean {
 }
 
 task BeforeCompile {
-  echo "$base_dir\..\BuildsInfo\RavenDB\Settings.dat" 
-	if (Test-Path "$base_dir\..\BuildsInfo\RavenDB\Settings.dat") {
-		cp "$base_dir\..\BuildsInfo\RavenDB\Settings.dat" "$base_dir\Raven.Studio\Settings.dat" -force
+	$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
+	$datDest = "$base_dir\Raven.Studio\Settings.dat"
+	echo $dat
+	if (Test-Path $dat) {
+		Copy-Item $dat $datDest -force
 	}
 	else {
-	  new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
+		New-Item $datDest -type file -force
 	}
-	
 }
 
 task AfterCompile {
