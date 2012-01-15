@@ -36,3 +36,4 @@ ClientBin/
 *.docstates
 StyleCop.Cache
 *.dotCover
+RavenDB*.nupkg
