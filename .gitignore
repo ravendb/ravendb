@@ -27,7 +27,6 @@ VERSION
 /Samples/*/Servers/Shard*/Raven.Server.exe
 /Samples/*/Servers/Shard*/Raven.Server.log
 /Samples/*/Servers/Shard*/Raven.Server.log.*
-*.nupkg
 /Samples/Raven.Samples.IndexReplication/Server/*
 /Samples/Raven.Sample.Replication/Servers/*
 ClientBin/
