@@ -8,7 +8,8 @@
 					 xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
 					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 					 xmlns:syntaxeditor="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor"
-					 x:Class="Raven.Studio.Views.Edit"
+                     xmlns:Studio="clr-namespace:Raven.Studio" xmlns:Controls="clr-namespace:Raven.Studio.Controls"
+                     x:Class="Raven.Studio.Views.Edit"
 					 mc:Ignorable="d"
 					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel">
 
@@ -158,10 +159,13 @@
 				<Border Background="{StaticResource Brush_SubtleBackground2}"
 						Grid.RowSpan="3" />
 
-				<syntaxeditor:EditorSearchView x:Name="SearchTool"
+				<Controls:SearchControlView x:Name="SearchTool"
 											   Visibility="Collapsed"
 											   VerticalAlignment="Bottom"
-											   HorizontalAlignment="Left" />
+											   HorizontalAlignment="Left"
+                                               IsHitTestVisible="True"
+                                      
+                                               />
 
 				<TextBlock Text="Metadata"
 						   Margin="10,10,5,6"

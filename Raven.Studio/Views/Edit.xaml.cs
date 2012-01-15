@@ -30,8 +30,8 @@ namespace Raven.Studio.Views
 			KeyUp += OnKeyUp;
 			TabControl.SelectionChanged += TabChanged;
 
-			SearchTool.SearchOptions = new EditorSearchOptions();
 			SearchTool.SyntaxEditor = (SyntaxEditor)TabControl.SelectedContent;
+			DisableSearch();
 		}
 
 		private void TabChanged(object sender, SelectionChangedEventArgs e)
@@ -89,6 +89,7 @@ namespace Raven.Studio.Views
 		{
 			SearchTool.Visibility = Visibility.Visible;
 			SearchTool.IsEnabled = true;
+			SearchTool.FocusFindWhatTextBox();
 		}
 
 		private void Search_Click(object sender, RoutedEventArgs e)
