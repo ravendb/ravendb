@@ -434,8 +434,8 @@ task CreateNugetPackage {
 		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
 	}
   
-  del $base_dir\*.nupkg
-	remove-item $build_dir\NuPack -force -recurse -erroraction silentlycontinue
+	Remove-Item $base_dir\RavenDB*.nupkg
+	Remove-Item $build_dir\NuPack -force -recurse -erroraction silentlycontinue
 	mkdir $build_dir\NuPack
 	mkdir $build_dir\NuPack\content
 	mkdir $build_dir\NuPack\lib
