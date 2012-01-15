@@ -16,9 +16,9 @@ properties {
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
-		};
+		}
     
-  $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" );
+  $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" )
     
   $server_files = @( "Raven.Server.exe", "Raven.Studio.xap", "nlog.???", (Get-DependencyPackageFiles Newtonsoft.Json), "Lucene.Net.???",
                      "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???",
@@ -27,27 +27,27 @@ properties {
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
-		};
+		}
     
   $client_dlls_3_5 = @( (Get-DependencyPackageFiles NLog -FrameworkVersion net35), (Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion net35), "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
-		};
+		}
      
   $client_dlls = @( "nlog.???", "Raven.Client.MvcIntegration.???", (Get-DependencyPackageFiles Newtonsoft.Json),
 					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", "AsyncCtpLibrary.???" ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
-		};
+		}
   
   $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", 
 						(Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4)) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
-		};
+		}
  
   $all_client_dlls = @( "Raven.Client.MvcIntegration.???", "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 						  "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???",
@@ -56,9 +56,9 @@ properties {
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
-		};
+		}
       
-  $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  );
+  $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  )
 }
 include .\psake_ext.ps1
 
@@ -257,22 +257,15 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 }
 
 task CleanOutputDirectory { 
-	remove-item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
+	Remove-Item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
 }
 
 task CopyEmbeddedClient { 
-
-  foreach($client_dll in $all_client_dlls) {
-    cp "$client_dll" $build_dir\Output\EmbeddedClient
-  }
+	$all_client_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\EmbeddedClient }
 }
 
 task CopySilverlight{ 
-
-  foreach($silverlight_dll in $silverlight_dlls) {
-    cp "$silverlight_dll" $build_dir\Output\Silverlight
-    
-  }
+	$silverlight_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight }
 }
 
 task CopySmuggler {
@@ -287,24 +280,16 @@ task CopyBackup {
 }
 
 task CopyClient {
-  foreach($client_dll in $client_dlls) {
-    cp "$client_dll" $build_dir\Output\Client
-  }
+	$client_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Client }
 }
 
 task CopyClient35 {
-  foreach($client_dll in $client_dlls_3_5) {
-    cp "$client_dll" $build_dir\Output\Client-3.5
-  }
+	$client_dlls_3_5 | ForEach-Object { Copy-Item "$_" $build_dir\Output\Client-3.5 }
 }
 
-task CopyWeb { 
-  foreach($web_dll in $web_dlls) {
-    cp "$web_dll" $build_dir\Output\Web\bin
-  }
-  foreach($web_file in $web_files) {
-    cp "$build_dir\$web_file" $build_dir\Output\Web
-  }
+task CopyWeb {
+	$web_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Web\bin }
+	$web_files | ForEach-Object { Copy-Item "$build_dir\$_" $build_dir\Output\Web }
 }
 
 task CopyBundles {
@@ -314,13 +299,9 @@ task CopyBundles {
 }
 
 task CopyServer {
-   foreach($server_file in $server_files) {
-    cp "$server_file" $build_dir\Output\Server
-  }
-	
-	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
+	$server_files | ForEach-Object { Copy-Item "$_" $build_dir\Output\Server }
+	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
-
 
 task CreateDocs {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
@@ -464,54 +445,35 @@ task CreateNugetPackage {
 	mkdir $build_dir\NuPack\server
 
 	# package for RavenDB embedded is separate and requires .NET 4.0
-	remove-item $build_dir\NuPack-Embedded -force -recurse -erroraction silentlycontinue
+	Remove-Item $build_dir\NuPack-Embedded -force -recurse -erroraction silentlycontinue
 	mkdir $build_dir\NuPack-Embedded
 	mkdir $build_dir\NuPack-Embedded\content
 	mkdir $build_dir\NuPack-Embedded\lib\
 	mkdir $build_dir\NuPack-Embedded\lib\net40
 	mkdir $build_dir\NuPack-Embedded\tools
 	
-	foreach($client_dll in $client_dlls_3_5) {
-    cp "$client_dll" $build_dir\NuPack\lib\net35
-  }
+	$client_dlls_3_5 | ForEach-Object { Copy-Item "$_" $build_dir\NuPack\lib\net35 }
+	$client_dlls | ForEach-Object { Copy-Item "$_" $build_dir\NuPack\lib\net40 }
+	$silverlight_dlls | ForEach-Object { Copy-Item "$_" $build_dir\NuPack\lib\sl40 }
+	$all_client_dlls | ForEach-Object { Copy-Item "$_" $build_dir\NuPack-Embedded\lib\net40 }
 
-	foreach($client_dll in $client_dlls) {
-    cp "$client_dll" $build_dir\NuPack\lib\net40
-  }
+	# Remove files that are obtained as dependencies
+	Remove-Item $build_dir\NuPack\lib\*\Newtonsoft.Json.* -Recurse
+	Remove-Item $build_dir\NuPack\lib\*\NLog.* -Recurse
 
-	foreach($sl_dll in $silverlight_dlls) {
-    cp "$sl_dll" $build_dir\NuPack\lib\sl40
-  }
-  
-  foreach($client_dll in $all_client_dlls) {
-    cp "$client_dll" $build_dir\NuPack-Embedded\lib\net40
-  }
-
-  # Remove files that are obtained as dependencies
-  del $build_dir\NuPack\lib\net35\Newtonsoft.Json.*
-  del $build_dir\NuPack\lib\net40\Newtonsoft.Json.*
-  del $build_dir\NuPack\lib\sl40\Newtonsoft.Json.*
-  del $build_dir\NuPack\lib\net35\nlog.*
-  del $build_dir\NuPack\lib\net40\nlog.*
-  del $build_dir\NuPack\lib\sl40\nlog.*
-  del $build_dir\NuPack-Embedded\lib\net40\Newtonsoft.Json.*
-  del $build_dir\NuPack-Embedded\lib\net40\nlog.*
-
-  # The Server folder is used as a tool, and therefore needs the dependency DLLs in it (can't depend on Nuget for that)
- 	foreach($server_file in $server_files) {
-    cp "$server_file" $build_dir\NuPack\server
-  }
+	# The Server folder is used as a tool, and therefore needs the dependency DLLs in it (can't depend on Nuget for that)
+	$server_files | ForEach-Object { Copy-Item "$_" $build_dir\NuPack\server }
 	
-  cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\NuPack\server\Raven.Server.exe.config
-  
-  cp $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack\content\Web.config.transform
-  cp $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack-Embedded\content\Web.config.transform
-  
-  cp $build_dir\Raven.Smuggler.??? $build_dir\NuPack\Tools
-  cp $build_dir\Raven.Smuggler.??? $build_dir\NuPack-Embedded\Tools
+	cp $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\NuPack\server\Raven.Server.exe.config
 
-  cp $build_dir\Raven.Backup.??? $build_dir\NuPack\Tools
-  cp $build_dir\Raven.Backup.??? $build_dir\NuPack-Embedded\Tools  
+	cp $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack\content\Web.config.transform
+	cp $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack-Embedded\content\Web.config.transform
+
+	cp $build_dir\Raven.Smuggler.??? $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Smuggler.??? $build_dir\NuPack-Embedded\Tools
+
+	cp $build_dir\Raven.Backup.??? $build_dir\NuPack\Tools
+	cp $build_dir\Raven.Backup.??? $build_dir\NuPack-Embedded\Tools  
 
 ########### First pass - RavenDB.nupkg
 
