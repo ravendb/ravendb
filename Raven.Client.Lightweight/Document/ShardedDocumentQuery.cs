@@ -592,6 +592,25 @@ namespace Raven.Client.Document
 #endif
 
 		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		public IDocumentQuery<T> RandomOrdering()
+		{
+			ApplyForAll(ts => ts.RandomOrdering(Guid.NewGuid().ToString()));
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		public IDocumentQuery<T> RandomOrdering(string seed)
+		{
+			ApplyForAll(ts => ts.RandomOrdering(seed));
+			return this;
+		}
+
+		/// <summary>
 		/// Adds an ordering for a specific field to the query
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>

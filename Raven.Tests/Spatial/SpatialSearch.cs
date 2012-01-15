@@ -14,7 +14,7 @@ namespace Raven.Tests.Spatial
 			public SpatialIdx()
 			{
 				Map = docs => from e in docs
-							  select new {e.Venue, e.Date, _ = SpatialIndex.Generate(e.Latitude, e.Longitude)};
+							  select new {e.Capacity, e.Venue, e.Date, _ = SpatialIndex.Generate(e.Latitude, e.Longitude)};
 
 				Index(x => x.Venue, FieldIndexing.Analyzed);
 			}
@@ -49,6 +49,39 @@ namespace Raven.Tests.Spatial
 						.ToList();
 
 					Assert.NotEqual(0, stats.TotalResults);
+				}
+			}
+		}
+
+		[Fact]
+		public void Can_do_spatial_search_with_client_api_within_given_capacity()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new SpatialIdx().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Event("a/1", 38.9579000, -77.3572000, DateTime.Now, 5000));
+					session.Store(new Event("a/2", 38.9690000, -77.3862000, DateTime.Now.AddDays(1), 5000));
+					session.Store(new Event("b/2", 38.9690000, -77.3862000, DateTime.Now.AddDays(2), 2000));
+					session.Store(new Event("c/3", 38.9510000, -77.4107000, DateTime.Now.AddYears(3), 1500));
+					session.SaveChanges();
+				}
+
+				WaitForIndexing(store);
+
+				using (var session = store.OpenSession())
+				{
+					RavenQueryStatistics stats;
+					var events = session.Advanced.LuceneQuery<Event>("SpatialIdx")
+						.Statistics(out stats)
+						.WhereBetweenOrEqual("Capacity", 0, 2000)
+						.WithinRadiusOf(6.0, 38.96939, -77.386398)
+						.OrderByDescending(x => x.Date)
+						.ToList();
+
+					Assert.Equal(2, stats.TotalResults);
 				}
 			}
 		}

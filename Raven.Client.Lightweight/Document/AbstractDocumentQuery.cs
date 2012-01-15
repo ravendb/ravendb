@@ -518,6 +518,23 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		public void RandomOrdering()
+		{
+			AddOrder(Constants.RandomFieldName + ";" + Guid.NewGuid(), false);
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		public void RandomOrdering(string seed)
+		{
+			AddOrder(Constants.RandomFieldName + ";" + seed, false);
+		}
+
+		/// <summary>
 		///   Adds an ordering for a specific field to the query
 		/// </summary>
 		/// <param name = "fieldName">Name of the field.</param>
@@ -915,7 +932,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			NegateIfNeeded();
 
-			fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
+			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
 			theQueryText.Append(fieldName).Append(":{");
 			theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams{Value = start, FieldName = fieldName}));
@@ -942,12 +959,28 @@ If you really want to do in memory filtering on the data returned from the query
 
 			NegateIfNeeded();
 
-			fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
+			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
+
 			theQueryText.Append(fieldName).Append(":[");
 			theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }));
 			theQueryText.Append(" TO ");
 			theQueryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = end, FieldName = fieldName }));
 			theQueryText.Append("]");
+		}
+
+		private string GetFieldNameForRangeQueries(string fieldName, object start, object end)
+		{
+			fieldName = EnsureValidFieldName(new WhereParams {FieldName = fieldName});
+
+			if(fieldName == Constants.DocumentIdFieldName)
+				return fieldName;
+
+			var val = (start ?? end);
+			var isNumeric = val is int || val is long || val is decimal || val is double || val is float;
+
+			if (isNumeric && fieldName.EndsWith("_Range") == false)
+				fieldName = fieldName + "_Range";
+			return fieldName;
 		}
 
 		/// <summary>
@@ -1440,6 +1473,26 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			return lastEquality;
 		}
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering()
+		{
+			RandomOrdering();
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering(string seed)
+		{
+			RandomOrdering(seed);
+			return this;
+		}
+
 #if !NET_3_5
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 

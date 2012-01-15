@@ -64,7 +64,10 @@ namespace Raven.Database.Config
 											? GetDefaultMemoryCacheLimitMegabytes()
 											: int.Parse(cacheMemoryLimitMegabytes);
 
-
+			var memoryCacheExpiration = Settings["Raven/MemoryCacheExpiration"];
+			MemoryCacheExpiration = memoryCacheExpiration == null
+			                        	? TimeSpan.FromMinutes(5)
+			                        	: TimeSpan.FromSeconds(int.Parse(memoryCacheExpiration));
 
 			var memoryCacheLimitPercentage = Settings["Raven/MemoryCacheLimitPercentage"];
 			MemoryCacheLimitPercentage = memoryCacheLimitPercentage == null
@@ -526,6 +529,11 @@ namespace Raven.Database.Config
 		}
 
 		private string indexStoragePath;
+		/// <summary>
+		/// The expiration value for documents in the internal managed cache
+		/// </summary>
+		public TimeSpan MemoryCacheExpiration { get; set; }
+
 		public string IndexStoragePath
 		{
 			get

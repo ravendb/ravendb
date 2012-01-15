@@ -16,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
+using Raven.Database.Indexing.Sorting;
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Extensions
@@ -124,6 +125,13 @@ namespace Raven.Database.Extensions
 			return new Sort(self.SortedFields
 							.Select(sortedField =>
 							{
+								if(sortedField.Field.StartsWith(Constants.RandomFieldName))
+								{
+									var parts = sortedField.Field.Split(new[]{';'}, StringSplitOptions.RemoveEmptyEntries);
+									if (parts.Length < 2) // truly random
+										return new RandomSortField(Guid.NewGuid().ToString());
+									return new RandomSortField(parts[1]);
+								}
 								if (isSpatialIndexQuery && sortedField.Field == Constants.DistanceFieldName)
 								{
 									var dsort = new Lucene.Net.Spatial.Tier.DistanceFieldComparatorSource((Lucene.Net.Spatial.Tier.DistanceFilter)filter);

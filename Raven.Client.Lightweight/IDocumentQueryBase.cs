@@ -315,6 +315,19 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name = "waitTimeout">The wait timeout.</param>
 		TSelf WaitForNonStaleResults(TimeSpan waitTimeout);
 
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		TSelf RandomOrdering();
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		TSelf RandomOrdering(string seed);
+
+
 		/// <summary>
 		///   Adds an ordering for a specific field to the query
 		/// </summary>
