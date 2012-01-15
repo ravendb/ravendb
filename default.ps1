@@ -9,7 +9,7 @@ properties {
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
   
-  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", "nlog.???", (Get-DependencyPackageFiles Newtonsoft.Json), 
+  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles NLog), (Get-DependencyPackageFiles Newtonsoft.Json), 
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???",
 				"ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", 
 				"Raven.Storage.Managed.???", "Raven.Munin.???" ) |
@@ -20,7 +20,7 @@ properties {
     
   $web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" )
     
-  $server_files = @( "Raven.Server.exe", "Raven.Studio.xap", "nlog.???", (Get-DependencyPackageFiles Newtonsoft.Json), "Lucene.Net.???",
+  $server_files = @( "Raven.Server.exe", "Raven.Studio.xap", (Get-DependencyPackageFiles NLog), (Get-DependencyPackageFiles Newtonsoft.Json), "Lucene.Net.???",
                      "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???",
                     "Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Storage.Esent.???",
                     "Raven.Storage.Managed.???", "Raven.Munin.???" ) |
@@ -35,7 +35,7 @@ properties {
 			return "$build_dir\$_"
 		}
      
-  $client_dlls = @( "nlog.???", "Raven.Client.MvcIntegration.???", (Get-DependencyPackageFiles Newtonsoft.Json),
+  $client_dlls = @( (Get-DependencyPackageFiles NLog), "Raven.Client.MvcIntegration.???", (Get-DependencyPackageFiles Newtonsoft.Json),
 					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Debug.???", "AsyncCtpLibrary.???" ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
@@ -51,7 +51,7 @@ properties {
  
   $all_client_dlls = @( "Raven.Client.MvcIntegration.???", "Raven.Client.Lightweight.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 						  "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???",
-						  "Lucene.Net.Contrib.SpellChecker.???", "nlog.???", (Get-DependencyPackageFiles Newtonsoft.Json),
+						  "Lucene.Net.Contrib.SpellChecker.???", (Get-DependencyPackageFiles NLog), (Get-DependencyPackageFiles Newtonsoft.Json),
 						  "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap"  ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
