@@ -35,10 +35,11 @@ namespace Raven.Studio.Models
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
-			document.Value = new JsonDocument { DataAsJson = new RavenJObject
-			{
-				{"Name", "..."}
-			}, Metadata = new RavenJObject() };
+			document.Value = new JsonDocument
+			                 	{
+			                 		DataAsJson = {{"Name", "..."}},
+			                 		Etag = Guid.Empty
+			                 	};
 
 			currentDatabase = Database.Value.Name;
 		}
