@@ -423,15 +423,16 @@ task UploadUnstable -depends Unstable, DoRelease, Upload {
 }	
 
 task CreateNugetPackage {
-  $accessPath = "$base_dir\..\Nuget-Access-Key.txt"
-  
-  if ( (Test-Path $accessPath) -eq $false )
-  {
-    return;
-  }
-  
-  $accessKey = Get-Content $accessPath
-  $accessKey = $accessKey.Trim()
+	
+	$accessKey = "no-key";
+	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
+	if ( (Test-Path $accessPath) ) {
+		$accessKey = Get-Content $accessPath
+		$accessKey = $accessKey.Trim()
+	}
+	else {
+		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
+	}
   
   del $base_dir\*.nupkg
 	remove-item $build_dir\NuPack -force -recurse -erroraction silentlycontinue
