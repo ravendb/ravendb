@@ -50,6 +50,54 @@ namespace Raven.Tests.Bugs.MapRedue
         }
 
         [Fact]
+        public void Can_create_index_debug()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Category { Id = "categories/1", ParentId = null });
+                    session.Store(new Category { Id = "categories/2", ParentId = null });
+
+                    session.Store(new Category { Id = "categories/11", ParentId = "categories/1" });
+                    session.Store(new Category { Id = "categories/12", ParentId = "categories/1" });
+                    session.Store(new Category { Id = "categories/13", ParentId = "categories/1" });
+
+                    session.Store(new Category { Id = "categories/21", ParentId = "categories/2" });
+                    session.Store(new Category { Id = "categories/22", ParentId = "categories/2" });
+
+                    session.SaveChanges();
+                }
+
+                var index = new CategoriesWithChildrenCount {Conventions = store.Conventions};
+                var indexDefinition = index.CreateIndexDefinition();
+
+                indexDefinition.Map =
+                    @"docs.Categories
+	.Select(category => new {category = category, items = new[] {new {Id = (System.String)(category.Id), Count = 0, ParentId = (System.String)(category.ParentId)}, new {Id = (System.String)(category.ParentId), Count = 1, ParentId = (System.String)null}}})
+	.SelectMany(__h__TransparentIdentifiere => __h__TransparentIdentifiere.items, (__h__TransparentIdentifiere, item) => new {Id = item.Id, Count = item.Count, ParentId = item.ParentId})";
+
+
+                store.DatabaseCommands.PutIndex(index.IndexName, indexDefinition, true);
+
+                WaitForIndexing(store);
+
+                WaitForUserToContinueTheTest(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<CategoriesWithChildrenCount.ReduceResult, CategoriesWithChildrenCount>()
+                        .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                        .ToList();
+
+                    Assert.NotEmpty(results);
+                    Assert.Equal(3, results.First(x => x.Id == "categories/1").Count);
+                    Assert.Equal(2, results.First(x => x.Id == "categories/2").Count);
+                }
+            }
+        }
+
+        [Fact]
         public void Can_create_index()
         {
             using (var store = NewDocumentStore())
