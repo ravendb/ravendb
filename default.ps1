@@ -29,7 +29,7 @@ properties {
 			return "$build_dir\$_"
 		};
     
-  $client_dlls_3_5 = @( "nlog.???", (Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion Net35), "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???") |
+  $client_dlls_3_5 = @( (Get-DependencyPackageFiles NLog -FrameworkVersion net35), (Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion net35), "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -42,8 +42,8 @@ properties {
 			return "$build_dir\$_"
 		};
   
-  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", (Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), 
-						(Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4)) |
+  $silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", 
+						(Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4)) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
