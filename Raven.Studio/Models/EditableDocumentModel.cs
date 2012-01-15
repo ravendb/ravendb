@@ -147,7 +147,7 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
-				return metadata.FirstOrDefault(x => x.Key == "Raven-Entity-Name").Key;
+				return metadata.FirstOrDefault(x => x.Key == "Raven-Entity-Name").Value;
 			}
 		}
 
@@ -394,7 +394,7 @@ namespace Raven.Studio.Models
 						metadata.Value<string>(Constants.RavenEntityName) == null)
 					{
 						var entityName = document.Key.Split(new[] {"/"}, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-						if(entityName!=null && entityName.Length > 1)
+						if (entityName != null && entityName.Length > 1)
 						{
 							metadata[Constants.RavenEntityName] = char.ToUpper(entityName[0]) + entityName.Substring(1);
 						}
@@ -413,9 +413,7 @@ namespace Raven.Studio.Models
 				
 				document.UpdateMetadata(metadata);
 				ApplicationModel.Current.AddNotification(new Notification("Saving document " + document.Key + " ..."));
-				DatabaseCommands.PutAsync(document.Key, document.Etag,
-										  doc,
-										  metadata)
+				DatabaseCommands.PutAsync(document.Key, document.Etag, doc, metadata)
 					.ContinueOnSuccess(result =>
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
