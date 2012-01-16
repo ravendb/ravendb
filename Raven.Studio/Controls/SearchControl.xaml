@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d"
+             xmlns:Controls="clr-namespace:Raven.Studio.Controls" mc:Ignorable="d"
              x:Class="Raven.Studio.SearchControl"
              Width="250"
              Height="30">
@@ -25,8 +25,9 @@
                      Margin="51,0,0,0"
                      TextWrapping="Wrap"
                      VerticalAlignment="Center"
-                     Width="95" 
-                     TextChanged="searchField_TextChanged"/>
+                     Width="95"
+                     Text="{Binding Source={StaticResource WordHighlightTagger}, Path=HighlightedString, Mode=TwoWay}"
+                     Controls:UpdateSourceTrigger.TextChangeUpdateSourceTrigger="True"/>
             <Button HorizontalAlignment="Right"
                     Margin="0,0,55,0"
                     VerticalAlignment="Center">
