@@ -168,21 +168,21 @@
 									   VerticalAlignment="Center" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Longitude}"
+									 Text="{Binding Longitude, Mode=TwoWay}"
 									 VerticalAlignment="Center" />
 
 							<TextBlock Text="Latitude:"
 									   VerticalAlignment="Center" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Latitude}"
+									 Text="{Binding Latitude, Mode=TwoWay}"
 									 VerticalAlignment="Center" />
 
 							<TextBlock Text="Radius:"
 									   VerticalAlignment="Center" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Radius}"
+									 Text="{Binding Radius, Mode=TwoWay}"
 									 VerticalAlignment="Center" />
 						</StackPanel>
 					</StackPanel>
