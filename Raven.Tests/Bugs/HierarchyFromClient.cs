@@ -56,7 +56,7 @@ namespace Raven.Tests.Bugs
 									}
 			}.ToIndexDefinition(new DocumentConvention());
 
-			Assert.Equal("docs.Containers\r\n\t.SelectMany(p => Hierarchy(p, \"Containers\"), (p, c) => c.Name)", indexDefinition.Map);
+			Assert.Equal("docs.Containers\r\n\t.Select(c => new {Names = Hierarchy(c, \"Containers\")\r\n\t.Select(x => x.Name)})", indexDefinition.Map);
 		}
 
 		public class Person
