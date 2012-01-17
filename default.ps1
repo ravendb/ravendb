@@ -117,8 +117,8 @@ task Init -depends Verify40, Clean {
 		git update-index --assume-unchanged $asmInfo
 	}
 	
-	new-item $release_dir -itemType directory -ErrorAction SilentlyContinue
-	new-item $build_dir -itemType directory -ErrorAction SilentlyContinue
+	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
+	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 	
 	copy $tools_dir\xUnit\*.* $build_dir
 	
