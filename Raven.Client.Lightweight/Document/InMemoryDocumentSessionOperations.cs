@@ -1081,6 +1081,11 @@ more responsive application.
 		}
 
         readonly List<ICommandData> deferedCommands = new List<ICommandData>();
+        
+        /// <summary>
+        /// Defer commands to be executed on SaveChanges()
+        /// </summary>
+        /// <param name="commands">The commands to be executed</param>
         public void Defer(params ICommandData[] commands)
         {
             deferedCommands.AddRange(commands);

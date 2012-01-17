@@ -130,6 +130,10 @@ namespace Raven.Client
 		bool HasChanged(object entity);
 
 
-	    void Defer(params ICommandData[] commands);
+        /// <summary>
+        /// Defer commands to be executed on SaveChanges()
+        /// </summary>
+        /// <param name="commands">The commands to be executed</param>
+        void Defer(params ICommandData[] commands);
 	}
 }
