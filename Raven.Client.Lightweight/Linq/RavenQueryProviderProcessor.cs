@@ -842,6 +842,8 @@ namespace Raven.Client.Linq
 			luceneQuery.AddOrder(expressionMemberInfo.Path, descending, type);
 		}
 
+		private bool insideSelect;
+		
 		private void VisitSelect(Expression operand)
 		{
 			var lambdaExpression = operand as LambdaExpression;
@@ -849,11 +851,21 @@ namespace Raven.Client.Linq
 			switch (body.NodeType)
 			{
 				case ExpressionType.Convert:
-					VisitSelect(((UnaryExpression)body).Operand);
+					insideSelect = true;
+					try
+					{
+						VisitSelect(((UnaryExpression)body).Operand);
+					}
+					finally
+					{
+						insideSelect = false;
+					}
 					break;
 				case ExpressionType.MemberAccess:
 					MemberExpression memberExpression = ((MemberExpression)body);
-					AddToFieldsToFetch(memberExpression.Member.Name, memberExpression.Member.Name) ;
+					AddToFieldsToFetch(memberExpression.Member.Name, memberExpression.Member.Name);
+					if (insideSelect == false)
+						FieldsToRename[memberExpression.Member.Name] = null;
 					break;
 				//Anonymous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
 				//See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
@@ -1178,7 +1190,11 @@ namespace Raven.Client.Linq
 						continue;
 					changed = true;
 					safeToModify.Remove(rename.Key);
-					safeToModify[rename.Value] = val;
+					var ravenJObject = val as RavenJObject;
+					if (rename.Value == null && ravenJObject != null)
+						safeToModify = ravenJObject;
+					else
+						safeToModify[rename.Value] = val;
 				}
 				if (!changed) 
 					continue;

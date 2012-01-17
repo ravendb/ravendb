@@ -568,6 +568,7 @@
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
     <Compile Include="MailingList\Asger.cs" />
+    <Compile Include="MailingList\Benjamin.cs" />
     <Compile Include="MailingList\BrainV.cs" />
     <Compile Include="MailingList\BAM.cs" />
     <Compile Include="MailingList\Build570.cs" />
