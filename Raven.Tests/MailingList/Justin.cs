@@ -80,12 +80,7 @@ namespace Raven.Tests.MailingList
 			{
 				Console.WriteLine("Document Store initialized - running in memory.");
 
-				try
-				{
-					new Users_NameAndPassportSearching_WithError().Execute(documentStore);
-					Console.WriteLine("Indexes defined.");
-				}
-				catch { }
+				Assert.Throws<InvalidOperationException>(() => new Users_NameAndPassportSearching_WithError().Execute(documentStore));
 
 				var users = CreateFakeUsers();
 				var usersCount = users.Count();
