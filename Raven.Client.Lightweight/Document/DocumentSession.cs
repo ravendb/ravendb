@@ -12,6 +12,7 @@ using System.Reflection;
 using System;
 using System.Text;
 using System.Threading;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -403,11 +404,14 @@ namespace Raven.Client.Document
 			using (EntitiesToJsonCachingScope())
 			{
 				var data = PrepareForSaveChanges();
-				if (data.Commands.Count == 0)
+
+				if (data.Commands.Count == 0 && data.DeferredCommands.Count == 0)
 					return; // nothing to do here
 				IncrementRequestCount();
 				LogBatch(data);
-				UpdateBatchResults(DatabaseCommands.Batch(data.Commands), data.Entities);
+
+                var batchResults = DatabaseCommands.Batch(data.DeferredCommands.Concat(data.Commands));
+				UpdateBatchResults(batchResults.Skip(data.DeferredCommands.Count).ToArray(), data.Entities);
 			}
 		}
 
@@ -642,7 +646,6 @@ namespace Raven.Client.Document
 		}
 
 #endif
-
 	}
 #endif
 }

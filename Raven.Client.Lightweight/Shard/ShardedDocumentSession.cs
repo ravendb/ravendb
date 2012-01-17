@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Exceptions;
 #if !NET_3_5
 using Raven.Client.Document.Batches;
@@ -171,6 +172,11 @@ namespace Raven.Client.Shard
 			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
 
 			return GetSingleShardSession(shardIds).Advanced.HasChanged(entity);
+		}
+
+		public void Defer(params ICommandData[] commands)
+		{
+			throw new NotSupportedException("You cannot defer commands in a sharded session");
 		}
 
 		/// <summary>
