@@ -139,7 +139,7 @@ task BeforeCompile {
 	if (Test-Path $dat) {
 		Copy-Item $dat $datDest -force
 	}
-	ElseIf (Test-Path $datDest -eq $false) {
+	ElseIf ((Test-Path $datDest) -eq $false) {
 		New-Item $datDest -type file -force
 	}
 }
