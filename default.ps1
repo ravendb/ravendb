@@ -295,7 +295,7 @@ task CopyWeb {
 
 task CopyBundles {
 	Copy-Item (Get-ChildItem $build_dir\Raven.Bundles.*.??? | Where-Object { $_.Name.Contains(".Tests.") -eq $false }) $build_dir\Output\Bundles
-	Copy-Item $build_dir\Raven.Client.*.??? $build_dir\Output\Bundles
+	Copy-Item (Get-ChildItem $build_dir\Raven.Client.*.??? | Where-Object { $_.Name.Contains(".Tests.") -eq $false }) $build_dir\Output\Bundles
 }
 
 task CopyServer {
