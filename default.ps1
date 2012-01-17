@@ -270,13 +270,13 @@ task CopySilverlight{
 }
 
 task CopySmuggler {
-	cp $build_dir\Raven.Abstractions.??? $build_dir\Output\Smuggler
+	Copy-Item $build_dir\Raven.Abstractions.??? $build_dir\Output\Smuggler
 	Copy-Item (Get-DependencyPackageFiles Newtonsoft.Json) $build_dir\Output\Smuggler
-	cp $build_dir\Raven.Smuggler.??? $build_dir\Output\Smuggler
+	Copy-Item $build_dir\Raven.Smuggler.??? $build_dir\Output\Smuggler
 }
 
 task CopyBackup {
-	cp $build_dir\Raven.Backup.??? $build_dir\Output\Backup
+	Copy-Item $build_dir\Raven.Backup.??? $build_dir\Output\Backup
 	Copy-Item (Get-DependencyPackageFiles Newtonsoft.Json) $build_dir\Output\Backup
 }
 
@@ -294,9 +294,8 @@ task CopyWeb {
 }
 
 task CopyBundles {
-	cp $build_dir\Raven.Bundles.*.??? $build_dir\Output\Bundles
-	cp $build_dir\Raven.Client.*.??? $build_dir\Output\Bundles
-	del $build_dir\Output\Bundles\Raven.Bundles.Tests.???
+	Copy-Item (Get-ChildItem $build_dir\Raven.Bundles.*.??? | Where-Object { $_.Name.Contains(".Tests.") -eq $false }) $build_dir\Output\Bundles
+	Copy-Item $build_dir\Raven.Client.*.??? $build_dir\Output\Bundles
 }
 
 task CopyServer {
