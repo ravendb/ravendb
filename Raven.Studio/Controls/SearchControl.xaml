@@ -2,19 +2,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d"
+             xmlns:Controls="clr-namespace:Raven.Studio.Controls" mc:Ignorable="d"
              x:Class="Raven.Studio.SearchControl"
-             Width="250"
+             Width="199"
              Height="30">
 
     <Grid x:Name="LayoutRoot">
         <Rectangle Fill="#FF6C6C7E"
                    Margin="2,0,0,0"
                    Stroke="Black"
-                   Width="248"
+                   Width="Auto"
                    Style="{StaticResource DividerStyle}"
                    RadiusY="15"
-                   RadiusX="15" />
+                   RadiusX="15" d:LayoutOverrides="HorizontalMargin" />
         <Grid Margin="10,0">
             <TextBlock HorizontalAlignment="Left"
                        TextWrapping="Wrap"
@@ -25,24 +25,9 @@
                      Margin="51,0,0,0"
                      TextWrapping="Wrap"
                      VerticalAlignment="Center"
-                     Width="95" 
-                     TextChanged="searchField_TextChanged"/>
-            <Button HorizontalAlignment="Right"
-                    Margin="0,0,55,0"
-                    VerticalAlignment="Center">
-                <Image Height="16"
-                       Source="/Raven.Studio;component/Assets/Images/document_page_previous.png"
-                       Stretch="Fill"
-                       Width="16" />
-            </Button>
-            <Button HorizontalAlignment="Right"
-                    Margin="0,0,29,0"
-                    VerticalAlignment="Center">
-                <Image Height="16"
-                       Source="/Raven.Studio;component/Assets/Images/document_page_next.png"
-                       Stretch="Fill"
-                       Width="16" />
-            </Button>
+                     Width="95"
+                     Text="{Binding Source={StaticResource WordHighlightTagger}, Path=HighlightedString, Mode=TwoWay}"
+                     Controls:UpdateSourceTrigger.TextChangeUpdateSourceTrigger="True"/>
             <Button HorizontalAlignment="Right"
                     Margin="0,1,1,1"
                     d:LayoutOverrides="Height"

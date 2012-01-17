@@ -11,7 +11,8 @@
 				<ResourceDictionary Source="Assets/Types.xaml" />
 				<ResourceDictionary Source="Commands/Commands.xaml" />
 				<ResourceDictionary Source="Infrastructure/ContextMenu/ContextMenu.xaml" />
-				<ResourceDictionary Source="Infrastructure/ContextMenu/MenuItem.xaml" />
+                <ResourceDictionary Source="Controls/Taggers.xaml" />
+                <ResourceDictionary Source="Infrastructure/ContextMenu/MenuItem.xaml" />
 				<ResourceDictionary Source="Infrastructure/ContextMenu/Separator.xaml" />
 			</ResourceDictionary.MergedDictionaries>
 		</ResourceDictionary>

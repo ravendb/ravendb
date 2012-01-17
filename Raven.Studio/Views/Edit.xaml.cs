@@ -1,11 +1,5 @@
 ﻿using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
-using ActiproSoftware.Windows.Controls.SyntaxEditor;
-using ActiproSoftware.Windows.Controls.SyntaxEditor.Implementation;
-using ActiproSoftware.Windows.Controls.SyntaxEditor.Primitives;
-using Microsoft.Expression.Interactivity.Core;
-using Raven.Studio.Features.Util;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -28,15 +22,6 @@ namespace Raven.Studio.Views
 
 			KeyDown += OnKeyDown;
 			KeyUp += OnKeyUp;
-			TabControl.SelectionChanged += TabChanged;
-
-			SearchTool.SearchOptions = new EditorSearchOptions();
-			SearchTool.SyntaxEditor = (SyntaxEditor)TabControl.SelectedContent;
-		}
-
-		private void TabChanged(object sender, SelectionChangedEventArgs e)
-		{
-			SearchTool.SyntaxEditor = (SyntaxEditor)TabControl.SelectedContent;			
 		}
 
 		private void OnKeyUp(object sender, KeyEventArgs args)
@@ -81,14 +66,12 @@ namespace Raven.Studio.Views
 
 		private void DisableSearch()
 		{
-			SearchTool.Visibility = Visibility.Collapsed;
-			SearchTool.IsEnabled = false;
+			SearchTool.IsActive = false;
 		}
 
 		private void EnableSearch()
 		{
-			SearchTool.Visibility = Visibility.Visible;
-			SearchTool.IsEnabled = true;
+			SearchTool.IsActive = true;
 		}
 
 		private void Search_Click(object sender, RoutedEventArgs e)
