@@ -119,10 +119,10 @@
 						 ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
 
 					<i:Interaction.Triggers>
-						<ei:KeyTrigger Key="Delete">
+						<Behaviors:StudioKeyTrigger Key="Delete">
 							<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
 												   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-						</ei:KeyTrigger>
+						</Behaviors:StudioKeyTrigger>
 					</i:Interaction.Triggers>
 
 					<i:Interaction.Behaviors>
