@@ -11,7 +11,7 @@ namespace Raven.Database.Server.Responders
 		{
 			get
 			{
-				return (DocumentDatabase)ResourceStore;
+				return ResourceStore;
 			}
 		}
 	}

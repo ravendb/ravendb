@@ -117,6 +117,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
     <Compile Include="Features\Terms\TermsView.xaml.cs">
