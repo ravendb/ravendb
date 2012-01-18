@@ -163,6 +163,7 @@
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
+    <Compile Include="Bugs\Attachments.cs" />
     <Compile Include="Bugs\BackwardCompatability.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
