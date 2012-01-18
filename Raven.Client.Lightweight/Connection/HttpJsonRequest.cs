@@ -533,6 +533,19 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		
+
+		public RavenJToken ReadResponseJson()
+		{
+			var responseString = ReadResponseString();
+			try
+			{
+				using (var reader = new JsonTextReader(new StringReader(responseString)))
+					return RavenJToken.Load(reader);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException("Could not parse: " + responseString, e);
+			}
+		}
 	}
 }
