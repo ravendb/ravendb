@@ -601,7 +601,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			try
 			{
-				httpJsonRequest.ReadResponseJson();
+				httpJsonRequest.ExecuteRequest();
 			}
 			catch (WebException e)
 			{
