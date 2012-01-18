@@ -26,6 +26,15 @@
 										Modifiers="Control">
 				<i:InvokeCommandAction Command="{Binding Refresh}" />
 			</Behaviors:StudioKeyTrigger>
+
+			<Behaviors:StudioKeyTrigger Key="F"
+										Modifiers="Control">
+				<i:InvokeCommandAction Command="{Binding EnableSearch}" />
+			</Behaviors:StudioKeyTrigger>
+
+			<Behaviors:StudioKeyTrigger Key="Escape">
+				<i:InvokeCommandAction Command="{Binding DisableSearch}" />
+			</Behaviors:StudioKeyTrigger>
 		</i:Interaction.Triggers>
 
 		<Grid.ColumnDefinitions>
@@ -84,9 +93,10 @@
 					<Studio:SearchControl x:Name="SearchTool"
 										  Visibility="Collapsed"
 										  VerticalAlignment="Bottom"
-										  HorizontalAlignment="Left" />
+										  HorizontalAlignment="Left"
+										  IsActive="{Binding SearchEnabled, Mode=TwoWay}"/>
 
-					<Button Click="Search_Click"
+					<Button Command="{Binding ToggleSearch}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							Margin="4,0"
 							ToolTipService.ToolTip="Search">
