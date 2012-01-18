@@ -117,7 +117,14 @@
 						 Style="{StaticResource DocumentList}"
 						 Margin="10"
 						 ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
-				
+
+					<i:Interaction.Triggers>
+						<ei:KeyTrigger Key="Delete">
+							<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
+												   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+						</ei:KeyTrigger>
+					</i:Interaction.Triggers>
+
 					<i:Interaction.Behaviors>
 						<Behaviors:SelectItemOnRightClick />
 						<Behaviors:ShowItemsBasedOnControlDimensions Model="{Binding}" />
