@@ -5,6 +5,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Database.Server.Security.OAuth
 {
@@ -73,7 +74,8 @@ namespace Raven.Database.Server.Security.OAuth
 		{
 			var issued = (SystemTime.UtcNow - DateTime.MinValue).TotalMilliseconds;
 
-			var body = RavenJObject.FromObject(new AccessTokenBody { UserId = userId, AuthorizedDatabases = databases ?? new string[0], Issued = issued })
+			var authorizedDatabases = (databases ?? new string[0]).Select(tenantId=>new AccessTokenBody.DatabaseAccess{TenantId = tenantId, ReadOnly = false}).ToArray();
+			var body = RavenJObject.FromObject(new AccessTokenBody { UserId = userId, AuthorizedDatabases = authorizedDatabases, Issued = issued })
 					.ToString(Formatting.None);
 
 			var signature = Sign(body, cert);
