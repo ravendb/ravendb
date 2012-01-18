@@ -585,8 +585,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 					return null;
 				throw;
 			}
+			var value = indexDef.Value<RavenJObject>("Index");
 			return convention.CreateSerializer().Deserialize<IndexDefinition>(
-				new RavenJTokenReader(indexDef.Value<string>("Index"))
+				new RavenJTokenReader(value)
 				);
 		}
 
@@ -666,7 +667,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 			try
 			{
-				checkIndexExists.ReadResponseJson();
+				checkIndexExists.ExecuteRequest();
 				if (overwrite == false)
 					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 			}
@@ -845,10 +846,10 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 			req.Write(jArray.ToString(Formatting.None));
 
-			RavenJObject response;
+			RavenJArray response;
 			try
 			{
-				response = (RavenJObject) req.ReadResponseJson();
+				response = (RavenJArray) req.ReadResponseJson();
 			}
 			catch (WebException e)
 			{
@@ -1199,7 +1200,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			request.AddOperationHeaders(OperationsHeaders);
 			try
 			{
-				request.ReadResponseJson();
+				request.ExecuteRequest();
 				return SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders, request.ResponseStatusCode);
 			}
 			catch (WebException e)
