@@ -216,16 +216,8 @@ namespace Raven.Client.Document
 #endif
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
+		/// Initializes a new instance of the <see cref="AbstractDocumentQuery{T, TSelf}"/> class.
 		/// </summary>
-		/// <param name="databaseCommands">The database commands.</param>
-#if !NET_3_5
-		/// <param name="asyncDatabaseCommands">The async database commands</param>
-#endif
-
-		/// <param name = "indexName">Name of the index.</param>
-		/// <param name = "projectionFields">The projection fields.</param>
-		/// <param name = "theSession">The session.</param>
 		public AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
 #if !SILVERLIGHT
 									 IDatabaseCommands databaseCommands,

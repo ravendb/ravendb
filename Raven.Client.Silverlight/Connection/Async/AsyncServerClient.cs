@@ -827,7 +827,6 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return url.Stats()
 				.NoCache()
 				.ToJsonRequest(this, credentials, convention)
-				.AddOperationHeader("Raven-Timer-Request", "true")
 				.ReadResponseJsonAsync()
 				.ContinueWith(task =>
 				{

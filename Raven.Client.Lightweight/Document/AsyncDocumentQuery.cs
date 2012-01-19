@@ -18,7 +18,7 @@ namespace Raven.Client.Document
 	public class AsyncDocumentQuery<T> : AbstractDocumentQuery<T, AsyncDocumentQuery<T>>, IAsyncDocumentQuery<T>
 	{
 		/// <summary>
-		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
+		/// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
 		/// </summary>
 		public AsyncDocumentQuery(InMemoryDocumentSessionOperations session,
 #if !SILVERLIGHT
@@ -34,7 +34,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
+		/// Initializes a new instance of the <see cref="AbstractDocumentQuery{T,TSelf}"/> class.
 		/// </summary>
 		public AsyncDocumentQuery(AsyncDocumentQuery<T> other)
 			: base(other)

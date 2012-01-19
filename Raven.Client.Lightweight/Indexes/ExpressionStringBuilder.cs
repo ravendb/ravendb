@@ -224,10 +224,9 @@ namespace Raven.Client.Indexes
 				// only translate from the root type or deriatives
 				(queryRoot == null || (member.DeclaringType.IsAssignableFrom(queryRoot))) &&
 				// only translate from the root alias
-				(queryRootName == null || ( 
-					instance.NodeType == ExpressionType.Parameter  &&	
+				(queryRootName == null || (
+					instance.NodeType == ExpressionType.Parameter &&
 					((ParameterExpression)instance).Name == queryRootName)))
-
 			{
 				name = Constants.DocumentIdFieldName;
 			}
@@ -641,8 +640,8 @@ namespace Raven.Client.Indexes
 					if (constantExpression == null)
 						return;
 					left = expression;
-					right = convention.SaveEnumsAsIntegers ? 
-						Expression.Constant((int)constantExpression.Value) : 
+					right = convention.SaveEnumsAsIntegers ?
+						Expression.Constant((int)constantExpression.Value) :
 						Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
 					break;
 			}
@@ -1209,8 +1208,8 @@ namespace Raven.Client.Indexes
 		{
 			if (Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) == null)
 				return false;
-			
-			if(node.Method.DeclaringType.Name == "Enumerable")
+
+			if (node.Method.DeclaringType.Name == "Enumerable")
 			{
 				switch (node.Method.Name)
 				{
@@ -1306,12 +1305,12 @@ namespace Raven.Client.Indexes
 			switch (node.NodeType)
 			{
 				case ExpressionType.NewArrayInit:
-			        Out("new ");
-                    if (!CheckIfAnonymousType(node.Type.GetElementType()))
-                    {
-                        Out(node.Type.GetElementType().FullName + " ");
-                    }
-			        Out("[]");
+					Out("new ");
+					if (!CheckIfAnonymousType(node.Type.GetElementType()))
+					{
+						Out(node.Type.GetElementType().FullName + " ");
+					}
+					Out("[]");
 					VisitExpressions('{', node.Expressions, '}');
 					return node;
 
@@ -1323,14 +1322,14 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
-        private static bool CheckIfAnonymousType(Type type)
-        {
-            // hack: the only way to detect anonymous types right now
-            return Attribute.IsDefined(type, typeof(CompilerGeneratedAttribute), false)
-                && type.IsGenericType && type.Name.Contains("AnonymousType")
-                && (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
-                && (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
-        }
+		private static bool CheckIfAnonymousType(Type type)
+		{
+			// hack: the only way to detect anonymous types right now
+			return Attribute.IsDefined(type, typeof(CompilerGeneratedAttribute), false)
+				&& type.IsGenericType && type.Name.Contains("AnonymousType")
+				&& (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
+				&& (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
+		}
 
 		private static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
 		{
