@@ -277,7 +277,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where user.Name == (ayende)
 					select user;
-			Assert.Equal("(Name:ayende1)", q.ToString());
+			Assert.Equal("Name:ayende1", q.ToString());
 		}
 
 		[Fact]
