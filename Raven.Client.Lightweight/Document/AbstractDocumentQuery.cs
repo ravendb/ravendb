@@ -820,8 +820,9 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Matches substrings of the field
+		///   Avoid using WhereConatins(), use Search() instead
 		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		public void WhereContains(string fieldName, object value)
 		{
 			WhereEquals(new WhereParams
@@ -834,9 +835,10 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Matches substrings of the field
+		///   Avoid using WhereConatins(), use Search() instead
 		/// </summary>
-		public void WhereContains(string fieldName, params object [] values)
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		public void WhereContains(string fieldName, params object[] values)
 		{
 			if (values == null || values.Length == 0)
 			{
@@ -859,8 +861,9 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Matches substrings of the field
+		///   Avoid using WhereConatins(), use Search() instead
 		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		public void WhereContains(string fieldName, IEnumerable<object> values)
 		{
 			WhereContains(fieldName, values.ToArray());

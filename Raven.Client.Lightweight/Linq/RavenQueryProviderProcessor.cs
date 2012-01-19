@@ -440,13 +440,10 @@ namespace Raven.Client.Linq
 			});
 		}
 
-		private void VisitContains(MethodCallExpression expression)
+		private void VisitContains(MethodCallExpression _)
 		{
-			var memberInfo = GetMember(expression.Object);
-
-			luceneQuery.WhereContains(
-				memberInfo.Path,
-				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
+			throw new NotSupportedException(@"Contains is not supported, doing a substring match over a text field is a vey slow operation, and is not allowed using the Linq API.
+The recommended method is to use full text search (mark the field as Analyzed and use the Search() method to query it.");
 		}
 
 		private void VisitStartsWith(MethodCallExpression expression)
