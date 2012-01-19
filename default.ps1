@@ -139,7 +139,7 @@ task BeforeCompile {
 	if (Test-Path $dat) {
 		Copy-Item $dat $datDest -force
 	}
-	ElseIf (Test-Path $datDest -eq $false) {
+	ElseIf ((Test-Path $datDest) -eq $false) {
 		New-Item $datDest -type file -force
 	}
 }
@@ -389,7 +389,7 @@ task Upload -depends DoRelease {
 	Write-Host "Starting upload"
 	if (Test-Path $uploader) {
 		$log = $env:push_msg 
-		if($log -eq $null -or $log.Length -eq 0) {
+		if(($log -eq $null) -or ($log.Length -eq 0)) {
 		  $log = git log -n 1 --oneline		
 		}
 		
