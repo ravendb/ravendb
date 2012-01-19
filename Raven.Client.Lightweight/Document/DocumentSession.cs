@@ -411,7 +411,7 @@ namespace Raven.Client.Document
 				LogBatch(data);
 
                 var batchResults = DatabaseCommands.Batch(data.Commands);
-				UpdateBatchResults(batchResults.Skip(data.DeferredCommandsCount).ToArray(), data.Entities);
+				UpdateBatchResults(batchResults, data);
 			}
 		}
 

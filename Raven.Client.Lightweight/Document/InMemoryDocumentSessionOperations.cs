@@ -717,17 +717,15 @@ more responsive application.
 		/// <summary>
 		/// Updates the batch results.
 		/// </summary>
-		/// <param name="batchResults">The batch results.</param>
-		/// <param name="entities">The entities.</param>
-		protected void UpdateBatchResults(IList<BatchResult> batchResults, IList<object> entities)
+		protected void UpdateBatchResults(IList<BatchResult> batchResults, SaveChangesData saveChangesData)
 		{
-			for (var i = 0; i < batchResults.Count; i++)
+			for (var i = saveChangesData.DeferredCommandsCount; i < batchResults.Count; i++)
 			{
 				var batchResult = batchResults[i];
 				if (batchResult.Method != "PUT")
 					continue;
-				
-				var entity = entities[i];
+
+				var entity = saveChangesData.Entities[i];
 				DocumentMetadata documentMetadata;
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
