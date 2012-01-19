@@ -34,7 +34,7 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 #if !NET_3_5
-		, ILazySessionOperations, IEagerSessionOperations
+, ILazySessionOperations, IEagerSessionOperations
 #endif
 	{
 #if !NET_3_5
@@ -410,14 +410,14 @@ namespace Raven.Client.Document
 				IncrementRequestCount();
 				LogBatch(data);
 
-                var batchResults = DatabaseCommands.Batch(data.Commands);
+				var batchResults = DatabaseCommands.Batch(data.Commands);
 				UpdateBatchResults(batchResults, data);
 			}
 		}
 
 		private void LogBatch(SaveChangesData data)
 		{
-			log.Debug(()=>
+			log.Debug(() =>
 			{
 				var sb = new StringBuilder()
 					.AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
@@ -568,11 +568,11 @@ namespace Raven.Client.Document
 			var lazyValue = new Lazy<T>(() =>
 			{
 				ExecuteAllPendingLazyOperations();
-				return (T) operation.Result;
+				return (T)operation.Result;
 			});
 
 			if (onEval != null)
-				onEvaluateLazy[operation] = theResult => onEval((T) theResult);
+				onEvaluateLazy[operation] = theResult => onEval((T)theResult);
 
 			return lazyValue;
 		}

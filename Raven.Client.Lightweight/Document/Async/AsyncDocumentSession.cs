@@ -30,9 +30,9 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
 		/// </summary>
-		public AsyncDocumentSession(DocumentStore documentStore, 
-			IAsyncDatabaseCommands asyncDatabaseCommands, 
-			DocumentSessionListeners listeners, 
+		public AsyncDocumentSession(DocumentStore documentStore,
+			IAsyncDatabaseCommands asyncDatabaseCommands,
+			DocumentSessionListeners listeners,
 			Guid id)
 			: base(documentStore, listeners, id)
 		{
@@ -50,11 +50,11 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index)
 		{
-			return new AsyncDocumentQuery<T>(this, 
+			return new AsyncDocumentQuery<T>(this,
 #if !SILVERLIGHT
-					null,
+ null,
 #endif
-				AsyncDatabaseCommands, index, new string[0], listeners.QueryListeners);
+ AsyncDatabaseCommands, index, new string[0], listeners.QueryListeners);
 		}
 
 		/// <summary>
@@ -67,11 +67,11 @@ namespace Raven.Client.Document.Async
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
-			return new AsyncDocumentQuery<T>(this, 
+			return new AsyncDocumentQuery<T>(this,
 #if !SILVERLIGHT
-					null,
+ null,
 #endif
-					AsyncDatabaseCommands, indexName, new string[0], listeners.QueryListeners);
+ AsyncDatabaseCommands, indexName, new string[0], listeners.QueryListeners);
 		}
 
 		/// <summary>
@@ -140,7 +140,7 @@ namespace Raven.Client.Document.Async
 			IncrementRequestCount();
 			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
 			return CompleteLoadAsync<T>(id, loadOperation);
-			   
+
 		}
 
 		private Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
@@ -177,7 +177,7 @@ namespace Raven.Client.Document.Async
 		public Task<T[]> LoadAsyncInternal<T>(string[] ids, string[] includes)
 		{
 			IncrementRequestCount();
-			var multiLoadOperation = new MultiLoadOperation(this,AsyncDatabaseCommands.DisableAllCaching, ids);
+			var multiLoadOperation = new MultiLoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, ids);
 			return LoadAsyncInternal<T>(ids, includes, multiLoadOperation);
 		}
 
@@ -205,7 +205,7 @@ namespace Raven.Client.Document.Async
 		{
 			var cachingScope = EntitiesToJsonCachingScope();
 			var data = PrepareForSaveChanges();
-            return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
+			return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
 				.ContinueWith(task =>
 				{
 					UpdateBatchResults(task.Result, data);
@@ -276,16 +276,16 @@ namespace Raven.Client.Document.Async
 			return new RavenQueryInspector<T>(
 				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics,
 #if !SILVERLIGHT
-				null,
+ null,
 #endif
-				Advanced.AsyncDatabaseCommands),
+ Advanced.AsyncDatabaseCommands),
 				ravenQueryStatistics,
 				indexName,
 				null,
 #if !SILVERLIGHT
-				null,
+ null,
 #endif
-				Advanced.AsyncDatabaseCommands);
+ Advanced.AsyncDatabaseCommands);
 		}
 
 		/// <summary>
