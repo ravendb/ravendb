@@ -871,6 +871,13 @@ If you really want to do in memory filtering on the data returned from the query
 
 			foreach (var value in values)
 			{
+				if (first == false)
+				{
+					OrElse();
+				}
+
+				first = false;
+
 				WhereEquals(new WhereParams
 				{
 					AllowWildcards = true,
@@ -879,11 +886,7 @@ If you really want to do in memory filtering on the data returned from the query
 					Value = value
 				});
 
-				if(first == false)
-				{
-					OrElse();
-				}
-				first = false;
+				
 			}
 
 			if(first) // no items

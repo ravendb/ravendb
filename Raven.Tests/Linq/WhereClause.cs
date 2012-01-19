@@ -201,7 +201,7 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from user in indexedUsers
-					where user.Name.Contains("ayende")
+					where user.Name == ("ayende")
 					select user;
 			Assert.Equal("Name:ayende", q.ToString());
 		}
@@ -211,7 +211,7 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from x in indexedUsers
-					where x.Name.Contains("ayende")
+					where x.Name == ("ayende")
 					select x;
 
 
@@ -224,7 +224,7 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from x in indexedUsers
-					where x.Name.Contains("ayende")
+					where x.Name == ("ayende")
 					select x;
 
 			Assert.NotNull(q);
@@ -236,7 +236,7 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from x in indexedUsers
-					where x.Name.Contains("ayende")
+					where x.Name == ("ayende")
 					select x;
 
 			Assert.NotNull(q);
@@ -275,9 +275,9 @@ namespace Raven.Tests.Linq
 			var indexedUsers = GetRavenQueryInspector();
 			var ayende = "ayende" + 1;
 			var q = from user in indexedUsers
-					where user.Name.Contains(ayende)
+					where user.Name == (ayende)
 					select user;
-			Assert.Equal("Name:ayende1", q.ToString());
+			Assert.Equal("(Name:ayende1)", q.ToString());
 		}
 
 		[Fact]
@@ -294,7 +294,7 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from user in indexedUsers
-					where user.Name.Contains("ayende") && user.Email.Contains("ayende@ayende.com")
+					where user.Name == ("ayende") && user.Email == ("ayende@ayende.com")
 					select user;
 			Assert.Equal("Name:ayende AND Email:ayende@ayende.com", q.ToString());
 		}
@@ -304,7 +304,7 @@ namespace Raven.Tests.Linq
 		{
 			var indexedUsers = GetRavenQueryInspector();
 			var q = from user in indexedUsers
-					where user.Name.Contains("ayende") || user.Email.Contains("ayende@ayende.com")
+					where user.Name == ("ayende") || user.Email == ("ayende@ayende.com")
 					select user;
 			Assert.Equal("Name:ayende OR Email:ayende@ayende.com", q.ToString());
 		}

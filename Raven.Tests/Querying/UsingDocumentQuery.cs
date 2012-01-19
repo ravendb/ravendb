@@ -37,7 +37,7 @@ namespace Raven.Tests.Querying
 		{
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
 				.WhereIn("Name", new[] { "ayende" });
-			Assert.Equal("Name:ayende", q.ToString());
+			Assert.Equal("(Name:ayende)", q.ToString());
 		}
 
 		[Fact]
@@ -72,7 +72,7 @@ namespace Raven.Tests.Querying
 			var array = new string[0];
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
 				.WhereIn("Name", array);
-			Assert.True(q.ToString().StartsWith("Name:Empty_Contains_"));
+			Assert.True(q.ToString().StartsWith("Name:Empty_In_"));
 		}
 
 		[Fact]
