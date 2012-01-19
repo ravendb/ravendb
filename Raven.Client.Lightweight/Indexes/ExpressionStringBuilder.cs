@@ -1148,6 +1148,9 @@ namespace Raven.Client.Indexes
 						Visit(node.Arguments[0]);
 						Out("[\"@metadata\"]");
 						return node;
+					case "AsDocument":
+						Visit(node.Arguments[0]);
+						return node;
 					case "Hierarchy":
 						VisitHierarchy(node, expression);
 						return node;

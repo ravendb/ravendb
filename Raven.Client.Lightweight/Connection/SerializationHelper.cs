@@ -105,7 +105,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Deserialize a request to a JsonDocument
 		/// </summary>
-		public static JsonDocument DeserializeJsonDocument(string key, string requestString,
+		public static JsonDocument DeserializeJsonDocument(string key, RavenJToken requestJson,
 #if !SILVERLIGHT
 			NameValueCollection headers, 
 #else 
@@ -113,17 +113,9 @@ namespace Raven.Client.Connection
 #endif
 			HttpStatusCode statusCode)
 		{
-			RavenJObject meta = null;
-			RavenJObject jsonData = null;
-			try
-			{
-				jsonData = RavenJObject.Parse(requestString);
-				meta = headers.FilterHeaders(isServerDocument: false);
-			}
-			catch (JsonReaderException jre)
-			{
-				throw new JsonReaderException("Invalid Json Response: \r\n" + requestString, jre);
-			}
+			var jsonData = (RavenJObject)requestJson;
+			var meta = headers.FilterHeaders(isServerDocument: false);
+			
 #if !SILVERLIGHT
 			var etag = headers["ETag"];
 			var lastModified = headers[Constants.LastModified];

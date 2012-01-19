@@ -65,6 +65,14 @@ namespace Raven.Client.Indexes
 		{
 			throw new NotSupportedException("This is here as a marker only");
 		}
+
+		/// <summary>
+		/// Allow to get to the metadata of the document
+		/// </summary>
+		protected RavenJObject AsDocument(object doc)
+		{
+			throw new NotSupportedException("This is here as a marker only");
+		}
 #endif
 
 #if !SILVERLIGHT

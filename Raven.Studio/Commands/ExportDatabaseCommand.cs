@@ -1,11 +1,13 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using Ionic.Zlib;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Silverlight.Connection;
+using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Commands
@@ -60,11 +62,11 @@ namespace Raven.Studio.Commands
 		{
 			var url = ("/indexes/?start=" + totalCount + "&pageSize=" + BatchSize).NoCache();
 			var request = DatabaseCommands.CreateRequest(url, "GET");
-			return request.ReadResponseStringAsync()
+			return request.ReadResponseJsonAsync()
 				.ContinueOnSuccess(documents =>
 				                   	{
-				                   		var array = JArray.Parse(documents);
-				                   		if (array.Count == 0)
+				                   		var array = ((RavenJArray)documents);
+				                   		if (array.Length == 0)
 				                   		{
 				                   			output(String.Format("Done with reading indexes, total: {0}", totalCount));
 
@@ -76,10 +78,10 @@ namespace Raven.Studio.Commands
 				                   		}
 				                   		else
 				                   		{
-				                   			totalCount += array.Count;
-				                   			output(String.Format("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", array.Count,
+				                   			totalCount += array.Length;
+				                   			output(String.Format("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", array.Length,
 				                   			                     totalCount));
-				                   			foreach (JToken item in array)
+				                   			foreach (RavenJToken item in array)
 				                   			{
 				                   				item.WriteTo(jsonWriter);
 				                   			}
@@ -93,11 +95,11 @@ namespace Raven.Studio.Commands
 		{
 			var url = ("/docs/?pageSize=" + BatchSize + "&etag=" + lastEtag).NoCache();
 			var request = DatabaseCommands.CreateRequest(url, "GET");
-			return request.ReadResponseStringAsync()
+			return request.ReadResponseJsonAsync()
 				.ContinueOnSuccess(docs =>
 				                   	{
-				                   		var array = JArray.Parse(docs);
-				                   		if (array.Count == 0)
+				                   		var array = ((RavenJArray)docs);
+				                   		if (array.Length == 0)
 				                   		{
 				                   			output(String.Format("Done with reading documents, total: {0}", totalCount));
 				                   			jsonWriter.WriteEndArray();
@@ -107,14 +109,14 @@ namespace Raven.Studio.Commands
 				                   		}
 				                   		else
 				                   		{
-				                   			totalCount += array.Count;
-				                   			output(String.Format("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", array.Count,
+				                   			totalCount += array.Length;
+				                   			output(String.Format("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", array.Length,
 				                   			                     totalCount));
-				                   			foreach (JToken item in array)
+				                   			foreach (RavenJToken item in array)
 				                   			{
 				                   				item.WriteTo(jsonWriter);
 				                   			}
-				                   			lastEtag = new Guid(array.Last.Value<JObject>("@metadata").Value<string>("@etag"));
+				                   			lastEtag = new Guid(array.Last().Value<JObject>("@metadata").Value<string>("@etag"));
 
 				                   			return ReadDocuments(lastEtag, totalCount);
 				                   		}

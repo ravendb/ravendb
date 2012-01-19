@@ -73,10 +73,27 @@ namespace Raven.Client.Connection
 		}
 
 #if !NET_3_5
+		public Task<RavenJToken> ReadResponseJsonAsync()
+		{
+			return ReadResponseStringAsync()
+				.ContinueWith(x =>
+				{
+					var result = x.Result;
+
+					return RavenJToken.Parse(result);
+					
+				});
+		}
+
+		public Task ExecuteRequestAsync()
+		{
+			return ReadResponseStringAsync();
+		}
+
 		/// <summary>
 		/// Begins the read response string.
 		/// </summary>
-		public Task<string> ReadResponseStringAsync()
+		private Task<string> ReadResponseStringAsync()
 		{
 			if (SkipServerCheck)
 			{
@@ -129,7 +146,10 @@ namespace Raven.Client.Connection
 				}).Unwrap();
 		}
 #endif
-
+		public void ExecuteRequest()
+		{
+			ReadResponseString();
+		}
 		/// <summary>
 		/// Reads the response string.
 		/// </summary>
@@ -533,6 +553,10 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		
+
+		public RavenJToken ReadResponseJson()
+		{
+			return RavenJToken.Parse(ReadResponseString());
+		}
 	}
 }

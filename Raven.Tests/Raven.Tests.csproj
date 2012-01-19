@@ -163,6 +163,7 @@
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
+    <Compile Include="Bugs\Attachments.cs" />
     <Compile Include="Bugs\BackwardCompatability.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
@@ -567,7 +568,9 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\AllPropertiesIndex.cs" />
     <Compile Include="MailingList\Asger.cs" />
+    <Compile Include="MailingList\Benjamin.cs" />
     <Compile Include="MailingList\BrainV.cs" />
     <Compile Include="MailingList\BAM.cs" />
     <Compile Include="MailingList\Build570.cs" />

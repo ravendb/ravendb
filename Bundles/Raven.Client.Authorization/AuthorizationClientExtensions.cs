@@ -42,7 +42,9 @@ namespace Raven.Client.Authorization
 
 			var result = serverClient.ExecuteGetRequest(url.ToString());
 
-			return JsonConvert.DeserializeObject<OperationAllowedResult[]>(result);
+			return
+				session.DocumentStore.Conventions.CreateSerializer().Deserialize<OperationAllowedResult[]>(
+					new RavenJTokenReader(result));
 		}
 
 		public static DocumentAuthorization GetAuthorizationFor(this IDocumentSession session, object entity)
