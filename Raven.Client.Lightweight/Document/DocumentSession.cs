@@ -405,13 +405,13 @@ namespace Raven.Client.Document
 			{
 				var data = PrepareForSaveChanges();
 
-				if (data.Commands.Count == 0 && data.DeferredCommands.Count == 0)
+				if (data.Commands.Count == 0)
 					return; // nothing to do here
 				IncrementRequestCount();
 				LogBatch(data);
 
-                var batchResults = DatabaseCommands.Batch(data.DeferredCommands.Concat(data.Commands));
-				UpdateBatchResults(batchResults.Skip(data.DeferredCommands.Count).ToArray(), data.Entities);
+                var batchResults = DatabaseCommands.Batch(data.Commands);
+				UpdateBatchResults(batchResults.Skip(data.DeferredCommandsCount).ToArray(), data.Entities);
 			}
 		}
 

@@ -205,10 +205,10 @@ namespace Raven.Client.Document.Async
 		{
 			var cachingScope = EntitiesToJsonCachingScope();
 			var data = PrepareForSaveChanges();
-            return AsyncDatabaseCommands.BatchAsync(data.DeferredCommands.Concat(data.Commands).ToArray())
+            return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
 				.ContinueWith(task =>
 				{
-					UpdateBatchResults(task.Result.Skip(data.DeferredCommands.Count).ToArray(), data.Entities);
+					UpdateBatchResults(task.Result.Skip(data.DeferredCommandsCount).ToArray(), data.Entities);
 					cachingScope.Dispose();
 				});
 		}

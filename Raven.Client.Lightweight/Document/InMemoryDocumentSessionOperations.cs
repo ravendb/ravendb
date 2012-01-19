@@ -765,8 +765,8 @@ more responsive application.
 			var result = new SaveChangesData
 			{
 				Entities = new List<object>(),
-				Commands = new List<ICommandData>(),
-                DeferredCommands = deferedCommands.ToList()
+				Commands = new List<ICommandData>(deferedCommands),
+				DeferredCommandsCount = deferedCommands.Count
 			};
             deferedCommands.Clear();
             
@@ -1168,7 +1168,7 @@ more responsive application.
 			/// <value>The commands.</value>
 			public IList<ICommandData> Commands { get; set; }
             
-            public IList<ICommandData> DeferredCommands { get; set; }
+            public int DeferredCommandsCount { get; set; }
             
             /// <summary>
 			/// Gets or sets the entities.
