@@ -44,19 +44,6 @@ namespace Raven.Tests.Bugs.MapRedue
             }
         }
 
-		[Fact]
-		public void Active()
-		{
-			var indexIndexWithLetInReduceFunction = new Index_IndexWithLetInReduceFunction();
-			IEnumerable<dynamic> objects = new object[] { new DynamicJsonObject(RavenJObject.FromObject(new User { Id = "users/dlang", Name = "Daniel Lang" })) };
-
-			objects = indexIndexWithLetInReduceFunction.MapDefinitions.Aggregate(objects, (current, mapDefinition) => mapDefinition(current));
-
-			var reduceDefinition = indexIndexWithLetInReduceFunction.ReduceDefinition(objects);
-
-			reduceDefinition.ToArray();
-		}
-
     	[Fact]
         public void Can_perform_index_with_let_in_reduce_function()
         {
