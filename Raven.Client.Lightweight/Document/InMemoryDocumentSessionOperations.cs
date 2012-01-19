@@ -765,9 +765,12 @@ more responsive application.
 			var result = new SaveChangesData
 			{
 				Entities = new List<object>(),
-				Commands = new List<ICommandData>()
+				Commands = new List<ICommandData>(),
+                DeferredCommands = deferedCommands.ToList()
 			};
-			TryEnlistInAmbientTransaction();
+            deferedCommands.Clear();
+            
+            TryEnlistInAmbientTransaction();
 			PrepareForEntitiesDeletion(result);
 			PrepareForEntitiesPuts(result);
 
@@ -1077,6 +1080,17 @@ more responsive application.
 			entitiesByKey.Clear();
 		}
 
+        readonly List<ICommandData> deferedCommands = new List<ICommandData>();
+        
+        /// <summary>
+        /// Defer commands to be executed on SaveChanges()
+        /// </summary>
+        /// <param name="commands">The commands to be executed</param>
+        public void Defer(params ICommandData[] commands)
+        {
+            deferedCommands.AddRange(commands);
+        }
+
 		/// <summary>
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
@@ -1153,7 +1167,10 @@ more responsive application.
 			/// </summary>
 			/// <value>The commands.</value>
 			public IList<ICommandData> Commands { get; set; }
-			/// <summary>
+            
+            public IList<ICommandData> DeferredCommands { get; set; }
+            
+            /// <summary>
 			/// Gets or sets the entities.
 			/// </summary>
 			/// <value>The entities.</value>

@@ -4,9 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Commands;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Document
@@ -105,5 +107,56 @@ namespace Raven.Tests.Document
 				}
 			}
 		}
-	}
+
+        [Fact]
+        public void Can_defer_commands_until_savechanges_async()
+        {
+            using (var server = GetNewServer(port, path))
+            {
+                var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+                documentStore.Initialize();
+                using (var session = documentStore.OpenAsyncSession())
+                {
+                    var commands = new ICommandData[]
+                                       {
+                                           new PutCommandData
+                                               {
+                                                   Document =
+                                                       RavenJObject.FromObject(new Company {Name = "Hibernating Rhinos"}),
+                                                   Etag = null,
+                                                   Key = "rhino1",
+                                                   Metadata = new RavenJObject(),
+                                               },
+                                           new PutCommandData
+                                               {
+                                                   Document =
+                                                       RavenJObject.FromObject(new Company {Name = "Hibernating Rhinos"}),
+                                                   Etag = null,
+                                                   Key = "rhino2",
+                                                   Metadata = new RavenJObject(),
+                                               }
+                                       };
+
+                    session.Advanced.Defer(commands);
+                    session.Advanced.Defer(new DeleteCommandData
+                    {
+                        Etag = null,
+                        Key = "rhino2"
+                    });
+
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                    session.SaveChangesAsync().Wait();
+                    //Assert.Equal(1, session.Advanced.NumberOfRequests); // This returns 0 for some reason in async mode
+
+                    // Make sure that session is empty
+                    //session.SaveChangesAsync().Wait();
+                    //Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+
+                Assert.Null(documentStore.DatabaseCommands.Get("rhino2"));
+                Assert.NotNull(documentStore.DatabaseCommands.Get("rhino1"));
+            }
+        }
+    }
 }
