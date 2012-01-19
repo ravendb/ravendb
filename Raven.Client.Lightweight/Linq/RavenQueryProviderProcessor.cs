@@ -624,24 +624,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					{
 						throw new InvalidOperationException("Could not extract value from " + expression);
 					}
-					luceneQuery.Search(expressionInfo.Path, (string)value);
-					if(GetValueFromExpressionWithoutConversion(expression.Arguments[3], out value) == false)
+					luceneQuery.Search(expressionInfo.Path, (string) value);
+					if (GetValueFromExpressionWithoutConversion(expression.Arguments[3], out value) == false)
 					{
 						throw new InvalidOperationException("Could not extract value from " + expression);
 					}
-					luceneQuery.Boost((decimal)value);
+					luceneQuery.Boost((decimal) value);
 					break;
 				case "In":
 					var memberInfo = GetMember(expression.Arguments[0]);
 					var objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
-
-					var array = objects as object[];
-					if (array != null)
-						luceneQuery.WhereContains(memberInfo.Path, array);
-					else
-					{
-						luceneQuery.WhereContains(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
-					}
+					luceneQuery.WhereIn(memberInfo.Path, ((IEnumerable) objects).Cast<object>());
 
 					break;
 				default:

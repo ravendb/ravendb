@@ -45,7 +45,7 @@ namespace Raven.Database.Indexing
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		private readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();
 
-		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration)
+		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
 		{
 			this.indexDefinitionStorage = indexDefinitionStorage;
 			this.configuration = configuration;
@@ -54,18 +54,57 @@ namespace Raven.Database.Indexing
 			if (Directory.Exists(path) == false && configuration.RunInMemory == false)
 				Directory.CreateDirectory(path);
 
-			foreach (var indexDirectory in indexDefinitionStorage.IndexNames)
+			foreach (var indexName in indexDefinitionStorage.IndexNames)
 			{
-				log.Debug("Loading saved index {0}", indexDirectory);
-
-				var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexDirectory);
-				if (indexDefinition == null)
-					continue;
-
-				var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition);
-				var indexImplementation = CreateIndexImplementation(indexDirectory, indexDefinition, luceneDirectory);
-				indexes.TryAdd(indexDirectory, indexImplementation);
+				OpenIndexOnStartup(documentDatabase, indexName);
 			}
+		}
+
+		private void OpenIndexOnStartup(DocumentDatabase documentDatabase, string indexName)
+		{
+			if (indexName == null) throw new ArgumentNullException("indexName");
+
+			log.Debug("Loading saved index {0}", indexName);
+
+			var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexName);
+			if (indexDefinition == null)
+				return;
+
+			Index indexImplementation;
+			bool resetTried = false;
+			while (true)
+			{
+				try
+				{
+					var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition);
+					indexImplementation = CreateIndexImplementation(indexName, indexDefinition, luceneDirectory);
+					break;
+				}
+				catch (Exception e)
+				{
+					if (resetTried)
+						throw new InvalidOperationException("Could not open / create index" + indexName + ", reset already tried", e);
+					resetTried = true;
+					log.WarnException("Could not open index " + indexName + ", forcibly resetting index", e);
+					try
+					{
+						documentDatabase.TransactionalStorage.Batch(accessor =>
+						{
+							accessor.Indexing.DeleteIndex(indexName);
+							accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
+						});
+
+						var indexDirectory = indexName ?? IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
+						var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
+						IOExtensions.DeleteDirectory(indexFullPath);
+					}
+					catch (Exception exception)
+					{
+						throw new InvalidOperationException("Could not reset index " + indexName, exception);
+					}
+				}
+			}
+			indexes.TryAdd(indexName, indexImplementation);
 		}
 
 
@@ -97,6 +136,7 @@ namespace Raven.Database.Indexing
 			}
 
 			return directory;
+
 		}
 
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)

@@ -138,6 +138,11 @@ namespace Raven.Client.Document
 		void NegateNext();
 
 		/// <summary>
+		/// Check that the field has one of the specified value
+		/// </summary>
+		void WhereIn(string fieldName, IEnumerable<object> values);
+
+		/// <summary>
 		///   Avoid using WhereConatins(), use Search() instead
 		/// </summary>
 		[Obsolete("Avoid using WhereConatins(), use Search() instead")]

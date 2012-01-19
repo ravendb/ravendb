@@ -861,6 +861,38 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
+		/// Check that the field has one of the specified value
+		/// </summary>
+		public void WhereIn(string fieldName, IEnumerable<object> values)
+		{
+			bool first = true;
+
+			OpenSubclause();
+
+			foreach (var value in values)
+			{
+				WhereEquals(new WhereParams
+				{
+					AllowWildcards = true,
+					IsAnalyzed = true,
+					FieldName = fieldName,
+					Value = value
+				});
+
+				if(first == false)
+				{
+					OrElse();
+				}
+				first = false;
+			}
+
+			if(first) // no items
+				WhereEquals(fieldName, "Empty_In_" + Guid.NewGuid());
+
+			CloseSubclause();
+		}
+
+		/// <summary>
 		///   Avoid using WhereConatins(), use Search() instead
 		/// </summary>
 		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
