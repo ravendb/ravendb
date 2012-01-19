@@ -1,5 +1,8 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Raven.Abstractions.Linq;
 using Raven.Client.Indexes;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Bugs.MapRedue
@@ -41,7 +44,20 @@ namespace Raven.Tests.Bugs.MapRedue
             }
         }
 
-        [Fact]
+		[Fact]
+		public void Active()
+		{
+			var indexIndexWithLetInReduceFunction = new Index_IndexWithLetInReduceFunction();
+			IEnumerable<dynamic> objects = new object[] { new DynamicJsonObject(RavenJObject.FromObject(new User { Id = "users/dlang", Name = "Daniel Lang" })) };
+
+			objects = indexIndexWithLetInReduceFunction.MapDefinitions.Aggregate(objects, (current, mapDefinition) => mapDefinition(current));
+
+			var reduceDefinition = indexIndexWithLetInReduceFunction.ReduceDefinition(objects);
+
+			reduceDefinition.ToArray();
+		}
+
+    	[Fact]
         public void Can_perform_index_with_let_in_reduce_function()
         {
             using (var store = NewDocumentStore())
