@@ -66,7 +66,6 @@ namespace Raven.Database.Linq.Ast
 				if(parentTarget != null && parentTarget.MemberName == "GroupBy")
 				{
 					return new CastExpression(new TypeReference("Func<IGrouping<dynamic,dynamic>, dynamic>"), parenthesizedlambdaExpression, CastType.Cast);
-		
 				}
 			}
 			return new CastExpression(new TypeReference("Func<dynamic, dynamic>"), parenthesizedlambdaExpression, CastType.Cast);

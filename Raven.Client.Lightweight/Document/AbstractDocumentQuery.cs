@@ -216,16 +216,8 @@ namespace Raven.Client.Document
 #endif
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
+		/// Initializes a new instance of the <see cref="AbstractDocumentQuery{T, TSelf}"/> class.
 		/// </summary>
-		/// <param name="databaseCommands">The database commands.</param>
-#if !NET_3_5
-		/// <param name="asyncDatabaseCommands">The async database commands</param>
-#endif
-
-		/// <param name = "indexName">Name of the index.</param>
-		/// <param name = "projectionFields">The projection fields.</param>
-		/// <param name = "theSession">The session.</param>
 		public AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
 #if !SILVERLIGHT
 									 IDatabaseCommands databaseCommands,
@@ -828,8 +820,9 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Matches substrings of the field
+		///   Avoid using WhereConatins(), use Search() instead
 		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		public void WhereContains(string fieldName, object value)
 		{
 			WhereEquals(new WhereParams
@@ -842,9 +835,10 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Matches substrings of the field
+		///   Avoid using WhereConatins(), use Search() instead
 		/// </summary>
-		public void WhereContains(string fieldName, params object [] values)
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		public void WhereContains(string fieldName, params object[] values)
 		{
 			if (values == null || values.Length == 0)
 			{
@@ -867,8 +861,44 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Matches substrings of the field
+		/// Check that the field has one of the specified value
 		/// </summary>
+		public void WhereIn(string fieldName, IEnumerable<object> values)
+		{
+			bool first = true;
+
+			OpenSubclause();
+
+			foreach (var value in values)
+			{
+				if (first == false)
+				{
+					OrElse();
+				}
+
+				first = false;
+
+				WhereEquals(new WhereParams
+				{
+					AllowWildcards = true,
+					IsAnalyzed = true,
+					FieldName = fieldName,
+					Value = value
+				});
+
+				
+			}
+
+			if(first) // no items
+				WhereEquals(fieldName, "Empty_In_" + Guid.NewGuid());
+
+			CloseSubclause();
+		}
+
+		/// <summary>
+		///   Avoid using WhereConatins(), use Search() instead
+		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		public void WhereContains(string fieldName, IEnumerable<object> values)
 		{
 			WhereContains(fieldName, values.ToArray());

@@ -5,7 +5,6 @@ using System.Windows.Input;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Connection.Async;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -18,7 +17,6 @@ namespace Raven.Studio.Models
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
 		private string originalIndex;
-		private bool createNewIndexMode;
 
 		public IndexDefinitionModel()
 		{
@@ -56,7 +54,6 @@ namespace Raven.Studio.Models
 			var urlParser = new UrlParser(parameters);
 			if (urlParser.GetQueryParam("mode") == "new")
 			{
-				createNewIndexMode = true;
 				ViewTitle = "Create an Index";
 				return;
 			}

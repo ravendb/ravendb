@@ -70,8 +70,6 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Toes the index definition.
 		/// </summary>
-		/// <param name="convention">The convention.</param>
-		/// <returns></returns>
 		public IndexDefinition ToIndexDefinition(DocumentConvention convention, bool validateMap = true)
 		{
 			if (Map == null && validateMap)

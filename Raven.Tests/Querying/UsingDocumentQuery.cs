@@ -36,15 +36,15 @@ namespace Raven.Tests.Querying
 		public void CanUnderstandSimpleContains()
 		{
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
-				.WhereContains("Name", "ayende");
-			Assert.Equal("Name:ayende", q.ToString());
+				.WhereIn("Name", new[] { "ayende" });
+			Assert.Equal("(Name:ayende)", q.ToString());
 		}
 
 		[Fact]
 		public void CanUnderstandParamArrayContains()
 		{
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
-				.WhereContains("Name", "ryan", "heath");
+				.WhereIn("Name", new[] { "ryan", "heath" });
 			Assert.Equal("(Name:ryan OR Name:heath)", q.ToString());
 		}
 
@@ -53,7 +53,7 @@ namespace Raven.Tests.Querying
 		{
 			var array = new[] {"ryan", "heath"};
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
-				.WhereContains("Name", array);
+				.WhereIn("Name", array);
 			Assert.Equal("(Name:ryan OR Name:heath)", q.ToString());
 		}
 
@@ -62,7 +62,7 @@ namespace Raven.Tests.Querying
 		{
 			var array = new[] { "ryan"};
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
-				.WhereContains("Name", array);
+				.WhereIn("Name", array);
 			Assert.Equal("(Name:ryan)", q.ToString());
 		}
 
@@ -71,8 +71,8 @@ namespace Raven.Tests.Querying
 		{
 			var array = new string[0];
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
-				.WhereContains("Name", array);
-			Assert.True(q.ToString().StartsWith("Name:Empty_Contains_"));
+				.WhereIn("Name", array);
+			Assert.True(q.ToString().StartsWith("Name:Empty_In_"));
 		}
 
 		[Fact]
@@ -80,7 +80,7 @@ namespace Raven.Tests.Querying
 		{
 			IEnumerable<string> list = new[] { "ryan", "heath" };
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
-				.WhereContains("Name", list);
+				.WhereIn("Name", list);
 			Assert.Equal("(Name:ryan OR Name:heath)", q.ToString());
 		}
 
@@ -89,7 +89,7 @@ namespace Raven.Tests.Querying
 		{
 			var ayende = "ayende" + 1;
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
-				.WhereContains("Name", ayende);
+				.WhereIn("Name", new[] { ayende });
 			Assert.Equal("Name:ayende1", q.ToString());
 		}
 
@@ -104,9 +104,9 @@ namespace Raven.Tests.Querying
 		public void CanUnderstandAnd()
 		{
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
-				.WhereContains("Name", "ayende")
+				.WhereEquals("Name", "ayende")
 				.AndAlso()
-				.WhereContains("Email", "ayende@ayende.com");
+				.WhereEquals("Email", "ayende@ayende.com");
 			Assert.Equal("Name:ayende AND Email:ayende@ayende.com", q.ToString());
 		}
 
@@ -114,9 +114,9 @@ namespace Raven.Tests.Querying
 		public void CanUnderstandOr()
 		{
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
-				.WhereContains("Name", "ayende")
+				.WhereEquals("Name", "ayende")
 				.OrElse()
-				.WhereContains("Email", "ayende@ayende.com");
+				.WhereEquals("Email", "ayende@ayende.com");
 			Assert.Equal("Name:ayende OR Email:ayende@ayende.com", q.ToString());
 		}
 

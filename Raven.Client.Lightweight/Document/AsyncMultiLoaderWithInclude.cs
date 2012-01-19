@@ -80,7 +80,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="MultiLoaderWithInclude{T}"/> class.
+		/// Initializes a new instance of the <see cref="AsyncMultiLoaderWithInclude{T}"/> class.
 		/// </summary>
 		/// <param name="session">The session.</param>
 		public AsyncMultiLoaderWithInclude(AsyncDocumentSession session)

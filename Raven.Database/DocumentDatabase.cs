@@ -160,7 +160,7 @@ namespace Raven.Database
 				configuration.DataDirectory,
 				configuration.Container.GetExportedValues<AbstractViewGenerator>(),
 				Extensions);
-			IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration);
+			IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
 
 			workContext.Configuration = configuration;
 			workContext.IndexStorage = IndexStorage;
