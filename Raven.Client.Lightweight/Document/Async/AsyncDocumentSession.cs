@@ -52,9 +52,9 @@ namespace Raven.Client.Document.Async
 		{
 			return new AsyncDocumentQuery<T>(this,
 #if !SILVERLIGHT
- null,
+				null,
 #endif
- AsyncDatabaseCommands, index, new string[0], listeners.QueryListeners);
+				AsyncDatabaseCommands, index, new string[0], listeners.QueryListeners);
 		}
 
 		/// <summary>
@@ -69,9 +69,9 @@ namespace Raven.Client.Document.Async
 			}
 			return new AsyncDocumentQuery<T>(this,
 #if !SILVERLIGHT
- null,
+				null,
 #endif
- AsyncDatabaseCommands, indexName, new string[0], listeners.QueryListeners);
+				AsyncDatabaseCommands, indexName, new string[0], listeners.QueryListeners);
 		}
 
 		/// <summary>
@@ -276,16 +276,16 @@ namespace Raven.Client.Document.Async
 			return new RavenQueryInspector<T>(
 				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics,
 #if !SILVERLIGHT
- null,
+				null,
 #endif
- Advanced.AsyncDatabaseCommands),
+			Advanced.AsyncDatabaseCommands),
 				ravenQueryStatistics,
 				indexName,
 				null,
 #if !SILVERLIGHT
- null,
+				null,
 #endif
- Advanced.AsyncDatabaseCommands);
+				Advanced.AsyncDatabaseCommands);
 		}
 
 		/// <summary>

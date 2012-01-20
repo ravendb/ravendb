@@ -365,47 +365,16 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		private void DirectPutAttachment(string key, RavenJObject metadata, Guid? etag, Stream data, string operationUrl)
 		{
-			var webRequest = WebRequest.Create(operationUrl + "/static/" + key);
-			webRequest.Method = "PUT";
-			webRequest.Credentials = credentials;
-			foreach (var header in metadata)
+			if(etag != null)
 			{
-				if (header.Key.StartsWith("@"))
-					continue;
-
-				//need to handle some headers differently, see http://msdn.microsoft.com/en-us/library/system.net.webheadercollection.aspx
-				string matchString = header.Key;
-				string formattedHeaderValue = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
-
-				//Just let an exceptions (from Parse(..) functions) bubble-up, so that the user can see they've provided an invalid value
-				if (matchString == "Content-Length")
-				{
-					// we filter out content length, because getting it wrong will cause errors 
-					// in the server side when serving the wrong value for this header.
-					// worse, if we are using http compression, this value is known to be wrong
-					// instead, we rely on the actual size of the data provided for us
-					//webRequest.ContentLength = long.Parse(formattedHeaderValue); 	
-				}
-				else if (matchString == "Content-Type")
-					webRequest.ContentType = formattedHeaderValue;
-				else
-					webRequest.Headers[header.Key] = formattedHeaderValue;
+				metadata["ETag"] = etag.Value.ToString();
 			}
-			if (etag != null)
-			{
-				webRequest.Headers["If-None-Match"] = etag.Value.ToString();
-			}
-			using (var stream = webRequest.GetRequestStream())
-			{
-				data.CopyTo(stream);
-				stream.Flush();
-			}
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/static/" + key, "PUT", metadata, credentials, convention);
+			
+			webRequest.Write(data);
 			try
 			{
-				using (webRequest.GetResponse())
-				{
-
-				}
+				webRequest.ExecuteRequest();
 			}
 			catch (WebException e)
 			{
@@ -421,13 +390,6 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			}
 		}
 
-		private static string StripQuotesIfNeeded(string str)
-		{
-			if (str.StartsWith("\"") && str.EndsWith("\""))
-				return str.Substring(1, str.Length - 2);
-			return str;
-		}
-
 		/// <summary>
 		/// Gets the attachment by the specified key
 		/// </summary>
@@ -440,27 +402,17 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		private Attachment DirectGetAttachment(string key, string operationUrl)
 		{
-			var webRequest = WebRequest.Create(operationUrl + "/static/" + key);
-			webRequest.Credentials = credentials;
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,operationUrl + "/static/" + key,"GET", credentials, convention);
 			try
 			{
-				using (var response = webRequest.GetResponse())
-				using (var responseStream = response.GetResponseStream())
+				var memoryStream = new MemoryStream(webRequest.ReadResponseBytes());
+				return new Attachment
 				{
-					if (responseStream == null)
-						throw new InvalidOperationException("couldn't get response stream from attachment request");
-
-					var memoryStream = new MemoryStream();
-					responseStream.CopyTo(memoryStream);
-					memoryStream.Position = 0;
-					return new Attachment
-					{
-						Data = ()=>memoryStream, 
-						Size = (int)memoryStream.Length,
-						Etag = new Guid(response.Headers["ETag"]),
-						Metadata = response.Headers.FilterHeaders(isServerDocument: false)
-					};
-				}
+					Data = () => memoryStream,
+					Size = (int) memoryStream.Length,
+					Etag = new Guid(webRequest.ResponseHeaders["ETag"]),
+					Metadata = webRequest.ResponseHeaders.FilterHeaders(isServerDocument: false)
+				};
 			}
 			catch (WebException e)
 			{
@@ -507,18 +459,13 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		private void DirectDeleteAttachment(string key, Guid? etag, string operationUrl)
 		{
-			var webRequest = WebRequest.Create(operationUrl + "/static/" + key);
-			webRequest.Method = "DELETE";
-			webRequest.Credentials = credentials;
-			if (etag != null)
+			var metadata = new RavenJObject();
+			if(etag != null)
 			{
-				webRequest.Headers["If-None-Match"] = etag.Value.ToString();
+				metadata["ETag"] = etag.Value.ToString();
 			}
-
-			using (webRequest.GetResponse())
-			{
-
-			}
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/static/" + key, "DELETE", metadata,credentials, convention);
+			webRequest.ExecuteRequest();
 		}
 
 		/// <summary>
@@ -685,14 +632,6 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 			var responseJson = (RavenJObject)request.ReadResponseJson();
 			return responseJson.Value<string>("index");
-		}
-
-		private void AddOperationHeaders(HttpWebRequest webRequest)
-		{
-			foreach (string header in OperationsHeaders)
-			{
-				webRequest.Headers[header] = OperationsHeaders[header];
-			}
 		}
 
 		/// <summary>
@@ -915,42 +854,27 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			ExecuteWithReplication<object>("PUT", u =>
 			{
-				var webRequest = (HttpWebRequest)WebRequest.Create(u + "/static/transactions/recoveryInformation/" + txId);
-				AddOperationHeaders(webRequest);
-				webRequest.Method = "PUT";
-				webRequest.Headers["Resource-Manager-Id"] = resourceManagerId.ToString();
-				webRequest.Headers[Constants.NotForReplication] = "true";
-				webRequest.Credentials = credentials;
-				webRequest.UseDefaultCredentials = true;
-
-				using (var stream = webRequest.GetRequestStream())
+				var metadata = new RavenJObject
 				{
-					stream.Write(recoveryInformation, 0, recoveryInformation.Length);
-				}
+					{"Resource-Manager-Id", resourceManagerId.ToString()},
+					{Constants.NotForReplication, true}
+				};
+				var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, u + "/static/transactions/recoveryInformation/" + txId, "PUT", metadata, credentials, convention);
 
-				webRequest.GetResponse()
-					.Close();
+				webRequest.Write(new MemoryStream(recoveryInformation));
 
+				webRequest.ExecuteRequest();
 				return null;
 			});
 		}
 
 		private byte[] DirectPromoteTransaction(Guid fromTxId, string operationUrl)
 		{
-			var webRequest = (HttpWebRequest)WebRequest.Create(operationUrl + "/transaction/promote?fromTxId=" + fromTxId);
-			AddOperationHeaders(webRequest);
-			webRequest.Method = "POST";
-			webRequest.ContentLength = 0;
-			webRequest.Credentials = credentials;
-			webRequest.UseDefaultCredentials = true;
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,
+			                                                          operationUrl + "/transaction/promote?fromTxId=" + fromTxId,
+			                                                          "POST", credentials, convention);
 
-			using (var response = webRequest.GetResponse())
-			{
-				using (var stream = response.GetResponseStreamWithHttpDecompression())
-				{
-					return stream.ReadData();
-				}
-			}
+			return webRequest.ReadResponseBytes();
 		}
 
 		private void DirectRollback(Guid txId, string operationUrl)
@@ -1192,6 +1116,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			return ExecuteWithReplication("HEAD", u => DirectHead(u, key));
 		}
 
+		/// <summary>
+		/// Do a direct HEAD request against the server for the specified document
+		/// </summary>
 		public JsonDocumentMetadata DirectHead(string serverUrl, string key)
 		{
 			var metadata = new RavenJObject();

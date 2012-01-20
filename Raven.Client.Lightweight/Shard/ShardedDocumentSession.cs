@@ -174,11 +174,11 @@ namespace Raven.Client.Shard
 			return GetSingleShardSession(shardIds).Advanced.HasChanged(entity);
 		}
 
-        /// <summary>
-        /// Defer commands to be executed on SaveChanges()
-        /// </summary>
-        /// <param name="commands">The commands to be executed</param>
-        public void Defer(params ICommandData[] commands)
+		/// <summary>
+		/// Defer commands to be executed on SaveChanges()
+		/// </summary>
+		/// <param name="commands">The commands to be executed</param>
+		public void Defer(params ICommandData[] commands)
 		{
 			throw new NotSupportedException("You cannot defer commands in a sharded session");
 		}

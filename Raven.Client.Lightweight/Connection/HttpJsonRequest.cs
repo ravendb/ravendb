@@ -22,6 +22,7 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Connection
 {
@@ -43,6 +44,7 @@ namespace Raven.Client.Connection
 		private string postedData;
 		private Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
+		public object Headers;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -150,6 +152,17 @@ namespace Raven.Client.Connection
 		{
 			ReadResponseString();
 		}
+
+		public byte[] ReadResponseBytes()
+		{
+			using(var webResponse = webRequest.GetResponse())
+			using(var stream = webResponse.GetResponseStreamWithHttpDecompression())
+			{
+				ResponseHeaders = new NameValueCollection(webResponse.Headers);
+				return stream.ReadData();
+			}
+		}
+
 		/// <summary>
 		/// Reads the response string.
 		/// </summary>
@@ -368,6 +381,9 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		/// <summary>
+		/// The request duration
+		/// </summary>
 		public double CalculateDuration()
 		{
 			return sp.ElapsedMilliseconds;
@@ -383,6 +399,15 @@ namespace Raven.Client.Connection
 		/// Whatever we can skip the server check and directly return the cached result
 		///</summary>
 		public bool SkipServerCheck { get; set; }
+
+		/// <summary>
+		/// The underlying request content type
+		/// </summary>
+		public string ContentType
+		{
+			get { return webRequest.ContentType; }
+			set { webRequest.ContentType = value; }
+		}
 
 		private void WriteMetadata(RavenJObject metadata)
 		{
@@ -557,6 +582,16 @@ namespace Raven.Client.Connection
 		public RavenJToken ReadResponseJson()
 		{
 			return RavenJToken.Parse(ReadResponseString());
+		}
+
+		public void Write(Stream data)
+		{
+			webRequest.ContentLength = data.Length;
+			using(var stream = webRequest.GetRequestStream())
+			{
+				data.CopyTo(stream);
+				stream.Flush();
+			}
 		}
 	}
 }

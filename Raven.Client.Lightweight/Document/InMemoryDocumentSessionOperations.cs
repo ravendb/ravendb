@@ -197,7 +197,7 @@ namespace Raven.Client.Document
 				string id;
 				if (TryGetIdFromInstance(instance, out id)
 #if !NET_3_5
- || (instance is IDynamicMetaObjectProvider &&
+				 || (instance is IDynamicMetaObjectProvider &&
 					   TryGetIdFromDynamic(instance, out id))
 #endif
 )
@@ -929,9 +929,9 @@ more responsive application.
 		{
 			if (
 #if !NET_3_5
-entityType == typeof(DynamicJsonObject) ||
+			entityType == typeof(DynamicJsonObject) ||
 #endif
- entityType == typeof(RavenJObject)) // dynamic types
+			 entityType == typeof(RavenJObject)) // dynamic types
 			{
 				if (metadata.ContainsKey(Constants.RavenClrType))
 					return;// do not overwrite the value
