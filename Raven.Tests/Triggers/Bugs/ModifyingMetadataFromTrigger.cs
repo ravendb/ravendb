@@ -17,9 +17,9 @@ namespace Raven.Tests.Triggers.Bugs
 
 		public ModifyingMetadataFromTrigger()
 		{
-			port = 8080;
+			port = 8079;
 			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
 		#region IDisposable Members
@@ -44,7 +44,7 @@ namespace Raven.Tests.Triggers.Bugs
 						Catalogs = {new TypeCatalog(typeof(AuditTrigger))}
 					}
 			}))
-			using (var store = new DocumentStore {Url = "http://localhost:8080"})
+			using (var store = new DocumentStore {Url = "http://localhost:8079"})
 			{
 				store.Initialize();
 

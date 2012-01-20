@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs
 			using(var store = new DocumentStore
 			{
 				DefaultDatabase = "TESTS",
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			}.Initialize())
 			{
 				store.Conventions.FindTypeTagName = type =>

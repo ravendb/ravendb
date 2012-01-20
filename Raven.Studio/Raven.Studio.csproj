@@ -62,13 +62,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.1.113.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.2.120.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Shared.Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.1.113.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+    <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.2.120.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
     </Reference>
-    <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.1.113.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+    <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.2.120.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight, Version=1.0.4107.18177, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -79,8 +82,8 @@
       <HintPath>..\SharedLibs\Silverlight\Microsoft.Expression.Interactions.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\SharedLibs\Newtonsoft.Json\Silverlight\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.4.0.5\lib\sl4\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System.Reactive">
       <HintPath>..\packages\Rx-Main.1.0.10621\lib\SL4\System.Reactive.dll</HintPath>
@@ -114,6 +117,16 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Behaviors\StudioKeyTrigger.cs" />
+    <Compile Include="Controls\UpdateSourceTrigger.cs" />
+    <Compile Include="Controls\WordHighlightTagger.cs" />
+    <Compile Include="Features\Terms\TermsView.xaml.cs">
+      <DependentUpon>TermsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Models\TermsModel.cs" />
+    <Compile Include="Views\Terms.xaml.cs">
+      <DependentUpon>Terms.xaml</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
     <Compile Include="Behaviors\ShowItemsBasedOnControlDimensions.cs" />
@@ -126,14 +139,25 @@
     <Compile Include="Behaviors\TextBoxUpdateBehavior.cs" />
     <Compile Include="Commands\ChangeDatabaseCommand.cs" />
     <Compile Include="Commands\ChangeFieldValueCommand.cs" />
+    <Compile Include="Commands\CopyToClipboardCommand.cs" />
+    <Compile Include="Commands\DeleteAllDocumentsOfCollectionCommand.cs" />
+    <Compile Include="Commands\DeleteIndexCommand.cs" />
+    <Compile Include="Commands\ExportDatabaseCommand.cs" />
+    <Compile Include="Commands\ImportDatabaseCommand.cs" />
     <Compile Include="Commands\NavigateToDocumentByIdCommand.cs" />
     <Compile Include="Commands\ListBoxCommand.cs" />
+    <Compile Include="Commands\NavigateToExternalUrlCommand.cs" />
     <Compile Include="Commands\NavigateToNextPageCommand.cs" />
     <Compile Include="Commands\NavigateToPrevPageCommand.cs" />
     <Compile Include="Commands\CopyDocumentsIdsCommand.cs" />
     <Compile Include="Commands\DeleteDocumentsCommand.cs" />
+    <Compile Include="Commands\PromoteToAutoIndexCommand.cs" />
     <Compile Include="Commands\ShowLicensingStatusCommand.cs" />
     <Compile Include="Controls\Editors\EditorBase.cs" />
+    <Compile Include="Controls\ListBoxMenu.cs" />
+    <Compile Include="Controls\SearchControl.xaml.cs">
+      <DependentUpon>SearchControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\ViewSizeControl.xaml.cs">
       <DependentUpon>ViewSizeControl.xaml</DependentUpon>
     </Compile>
@@ -182,7 +206,8 @@
     <Compile Include="Impl\PopupPlacement\PopupPlacement.cs" />
     <Compile Include="Impl\PopupPlacement\PopupVerticalAlignment.cs" />
     <Compile Include="Infrastructure\Converters\CollectionCountToGridLengthConverter.cs" />
-    <Compile Include="Infrastructure\Converters\HiddenWhenGreaterThenOrEqualTo.cs" />
+    <Compile Include="Infrastructure\Converters\HiddenWhenGreaterThen.cs" />
+    <Compile Include="Infrastructure\Converters\HiddenWhenStringEmptyOrNull.cs" />
     <Compile Include="Infrastructure\ErrorHandler.cs" />
     <Compile Include="Infrastructure\ErrorPresenter.cs" />
     <Compile Include="Features\Indexes\IndexesListView.xaml.cs">
@@ -248,6 +273,7 @@
     <Compile Include="Infrastructure\Converters\StringEmptyToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\Converters\TargetedDataTemplate.cs" />
     <Compile Include="Infrastructure\ColorExtensions.cs" />
+    <Compile Include="Infrastructure\ListExtensions.cs" />
     <Compile Include="Infrastructure\ModelAttacher.cs" />
     <Compile Include="Infrastructure\Converters\EnumToEnumerableConverter.cs" />
     <Compile Include="Infrastructure\Converters\EnumToIntConverter.cs" />
@@ -278,9 +304,7 @@
     <Compile Include="Models\CollectionsModel.cs" />
     <Compile Include="Models\IndexesErrorsModel.cs" />
     <Compile Include="Models\IndexesModel.cs" />
-    <Compile Include="Models\IndexListItemModel.cs" />
-    <Compile Include="Models\IndexModel.cs" />
-    <Compile Include="Models\IndexGroupHeader.cs" />
+    <Compile Include="Models\IndexListItem.cs" />
     <Compile Include="Models\LinkModel.cs" />
     <Compile Include="Models\NotificationLevel.cs" />
     <Compile Include="Models\Notification.cs" />
@@ -379,6 +403,18 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="Controls\Taggers.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Terms\TermsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Terms.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Resource Include="Assets\Brushes.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -398,6 +434,10 @@
     <Page Include="Controls\NotificationArea.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\SearchControl.xaml">
+      <Generator>MSBuild:MarkupCompilePass1</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Controls\ViewSizeControl.xaml">
       <SubType>Designer</SubType>
@@ -593,6 +633,7 @@
     <Resource Include="Assets\Images\edit_pencil_write_icon.png" />
     <Resource Include="Assets\Images\ExecuteQuery.png" />
     <Resource Include="Assets\Images\ChangeView.png" />
+    <Resource Include="Assets\Images\Search.png" />
     <Content Include="Impl\PopupPlacement\Credit.txt" />
   </ItemGroup>
   <ItemGroup>

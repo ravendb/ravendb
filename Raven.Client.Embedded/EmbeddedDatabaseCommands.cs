@@ -112,11 +112,20 @@ namespace Raven.Client.Embedded
 
 		private JsonDocument EnsureLocalDate(JsonDocument jsonDocument)
 		{
-	  if(jsonDocument == null)
-		return null;
+			if(jsonDocument == null)
+				return null;
 			if (jsonDocument.LastModified != null)
 				jsonDocument.LastModified = jsonDocument.LastModified.Value.ToLocalTime();
 			return jsonDocument;
+		}
+
+		private JsonDocumentMetadata EnsureLocalDate(JsonDocumentMetadata jsonDocumentMetadata)
+		{
+			if (jsonDocumentMetadata == null)
+				return null;
+			if (jsonDocumentMetadata.LastModified != null)
+				jsonDocumentMetadata.LastModified = jsonDocumentMetadata.LastModified.Value.ToLocalTime();
+			return jsonDocumentMetadata;
 		}
 
 		/// <summary>
@@ -411,7 +420,11 @@ namespace Raven.Client.Embedded
 		public void StoreRecoveryInformation(Guid resourceManagerId,Guid txId, byte[] recoveryInformation)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var jObject = new RavenJObject {{"Resource-Manager-Id", resourceManagerId.ToString()}};
+			var jObject = new RavenJObject
+			{
+				{"Resource-Manager-Id", resourceManagerId.ToString()},
+				{Constants.NotForReplication, true}
+			};
 			database.PutStatic("transactions/recoveryInformation/" + txId, null, new MemoryStream(recoveryInformation), jObject);
 		}
 
@@ -592,6 +605,20 @@ namespace Raven.Client.Embedded
 		public DatabaseStatistics GetStatistics()
 		{
 			return database.Statistics;
+		}
+
+		/// <summary>
+		/// Retrieves the document metadata for the specified document key.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns>
+		/// The document metadata for the specifed document, or null if the document does not exist
+		/// </returns>
+		public JsonDocumentMetadata Head(string key)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			var jsonDocumentMetadata = database.GetDocumentMetadata(key, RavenTransactionAccessor.GetTransactionInformation());
+			return EnsureLocalDate(jsonDocumentMetadata);
 		}
 
 		/// <summary>

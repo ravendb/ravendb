@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Exceptions;
 #if !NET_3_5
 using Raven.Client.Document.Batches;
@@ -64,40 +65,40 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
-		/// Gets or sets a value indicating whether non authoritive information is allowed.
-		/// Non authoritive information is document that has been modified by a transaction that hasn't been committed.
-		/// The server provides the latest committed version, but it is known that attempting to write to a non authoritive document
+		/// Gets or sets a value indicating whether non authoritative information is allowed.
+		/// Non authoritative information is document that has been modified by a transaction that hasn't been committed.
+		/// The server provides the latest committed version, but it is known that attempting to write to a non authoritative document
 		/// will fail, because it is already modified.
-		/// If set to <c>false</c>, the session will wait <see cref="NonAuthoritiveInformationTimeout"/> for the transaction to commit to get an
-		/// authoritive information. If the wait is longer than <see cref="NonAuthoritiveInformationTimeout"/>, <see cref="NonAuthoritiveInformationException"/> is thrown.
+		/// If set to <c>false</c>, the session will wait <see cref="NonAuthoritativeInformationTimeout"/> for the transaction to commit to get an
+		/// authoritative information. If the wait is longer than <see cref="NonAuthoritativeInformationTimeout"/>, <see cref="NonAuthoritativeInformationException"/> is thrown.
 		/// </summary>
 		/// <value>
-		/// 	<c>true</c> if non authoritive information is allowed; otherwise, <c>false</c>.
+		/// 	<c>true</c> if non authoritative information is allowed; otherwise, <c>false</c>.
 		/// </value>
-		public bool AllowNonAuthoritiveInformation
+		public bool AllowNonAuthoritativeInformation
 		{
-			get { return shardSessions.First().Advanced.AllowNonAuthoritiveInformation; }
+			get { return shardSessions.First().Advanced.AllowNonAuthoritativeInformation; }
 			set
 			{
 				foreach (var documentSession in shardSessions)
 				{
-					documentSession.Advanced.AllowNonAuthoritiveInformation = value;
+					documentSession.Advanced.AllowNonAuthoritativeInformation = value;
 				}
 			}
 		}
 
 		/// <summary>
-		/// Gets or sets the timeout to wait for authoritive information if encountered non authoritive document.
+		/// Gets or sets the timeout to wait for authoritative information if encountered non authoritative document.
 		/// </summary>
 		/// <value></value>
-		public TimeSpan NonAuthoritiveInformationTimeout
+		public TimeSpan NonAuthoritativeInformationTimeout
 		{
-			get { return shardSessions.First().Advanced.NonAuthoritiveInformationTimeout; }
+			get { return shardSessions.First().Advanced.NonAuthoritativeInformationTimeout; }
 			set
 			{
 				foreach (var documentSession in shardSessions)
 				{
-					documentSession.Advanced.NonAuthoritiveInformationTimeout = value;
+					documentSession.Advanced.NonAuthoritativeInformationTimeout = value;
 				}
 			}
 		}
@@ -171,6 +172,15 @@ namespace Raven.Client.Shard
 			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
 
 			return GetSingleShardSession(shardIds).Advanced.HasChanged(entity);
+		}
+
+		/// <summary>
+		/// Defer commands to be executed on SaveChanges()
+		/// </summary>
+		/// <param name="commands">The commands to be executed</param>
+		public void Defer(params ICommandData[] commands)
+		{
+			throw new NotSupportedException("You cannot defer commands in a sharded session");
 		}
 
 		/// <summary>

@@ -205,18 +205,11 @@ namespace Raven.Database.Extensions
 			context.Response.StatusDescription = "Not Found";
 		}
 
-		public static void SetStatusToNonAuthoritiveInformation(this IHttpContext context)
-		{
-			context.Response.StatusCode = 203;
-			context.Response.StatusDescription = "Non-Authoritative Information";
-		}
-
 		public static void SetStatusToNotModified(this IHttpContext context)
 		{
 			context.Response.StatusCode = 304;
 			context.Response.StatusDescription = "Not Modified";
 		}
-
 
 		public static void SetStatusToNonAuthoritativeInformation(this IHttpContext context)
 		{
@@ -415,12 +408,13 @@ namespace Raven.Database.Extensions
 		{
 			byte[] bytes;
 			var etagValue = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-Match"];
-			if (etagValue == EmbeddedLastChangedDate)
+			var currentFileEtag = EmbeddedLastChangedDate + docPath;
+			if (etagValue == currentFileEtag)
 			{
 				context.SetStatusToNotModified();
 				return;
 			}
-			string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", "."); 
+			string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", ".");
 			using (var resource = asm.GetManifestResourceStream(resourceName))
 			{
 				if (resource == null)
@@ -430,7 +424,7 @@ namespace Raven.Database.Extensions
 				}
 				bytes = resource.ReadData();
 			}
-			context.Response.AddHeader("ETag", EmbeddedLastChangedDate);
+			context.Response.AddHeader("ETag", currentFileEtag);
 			context.Response.OutputStream.Write(bytes, 0, bytes.Length);
 		}
 

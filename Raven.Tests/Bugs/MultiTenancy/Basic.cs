@@ -34,10 +34,10 @@ namespace Raven.Tests.Bugs.MultiTenancy
 		[Fact]
 		public void CanCreateDatabaseUsingExtensionMethod()
 		{
-			using (GetNewServer(8080))
+			using (GetNewServer(8079))
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			}.Initialize())
 			{
 				store.DatabaseCommands.EnsureDatabaseExists("Northwind");
@@ -70,10 +70,10 @@ namespace Raven.Tests.Bugs.MultiTenancy
 		[Fact]
 		public void CanQueryTenantDatabase()
 		{
-			using (GetNewServer(8080))
+			using (GetNewServer(8079))
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			}.Initialize())
 			{
 				store.DatabaseCommands.EnsureDatabaseExists("Northwind");
@@ -99,10 +99,10 @@ namespace Raven.Tests.Bugs.MultiTenancy
 		[Fact]
 		public void CanQueryDefaultDatabaseQuickly()
 		{
-			using (GetNewServer(8080))
+			using (GetNewServer(8079))
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			}.Initialize())
 			{
 				store.DatabaseCommands.EnsureDatabaseExists("Northwind");
@@ -130,10 +130,10 @@ namespace Raven.Tests.Bugs.MultiTenancy
 		[Fact]
 		public void OpenSessionUsesSpecifiedDefaultDatabase()
 		{
-			using (GetNewServer(8080))
+			using (GetNewServer(8079))
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8080",
+				Url = "http://localhost:8079",
 				DefaultDatabase = "Northwind"
 			}.Initialize())
 			{
@@ -162,10 +162,10 @@ namespace Raven.Tests.Bugs.MultiTenancy
 		[Fact]
 		public void CanUseMultipleDatabases()
 		{
-			using(GetNewServer(8080))
+			using(GetNewServer(8079))
 			using(var store = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			}.Initialize())
 			{
 				using(var s = store.OpenSession())

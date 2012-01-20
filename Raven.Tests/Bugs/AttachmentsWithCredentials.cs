@@ -37,11 +37,11 @@ namespace Raven.Tests.Bugs
 		public AttachmentsWithCredentials()
 		{
 		    path = GetPath(DbName);
-			server = GetNewServerWithoutAnonymousAccess(8080, path);
+			server = GetNewServerWithoutAnonymousAccess(8079, path);
 
 			store = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			}.Initialize();
 		}
 

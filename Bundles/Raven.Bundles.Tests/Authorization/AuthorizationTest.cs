@@ -40,6 +40,7 @@ namespace Raven.Bundles.Tests.Authorization
 				AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.All,
 				Catalog = { Catalogs = { new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly) } },
 				DataDirectory = "Data",
+				Port = 8079,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 			});
 			store = new DocumentStore { Url = server.Database.Configuration.ServerUrl };

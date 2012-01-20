@@ -158,7 +158,7 @@ namespace Raven.Tests.Indexes
 			}.ToIndexDefinition(new DocumentConvention());
 			var original = new IndexDefinition {
 				Map = @"docs.Users
-	.Where(user => user.Name.Contains('C'))"
+	.Where(user => Enumerable.Contains(user.Name, 'C'))"
 			};
 			Assert.Equal(original, generated);
 		}

@@ -34,7 +34,7 @@ namespace Raven.Tests.Bugs
 		public WillNotFailSystemIfServerIsNotAvailableOnStartup()
 		{
 			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
 		[Fact]
@@ -42,11 +42,11 @@ namespace Raven.Tests.Bugs
 		{
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			}.Initialize())
 			{
 				Assert.Throws<WebException>(() => store.OpenSession().Load<User>("user/1"));
-				using (GetNewServer(8080,path))
+				using (GetNewServer(8079,path))
 				{
 					using (var session = store.OpenSession())
 					{

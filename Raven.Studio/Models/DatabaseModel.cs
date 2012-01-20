@@ -10,19 +10,19 @@ namespace Raven.Studio.Models
 	public class DatabaseModel : Model
 	{
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
-		private string name;
+		private readonly string name;
 
 		public Observable<TaskModel> SelectedTask { get; set; }
 
 		public DatabaseModel(string name, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
-			Name = name;
+			this.name = name;
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 
 			Tasks = new BindableCollection<TaskModel>(x => x.Name)
 			{
-				new ImportTask(asyncDatabaseCommands),
-				new ExportTask(asyncDatabaseCommands)
+				new ImportTask(),
+				new ExportTask(),
 			};
 			SelectedTask = new Observable<TaskModel> {Value = Tasks.FirstOrDefault()};
 			Statistics = new Observable<DatabaseStatistics>();
@@ -32,7 +32,6 @@ namespace Raven.Studio.Models
 
 		public BindableCollection<string> Indexes { get; private set; }
 
-
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
 			get { return asyncDatabaseCommands; }
@@ -41,11 +40,6 @@ namespace Raven.Studio.Models
 		public string Name
 		{
 			get { return name; }
-			set
-			{
-				name = value;
-				OnPropertyChanged();
-			}
 		}
 
 		public Observable<DatabaseStatistics> Statistics { get; set; }

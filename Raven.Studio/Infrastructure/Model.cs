@@ -22,7 +22,6 @@ namespace Raven.Studio.Infrastructure
 
 		internal void ForceTimerTicked()
 		{
-			lastRefresh = DateTime.MinValue;
 			IsForced = true;
 			TimerTicked();
 		}
@@ -37,7 +36,8 @@ namespace Raven.Studio.Infrastructure
 				if (currentTask != null)
 					return;
 
-				if (DateTime.Now - lastRefresh < GetRefreshRate())
+				var timeFromLastRefresh = DateTime.Now - lastRefresh;
+				if (timeFromLastRefresh < GetRefreshRate())
 					return;
 
 				using(OnWebRequest(request => request.Headers["Raven-Timer-Request"] = "true"))
@@ -59,8 +59,10 @@ namespace Raven.Studio.Infrastructure
 
 		private TimeSpan GetRefreshRate()
 		{
-			//if (Debugger.IsAttached)
-			//    return RefreshRate.Add(TimeSpan.FromMinutes(5));
+			if (IsForced)
+				return TimeSpan.FromSeconds(0.5);
+			if (Debugger.IsAttached)
+				return RefreshRate.Add(TimeSpan.FromSeconds(60));
 			return RefreshRate;
 		}
 
@@ -77,6 +79,5 @@ namespace Raven.Studio.Infrastructure
 			onWebRequest += action;
 			return new DisposableAction(() => onWebRequest = null);
 		}
-		
 	}
 }

@@ -33,13 +33,13 @@ namespace Raven.Client.Connection
 					let key = Extract(metadata, "@id", string.Empty)
 					let lastModified = Extract(metadata, Constants.LastModified, SystemTime.Now, (string d) => ConvertToUtcDate(d))
 					let etag = Extract(metadata, "@etag", Guid.Empty, (string g) => new Guid(g))
-					let nai = Extract(metadata, "Non-Authoritive-Information", false, (string b) => Convert.ToBoolean(b))
+					let nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b))
 					select new JsonDocument
 					{
 						Key = key,
 						LastModified = lastModified,
 						Etag = etag,
-						NonAuthoritiveInformation = nai,
+						NonAuthoritativeInformation = nai,
 						Metadata = metadata.FilterHeaders(isServerDocument: false),
 						DataAsJson = doc,
 					}).ToList();
@@ -105,7 +105,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Deserialize a request to a JsonDocument
 		/// </summary>
-		public static JsonDocument DeserializeJsonDocument(string key, string requestString,
+		public static JsonDocument DeserializeJsonDocument(string key, RavenJToken requestJson,
 #if !SILVERLIGHT
 			NameValueCollection headers, 
 #else 
@@ -113,17 +113,9 @@ namespace Raven.Client.Connection
 #endif
 			HttpStatusCode statusCode)
 		{
-			RavenJObject meta = null;
-			RavenJObject jsonData = null;
-			try
-			{
-				jsonData = RavenJObject.Parse(requestString);
-				meta = headers.FilterHeaders(isServerDocument: false);
-			}
-			catch (JsonReaderException jre)
-			{
-				throw new JsonReaderException("Invalid Json Response: \r\n" + requestString, jre);
-			}
+			var jsonData = (RavenJObject)requestJson;
+			var meta = headers.FilterHeaders(isServerDocument: false);
+			
 #if !SILVERLIGHT
 			var etag = headers["ETag"];
 			var lastModified = headers[Constants.LastModified];
@@ -134,7 +126,7 @@ namespace Raven.Client.Connection
 			return new JsonDocument
 			{
 				DataAsJson = jsonData,
-				NonAuthoritiveInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
+				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
 				Key = key,
 				Etag = new Guid(etag),
 				LastModified = DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture).ToLocalTime(),
@@ -142,5 +134,41 @@ namespace Raven.Client.Connection
 			};
 		}
 
+		/// <summary>
+		/// Deserialize a request to a JsonDocument
+		/// </summary>
+		public static JsonDocumentMetadata DeserializeJsonDocumentMetadata(string key,
+#if !SILVERLIGHT
+			NameValueCollection headers,
+#else 
+			IDictionary<string, IList<string>> headers,
+#endif
+			HttpStatusCode statusCode)
+		{
+			RavenJObject meta = null;
+			try
+			{
+				meta = headers.FilterHeaders(isServerDocument: false);
+			}
+			catch (JsonReaderException jre)
+			{
+				throw new JsonReaderException("Invalid Json Response", jre);
+			}
+#if !SILVERLIGHT
+			var etag = headers["ETag"];
+			var lastModified = headers[Constants.LastModified];
+#else
+			var etag = headers["ETag"].First();
+			var lastModified = headers[Constants.LastModified].First();
+#endif
+			return new JsonDocumentMetadata
+			{
+				NonAuthoritativeInformation = statusCode == HttpStatusCode.NonAuthoritativeInformation,
+				Key = key,
+				Etag = new Guid(etag),
+				LastModified = DateTime.ParseExact(lastModified, "r", CultureInfo.InvariantCulture).ToLocalTime(),
+				Metadata = meta
+			};
+		}
 	}
 }

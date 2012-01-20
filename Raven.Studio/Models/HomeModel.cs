@@ -44,6 +44,11 @@ namespace Raven.Studio.Models
 			return (long)x == 0;
 		}
 
+		public override void LoadModelParameters(string parameters)
+		{
+			RecentDocuments.Value.Pager.SetSkip(new UrlParser(parameters));
+		}
+
 		public override Task TimerTickedAsync()
 		{
 			return RecentDocuments.Value.TimerTickedAsync();

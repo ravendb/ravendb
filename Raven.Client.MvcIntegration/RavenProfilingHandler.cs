@@ -88,7 +88,7 @@ namespace Raven.Client.MvcIntegration
 			{
 				var value = cache.GetOrAdd(path, s =>
 				{
-					using(var stream = typeof(RavenProfilingHandler).Assembly.GetManifestResourceStream("Raven.Client.MvcIntegration." + path.Replace("/",".")))
+					using (var stream = typeof(RavenProfilingHandler).Assembly.GetManifestResourceStream("Raven.Client.MvcIntegration.Content." + path.Replace("/", ".")))
 					{
 						return new StreamReader(stream).ReadToEnd();
 					}

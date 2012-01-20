@@ -41,8 +41,9 @@
     <DefineConstants>TRACE;DEBUG;NET_4_0</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <NoWarn>1607</NoWarn>
+    <NoWarn>1607, 1591</NoWarn>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <DocumentationFile>bin\Debug\Raven.Database.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -61,8 +62,9 @@
     <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="BouncyCastle.Crypto">
-      <HintPath>..\SharedLibs\BouncyCastle.Crypto.dll</HintPath>
+    <Reference Include="BouncyCastle.Crypto, Version=1.7.4137.9688, Culture=neutral, PublicKeyToken=a4292a325f69b123, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\BouncyCastle.1.7.0\lib\Net40-Client\BouncyCastle.Crypto.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -80,11 +82,11 @@
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\SharedLibs\Newtonsoft.Json\Net\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.4.0.5\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
-      <HintPath>..\SharedLibs\NLog.dll</HintPath>
+      <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -105,9 +107,9 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="xunit, Version=1.5.0.1479, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+    <Reference Include="xunit, Version=1.9.0.1566, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\xunit.dll</HintPath>
+      <HintPath>..\packages\xunit.1.9.0.1566\lib\xunit.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -117,6 +119,11 @@
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
+    <Compile Include="Impl\ExceptionAggregator.cs" />
+    <Compile Include="Indexing\Sorting\RandomFieldComparatorSource.cs" />
+    <Compile Include="Indexing\Sorting\RandomFieldComparator.cs" />
+    <Compile Include="Indexing\Sorting\RandomSortField.cs" />
+    <Compile Include="Linq\Ast\TransformDynamicLambdaExpressions.cs" />
     <Compile Include="Rhino.Licensing\AbstractLicenseValidator.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryClient.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryHost.cs" />
@@ -159,6 +166,7 @@
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
+    <Compile Include="Server\Responders\DatabaseSize.cs" />
     <Compile Include="Server\Responders\Favicon.cs" />
     <Compile Include="Server\Responders\Licensing.cs" />
     <Compile Include="Server\Responders\Logs.cs" />
@@ -571,6 +579,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Commercial\RavenDB.public" />
+    <None Include="packages.config" />
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <ItemGroup>

@@ -11,7 +11,7 @@ namespace Raven.Tests.Bugs
 		public void CanTrackLoadActions()
 		{
 			using(GetNewServer())
-			using(var store = new DocumentStore{Url =  "http://localhost:8080"})
+			using(var store = new DocumentStore{Url =  "http://localhost:8079"})
 			{
 				store.Initialize();
 				// make the replication check here
@@ -38,7 +38,7 @@ namespace Raven.Tests.Bugs
 		public void CanTrackQueries()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore {Url = "http://localhost:8080"})
+			using (var store = new DocumentStore {Url = "http://localhost:8079"})
 			{
 				store.Initialize();
 				// make the replication check here
@@ -66,7 +66,7 @@ namespace Raven.Tests.Bugs
 		public void CanTrackPosts()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" })
+			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
 				store.Initialize();
 				// make the replication check here

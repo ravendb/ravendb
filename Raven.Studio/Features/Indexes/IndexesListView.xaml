@@ -5,6 +5,10 @@
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:Converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
 			 xmlns:Models="clr-namespace:Raven.Studio.Models"
+			 xmlns:Controls="clr-namespace:System.Windows.Controls"
+			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
+			 xmlns:Controls1="clr-namespace:Raven.Studio.Controls"
 			 mc:Ignorable="d"
 			 x:Name="this"
 			 x:Class="Raven.Studio.Features.Indexes.IndexesListView"
@@ -15,7 +19,7 @@
 	<UserControl.Resources>
 		<Converters:DataTemplateSelectorConverter x:Key="DataTemplateSelectorConverter">
 			<Converters:DataTemplateSelectorConverter.DataTemplates>
-				<Converters:TargetedDataTemplate TargetType="Raven.Studio.Models.IndexModel">
+				<Converters:TargetedDataTemplate TargetType="Raven.Studio.Models.IndexItem">
 					<Converters:TargetedDataTemplate.Template>
 						<DataTemplate>
 							<Grid Width="390"
@@ -154,10 +158,24 @@
 				</StackPanel>
 			</toolkit:DockPanel>
 		</toolkit:HeaderedContentControl.Header>
-		<ListBox Style="{StaticResource Style_ListBox_Indexes}"
-				 ItemsSource="{Binding GroupedIndexes}"
-				 ItemTemplate="{StaticResource IndexItemTemplate}"
-				 Margin="10,5" />
+
+		<Controls1:ListBoxMenu x:Name="IndexesList" 
+							   Style="{StaticResource Style_ListBox_Indexes}"
+							   ItemsSource="{Binding GroupedIndexes}"
+							   ItemTemplate="{StaticResource IndexItemTemplate}"
+							   Margin="10,5">
+
+			<Controls:ContextMenuService.ContextMenu>
+				<Controls:ContextMenu x:Name="IndexesContextMenu">
+					<Controls:MenuItem Header="Delete index"
+									   Command="{Binding Source={StaticResource DeleteIndexCommand}}"
+									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+					<Controls:MenuItem Header="Promote to auto index"
+									   Command="{Binding Source={StaticResource PromoteToAutoIndexCommand}}"
+									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+				</Controls:ContextMenu>
+			</Controls:ContextMenuService.ContextMenu>
+		</Controls1:ListBoxMenu>
 	</toolkit:HeaderedContentControl>
 
 </UserControl>

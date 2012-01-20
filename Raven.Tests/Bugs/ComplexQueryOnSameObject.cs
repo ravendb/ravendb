@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs
 			using(GetNewServer())
 			{
 				new WebClient().DownloadString(
-					"http://localhost:8080/indexes/dynamic/AdRequests?query=-Impressions%252CClick%253A%255B%255BNULL_VALUE%255D%255D%2520AND%2520Impressions%252CClick%253A*%2520AND%2520Impressions%252CClick.ClickTime%253A%255B20110205142325841%2520TO%2520NULL%255D&start=0&pageSize=128&aggregation=None");
+					"http://localhost:8079/indexes/dynamic/AdRequests?query=-Impressions%252CClick%253A%255B%255BNULL_VALUE%255D%255D%2520AND%2520Impressions%252CClick%253A*%2520AND%2520Impressions%252CClick.ClickTime%253A%255B20110205142325841%2520TO%2520NULL%255D&start=0&pageSize=128&aggregation=None");
 			}
 		}
 

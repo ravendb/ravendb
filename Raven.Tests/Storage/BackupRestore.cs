@@ -41,7 +41,7 @@ namespace Raven.Tests.Storage
 			base.Dispose();
 		}
 
-		private void DeleteIfExists(string DirectoryName)
+		private static void DeleteIfExists(string DirectoryName)
 		{
 			string directoryFullName = null;
 
@@ -56,6 +56,8 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterBackupRestoreCanReadDocument()
 		{
+			DeleteIfExists("raven.db.test.backup"); // for full backups, we can't have anything in the target dir
+
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
 			db.StartBackup("raven.db.test.backup", false);
@@ -73,9 +75,39 @@ namespace Raven.Tests.Storage
 			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 		}
 
+		[Fact(Skip = "Waiting feedback from microsoft with regards to how it works")]
+		public void AfterIncrementalBackupRestoreCanReadDocument()
+		{
+			DeleteIfExists("raven.db.test.backup"); // for full backups, we can't have anything in the target dir
+
+			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
+
+			db.StartBackup("raven.db.test.backup", false);
+			WaitForBackup(true);
+
+			db.Put("itamar", null, RavenJObject.Parse("{'email':'itamar@ayende.com'}"), new RavenJObject(), null);
+			db.StartBackup("raven.db.test.backup", true);
+			WaitForBackup(true);
+
+			db.Dispose();
+
+			DeleteIfExists("raven.db.test.esent");
+
+			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
+
+			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
+
+			var jObject = db.Get("ayende", null).ToJson();
+			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
+			jObject = db.Get("itamar", null).ToJson();
+			Assert.Equal("itamar@ayende.com", jObject.Value<string>("email"));
+		}
+
 		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedAfterRestore()
 		{
+			DeleteIfExists("raven.db.test.backup"); // for full backups, we can't have anything in the target dir
+
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 			db.StartBackup("raven.db.test.backup", false);
@@ -104,6 +136,8 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedBeforeRestore()
 		{
+			DeleteIfExists("raven.db.test.backup"); // for full backups, we can't have anything in the target dir
+
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
@@ -139,6 +173,8 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterFailedBackupRestoreCanDetectError()
 		{
+			DeleteIfExists("raven.db.test.backup"); // for full backups, we can't have anything in the target dir
+
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;

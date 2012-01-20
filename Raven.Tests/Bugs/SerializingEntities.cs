@@ -77,11 +77,12 @@ namespace Raven.Tests.Bugs
 			{
 				using(new RavenDbServer(new RavenConfiguration
 				{
-					DataDirectory = "Data"
+					DataDirectory = "Data",
+					Port = 8079
 				}))
 				using (var documentStore = new DocumentStore
 				{
-					Url = "http://localhost:8080"
+					Url = "http://localhost:8079"
 				}.Initialize())
 				{
 					

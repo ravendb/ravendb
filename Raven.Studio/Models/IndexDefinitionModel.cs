@@ -5,7 +5,6 @@ using System.Windows.Input;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Connection.Async;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -18,7 +17,6 @@ namespace Raven.Studio.Models
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
 		private string originalIndex;
-		private bool createNewIndexMode;
 
 		public IndexDefinitionModel()
 		{
@@ -32,6 +30,7 @@ namespace Raven.Studio.Models
 
 			statistics = Database.Value.Statistics;
 			statistics.PropertyChanged += (sender, args) => OnPropertyChanged("ErrorsCount");
+			ViewTitle = "Edit Index";
 		}
 
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
@@ -55,15 +54,15 @@ namespace Raven.Studio.Models
 			var urlParser = new UrlParser(parameters);
 			if (urlParser.GetQueryParam("mode") == "new")
 			{
-				createNewIndexMode = true;
-				OnPropertyChanged("ViewTitle");
+				ViewTitle = "Create an Index";
 				return;
 			}
 
 			var name = urlParser.Path;
 			if (string.IsNullOrWhiteSpace(name))
-				UrlUtil.Navigate("/indexes");
+				HandleIndexNotFound(null);
 
+			ViewTitle = "Edit Index: " + Name;
 			DatabaseCommands.GetIndexAsync(name)
 				.ContinueOnSuccessInTheUIThread(index1 =>
 				                   {
@@ -79,9 +78,12 @@ namespace Raven.Studio.Models
 
 		public static void HandleIndexNotFound(string name)
 		{
-			var notification = new Notification(string.Format("Could not find '{0}' index", name), NotificationLevel.Warning);
-			ApplicationModel.Current.AddNotification(notification);
-			UrlUtil.Navigate("/documents");
+			if (string.IsNullOrWhiteSpace(name) == false)
+			{
+				var notification = new Notification(string.Format("Could not find '{0}' index", name), NotificationLevel.Warning);
+				ApplicationModel.Current.AddNotification(notification);
+			}
+			UrlUtil.Navigate("/indexes");
 		}
 
 		private void ResetToOriginal()
@@ -127,7 +129,8 @@ namespace Raven.Studio.Models
 				var field = Fields.FirstOrDefault(f => f.Name == localItem.Key);
 				if (field == null)
 				{
-					field = new FieldProperties { Name = localItem.Key };
+					field = FieldProperties.Defualt;
+					field.Name = localItem.Key;
 					Fields.Add(field);
 				}
 				setter(field, localItem.Value);
@@ -144,9 +147,20 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		//public string MapUrl
+		//{
+		//    get{return }
+		//}
+
+		private string viewTitle;
 		public string ViewTitle
 		{
-			get { return createNewIndexMode ? "Create an Index" : "Index: " + Name; }
+			get { return viewTitle; }
+			set
+			{
+				viewTitle = value;
+				OnPropertyChanged();
+			}
 		}
 
 		private bool showReduce;

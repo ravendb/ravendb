@@ -4,8 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
+using System.Windows;
 
 namespace Raven.Studio.Controls.Editors
 {
@@ -16,7 +18,9 @@ namespace Raven.Studio.Controls.Editors
 			using (var manifestResourceStream = typeof(SettingsRegister).Assembly.GetManifestResourceStream("Raven.Studio.Settings.dat"))
 			{
 				if (manifestResourceStream == null || manifestResourceStream.Length == 0)
+				{
 					return;
+				}
 
 				using (var reader = new BinaryReader(manifestResourceStream))
 				using (var aes = new AesManaged())
@@ -27,7 +31,9 @@ namespace Raven.Studio.Controls.Editors
 					using (var cryptoStream = new CryptoStream(manifestResourceStream, aes.CreateDecryptor(), CryptoStreamMode.Read))
 					using (var cryptoReader = new BinaryReader(cryptoStream))
 					{
-						ActiproSoftware.Products.ActiproLicenseManager.RegisterLicense(cryptoReader.ReadString(), cryptoReader.ReadString());
+						var licensee = cryptoReader.ReadString();
+						var licenseKey = cryptoReader.ReadString();
+						ActiproSoftware.Products.ActiproLicenseManager.RegisterLicense(licensee, licenseKey);
 					}
 				}
 			}

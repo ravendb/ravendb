@@ -12,7 +12,7 @@ namespace Raven.Tests.Bugs
 		public void ShouldBePossible()
 		{
 			using (GetNewServer())
-			using (IDocumentStore store = new DocumentStore {Url = "http://localhost:8080"}.Initialize())
+			using (IDocumentStore store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
 				using (IDocumentSession session = store.OpenSession())
 				{

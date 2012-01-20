@@ -93,9 +93,9 @@ namespace Raven.Database.Server.Responders
 						context.SetStatusToNotModified();
 						return;
 					}
-					if (documentMetadata.NonAuthoritiveInformation != null && documentMetadata.NonAuthoritiveInformation.Value)
+					if (documentMetadata.NonAuthoritativeInformation != null && documentMetadata.NonAuthoritativeInformation.Value)
 					{
-						context.SetStatusToNonAuthoritiveInformation();
+						context.SetStatusToNonAuthoritativeInformation();
 					}
 					
 					GetDocumentDirectly(context, docId);
@@ -120,11 +120,11 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
-			if (documentMetadata.NonAuthoritiveInformation != null && documentMetadata.NonAuthoritiveInformation.Value)
+			if (documentMetadata.NonAuthoritativeInformation != null && documentMetadata.NonAuthoritativeInformation.Value)
 			{
-				context.SetStatusToNonAuthoritiveInformation();
+				context.SetStatusToNonAuthoritativeInformation();
 			}
-
+			documentMetadata.Metadata[Constants.LastModified] = documentMetadata.LastModified; //HACK ? to get the document's last modified value into the response headers
 			context.WriteHeaders(documentMetadata.Metadata, documentMetadata.Etag.Value);
 		}
 
@@ -136,9 +136,9 @@ namespace Raven.Database.Server.Responders
 				context.SetStatusToNotFound();
 				return;
 			}
-			if (doc.NonAuthoritiveInformation != null && doc.NonAuthoritiveInformation.Value)
+			if (doc.NonAuthoritativeInformation != null && doc.NonAuthoritativeInformation.Value)
 			{
-				context.SetStatusToNonAuthoritiveInformation();
+				context.SetStatusToNonAuthoritativeInformation();
 			}
 			Debug.Assert(doc.Etag != null);
 			doc.Metadata[Constants.LastModified] = doc.LastModified;

@@ -46,7 +46,7 @@ namespace Raven.Client.Linq
 		public string CurrentPath { get { return currentPath; } }
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="RavenQueryProviderProcessor{T}"/> class.
 		/// </summary>
 		/// <param name="queryGenerator">The document query generator.</param>
 		/// <param name="customizeQuery">The customize query.</param>
@@ -440,13 +440,10 @@ namespace Raven.Client.Linq
 			});
 		}
 
-		private void VisitContains(MethodCallExpression expression)
+		private void VisitContains(MethodCallExpression _)
 		{
-			var memberInfo = GetMember(expression.Object);
-
-			luceneQuery.WhereContains(
-				memberInfo.Path,
-				GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
+			throw new NotSupportedException(@"Contains is not supported, doing a substring match over a text field is a vey slow operation, and is not allowed using the Linq API.
+The recommended method is to use full text search (mark the field as Analyzed and use the Search() method to query it.");
 		}
 
 		private void VisitStartsWith(MethodCallExpression expression)
@@ -627,19 +624,17 @@ namespace Raven.Client.Linq
 					{
 						throw new InvalidOperationException("Could not extract value from " + expression);
 					}
-					luceneQuery.Search(expressionInfo.Path, (string)value);
+					luceneQuery.Search(expressionInfo.Path, (string) value);
+					if (GetValueFromExpressionWithoutConversion(expression.Arguments[3], out value) == false)
+					{
+						throw new InvalidOperationException("Could not extract value from " + expression);
+					}
+					luceneQuery.Boost((decimal) value);
 					break;
 				case "In":
 					var memberInfo = GetMember(expression.Arguments[0]);
 					var objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
-
-					var array = objects as object[];
-					if (array != null)
-						luceneQuery.WhereContains(memberInfo.Path, array);
-					else
-					{
-						luceneQuery.WhereContains(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
-					}
+					luceneQuery.WhereIn(memberInfo.Path, ((IEnumerable) objects).Cast<object>());
 
 					break;
 				default:
@@ -837,6 +832,7 @@ namespace Raven.Client.Linq
 			luceneQuery.AddOrder(expressionMemberInfo.Path, descending, type);
 		}
 
+		private bool insideSelect;
 		private void VisitSelect(Expression operand)
 		{
 			var lambdaExpression = operand as LambdaExpression;
@@ -844,13 +840,25 @@ namespace Raven.Client.Linq
 			switch (body.NodeType)
 			{
 				case ExpressionType.Convert:
-					VisitSelect(((UnaryExpression)body).Operand);
+					insideSelect = true;
+					try
+					{
+						VisitSelect(((UnaryExpression)body).Operand);
+					}
+					finally
+					{
+						insideSelect = false;
+					}
 					break;
 				case ExpressionType.MemberAccess:
 					MemberExpression memberExpression = ((MemberExpression)body);
-					AddToFieldsToFetch(memberExpression.Member.Name, memberExpression.Member.Name) ;
+					AddToFieldsToFetch(memberExpression.Member.Name, memberExpression.Member.Name);
+					if(insideSelect == false)
+					{
+						FieldsToRename[memberExpression.Member.Name] = null;
+					}
 					break;
-				//Anonomyous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
+				//Anonymous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
 				//See http://blogs.msdn.com/b/sreekarc/archive/2007/04/03/immutable-the-new-anonymous-type.aspx
 				case ExpressionType.New:
 					var newExpression = ((NewExpression)body);
@@ -875,7 +883,10 @@ namespace Raven.Client.Linq
 						if (field == null)
 							continue;
 
-						AddToFieldsToFetch(field.Member.Name, field.Member.Name);
+						var expression = GetMemberExpression(field.Expression);
+						var renamedField = GetSelectPath(expression);
+
+						AddToFieldsToFetch(renamedField, field.Member.Name);
 					}
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
@@ -1169,8 +1180,16 @@ namespace Raven.Client.Linq
 					if (safeToModify.TryGetValue(rename.Key, out val) == false)
 						continue;
 					changed = true;
-					safeToModify.Remove(rename.Key);
-					safeToModify[rename.Value] = val;
+					var ravenJObject = val as RavenJObject;
+					if(rename.Value == null && ravenJObject != null)
+					{
+						safeToModify = ravenJObject;
+					}
+					else if(rename.Value != null)
+					{
+						safeToModify[rename.Value] = val;
+						safeToModify.Remove(rename.Key);
+					}
 				}
 				if (!changed) 
 					continue;

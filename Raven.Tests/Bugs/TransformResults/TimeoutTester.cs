@@ -17,7 +17,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		public void will_timeout_query_after_some_time()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				new Answers_ByAnswerEntity().Execute(store);
 				var answerId = "";
@@ -34,7 +34,7 @@ namespace Raven.Tests.Bugs.TransformResults
 						.Statistics(out stats)
 						.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
 						.OrderBy(x => x.Content)
-						.Where(x => x.Content.Contains(content))
+						.Where(x => x.Content == (content))
 						.Skip(0).Take(1)
 						.As<AnswerEntity>()
 						.FirstOrDefault();

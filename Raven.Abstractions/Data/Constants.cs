@@ -7,6 +7,7 @@ namespace Raven.Abstractions.Data
 		public const string DefaultDatabase = "<default>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
 		public const string DistanceFieldName = "__distance";
+		public const string RandomFieldName = "__random";
 		public const string NullValueNotAnalyzed = "[[NULL_VALUE]]";
 		public const string EmptyStringNotAnalyzed = "[[EMPTY_STRING]]";
 		public const string NullValue = "NULL_VALUE";
@@ -18,5 +19,6 @@ namespace Raven.Abstractions.Data
 		public const string RavenReadOnly = "Raven-Read-Only";
 		public const string RavenDocumentDoesNotExists = "Raven-Document-Does-Not-Exists";
 		public const string Metadata = "@metadata";
+		public const string NotForReplication = "Raven-Not-For-Replication";
 	}
 }

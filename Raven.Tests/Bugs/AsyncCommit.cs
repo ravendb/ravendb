@@ -14,7 +14,7 @@ namespace Raven.Tests.Bugs
 	public class AsyncCommit : LocalClientTest
 	{
 		[Fact]
-		public void DtcCommitWillGiveNewResultIfNonAuthoritiveIsSetToFalse()
+		public void DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalse()
 		{
 			using (var documentStore = NewDocumentStore())
 			{
@@ -35,7 +35,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = documentStore.OpenSession())
 				{
-					s.Advanced.AllowNonAuthoritiveInformation = false;
+					s.Advanced.AllowNonAuthoritativeInformation = false;
 					var user = s.Load<AccurateCount.User>("users/1");
 					Assert.Equal("Rahien", user.Name);
 				}
@@ -43,7 +43,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void DtcCommitWillGiveNewResultIfNonAuthoritiveIsSetToFalseWhenQuerying()
+		public void DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalseWhenQuerying()
 		{
 			using (var documentStore = NewDocumentStore())
 			{
@@ -75,7 +75,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = documentStore.OpenSession())
 				{
-					s.Advanced.AllowNonAuthoritiveInformation = false;
+					s.Advanced.AllowNonAuthoritativeInformation = false;
 					var user = s.Advanced.LuceneQuery<AccurateCount.User>("test")
 						.FirstOrDefault();
 					Assert.Equal("Rahien", user.Name);

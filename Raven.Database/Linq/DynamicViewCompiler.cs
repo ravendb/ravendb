@@ -245,7 +245,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 					invocation = (InvocationExpression) target.TargetObject;
 					target = (MemberReferenceExpression)invocation.TargetObject;
 				}
-				var lambdaExpression = ((LambdaExpression)invocation.Arguments[0]);
+				var lambdaExpression = GetLambdaExpression(invocation);
 				groupByParamter = lambdaExpression.Parameters[0].ParameterName;
 				groupBySource = lambdaExpression.ExpressionBody;
 			}
@@ -286,6 +286,22 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			                   				},
 			                   			ExpressionBody = groupBySource
 			                   		})));
+		}
+
+		private static LambdaExpression GetLambdaExpression(InvocationExpression invocation)
+		{
+			var expression = invocation.Arguments[0];
+			var castExpression = expression as CastExpression;
+			if(castExpression != null)
+			{
+				expression = castExpression.Expression;
+			}
+			var parenthesizedExpression = expression as ParenthesizedExpression;
+			if(parenthesizedExpression != null)
+			{
+				expression = parenthesizedExpression.Expression;
+			}
+			return ((LambdaExpression)expression);
 		}
 
 		private void ValidateMapReduceFields(List<string> mapFields)
@@ -347,24 +363,24 @@ Reduce only fields: {2}
 		{
 			public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)
 			{
-				AddDocumentIdFieldToLambdaIfCreatingNewObject(lambdaExpression);
+				if (AddDocumentIdFieldToLambdaIfCreatingNewObject(lambdaExpression))
+					return null;
 				return base.VisitLambdaExpression(lambdaExpression, data);
 			}
 
-			private void AddDocumentIdFieldToLambdaIfCreatingNewObject(LambdaExpression lambdaExpression)
+			private bool AddDocumentIdFieldToLambdaIfCreatingNewObject(LambdaExpression lambdaExpression)
 			{
-				if (lambdaExpression.ExpressionBody is ObjectCreateExpression == false)
-					return;
-				var objectCreateExpression = ((ObjectCreateExpression)lambdaExpression.ExpressionBody);
-				if (objectCreateExpression.IsAnonymousType == false)
-					return;
+				var objectCreateExpression = QueryParsingUtils.GetAnonymousCreateExpression(lambdaExpression.ExpressionBody) as ObjectCreateExpression;
+
+				if (objectCreateExpression == null || objectCreateExpression.IsAnonymousType == false)
+					return false;
 
 				var objectInitializer = objectCreateExpression.ObjectInitializer;
 
 				var identifierExpression = new IdentifierExpression(lambdaExpression.Parameters[0].ParameterName);
 
 				if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
-					return;
+					return false;
 
 				objectInitializer.CreateExpressions.Add(
 					new NamedArgumentExpression
@@ -372,6 +388,8 @@ Reduce only fields: {2}
 						Name = Constants.DocumentIdFieldName,
 						Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
 					});
+
+				return true;
 			}
 
 		}

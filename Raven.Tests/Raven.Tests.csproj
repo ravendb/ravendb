@@ -83,11 +83,11 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE\ReferenceAssemblies\v2.0\Microsoft.VisualStudio.DebuggerVisualizers.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\SharedLibs\Newtonsoft.Json\Net\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.4.0.5\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
-      <HintPath>..\SharedLibs\NLog.dll</HintPath>
+      <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
     </Reference>
     <Reference Include="Rhino.Mocks">
       <HintPath>..\SharedLibs\Rhino.Mocks.dll</HintPath>
@@ -109,12 +109,11 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="xunit, Version=1.1.0.1323, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\SharedLibs\xunit.dll</HintPath>
+    <Reference Include="xunit, Version=1.9.0.1566, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\packages\xunit.1.9.0.1566\lib\xunit.dll</HintPath>
     </Reference>
-    <Reference Include="xunit.extensions">
-      <HintPath>..\SharedLibs\xunit.extensions.dll</HintPath>
+    <Reference Include="xunit.extensions, Version=1.9.0.1566, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <HintPath>..\packages\xunit.extensions.1.9.0.1566\lib\xunit.extensions.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -164,6 +163,7 @@
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
+    <Compile Include="Bugs\Attachments.cs" />
     <Compile Include="Bugs\BackwardCompatability.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
@@ -171,6 +171,7 @@
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\CompiledIndexesNhsevidence.cs" />
+    <Compile Include="Bugs\ComplexIndexes.cs" />
     <Compile Include="Bugs\ConflictsWithIIS.cs" />
     <Compile Include="Bugs\ConflictsWithRemote.cs" />
     <Compile Include="Bugs\CreatingIndexes.cs" />
@@ -179,6 +180,7 @@
     <Compile Include="Bugs\DictionaryOfDateTime.cs" />
     <Compile Include="Bugs\DynamicQuerySorting.cs" />
     <Compile Include="Bugs\EmbeddableDocumentStoreUsingUrlWithConnectionString.cs" />
+    <Compile Include="Bugs\EmptyAttachments.cs" />
     <Compile Include="Bugs\Everett.cs" />
     <Compile Include="Bugs\FullTextSearchOnTags.cs" />
     <Compile Include="Bugs\Identifiers\SpecialCharactersOnIIS.cs" />
@@ -201,9 +203,11 @@
     <Compile Include="Bugs\MapReduceWithDifferentFieldNames.cs" />
     <Compile Include="Bugs\MapReduceWithDifferentFieldNamesFromTheStronglyTypedType.cs" />
     <Compile Include="Bugs\MapRedue\Chris.cs" />
+    <Compile Include="Bugs\MapRedue\LetInReduceFunction.cs" />
     <Compile Include="Bugs\MapRedue\Document.cs" />
     <Compile Include="Bugs\MapRedue\DocumentView.cs" />
     <Compile Include="Bugs\MapRedue\MapReduceIndex.cs" />
+    <Compile Include="Bugs\MapRedue\TreeWithChildrenCount.cs" />
     <Compile Include="Bugs\Marcus.cs" />
     <Compile Include="Bugs\Matthew.cs" />
     <Compile Include="Bugs\MetadataBugs.cs" />
@@ -215,6 +219,7 @@
     <Compile Include="Bugs\NestedProjection.cs" />
     <Compile Include="Bugs\NestedTransactions.cs" />
     <Compile Include="Bugs\OfflineConcurrency.cs" />
+    <Compile Include="Bugs\Orders.cs" />
     <Compile Include="Bugs\PoisonIndexes\PoisonIndex.cs" />
     <Compile Include="Bugs\Queries\Boolean.cs" />
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
@@ -225,6 +230,7 @@
     <Compile Include="Bugs\RacielrodTest.cs" />
     <Compile Include="Bugs\RecursiveQueries.cs" />
     <Compile Include="Bugs\Reindexing.cs" />
+    <Compile Include="Bugs\ReservedWords.cs" />
     <Compile Include="Bugs\RoundCrisis.cs" />
     <Compile Include="Bugs\SelfReference.cs" />
     <Compile Include="Bugs\SerializingAndDeserializingWithRaven.cs" />
@@ -452,6 +458,7 @@
     <Compile Include="Bugs\Stacey\InServerDatabase.cs" />
     <Compile Include="Bugs\Stacey\Models.cs" />
     <Compile Include="Bugs\Stacey\Aspects.cs" />
+    <Compile Include="Bugs\tmp.cs" />
     <Compile Include="Bugs\TransformResults\SortHintTester.cs" />
     <Compile Include="Bugs\SortingById.cs" />
     <Compile Include="Bugs\SortingOnLong.cs" />
@@ -496,6 +503,7 @@
     <Compile Include="Bugs\MapRedue\VersionedDocuments.cs" />
     <Compile Include="Bugs\VeryBigResultSet.cs" />
     <Compile Include="Bugs\VeryBigResultSetRemote.cs" />
+    <Compile Include="Bugs\Vlad.cs" />
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
     <Compile Include="Bugs\Vlko\RelationIdIndex.cs" />
     <Compile Include="Bugs\WaitForNonStaleResultsAsOfLastWrite.cs" />
@@ -534,6 +542,7 @@
     <Compile Include="Faceted\Camera.cs" />
     <Compile Include="Faceted\FacetedIndex.cs" />
     <Compile Include="Faceted\FacetedIndexTestHelper.cs" />
+    <Compile Include="Indexes\BoostingDuringIndexing.cs" />
     <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
     <Compile Include="Indexes\CreateIndexesWithCasting.cs" />
@@ -562,10 +571,20 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\AllPropertiesIndex.cs" />
+    <Compile Include="MailingList\Asger.cs" />
+    <Compile Include="MailingList\Benjamin.cs" />
+    <Compile Include="MailingList\BrainV.cs" />
+    <Compile Include="MailingList\BAM.cs" />
     <Compile Include="MailingList\Build570.cs" />
     <Compile Include="MailingList\HierarchicalInheritanceIndexing.cs" />
     <Compile Include="MailingList\IisQueryLengthIssues.cs" />
+    <Compile Include="MailingList\IndexMetadata.cs" />
+    <Compile Include="MailingList\IndexWithUnion.cs" />
+    <Compile Include="MailingList\IndexWithWhere.cs" />
+    <Compile Include="MailingList\JBA.cs" />
     <Compile Include="MailingList\JohanNilsson.cs" />
+    <Compile Include="MailingList\Justin.cs" />
     <Compile Include="MailingList\ListCount.cs" />
     <Compile Include="MailingList\MapReduceIssue\CanPageThroughReduceResults.cs" />
     <Compile Include="MailingList\DynamicQueryIndexSelection.cs" />
@@ -574,6 +593,7 @@
     <Compile Include="MailingList\GuidProjection.cs" />
     <Compile Include="MailingList\LazyStats.cs" />
     <Compile Include="MailingList\PhilJones.cs" />
+    <Compile Include="MailingList\Random.cs" />
     <Compile Include="MailingList\RavenDbPutTest.cs" />
     <Compile Include="MailingList\NicolasGarfinkiel.cs" />
     <Compile Include="MailingList\Rob.cs" />
@@ -582,11 +602,16 @@
     <Compile Include="MailingList\RobStats\StatisticsBug.cs" />
     <Compile Include="MailingList\RobStats\Summary.cs" />
     <Compile Include="MailingList\RobStats\TheIndex.cs" />
+    <Compile Include="MailingList\ronne.cs" />
+    <Compile Include="MailingList\Samina.cs" />
     <Compile Include="MailingList\SetBased.cs" />
     <Compile Include="MailingList\SkippedResults.cs" />
+    <Compile Include="MailingList\spokeypokey\Spokey.cs" />
+    <Compile Include="MailingList\spokeypokey\Spokey5.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey2.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey3.cs" />
+    <Compile Include="MailingList\spokeypokey\spokeypokey4.cs" />
     <Compile Include="MailingList\Stacey.cs" />
     <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\TimeZoneQueries.cs" />
@@ -678,6 +703,7 @@
     <Compile Include="Storage\GeneralStorage.cs" />
     <Compile Include="Storage\IndexStaleViaEtags.cs" />
     <Compile Include="Storage\ReduceStaleness.cs" />
+    <Compile Include="Storage\SimilarIndexNames.cs" />
     <Compile Include="Stress\BigDoc.cs" />
     <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
@@ -780,6 +806,7 @@
     </None>
     <EmbeddedResource Include="DefaultLogging.config" />
     <EmbeddedResource Include="MailingList\MapReduceIssue\MvcMusicStore_Dump.json" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

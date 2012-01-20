@@ -13,7 +13,7 @@ namespace Raven.Tests.MailingList.MapReduceIssue
 			using(GetNewServer())
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8080/"
+				Url = "http://localhost:8079/"
 			}.Initialize())
 			{
 				using (var stream = typeof(CanPageThroughReduceResults).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.MapReduceIssue.MvcMusicStore_Dump.json"))

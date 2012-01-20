@@ -79,13 +79,21 @@ namespace Raven.Client.Silverlight.Connection
 				webRequest.ContentType = "application/json; charset=utf-8";
 		}
 
+		public Task<RavenJToken> ReadResponseJsonAsync()
+		{
+			return ReadResponseStringAsync()
+				.ContinueWith(task => RavenJToken.Parse(task.Result));
+		}
+
+		public Task ExecuteRequest()
+		{
+			return ReadResponseStringAsync();
+		}
+
 		/// <summary>
 		/// Begins the read response string.
 		/// </summary>
-		/// <param name="callback">The callback.</param>
-		/// <param name="state">The state.</param>
-		/// <returns></returns>
-		public Task<string> ReadResponseStringAsync()
+		private Task<string> ReadResponseStringAsync()
 		{
 			return WaitForTask.ContinueWith(_ => webRequest
 			                                     	.GetResponseAsync()
@@ -263,8 +271,21 @@ namespace Raven.Client.Silverlight.Connection
 		/// </summary>
 		public Task WriteAsync(string data)
 		{
-			var byteArray = Encoding.UTF8.GetBytes(data);
-			return WriteAsync(byteArray);
+			return WaitForTask.ContinueWith(_ =>
+			                                webRequest.GetRequestStreamAsync()
+			                                	.ContinueWith(task =>
+			                                	{
+			                                		var dataStream = task.Result;
+			                                		var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
+			                                		return streamWriter.WriteAsync(data)
+			                                			.ContinueWith(writeTask =>
+			                                			{
+			                                				streamWriter.Dispose();
+			                                				dataStream.Dispose();
+			                                				return writeTask;
+			                                			}).Unwrap();
+			                                	}).Unwrap())
+				.Unwrap();
 		}
 
 		/// <summary>

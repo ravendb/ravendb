@@ -53,9 +53,16 @@ namespace Raven.Studio.Models
 			if (SkipAutoRefresh && IsForced == false)
 				return null;
 
-			if (CustomFetchingOfDocuments != null)
-				return CustomFetchingOfDocuments(this);
+			if (IsForced)
+				IsLoadingDocuments = true;
 
+			var fetchingDocuments = CustomFetchingOfDocuments != null ? CustomFetchingOfDocuments(this) : DefaultFetchingOfDocuments();
+			return fetchingDocuments
+				.ContinueOnSuccessInTheUIThread(() => IsLoadingDocuments = false);
+		}
+
+		private Task DefaultFetchingOfDocuments()
+		{
 			return ApplicationModel.DatabaseCommands.GetDocumentsAsync(Pager.Skip, Pager.PageSize)
 				.ContinueOnSuccess(docs => Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
 		}
@@ -70,6 +77,18 @@ namespace Raven.Studio.Models
 		}
 
 		public static DocumentSize DocumentSize { get; private set; }
+
+		private bool isLoadingDocuments;
+		public bool IsLoadingDocuments
+		{
+			get { return isLoadingDocuments; }
+			set
+			{
+				isLoadingDocuments = value;
+				OnPropertyChanged();
+			}
+		}
+
 	}
 
 	public class DocumentSize : NotifyPropertyChangedBase

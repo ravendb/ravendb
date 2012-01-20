@@ -90,7 +90,7 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="RavenQueryProvider&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
 		/// </summary>
 		public RavenQueryProvider(
 			IDocumentQueryGenerator queryGenerator,

@@ -34,12 +34,16 @@ namespace Raven.Studio.Infrastructure
 			}
 		}
 
-		public static void UpdateAllFromServer()
+		public static List<Model> UpdateAllFromServer()
 		{
+			var result = new List<Model>();
 			foreach (var ctx in CurrentViews.Select(view => view.DataContext).Distinct())
 			{
-				InvokeOnModel(ctx, model => model.ForceTimerTicked());
+				var x = InvokeOnModel(ctx, model => model.ForceTimerTicked());
+				if(x != null)
+					result.Add(x);
 			}
+			return result;
 		}
 
 		private static void InvokeTimerTicked(object ctx)
@@ -47,14 +51,14 @@ namespace Raven.Studio.Infrastructure
 			InvokeOnModel(ctx, model => model.TimerTicked());
 		}
 
-		private static void InvokeOnModel(object ctx, Action<Model> action)
+		private static Model InvokeOnModel(object ctx, Action<Model> action)
 		{
 			var model = ctx as Model;
 			if (model == null)
 			{
 				var observable = ctx as IObservable;
 				if (observable == null)
-					return;
+					return null;
 				model = observable.Value as Model;
 				if (model == null)
 				{
@@ -67,10 +71,11 @@ namespace Raven.Studio.Infrastructure
 					                              	InvokeOnModel(ctx, action);
 					                              };
 					observable.PropertyChanged += observableOnPropertyChanged;
-					return;
+					return null;
 				}
 			}
 			action(model);
+			return model;
 		}
 
 

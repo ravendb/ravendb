@@ -9,7 +9,7 @@ namespace Raven.Studio.Commands
 	{
 		public override void Execute(object parameter)
 		{
-			var documentsIds = Items
+			var documentsIds = SelectedItems
 				.Select(x => x.Id)
 				.ToList();
 

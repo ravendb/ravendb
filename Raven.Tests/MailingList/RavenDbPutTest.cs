@@ -22,7 +22,7 @@ namespace Raven.Tests.MailingList
 		public void strangely_puts_after_just_a_query()
 		{
 			using(GetNewServer())
-			using (var documentStore = new DocumentStore { Url = "http://localhost:8080/" })
+			using (var documentStore = new DocumentStore { Url = "http://localhost:8079/" })
 			{
 				documentStore.Conventions.DefaultQueryingConsistency = Raven.Client.Document.ConsistencyOptions.QueryYourWrites;
 

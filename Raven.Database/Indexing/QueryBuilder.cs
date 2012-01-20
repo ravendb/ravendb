@@ -15,8 +15,8 @@ namespace Raven.Database.Indexing
 {
 	public static class QueryBuilder
 	{
-		static readonly Regex untokenizedQuery = new Regex(@"([\w\d_]+?):(\[\[.+?\]\])", RegexOptions.Compiled);
-		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):(\<\<.+?\>\>)", RegexOptions.Compiled);
+		static readonly Regex untokenizedQuery = new Regex(@"([\w\d_]+?):\s*(\[\[.+?\]\])", RegexOptions.Compiled);
+		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled);
 
 		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
 		{
@@ -48,10 +48,25 @@ namespace Raven.Database.Indexing
 				var field = searchMatch.Groups[1].Value;
 				var terms = searchMatch.Groups[2].Value.Substring(2, searchMatch.Groups[2].Length - 4);
 
+				string boost = "";
+				if (string.IsNullOrWhiteSpace(searchMatch.Groups[3].Value) == false)
+				{
+					boost = searchMatch.Groups[3].Value;
+				}
+
 				queryStringBuilder.Remove(searchMatch.Index, searchMatch.Length);
 				foreach (var term in terms.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
 				{
-					queryStringBuilder.Insert(searchMatch.Index, new StringBuilder().Append(field).Append(':').Append(term).Append(' '));
+					switch (term) // ignore invalid options
+					{
+						case "OR":
+						case "AND":
+						case "||":
+						case "&&":
+							continue;
+					}
+
+					queryStringBuilder.Insert(searchMatch.Index, new StringBuilder().Append(field).Append(':').Append(term).Append(boost).Append(' '));
 				}
 			}
 			return queryStringBuilder.ToString();

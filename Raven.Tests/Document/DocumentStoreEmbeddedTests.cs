@@ -106,7 +106,7 @@ namespace Raven.Tests.Document
 
 
 		[Fact]
-		public void Will_get_notification_when_reading_non_authoritive_information()
+		public void Will_get_notification_when_reading_non_authoritative_information()
 		{
 			using (var documentStore = NewDocumentStore())
 			{
@@ -127,9 +127,9 @@ namespace Raven.Tests.Document
 					{
 						using (var session2 = documentStore.OpenSession())
 						{
-							session2.Advanced.AllowNonAuthoritiveInformation = false;
-							session2.Advanced.NonAuthoritiveInformationTimeout = TimeSpan.Zero;
-							Assert.Throws<NonAuthoritiveInformationException>(()=>session2.Load<Company>(company.Id));
+							session2.Advanced.AllowNonAuthoritativeInformation = false;
+							session2.Advanced.NonAuthoritativeInformationTimeout = TimeSpan.Zero;
+							Assert.Throws<NonAuthoritativeInformationException>(()=>session2.Load<Company>(company.Id));
 						}
 					}
 				}
@@ -231,7 +231,7 @@ namespace Raven.Tests.Document
 				{
 					var companyFromRaven = session2.Query<Company>("Companies/Name")
 						.Customize(query => query.WaitForNonStaleResults())
-						.Where(x=>x.Name.Contains(company.Name))
+						.Where(x=>x.Name == (company.Name))
 						.ToArray()
 						.First();
 					Assert.Equal(companyFromRaven.Id, company.Id);
@@ -480,6 +480,33 @@ namespace Raven.Tests.Document
 
 				Assert.Null(documentStore.DatabaseCommands.Get("rhino2"));
 				Assert.NotNull(documentStore.DatabaseCommands.Get("rhino1"));
+			}
+		}
+
+		[Fact]
+		public void Can_get_document_metadata()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				documentStore.DatabaseCommands
+					.Put("rhino1", null, RavenJObject.FromObject(new Company { Name = "Hibernating Rhinos" }), new RavenJObject());
+
+				JsonDocument doc = documentStore.DatabaseCommands.Get("rhino1");
+				JsonDocumentMetadata meta = documentStore.DatabaseCommands.Head("rhino1");
+
+				Assert.NotNull(meta);
+				Assert.Equal(doc.Key, meta.Key);
+				Assert.Equal(doc.Etag, meta.Etag);
+				Assert.Equal(doc.LastModified, meta.LastModified);
+			}
+		}
+
+		[Fact]
+		public void When_document_does_not_exist_Then_metadata_should_be_null()
+		{
+			using (var documentStore = NewDocumentStore())
+			{
+				Assert.Null(documentStore.DatabaseCommands.Head("rhino1"));
 			}
 		}
 

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Web;
+using System.Web.Hosting;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -16,6 +17,15 @@ namespace Raven.Web
 		internal static DocumentDatabase database;
 		internal static HttpServer server;
 		private static readonly object locker = new object();
+
+		public class ReleaseRavenDBWhenAppDomainIsTornDown : IRegisteredObject
+		{
+			public void Stop(bool immediate)
+			{
+				Shutdown();
+				HostingEnvironment.UnregisterObject(this);
+			}
+		}
 
 		public IHttpHandler GetHandler(HttpContext context, string requestType, string url, string pathTranslated)
 		{
@@ -61,20 +71,20 @@ namespace Raven.Web
 					}
 					throw;
 				}
+
+				HostingEnvironment.RegisterObject(new ReleaseRavenDBWhenAppDomainIsTornDown());
 			}
 		}
 
 		public static void Shutdown()
 		{
-			if (database == null)
-				return;
 			lock (locker)
 			{
-				if (database == null)
-					return;
+				if (server != null)
+					server.Dispose();
 
-				server.Dispose();
-				database.Dispose();
+				if (database != null)
+					database.Dispose();
 
 				server = null;
 				database = null;

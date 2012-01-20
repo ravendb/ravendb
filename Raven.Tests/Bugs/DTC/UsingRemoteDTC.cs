@@ -11,7 +11,7 @@ namespace Raven.Tests.Bugs.DTC
 		{
 			using (GetNewServer())
 			{
-				using(var store = new DocumentStore{ Url = "http://localhost:8080"}.Initialize())
+				using(var store = new DocumentStore{ Url = "http://localhost:8079"}.Initialize())
 				{
 					User u2;
 					bool happy;
@@ -27,7 +27,7 @@ namespace Raven.Tests.Bugs.DTC
 
 					using (var s3 = store.OpenSession())
 					{
-						s3.Advanced.AllowNonAuthoritiveInformation = false;
+						s3.Advanced.AllowNonAuthoritativeInformation = false;
 						happy = s3.Load<User>(u2.Id) != null;
 					}
 

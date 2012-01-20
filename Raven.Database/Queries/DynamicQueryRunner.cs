@@ -142,7 +142,7 @@ namespace Raven.Database.Queries
 
 			if (TemporaryIndexShouldBeMadePermanent(indexInfo))
 			{
-				TempIndexToPermenantIndex(temporaryIndexName, permanentIndexName, createDefinition);
+				TempIndexToPermanentIndex(temporaryIndexName, permanentIndexName, createDefinition);
 				return Tuple.Create(permanentIndexName, false);
 			}
 
@@ -165,8 +165,11 @@ namespace Raven.Database.Queries
 
 		}
 
-		private void TempIndexToPermenantIndex(string temporaryIndexName, string permanentIndexName, Func<IndexDefinition> createDefinition)
+		private void TempIndexToPermanentIndex(string temporaryIndexName, string permanentIndexName, Func<IndexDefinition> createDefinition)
 		{
+			if (documentDatabase.GetIndexDefinition(permanentIndexName) != null)
+				return;
+
 			lock (createIndexLock)
 			{
 				if (documentDatabase.GetIndexDefinition(permanentIndexName) != null)

@@ -203,7 +203,7 @@ namespace Raven.Client.Document
 
 #if !SILVERLIGHT && !NET_3_5
 		/// <summary>
-		///   Initializes a new instance of the <see cref = "DocumentQuery&lt;T&gt;" /> class.
+		///   Initializes a new instance of the <see cref = "DocumentQuery{T}" /> class.
 		/// </summary>
 		protected AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
 									 IDatabaseCommands databaseCommands,
@@ -216,16 +216,8 @@ namespace Raven.Client.Document
 #endif
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="AbstractDocumentQuery{T, TSelf}"/> class.
 		/// </summary>
-		/// <param name="databaseCommands">The database commands.</param>
-#if !NET_3_5
-		/// <param name="asyncDatabaseCommands">The async database commands</param>
-#endif
-
-		/// <param name = "indexName">Name of the index.</param>
-		/// <param name = "projectionFields">The projection fields.</param>
-		/// <param name = "theSession">The session.</param>
 		public AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
 #if !SILVERLIGHT
 									 IDatabaseCommands databaseCommands,
@@ -255,7 +247,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		///   Initializes a new instance of the <see cref = "IDocumentQuery&lt;T&gt;" /> class.
+		///   Initializes a new instance of the <see cref = "IDocumentQuery{T}" /> class.
 		/// </summary>
 		/// <param name = "other">The other.</param>
 		protected AbstractDocumentQuery(AbstractDocumentQuery<T, TSelf> other)
@@ -515,6 +507,23 @@ namespace Raven.Client.Document
 		public IEnumerable<string> GetProjectionFields()
 		{
 			return projectionFields ?? Enumerable.Empty<string>();
+		}
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		public void RandomOrdering()
+		{
+			AddOrder(Constants.RandomFieldName + ";" + Guid.NewGuid(), false);
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		public void RandomOrdering(string seed)
+		{
+			AddOrder(Constants.RandomFieldName + ";" + seed, false);
 		}
 
 		/// <summary>
@@ -811,8 +820,9 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Matches substrings of the field
+		///   Avoid using WhereConatins(), use Search() instead
 		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		public void WhereContains(string fieldName, object value)
 		{
 			WhereEquals(new WhereParams
@@ -825,9 +835,10 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Matches substrings of the field
+		///   Avoid using WhereConatins(), use Search() instead
 		/// </summary>
-		public void WhereContains(string fieldName, params object [] values)
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		public void WhereContains(string fieldName, params object[] values)
 		{
 			if (values == null || values.Length == 0)
 			{
@@ -850,8 +861,44 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Matches substrings of the field
+		/// Check that the field has one of the specified value
 		/// </summary>
+		public void WhereIn(string fieldName, IEnumerable<object> values)
+		{
+			bool first = true;
+
+			OpenSubclause();
+
+			foreach (var value in values)
+			{
+				if (first == false)
+				{
+					OrElse();
+				}
+
+				first = false;
+
+				WhereEquals(new WhereParams
+				{
+					AllowWildcards = true,
+					IsAnalyzed = true,
+					FieldName = fieldName,
+					Value = value
+				});
+
+				
+			}
+
+			if(first) // no items
+				WhereEquals(fieldName, "Empty_In_" + Guid.NewGuid());
+
+			CloseSubclause();
+		}
+
+		/// <summary>
+		///   Avoid using WhereConatins(), use Search() instead
+		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		public void WhereContains(string fieldName, IEnumerable<object> values)
 		{
 			WhereContains(fieldName, values.ToArray());
@@ -915,7 +962,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			NegateIfNeeded();
 
-			fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
+			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
 			theQueryText.Append(fieldName).Append(":{");
 			theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams{Value = start, FieldName = fieldName}));
@@ -942,12 +989,28 @@ If you really want to do in memory filtering on the data returned from the query
 
 			NegateIfNeeded();
 
-			fieldName = EnsureValidFieldName(new WhereParams { FieldName = fieldName });
+			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
+
 			theQueryText.Append(fieldName).Append(":[");
 			theQueryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }));
 			theQueryText.Append(" TO ");
 			theQueryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = end, FieldName = fieldName }));
 			theQueryText.Append("]");
+		}
+
+		private string GetFieldNameForRangeQueries(string fieldName, object start, object end)
+		{
+			fieldName = EnsureValidFieldName(new WhereParams {FieldName = fieldName});
+
+			if(fieldName == Constants.DocumentIdFieldName)
+				return fieldName;
+
+			var val = (start ?? end);
+			var isNumeric = val is int || val is long || val is decimal || val is double || val is float;
+
+			if (isNumeric && fieldName.EndsWith("_Range") == false)
+				fieldName = fieldName + "_Range";
+			return fieldName;
 		}
 
 		/// <summary>
@@ -1342,7 +1405,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public void Search(string fieldName, string searchTerms)
 		{
 			lastEquality = new KeyValuePair<string, string>(fieldName, "<<"+searchTerms+">>");
-			theQueryText.Append(' ').Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">> ");
+			theQueryText.Append(' ').Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">>");
 		}
 
 		private string TransformToEqualValue(WhereParams whereParams)
@@ -1430,7 +1493,7 @@ If you really want to do in memory filtering on the data returned from the query
 					string.Format("A clause was not closed correctly within this query, current clause depth = {0}",
 								  currentClauseDepth));
 			}
-			return theQueryText.ToString();
+			return theQueryText.ToString().Trim();
 		}
 
 		/// <summary>
@@ -1440,6 +1503,26 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			return lastEquality;
 		}
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering()
+		{
+			RandomOrdering();
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering(string seed)
+		{
+			RandomOrdering(seed);
+			return this;
+		}
+
 #if !NET_3_5
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 

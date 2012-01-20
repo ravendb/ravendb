@@ -14,7 +14,7 @@ namespace Raven.Tests.MultiGet
 		public void CanUseLazyWithMultiTenancy()
 		{
 			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				store.DatabaseCommands.EnsureDatabaseExists("test");
 
@@ -40,7 +40,7 @@ namespace Raven.Tests.MultiGet
 		public void CanCacheLazyQueryResults()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080", DefaultDatabase = "test"}.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079", DefaultDatabase = "test"}.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -90,7 +90,7 @@ namespace Raven.Tests.MultiGet
 		public void CanAggressivelyCacheLoads()
 		{
 			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080", DefaultDatabase = "test"}.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079", DefaultDatabase = "test"}.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{

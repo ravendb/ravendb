@@ -10,11 +10,11 @@ namespace Raven.Studio.Models
             Output = new BindableCollection<string>(x => x);
         }
 
-        private string _name;
+        private string name;
         public string Name
         {
-            get { return _name; }
-            set { _name = value; OnPropertyChanged(); }
+            get { return name; }
+            set { name = value; OnPropertyChanged(); }
         }
 
         public string Description { get; set; }

@@ -55,7 +55,7 @@ namespace Raven.Client
 		void Store(object entity);
 
 		/// <summary>
-		/// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
+		/// Marks the specified entity for deletion. The entity will be deleted when <see cref="SaveChangesAsync"/> is called.
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <param name="entity">The entity.</param>

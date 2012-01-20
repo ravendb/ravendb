@@ -59,8 +59,10 @@ namespace Raven.Client.Indexes
 
 			if (linqQuery.StartsWith(querySourceName))
 				linqQuery = querySource + linqQuery.Substring(querySourceName.Length);
-			else if (linqQuery.StartsWith("(" + querySourceName + ")"))
+			else if (linqQuery.StartsWith("(" + querySourceName +")"))
 				linqQuery = querySource + linqQuery.Substring(querySourceName.Length + 2);
+			else if (linqQuery.StartsWith("(" + querySourceName))
+				linqQuery = "(" + querySource + linqQuery.Substring(querySourceName.Length + 1);
 			else
 				throw new InvalidOperationException("Canot understand how to parse the query");
 

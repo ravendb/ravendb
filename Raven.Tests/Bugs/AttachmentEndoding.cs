@@ -21,9 +21,9 @@ namespace Raven.Tests.Bugs
 
 		public AttachmentEndoding()
 		{
-			port = 8080;
+			port = 8079;
 			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
 		#region IDisposable Members
@@ -47,7 +47,7 @@ namespace Raven.Tests.Bugs
 
 				using (var wc = new WebClient())
 				{
-					var staticJson = wc.DownloadString("http://localhost:8080/static");
+					var staticJson = wc.DownloadString("http://localhost:8079/static");
 					var value = RavenJArray.Parse(staticJson)[0].Value<string>("Key");
 					Assert.Equal("test/hello/world", value);
 				}

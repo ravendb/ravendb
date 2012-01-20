@@ -1,4 +1,3 @@
-using System;
 using Newtonsoft.Json;
 using Raven.Studio.Infrastructure;
 
@@ -13,17 +12,26 @@ namespace Raven.Studio.Features.Documents
 			this.viewableDocument = viewableDocument;
 		}
 
+		public override bool CanExecute(object parameter)
+		{
+			return viewableDocument != null;
+		}
+
 		public override void Execute(object parameter)
 		{
+			var urlParser = new UrlParser("/edit");
+
 			if (string.IsNullOrEmpty(viewableDocument.Id))
 			{
 				var projection = viewableDocument.InnerDocument.ToJson().ToString(Formatting.None);
-				UrlUtil.Navigate("/edit?projection=" + Uri.EscapeDataString(projection));
+				urlParser.SetQueryParam("projection", projection);
 			}
 			else
 			{
-				UrlUtil.Navigate("/edit?id=" + viewableDocument.Id);
+				urlParser.SetQueryParam("id", viewableDocument.Id);
 			}
+
+			UrlUtil.Navigate(urlParser.BuildUrl());
 		}
 	}
 }

@@ -15,6 +15,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
 {
@@ -55,6 +56,22 @@ namespace Raven.Client.Indexes
 		protected IEnumerable<TResult> Recurse<TSource,TResult>(TSource source, Func<TSource, TResult> func)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		/// <summary>
+		/// Allow to get to the metadata of the document
+		/// </summary>
+		protected RavenJObject MetadataFor(object doc)
+		{
+			throw new NotSupportedException("This is here as a marker only");
+		}
+
+		/// <summary>
+		/// Allow to get to the metadata of the document
+		/// </summary>
+		protected RavenJObject AsDocument(object doc)
+		{
+			throw new NotSupportedException("This is here as a marker only");
 		}
 #endif
 

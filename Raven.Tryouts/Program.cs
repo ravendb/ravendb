@@ -1,36 +1,35 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Database.Extensions;
-using NLog;
-using Raven.Tests.Bugs;
-using Raven.Tests.Bugs.Indexing;
 
-namespace etobi.EmbeddedTest
+namespace ConsoleApplication1
 {
 	internal class Program
 	{
-		static void Main(string[] args)
+		public class Users_AllProperties : AbstractIndexCreationTask<User>
 		{
-			var documentStore = new DocumentStore
+			public Users_AllProperties()
 			{
-				Url = "http://localhost:8080"
-			}.Initialize();
-
-			var s = documentStore.OpenSession().Query<Item3>().Where(x=>x.Age > 100).ToString();
-			Console.WriteLine(s);
+				Map = users =>
+				      from user in users
+				      select new
+				      {
+						Query = AsDocument(user).Select(x=>x.Value)
+				      };
+			}
 		}
+
+		private static void Main()
+		{
+			
+		}
+
 	}
 
-	public class Item3
+	internal class User
 	{
-		public long Age { get; set; }
+		public string Name { get; set; }
+		public int Age { get; set; }
+		public string PassportNumber { get; set; }
 	}
 }

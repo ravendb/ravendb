@@ -61,6 +61,7 @@
 					</StackPanel>
 					<StackPanel Orientation="Horizontal" toolkit:DockPanel.Dock="Right" VerticalAlignment="Center">
 						<HyperlinkButton Command="{StaticResource CreateDatabaseCommand}" 
+										 CommandParameter="{Binding}"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
 										 VerticalAlignment="Center">
 						  <HyperlinkButton.Content>
@@ -77,7 +78,12 @@
 					 SelectedItem="{Binding SelectedDatabase, Mode=TwoWay}"
 					 ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
 					 ItemTemplate="{StaticResource DatabaseItemTemplate}"
-					 Margin="10" />
+					 Margin="10">
+
+				<i:Interaction.Behaviors>
+					<Behaviors:SelectItemOnRightClick />
+				</i:Interaction.Behaviors>
+			</ListBox>
 		</toolkit:HeaderedContentControl>
 	</Grid>
 </Infrastructure:View>

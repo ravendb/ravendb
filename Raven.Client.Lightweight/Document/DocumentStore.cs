@@ -546,7 +546,6 @@ namespace Raven.Client.Document
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
 			authRequest.Credentials = Credentials;
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
-			authRequest.PreAuthenticate = true;
 #else
 			var authRequest = (HttpWebRequest) WebRequestCreator.ClientHttp.Create(new Uri(oauthSource.NoCache()));
 #endif
@@ -663,9 +662,10 @@ namespace Raven.Client.Document
 			if (cacheDuration.TotalSeconds < 1)
 				throw new ArgumentException("cacheDuration must be longer than a single second");
 
+			var old = jsonRequestFactory.AggressiveCacheDuration;
 			jsonRequestFactory.AggressiveCacheDuration = cacheDuration;
 
-			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = null);
+			return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = old);
 #else
 			// TODO: with silverlight, we don't currently support aggressive caching
 			return new DisposableAction(() => { });
@@ -824,7 +824,7 @@ Your OAuth endpoint should be using HTTPS, not HTTP, as the transport mechanism.
 You can setup the OAuth endpoint in the RavenDB server settings ('Raven/OAuthTokenServer' configuration value), or setup your own behavior by providing a value for:
 	documentStore.Conventions.HandleUnauthorizedResponse
 If you are on an internal network or requires this for testing, you can disable this warning by calling:
-	documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = false;
+	documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = true;
 ";
 
 	}

@@ -19,7 +19,7 @@ namespace Raven.Tests.Bugs.Queries
 		public void CanGetTermsForIndex()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 
 				using (var s = store.OpenSession())
@@ -59,7 +59,7 @@ namespace Raven.Tests.Bugs.Queries
 		public void CanGetTermsForIndex_WithPaging()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var s = store.OpenSession())
 				{

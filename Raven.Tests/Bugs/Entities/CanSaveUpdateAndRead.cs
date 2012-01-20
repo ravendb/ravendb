@@ -11,7 +11,7 @@ namespace Raven.Tests.Bugs.Entities
 		public void Can_read_entity_name_after_update()
 		{
 			using(GetNewServer())
-			using(var store = new DocumentStore{Url = "http://localhost:8080"}.Initialize())
+			using(var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
 				using(var s =store.OpenSession())
 				{
@@ -39,7 +39,7 @@ namespace Raven.Tests.Bugs.Entities
 		public void Can_read_entity_name_after_update_from_query()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var s = store.OpenSession())
 				{
@@ -65,7 +65,7 @@ namespace Raven.Tests.Bugs.Entities
 		public void Can_read_entity_name_after_update_from_query_after_entity_is_in_cache()
 		{
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var s = store.OpenSession())
 				{

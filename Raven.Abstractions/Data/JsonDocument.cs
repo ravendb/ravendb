@@ -21,20 +21,30 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public JsonDocument()
 		{
-			DataAsJson = new RavenJObject();
-			Metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase);
 		}
+
+		private RavenJObject dataAsJson;
+		private RavenJObject metadata;
+
 		/// <summary>
 		/// 	Gets or sets the document data as json.
 		/// </summary>
 		/// <value>The data as json.</value>
-		public RavenJObject DataAsJson { get; set; }
+		public RavenJObject DataAsJson
+		{
+			get { return dataAsJson ?? (dataAsJson = new RavenJObject()); }
+			set { dataAsJson = value; }
+		}
 
 		/// <summary>
 		/// 	Gets or sets the metadata for the document
 		/// </summary>
 		/// <value>The metadata.</value>
-		public RavenJObject Metadata { get; set; }
+		public RavenJObject Metadata
+		{
+			get { return metadata ?? (metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase)); }
+			set { metadata = value; }
+		}
 
 		/// <summary>
 		/// 	Gets or sets the key for the document
@@ -43,9 +53,9 @@ namespace Raven.Abstractions.Data
 		public string Key { get; set; }
 
 		/// <summary>
-		/// 	Gets or sets a value indicating whether this document is non authoritive (modified by uncommitted transaction).
+		/// 	Gets or sets a value indicating whether this document is non authoritative (modified by uncommitted transaction).
 		/// </summary>
-		public bool? NonAuthoritiveInformation { get; set; }
+		public bool? NonAuthoritativeInformation { get; set; }
 
 		/// <summary>
 		/// Gets or sets the etag.
@@ -65,7 +75,6 @@ namespace Raven.Abstractions.Data
 		/// <returns></returns>
 		public RavenJObject ToJson()
 		{
-
 			var doc = (RavenJObject)DataAsJson.CloneToken();
 			var metadata = (RavenJObject)Metadata.CloneToken();
 
@@ -73,8 +82,8 @@ namespace Raven.Abstractions.Data
 				metadata[Constants.LastModified] = LastModified.Value;
 			if(Etag != null)
 				metadata["@etag"] = Etag.Value.ToString();
-			if (NonAuthoritiveInformation != null)
-				metadata["Non-Authoritive-Information"] = NonAuthoritiveInformation.Value;
+			if (NonAuthoritativeInformation != null)
+				metadata["Non-Authoritative-Information"] = NonAuthoritativeInformation.Value;
 
 			doc["@metadata"] = metadata;
 

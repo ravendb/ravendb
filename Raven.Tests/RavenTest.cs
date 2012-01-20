@@ -103,7 +103,7 @@ namespace Raven.Tests
 				do
 				{
 					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null);
+				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && Debugger.IsAttached);
 			}
 		}
 
@@ -129,7 +129,7 @@ namespace Raven.Tests
 		{
 			var ravenConfiguration = new RavenConfiguration
 			{
-				Port = 8080,
+				Port = 8079,
 				RunInMemory = true,
 				DataDirectory = "Data",
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All
@@ -140,16 +140,25 @@ namespace Raven.Tests
 			if(ravenConfiguration.RunInMemory == false)
 				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
 
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
 			var ravenDbServer = new RavenDbServer(ravenConfiguration);
 
 			if (initializeDocumentsByEntitiyName)
 			{
-				using (var documentStore = new DocumentStore
+				try
 				{
-					Url = "http://localhost:8080"
-				}.Initialize())
+					using (var documentStore = new DocumentStore
+					{
+						Url = "http://localhost:8079"
+					}.Initialize())
+					{
+						new RavenDocumentsByEntityName().Execute(documentStore);
+					}
+				}
+				catch
 				{
-					new RavenDocumentsByEntityName().Execute(documentStore);
+					ravenDbServer.Dispose();
+					throw;
 				}
 			}
 
@@ -167,7 +176,7 @@ namespace Raven.Tests
 
 			using (var documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			})
 			{
 				documentStore.Initialize();
@@ -179,7 +188,7 @@ namespace Raven.Tests
 				do
 				{
 					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null);
+				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && Debugger.IsAttached);
 			}
 
 		}
@@ -194,12 +203,20 @@ namespace Raven.Tests
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All
 			});
 
-			using (var documentStore = new DocumentStore
+			try
 			{
-				Url = "http://localhost:" + port
-			}.Initialize())
+				using (var documentStore = new DocumentStore
+				{
+					Url = "http://localhost:" + port
+				}.Initialize())
+				{
+					new RavenDocumentsByEntityName().Execute(documentStore);
+				}
+			}
+			catch 
 			{
-				new RavenDocumentsByEntityName().Execute(documentStore);
+				ravenDbServer.Dispose();
+				throw;
 			}
 			return ravenDbServer;
 		}

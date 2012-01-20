@@ -13,7 +13,7 @@ namespace Raven.Tests.Bugs.Indexing
 			using(GetNewServer())
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8080"
+				Url = "http://localhost:8079"
 			}.Initialize())
 			{
 				IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(Transaction_ByMrn))), store);

@@ -21,7 +21,7 @@ namespace Raven.Tests.Bugs.Iulian
 			var id = @"mssage@msmq://local/Sample.AppService";
 
 			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				using (var s = store.OpenSession())
 				{

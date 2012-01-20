@@ -26,7 +26,7 @@ namespace Raven.Tests.MailingList
 		public void Can_project_InternalId_from_transformResults()
 		{
 			using(GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8080" })
+			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
 				store.Initialize();
 				store.Conventions.FindIdentityProperty = (x => x.Name == "DocId");

@@ -22,7 +22,7 @@ namespace Raven.Client.Document
 	public class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>
 	{
 		/// <summary>
-		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public DocumentQuery(InMemoryDocumentSessionOperations session
 #if !SILVERLIGHT
@@ -44,7 +44,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="DocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public DocumentQuery(DocumentQuery<T> other)
 			: base(other)
@@ -114,6 +114,25 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AddOrder(string fieldName, bool descending)
 		{
 			AddOrder(fieldName, descending);
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.RandomOrdering()
+		{
+			RandomOrdering();
+			return this;
+		}
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.RandomOrdering(string seed)
+		{
+			RandomOrdering(seed);
 			return this;
 		}
 
@@ -281,6 +300,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches substrings of the field
 		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereContains(string fieldName, object value)
 		{
 			WhereContains(fieldName, value);
@@ -290,6 +310,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches substrings of the field
 		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereContains(string fieldName, params object[] values)
 		{
 			WhereContains(fieldName, values);
@@ -299,9 +320,20 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches substrings of the field
 		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereContains(string fieldName, IEnumerable<object> values)
 		{
 			WhereContains(fieldName, values);
+			return this;
+		}
+
+
+		/// <summary>
+		/// Check that the field has one of the specified value
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereIn(string fieldName, IEnumerable<object> values)
+		{
+			WhereIn(fieldName, values);
 			return this;
 		}
 
@@ -603,7 +635,7 @@ namespace Raven.Client.Document
 		/// </returns>
 		public override string ToString()
 		{
-			return QueryText.ToString();
+			return QueryText.ToString().Trim();
 		}
 	}
 }

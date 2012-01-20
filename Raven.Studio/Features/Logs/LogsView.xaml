@@ -10,7 +10,8 @@
 					 xmlns:Logs="clr-namespace:Raven.Studio.Features.Logs"
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" 
+					 xmlns:Controls="clr-namespace:System.Windows.Controls"
 					 mc:Ignorable="d"
 					 d:DataContext="{d:DesignInstance Logs:LogsModel}">
 
@@ -218,8 +219,19 @@
 					<Run Text="Logs end point is not enabled." FontWeight="Bold" />
 					<LineBreak />
 					<Run Text="To enable it, add a file called 'NLog.config' in the same directory as the server, with the following content:" />
-				</TextBlock>	
-				<TextBox Text="{Binding EnablingLogsInstructions}" IsReadOnly="True" Margin="0,10,0,0" />
+				</TextBlock>
+				<TextBox Text="{Binding EnablingLogsInstructions}"
+						 x:Name="LogInstructions"
+						 IsReadOnly="True"
+						 Margin="0,10,0,0">
+					<Controls:ContextMenuService.ContextMenu>
+						<Controls:ContextMenu x:Name="NoLogsContextMenu">
+							<Controls:MenuItem Header="Copy"
+											   Command="{Binding Source={StaticResource CopyToClipboardCommand}}"
+											   CommandParameter="{Binding EnablingLogsInstructions}" />
+						</Controls:ContextMenu>
+					</Controls:ContextMenuService.ContextMenu>
+				</TextBox>
 			</StackPanel>
 		</Grid>
 	</Grid>

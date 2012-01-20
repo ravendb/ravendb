@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
@@ -24,6 +25,7 @@ using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Plugins.Builtins;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
@@ -48,6 +50,7 @@ namespace Raven.Database.Server
 
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
 
+		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
 		public int NumberOfRequests
 		{
@@ -86,6 +89,7 @@ namespace Raven.Database.Server
 
 		private TimeSpan maxTimeDatabaseCanBeIdle;
 		private TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+		private bool disposed;
 
 		public bool HasPendingRequests
 		{
@@ -100,7 +104,7 @@ namespace Raven.Database.Server
 			DefaultConfiguration = configuration;
 
 			int val;
-			if(int.TryParse(configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
+			if (int.TryParse(configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
 				val = 900;
 			maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(val);
 			if (int.TryParse(configuration.Settings["Raven/Tenants/FrequnecyToCheckForIdleDatabases"], out val) == false)
@@ -143,23 +147,45 @@ namespace Raven.Database.Server
 
 		public void Dispose()
 		{
-			if (databasesCleanupTimer != null)
-				databasesCleanupTimer.Dispose();
-			if (listener != null && listener.IsListening)
-				listener.Stop();
-
-			lock(ResourcesStoresCache)
+			disposerLock.EnterWriteLock();
+			try
 			{
-				foreach (var documentDatabase in ResourcesStoresCache)
+				var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
+				exceptionAggregator.Execute(() =>
 				{
-					documentDatabase.Value.Dispose();
-				}
-				ResourcesStoresCache.Clear();
-			}
+					if (databasesCleanupTimer != null)
+						databasesCleanupTimer.Dispose();
+				});
+				exceptionAggregator.Execute(() =>
+				{
+					if (listener != null && listener.IsListening)
+						listener.Stop();
+				});
+				disposed = true;
 
-			currentConfiguration.Dispose();
-			currentDatabase.Dispose();
-			currentTenantId.Dispose();
+				exceptionAggregator.Execute(() =>
+				{
+					lock (ResourcesStoresCache)
+					{
+						foreach (var documentDatabase in ResourcesStoresCache)
+						{
+							var database = documentDatabase.Value;
+							exceptionAggregator.Execute(database.Dispose);
+						}
+						ResourcesStoresCache.Clear();
+					}
+				});
+
+				exceptionAggregator.Execute(currentConfiguration.Dispose);
+				exceptionAggregator.Execute(currentDatabase.Dispose);
+				exceptionAggregator.Execute(currentTenantId.Dispose);
+
+				exceptionAggregator.ThrowIfNeeded();
+			}
+			finally
+			{
+				disposerLock.ExitWriteLock();
+			}
 		}
 
 		#endregion
@@ -208,13 +234,23 @@ namespace Raven.Database.Server
 			lock (ResourcesStoresCache)
 			{
 				DateTime time;
-				databaseLastRecentlyUsed.TryRemove(db, out time);
-
 				DocumentDatabase database;
-				if (ResourcesStoresCache.TryRemove(db, out database))
+				if (ResourcesStoresCache.TryGetValue(db, out database) == false)
+				{
+					databaseLastRecentlyUsed.TryRemove(db, out time);
+					return;
+				}
+				try
+				{
 					database.Dispose();
-
-
+				}
+				catch (Exception e)
+				{
+					logger.ErrorException("Could not cleanup tenant database: " + db, e);
+					return;
+				}
+				databaseLastRecentlyUsed.TryRemove(db, out time);
+				ResourcesStoresCache.TryRemove(db, out database);
 			}
 		}
 
@@ -233,7 +269,7 @@ namespace Raven.Database.Server
 				// listner shutdown
 				return;
 			}
-			
+
 			if (concurretRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
 			{
 				HandleTooBusyError(ctx);
@@ -252,35 +288,49 @@ namespace Raven.Database.Server
 
 		public void HandleActualRequest(IHttpContext ctx)
 		{
-			var sw = Stopwatch.StartNew();
-			bool ravenUiRequest = false;
+			var isReadLockHeld = disposerLock.IsReadLockHeld;
+			if (isReadLockHeld == false)
+				disposerLock.EnterReadLock();
 			try
 			{
-				ravenUiRequest = DispatchRequest(ctx);
-			}
-			catch (Exception e)
-			{
-				HandleException(ctx, e);
-				if (ShouldLogException(e))
-					logger.WarnException("Error on request", e);
-			}
-			finally
-			{
+				if (disposed)
+					return;
+
+				var sw = Stopwatch.StartNew();
+				bool ravenUiRequest = false;
 				try
 				{
-					FinalizeRequestProcessing(ctx, sw, ravenUiRequest);
+					ravenUiRequest = DispatchRequest(ctx);
 				}
 				catch (Exception e)
 				{
-					logger.ErrorException("Could not finalize request properly", e);
+					HandleException(ctx, e);
+					if (ShouldLogException(e))
+						logger.WarnException("Error on request", e);
 				}
+				finally
+				{
+					try
+					{
+						FinalizeRequestProcessing(ctx, sw, ravenUiRequest);
+					}
+					catch (Exception e)
+					{
+						logger.ErrorException("Could not finalize request properly", e);
+					}
+				}
+			}
+			finally
+			{
+				if (isReadLockHeld == false)
+					disposerLock.ExitReadLock();
 			}
 		}
 
 		protected bool ShouldLogException(Exception exception)
 		{
 			return exception is IndexDisabledException == false &&
-			       exception is IndexDoesNotExistsException == false;
+				   exception is IndexDoesNotExistsException == false;
 
 		}
 
@@ -316,7 +366,7 @@ namespace Raven.Database.Server
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
 			// long.
-			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" && 
+			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" &&
 				logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25)
 				return;
 
@@ -450,7 +500,7 @@ namespace Raven.Database.Server
 		{
 			SetupRequestToProperDatabase(ctx);
 
-			CurrentOperationContext.Headers.Value = ctx.Request.Headers;
+			CurrentOperationContext.Headers.Value = new NameValueCollection(ctx.Request.Headers);
 
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
 			if (ctx.RequiresAuthentication &&
@@ -499,7 +549,7 @@ namespace Raven.Database.Server
 					currentDatabase.Value = DefaultResourceStore;
 					currentConfiguration.Value = DefaultConfiguration;
 				}
-				catch 
+				catch
 				{
 					// this can happen during system shutdown
 				}
@@ -560,8 +610,8 @@ namespace Raven.Database.Server
 			using (DefaultResourceStore.DisableAllTriggersForCurrentThread())
 				jsonDocument = DefaultResourceStore.Get("Raven/Databases/" + tenantId, null);
 
-			if (jsonDocument == null || 
-				jsonDocument.Metadata == null || 
+			if (jsonDocument == null ||
+				jsonDocument.Metadata == null ||
 				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists))
 				return false;
 
@@ -571,12 +621,17 @@ namespace Raven.Database.Server
 			{
 				var config = new InMemoryRavenConfiguration
 				{
-					Settings = DefaultConfiguration.Settings,
+					Settings = new NameValueCollection(DefaultConfiguration.Settings),
 				};
+
+				config.CustomizeValuesForTenant(tenantId);
+
 				foreach (var setting in document.Settings)
 				{
 					config.Settings[setting.Key] = setting.Value;
 				}
+
+
 				var dataDir = config.Settings["Raven/DataDir"];
 				if (dataDir == null)
 					throw new InvalidOperationException("Could not find Raven/DataDir");

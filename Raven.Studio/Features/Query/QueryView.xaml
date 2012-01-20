@@ -168,21 +168,21 @@
 									   VerticalAlignment="Center" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Longitude}"
+									 Text="{Binding Longitude, Mode=TwoWay}"
 									 VerticalAlignment="Center" />
 
 							<TextBlock Text="Latitude:"
 									   VerticalAlignment="Center" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Latitude}"
+									 Text="{Binding Latitude, Mode=TwoWay}"
 									 VerticalAlignment="Center" />
 
 							<TextBlock Text="Radius:"
 									   VerticalAlignment="Center" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
-									 Text="{Binding Radius}"
+									 Text="{Binding Radius, Mode=TwoWay}"
 									 VerticalAlignment="Center" />
 						</StackPanel>
 					</StackPanel>
@@ -264,12 +264,16 @@
 
 
 			</StackPanel>
-
+			
+			
 			<Grid Grid.Row="2"
 				  Margin="{StaticResource Margin_ContentPage}"
-				  Visibility="{Binding Path=DocumentsResult.Value, Converter={StaticResource HiddenWhenNull}}">
-				<Documents:DocumentsView Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}"
-										 DataContext="{Binding Path=DocumentsResult.Value}" />
+				  DataContext="{Binding Path=DocumentsResult.Value}"
+				  Visibility="{Binding Path=., Converter={StaticResource HiddenWhenNull}}">
+
+				<Documents:DocumentsView Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}" />
+				<TextBlock Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}" 
+						   Text="There is no results for this query." />
 			</Grid>
 		</Grid>
 	</toolkit:DockPanel>

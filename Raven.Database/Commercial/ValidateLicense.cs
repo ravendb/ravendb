@@ -10,14 +10,15 @@ using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
 using Rhino.Licensing;
 using Rhino.Licensing.Discovery;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Commercial
 {
 	public class ValidateLicense : IStartupTask
 	{
 		public static LicensingStatus CurrentLicense { get; set; }
-
-		private LicenseValidator licenseValidator;
+		private static bool alreadyRun;
+		private AbstractLicenseValidator licenseValidator;
 		private readonly Logger logger = LogManager.GetCurrentClassLogger();
 
 		static ValidateLicense()
@@ -33,6 +34,11 @@ namespace Raven.Database.Commercial
 
 		public void Execute(DocumentDatabase database)
 		{
+			if (alreadyRun)
+				return;
+
+			alreadyRun = true;
+
 			string publicKey;
 			using(var stream = typeof(ValidateLicense).Assembly.GetManifestResourceStream("Raven.Database.Commercial.RavenDB.public"))
 			{
@@ -40,21 +46,24 @@ namespace Raven.Database.Commercial
 					throw new InvalidOperationException("Could not find public key for the license");
 				publicKey = new StreamReader(stream).ReadToEnd();
 			}
-			var fullPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "license.xml"));
-			licenseValidator = new LicenseValidator(publicKey, fullPath)
+			
+			var licensePath = GetLicensePath(database);
+			var licenseText = GetLicenseText(database);
+			
+			licenseValidator = new StringLicenseValidator(publicKey, licenseText)
 			{
 				DisableFloatingLicenses = true,
 			};
 			licenseValidator.LicenseInvalidated+=LicenseValidatorOnLicenseInvalidated;
 			licenseValidator.MultipleLicensesWereDiscovered += LicenseValidatorOnMultipleLicensesWereDiscovered;
 
-			if(File.Exists(fullPath) == false)
+			if (string.IsNullOrEmpty(licenseText))
 			{
 				CurrentLicense = new LicensingStatus
 				{
 					Status = "AGPL - Open Source",
 					Error = false,
-					Message = "No license file was found at " + fullPath +
+					Message = "No license file was found at " + licenseText +
 					          "\r\nThe AGPL license restrictions apply, only Open Source / Development work is permitted."
 				};
 				return;
@@ -62,26 +71,57 @@ namespace Raven.Database.Commercial
 
 			try
 			{
-				licenseValidator.AssertValidLicense();
+				licenseValidator.AssertValidLicense(()=>
+				{
+					string value;
+					if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&
+						"true".Equals(value, StringComparison.InvariantCultureIgnoreCase))
+					{
+						licenseValidator.MultipleLicenseUsageBehavior = AbstractLicenseValidator.MultipleLicenseUsage.AllowSameLicense;
+					}
+				});
+				
 
 				CurrentLicense = new LicensingStatus
 				{
 					Status = "Commercial - " + licenseValidator.LicenseType,
 					Error = false,
-					Message = "Valid license " + fullPath
+					Message = "Valid license at " + licensePath
 				};
 			}
 			catch (Exception e)
 			{
-				logger.ErrorException("Could not validate license at " + fullPath, e);
+				logger.ErrorException("Could not validate license at "  + licensePath + ", " + licenseText, e);
 
 				CurrentLicense = new LicensingStatus
 				{
 					Status = "AGPL - Open Source",
 					Error = true,
-					Message = "Could not validate license file at " + fullPath + Environment.NewLine + e
+					Message = "Could not validate license: " + licensePath + ", " + licenseText + Environment.NewLine + e
 				};
 			}
+		}
+
+		private static string GetLicenseText(DocumentDatabase database)
+		{
+			var value = database.Configuration.Settings["Raven/License"];
+			if (string.IsNullOrEmpty(value) == false)
+				return value;
+			var fullPath = GetLicensePath(database).ToFullPath();
+			if (File.Exists(fullPath))
+				return File.ReadAllText(fullPath);
+			return string.Empty;
+		}
+
+		private static string GetLicensePath(DocumentDatabase database)
+		{
+			var value = database.Configuration.Settings["Raven/License"];
+			if (string.IsNullOrEmpty(value) == false)
+				return "configuration";
+			value = database.Configuration.Settings["Raven/LicensePath"];
+			if (string.IsNullOrEmpty(value) == false)
+				return value;
+			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "license.xml");
 		}
 
 		private void LicenseValidatorOnMultipleLicensesWereDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)

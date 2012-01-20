@@ -316,14 +316,14 @@ namespace Raven.Abstractions.Linq
 	public class DynamicList : DynamicObject, IEnumerable<object>
 	{
 		private readonly DynamicJsonObject parent;
-		private readonly object[] inner;
+		private readonly IEnumerable<object> inner;
 
-		public DynamicList(object[] inner)
+		public DynamicList(IEnumerable<object> inner)
 		{
 			this.inner = inner;
 		}
 
-		internal DynamicList(DynamicJsonObject parent, object[] inner)
+		internal DynamicList(DynamicJsonObject parent, IEnumerable<object> inner)
 			: this(inner)
 		{
 			this.parent = parent;
@@ -342,10 +342,7 @@ namespace Raven.Abstractions.Linq
 					result = Enumerable.Count(this, (Func<object, bool>)args[0]);
 					return true;
 				case "DefaultIfEmpty":
-					if (inner.Length > 0)
-						result = this;
-					else
-						result = new object[] { new DynamicNullObject() };
+					result = inner.DefaultIfEmpty(new DynamicNullObject());
 					return true;
 			}
 			return base.TryInvokeMember(binder, args, out result);
@@ -421,57 +418,19 @@ namespace Raven.Abstractions.Linq
 			((ICollection)inner).CopyTo(array, index);
 		}
 
-
-		public object SyncRoot
-		{
-			get { return inner.SyncRoot; }
-		}
-
-
-		public bool IsSynchronized
-		{
-			get { return inner.IsSynchronized; }
-		}
-
 		public object this[int index]
 		{
-			get { return inner[index]; }
-			set { inner[index] = value; }
+			get { return inner.ElementAt(index); }
 		}
-
-
-		public bool IsFixedSize
-		{
-			get { return inner.IsFixedSize; }
-		}
-
 
 		public bool Contains(object item)
 		{
 			return inner.Contains(item);
 		}
 
-
-		public int IndexOf(object item)
-		{
-			return Array.IndexOf(inner, item);
-		}
-
-
-		public int IndexOf(object item, int index)
-		{
-			return Array.IndexOf(inner, item, index);
-		}
-
-
-		public int IndexOf(object item, int index, int count)
-		{
-			return Array.IndexOf(inner, item, index, count);
-		}
-
 		public int Count
 		{
-			get { return inner.Length; }
+			get { return inner.Count(); }
 		}
 
 		public int Sum(Func<dynamic, int> aggregator)
@@ -515,17 +474,17 @@ namespace Raven.Abstractions.Linq
 		/// <value>The length.</value>
 		public int Length
 		{
-			get { return inner.Length; }
+			get { return inner.Count(); }
 		}
 
 		public IEnumerable<object> Select(Func<object, object> func)
 		{
-			return new DynamicList(parent, inner.Select(func).ToArray());
+			return new DynamicList(parent, inner.Select(func));
 		}
 
 		public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)
 		{
-			return new DynamicList(parent, inner.SelectMany(func).ToArray());
+			return new DynamicList(parent, inner.SelectMany(func));
 		}
 	}
 

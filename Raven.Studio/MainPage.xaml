@@ -15,46 +15,60 @@
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
 		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
-			<RowDefinition Height="*"/>
-			<RowDefinition Height="35"/>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="35" />
 		</Grid.RowDefinitions>
-		
-	  <Grid x:Name="HeaderGrid" Grid.Row="0" Grid.ColumnSpan="2">
+
+		<Grid x:Name="HeaderGrid"
+			  Grid.Row="0"
+			  Grid.ColumnSpan="2">
 			<Grid.RowDefinitions>
-			  <RowDefinition Height="Auto"/>
-			  <RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
 			</Grid.RowDefinitions>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="*" />
 				<ColumnDefinition Width="Auto" />
 			</Grid.ColumnDefinitions>
-		  
+
 			<Border Grid.ColumnSpan="2">
-			  <Border.Background>
-				<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-				  <GradientStop Color="White" Offset="0.174"/>
-				  <GradientStop Color="#FFDEDEDE" Offset="0.993"/>
-				  <GradientStop Color="#FF78223D" Offset="1"/>
-				</LinearGradientBrush>
-			  </Border.Background>
+				<Border.Background>
+					<LinearGradientBrush EndPoint="0.5,1"
+										 StartPoint="0.5,0">
+						<GradientStop Color="White"
+									  Offset="0.174" />
+						<GradientStop Color="#FFDEDEDE"
+									  Offset="0.993" />
+						<GradientStop Color="#FF78223D"
+									  Offset="1" />
+					</LinearGradientBrush>
+				</Border.Background>
 			</Border>
 			<Border Height="5"
 					Grid.Row="1"
 					Grid.ColumnSpan="2">
-			  <Border.Background>
-				<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-				  <GradientStop Color="#FF78223D" Offset="0.13"/>
-				  <GradientStop Color="#FF8B2241" Offset="0.174"/>
-				  <GradientStop Color="#FF8B2241" Offset="0.348"/>
-				  <GradientStop Color="#FF9F2145" Offset="0.391"/>
-				  <GradientStop Color="#FF9F2145" Offset="0.565"/>
-				  <GradientStop Color="#FFB22148" Offset="0.609"/>
-				</LinearGradientBrush>
-			  </Border.Background>
+				<Border.Background>
+					<LinearGradientBrush EndPoint="0.5,1"
+										 StartPoint="0.5,0">
+						<GradientStop Color="#FF78223D"
+									  Offset="0.13" />
+						<GradientStop Color="#FF8B2241"
+									  Offset="0.174" />
+						<GradientStop Color="#FF8B2241"
+									  Offset="0.348" />
+						<GradientStop Color="#FF9F2145"
+									  Offset="0.391" />
+						<GradientStop Color="#FF9F2145"
+									  Offset="0.565" />
+						<GradientStop Color="#FFB22148"
+									  Offset="0.609" />
+					</LinearGradientBrush>
+				</Border.Background>
 			</Border>
 
-			<Grid Grid.Column="1" x:Name="Logo">
+			<Grid Grid.Column="1"
+				  x:Name="Logo">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="*" />
 					<ColumnDefinition Width="Auto" />
@@ -63,22 +77,23 @@
 				<HyperlinkButton Grid.Column="1"
 								 HorizontalAlignment="Left"
 								 Margin="0,5,5,1"
-								 NavigateUri="http://beta.ravendb.net/"
+								 Command="{StaticResource NavigateToExternalUrlCommand}"
+								 CommandParameter="http://beta.ravendb.net/"
 								 TargetName="_blank">
 					<Image Source="{StaticResource Image_RavenDBLogo}"
 						   Stretch="Uniform"
 						   Height="25" />
 				</HyperlinkButton>
-				
+
 				<Databases:DatabaseSelectionView VerticalAlignment="Bottom"
 												 HorizontalAlignment="Right" />
 			</Grid>
-		  
+
 			<StackPanel x:Name="MainLinks"
 						Orientation="Horizontal"
 						VerticalAlignment="Stretch"
 						Margin="{StaticResource Margin_MainPageLeftRight}">
-				
+
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton x:Name="SummaryLink"
 								 Content="Summary"
@@ -91,7 +106,7 @@
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
 				</HyperlinkButton>
-			  <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Collections"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/collections"
@@ -107,7 +122,7 @@
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
 				</HyperlinkButton>
-			  <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 
 				<HyperlinkButton Content="Documents"
 								 Command="{StaticResource NavigateToCommand}"
@@ -119,7 +134,7 @@
 						</Behaviors:StringCollection>
 					</Behaviors:LinkHighlighter.AlternativeUris>
 				</HyperlinkButton>
-			  <Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
+				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 				<HyperlinkButton Content="Tasks"
 								 Command="{StaticResource NavigateToCommand}"
 								 CommandParameter="/tasks"
@@ -132,70 +147,86 @@
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
 			</StackPanel>
 		</Grid>
-		
-	  <Grid x:Name="ContentGrid" Grid.Row="1">
+
+		<Grid x:Name="ContentGrid"
+			  Grid.Row="1">
 			<Grid>
 				<Grid.CacheMode>
-					<BitmapCache/>
+					<BitmapCache />
 				</Grid.CacheMode>
 				<Grid.RowDefinitions>
-					<RowDefinition Height="*"/>
-					<RowDefinition Height="*"/>
+					<RowDefinition Height="*" />
+					<RowDefinition Height="*" />
 				</Grid.RowDefinitions>
-				<TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}" 
+				<TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTexture}"
 										BorderThickness="0"
-										Height="400" VerticalAlignment="Top"
+										Height="400"
+										VerticalAlignment="Top"
 										Grid.Row="0">
 					<TiledBG:TiledBGControl.OpacityMask>
-						<LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
-							<GradientStop Color="Transparent" Offset="1"/>
-							<GradientStop Color="#AA000000" Offset="0.75"/>
-							<GradientStop Color="#FF000000"/>
+						<LinearGradientBrush StartPoint="0.5,0"
+											 EndPoint="0.5,1">
+							<GradientStop Color="Transparent"
+										  Offset="1" />
+							<GradientStop Color="#AA000000"
+										  Offset="0.75" />
+							<GradientStop Color="#FF000000" />
 						</LinearGradientBrush>
 					</TiledBG:TiledBGControl.OpacityMask>
 				</TiledBG:TiledBGControl>
-			  <TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTextureBottom}" 
+				<TiledBG:TiledBGControl TiledImageSource="{StaticResource Image_BackgroundTextureBottom}"
 										BorderThickness="0"
-										Height="400" VerticalAlignment="Bottom"
+										Height="400"
+										VerticalAlignment="Bottom"
 										Grid.Row="1">
-				<TiledBG:TiledBGControl.OpacityMask>
-					<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-						<GradientStop Color="Black" Offset="1"/>
-						<GradientStop Color="#AA000000" Offset="0.75"/>
-						<GradientStop Color="Transparent"/>
-					</LinearGradientBrush>
-				</TiledBG:TiledBGControl.OpacityMask>
-			  </TiledBG:TiledBGControl>
+					<TiledBG:TiledBGControl.OpacityMask>
+						<LinearGradientBrush EndPoint="0.5,1"
+											 StartPoint="0.5,0">
+							<GradientStop Color="Black"
+										  Offset="1" />
+							<GradientStop Color="#AA000000"
+										  Offset="0.75" />
+							<GradientStop Color="Transparent" />
+						</LinearGradientBrush>
+					</TiledBG:TiledBGControl.OpacityMask>
+				</TiledBG:TiledBGControl>
 			</Grid>
 
-				<navigation:Frame x:Name="ContentFrame"
-								  Style="{StaticResource ContentFrameStyle}"
-								  Source=""
-								  Navigated="ContentFrame_Navigated"
-								  NavigationFailed="ContentFrame_NavigationFailed"
-								  Margin="15,0">
-					<navigation:Frame.UriMapper>
-						<uriMapper:UriMapper>
-							<uriMapper:UriMapping Uri=""
-												  MappedUri="/Views/Home.xaml" />
-							<uriMapper:UriMapping Uri="/indexes-errors/{indexName}"
-												  MappedUri="/Views/IndexesErrors.xaml" />
-							<uriMapper:UriMapping Uri="/indexes-errors"
-												  MappedUri="/Views/IndexesErrors.xaml" />
-							<uriMapper:UriMapping Uri="/indexes/{indexName}"
-												  MappedUri="/Views/Index.xaml" />
-							<uriMapper:UriMapping Uri="/query/{indexName}"
-												  MappedUri="/Views/Query.xaml" />
-							<uriMapper:UriMapping Uri="/logs/{errors}"
-												  MappedUri="/Views/Logs.xaml" />
-							<uriMapper:UriMapping Uri="/{pageName}"
-												  MappedUri="/Views/{pageName}.xaml" />
-						</uriMapper:UriMapper>
-					</navigation:Frame.UriMapper>
-				</navigation:Frame>
+			<navigation:Frame x:Name="ContentFrame"
+							  Style="{StaticResource ContentFrameStyle}"
+							  Source=""
+							  Navigated="ContentFrame_Navigated"
+							  NavigationFailed="ContentFrame_NavigationFailed"
+							  Margin="15,0"
+							  Navigating="ContentFrame_Navigating">
+				<navigation:Frame.UriMapper>
+					<uriMapper:UriMapper>
+						<uriMapper:UriMapping Uri=""
+											  MappedUri="/Views/Home.xaml" />
+						<uriMapper:UriMapping Uri="/indexes-errors/{indexName}"
+											  MappedUri="/Views/IndexesErrors.xaml" />
+						<uriMapper:UriMapping Uri="/indexes-errors"
+											  MappedUri="/Views/IndexesErrors.xaml" />
+						<uriMapper:UriMapping Uri="/indexes/{indexName}"
+											  MappedUri="/Views/Index.xaml" />
+						<uriMapper:UriMapping Uri="/query/{indexName}"
+											  MappedUri="/Views/Query.xaml" />
+						<uriMapper:UriMapping Uri="/logs/{errors}"
+											  MappedUri="/Views/Logs.xaml" />
+						<uriMapper:UriMapping Uri="/{pageName}"
+											  MappedUri="/Views/{pageName}.xaml" />
+					</uriMapper:UriMapper>
+				</navigation:Frame.UriMapper>
+			</navigation:Frame>
 		</Grid>
 
-		<RavenControls:NotificationArea Grid.Row="0" Grid.Column="0" Grid.RowSpan="999" Grid.ColumnSpan="999" Notifications="{Binding Notifications}" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,10,10,0" Height="40"/>
+		<RavenControls:NotificationArea Grid.RowSpan="999"
+										Grid.ColumnSpan="999"
+										Notifications="{Binding Notifications}"
+										VerticalAlignment="Top"
+										HorizontalAlignment="Right"
+										Margin="0,10,10,0"
+										Height="40" />
 
 		<Grid Grid.Row="2">
 			<Grid.RowDefinitions>

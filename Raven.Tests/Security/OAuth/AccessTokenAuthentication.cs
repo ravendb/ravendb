@@ -5,9 +5,11 @@ using Newtonsoft.Json;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Database.Server.Security.OAuth;
 using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Security.OAuth
 {
@@ -17,12 +19,12 @@ namespace Raven.Tests.Security.OAuth
 		readonly string path;
 		const string relativeUrl = "/docs";
 		const string baseUrl = "http://localhost";
-		const int port = 8080;
+		const int port = 8079;
 
 		public AccessTokenAuthentication()
 		{
 			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8080);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
 		protected override void ConfigureServer(RavenConfiguration ravenConfiguration)
@@ -43,7 +45,8 @@ namespace Raven.Tests.Security.OAuth
 
 			if (expired) issued -= TimeSpan.FromHours(1).TotalMilliseconds;
 
-			var body = RavenJObject.FromObject(new { UserId = user, AuthorizedDatabases = databases.Split(','), Issued = issued }).ToString(Formatting.None);
+			var authorizedDatabases = databases.Split(',').Select(tenantId=> new AccessTokenBody.DatabaseAccess{TenantId = tenantId}).ToArray();
+			var body = RavenJObject.FromObject(new AccessTokenBody { UserId = user, AuthorizedDatabases = authorizedDatabases, Issued = issued }).ToString(Formatting.None);
 
 			var signature = valid ? CertHelper.Sign(body, server.Database.Configuration.OAuthTokenCertificate) : "InvalidSignature";
 
