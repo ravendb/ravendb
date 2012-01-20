@@ -180,7 +180,7 @@ namespace Raven.Json.Linq
 			}
 			catch (Exception e)
 			{
-				throw new JsonSerializationException("Could not parse: " + json, e);
+				throw new JsonSerializationException("Could not parse: [" + json +"]", e);
 			}
 		}
 
