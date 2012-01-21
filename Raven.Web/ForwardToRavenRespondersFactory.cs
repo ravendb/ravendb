@@ -31,6 +31,9 @@ namespace Raven.Web
 		{
 			if (database == null)
 				throw new InvalidOperationException("Database has not been initialized properly");
+			if (server == null)
+				throw new InvalidOperationException("Server has not been initialized properly");
+
 			return new ForwardToRavenResponders(server);
 		}
 
