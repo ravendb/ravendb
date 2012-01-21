@@ -6,6 +6,7 @@
 using System;
 using System.Web;
 using System.Web.Hosting;
+using NLog;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -17,6 +18,8 @@ namespace Raven.Web
 		internal static DocumentDatabase database;
 		internal static HttpServer server;
 		private static readonly object locker = new object();
+
+		private static Logger log = LogManager.GetCurrentClassLogger();
 
 		public class ReleaseRavenDBWhenAppDomainIsTornDown : IRegisteredObject
 		{
@@ -51,6 +54,7 @@ namespace Raven.Web
 				if (database != null)
 					return;
 
+				log.Info("Setting up RavenDB Http Integration to the ASP.Net Pipeline");
 				try
 				{
 					var ravenConfiguration = new RavenConfiguration();
@@ -83,8 +87,9 @@ namespace Raven.Web
 		{
 			lock (locker)
 			{
+				log.Info("Disposing of RavenDB Http Integration to the ASP.Net Pipeline");
 				if (server != null)
-					server.Dispose();
+					{server.Dispose();
 
 				if (database != null)
 					database.Dispose();
