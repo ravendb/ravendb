@@ -56,6 +56,7 @@ namespace Raven.Database.Extensions
 
 		public static string ToFullPath(this string path)
 		{
+			path = Environment.ExpandEnvironmentVariables(path);
 			if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
 				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path.Substring(2));
 
