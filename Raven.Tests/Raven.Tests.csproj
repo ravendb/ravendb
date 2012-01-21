@@ -159,6 +159,7 @@
     </Compile>
     <Compile Include="Bugs\Account.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
+    <Compile Include="Bugs\AdHocProjections.cs" />
     <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
     <Compile Include="Bugs\AggressiveCaching.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
