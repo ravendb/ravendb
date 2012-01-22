@@ -52,8 +52,11 @@ namespace Raven.Studio.Models
 			{
 				int add = (TotalResults.Value ?? 0) % PageSize == 0 ? 0 : 1;
 				var totalPages = (TotalResults.Value ?? 0)/ PageSize + add;
-				if(totalPages < CurrentPage && totalPages != 0)
+
+				// if all documents from this page where deleted we want to go the the previouse page so we won't show an empty page
+				if(totalPages < CurrentPage && totalPages != 0) 
 					NavigateToPrevPage();
+
 				return totalPages;
 			}
 		}
