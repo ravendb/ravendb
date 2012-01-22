@@ -1,4 +1,5 @@
 using System;
+using System.Windows;
 using System.Windows.Input;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
@@ -41,10 +42,7 @@ namespace Raven.Studio.Models
 
 		public int CurrentPage
 		{
-			get
-			{
-				return Skip / PageSize + 1 + (Skip != 0 && Skip < PageSize ? 1 : 0);
-			}
+			get { return Skip/PageSize + 1 + (Skip != 0 && Skip < PageSize ? 1 : 0); }
 		}
 
 		public Observable<long?> TotalResults { get; private set; }
@@ -53,7 +51,10 @@ namespace Raven.Studio.Models
 			get
 			{
 				int add = (TotalResults.Value ?? 0) % PageSize == 0 ? 0 : 1;
-				return (TotalResults.Value ?? 0)/ PageSize + add;
+				var totalPages = (TotalResults.Value ?? 0)/ PageSize + add;
+				if(totalPages < CurrentPage && totalPages != 0)
+					NavigateToPrevPage();
+				return totalPages;
 			}
 		}
 
