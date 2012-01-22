@@ -49,7 +49,14 @@ namespace Raven.Tests.Linq
 			{
 				using (var session = store.OpenSession())
 				{
-					for (int i = 0; i < 10; i++)
+					for (int i = 5; i < 10; i++)
+						session.Store(new Section(i));
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					for (int i = 4; i >= 0; i--)
 						session.Store(new Section(i));
 					session.SaveChanges();
 				}
@@ -61,7 +68,7 @@ namespace Raven.Tests.Linq
 						.OrderBy(x => x)
 						.FirstOrDefault();
 
-					Assert.Equal(9, lastPosition);
+					Assert.Equal(0, lastPosition);
 				}
 			}
 		}
