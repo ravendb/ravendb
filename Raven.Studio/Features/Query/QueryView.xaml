@@ -251,7 +251,7 @@
 					<TextBlock Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
 							   Text="There are no results for this query." />
 				</StackPanel>
-				
+				<toolkit:BusyIndicator IsBusy="{Binding DocumentsResult.Value.IsLoadingDocuments, Mode=TwoWay}" BusyContent="Quering..." />
 				<ItemsControl ItemsSource="{Binding Suggestions}">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
