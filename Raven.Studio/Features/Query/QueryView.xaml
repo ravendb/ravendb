@@ -237,14 +237,18 @@
 					Grid.Row="2"
 					Grid.RowSpan="1" />
 			<StackPanel Grid.Row="2">
-				<TextBlock Text="Error"
+                <TextBlock Text="Error"
 						   Style="{StaticResource Style_TextBlock_PagePartHeader}"
 						   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
 				<TextBlock Text="{Binding Error}"
 						   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
+                <Documents:DocumentsView Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}" />
+                <TextBlock Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
+                           Text="There are no results for this query." />
 
-				<ItemsControl ItemsSource="{Binding Suggestions}">
+
+                <ItemsControl ItemsSource="{Binding Suggestions}">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
 							<StackPanel Orientation="Horizontal">
@@ -271,9 +275,7 @@
 				  DataContext="{Binding Path=DocumentsResult.Value}"
 				  Visibility="{Binding Path=., Converter={StaticResource HiddenWhenNull}}">
 
-				<Documents:DocumentsView Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}" />
-				<TextBlock Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}" 
-						   Text="There is no results for this query." />
+				
 			</Grid>
 		</Grid>
 	</toolkit:DockPanel>
