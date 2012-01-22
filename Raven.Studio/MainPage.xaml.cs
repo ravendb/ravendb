@@ -91,7 +91,7 @@ namespace Raven.Studio
 		private void ContentFrame_NavigationFailed(object sender, NavigationFailedEventArgs e)
 		{
 			e.Handled = true;
-			ErrorPresenter.Show(e.Exception);
+			ErrorPresenter.Show(e.Exception, null, string.Format("Could not load page: {0}", e.Uri));
 		}
 
 		private void ContentFrame_Navigating(object sender, NavigatingCancelEventArgs e)
