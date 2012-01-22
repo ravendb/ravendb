@@ -26,25 +26,27 @@ namespace Raven.Studio.Infrastructure
 				writer.WriteLine();
 			}
 
+			writer.Write("Message: ");
 			writer.WriteLine(e.Message);
+			if (string.IsNullOrWhiteSpace(UrlUtil.Url) == false)
+			{
+				writer.Write("Uri: ");
+				writer.WriteLine(UrlUtil.Url);
+			}
+			writer.Write("Server Uri: ");
 			writer.WriteLine();
+			writer.WriteLine(GetServerUri(e));
+
+			writer.WriteLine("-- Error Information --");
 			writer.WriteLine(e.ToString());
 			writer.WriteLine();
 
 			if (innerStackTrace != null)
 			{
-				writer.WriteLine();
 				writer.WriteLine("Inner StackTrace: ");
 				writer.WriteLine(innerStackTrace.ToString());
-				writer.WriteLine();
 			}
-
-			writer.WriteLine("-- Additional Information --");
-			writer.Write("Uri: ");
-			writer.WriteLine(UrlUtil.Url);
-			writer.Write("Server Uri: ");
-			writer.WriteLine(GetServerUri(e) ?? "null");
-
+		
 			Show(writer.ToString());
 		}
 
@@ -63,12 +65,17 @@ namespace Raven.Studio.Infrastructure
 		private static string GetServerUri(Exception e)
 		{
 			if (e.Data.Contains("Url"))
-				return e.Data["Url"] as string;
-			
+			{
+				var serverUri = (Uri) e.Data["Url"];
+				if(serverUri != null)
+					return serverUri.ToString();
+				return "null";
+			}
+
 			if (e.InnerException != null)
 				return GetServerUri(e.InnerException);
-			
-			return null;
+
+			return "unknown";
 		}
 	}
 }
