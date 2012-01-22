@@ -244,13 +244,13 @@
 				<TextBlock Text="{Binding Error}"
 						   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
-				<Grid DataContext="{Binding Path=DocumentsResult.Value}"
-					  Visibility="{Binding Path=., Converter={StaticResource HiddenWhenNull}}">
+				<StackPanel DataContext="{Binding Path=DocumentsResult.Value}"
+							Visibility="{Binding Path=., Converter={StaticResource HiddenWhenNull}}">
 
 					<Documents:DocumentsView Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}" />
 					<TextBlock Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
 							   Text="There are no results for this query." />
-				</Grid>
+				</StackPanel>
 				
 				<ItemsControl ItemsSource="{Binding Suggestions}">
 					<ItemsControl.ItemTemplate>
