@@ -8,7 +8,9 @@ using System;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Raven.Abstractions.Data;
+using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Logs
@@ -16,11 +18,13 @@ namespace Raven.Studio.Features.Logs
 	public class LogsModel : ViewModel
 	{
 		public BindableCollection<LogItem> Logs { get; private set; }
+		public BindableCollection<LogItem> DisplayedLogs { get; private set; }
 
 		public LogsModel()
 		{
 			ModelUrl = "/logs";
 			Logs = new BindableCollection<LogItem>(log => log.TimeStamp, new KeysComparer<LogItem>(x => x.Message));
+			DisplayedLogs = new BindableCollection<LogItem>(log => log.TimeStamp, new KeysComparer<LogItem>(x => x.Message));
 		}
 
 		protected override Task LoadedTimerTickedAsync()
@@ -31,7 +35,11 @@ namespace Raven.Studio.Features.Logs
 			return DatabaseCommands.GetLogsAsync(showErrorsOnly)
 				.ContinueOnSuccess(logs =>
 				                   	{
-				                   		Logs.Match(logs);
+										Logs.Match(logs, () =>
+										{
+											if (DisplayedLogs.Count == 0)
+												DisplayedLogs.Match(Logs);
+										});
 				                   		IsLogsEnabled = true;
 				                   	})
 				.CatchIgnore<WebException>(LogsIsNotEnabled);
@@ -89,6 +97,11 @@ namespace Raven.Studio.Features.Logs
 		public override void LoadModelParameters(string parameters)
 		{
 			ShowErrorsOnly = new UrlParser(parameters).Path.Trim('/') == "error";
+		}
+
+		public ICommand Refresh
+		{
+			get { return new ChangeFieldValueCommand<LogsModel>(this, x => DisplayedLogs.Match(Logs)); }
 		}
 	}
 }
