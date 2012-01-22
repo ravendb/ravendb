@@ -19,7 +19,7 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void CanOrderBy_AProjection()
+		public void CanDescOrderBy_AProjection()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -35,6 +35,30 @@ namespace Raven.Tests.Linq
 					var lastPosition = session.Query<Section>()
 						.Select(x => x.Position)
 						.OrderByDescending(x => x)
+						.FirstOrDefault();
+
+					Assert.Equal(9, lastPosition);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanAscOrderBy_AProjection()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					for (int i = 0; i < 10; i++)
+						session.Store(new Section(i));
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var lastPosition = session.Query<Section>()
+						.Select(x => x.Position)
+						.OrderBy(x => x)
 						.FirstOrDefault();
 
 					Assert.Equal(9, lastPosition);
