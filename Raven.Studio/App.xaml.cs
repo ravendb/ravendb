@@ -29,9 +29,7 @@ namespace Raven.Studio
 			if (System.Diagnostics.Debugger.IsAttached) return;
 			
 			e.Handled = true;
-			var ex = e.ExceptionObject;
-			if (ErrorHandler.Handle(ex) == false)
-				ErrorPresenter.Show(ex);
+			ErrorPresenter.Show(e.ExceptionObject);
 		}
 	}
 }

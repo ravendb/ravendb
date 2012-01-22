@@ -108,7 +108,7 @@ namespace Raven.Database.Indexing
 		// we don't use the usual GroupBy, because that isn't streaming
 		// we rely on the fact that all values from the same docs are always outputed at 
 		// the same time, so we can take advantage of this fact
-		private static IEnumerable<IGrouping<object ,dynamic>> GroupByDocumentId(IEnumerable<object> docs)
+		private static IEnumerable<IGrouping<object, dynamic>> GroupByDocumentId(IEnumerable<object> docs)
 		{
 			var enumerator = docs.GetEnumerator();
 			if(enumerator.MoveNext()==false)
@@ -357,13 +357,13 @@ namespace Raven.Database.Indexing
 			IEnumerable<AbstractField> fields;
 			if (doc is IDynamicJsonObject)
 			{
-				fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)doc).Inner,
-																		indexDefinition, Field.Store.YES);
+
+				fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)doc).Inner, Field.Store.YES);
 			}
 			else
 			{
 				properties = properties ?? TypeDescriptor.GetProperties(doc);
-				fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.YES);
+				fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.YES);
 			}
 			if (Math.Abs(boost - 1) > float.Epsilon)
 			{

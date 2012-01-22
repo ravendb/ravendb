@@ -208,7 +208,6 @@
     <Compile Include="Infrastructure\Converters\CollectionCountToGridLengthConverter.cs" />
     <Compile Include="Infrastructure\Converters\HiddenWhenGreaterThen.cs" />
     <Compile Include="Infrastructure\Converters\HiddenWhenStringEmptyOrNull.cs" />
-    <Compile Include="Infrastructure\ErrorHandler.cs" />
     <Compile Include="Infrastructure\ErrorPresenter.cs" />
     <Compile Include="Features\Indexes\IndexesListView.xaml.cs">
       <DependentUpon>IndexesListView.xaml</DependentUpon>

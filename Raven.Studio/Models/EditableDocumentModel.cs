@@ -436,7 +436,7 @@ namespace Raven.Studio.Models
 				}
 				catch (JsonReaderException ex)
 				{
-					ErrorPresenter.Show(ex.Message, string.Empty);
+					ErrorPresenter.Show(ex.Message);
 					return;
 				}
 
@@ -474,7 +474,7 @@ namespace Raven.Studio.Models
 				}
 				catch (JsonReaderException ex)
 				{
-					ErrorPresenter.Show(ex.Message, string.Empty);
+					ErrorPresenter.Show(ex.Message);
 					return;
 				}
 				editableDocumentModel.UpdateMetadata(metadata);
