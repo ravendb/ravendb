@@ -54,20 +54,17 @@ namespace Raven.Database.Server.Security.OAuth
 				return false;
 			}
 
-			if(!tokenBody.IsAuthorized(TenantId))
+			var writeAccess = isGetRequest == false;
+			if(!tokenBody.IsAuthorized(TenantId, writeAccess))
 			{
 				if (allowUnauthenticatedUsers)
 					return true;
 
-				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope", "Not authorized for tenant " + TenantId);
+				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope", 
+					writeAccess ?
+					"Not authorized for read/write access for tenant " + TenantId :
+					"Not authorized for tenant " + TenantId);
 	   
-				return false;
-			}
-
-			if(tokenBody.ReadOnly && isGetRequest)
-			{
-				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope", "Not authorized for writing to tenant " + TenantId);
-
 				return false;
 			}
 			
@@ -113,11 +110,6 @@ namespace Raven.Database.Server.Security.OAuth
 		public bool IsInRole(string role)
 		{
 			return false;
-		}
-
-		public string[] AuthorizedDatabases
-		{
-			get { return tokenBody.AuthorizedDatabases; }
 		}
 
 		public IIdentity Identity

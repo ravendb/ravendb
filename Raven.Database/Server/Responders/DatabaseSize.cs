@@ -24,7 +24,7 @@ namespace Raven.Database.Server.Responders
 					var totalSizeOnDisk = Database.GetTotalSizeOnDisk();
 					context.WriteJson(new
 					{
-						DatabasSize = totalSizeOnDisk,
+						DatabaseSize = totalSizeOnDisk,
 						DatabaseSizeHumane = Humane(totalSizeOnDisk)
 					});
 					break;

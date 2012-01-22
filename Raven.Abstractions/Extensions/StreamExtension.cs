@@ -39,19 +39,19 @@ namespace Raven.Abstractions.Extensions
 			var list = new List<byte[]>();
 			const int defaultBufferSize = 1024 * 16;
 			var buffer = new byte[defaultBufferSize];
-			var offset = 0;
+			var currentOffset = 0;
 			int read;
-			while ((read = steram.Read(buffer, offset, buffer.Length - offset)) != 0)
+			while ((read = steram.Read(buffer, currentOffset, buffer.Length - currentOffset)) != 0)
 			{
-				offset += read;
-				if (offset == buffer.Length)
+				currentOffset += read;
+				if (currentOffset == buffer.Length)
 				{
 					list.Add(buffer);
 					buffer = new byte[defaultBufferSize];
-					offset = 0;
+					currentOffset = 0;
 				}
 			}
-			var totalSize = list.Sum(x => x.Length) + offset;
+			var totalSize = list.Sum(x => x.Length) + currentOffset;
 			var result = new byte[totalSize];
 			var resultOffset = 0;
 			foreach (var partial in list)
@@ -59,7 +59,7 @@ namespace Raven.Abstractions.Extensions
 				Buffer.BlockCopy(partial, 0, result, resultOffset, partial.Length);
 				resultOffset += partial.Length;
 			}
-			Buffer.BlockCopy(buffer, 0, result, resultOffset, offset);
+			Buffer.BlockCopy(buffer, 0, result, resultOffset, currentOffset);
 			return result;
 		}
 

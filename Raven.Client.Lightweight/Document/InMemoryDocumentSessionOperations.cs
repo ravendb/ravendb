@@ -60,7 +60,7 @@ namespace Raven.Client.Document
 		{
 			get { return (registeredStoresInTransaction ?? (registeredStoresInTransaction = new Dictionary<string, HashSet<string>>())); }
 		}
-#endif 
+#endif
 
 		/// <summary>
 		/// hold the data required to manage the data for RavenDB's Unit of Work
@@ -72,7 +72,7 @@ namespace Raven.Client.Document
 		/// Translate between a key and its associated entity
 		/// </summary>
 		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
-		
+
 		private readonly DocumentStore documentStore;
 
 		/// <summary>
@@ -88,21 +88,21 @@ namespace Raven.Client.Document
 			get { return documentStore; }
 		}
 
-		
+
 		/// <summary>
 		/// Gets the number of requests for this session
 		/// </summary>
 		/// <value></value>
 		public int NumberOfRequests { get; private set; }
 
-	    private IDictionary<object, RavenJObject> cachedJsonDocs;
+		private IDictionary<object, RavenJObject> cachedJsonDocs;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
 		/// </summary>
 		protected InMemoryDocumentSessionOperations(
-			DocumentStore documentStore, 
-			DocumentSessionListeners listeners, 
+			DocumentStore documentStore,
+			DocumentSessionListeners listeners,
 			Guid id)
 		{
 			Id = id;
@@ -195,12 +195,12 @@ namespace Raven.Client.Document
 			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
 			{
 				string id;
-				if(TryGetIdFromInstance(instance, out id)
+				if (TryGetIdFromInstance(instance, out id)
 #if !NET_3_5
-				   || (instance is IDynamicMetaObjectProvider && 
-				       TryGetIdFromDynamic(instance, out id) )
-#endif 
-					)
+				 || (instance is IDynamicMetaObjectProvider &&
+					   TryGetIdFromDynamic(instance, out id))
+#endif
+)
 				{
 					var jsonDocument = GetJsonDocument(id);
 					entitiesByKey[id] = instance;
@@ -209,7 +209,7 @@ namespace Raven.Client.Document
 						ETag = UseOptimisticConcurrency ? (Guid?)Guid.Empty : null,
 						Key = id,
 						OriginalMetadata = jsonDocument.Metadata,
-						Metadata = (RavenJObject)jsonDocument.Metadata.CloneToken() ,
+						Metadata = (RavenJObject)jsonDocument.Metadata.CloneToken(),
 						OriginalValue = new RavenJObject()
 					};
 				}
@@ -254,7 +254,7 @@ namespace Raven.Client.Document
 		/// <value></value>
 		public bool HasChanges
 		{
-			get 
+			get
 			{
 				return deletedEntities.Count > 0 ||
 						entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).Any();
@@ -320,7 +320,7 @@ more responsive application.
 			{
 				documentFound.Metadata[Constants.LastModified] = documentFound.LastModified;
 			}
-			
+
 			return TrackEntity<T>(documentFound.Key, documentFound.DataAsJson, documentFound.Metadata);
 		}
 
@@ -345,10 +345,10 @@ more responsive application.
 			{
 				// the local instnace may have been changed, we adhere to the current Unit of Work
 				// instance, and return that, ignoring anything new.
-				return (T) entity;
+				return (T)entity;
 			}
 			var etag = metadata.Value<string>("@etag");
-			if(metadata.Value<bool>("Non-Authoritative-Information") && 
+			if (metadata.Value<bool>("Non-Authoritative-Information") &&
 				AllowNonAuthoritativeInformation == false)
 			{
 				throw new NonAuthoritativeInformationException("Document " + key +
@@ -358,12 +358,12 @@ more responsive application.
 			{
 				OriginalValue = document,
 				Metadata = metadata,
-				OriginalMetadata = (RavenJObject)metadata.CloneToken() ,
+				OriginalMetadata = (RavenJObject)metadata.CloneToken(),
 				ETag = new Guid(etag),
 				Key = key
 			};
 			entitiesByKey[key] = entity;
-			return (T) entity;
+			return (T)entity;
 		}
 
 		/// <summary>
@@ -387,10 +387,10 @@ more responsive application.
 		public void Delete<T>(T entity)
 		{
 			DocumentMetadata value;
-			if(entitiesAndMetadata.TryGetValue(entity, out value)==false)
-				throw new InvalidOperationException(entity+" is not associated with the session, cannot delete unknown entity instance");
-			if(value.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) && value.OriginalMetadata.Value<bool>(Constants.RavenReadOnly))
-				throw new InvalidOperationException(entity +" is marked as read only and cannot be deleted");
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				throw new InvalidOperationException(entity + " is not associated with the session, cannot delete unknown entity instance");
+			if (value.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) && value.OriginalMetadata.Value<bool>(Constants.RavenReadOnly))
+				throw new InvalidOperationException(entity + " is marked as read only and cannot be deleted");
 			deletedEntities.Add(entity);
 		}
 
@@ -405,8 +405,8 @@ more responsive application.
 		/// <returns></returns>
 		protected object ConvertToEntity<T>(string id, RavenJObject documentFound, RavenJObject metadata)
 		{
-			if(typeof(T) == typeof(RavenJObject))
-				return (T) (object) documentFound.CloneToken();
+			if (typeof(T) == typeof(RavenJObject))
+				return (T)(object)documentFound.CloneToken();
 
 			var entity = default(T);
 			EnsureNotReadVetoed(metadata);
@@ -415,7 +415,7 @@ more responsive application.
 			{
 				var type = Type.GetType(documentType);
 				if (type != null)
-					entity = (T) documentFound.Deserialize(type, Conventions);
+					entity = (T)documentFound.Deserialize(type, Conventions);
 			}
 			if (Equals(entity, default(T)))
 			{
@@ -463,9 +463,9 @@ more responsive application.
 			{
 				SetPropertyOrField(identityProperty.PropertyType, entity, val => identityProperty.SetValue(entity, val, null), id);
 			}
-			else 
+			else
 			{
-				const BindingFlags privateInstanceField = BindingFlags.Instance|BindingFlags.NonPublic;
+				const BindingFlags privateInstanceField = BindingFlags.Instance | BindingFlags.NonPublic;
 				var fieldInfo = entityType.GetField("<" + identityProperty.Name + ">i__Field", privateInstanceField) ??
 								entityType.GetField("<" + identityProperty.Name + ">k__BackingField", privateInstanceField);
 
@@ -478,7 +478,7 @@ more responsive application.
 
 		private void SetPropertyOrField(Type propertyOrFieldType, object entity, Action<object> setIdenitifer, string id)
 		{
-			if (propertyOrFieldType == typeof (string))
+			if (propertyOrFieldType == typeof(string))
 			{
 				setIdenitifer(id);
 			}
@@ -488,9 +488,9 @@ more responsive application.
 					Conventions.IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(propertyOrFieldType));
 				if (converter == null)
 					throw new ArgumentException("Could not convert identity to type " + propertyOrFieldType +
-					                            " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
+												" because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
 
-				setIdenitifer(converter.ConvertTo(Conventions.FindIdValuePartForValueTypeConversion(entity,id)));
+				setIdenitifer(converter.ConvertTo(Conventions.FindIdValuePartForValueTypeConversion(entity, id)));
 			}
 		}
 
@@ -502,8 +502,8 @@ more responsive application.
 
 			var s = readVeto.Value<string>("Reason");
 			throw new ReadVetoException(
-				"Document could not be read because of a read veto."+Environment.NewLine +
-				"The read was vetoed by: " + readVeto.Value<string>("Trigger") + Environment.NewLine + 
+				"Document could not be read because of a read veto." + Environment.NewLine +
+				"The read was vetoed by: " + readVeto.Value<string>("Trigger") + Environment.NewLine +
 				"Veto reason: " + s
 				);
 		}
@@ -513,7 +513,7 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity)
 		{
-			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?) null, null);
+			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?)null, null);
 		}
 
 		/// <summary>
@@ -585,7 +585,7 @@ more responsive application.
 
 			var tag = documentStore.Conventions.GetTypeTagName(entity.GetType());
 			var metadata = new RavenJObject();
-			if(tag != null)
+			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			{
@@ -603,7 +603,7 @@ more responsive application.
 		{
 			if (id == null || id.EndsWith("/") || !entitiesByKey.ContainsKey(id) || ReferenceEquals(entitiesByKey[id], entity))
 				return;
-			
+
 			throw new NonUniqueObjectException("Attempted to associated a different object with id '" + id + "'.");
 		}
 
@@ -624,8 +624,8 @@ more responsive application.
 
 			}
 
-			if(id != null && id.StartsWith("/"))
-				throw new InvalidOperationException("Cannot use value '"+id+"' as a document id because it begins with a '/'");
+			if (id != null && id.StartsWith("/"))
+				throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
 			return id;
 		}
 
@@ -639,7 +639,7 @@ more responsive application.
 			{
 				var value = identityProperty.GetValue(entity, new object[0]);
 				id = value as string;
-				if(id == null && value != null) // need convertion
+				if (id == null && value != null) // need convertion
 				{
 					id = Conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType(), true);
 					return true;
@@ -686,14 +686,14 @@ more responsive application.
 		protected ICommandData CreatePutEntityCommand(object entity, DocumentMetadata documentMetadata)
 		{
 			string id;
-			if(TryGetIdFromInstance(entity, out id) && 
-				documentMetadata.Key != null && 
+			if (TryGetIdFromInstance(entity, out id) &&
+				documentMetadata.Key != null &&
 				documentMetadata.Key.Equals(id, StringComparison.InvariantCultureIgnoreCase) == false)
 			{
 				throw new InvalidOperationException("Entity " + entity.GetType().FullName + " had document key '" +
-				                                    documentMetadata.Key + "' but now has document key property '" + id + "'." +
-				                                    Environment.NewLine +
-				                                    "You cannot change the document key property of a entity loaded into the session");
+													documentMetadata.Key + "' but now has document key property '" + id + "'." +
+													Environment.NewLine +
+													"You cannot change the document key property of a entity loaded into the session");
 			}
 
 			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
@@ -717,17 +717,15 @@ more responsive application.
 		/// <summary>
 		/// Updates the batch results.
 		/// </summary>
-		/// <param name="batchResults">The batch results.</param>
-		/// <param name="entities">The entities.</param>
-		protected void UpdateBatchResults(IList<BatchResult> batchResults, IList<object> entities)
+		protected void UpdateBatchResults(IList<BatchResult> batchResults, SaveChangesData saveChangesData)
 		{
-			for (var i = 0; i < batchResults.Count; i++)
+			for (var i = saveChangesData.DeferredCommandsCount; i < batchResults.Count; i++)
 			{
 				var batchResult = batchResults[i];
 				if (batchResult.Method != "PUT")
 					continue;
-				
-				var entity = entities[i];
+
+				var entity = saveChangesData.Entities[i];
 				DocumentMetadata documentMetadata;
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
@@ -736,7 +734,7 @@ more responsive application.
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
-				documentMetadata.OriginalMetadata = (RavenJObject)batchResult.Metadata.CloneToken() ;
+				documentMetadata.OriginalMetadata = (RavenJObject)batchResult.Metadata.CloneToken();
 				documentMetadata.Metadata = batchResult.Metadata;
 				documentMetadata.OriginalValue = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
@@ -748,7 +746,7 @@ more responsive application.
 				}
 			}
 
-			var lastPut = batchResults.LastOrDefault(x=>x.Method == "PUT");
+			var lastPut = batchResults.LastOrDefault(x => x.Method == "PUT");
 			if (lastPut == null)
 				return;
 
@@ -765,8 +763,11 @@ more responsive application.
 			var result = new SaveChangesData
 			{
 				Entities = new List<object>(),
-				Commands = new List<ICommandData>()
+				Commands = new List<ICommandData>(deferedCommands),
+				DeferredCommandsCount = deferedCommands.Count
 			};
+			deferedCommands.Clear();
+
 			TryEnlistInAmbientTransaction();
 			PrepareForEntitiesDeletion(result);
 			PrepareForEntitiesPuts(result);
@@ -795,11 +796,11 @@ more responsive application.
 			DocumentMetadata value = null;
 
 			var keysToDelete = (from deletedEntity in deletedEntities
-			                    where entitiesAndMetadata.TryGetValue(deletedEntity, out value) 
+								where entitiesAndMetadata.TryGetValue(deletedEntity, out value)
 								// skip deleting read only entities
 								where !value.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) ||
 									  !value.OriginalMetadata.Value<bool>(Constants.RavenReadOnly)
-			                    select value.Key).ToList();
+								select value.Key).ToList();
 
 			foreach (var key in keysToDelete)
 			{
@@ -836,13 +837,13 @@ more responsive application.
 #if !SILVERLIGHT
 			if (documentStore.EnlistInDistributedTransactions == false)
 				return;
-			
-			if (hasEnlisted || Transaction.Current == null) 
+
+			if (hasEnlisted || Transaction.Current == null)
 				return;
 
 			HashSet<string> registered;
 			var localIdentifier = Transaction.Current.TransactionInformation.LocalIdentifier;
-			if(RegisteredStoresInTransaction.TryGetValue(localIdentifier, out registered) == false)
+			if (RegisteredStoresInTransaction.TryGetValue(localIdentifier, out registered) == false)
 			{
 				RegisteredStoresInTransaction[localIdentifier] =
 					registered = new HashSet<string>();
@@ -850,7 +851,7 @@ more responsive application.
 
 			if (registered.Add(StoreIdentifier))
 			{
-				var transactionalSession = (ITransactionalDocumentSession) this;
+				var transactionalSession = (ITransactionalDocumentSession)this;
 				if (documentStore.DatabaseCommands.SupportsPromotableTransactions == false)
 				{
 					Transaction.Current.EnlistDurable(
@@ -861,13 +862,13 @@ more responsive application.
 				else
 				{
 					var promotableSinglePhaseNotification = new PromotableRavenClientEnlistment(transactionalSession,
-					                                                                            () =>
-					                                                                            RegisteredStoresInTransaction.
-					                                                                            	Remove(localIdentifier));
+																								() =>
+																								RegisteredStoresInTransaction.
+																									Remove(localIdentifier));
 					var registeredSinglePhaseNotification =
 						Transaction.Current.EnlistPromotableSinglePhase(promotableSinglePhaseNotification);
 
-					if(registeredSinglePhaseNotification == false)
+					if (registeredSinglePhaseNotification == false)
 					{
 						Transaction.Current.EnlistDurable(
 							ResourceManagerId,
@@ -926,11 +927,11 @@ more responsive application.
 
 		private void SetClrType(Type entityType, RavenJObject metadata)
 		{
-			if(
+			if (
 #if !NET_3_5
-				entityType == typeof(DynamicJsonObject) || 
+			entityType == typeof(DynamicJsonObject) ||
 #endif
-				entityType == typeof(RavenJObject)) // dynamic types
+			 entityType == typeof(RavenJObject)) // dynamic types
 			{
 				if (metadata.ContainsKey(Constants.RavenClrType))
 					return;// do not overwrite the value
@@ -958,7 +959,7 @@ more responsive application.
 
 			if (cachedJsonDocs != null)
 				cachedJsonDocs[entity] = jObject;
-		    return jObject;
+			return jObject;
 		}
 
 		private static void TrySimplfyingJson(RavenJObject jObject, JsonContract contract)
@@ -971,17 +972,17 @@ more responsive application.
 			foreach (var kvp in jObject)
 			{
 				var prop = kvp;
-				if(prop.Value == null)
+				if (prop.Value == null)
 					continue;
 				var obj = prop.Value as RavenJObject;
-				if(obj == null)
+				if (obj == null)
 					continue;
 
 				var jsonProperty = objectContract.Properties.GetClosestMatchProperty(prop.Key);
 
 				if (ShouldSimplfyJsonBasedOnType(obj.Value<string>("$type"), jsonProperty) == false)
 					continue;
-				
+
 				if (obj.ContainsKey("$values") == false)
 				{
 					deferredActions.Add(() => obj.Remove("$type"));
@@ -1077,12 +1078,23 @@ more responsive application.
 			entitiesByKey.Clear();
 		}
 
+		readonly List<ICommandData> deferedCommands = new List<ICommandData>();
+
+		/// <summary>
+		/// Defer commands to be executed on SaveChanges()
+		/// </summary>
+		/// <param name="commands">The commands to be executed</param>
+		public void Defer(params ICommandData[] commands)
+		{
+			deferedCommands.AddRange(commands);
+		}
+
 		/// <summary>
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
 		public virtual void Dispose()
 		{
-			
+
 		}
 
 		/// <summary>
@@ -1110,7 +1122,7 @@ more responsive application.
 		{
 			hasEnlisted = false;
 		}
-#endif 
+#endif
 		/// <summary>
 		/// Metadata held about an entity by the session
 		/// </summary>
@@ -1153,6 +1165,9 @@ more responsive application.
 			/// </summary>
 			/// <value>The commands.</value>
 			public IList<ICommandData> Commands { get; set; }
+
+			public int DeferredCommandsCount { get; set; }
+
 			/// <summary>
 			/// Gets or sets the entities.
 			/// </summary>

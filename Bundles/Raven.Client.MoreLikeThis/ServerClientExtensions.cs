@@ -59,7 +59,7 @@ namespace Raven.Client.MoreLikeThis
 
 					var result = cmd.ExecuteGetRequest(requestUri);
 
-					multiLoadResult = RavenJObject.Parse(result).Deserialize<MultiLoadResult>(inMemoryDocumentSessionOperations.Conventions);
+					multiLoadResult = ((RavenJObject)result).Deserialize<MultiLoadResult>(inMemoryDocumentSessionOperations.Conventions);
 				}
 			} while (multiLoadOperation.SetResult(multiLoadResult));
 

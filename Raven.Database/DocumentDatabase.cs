@@ -160,7 +160,7 @@ namespace Raven.Database
 				configuration.DataDirectory,
 				configuration.Container.GetExportedValues<AbstractViewGenerator>(),
 				Extensions);
-			IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration);
+			IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
 
 			workContext.Configuration = configuration;
 			workContext.IndexStorage = IndexStorage;
@@ -239,7 +239,6 @@ namespace Raven.Database
 		{
 			get
 			{
-
 				var result = new DatabaseStatistics
 				{
 					CountOfIndexes = IndexStorage.Indexes.Length,
@@ -247,8 +246,7 @@ namespace Raven.Database
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Put"})
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Delete"}))
 						.Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Read"}))
-						.Concat(
-							IndexUpdateTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Index Update"}))
+						.Concat(IndexUpdateTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Index Update"}))
 						.ToArray(),
 					Extensions = Configuration.ReportExtensions(
 						typeof (IStartupTask),
@@ -280,11 +278,9 @@ namespace Raven.Database
 			}
 		}
 
-
 		public string SilverlightXapName
 		{
 			get { return "Raven.Studio.xap"; }
-			
 		}
 
 		public ConcurrentDictionary<string, object> ExternalState { get; set; }

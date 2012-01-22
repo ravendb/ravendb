@@ -72,7 +72,7 @@ namespace Raven.Database.Indexing
 					workerWorkCounter = currentWorkCounter;
 					return true;
 				}
-				log.Debug("Not work was found, workerWorkCounter: {0}, currentWorkCounter: {1}, will wait for additional work", workerWorkCounter, currentWorkCounter);
+				log.Debug("No work was found, workerWorkCounter: {0}, currentWorkCounter: {1}, will wait for additional work", workerWorkCounter, currentWorkCounter);
 				return Monitor.Wait(waitForWork, timeout);
 			}
 		}

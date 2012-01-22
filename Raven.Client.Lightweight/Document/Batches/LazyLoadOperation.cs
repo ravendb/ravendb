@@ -5,6 +5,7 @@ using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
 {
@@ -45,7 +46,7 @@ namespace Raven.Client.Document.Batches
 			{
 				headers[header.Key] = header.Value;
 			}
-			var jsonDocument = SerializationHelper.DeserializeJsonDocument(key, response.Result, headers, (HttpStatusCode) response.Status);
+			var jsonDocument = SerializationHelper.DeserializeJsonDocument(key, RavenJObject.Parse(response.Result), headers, (HttpStatusCode)response.Status);
 			RequiresRetry = loadOperation.SetResult(jsonDocument);
 			if (RequiresRetry == false)
 				Result = loadOperation.Complete<T>();

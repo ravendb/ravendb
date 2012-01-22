@@ -85,7 +85,6 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Creates the indexes found in the specified catalog
 		/// </summary>
-		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to getn indexing tasks from.</param>
 		public static Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention conventions)
 		{
 			var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();

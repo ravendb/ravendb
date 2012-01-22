@@ -226,8 +226,6 @@ namespace Raven.Json.Linq
 			try
 			{
 				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
-
-			
 				return Load(jsonReader);
 			}
 			catch (Exception e)

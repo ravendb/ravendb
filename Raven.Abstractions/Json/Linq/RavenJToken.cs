@@ -172,9 +172,16 @@ namespace Raven.Json.Linq
 		/// <returns>A <see cref="RavenJToken"/> populated from the string that contains JSON.</returns>
 		public static RavenJToken Parse(string json)
 		{
-			JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+			try
+			{
+				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
 
-			return Load(jsonReader);
+				return Load(jsonReader);
+			}
+			catch (Exception e)
+			{
+				throw new JsonSerializationException("Could not parse: [" + json +"]", e);
+			}
 		}
 
 		/// <summary>
