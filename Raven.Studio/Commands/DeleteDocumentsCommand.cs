@@ -29,10 +29,7 @@ namespace Raven.Studio.Commands
 				.ContinueWhenTrueInTheUIThread(() =>
 				                               	{
 				                               		var model = (DocumentsModel) Context;
-				                               		foreach (var document in SelectedItems)
-				                               		{
-				                               			model.Documents.Remove(document);
-				                               		}
+				                               		model.ForceTimerTicked();
 				                               	});
 		}
 
