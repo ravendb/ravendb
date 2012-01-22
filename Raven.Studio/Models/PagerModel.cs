@@ -50,7 +50,11 @@ namespace Raven.Studio.Models
 		public Observable<long?> TotalResults { get; private set; }
 		public long TotalPages
 		{
-			get { return (TotalResults.Value ?? 0)/ PageSize + 1; }
+			get
+			{
+				int add = (TotalResults.Value ?? 0) % PageSize == 0 ? 0 : 1;
+				return (TotalResults.Value ?? 0)/ PageSize + add;
+			}
 		}
 
 		private short? skip;
