@@ -136,7 +136,10 @@ namespace Raven.Studio.Models
 			}
 			else
 			{
-				var databaseModel = new DatabaseModel(databaseName, documentStore.AsyncDatabaseCommands.ForDatabase(databaseName));
+				var databaseCommands = databaseName.Equals("default", StringComparison.OrdinalIgnoreCase) ? 
+					documentStore.AsyncDatabaseCommands.ForDefaultDatabase() : 
+					documentStore.AsyncDatabaseCommands.ForDatabase(databaseName);
+				var databaseModel = new DatabaseModel(databaseName, databaseCommands);
 				Databases.Add(databaseModel);
 				SelectedDatabase.Value = databaseModel;
 			}
