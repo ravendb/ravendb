@@ -34,9 +34,9 @@ namespace Raven.Studio.Infrastructure
 				writer.WriteLine(UrlUtil.Url);
 			}
 			writer.Write("Server Uri: ");
-			writer.WriteLine();
 			writer.WriteLine(GetServerUri(e));
 
+			writer.WriteLine();
 			writer.WriteLine("-- Error Information --");
 			writer.WriteLine(e.ToString());
 			writer.WriteLine();
