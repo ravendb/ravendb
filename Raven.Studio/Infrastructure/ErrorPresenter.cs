@@ -43,7 +43,7 @@ namespace Raven.Studio.Infrastructure
 			writer.Write("Uri: ");
 			writer.WriteLine(UrlUtil.Url);
 			writer.Write("Server Uri: ");
-			writer.WriteLine(GetServerUri(e));
+			writer.WriteLine(GetServerUri(e) ?? "null");
 
 			Show(writer.ToString());
 		}
@@ -62,7 +62,13 @@ namespace Raven.Studio.Infrastructure
 
 		private static string GetServerUri(Exception e)
 		{
-			return "null";
+			if (e.Data.Contains("Url"))
+				return e.Data["Url"] as string;
+			
+			if (e.InnerException != null)
+				return GetServerUri(e.InnerException);
+			
+			return null;
 		}
 	}
 }
