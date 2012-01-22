@@ -101,18 +101,19 @@ namespace Raven.Database.Indexing
 							 Field.Index.NOT_ANALYZED_NO_NORMS);
 				yield break;
 			}
-			if (value is DynamicNullObject)
+			var dynamicNullObject = value as DynamicNullObject;
+			if (dynamicNullObject != null)
 			{
-				if(((DynamicNullObject)value ).IsExplicitNull)
+				if((dynamicNullObject ).IsExplicitNull)
 				{
 					yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
-							 Field.Index.NOT_ANALYZED_NO_NORMS);
+					                                    Field.Index.NOT_ANALYZED_NO_NORMS);
 				}
 				yield break;
 			}
-			if(value is BoostedValue)
+			var boostedValue = value as BoostedValue;
+			if (boostedValue != null)
 			{
-				var boostedValue = (BoostedValue)value;
 				foreach (var field in CreateFields(name, boostedValue.Value, storage))
 				{
 					field.SetBoost(boostedValue.Boost);
@@ -122,14 +123,16 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 
-			if(value is AbstractField)
+			var abstractField = value as AbstractField;
+			if (abstractField != null)
 			{
-				yield return (AbstractField)value;
+				yield return abstractField;
 				yield break;
 			}
-			if(value is byte[])
+			var bytes = value as byte[];
+			if (bytes != null)
 			{
-				yield return CreateBinaryFieldWithCaching(name, (byte[])value, storage);
+				yield return CreateBinaryFieldWithCaching(name, bytes, storage);
 				yield break;
 			}
 
