@@ -36,14 +36,14 @@
 				</StackPanel>
 				<StackPanel toolkit:DockPanel.Dock="Right"
 							Orientation="Horizontal">
-                    <Button Command="{Binding Refresh}"
-                            Style="{StaticResource Style_Button_MouseOverChrome}"
-                            Margin="4,0"
-                            ToolTipService.ToolTip="Refresh">
-                        <Image Source="{StaticResource Image_Refresh_Small}"
-                               Stretch="None" />
-                    </Button>
-                    <HyperlinkButton x:Name="AllErrorsHyperlink"
+					<Button Command="{Binding Refresh}"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							Margin="4,0"
+							ToolTipService.ToolTip="Refresh">
+						<Image Source="{StaticResource Image_Refresh_Small}"
+							   Stretch="None" />
+					</Button>
+					<HyperlinkButton x:Name="AllErrorsHyperlink"
 									 Content="All Logs"
 									 Command="{StaticResource NavigateToCommand}"
 									 CommandParameter="/logs"
