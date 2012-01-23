@@ -118,45 +118,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\Bugs\Compaction.cs">
-      <Link>Munin\Bugs\Compaction.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\Bugs\MultiThreadedWrites.cs">
-      <Link>Munin\Bugs\MultiThreadedWrites.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\CanWorkWithTwoDicsInSameFile.cs">
-      <Link>Munin\CanWorkWithTwoDicsInSameFile.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\Conflicts.cs">
-      <Link>Munin\Conflicts.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\MultiDicInSingleFile.cs">
-      <Link>Munin\MultiDicInSingleFile.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\MyToDoList.cs">
-      <Link>Munin\MyToDoList.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\Optimize.cs">
-      <Link>Munin\Optimize.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\Puts.cs">
-      <Link>Munin\Puts.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\PutsAfterRestart.cs">
-      <Link>Munin\PutsAfterRestart.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\Removes.cs">
-      <Link>Munin\Removes.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\SimpleFileTest.cs">
-      <Link>Munin\SimpleFileTest.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\ToDo.cs">
-      <Link>Munin\ToDo.cs</Link>
-    </Compile>
-    <Compile Include="..\Modules\Munin\Raven.Munin.Tests\ToDoRepository.cs">
-      <Link>Munin\ToDoRepository.cs</Link>
-    </Compile>
     <Compile Include="Bugs\Account.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
@@ -662,6 +623,19 @@
     <Compile Include="MultiGet\MultiGetProfiling.cs" />
     <Compile Include="MultiGet\MultiGetQueries.cs" />
     <Compile Include="MultiGet\MultiGetSecurity.cs" />
+    <Compile Include="Munin\Bugs\Compaction.cs" />
+    <Compile Include="Munin\Bugs\MultiThreadedWrites.cs" />
+    <Compile Include="Munin\CanWorkWithTwoDicsInSameFile.cs" />
+    <Compile Include="Munin\Conflicts.cs" />
+    <Compile Include="Munin\MultiDicInSingleFile.cs" />
+    <Compile Include="Munin\MyToDoList.cs" />
+    <Compile Include="Munin\Optimize.cs" />
+    <Compile Include="Munin\Puts.cs" />
+    <Compile Include="Munin\PutsAfterRestart.cs" />
+    <Compile Include="Munin\Removes.cs" />
+    <Compile Include="Munin\SimpleFileTest.cs" />
+    <Compile Include="Munin\ToDo.cs" />
+    <Compile Include="Munin\ToDoRepository.cs" />
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Querying\IndexedUser.cs" />
