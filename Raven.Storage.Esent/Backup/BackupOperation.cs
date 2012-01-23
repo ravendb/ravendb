@@ -25,7 +25,7 @@ namespace Raven.Storage.Esent.Backup
 		private string to;
 		private bool incrementalBackup;
 		private string src;
-
+		private int backupCount;
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		public BackupOperation(DocumentDatabase database, string src, string to, bool incrementalBackup)
@@ -44,11 +44,14 @@ namespace Raven.Storage.Esent.Backup
 				src = src.ToFullPath();
 				to = to.ToFullPath();
 
-				if (Directory.Exists(to) && File.Exists(Path.Combine(to, "RavenDB.Backup"))) // trying to backup to an existing backup folder
+				var backupConfigPath = Path.Combine(to, "RavenDB.Backup");
+				if (Directory.Exists(to) && File.Exists(backupConfigPath)) // trying to backup to an existing backup folder
 				{
 					if (!incrementalBackup) 
 						throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
 
+					var incrementalTag = DateTime.UtcNow.ToString("Inc yyyy-MM-dd hh-mm-ss");
+					to = Path.Combine(to, incrementalTag);
 				}
 				else
 				{
@@ -81,7 +84,7 @@ namespace Raven.Storage.Esent.Backup
 				esentBackup.Notify += UpdateBackupStatus;
 				esentBackup.Execute();
 
-				File.WriteAllText(Path.Combine(to, "RavenDB.Backup"), "Backup completed " + DateTime.Now);
+				File.WriteAllText(backupConfigPath, "Backup completed " + DateTime.Now);
 			}
 			catch (Exception e)
 			{
