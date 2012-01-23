@@ -6,7 +6,7 @@
 			 mc:Ignorable="d"
 			 x:Class="Raven.Studio.SearchControl"
 			 Width="199"
-			 Height="28">
+			 Height="30">
 
 	<Grid x:Name="LayoutRoot">
 		<Rectangle Fill="#FFE9E9E9"
@@ -25,7 +25,7 @@
 					   VerticalAlignment="Center" />
 			<TextBox x:Name="searchField"
 					 HorizontalAlignment="Left"
-					 Margin="51,5,0,5"
+					 Margin="51,2,0,2"
 					 TextWrapping="Wrap"
 					 VerticalAlignment="Center"
 					 Width="95"
