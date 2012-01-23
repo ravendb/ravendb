@@ -21,7 +21,6 @@ namespace Raven.Database.Indexing
 {
 	public class SimpleIndex : Index
 	{
-		
 		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
 			: base(directory, name, indexDefinition, viewGenerator)
 		{
@@ -166,9 +165,16 @@ namespace Raven.Database.Indexing
 			};
 		}
 
+		private readonly Dictionary<Type, PropertyDescriptorCollection> propertyDescriptorCache = new Dictionary<Type, PropertyDescriptorCollection>();
+
 		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, object doc)
 		{
-		    var properties = TypeDescriptor.GetProperties(doc);
+		    PropertyDescriptorCollection properties;
+			Type type = doc.GetType();
+			if(propertyDescriptorCache.TryGetValue(type, out properties) == false)
+			{
+				propertyDescriptorCache[type] = properties = TypeDescriptor.GetProperties(doc);
+			}
 			
 			var abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO).ToList();
 			return new IndexingResult()

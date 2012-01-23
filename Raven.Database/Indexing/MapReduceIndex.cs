@@ -165,6 +165,7 @@ namespace Raven.Database.Indexing
 		}
 
 		private static readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache = new ConcurrentDictionary<Type, Func<object, object>>();
+	
 		private static object GetDocumentId(object doc)
 		{
 			var docIdFetcher = documentIdFetcherCache.GetOrAdd(doc.GetType(), type =>
@@ -174,7 +175,7 @@ namespace Raven.Database.Indexing
 				{
 					return i => ((dynamic) i).__document_id;
 				}
-				var docIdProp = TypeDescriptor.GetProperties(doc).Find(Abstractions.Data.Constants.DocumentIdFieldName, false);
+				var docIdProp = TypeDescriptor.GetProperties(doc).Find(Constants.DocumentIdFieldName, false);
 				return docIdProp.GetValue;
 			});
 			if (docIdFetcher == null)
