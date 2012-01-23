@@ -161,8 +161,7 @@ namespace Raven.Database.Indexing
 			var newDocId = dynamicJsonObject.GetDocumentId();
 			return new IndexingResult
 			{
-				Fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)dynamicJsonObject).Inner, indexDefinition,
-																  Field.Store.NO).ToList(),
+				Fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)dynamicJsonObject).Inner, Field.Store.NO).ToList(),
 				NewDocId = newDocId is DynamicNullObject ? null : (string)newDocId,
 				ShouldSkip = false
 			};
@@ -174,7 +173,7 @@ namespace Raven.Database.Indexing
 			{
 				properties = TypeDescriptor.GetProperties(doc);
 			}
-			var abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.NO).ToList();
+			var abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO).ToList();
 			return new IndexingResult()
 			{
 				Fields = abstractFields,
