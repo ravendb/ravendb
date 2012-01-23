@@ -8,7 +8,8 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:Models="clr-namespace:Raven.Studio.Models"
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-			 mc:Ignorable="d"
+             xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+             xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
 			 d:DataContext="{d:DesignInstance Models:IndexDefinitionModel, IsDesignTimeCreatable=False}">
 	<UserControl.Resources>
 		<DataTemplate x:Key="IndexFieldTemplate">
@@ -117,7 +118,16 @@
 				toolkit:DockPanel.Dock="Top">
 			<toolkit:DockPanel Margin="4"
 							   LastChildFill="False">
-				<StackPanel Orientation="Horizontal">
+                
+                <i:Interaction.Triggers>
+                    <Behaviors:StudioKeyTrigger Key="N"
+                                                Modifiers="Control">
+                        <i:InvokeCommandAction Command="{StaticResource NavigateToCommand}"
+                                               CommandParameter="/indexes/new?mode=new" />
+                    </Behaviors:StudioKeyTrigger>
+                </i:Interaction.Triggers>
+                
+                <StackPanel Orientation="Horizontal">
 					<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
 						   Stretch="None"
 						   VerticalAlignment="Center"
