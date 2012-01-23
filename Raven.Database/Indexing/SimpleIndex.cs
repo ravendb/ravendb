@@ -39,7 +39,6 @@ namespace Raven.Database.Indexing
 			Write(context, (indexWriter, analyzer) =>
 			{
 				bool madeChanges = false;
-				PropertyDescriptorCollection properties = null;
 				var processedKeys = new HashSet<string>();
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
 					.Where(x => x != null)
@@ -77,7 +76,7 @@ namespace Raven.Database.Indexing
 					count++;
 
 					float boost;
-					var indexingResult = GetIndexingResult(ref properties, doc, anonymousObjectToLuceneDocumentConverter, out boost);
+					var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
 
 					if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
 					{
@@ -121,7 +120,7 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Indexed {0} documents for {1}", count, name);
 		}
 
-		private IndexingResult GetIndexingResult(ref PropertyDescriptorCollection properties, object doc, AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, out float boost)
+		private IndexingResult GetIndexingResult(object doc, AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, out float boost)
 		{
 			boost = 1;
 
@@ -136,7 +135,7 @@ namespace Raven.Database.Indexing
 			if (doc is DynamicJsonObject)
 				indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, (DynamicJsonObject) doc);
 			else
-				indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, ref properties, doc);
+				indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, doc);
 
 			if (Math.Abs(boost - 1) > float.Epsilon)
 			{
@@ -167,12 +166,10 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, ref PropertyDescriptorCollection properties, object doc)
+		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, object doc)
 		{
-			if (properties == null)
-			{
-				properties = TypeDescriptor.GetProperties(doc);
-			}
+		    var properties = TypeDescriptor.GetProperties(doc);
+			
 			var abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO).ToList();
 			return new IndexingResult()
 			{

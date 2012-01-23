@@ -215,6 +215,7 @@
     <Compile Include="Bugs\Metadata\Querying.cs" />
     <Compile Include="Bugs\MultiMap\Errors.cs" />
     <Compile Include="Bugs\MultiMap\MultiMapReduce.cs" />
+    <Compile Include="Bugs\MultiMap\MultiMapWithCustomProperties.cs" />
     <Compile Include="Bugs\MultiMap\SimpleMultiMap.cs" />
     <Compile Include="Bugs\NestedProjection.cs" />
     <Compile Include="Bugs\NestedTransactions.cs" />
