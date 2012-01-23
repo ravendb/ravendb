@@ -24,6 +24,18 @@ namespace Raven.Tests.Bugs.MultiMap
                 WaitForIndexing(store);
 
                 Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+
+				using(var s = store.OpenSession())
+				{
+					Assert.NotEmpty(s.Query<Cat, CatsAndDogs>()
+					                	.Where(x => x.CatsOnlyProperty == "Miau")
+					                	.ToList());
+
+					Assert.NotEmpty(s.Query<Dog, CatsAndDogs>()
+										.Where(x => x.Name == "Oscar")
+										.ToList());
+
+				}
             }
         }
 
