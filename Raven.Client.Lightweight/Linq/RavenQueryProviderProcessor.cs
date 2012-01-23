@@ -118,6 +118,10 @@ namespace Raven.Client.Linq
 								throw new ArgumentOutOfRangeException(unaryExpressionOp.NodeType.ToString());
 						}
 						break;
+					case ExpressionType.Convert:
+					case ExpressionType.ConvertChecked:
+						VisitExpression(((UnaryExpression) expression).Operand);
+						break;
 					default:
 						if (expression is MethodCallExpression)
 						{

@@ -272,7 +272,7 @@ Configuration options:
 
 				Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
 				Console.WriteLine("Server started in {0:#,#;;0} ms", sp.ElapsedMilliseconds);
-				Console.WriteLine("Data directory: {0}", ravenConfiguration.DataDirectory);
+				Console.WriteLine("Data directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.DataDirectory);
 				Console.WriteLine("HostName: {0} Port: {1}, Storage: {2}", ravenConfiguration.HostName ?? "<any>",
 					ravenConfiguration.Port,
 					server.Database.TransactionalStorage.FriendlyName);

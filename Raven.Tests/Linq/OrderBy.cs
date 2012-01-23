@@ -33,8 +33,8 @@ namespace Raven.Tests.Linq
 				using (var session = store.OpenSession())
 				{
 					var lastPosition = session.Query<Section>()
+						.OrderByDescending(x => x.Position)
 						.Select(x => x.Position)
-						.OrderByDescending(x => x)
 						.FirstOrDefault();
 
 					Assert.Equal(9, lastPosition);
@@ -64,8 +64,8 @@ namespace Raven.Tests.Linq
 				using (var session = store.OpenSession())
 				{
 					var lastPosition = session.Query<Section>()
+						.OrderBy(x => x.Position)
 						.Select(x => x.Position)
-						.OrderBy(x => x)
 						.FirstOrDefault();
 
 					Assert.Equal(0, lastPosition);
