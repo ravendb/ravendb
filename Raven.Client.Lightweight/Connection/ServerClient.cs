@@ -694,7 +694,12 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			{
 				var httpWebResponse = e.Response as HttpWebResponse;
 				if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+				{
+					var text = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression()).ReadToEnd();
+					if (text.Contains("maxQueryString"))
+						throw new InvalidOperationException(text, e);
 					throw new InvalidOperationException("There is no index named: " + index);
+				}
 				throw;
 			}
 			return SerializationHelper.ToQueryResult(json, request.ResponseHeaders["ETag"]);
