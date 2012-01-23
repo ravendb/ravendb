@@ -18,31 +18,6 @@ namespace Raven.Studio
 			InitializeComponent();
 		}
 
-		private bool isCtrlDown;
-		protected override void OnKeyUp(System.Windows.Input.KeyEventArgs e)
-		{
-			switch (e.Key)
-			{
-				case Key.Ctrl:
-					isCtrlDown = false;
-					break;
-			}
-		}
-
-		protected override void OnKeyDown(KeyEventArgs e)
-		{
-			switch (e.Key)
-			{
-				case Key.O:
-					if (isCtrlDown)
-						new NavigateToDocumentByIdCommand().Execute(null);
-					break;
-				case Key.Ctrl:
-					isCtrlDown = true;
-					break;
-			}
-		}
-
 		// After the Frame navigates, ensure the HyperlinkButton representing the current page is selected
 		private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
 		{

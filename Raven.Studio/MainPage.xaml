@@ -10,7 +10,8 @@
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 			 xmlns:System="clr-namespace:System;assembly=mscorlib"
 			 xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
-			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit">
+			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
@@ -19,6 +20,13 @@
 			<RowDefinition Height="*" />
 			<RowDefinition Height="35" />
 		</Grid.RowDefinitions>
+
+		<i:Interaction.Triggers>
+			<Behaviors:StudioKeyTrigger Key="O"
+										Modifiers="Control">
+				<i:InvokeCommandAction Command="{StaticResource NavigateToDocumentByIdCommand}"/>
+			</Behaviors:StudioKeyTrigger>
+		</i:Interaction.Triggers>
 
 		<Grid x:Name="HeaderGrid"
 			  Grid.Row="0"
@@ -257,5 +265,4 @@
 			</toolkit:DockPanel>
 		</Grid>
 	</Grid>
-
 </UserControl>
