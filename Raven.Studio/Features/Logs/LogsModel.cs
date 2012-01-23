@@ -12,6 +12,7 @@ using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
+using System.Linq;
 
 namespace Raven.Studio.Features.Logs
 {
@@ -35,7 +36,7 @@ namespace Raven.Studio.Features.Logs
 			return DatabaseCommands.GetLogsAsync(showErrorsOnly)
 				.ContinueOnSuccess(logs =>
 				                   	{
-										Logs.Match(logs, () =>
+										Logs.Match(logs.OrderByDescending(x=>x.TimeStamp).ToList(), () =>
 										{
 											if (DisplayedLogs.Count == 0)
 												DisplayedLogs.Match(Logs);
