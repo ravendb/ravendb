@@ -201,10 +201,7 @@ namespace Raven.Database.Config
 			int totalPhysicalMemoryMegabytes;
 			if (Type.GetType("Mono.Runtime") != null)
 			{
-				var pc = new System.Diagnostics.PerformanceCounter("Mono Memory", "Total Physical Memory");
-				totalPhysicalMemoryMegabytes = (int)(pc.RawValue / 1024 / 1024);
-				if (totalPhysicalMemoryMegabytes == 0)
-					totalPhysicalMemoryMegabytes = 128; // 128MB, the Mono runtime default
+				totalPhysicalMemoryMegabytes = GetDefaultMemoryCacheLimitMegabytesOnMono();
 			}
 			else
 			{
@@ -226,6 +223,15 @@ namespace Raven.Database.Config
 				return 128; // if machine has less than 1024 MB, then only use 128 MB 
 
 			return val;
+		}
+
+		private static int GetDefaultMemoryCacheLimitMegabytesOnMono()
+		{
+			var pc = new System.Diagnostics.PerformanceCounter("Mono Memory", "Total Physical Memory");
+			var totalPhysicalMemoryMegabytes = (int)(pc.RawValue / 1024 / 1024);
+			if (totalPhysicalMemoryMegabytes == 0)
+				totalPhysicalMemoryMegabytes = 128; // 128MB, the Mono runtime default
+			return totalPhysicalMemoryMegabytes;
 		}
 
 		public NameValueCollection Settings { get; set; }
