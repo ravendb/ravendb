@@ -44,22 +44,6 @@ namespace Raven.Json.Linq
 			return true;
 		}
 
-		public override int? ReadAsInt32()
-		{
-			Read();
-
-			if (TokenType == JsonToken.Null)
-				return null;
-			if (TokenType == JsonToken.Integer)
-			{
-				SetToken(JsonToken.Integer, Convert.ToInt32(Value, CultureInfo.InvariantCulture));
-				return (int)Value;
-			}
-
-			throw new JsonReaderException(
-				"Error reading integer. Expected a integer (Int32) but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
-		}
-
 		private static IEnumerable<ReadState> ReadRavenJToken(RavenJToken token)
 		{
 			if (token is RavenJValue)
@@ -199,7 +183,7 @@ namespace Raven.Json.Linq
 			}
 
 			throw new JsonReaderException(
-				"Error reading date. Expected date but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
+				"Error reading date. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
 		}
 #endif
 	}
