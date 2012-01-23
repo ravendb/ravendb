@@ -75,7 +75,7 @@ namespace Raven.Tests.Storage
 			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 		}
 
-		[Fact(Skip = "Waiting feedback from microsoft with regards to how it works")]
+		[Fact]
 		public void AfterIncrementalBackupRestoreCanReadDocument()
 		{
 			DeleteIfExists("raven.db.test.backup"); // for full backups, we can't have anything in the target dir

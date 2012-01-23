@@ -44,9 +44,11 @@ namespace Raven.Storage.Esent.Backup
 				src = src.ToFullPath();
 				to = to.ToFullPath();
 
-				if (Directory.Exists(src) && File.Exists(Path.Combine(to, "RavenDB.Backup"))) // trying to backup to an existing backup folder
+				if (Directory.Exists(to) && File.Exists(Path.Combine(to, "RavenDB.Backup"))) // trying to backup to an existing backup folder
 				{
-					if (!incrementalBackup) throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
+					if (!incrementalBackup) 
+						throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
+
 				}
 				else
 				{
