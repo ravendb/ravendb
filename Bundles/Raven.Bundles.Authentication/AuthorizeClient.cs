@@ -24,7 +24,8 @@ namespace Raven.Bundles.Authentication
 			{
 				allowedDatabases = user.AllowedDatabases.Select(tenantId=> new AccessTokenBody.DatabaseAccess
 				{
-					TenantId = tenantId
+					TenantId = tenantId,
+					Admin = user.Admin
 				}).ToArray();
 			}
 

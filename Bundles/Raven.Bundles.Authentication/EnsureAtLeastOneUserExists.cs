@@ -49,7 +49,8 @@ Credentials for this user can be found in the following file: {0}", authConfigPa
 			JsonExtensions.CreateDefaultJsonSerializer().Serialize(ravenJTokenWriter, new AuthenticationUser
 			{
 				AllowedDatabases = new[] { "*" },
-				Name = "Admin"
+				Name = "Admin",
+				Admin = true
 			}.SetPassword(pwd));
 
 
