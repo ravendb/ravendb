@@ -138,7 +138,12 @@ namespace Raven.Client.Linq
 		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms, decimal boost = 1)
 		{
 			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof (T)), self.Expression,
+			Expression expression = self.Expression;
+			if(expression.Type != typeof(IRavenQueryable<T>))
+			{
+				expression = Expression.Convert(expression, typeof (IRavenQueryable<T>));
+			}
+			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof (T)), expression,
 			                                                          fieldSelector, Expression.Constant(searchTerms), Expression.Constant(boost)));
 			return (IRavenQueryable<T>)queryable;
 		}

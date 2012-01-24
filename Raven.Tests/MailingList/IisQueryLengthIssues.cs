@@ -7,6 +7,12 @@ namespace Raven.Tests.MailingList
 {
 	public class IisQueryLengthIssues : IISExpressTestClient
 	{
+		private readonly string[] errorOptions = new[]
+		                                {
+		                                	"Verify the configuration/system.webServer/security/requestFiltering/requestLimits@maxQueryString setting in the applicationhost.config or web.config file.",
+		                                	"The length of the query string for this request exceeds the configured maxQueryStringLength value"
+		                                };
+
 		[IISExpressInstalledFact]
 		public void ShouldFailGracefully()
 		{
@@ -14,8 +20,8 @@ namespace Raven.Tests.MailingList
 			{
 				var name = new string('x', 0x1000);
 				var exception = Assert.Throws<InvalidOperationException>(() => store.OpenSession().Query<User>().Where(u => u.FirstName == name).ToList());
-				Assert.Contains("The length of the query string for this request exceeds the configured maxQueryStringLength value",
-					exception.Message);
+				
+				Assert.True(errorOptions.Any(s => exception.Message.Contains(s)));
 			}
 		}
 
@@ -26,8 +32,7 @@ namespace Raven.Tests.MailingList
 			{
 				var name = new string('x', 0x1000);
 				var exception = Assert.Throws<InvalidOperationException>(() => store.OpenSession().Query<User>("test").Where(u => u.FirstName == name).ToList());
-				Assert.Contains("The length of the query string for this request exceeds the configured maxQueryStringLength value",
-					exception.Message);
+				Assert.True(errorOptions.Any(s => exception.Message.Contains(s)));
 			}
 		}
 	}

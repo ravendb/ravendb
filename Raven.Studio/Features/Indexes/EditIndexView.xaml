@@ -8,7 +8,8 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:Models="clr-namespace:Raven.Studio.Models"
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-			 mc:Ignorable="d"
+			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
 			 d:DataContext="{d:DesignInstance Models:IndexDefinitionModel, IsDesignTimeCreatable=False}">
 	<UserControl.Resources>
 		<DataTemplate x:Key="IndexFieldTemplate">
@@ -117,6 +118,20 @@
 				toolkit:DockPanel.Dock="Top">
 			<toolkit:DockPanel Margin="4"
 							   LastChildFill="False">
+				
+				<i:Interaction.Triggers>
+					<Behaviors:StudioKeyTrigger Key="N"
+												Modifiers="Control">
+						<i:InvokeCommandAction Command="{StaticResource NavigateToCommand}"
+											   CommandParameter="/indexes/new?mode=new" />
+					</Behaviors:StudioKeyTrigger>
+
+					<Behaviors:StudioKeyTrigger Key="S"
+												Modifiers="Control">
+						<i:InvokeCommandAction Command="{Binding SaveIndex}"/>
+					</Behaviors:StudioKeyTrigger>
+				</i:Interaction.Triggers>
+				
 				<StackPanel Orientation="Horizontal">
 					<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
 						   Stretch="None"
@@ -200,8 +215,8 @@
 
 					<Button x:Name="AddField"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
-                            Command="{Binding AddField}"
-                            VerticalAlignment="Center"
+							Command="{Binding AddField}"
+							VerticalAlignment="Center"
 							HorizontalAlignment="Left"
 							Margin="0">
 						<Button.Content>
@@ -216,28 +231,28 @@
 							</StackPanel>
 						</Button.Content>
 					</Button>
-                    
-                    <Button x:Name="MappedResults"
-                            Style="{StaticResource Style_Button_MouseOverChrome}"
-                            Command="{StaticResource NavigateToExternalUrlCommand}"
-                            CommandParameter="{Binding Name, StringFormat='/indexes/{0}?debug=map'}"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Left"
-                            Margin="0">
-                        <Button.Content>
-                            <StackPanel Orientation="Horizontal"
-                                        VerticalAlignment="Center">
-                                <Image Source="{StaticResource Image_ChangeView_Tiny}"
-                                       Stretch="None"
-                                       VerticalAlignment="Center" />
-                                <TextBlock Text="Mapped Results"
-                                           VerticalAlignment="Center"
-                                           Margin="2,0,0,0" />
-                            </StackPanel>
-                        </Button.Content>
-                    </Button>
+					
+					<Button x:Name="MappedResults"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							Command="{StaticResource NavigateToExternalUrlCommand}"
+							CommandParameter="{Binding Name, StringFormat='/indexes/{0}?debug=map'}"
+							VerticalAlignment="Center"
+							HorizontalAlignment="Left"
+							Margin="0">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal"
+										VerticalAlignment="Center">
+								<Image Source="{StaticResource Image_ChangeView_Tiny}"
+									   Stretch="None"
+									   VerticalAlignment="Center" />
+								<TextBlock Text="Mapped Results"
+										   VerticalAlignment="Center"
+										   Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
 
-                    <Button x:Name="Save"
+					<Button x:Name="Save"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							HorizontalAlignment="Left"
 							Margin="4 0 0 0"

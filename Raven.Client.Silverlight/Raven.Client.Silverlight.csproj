@@ -315,6 +315,7 @@
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
     <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Data\ServerRequestError.cs" />
+    <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -8,9 +8,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
+using Lucene.Net.Documents;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using System.Linq;
+using Raven.Database.Indexing;
 
 namespace Raven.Database.Linq
 {
@@ -85,6 +87,15 @@ namespace Raven.Database.Linq
 			ForEntityNames = new HashSet<string>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<string, FieldIndexing>();
+		}
+
+		protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool indexed = true)
+		{
+			var indexDefinition = new IndexDefinition();
+			indexDefinition.Indexes[name] = indexed ? FieldIndexing.Analyzed : FieldIndexing.NotAnalyzed;
+			var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
+
+			return anonymousObjectToLuceneDocumentConverter.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO);
 		}
 
 		protected IEnumerable<dynamic> Hierarchy(object source, string name)

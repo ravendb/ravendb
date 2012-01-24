@@ -1,6 +1,4 @@
-using System.Windows.Input;
 using Raven.Studio.Commands;
-using Raven.Studio.Features.Databases;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -31,6 +29,12 @@ namespace Raven.Studio.Models
 				if (changeDatabase.CanExecute(selectedDatabase.Name))
 					changeDatabase.Execute(selectedDatabase);
 			}
+		}
+
+		protected override System.Threading.Tasks.Task LoadedTimerTickedAsync()
+		{
+			// Fetch databases names from the server
+			return ApplicationModel.Current.Server.Value.TimerTickedAsync();
 		}
 	}
 }

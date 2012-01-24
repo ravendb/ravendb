@@ -9,6 +9,7 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using System.Linq;
 
 namespace Raven.Storage.Esent.Backup
 {
@@ -25,8 +26,7 @@ namespace Raven.Storage.Esent.Backup
 
 		public void Execute()
 		{
-			if((Directory.Exists(Path.Combine(backupLocation,"Indexes")) == false) ||
-				(Directory.Exists(Path.Combine(backupLocation,"IndexDefinitions")) == false))
+			if (File.Exists(Path.Combine(backupLocation, "RavenDB.Backup")) == false)
 			{
 				throw new InvalidOperationException(backupLocation + " doesn't look like a valid backup");
 			}
@@ -40,6 +40,8 @@ namespace Raven.Storage.Esent.Backup
 			Directory.CreateDirectory(Path.Combine(databaseLocation, "logs"));
 			Directory.CreateDirectory(Path.Combine(databaseLocation, "temp"));
 			Directory.CreateDirectory(Path.Combine(databaseLocation, "system"));
+
+			var lastIndexBackup = CombineIncrementalBackups();
 
 			CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "IndexDefinitions")),
 				new DirectoryInfo(Path.Combine(databaseLocation, "IndexDefinitions")));
@@ -64,6 +66,25 @@ namespace Raven.Storage.Esent.Backup
 			{
 				Api.JetTerm(instance);
 			}
+		}
+
+		private string CombineIncrementalBackups()
+		{
+			var directories = Directory.GetDirectories(backupLocation, "Inc*")
+				.OrderBy(dir => dir)
+				.ToList();
+
+			foreach (var directory in directories)
+			{
+				foreach (var file in Directory.GetFiles(directory,"RVN*.log"))
+				{
+					var justFile = Path.GetFileName(file);
+					File.Copy(file, Path.Combine(backupLocation, "new", justFile), true);
+				}
+			}
+
+			return directories.LastOrDefault() ?? backupLocation;
+
 		}
 
 		private JET_err StatusCallback(JET_SESID sesid, JET_SNP snp, JET_SNT snt, object data)
