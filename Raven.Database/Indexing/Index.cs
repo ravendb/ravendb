@@ -294,7 +294,7 @@ namespace Raven.Database.Indexing
 			indexWriter = CreateIndexWriter(directory);
 		}
 
-		public PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose)
+		public PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose, bool forQuerying = false)
 		{
 			toDispose.Add(defaultAnalyzer.Close);
 			var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(defaultAnalyzer);
@@ -304,6 +304,14 @@ namespace Raven.Database.Indexing
 				if (analyzerInstance == null)
 					continue;
 				toDispose.Add(analyzerInstance.Close);
+
+				if (forQuerying)
+				{
+					var customAttributes = analyzerInstance.GetType().GetCustomAttributes(typeof (NotForQueryingAttribute), false);
+					if (customAttributes.Length > 0)
+						continue;
+				}
+
 				perFieldAnalyzerWrapper.AddAnalyzer(analyzer.Key, analyzerInstance);
 			}
 			StandardAnalyzer standardAnalyzer = null;
@@ -712,7 +720,7 @@ namespace Raven.Database.Indexing
 					PerFieldAnalyzerWrapper searchAnalyzer = null;
 					try
 					{
-						searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose);
+						searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
 						searchAnalyzer = parent.AnalyzerGenerators.Aggregate(searchAnalyzer, (currentAnalyzer, generator) =>
 						{
 							Analyzer newAnalyzer = generator.GenerateAnalzyerForQuerying(parent.name, indexQuery.Query, currentAnalyzer);
@@ -720,7 +728,7 @@ namespace Raven.Database.Indexing
 							{
 								DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
 							}
-							return parent.CreateAnalyzer(newAnalyzer, toDispose);
+							return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
 						});
 						luceneQuery = QueryBuilder.BuildQuery(query, searchAnalyzer);
 					}

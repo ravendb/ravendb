@@ -120,6 +120,7 @@
     <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Impl\ExceptionAggregator.cs" />
+    <Compile Include="Indexing\NotForQueryingAttribute.cs" />
     <Compile Include="Indexing\Sorting\RandomFieldComparatorSource.cs" />
     <Compile Include="Indexing\Sorting\RandomFieldComparator.cs" />
     <Compile Include="Indexing\Sorting\RandomSortField.cs" />
