@@ -68,7 +68,7 @@ namespace Raven.Database.Server.Security.OAuth
 				return false;
 			}
 			
-			ctx.User = new OAuthPrincipal(tokenBody);
+			ctx.User = new OAuthPrincipal(tokenBody, TenantId);
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = tokenBody.UserId;
 			return true;
 		}
@@ -101,15 +101,25 @@ namespace Raven.Database.Server.Security.OAuth
 	public class OAuthPrincipal : IPrincipal, IIdentity
 	{
 		private readonly AccessTokenBody tokenBody;
+		private readonly string tenantId;
 
-		public OAuthPrincipal(AccessTokenBody tokenBody)
+		public OAuthPrincipal(AccessTokenBody tokenBody, string tenantId)
 		{
 			this.tokenBody = tokenBody;
+			this.tenantId = tenantId;
 		}
 
 		public bool IsInRole(string role)
 		{
-			return false;
+			if ("Administrators".Equals(role, StringComparison.InvariantCultureIgnoreCase) == false)
+				return false;
+
+			var databaseAccess = tokenBody.AuthorizedDatabases.FirstOrDefault(x=>string.Equals(x.TenantId, tenantId, StringComparison.InvariantCultureIgnoreCase) || x.TenantId == "*");
+
+			if (databaseAccess == null)
+				return false;
+
+			return databaseAccess.Admin;
 		}
 
 		public IIdentity Identity

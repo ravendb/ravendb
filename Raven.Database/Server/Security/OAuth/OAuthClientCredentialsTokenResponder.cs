@@ -61,7 +61,7 @@ namespace Raven.Database.Server.Security.OAuth
 				return;
 			}
 
-			string[] authorizedDatabases;
+			AccessTokenBody.DatabaseAccess[] authorizedDatabases;
 			if (!AuthenticateClient.Authenticate(ResourceStore, identity.Item1, identity.Item2, out authorizedDatabases))
 			{
 				if ((ResourceStore == DefaultResourceStore ||
@@ -79,8 +79,11 @@ namespace Raven.Database.Server.Security.OAuth
 
 			var userId = identity.Item1;
 
-			var token = AccessToken.Create(Settings.OAuthTokenCertificate, userId,
-										   authorizedDatabases);
+			var token = AccessToken.Create(Settings.OAuthTokenCertificate, new AccessTokenBody
+			{
+				UserId = userId,
+				AuthorizedDatabases = authorizedDatabases
+			});
 
 			context.Write(token.Serialize());
 		}

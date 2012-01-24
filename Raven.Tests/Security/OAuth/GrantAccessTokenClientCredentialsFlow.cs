@@ -41,9 +41,15 @@ namespace Raven.Tests.Security.OAuth
 
 		public class FakeAuthenticateClient : IAuthenticateClient
 		{
-			public bool Authenticate(DocumentDatabase documentDatabase, string username, string password, out string[] allowedDatabases)
+			public bool Authenticate(DocumentDatabase documentDatabase, string username, string password, out AccessTokenBody.DatabaseAccess[] allowedDatabases)
 			{
-				allowedDatabases = new[] { "*" };
+				allowedDatabases = new[]
+				{
+					new AccessTokenBody.DatabaseAccess
+					{
+						TenantId = "*"
+					},
+				};
 				return string.IsNullOrEmpty(password) == false;
 			}
 		}

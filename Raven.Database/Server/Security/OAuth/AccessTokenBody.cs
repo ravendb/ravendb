@@ -37,6 +37,7 @@ namespace Raven.Database.Server.Security.OAuth
 
 		public class DatabaseAccess
 		{
+			public bool Admin { get; set; }
 			public string TenantId { get; set; }
 			public bool ReadOnly { get; set; }
 		}
