@@ -737,7 +737,7 @@ namespace Raven.Client.Indexes
 		{
 			if (node.Value != null)
 			{
-				var s = node.Value.ToString();
+				var s = Convert.ToString(node.Value, CultureInfo.InvariantCulture);
 				if (node.Value is string)
 				{
 					Out("\"");
