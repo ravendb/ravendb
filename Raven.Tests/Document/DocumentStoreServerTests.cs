@@ -555,6 +555,57 @@ namespace Raven.Tests.Document
 
 
 		[Fact]
+        public void Can_defer_commands_until_savechanges_async()
+		{
+			using (var server = GetNewServer(port, path))
+			{
+				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+				documentStore.Initialize();
+                using (var session = documentStore.OpenSession())
+                {
+                    var commands = new ICommandData[]
+                                       {
+                                           new PutCommandData
+                                               {
+                                                   Document =
+                                                       RavenJObject.FromObject(new Company {Name = "Hibernating Rhinos"}),
+                                                   Etag = null,
+                                                   Key = "rhino1",
+                                                   Metadata = new RavenJObject(),
+                                               },
+                                           new PutCommandData
+                                               {
+                                                   Document =
+                                                       RavenJObject.FromObject(new Company {Name = "Hibernating Rhinos"}),
+                                                   Etag = null,
+                                                   Key = "rhino2",
+                                                   Metadata = new RavenJObject(),
+                                               }
+                                       };
+
+                    session.Advanced.Defer(commands);
+                    session.Advanced.Defer(new DeleteCommandData
+                                               {
+                                                   Etag = null,
+                                                   Key = "rhino2"
+                                               });
+
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                    session.SaveChanges();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // Make sure that session is empty
+                    session.SaveChanges();
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+
+				Assert.Null(documentStore.DatabaseCommands.Get("rhino2"));
+				Assert.NotNull(documentStore.DatabaseCommands.Get("rhino1"));
+			}
+		}
+
+		[Fact]
 		public void Can_get_two_documents_in_one_call()
 		{
 			using (var server = GetNewServer(port, path))
