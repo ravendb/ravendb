@@ -45,6 +45,7 @@ namespace Raven.Client.Connection
 		private Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
 		public object Headers;
+		private Stream postedStream;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -248,6 +249,15 @@ namespace Raven.Client.Connection
 			if (postedData != null)
 			{
 				HttpJsonRequestHelper.WriteDataToRequest(newWebRequest, postedData);
+			}
+			if(postedStream != null)
+			{
+				postedStream.Position = 0;
+				using (var stream = newWebRequest.GetRequestStream())
+				{
+					postedStream.CopyTo(stream);
+					stream.Flush();
+				}
 			}
 			webRequest = newWebRequest;
 		}
@@ -584,12 +594,13 @@ namespace Raven.Client.Connection
 			return RavenJToken.Parse(ReadResponseString());
 		}
 
-		public void Write(Stream data)
+		public void Write(Stream streamToWrite)
 		{
-			webRequest.ContentLength = data.Length;
+			postedStream = streamToWrite;
+			webRequest.ContentLength = streamToWrite.Length;
 			using(var stream = webRequest.GetRequestStream())
 			{
-				data.CopyTo(stream);
+				streamToWrite.CopyTo(stream);
 				stream.Flush();
 			}
 		}

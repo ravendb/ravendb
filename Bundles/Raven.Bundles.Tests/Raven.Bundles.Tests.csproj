@@ -43,6 +43,7 @@
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -60,6 +61,7 @@
     <Compile Include="Authentication\Bugs\Mojo2_Failed.cs" />
     <Compile Include="Authentication\HttpWebRequestExtensions.cs" />
     <Compile Include="Authentication\SimpleLogin.cs" />
+    <Compile Include="Authentication\UsingDatabaseCommands.cs" />
     <Compile Include="Authorization\AuthorizationTest.cs" />
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
     <Compile Include="Authorization\Bugs\Kwal.cs" />

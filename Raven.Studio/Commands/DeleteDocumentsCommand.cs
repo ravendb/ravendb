@@ -25,14 +25,18 @@ namespace Raven.Studio.Commands
 			AskUser.ConfirmationAsync("Confirm Delete", documentsIds.Count > 1
 			                                            	? string.Format("Are you sure you want to delete these {0} documents?", documentsIds.Count)
 			                                            	: string.Format("Are you sure that you want to delete this document? ({0})", documentsIds.First()))
+				.ContinueWhenTrueInTheUIThread(() =>
+				                               	{
+													var model = (DocumentsModel)Context;
+													model.IsLoadingDocuments = true;
+
+													ApplicationModel.Current.AddNotification(new Notification("Deleting documents..."));
+				                               	})
 				.ContinueWhenTrue(() => DeleteDocuments(documentsIds))
 				.ContinueWhenTrueInTheUIThread(() =>
 				                               	{
 				                               		var model = (DocumentsModel) Context;
-				                               		foreach (var document in SelectedItems)
-				                               		{
-				                               			model.Documents.Remove(document);
-				                               		}
+				                               		model.ForceTimerTicked();
 				                               	});
 		}
 

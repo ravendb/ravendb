@@ -89,9 +89,8 @@ namespace Raven.Studio.Infrastructure
 					return task;
 
 				var ex = task.Exception.ExtractSingleInnerException();
-				if (ErrorHandler.Handle(ex) == false)
-					Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
-						.ContinueWith(_ => action(task.Exception));
+				Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
+					.ContinueWith(_ => action(task.Exception));
 				return task;
 			}).Unwrap();
 		}
@@ -110,9 +109,8 @@ namespace Raven.Studio.Infrastructure
 			        return;
 
 			    var ex = task.Exception.ExtractSingleInnerException();
-			    if (ErrorHandler.Handle(ex) == false)
-			        Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
-			            .ContinueWith(_ => action(task.Exception));
+			    Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
+			        .ContinueWith(_ => action(task.Exception));
 			});
 
 		}

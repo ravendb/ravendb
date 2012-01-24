@@ -764,6 +764,12 @@ namespace Raven.Client.Indexes
 					Out(s);
 					return node;
 				}
+				if (node.Value is decimal)
+				{
+					Out(s);
+					Out('M');
+					return node;
+				}
 				Out(s);
 				return node;
 			}

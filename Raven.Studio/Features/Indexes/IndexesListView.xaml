@@ -107,6 +107,15 @@
 	<toolkit:HeaderedContentControl Grid.Column="2"
 									Style="{StaticResource Style_HeaderedContentControl_Stretch}"
 									Margin="{StaticResource Margin_ContentPage}">
+
+		<i:Interaction.Triggers>
+			<Behaviors:StudioKeyTrigger Key="N"
+										Modifiers="Control">
+				<i:InvokeCommandAction Command="{StaticResource NavigateToCommand}"
+									   CommandParameter="/indexes/new?mode=new" />
+			</Behaviors:StudioKeyTrigger>
+		</i:Interaction.Triggers>
+		
 		<toolkit:HeaderedContentControl.Header>
 			<toolkit:DockPanel LastChildFill="False">
 				<StackPanel Orientation="Horizontal"

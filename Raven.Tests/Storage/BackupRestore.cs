@@ -75,33 +75,6 @@ namespace Raven.Tests.Storage
 			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 		}
 
-		[Fact(Skip = "Waiting feedback from microsoft with regards to how it works")]
-		public void AfterIncrementalBackupRestoreCanReadDocument()
-		{
-			DeleteIfExists("raven.db.test.backup"); // for full backups, we can't have anything in the target dir
-
-			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
-
-			db.StartBackup("raven.db.test.backup", false);
-			WaitForBackup(true);
-
-			db.Put("itamar", null, RavenJObject.Parse("{'email':'itamar@ayende.com'}"), new RavenJObject(), null);
-			db.StartBackup("raven.db.test.backup", true);
-			WaitForBackup(true);
-
-			db.Dispose();
-
-			DeleteIfExists("raven.db.test.esent");
-
-			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
-
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
-
-			var jObject = db.Get("ayende", null).ToJson();
-			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
-			jObject = db.Get("itamar", null).ToJson();
-			Assert.Equal("itamar@ayende.com", jObject.Value<string>("email"));
-		}
 
 		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedAfterRestore()
@@ -215,7 +188,9 @@ namespace Raven.Tests.Storage
 				{
 					if (checkError)
 					{
-						Assert.False(backupStatus.Messages.Any(x => x.Severity == BackupStatus.BackupMessageSeverity.Error));
+						var firstOrDefault = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
+						if (firstOrDefault != null)
+							Assert.False(true, firstOrDefault.Message);
 					}
 
 					return;

@@ -8,7 +8,6 @@ using System.Windows.Navigation;
 using Raven.Studio.Behaviors;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
-using Raven.Studio.Models;
 
 namespace Raven.Studio
 {
@@ -17,31 +16,6 @@ namespace Raven.Studio
 		public MainPage()
 		{
 			InitializeComponent();
-		}
-
-		private bool isCtrlDown;
-		protected override void OnKeyUp(System.Windows.Input.KeyEventArgs e)
-		{
-			switch (e.Key)
-			{
-				case Key.Ctrl:
-					isCtrlDown = false;
-					break;
-			}
-		}
-
-		protected override void OnKeyDown(KeyEventArgs e)
-		{
-			switch (e.Key)
-			{
-				case Key.O:
-					if (isCtrlDown)
-						new NavigateToDocumentByIdCommand().Execute(null);
-					break;
-				case Key.Ctrl:
-					isCtrlDown = true;
-					break;
-			}
 		}
 
 		// After the Frame navigates, ensure the HyperlinkButton representing the current page is selected
@@ -91,23 +65,7 @@ namespace Raven.Studio
 		private void ContentFrame_NavigationFailed(object sender, NavigationFailedEventArgs e)
 		{
 			e.Handled = true;
-			ErrorPresenter.Show(e.Exception);
-		}
-
-		private void ContentFrame_Navigating(object sender, NavigatingCancelEventArgs e)
-		{
-			var url = e.Uri.OriginalString;
-			if (string.IsNullOrEmpty(url) || url.StartsWith("http://"))
-				return;
-
-			if (Keyboard.Modifiers == ModifierKeys.Control)
-			{
-				var hostUrl = HtmlPage.Document.DocumentUri.OriginalString;
-				var fregmentIndex = hostUrl.IndexOf('#');
-				string host = fregmentIndex != -1 ? hostUrl.Substring(0, fregmentIndex + 1) : hostUrl;
-
-				HtmlPage.Window.Navigate(new Uri(host + url, UriKind.Absolute), "_blank");
-			}
+			ErrorPresenter.Show(e.Exception, null, string.Format("Could not load page: {0}", e.Uri));
 		}
 	}
 }

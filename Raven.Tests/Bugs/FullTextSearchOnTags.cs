@@ -11,6 +11,7 @@ namespace Raven.Tests.Bugs
 		public class Image
 		{
 			public string Id { get; set; }
+			public string Name { get; set; }
 			public ICollection<string> Users { get; set; }
 			public ICollection<string> Tags { get; set; }
 		}
@@ -41,6 +42,46 @@ namespace Raven.Tests.Bugs
 						.Search(x => x.Tags, "i love cats")
 						.ToList();
 					Assert.NotEmpty(images);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanSearchUsingPhraseAndOrderBy()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Image
+					{
+						Name = "B",
+						Tags = new[] { "cats", "animal", "feline" }
+					});
+					session.Store(new Image
+					{
+						Name = "A",
+						Tags = new[] { "cats", "animal", "feline" }
+					});
+					session.SaveChanges();
+				}
+
+				store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				{
+					Map = "from doc in docs.Images select new { doc.Tags,doc.Name }",
+				});
+
+				using (var session = store.OpenSession())
+				{
+					var images = session.Query<Image>("test")
+						.Customize(x => x.WaitForNonStaleResults())
+						.OrderBy(x=>x.Name)
+						.Search(x => x.Tags, "i love cats")
+						.ToList();
+					Assert.NotEmpty(images);
+
+					Assert.Equal("images/2", images[0].Id);
+					Assert.Equal("images/1", images[1].Id);
 				}
 			}
 		}
