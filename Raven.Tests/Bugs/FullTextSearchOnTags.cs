@@ -233,5 +233,43 @@ namespace Raven.Tests.Bugs
 				}
 			}
 		}
+
+        [Fact]
+        public void Can_search_inner_words()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Image {Id ="1", Name = "Great Photo buddy" });
+                    session.Store(new Image {Id ="2", Name = "Nice Photo of the sky" });
+                    session.SaveChanges();
+                }
+
+                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                {
+                    Map = "from doc in docs.Images select new { doc.Name }",
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    var images = session.Query<Image>("test")
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Search(x => x.Name, "*" + "Photo" + "*")
+                        .ToList();
+                    Assert.NotEmpty(images);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var images = session.Query<Image>("test")
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Search(x => x.Name, "Photo")
+                        .ToList();
+                    Assert.NotEmpty(images);
+                }
+            }
+        }
+
 	}
 }
