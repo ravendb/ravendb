@@ -63,7 +63,7 @@ namespace Raven.Studio.Models
 				Mode = DocumentMode.DocumentWithId;
 				SetCurrentDocumentKey(docId);
 				DatabaseCommands.GetAsync(docId)
-					.ContinueOnSuccess(newdoc =>
+					.ContinueOnSuccessInTheUIThread(newdoc =>
 									   {
 										   if (newdoc == null)
 										   {
