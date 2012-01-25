@@ -493,13 +493,13 @@ task CreateNugetPackage {
 
 ########### First pass - RavenDB.nupkg
 
-  $nupack = [xml](get-content $base_dir\RavenDB.nuspec)
-  $label = "$version.$env:buildlabel"
-  $nupack.package.metadata.version = "$version.$env:buildlabel"
-  if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
-    $nupack.package.metadata.version += "-Unstable"
-    $label += "-Unstable"
-  }
+	$nupack = [xml](get-content $base_dir\RavenDB.nuspec)
+	
+	$nugetVersion = "$version.$env:buildlabel"
+	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
+		$nugetVersion += "-Unstable"
+	}
+	$nupack.package.metadata.version = $nugetVersion
 
   $writerSettings = new-object System.Xml.XmlWriterSettings
   $writerSettings.OmitXmlDeclaration = $true
@@ -517,12 +517,10 @@ task CreateNugetPackage {
 
 ########### Second pass - RavenDB-Embedded.nupkg
 
-  $nupack = [xml](get-content $base_dir\RavenDB-Embedded.nuspec)
+	$nupack = [xml](get-content $base_dir\RavenDB-Embedded.nuspec)
 	
-  $nupack.package.metadata.version = "$version.$env:buildlabel"
-  if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
-    $nupack.package.metadata.version += "-Unstable"
-  }
+	$nupack.package.metadata.version = $nugetVersion
+	
   $writerSettings = new-object System.Xml.XmlWriterSettings
   $writerSettings.OmitXmlDeclaration = $true
   $writerSettings.NewLineOnAttributes = $true
@@ -542,8 +540,8 @@ task CreateNugetPackage {
 		$accessKey = $accessKey.Trim()
 		
 		# Push to nuget repository
-		& "$tools_dir\nuget.exe" push "RavenDB.$label.nupkg" $accessKey
-		& "$tools_dir\nuget.exe" push "RavenDB-Embedded.$label.nupkg" $accessKey
+		& "$tools_dir\nuget.exe" push "RavenDB.$nugetVersion.nupkg" $accessKey
+		& "$tools_dir\nuget.exe" push "RavenDB-Embedded.$nugetVersion.nupkg" $accessKey
 		
 		# This is prune to failure since the previous package may not exists
   
