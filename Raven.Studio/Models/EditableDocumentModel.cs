@@ -335,7 +335,7 @@ namespace Raven.Studio.Models
 
 		public ICommand Delete
 		{
-			get { return new DeleteDocumentCommand(Key, navigateToHome: true); }
+			get { return new DeleteDocumentCommand(Key, true); }
 		}
 
 		public ICommand Prettify

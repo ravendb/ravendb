@@ -8,12 +8,12 @@ namespace Raven.Studio.Commands
 	public class DeleteDocumentCommand : Command
 	{
 		private readonly string key;
-		private readonly bool navigateToHome;
+		private readonly bool navigateOnSuccess;
 
-		public DeleteDocumentCommand(string key, bool navigateToHome)
+		public DeleteDocumentCommand(string key, bool navigateOnSuccess)
 		{
 			this.key = key;
-			this.navigateToHome = navigateToHome;
+			this.navigateOnSuccess = navigateOnSuccess;
 		}
 
 		public override void Execute(object parameter)
@@ -28,7 +28,7 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccessInTheUIThread(() =>
 				                                	{
 				                                		ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was deleted", key)));
-				                                		if (navigateToHome)
+														if (navigateOnSuccess)
 				                                			UrlUtil.Navigate("/home");
 				                                	})
 				.Catch();
