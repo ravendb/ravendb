@@ -220,8 +220,11 @@
 											  MappedUri="/Views/Query.xaml" />
 						<uriMapper:UriMapping Uri="/logs/{errors}"
 											  MappedUri="/Views/Logs.xaml" />
+						<uriMapper:UriMapping Uri="/terms/{indexName}"
+											  MappedUri="/Views/Terms.xaml" />
 						<uriMapper:UriMapping Uri="/{pageName}"
 											  MappedUri="/Views/{pageName}.xaml" />
+						
 					</uriMapper:UriMapper>
 				</navigation:Frame.UriMapper>
 			</navigation:Frame>
