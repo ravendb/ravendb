@@ -29,7 +29,7 @@ namespace Raven.Studio.Commands
 				                                	{
 				                                		ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was deleted", key)));
 														if (navigateOnSuccess)
-				                                			UrlUtil.Navigate("/home");
+															UrlUtil.Navigate("/documents");
 				                                	})
 				.Catch();
 		}
