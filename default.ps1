@@ -491,9 +491,8 @@ task CreateNugetPackage {
 	Copy-Item $build_dir\Raven.Backup.??? $build_dir\NuPack-Client\Tools
 	Copy-Item $build_dir\Raven.Backup.??? $build_dir\NuPack-Embedded\Tools
 
-########### First pass - RavenDB.nupkg
-
-	$nupack = [xml](get-content $base_dir\RavenDB.nuspec)
+	# Generate the .nupkg files
+	$nupack = [xml](Get-Content $base_dir\RavenDB.nuspec)
 	
 	$nugetVersion = "$version.$env:buildlabel"
 	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
@@ -501,39 +500,27 @@ task CreateNugetPackage {
 	}
 	$nupack.package.metadata.version = $nugetVersion
 
-  $writerSettings = new-object System.Xml.XmlWriterSettings
-  $writerSettings.OmitXmlDeclaration = $true
-  $writerSettings.NewLineOnAttributes = $true
-  $writerSettings.Indent = $true
+	$writerSettings = new-object System.Xml.XmlWriterSettings
+	$writerSettings.Indent = $true
 	
-  $writer = [System.Xml.XmlWriter]::Create("$build_dir\Nupack\RavenDB.nuspec", $writerSettings)
-	
-  $nupack.WriteTo($writer)
-  $writer.Flush()
-  $writer.Close()
-  
-  & "$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB.nuspec
+	$nupack.Save("$build_dir\Nupack\RavenDB.nuspec");
+	&"$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB.nuspec
 
+	$tags = $nupack.package.metadata.tags
+	
+	$nupack.package.metadata.id = "RavenDB-Client"
+	$nupack.package.metadata.title = "RavenDB (Client)"
+	$nupack.package.metadata.tags = "$tags client"
+	$nupack.Save("$build_dir\Nupack-Client\RavenDB-Client.nuspec");
+	&"$tools_dir\nuget.exe" pack $build_dir\NuPack-Client\RavenDB-Client.nuspec
+	
+	$nupack.package.metadata.id = "RavenDB-Embedded"
+	$nupack.package.metadata.title = "RavenDB (Embedded)"
+	$nupack.package.metadata.tags = "$tags embedded"
+	$nupack.Save("$build_dir\Nupack-Embedded\RavenDB-Embedded.nuspec");
+	&"$tools_dir\nuget.exe" pack $build_dir\NuPack-Embedded\RavenDB-Embedded.nuspec
 
-########### Second pass - RavenDB-Embedded.nupkg
-
-	$nupack = [xml](get-content $base_dir\RavenDB-Embedded.nuspec)
-	
-	$nupack.package.metadata.version = $nugetVersion
-	
-  $writerSettings = new-object System.Xml.XmlWriterSettings
-  $writerSettings.OmitXmlDeclaration = $true
-  $writerSettings.NewLineOnAttributes = $true
-  $writerSettings.Indent = $true
-	
-  $writer = [System.Xml.XmlWriter]::Create("$build_dir\Nupack-Embedded\RavenDB-Embedded.nuspec", $writerSettings)
-	
-  $nupack.WriteTo($writer)
-  $writer.Flush()
-  $writer.Close()
-  
-  & "$tools_dir\nuget.exe" pack $build_dir\NuPack-Embedded\RavenDB-Embedded.nuspec
-  
+	# Upload packages
 	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
 	if ( (Test-Path $accessPath) ) {
 		$accessKey = Get-Content $accessPath
