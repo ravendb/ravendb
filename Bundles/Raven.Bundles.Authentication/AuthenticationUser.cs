@@ -9,7 +9,7 @@ namespace Raven.Bundles.Authentication
 	{
 		public string Name { get; set; }
 		public string Id { get; set; }
-
+		public bool Admin { get; set; }
 		public string[] AllowedDatabases { get; set; }
 
 		protected string HashedPassword { get; private set; }
