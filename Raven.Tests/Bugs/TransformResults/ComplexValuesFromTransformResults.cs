@@ -110,6 +110,36 @@ namespace Raven.Tests.Bugs.TransformResults
 			}
 		}
 
+        [Fact]
+        public void DecimalValues()
+        {
+            using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+            {
+                new Answers_ByQuestion().Execute(documentStore);
+
+                const string questionId = @"question\259";
+                using (IDocumentSession session = documentStore.OpenSession())
+                {
+                    var vote1 = new AnswerVote { QuestionId = questionId, Delta = 2, DecimalValue = 20};
+                    session.Store(vote1);
+                    var vote2 = new AnswerVote { QuestionId = questionId, Delta = 3, DecimalValue = 43};
+                    session.Store(vote2);
+
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = documentStore.OpenSession())
+                {
+                    AnswerViewItem questionInfo = session.Query<AnswerViewItem, Answers_ByQuestion>()
+                        .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                        .Where(x => x.QuestionId == questionId)
+                        .SingleOrDefault();
+                    Assert.NotNull(questionInfo);
+                    Assert.Equal(63, questionInfo.DecimalTotal);
+                }
+            }
+        }
+
 		[Fact]
 		public void write_then_read_from_stack_over_flow_types()
 		{
