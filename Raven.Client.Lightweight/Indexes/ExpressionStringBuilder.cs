@@ -217,7 +217,10 @@ namespace Raven.Client.Indexes
 
 		private void OutMember(Expression instance, MemberInfo member)
 		{
-			OutputTypeIfNeeded(member);
+            if (instance == null || instance.NodeType != ExpressionType.MemberAccess)
+            {
+                OutputTypeIfNeeded(member);
+            }
 			var name = member.Name;
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
@@ -248,7 +251,10 @@ namespace Raven.Client.Indexes
 
 				Out(member.DeclaringType.Name + "." + name);
 			}
-			CloseOutputTypeIfNeeded(member);
+            if (instance == null || instance.NodeType != ExpressionType.MemberAccess)
+            {
+                CloseOutputTypeIfNeeded(member);
+            }
 		}
 
 		private void CloseOutputTypeIfNeeded(MemberInfo member)
