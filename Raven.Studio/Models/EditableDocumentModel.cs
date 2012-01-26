@@ -155,7 +155,7 @@ namespace Raven.Studio.Models
 					return "Projection";
 				if (Mode == DocumentMode.New)
 					return "New Document";
-				return Key;
+				return DocumentKey;
 			}
 		}
 
@@ -291,7 +291,6 @@ namespace Raven.Studio.Models
 			{
 				document.Value.Key = value;
 				OnPropertyChanged();
-				OnPropertyChanged("DisplayId");
 			}
 		}
 
