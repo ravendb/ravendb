@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -25,6 +26,7 @@ namespace Raven.Studio.Models
 		private bool isLoaded;
 		private string documentKey;
 		private readonly string currentDatabase;
+		private string originalId = "";
 
 		public EditableDocumentModel()
 		{
@@ -61,7 +63,7 @@ namespace Raven.Studio.Models
 				Mode = DocumentMode.DocumentWithId;
 				SetCurrentDocumentKey(docId);
 				DatabaseCommands.GetAsync(docId)
-					.ContinueOnSuccess(newdoc =>
+					.ContinueOnSuccessInTheUIThread(newdoc =>
 									   {
 										   if (newdoc == null)
 										   {
@@ -70,6 +72,7 @@ namespace Raven.Studio.Models
 										   }
 										   document.Value = newdoc;
 										   isLoaded = true;
+									   	originalId = docId;
 									   })
 					.Catch();
 				return;
@@ -330,7 +333,7 @@ namespace Raven.Studio.Models
 
 		public ICommand Save
 		{
-			get { return new SaveDocumentCommand(this); }
+			get { return new SaveDocumentCommand(this, originalId); }
 		}
 
 		public ICommand Delete
@@ -392,10 +395,12 @@ namespace Raven.Studio.Models
 		private class SaveDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel document;
+			private readonly string originalId;
 
-			public SaveDocumentCommand(EditableDocumentModel document)
+			public SaveDocumentCommand(EditableDocumentModel document, string originalId)
 			{
 				this.document = document;
+				this.originalId = originalId;
 			}
 
 			public override void Execute(object parameter)
@@ -450,6 +455,11 @@ namespace Raven.Studio.Models
 						document.SetCurrentDocumentKey(result.Key);
 					})
 					.ContinueOnSuccess(() => new RefreshDocumentCommand(document).Execute(null))
+					.ContinueOnSuccessInTheUIThread(() =>
+					{
+						if(originalId != document.Key)
+							UrlUtil.Navigate("/edit?id=" + document.Key);
+					})
 					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
 			}
 		}
