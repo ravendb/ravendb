@@ -374,6 +374,11 @@ namespace Raven.Studio.Models
 				this.parent = parent;
 			}
 
+			public override bool CanExecute(object parameter)
+			{
+				return string.IsNullOrWhiteSpace(parent.DocumentKey) == false;
+			}
+
 			public override void Execute(object _)
 			{
 				parent.DatabaseCommands.GetAsync(parent.DocumentKey)
