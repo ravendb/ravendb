@@ -12,9 +12,22 @@ namespace Raven.Studio
 {
 	public partial class MainPage : UserControl
 	{
+		private bool isCtrlHold = false;
+
 		public MainPage()
 		{
 			InitializeComponent();
+
+			KeyDown += (sender, args) =>
+			           	{
+			           		if (args.Key == Key.Ctrl)
+			           			isCtrlHold = true;
+			           	};
+			KeyUp += (sender, args) =>
+			{
+				if (args.Key == Key.Ctrl)
+					isCtrlHold = false;
+			};
 		}
 
 		// After the Frame navigates, ensure the HyperlinkButton representing the current page is selected
@@ -73,7 +86,7 @@ namespace Raven.Studio
 			if (string.IsNullOrEmpty(url) || url.StartsWith("http://"))
 				return;
 
-			if (Keyboard.Modifiers != ModifierKeys.Control)
+			if (isCtrlHold == false)
 				return;
 
 			var hostUrl = HtmlPage.Document.DocumentUri.OriginalString;
