@@ -67,5 +67,21 @@ namespace Raven.Studio
 			e.Handled = true;
 			ErrorPresenter.Show(e.Exception, null, string.Format("Could not load page: {0}", e.Uri));
 		}
+
+		private void ContentFrame_Navigating(object sender, NavigatingCancelEventArgs e)
+		{
+			var url = e.Uri.OriginalString;
+			if (string.IsNullOrEmpty(url) || url.StartsWith("http://"))
+				return;
+
+			if (Keyboard.Modifiers != ModifierKeys.Control)
+				return;
+
+			var hostUrl = HtmlPage.Document.DocumentUri.OriginalString;
+			var fregmentIndex = hostUrl.IndexOf('#');
+			string host = fregmentIndex != -1 ? hostUrl.Substring(0, fregmentIndex + 1) : hostUrl;
+
+			HtmlPage.Window.Navigate(new Uri(host + url, UriKind.Absolute), "_blank");
+		}
 	}
 }

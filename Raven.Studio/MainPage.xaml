@@ -205,7 +205,8 @@
 							  Source=""
 							  Navigated="ContentFrame_Navigated"
 							  NavigationFailed="ContentFrame_NavigationFailed"
-							  Margin="15,0">
+							  Margin="15,0"
+							  Navigating="ContentFrame_Navigating">
 				<navigation:Frame.UriMapper>
 					<uriMapper:UriMapper>
 						<uriMapper:UriMapping Uri=""
