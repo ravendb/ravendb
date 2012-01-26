@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -26,7 +25,6 @@ namespace Raven.Studio.Models
 		private bool isLoaded;
 		private string documentKey;
 		private readonly string currentDatabase;
-		private string originalId = "";
 
 		public EditableDocumentModel()
 		{
@@ -64,16 +62,15 @@ namespace Raven.Studio.Models
 				SetCurrentDocumentKey(docId);
 				DatabaseCommands.GetAsync(docId)
 					.ContinueOnSuccessInTheUIThread(newdoc =>
-									   {
-										   if (newdoc == null)
-										   {
-											   HandleDocumentNotFound();
-											   return;
-										   }
-										   document.Value = newdoc;
-										   isLoaded = true;
-									   	originalId = docId;
-									   })
+					                                	{
+					                                		if (newdoc == null)
+					                                		{
+					                                			HandleDocumentNotFound();
+					                                			return;
+					                                		}
+					                                		document.Value = newdoc;
+					                                		isLoaded = true;
+					                                	})
 					.Catch();
 				return;
 			}
@@ -108,6 +105,9 @@ namespace Raven.Studio.Models
 
 		public void SetCurrentDocumentKey(string docId)
 		{
+			if (documentKey != null && documentKey != docId)
+				UrlUtil.Navigate("/edit?id=" + docId);
+
 			documentKey = Key = docId;
 		}
 
@@ -333,7 +333,7 @@ namespace Raven.Studio.Models
 
 		public ICommand Save
 		{
-			get { return new SaveDocumentCommand(this, originalId); }
+			get { return new SaveDocumentCommand(this); }
 		}
 
 		public ICommand Delete
@@ -395,12 +395,10 @@ namespace Raven.Studio.Models
 		private class SaveDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel document;
-			private readonly string originalId;
 
-			public SaveDocumentCommand(EditableDocumentModel document, string originalId)
+			public SaveDocumentCommand(EditableDocumentModel document)
 			{
 				this.document = document;
-				this.originalId = originalId;
 			}
 
 			public override void Execute(object parameter)
@@ -455,11 +453,6 @@ namespace Raven.Studio.Models
 						document.SetCurrentDocumentKey(result.Key);
 					})
 					.ContinueOnSuccess(() => new RefreshDocumentCommand(document).Execute(null))
-					.ContinueOnSuccessInTheUIThread(() =>
-					{
-						if(originalId != document.Key)
-							UrlUtil.Navigate("/edit?id=" + document.Key);
-					})
 					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
 			}
 		}
