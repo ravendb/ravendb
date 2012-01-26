@@ -89,7 +89,7 @@ namespace Raven.Web
 			{
 				log.Info("Disposing of RavenDB Http Integration to the ASP.Net Pipeline");
 				if (server != null)
-					{server.Dispose();
+					server.Dispose();
 
 				if (database != null)
 					database.Dispose();
