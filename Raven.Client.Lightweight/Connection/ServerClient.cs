@@ -326,8 +326,11 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			return jsonSerializer.Deserialize<PutResult>(new RavenJTokenReader(responseJson));
 		}
 
-		private static void AddTransactionInformation(RavenJObject metadata)
+		private void AddTransactionInformation(RavenJObject metadata)
 		{
+			if (convention.EnlistInDistributedTransactions == false)
+				return;
+
 			var transactionInformation = RavenTransactionAccessor.GetTransactionInformation();
 			if (transactionInformation == null)
 				return;

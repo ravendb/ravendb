@@ -229,7 +229,11 @@ namespace Raven.Client.Document
 		///<summary>
 		/// Whatever or not we will automatically enlist in distributed transactions
 		///</summary>
-		public bool EnlistInDistributedTransactions { get; set; }
+		public bool EnlistInDistributedTransactions
+		{
+			get { return Conventions.EnlistInDistributedTransactions; }
+			set { Conventions.EnlistInDistributedTransactions = value; }
+		}
 #endif
 
 
