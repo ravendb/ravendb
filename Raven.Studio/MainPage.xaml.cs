@@ -79,9 +79,9 @@ namespace Raven.Studio
 
 			var hostUrl = HtmlPage.Document.DocumentUri.OriginalString;
 			var fregmentIndex = hostUrl.IndexOf('#');
-			string host = fregmentIndex != -1 ? hostUrl.Substring(0, fregmentIndex + 1) : hostUrl;
+			string host = fregmentIndex != -1 ? hostUrl.Substring(0, fregmentIndex) : hostUrl;
 
-			HtmlPage.Window.Navigate(new Uri(host + url, UriKind.Absolute), "_blank");
+			HtmlPage.Window.Navigate(new Uri(host + "#" + url, UriKind.Absolute), "_blank");
 		}
 	}
 }
