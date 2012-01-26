@@ -23,7 +23,7 @@ namespace Raven.Studio.Models
 		private readonly Observable<JsonDocument> document;
 		private string jsonData;
 		private bool isLoaded;
-		private string documentKey;
+		public string DocumentKey { get; private set; }
 		private readonly string currentDatabase;
 
 		public EditableDocumentModel()
@@ -105,10 +105,10 @@ namespace Raven.Studio.Models
 
 		public void SetCurrentDocumentKey(string docId)
 		{
-			if (documentKey != null && documentKey != docId)
+			if (DocumentKey != null && DocumentKey != docId)
 				UrlUtil.Navigate("/edit?id=" + docId);
 
-			documentKey = Key = docId;
+			DocumentKey = Key = docId;
 		}
 
 		private void UpdateFromDocument()
@@ -233,7 +233,7 @@ namespace Raven.Studio.Models
 				currentDatabase != Database.Value.Name)
 				return null;
 
-			return DatabaseCommands.GetAsync(documentKey)
+			return DatabaseCommands.GetAsync(DocumentKey)
 				.ContinueOnSuccess(docOnServer =>
 				{
 					if (docOnServer == null)
@@ -377,7 +377,7 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object _)
 			{
-				parent.DatabaseCommands.GetAsync(parent.Key)
+				parent.DatabaseCommands.GetAsync(parent.DocumentKey)
 					.ContinueOnSuccess(doc =>
 										{
 											if (doc == null)
