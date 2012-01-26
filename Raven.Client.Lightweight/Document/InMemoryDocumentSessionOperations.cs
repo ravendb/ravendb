@@ -768,7 +768,10 @@ more responsive application.
 			};
 			deferedCommands.Clear();
 
-			TryEnlistInAmbientTransaction();
+#if !SILVERLIGHT
+			if (documentStore.EnlistInDistributedTransactions)
+				TryEnlistInAmbientTransaction();
+#endif
 			PrepareForEntitiesDeletion(result);
 			PrepareForEntitiesPuts(result);
 
@@ -832,11 +835,9 @@ more responsive application.
 			deletedEntities.Clear();
 		}
 
+#if !SILVERLIGHT
 		private void TryEnlistInAmbientTransaction()
 		{
-#if !SILVERLIGHT
-			if (documentStore.EnlistInDistributedTransactions == false)
-				return;
 
 			if (hasEnlisted || Transaction.Current == null)
 				return;
@@ -878,8 +879,8 @@ more responsive application.
 				}
 			}
 			hasEnlisted = true;
-#endif
 		}
+#endif
 
 		/// <summary>
 		/// Determines if the entity have changed.

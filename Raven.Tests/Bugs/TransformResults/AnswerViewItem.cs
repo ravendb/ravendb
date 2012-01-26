@@ -8,5 +8,6 @@
 		public string UserId { get; set; }
 		public string UserDisplayName { get; set; }
 		public int VoteTotal { get; set; }
+	    public decimal DecimalTotal { get; set; }
 	}
 }

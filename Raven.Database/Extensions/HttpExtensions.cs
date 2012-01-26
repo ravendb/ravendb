@@ -447,10 +447,10 @@ namespace Raven.Database.Extensions
 				return false;
 			
 			var windowsPrincipal = context.User as WindowsPrincipal;
-			if (windowsPrincipal == null)
-				return false;
+			if (windowsPrincipal != null)
+				return windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator);
 
-			return windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator);
+			return context.User.IsInRole("Administrators");
 		}
 
 		private static string GetContentType(string docPath)

@@ -1,5 +1,8 @@
 using System;
+using System.Globalization;
 using System.Linq;
+using System.Threading;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -26,6 +29,23 @@ namespace Raven.Tests.Indexes
 			using(var store = NewDocumentStore())
 			{
 				new Dec().Execute(store);
+			}
+		}
+
+		[Fact]
+		public void IgnoresLocale()
+		{
+			var oldCurrentCulture = Thread.CurrentThread.CurrentCulture;
+			Thread.CurrentThread.CurrentCulture = new CultureInfo("de");
+			using (new DisposableAction(() =>
+			{
+				Thread.CurrentThread.CurrentCulture = oldCurrentCulture;
+			}))
+			{
+				using (var store = NewDocumentStore())
+				{
+					new Dec().Execute(store);
+				}
 			}
 		}
 	}
