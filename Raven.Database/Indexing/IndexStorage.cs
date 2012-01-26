@@ -119,7 +119,7 @@ namespace Raven.Database.Indexing
 			else
 			{
 				var indexDirectory = indexName ?? IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
-				var indexFullPath = Path.Combine(path, indexDirectory);
+				var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
 				directory = FSDirectory.Open(new DirectoryInfo(indexFullPath));
 
 				if (!IndexReader.IndexExists(directory))
@@ -141,7 +141,7 @@ namespace Raven.Database.Indexing
 
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)
 		{
-			var newDir = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, IndexDefinitionStorage.FixupIndexName(indexName, path))));
+			var newDir = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(IndexDefinitionStorage.FixupIndexName(indexName, path)))));
 			Lucene.Net.Store.Directory.Copy(ramDir, newDir, true);
 			return newDir;
 		}
