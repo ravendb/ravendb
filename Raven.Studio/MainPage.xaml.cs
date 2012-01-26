@@ -6,16 +6,28 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Navigation;
 using Raven.Studio.Behaviors;
-using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio
 {
 	public partial class MainPage : UserControl
 	{
+		private bool isCtrlHold = false;
+
 		public MainPage()
 		{
 			InitializeComponent();
+
+			KeyDown += (sender, args) =>
+			           	{
+			           		if (args.Key == Key.Ctrl)
+			           			isCtrlHold = true;
+			           	};
+			KeyUp += (sender, args) =>
+			{
+				if (args.Key == Key.Ctrl)
+					isCtrlHold = false;
+			};
 		}
 
 		// After the Frame navigates, ensure the HyperlinkButton representing the current page is selected
@@ -66,6 +78,22 @@ namespace Raven.Studio
 		{
 			e.Handled = true;
 			ErrorPresenter.Show(e.Exception, null, string.Format("Could not load page: {0}", e.Uri));
+		}
+
+		private void ContentFrame_Navigating(object sender, NavigatingCancelEventArgs e)
+		{
+			var url = e.Uri.OriginalString;
+			if (string.IsNullOrEmpty(url) || url.StartsWith("http://"))
+				return;
+
+			if (isCtrlHold == false)
+				return;
+
+			var hostUrl = HtmlPage.Document.DocumentUri.OriginalString;
+			var fregmentIndex = hostUrl.IndexOf('#');
+			string host = fregmentIndex != -1 ? hostUrl.Substring(0, fregmentIndex) : hostUrl;
+
+			HtmlPage.Window.Navigate(new Uri(host + "#" + url, UriKind.Absolute), "_blank");
 		}
 	}
 }

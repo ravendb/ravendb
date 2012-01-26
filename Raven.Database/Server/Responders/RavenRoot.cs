@@ -23,17 +23,14 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			if(Settings.VirtualDirectory != "/")
-				context.Response.Redirect( Settings.VirtualDirectory + RootPath);
+				context.Response.Redirect(Settings.VirtualDirectory + RootPath);
 			else
 				context.Response.Redirect(RootPath);
 		}
 
 		public override bool IsUserInterfaceRequest
 		{
-			get
-			{
-				return true;
-			}
+			get { return true; }
 		}
 	}
 }

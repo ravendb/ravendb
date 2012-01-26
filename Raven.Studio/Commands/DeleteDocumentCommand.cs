@@ -16,6 +16,11 @@ namespace Raven.Studio.Commands
 			this.navigateOnSuccess = navigateOnSuccess;
 		}
 
+		public override bool CanExecute(object parameter)
+		{
+			return string.IsNullOrWhiteSpace(key) == false;
+		}
+
 		public override void Execute(object parameter)
 		{
 			AskUser.ConfirmationAsync("Confirm Delete", string.Format("Really delete {0} ?", key))

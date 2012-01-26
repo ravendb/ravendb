@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -24,9 +23,8 @@ namespace Raven.Studio.Models
 		private readonly Observable<JsonDocument> document;
 		private string jsonData;
 		private bool isLoaded;
-		private string documentKey;
+		public string DocumentKey { get; private set; }
 		private readonly string currentDatabase;
-		private string originalId = "";
 
 		public EditableDocumentModel()
 		{
@@ -64,16 +62,15 @@ namespace Raven.Studio.Models
 				SetCurrentDocumentKey(docId);
 				DatabaseCommands.GetAsync(docId)
 					.ContinueOnSuccessInTheUIThread(newdoc =>
-									   {
-										   if (newdoc == null)
-										   {
-											   HandleDocumentNotFound();
-											   return;
-										   }
-										   document.Value = newdoc;
-										   isLoaded = true;
-									   	originalId = docId;
-									   })
+					                                	{
+					                                		if (newdoc == null)
+					                                		{
+					                                			HandleDocumentNotFound();
+					                                			return;
+					                                		}
+					                                		document.Value = newdoc;
+					                                		isLoaded = true;
+					                                	})
 					.Catch();
 				return;
 			}
@@ -108,7 +105,10 @@ namespace Raven.Studio.Models
 
 		public void SetCurrentDocumentKey(string docId)
 		{
-			documentKey = Key = docId;
+			if (DocumentKey != null && DocumentKey != docId)
+				UrlUtil.Navigate("/edit?id=" + docId);
+
+			DocumentKey = Key = docId;
 		}
 
 		private void UpdateFromDocument()
@@ -155,7 +155,7 @@ namespace Raven.Studio.Models
 					return "Projection";
 				if (Mode == DocumentMode.New)
 					return "New Document";
-				return Key;
+				return DocumentKey;
 			}
 		}
 
@@ -233,7 +233,7 @@ namespace Raven.Studio.Models
 				currentDatabase != Database.Value.Name)
 				return null;
 
-			return DatabaseCommands.GetAsync(documentKey)
+			return DatabaseCommands.GetAsync(DocumentKey)
 				.ContinueOnSuccess(docOnServer =>
 				{
 					if (docOnServer == null)
@@ -291,7 +291,6 @@ namespace Raven.Studio.Models
 			{
 				document.Value.Key = value;
 				OnPropertyChanged();
-				OnPropertyChanged("DisplayId");
 			}
 		}
 
@@ -333,7 +332,7 @@ namespace Raven.Studio.Models
 
 		public ICommand Save
 		{
-			get { return new SaveDocumentCommand(this, originalId); }
+			get { return new SaveDocumentCommand(this); }
 		}
 
 		public ICommand Delete
@@ -375,9 +374,14 @@ namespace Raven.Studio.Models
 				this.parent = parent;
 			}
 
+			public override bool CanExecute(object parameter)
+			{
+				return string.IsNullOrWhiteSpace(parent.DocumentKey) == false;
+			}
+
 			public override void Execute(object _)
 			{
-				parent.DatabaseCommands.GetAsync(parent.Key)
+				parent.DatabaseCommands.GetAsync(parent.DocumentKey)
 					.ContinueOnSuccess(doc =>
 										{
 											if (doc == null)
@@ -395,12 +399,10 @@ namespace Raven.Studio.Models
 		private class SaveDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel document;
-			private readonly string originalId;
 
-			public SaveDocumentCommand(EditableDocumentModel document, string originalId)
+			public SaveDocumentCommand(EditableDocumentModel document)
 			{
 				this.document = document;
-				this.originalId = originalId;
 			}
 
 			public override void Execute(object parameter)
@@ -455,11 +457,6 @@ namespace Raven.Studio.Models
 						document.SetCurrentDocumentKey(result.Key);
 					})
 					.ContinueOnSuccess(() => new RefreshDocumentCommand(document).Execute(null))
-					.ContinueOnSuccessInTheUIThread(() =>
-					{
-						if(originalId != document.Key)
-							UrlUtil.Navigate("/edit?id=" + document.Key);
-					})
 					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
 			}
 		}

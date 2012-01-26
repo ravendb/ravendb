@@ -85,21 +85,19 @@ task Init -depends Verify40, Clean {
 		$env:buildlabel = "13"
 	}
 	
-	$projectFiles = ls -path $base_dir -include *.csproj -recurse | 
-					Where { $_ -notmatch [regex]::Escape($lib_dir) } | 
-					Where { $_ -notmatch [regex]::Escape($tools_dir) }
+	$projectFiles = Get-ChildItem -Path $base_dir -Filter "*.csproj" -Recurse | 
+						Where-Object { $_.Directory -notmatch [regex]::Escape($lib_dir) } | 
+						Where-Object { $_.Directory -notmatch [regex]::Escape($tools_dir) }
 	
 	$notclsCompliant = @("Raven.Silverlight.Client", "Raven.Studio", "Raven.Tests.Silverlight")
 	
 	foreach($projectFile in $projectFiles) {
 		
-		$projectDir = [System.IO.Path]::GetDirectoryName($projectFile)
-		$projectName = [System.IO.Path]::GetFileName($projectDir)
-		$asmInfo = [System.IO.Path]::Combine($projectDir, [System.IO.Path]::Combine("Properties", "AssemblyInfo.cs"))
+		$projectName = [System.IO.Path]::GetFileName($projectFile.Directory)
+		$asmInfo = [System.IO.Path]::Combine($projectFile.Directory, [System.IO.Path]::Combine("Properties", "AssemblyInfo.cs"))
 		
 		$clsComliant = "true"
-		
-		if([System.Array]::IndexOf($notclsCompliant, $projectName) -ne -1) {
+		if([System.Array]::IndexOf($notclsCompliant, $projectFile.Name) -ne -1) {
 			$clsComliant = "false"
 		}
 		
