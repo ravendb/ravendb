@@ -2,9 +2,8 @@
 using System.Net;
 using System.Security;
 using System.Threading.Tasks;
-using Raven.Client.Extensions;
 
-namespace Raven.Client.Silverlight.Extensions
+namespace Raven.Client.Extensions
 {
 	public static class TaskExtensions
 	{

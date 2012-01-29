@@ -39,7 +39,7 @@ namespace Raven.Client.Embedded
 		private TransactionInformation TransactionInformation
 		{
 			get { return convention.EnlistInDistributedTransactions ? RavenTransactionAccessor.GetTransactionInformation() : null; }
-		};
+		}
 
 		///<summary>
 		/// Create a new instance

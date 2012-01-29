@@ -25,6 +25,7 @@ using Raven.Client.Listeners;
 using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
+
 #endif
 
 namespace Raven.Client.Document
@@ -527,6 +528,8 @@ namespace Raven.Client.Document
 
 				var authRequest = PrepareOAuthRequest(oauthSource);
 				return authRequest.GetResponseAsync()
+					.AddUrlIfFaulting(authRequest.RequestUri)
+					.ConvertSecurityExceptionToServerNotFound()
 					.ContinueWith(task =>
 					{
 #if !SILVERLIGHT

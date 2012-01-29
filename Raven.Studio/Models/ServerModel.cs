@@ -17,6 +17,8 @@ namespace Raven.Studio.Models
 		private DatabaseModel[] defaultDatabase;
 
 		private string buildNumber;
+		private bool singleTenant;
+
 		public string BuildNumber
 		{
 			get { return buildNumber; }
@@ -65,13 +67,10 @@ namespace Raven.Studio.Models
 					onWebRequest(eventArgs.Request);
 			};
 
+			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
+
 			DisplayBuildNumber();
 			DisplyaLicenseStatus();
-
-			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
-			Databases.Set(defaultDatabase);
-			SelectedDatabase.Value = defaultDatabase[0];
-			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
 
 			var changeDatabaseCommand = new ChangeDatabaseCommand();
 			SelectedDatabase.PropertyChanged += (sender, args) =>
@@ -86,6 +85,9 @@ namespace Raven.Studio.Models
 
 		public override Task TimerTickedAsync()
 		{
+			if (singleTenant)
+				return null;
+
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync()
 				.ContinueOnSuccess(names =>
 				{
@@ -93,6 +95,11 @@ namespace Raven.Studio.Models
 					Databases.Match(defaultDatabase.Concat(databaseModels).ToArray());
 				})
 				.Catch();
+		}
+
+		public bool SingleTenant
+		{
+			get { return singleTenant; }
 		}
 
 		public Observable<DatabaseModel> SelectedDatabase { get; private set; }
@@ -126,35 +133,31 @@ namespace Raven.Studio.Models
 		{
 			var databaseName = urlParser.GetQueryParam("database");
 			if (databaseName == null)
-				return;
-			if (SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
-				return;
-			var database = Databases.FirstOrDefault(x => x.Name == databaseName);
-			if (database != null)
 			{
-				SelectedDatabase.Value = database;
+				defaultDatabase = new[] {new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands)};
+				Databases.Set(defaultDatabase);
+				SelectedDatabase.Value = defaultDatabase[0];
+				return;
 			}
-			else
-			{
-				var databaseCommands = databaseName.Equals("default", StringComparison.OrdinalIgnoreCase) ? 
-					documentStore.AsyncDatabaseCommands.ForDefaultDatabase() : 
-					documentStore.AsyncDatabaseCommands.ForDatabase(databaseName);
-				var databaseModel = new DatabaseModel(databaseName, databaseCommands);
-				Databases.Add(databaseModel);
-				SelectedDatabase.Value = databaseModel;
-			}
+			singleTenant = urlParser.GetQueryParam("api-key") != null;
+			var databaseCommands = databaseName.Equals("default", StringComparison.OrdinalIgnoreCase)
+			                       	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
+			                       	: documentStore.AsyncDatabaseCommands.ForDatabase(databaseName);
+			var databaseModel = new DatabaseModel(databaseName, databaseCommands);
+			Databases.Add(databaseModel);
+			SelectedDatabase.Value = databaseModel;
 		}
 
 		private void DisplayBuildNumber()
 		{
-			documentStore.AsyncDatabaseCommands.GetBuildNumber()
+			SelectedDatabase.Value.AsyncDatabaseCommands.GetBuildNumber()
 				.ContinueOnSuccessInTheUIThread(x => BuildNumber = x.BuildVersion)
 				.Catch();
 		}
 
 		private void DisplyaLicenseStatus()
 		{
-			documentStore.AsyncDatabaseCommands.GetLicenseStatus()
+			SelectedDatabase.Value.AsyncDatabaseCommands.GetLicenseStatus()
 				.ContinueOnSuccessInTheUIThread(x =>
 				{
 					License.Value = x;

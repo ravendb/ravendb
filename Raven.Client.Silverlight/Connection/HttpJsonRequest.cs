@@ -17,7 +17,6 @@ using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Silverlight.Extensions;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
 
