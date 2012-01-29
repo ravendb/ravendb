@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !NET_3_5
+using System;
 using System.Net;
 using System.Security;
 using System.Threading.Tasks;
@@ -39,3 +40,4 @@ namespace Raven.Client.Extensions
 		}
 	}
 }
+#endif
