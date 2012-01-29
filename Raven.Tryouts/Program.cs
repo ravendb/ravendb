@@ -1,4 +1,9 @@
-﻿using Raven.Database.Config;
+﻿using System;
+using Raven.Abstractions.Data;
+using Raven.Database.Config;
+using Raven.Database.Plugins;
+using Raven.Database.Server;
+using Raven.Database.Extensions;
 
 namespace Raven.Tryouts
 {
