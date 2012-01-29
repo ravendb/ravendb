@@ -121,7 +121,6 @@ namespace Raven.Client.Document
 
 #if !SILVERLIGHT
 			MaxNumberOfCachedRequests = 2048;
-			EnlistInDistributedTransactions = true;
 			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
 #else
 			SharedOperationsHeaders = new System.Collections.Generic.Dictionary<string,string>();

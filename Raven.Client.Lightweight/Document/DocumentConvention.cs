@@ -45,6 +45,7 @@ namespace Raven.Client.Document
 				new Int32Converter(),
 				new Int64Converter(),
 			};
+			EnlistInDistributedTransactions = true;
 			UseParallelMultiGet = true;
 			DefaultQueryingConsistency = ConsistencyOptions.MonotonicRead;
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
