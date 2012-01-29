@@ -441,16 +441,16 @@ namespace Raven.Database.Extensions
 			context.Response.WriteFile(filePath);
 		}
 
-		public static bool IsAdministrator(this IHttpContext context)
+		public static bool IsAdministrator(this IPrincipal principal)
 		{
-			if(context == null)
+			if(principal == null)
 				return false;
 			
-			var windowsPrincipal = context.User as WindowsPrincipal;
+			var windowsPrincipal = principal as WindowsPrincipal;
 			if (windowsPrincipal != null)
 				return windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator);
 
-			return context.User.IsInRole("Administrators");
+			return principal.IsInRole("Administrators");
 		}
 
 		private static string GetContentType(string docPath)
