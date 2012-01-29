@@ -525,8 +525,9 @@ task CreateNugetPackage {
 		$accessKey = $accessKey.Trim()
 		
 		# Push to nuget repository
-		& "$tools_dir\nuget.exe" push "RavenDB.$nugetVersion.nupkg" $accessKey
-		& "$tools_dir\nuget.exe" push "RavenDB-Embedded.$nugetVersion.nupkg" $accessKey
+		&"$tools_dir\NuGet.exe" push "RavenDB.$nugetVersion.nupkg" $accessKey
+		&"$tools_dir\NuGet.exe" push "RavenDB-Client.$nugetVersion.nupkg" $accessKey
+		&"$tools_dir\NuGet.exe" push "RavenDB-Embedded.$nugetVersion.nupkg" $accessKey
 		
 		# This is prune to failure since the previous package may not exists
   
