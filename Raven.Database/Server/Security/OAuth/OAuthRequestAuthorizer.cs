@@ -70,6 +70,7 @@ namespace Raven.Database.Server.Security.OAuth
 			
 			ctx.User = new OAuthPrincipal(tokenBody, TenantId);
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = tokenBody.UserId;
+			CurrentOperationContext.User.Value = ctx.User;
 			return true;
 		}
 

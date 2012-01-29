@@ -48,7 +48,10 @@ namespace Raven.Database.Server.Security.Windows
 			}
 
 			if (IsInvalidUser(ctx) == false)
+			{
 				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
+				CurrentOperationContext.User.Value = ctx.User;
+			}
 			return true;
 		}
 

@@ -503,6 +503,7 @@ namespace Raven.Database.Server
 			CurrentOperationContext.Headers.Value = new NameValueCollection(ctx.Request.Headers);
 
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
+			CurrentOperationContext.User.Value = null;
 			if (ctx.RequiresAuthentication &&
 				requestAuthorizer.Authorize(ctx) == false)
 				return false;
@@ -546,6 +547,7 @@ namespace Raven.Database.Server
 				try
 				{
 					CurrentOperationContext.Headers.Value = new NameValueCollection();
+					CurrentOperationContext.User.Value = null;
 					currentDatabase.Value = DefaultResourceStore;
 					currentConfiguration.Value = DefaultConfiguration;
 				}
