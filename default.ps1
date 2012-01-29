@@ -525,13 +525,9 @@ task CreateNugetPackage {
 		$accessKey = $accessKey.Trim()
 		
 		# Push to nuget repository
-		& "$tools_dir\nuget.exe" push "RavenDB.$nugetVersion.nupkg" $accessKey
-		& "$tools_dir\nuget.exe" push "RavenDB-Embedded.$nugetVersion.nupkg" $accessKey
-		
-		# This is prune to failure since the previous package may not exists
-  
-		#$prevVersion = ($env:buildlabel - 1)
-		# & "$tools_dir\nuget.exe" delete RavenDB "$version.$prevVersion" $accessKey -source http://packages.nuget.org/v1/ -NoPrompt
+		&"$tools_dir\NuGet.exe" push "RavenDB.$nugetVersion.nupkg" $accessKey
+		&"$tools_dir\NuGet.exe" push "RavenDB-Client.$nugetVersion.nupkg" $accessKey
+		&"$tools_dir\NuGet.exe" push "RavenDB-Embedded.$nugetVersion.nupkg" $accessKey
 	}
 	else {
 		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
