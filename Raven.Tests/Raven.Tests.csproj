@@ -143,6 +143,7 @@
     <Compile Include="Bugs\DynamicQuerySorting.cs" />
     <Compile Include="Bugs\EmbeddableDocumentStoreUsingUrlWithConnectionString.cs" />
     <Compile Include="Bugs\EmptyAttachments.cs" />
+    <Compile Include="Bugs\EqualityWithArrayOfGuids.cs" />
     <Compile Include="Bugs\Everett.cs" />
     <Compile Include="Bugs\FullTextSearchOnTags.cs" />
     <Compile Include="Bugs\Identifiers\SpecialCharactersOnIIS.cs" />
@@ -560,6 +561,7 @@
     <Compile Include="MailingList\GuidProjection.cs" />
     <Compile Include="MailingList\LazyStats.cs" />
     <Compile Include="MailingList\Mark.cs" />
+    <Compile Include="MailingList\MultiLoad.cs" />
     <Compile Include="MailingList\PhilJones.cs" />
     <Compile Include="MailingList\Random.cs" />
     <Compile Include="MailingList\RavenDbPutTest.cs" />
