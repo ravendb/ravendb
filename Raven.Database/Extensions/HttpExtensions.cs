@@ -393,15 +393,10 @@ namespace Raven.Database.Extensions
 		{
 			var filePath = Path.Combine(ravenPath, docPath);
 			context.Response.ContentType = GetContentType(docPath);
-			switch (File.Exists(filePath))
-			{
-				case false:
-					WriteEmbeddedFile(context, docPath);
-					break;
-				default:
-					WriteFile(context, filePath);
-					break;
-			}
+			if (File.Exists(filePath))
+				WriteFile(context, filePath);
+			else
+				WriteEmbeddedFile(context, docPath);
 		}
 
 		private static void WriteEmbeddedFile(this IHttpContext context, string docPath)
