@@ -28,12 +28,13 @@ namespace Raven.Studio.Features.Tasks
 		{
 			if (Status == null || Status.IsRunning == false)
 				return null;
-			return DatabaseCommands.GetAsync("raven\\backup\\status")
+			return DatabaseCommands.GetAsync(@"Raven/Backup/Status")
 				.ContinueOnSuccessInTheUIThread(item =>
 				{
 					var documentConvention = ApplicationModel.Current.Server.Value.Conventions;
 					Status = documentConvention.CreateSerializer().Deserialize<BackupStatus>(new RavenJTokenReader(item.DataAsJson));
 
+					Output.Clear();
 					foreach (var backupMessage in Status.Messages)
 					{
 						Output.Add(backupMessage.Message);

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Windows.Input;
+﻿using System.Windows.Input;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -25,7 +24,6 @@ namespace Raven.Studio.Models
 		public BindableCollection<TaskInput> TaskInputs { get; set; }
 
 		public abstract ICommand Action { get; }
-
 	}
 
 	public class TaskInput : NotifyPropertyChangedBase
