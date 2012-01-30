@@ -406,7 +406,6 @@ namespace Raven.Database.Extensions
 
 		private static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string docPath)
 		{
-			byte[] bytes;
 			var etagValue = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-Match"];
 			var currentFileEtag = EmbeddedLastChangedDate + docPath;
 			if (etagValue == currentFileEtag)
@@ -414,6 +413,8 @@ namespace Raven.Database.Extensions
 				context.SetStatusToNotModified();
 				return;
 			}
+
+			byte[] bytes;
 			string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", ".");
 			using (var resource = asm.GetManifestResourceStream(resourceName))
 			{
