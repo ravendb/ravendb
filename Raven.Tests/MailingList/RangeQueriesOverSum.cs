@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class Mauro : RavenTest
+	public class RangeQueriesOverSum : RavenTest
 	{
 		public class TheIndex : AbstractIndexCreationTask<Item, TheIndex.ReduceResult>
 		{

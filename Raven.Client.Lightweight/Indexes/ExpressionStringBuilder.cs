@@ -988,10 +988,12 @@ namespace Raven.Client.Indexes
 			var body = node.Body;
 			if(castLambdas)
 			{
-				if(body.NodeType != ExpressionType.Convert && 
-					body.NodeType != ExpressionType.ConvertChecked)
+				switch (body.NodeType)
 				{
-					body = Expression.Convert(body, body.Type);
+					case ExpressionType.Convert:
+					case ExpressionType.ConvertChecked:
+						body = Expression.Convert(body, body.Type);
+						break;
 				}
 			}
 			Visit(body);
@@ -1222,7 +1224,18 @@ namespace Raven.Client.Indexes
 				var old = castLambdas;
 				try
 				{
-					castLambdas = node.Method.Name == "Sum" || node.Method.Name == "Average";
+					switch (node.Method.Name)
+					{
+						case "Sum":
+						case "Average":
+						case "Min":
+						case "Max":
+							castLambdas = true;
+							break;
+						default:
+							castLambdas = false;
+							break;
+					}
 					Visit(node.Arguments[num2]);
 				}
 				finally
