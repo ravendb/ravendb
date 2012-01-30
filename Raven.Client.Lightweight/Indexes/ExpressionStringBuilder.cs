@@ -992,6 +992,8 @@ namespace Raven.Client.Indexes
 				{
 					case ExpressionType.Convert:
 					case ExpressionType.ConvertChecked:
+						break;
+					default:
 						body = Expression.Convert(body, body.Type);
 						break;
 				}
