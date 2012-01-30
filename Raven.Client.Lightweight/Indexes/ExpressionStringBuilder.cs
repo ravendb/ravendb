@@ -31,6 +31,7 @@ namespace Raven.Client.Indexes
 		private readonly bool translateIdentityProperty;
 		private ExpressionOperatorPrecedence _currentPrecedence;
 		private Dictionary<object, int> _ids;
+		private bool castLambdas;
 
 		// Methods
 		private ExpressionStringBuilder(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot,
@@ -984,7 +985,16 @@ namespace Raven.Client.Indexes
 				VisitExpressions('(', node.Parameters, ')');
 			}
 			Out(" => ");
-			Visit(node.Body);
+			var body = node.Body;
+			if(castLambdas)
+			{
+				if(body.NodeType != ExpressionType.Convert && 
+					body.NodeType != ExpressionType.ConvertChecked)
+				{
+					body = Expression.Convert(body, body.Type);
+				}
+			}
+			Visit(body);
 			return node;
 		}
 
@@ -1209,7 +1219,16 @@ namespace Raven.Client.Indexes
 				{
 					Out(", ");
 				}
-				Visit(node.Arguments[num2]);
+				var old = castLambdas;
+				try
+				{
+					castLambdas = node.Method.Name == "Sum" || node.Method.Name == "Average";
+					Visit(node.Arguments[num2]);
+				}
+				finally
+				{
+					castLambdas = old;
+				}
 				num2++;
 			}
 			Out(node.Method.Name != "get_Item" ? ")" : "]");
