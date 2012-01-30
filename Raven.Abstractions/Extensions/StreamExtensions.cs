@@ -13,7 +13,7 @@ namespace Raven.Abstractions.Extensions
 	/// <summary>
 	/// Extensions for working with streams
 	/// </summary>
-	public static class StreamExtension
+	public static class StreamExtensions
 	{
 
 #if NET_3_5
@@ -62,6 +62,5 @@ namespace Raven.Abstractions.Extensions
 			Buffer.BlockCopy(buffer, 0, result, resultOffset, currentOffset);
 			return result;
 		}
-
 	}
 }
