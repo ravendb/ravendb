@@ -628,12 +628,30 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					{
 						throw new InvalidOperationException("Could not extract value from " + expression);
 					}
-					luceneQuery.Search(expressionInfo.Path, (string) value);
+					var searchTerms = (string) value;
 					if (GetValueFromExpressionWithoutConversion(expression.Arguments[3], out value) == false)
 					{
 						throw new InvalidOperationException("Could not extract value from " + expression);
 					}
-					luceneQuery.Boost((decimal) value);
+					var boost = (decimal) value;
+					if (GetValueFromExpressionWithoutConversion(expression.Arguments[4], out value) == false)
+					{
+						throw new InvalidOperationException("Could not extract value from " + expression);
+					}
+					var options = (SearchOptions) value;
+					if (chainedWhere && options == SearchOptions.And)
+					{
+						luceneQuery.AndAlso();
+					}
+
+					luceneQuery.Search(expressionInfo.Path, searchTerms);
+					luceneQuery.Boost(boost);
+
+					if (options == SearchOptions.And)
+					{
+						chainedWhere = true;
+					}
+
 					break;
 				case "In":
 					var memberInfo = GetMember(expression.Arguments[0]);
