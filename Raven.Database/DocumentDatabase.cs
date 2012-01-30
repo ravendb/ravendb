@@ -277,12 +277,7 @@ namespace Raven.Database
 				return result;
 			}
 		}
-
-		public string SilverlightXapName
-		{
-			get { return "Raven.Studio.xap"; }
-		}
-
+		
 		public ConcurrentDictionary<string, object> ExternalState { get; set; }
 
 		public InMemoryRavenConfiguration Configuration

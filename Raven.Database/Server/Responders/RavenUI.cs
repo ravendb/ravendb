@@ -13,6 +13,8 @@ namespace Raven.Database.Server.Responders
 {
 	public class RavenUI : AbstractRequestResponder
 	{
+		private const string SilverlightXapName = "Raven.Studio.xap";
+
 		public override string UrlPattern
 		{
 			get { return "^/raven/"; }
@@ -31,7 +33,7 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			if (context.Request.Url.AbsolutePath == RavenRoot.RootPath && 
-				SilverlightUI.GetPaths(ResourceStore.SilverlightXapName, ResourceStore.Configuration.WebDir).All(f => File.Exists(f) == false))
+				SilverlightUI.GetPaths(SilverlightXapName, ResourceStore.Configuration.WebDir).All(f => File.Exists(f) == false))
 			{
 				context.WriteEmbeddedFile(Settings.WebDir, "studio_not_found.html");
 				return;
