@@ -468,6 +468,8 @@ namespace Raven.Database.Extensions
 					return "image/gif";
 				case ".png":
 					return "image/png";
+				case ".xap":
+					return "application/x-silverlight-2";
 				default:
 					return "text/plain";
 			}
