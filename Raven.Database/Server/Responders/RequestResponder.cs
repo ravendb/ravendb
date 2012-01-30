@@ -9,10 +9,7 @@ namespace Raven.Database.Server.Responders
 	{
 		public DocumentDatabase Database
 		{
-			get
-			{
-				return ResourceStore;
-			}
+			get { return ResourceStore; }
 		}
 	}
 }
