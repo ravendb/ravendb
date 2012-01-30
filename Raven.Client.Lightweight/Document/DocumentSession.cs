@@ -266,19 +266,29 @@ namespace Raven.Client.Document
 			if (ids.Length == 0)
 				return new T[0];
 
-			IncrementRequestCount();
-			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
-			MultiLoadResult multiLoadResult;
-			do
-			{
-				multiLoadOperation.LogOperation();
-				using (multiLoadOperation.EnterMultiLoadContext())
-				{
-					multiLoadResult = DatabaseCommands.Get(ids, includes);
-				}
-			} while (multiLoadOperation.SetResult(multiLoadResult));
+		    ids = ids.Distinct().ToArray();
 
-			return multiLoadOperation.Complete<T>();
+            // only load document that aren't already cached
+		    var idsOfNotExistingObjects = ids.Where(id => !entitiesByKey.ContainsKey(id)).ToArray();
+
+            if (idsOfNotExistingObjects.Any())
+            {
+                IncrementRequestCount();
+                var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
+                MultiLoadResult multiLoadResult;
+                do
+                {
+                    multiLoadOperation.LogOperation();
+                    using (multiLoadOperation.EnterMultiLoadContext())
+                    {
+                        multiLoadResult = DatabaseCommands.Get(idsOfNotExistingObjects, includes);
+                    }
+                } while (multiLoadOperation.SetResult(multiLoadResult));
+
+                multiLoadOperation.Complete<T>();
+            }
+
+		    return ids.Select(id => (T) entitiesByKey[id]).ToArray();
 		}
 
 		/// <summary>
