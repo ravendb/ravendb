@@ -421,8 +421,8 @@
     <Compile Include="..\Raven.Abstractions\Extensions\Reference.cs">
       <Link>Imports\Extensions\Reference.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Extensions\StreamExtension.cs">
-      <Link>Imports\Extensions\StreamExtension.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Extensions\StreamExtensions.cs">
+      <Link>Imports\Extensions\StreamExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Indexing\FieldIndexing.cs">
       <Link>Imports\Indexing\FieldIndexing.cs</Link>

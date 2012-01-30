@@ -13,7 +13,7 @@ namespace Raven.Abstractions.Extensions
 	/// <summary>
 	/// Extensions for working with streams
 	/// </summary>
-	public static class StreamExtension
+	public static class StreamExtensions
 	{
 
 #if NET_3_5
@@ -34,14 +34,14 @@ namespace Raven.Abstractions.Extensions
 		/// 	Reads the entire request buffer to memory and
 		/// 	return it as a byte array.
 		/// </summary>
-		public static byte[] ReadData(this Stream steram)
+		public static byte[] ReadData(this Stream stream)
 		{
 			var list = new List<byte[]>();
 			const int defaultBufferSize = 1024 * 16;
 			var buffer = new byte[defaultBufferSize];
 			var currentOffset = 0;
 			int read;
-			while ((read = steram.Read(buffer, currentOffset, buffer.Length - currentOffset)) != 0)
+			while ((read = stream.Read(buffer, currentOffset, buffer.Length - currentOffset)) != 0)
 			{
 				currentOffset += read;
 				if (currentOffset == buffer.Length)
@@ -62,6 +62,5 @@ namespace Raven.Abstractions.Extensions
 			Buffer.BlockCopy(buffer, 0, result, resultOffset, currentOffset);
 			return result;
 		}
-
 	}
 }

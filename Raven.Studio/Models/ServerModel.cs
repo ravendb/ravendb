@@ -83,8 +83,7 @@ namespace Raven.Studio.Models
 				if (SelectedDatabase.Value == null)
 					return;
 				var databaseName = SelectedDatabase.Value.Name;
-				if (changeDatabaseCommand.CanExecute(databaseName))
-					changeDatabaseCommand.Execute(databaseName);
+				Command.ExecuteCommand(changeDatabaseCommand, databaseName);
 			};
 		}
 
@@ -142,6 +141,14 @@ namespace Raven.Studio.Models
 				defaultDatabase = new[] {new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands)};
 				Databases.Set(defaultDatabase);
 				SelectedDatabase.Value = defaultDatabase[0];
+				return;
+			}
+			if (SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
+				return;
+			var database = Databases.FirstOrDefault(x => x.Name == databaseName);
+			if (database != null)
+			{
+				SelectedDatabase.Value = database;
 				return;
 			}
 			singleTenant = urlParser.GetQueryParam("api-key") != null;
