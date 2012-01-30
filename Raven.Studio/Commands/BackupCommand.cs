@@ -1,6 +1,7 @@
 using Raven.Abstractions.Data;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
+using System.Linq;
 
 namespace Raven.Studio.Commands
 {
@@ -12,13 +13,14 @@ namespace Raven.Studio.Commands
 			this.startBackupTask = startBackupTask;
 		}
 
-		public override void Execute(object parameter)
+		public override void Execute(object _)
 		{
-			var location = parameter as string;
+			var location = startBackupTask.TaskInputs.FirstOrDefault(x => x.Name == "Location");
+
 			if(location == null)
 				return;
 
-			DatabaseCommands.StartBackupAsync(location)
+			DatabaseCommands.StartBackupAsync(location.Value)
 				.ContinueWith(task =>
 				{
 					startBackupTask.Status = new BackupStatus
@@ -26,7 +28,6 @@ namespace Raven.Studio.Commands
 						IsRunning = true
 					};
 				}).Catch();
-
 		}
 	}
 }

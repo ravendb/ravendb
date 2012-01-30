@@ -15,8 +15,8 @@ namespace Raven.Studio.Features.Tasks
 		{
 			Name = "Backup Database";
 			Description = "Backup your database.";
-			NeedTextBox = true;
-			TextBoxDescription = "Location:";
+
+			TaskInputs.Add(new TaskInput("Location", @"C:\path-to-your-backup-folder"));
 		}
 
 		public override ICommand Action
