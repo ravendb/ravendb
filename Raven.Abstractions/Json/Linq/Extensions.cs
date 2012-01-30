@@ -130,33 +130,38 @@ namespace Raven.Json.Linq
 				// HACK
 				return (U)(object)token;
 			}
-			else
+			if (token == null)
+				return default(U);
+
+			var value = token as RavenJValue;
+			if (value == null)
+				throw new InvalidCastException("Cannot cast {0} to {1}.".FormatWith(CultureInfo.InvariantCulture, token.GetType(), typeof(U)));
+
+			if (value.Value is U)
+				return (U)value.Value;
+
+			Type targetType = typeof(U);
+
+			if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
 			{
-				if (token == null)
+				if (value.Value == null)
 					return default(U);
 
-				var value = token as RavenJValue;
-				if (value == null)
-					throw new InvalidCastException("Cannot cast {0} to {1}.".FormatWith(CultureInfo.InvariantCulture, token.GetType(), typeof(U)));
-
-				if (value.Value is U)
-					return (U)value.Value;
-
-				Type targetType = typeof(U);
-
-				if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
-				{
-					if (value.Value == null)
-						return default(U);
-
-					targetType = Nullable.GetUnderlyingType(targetType);
-				}
-				if(targetType == typeof(Guid))
-				{
-					return (U)(object)new Guid(value.Value.ToString());
-				}
-				return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
+				targetType = Nullable.GetUnderlyingType(targetType);
 			}
+			if(targetType == typeof(Guid))
+			{
+				if (value.Value == null)
+					return default(U);
+				return (U)(object)new Guid(value.Value.ToString());
+			}
+			if (targetType == typeof(string))
+			{
+				if (value.Value == null)
+					return default(U);
+				return (U)(object)value.Value.ToString();
+			}
+			return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
 		}
 	}
 }
