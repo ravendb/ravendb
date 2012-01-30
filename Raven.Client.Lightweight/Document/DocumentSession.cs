@@ -261,57 +261,60 @@ namespace Raven.Client.Document
 			return Load<T>(documentKey);
 		}
 
-        internal T[] LoadInternal<T>(string[] ids, string[] includes)
-        {
-            if (ids.Length == 0)
-                return new T[0];
+		internal T[] LoadInternal<T>(string[] ids, string[] includes)
+		{
+			if (ids.Length == 0)
+				return new T[0];
 
-            ids = ids.Distinct().ToArray();
+			IncrementRequestCount();
+			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
+			MultiLoadResult multiLoadResult;
+			do
+			{
+				multiLoadOperation.LogOperation();
+				using (multiLoadOperation.EnterMultiLoadContext())
+				{
+					multiLoadResult = DatabaseCommands.Get(ids, includes);
+				}
+			} while (multiLoadOperation.SetResult(multiLoadResult));
 
-            IncrementRequestCount();
-            var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
-            MultiLoadResult multiLoadResult;
-            do
-            {
-                multiLoadOperation.LogOperation();
-                using (multiLoadOperation.EnterMultiLoadContext())
-                {
-                    multiLoadResult = DatabaseCommands.Get(ids, includes);
-                }
-            } while (multiLoadOperation.SetResult(multiLoadResult));
-
-            return multiLoadOperation.Complete<T>();
+			return multiLoadOperation.Complete<T>();
 		}
 
-        internal T[] LoadInternal<T>(string[] ids)
-        {
-            if (ids.Length == 0)
-                return new T[0];
+		internal T[] LoadInternal<T>(string[] ids)
+		{
+			if (ids.Length == 0)
+				return new T[0];
 
-            ids = ids.Distinct().ToArray();
+			// only load documents that aren't already cached
+			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false)
+				.Distinct(StringComparer.InvariantCultureIgnoreCase)
+				.ToArray();
 
-            // only load document that aren't already cached
-            var idsOfNotExistingObjects = ids.Where(id => !entitiesByKey.ContainsKey(id)).ToArray();
+			if (idsOfNotExistingObjects.Length > 0)
+			{
+				IncrementRequestCount();
+				var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, idsOfNotExistingObjects);
+				MultiLoadResult multiLoadResult;
+				do
+				{
+					multiLoadOperation.LogOperation();
+					using (multiLoadOperation.EnterMultiLoadContext())
+					{
+						multiLoadResult = DatabaseCommands.Get(idsOfNotExistingObjects, null);
+					}
+				} while (multiLoadOperation.SetResult(multiLoadResult));
 
-            if (idsOfNotExistingObjects.Any())
-            {
-                IncrementRequestCount();
-                var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
-                MultiLoadResult multiLoadResult;
-                do
-                {
-                    multiLoadOperation.LogOperation();
-                    using (multiLoadOperation.EnterMultiLoadContext())
-                    {
-                        multiLoadResult = DatabaseCommands.Get(idsOfNotExistingObjects, null);
-                    }
-                } while (multiLoadOperation.SetResult(multiLoadResult));
+				multiLoadOperation.Complete<T>();
+			}
 
-                multiLoadOperation.Complete<T>();
-            }
-
-            return ids.Select(id => (T)entitiesByKey[id]).ToArray();
-        }
+			return ids.Select(id =>
+			{
+				object val;
+				entitiesByKey.TryGetValue(id, out val);
+				return (T)val;
+			}).ToArray();
+		}
 
 		/// <summary>
 		/// Queries the specified index using Linq.
