@@ -20,10 +20,7 @@ namespace Raven.Database.Server.Responders
 
 		public override bool IsUserInterfaceRequest
 		{
-			get
-			{
-				return true;
-			}
+			get { return true; }
 		}
 
 		public override string[] SupportedVerbs
