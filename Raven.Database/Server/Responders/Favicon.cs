@@ -22,7 +22,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			context.WriteEmbeddedFile(ResourceStore.GetType().Assembly, Settings.WebDir, "favicon.ico");
+			context.WriteEmbeddedFile(Settings.WebDir, "favicon.ico");
 		}
 
 		public override bool IsUserInterfaceRequest
