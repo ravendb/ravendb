@@ -34,6 +34,7 @@ namespace Raven.Client.Connection
 
 		private readonly DocumentConvention conventions;
 		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
+        private const string RavenReplicationFailoverDestinations = "Raven/Replication/FailoverDestinations";
 		private DateTime lastReplicationUpdate = DateTime.MinValue;
 		private readonly object replicationLock = new object();
 		private List<string> replicationDestinations = new List<string>();
@@ -234,8 +235,8 @@ namespace Raven.Client.Connection
 			JsonDocument document;
 			try
 			{
-				document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
-				failureCounts[commands.Url] = new IntHolder(); // we just hit the master, so we can reset its failure count
+			    document = GetFailoverDestinations(commands);
+			    failureCounts[commands.Url] = new IntHolder(); // we just hit the master, so we can reset its failure count
 			}
 			catch (Exception e)
 			{
@@ -263,7 +264,14 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
+	    private static JsonDocument GetFailoverDestinations(ServerClient commands)
+	    {
+	        var failoverDestinations = commands.DirectGet(commands.Url, RavenReplicationFailoverDestinations) ??
+	                                   commands.DirectGet(commands.Url, RavenReplicationDestinations);
+	        return failoverDestinations;
+	    }
+
+	    private JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
 		{
 			try
 			{
