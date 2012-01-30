@@ -139,6 +139,14 @@ namespace Raven.Studio.Models
 				SelectedDatabase.Value = defaultDatabase[0];
 				return;
 			}
+			if (SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
+				return;
+			var database = Databases.FirstOrDefault(x => x.Name == databaseName);
+			if (database != null)
+			{
+				SelectedDatabase.Value = database;
+				return;
+			}
 			singleTenant = urlParser.GetQueryParam("api-key") != null;
 			var databaseCommands = databaseName.Equals("default", StringComparison.OrdinalIgnoreCase)
 			                       	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
