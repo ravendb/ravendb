@@ -61,6 +61,7 @@
     <Compile Include="Data\AggregationOperation.cs" />
     <Compile Include="Data\AggregationOperationExtensions.cs" />
     <Compile Include="Data\Attachment.cs" />
+    <Compile Include="Data\BackupStatus.cs" />
     <Compile Include="Data\BatchResult.cs" />
     <Compile Include="Data\BoostedValue.cs" />
     <Compile Include="Data\BuildNumber.cs" />

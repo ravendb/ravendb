@@ -19,6 +19,11 @@ namespace Raven.Studio.Models
 		private string buildNumber;
 		private bool singleTenant;
 
+		
+		public DocumentConvention Conventions
+		{
+			get { return this.documentStore.Conventions; }
+		}
 		public string BuildNumber
 		{
 			get { return buildNumber; }

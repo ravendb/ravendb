@@ -2,9 +2,9 @@
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-           xmlns:Tasks="clr-namespace:Raven.Studio.Features.Tasks">
+		   xmlns:Tasks="clr-namespace:Raven.Studio.Features.Tasks">
 
 	<Grid>
-        <Tasks:TasksView />
+		<Tasks:TasksView />
   </Grid>
 </Infrastructure:View>

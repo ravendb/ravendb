@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using NLog;
+using Raven.Abstractions.Data;
 using Directory = System.IO.Directory;
 using Raven.Database.Extensions;
 

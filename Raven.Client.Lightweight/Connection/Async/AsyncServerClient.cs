@@ -447,6 +447,11 @@ namespace Raven.Client.Connection.Async
 			throw new NotImplementedException();
 		}
 
+		public Task StartBackupAsync(string backupLocation)
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>

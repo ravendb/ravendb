@@ -3,7 +3,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-    public abstract class TaskModel : NotifyPropertyChangedBase
+    public abstract class TaskModel : ViewModel
     {
         public TaskModel()
         {
@@ -18,6 +18,9 @@ namespace Raven.Studio.Models
         }
 
         public string Description { get; set; }
+
+    	public bool NeedTextBox { get; set; }
+    	public string TextBoxDescription { get; set; }
 
         public BindableCollection<string> Output { get; set; }
 
