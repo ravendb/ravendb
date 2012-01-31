@@ -10,6 +10,7 @@ using System.Linq;
 using Microsoft.Isam.Esent.Interop;
 using NLog;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database;
 using Raven.Database.Backup;

@@ -74,7 +74,7 @@ namespace Raven.Client.Document.SessionOperations
 			}
 
 			return results
-				.Select(sessionOperations.TrackEntity<T>)
+				.Select(document => document == null ? default(T) : sessionOperations.TrackEntity<T>(document))
 				.ToArray();
 		}
 	}

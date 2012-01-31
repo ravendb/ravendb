@@ -31,6 +31,7 @@ namespace Raven.Client.Indexes
 		private readonly bool translateIdentityProperty;
 		private ExpressionOperatorPrecedence _currentPrecedence;
 		private Dictionary<object, int> _ids;
+		private bool castLambdas;
 
 		// Methods
 		private ExpressionStringBuilder(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot,
@@ -217,10 +218,10 @@ namespace Raven.Client.Indexes
 
 		private void OutMember(Expression instance, MemberInfo member)
 		{
-            if (instance == null || instance.NodeType != ExpressionType.MemberAccess)
-            {
-                OutputTypeIfNeeded(member);
-            }
+			if (instance == null || instance.NodeType != ExpressionType.MemberAccess)
+			{
+				OutputTypeIfNeeded(member);
+			}
 			var name = member.Name;
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
@@ -251,10 +252,10 @@ namespace Raven.Client.Indexes
 
 				Out(member.DeclaringType.Name + "." + name);
 			}
-            if (instance == null || instance.NodeType != ExpressionType.MemberAccess)
-            {
-                CloseOutputTypeIfNeeded(member);
-            }
+			if (instance == null || instance.NodeType != ExpressionType.MemberAccess)
+			{
+				CloseOutputTypeIfNeeded(member);
+			}
 		}
 
 		private void CloseOutputTypeIfNeeded(MemberInfo member)
@@ -984,7 +985,20 @@ namespace Raven.Client.Indexes
 				VisitExpressions('(', node.Parameters, ')');
 			}
 			Out(" => ");
-			Visit(node.Body);
+			var body = node.Body;
+			if(castLambdas)
+			{
+				switch (body.NodeType)
+				{
+					case ExpressionType.Convert:
+					case ExpressionType.ConvertChecked:
+						break;
+					default:
+						body = Expression.Convert(body, body.Type);
+						break;
+				}
+			}
+			Visit(body);
 			return node;
 		}
 
@@ -1209,7 +1223,27 @@ namespace Raven.Client.Indexes
 				{
 					Out(", ");
 				}
-				Visit(node.Arguments[num2]);
+				var old = castLambdas;
+				try
+				{
+					switch (node.Method.Name)
+					{
+						case "Sum":
+						case "Average":
+						case "Min":
+						case "Max":
+							castLambdas = true;
+							break;
+						default:
+							castLambdas = false;
+							break;
+					}
+					Visit(node.Arguments[num2]);
+				}
+				finally
+				{
+					castLambdas = old;
+				}
 				num2++;
 			}
 			Out(node.Method.Name != "get_Item" ? ")" : "]");

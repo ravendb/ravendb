@@ -326,6 +326,23 @@ namespace Raven.Client.Silverlight.Connection.Async
 				.ContinueWith(task => convention.CreateSerializer().Deserialize<LicensingStatus>(new RavenJTokenReader(task.Result)));
 		}
 
+		public Task StartBackupAsync(string backupLocation)
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/admin/backup").NoCache(), "POST", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+			return request.WriteAsync(new RavenJObject
+				{
+					{"BackupLocation", backupLocation}
+				}.ToString(Formatting.None))
+				.ContinueWith(task =>
+				{
+					if (task.Exception != null)
+						return task;
+
+					return request.ExecuteRequest();
+				}).Unwrap();
+		}
+
 		public Task<BuildNumber> GetBuildNumber()
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/build/version").NoCache(), "GET", credentials, convention);

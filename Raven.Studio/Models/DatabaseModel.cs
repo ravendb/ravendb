@@ -1,6 +1,8 @@
+using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
+using Raven.Client.Document;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using System.Linq;
@@ -9,28 +11,32 @@ namespace Raven.Studio.Models
 {
 	public class DatabaseModel : Model
 	{
+		public const string DefaultDatabaseName = "Default";
+
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly string name;
 
 		public Observable<TaskModel> SelectedTask { get; set; }
 
-		public DatabaseModel(string name, IAsyncDatabaseCommands asyncDatabaseCommands)
+		public DatabaseModel(string name, DocumentStore documentStore)
 		{
 			this.name = name;
-			this.asyncDatabaseCommands = asyncDatabaseCommands;
 
 			Tasks = new BindableCollection<TaskModel>(x => x.Name)
 			{
 				new ImportTask(),
 				new ExportTask(),
+				new StartBackupTask(),
 			};
 			SelectedTask = new Observable<TaskModel> {Value = Tasks.FirstOrDefault()};
 			Statistics = new Observable<DatabaseStatistics>();
+
+			asyncDatabaseCommands = name.Equals(DefaultDatabaseName, StringComparison.OrdinalIgnoreCase)
+			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
+			                             	: documentStore.AsyncDatabaseCommands.ForDatabase(name);
 		}
 
 		public BindableCollection<TaskModel> Tasks { get; private set; }
-
-		public BindableCollection<string> Indexes { get; private set; }
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
@@ -50,7 +56,6 @@ namespace Raven.Studio.Models
 				.GetStatisticsAsync()
 				.ContinueOnSuccess(stats => Statistics.Value = stats);
 		}
-
 
 		private bool Equals(DatabaseModel other)
 		{

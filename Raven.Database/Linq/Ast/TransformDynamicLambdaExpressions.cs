@@ -102,7 +102,7 @@ namespace Raven.Database.Linq.Ast
 		private static INode ModifyLambdaForMinMax(LambdaExpression lambdaExpression,
 		                                           ParenthesizedExpression parenthesizedlambdaExpression)
 		{
-			var node = new CastExpression(new TypeReference("Func<dynamic, int>"), parenthesizedlambdaExpression, CastType.Cast);
+			var node = new CastExpression(new TypeReference("Func<dynamic, decimal>"), parenthesizedlambdaExpression, CastType.Cast);
 			var castExpression = lambdaExpression.ExpressionBody as CastExpression;
 			if (castExpression != null)
 			{

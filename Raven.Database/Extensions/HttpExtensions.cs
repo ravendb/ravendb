@@ -389,24 +389,18 @@ namespace Raven.Database.Extensions
 			return context.Request.Headers["If-None-Match"] == etag.ToString();
 		}
 
-		public static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string ravenPath, string docPath)
+		public static void WriteEmbeddedFile(this IHttpContext context, string ravenPath, string docPath)
 		{
 			var filePath = Path.Combine(ravenPath, docPath);
 			context.Response.ContentType = GetContentType(docPath);
-			switch (File.Exists(filePath))
-			{
-				case false:
-					WriteEmbeddedFile(context, asm, docPath);
-					break;
-				default:
-					WriteFile(context, filePath);
-					break;
-			}
+			if (File.Exists(filePath))
+				WriteFile(context, filePath);
+			else
+				WriteEmbeddedFile(context, docPath);
 		}
 
-		private static void WriteEmbeddedFile(this IHttpContext context, Assembly asm, string docPath)
+		private static void WriteEmbeddedFile(this IHttpContext context, string docPath)
 		{
-			byte[] bytes;
 			var etagValue = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-Match"];
 			var currentFileEtag = EmbeddedLastChangedDate + docPath;
 			if (etagValue == currentFileEtag)
@@ -414,8 +408,10 @@ namespace Raven.Database.Extensions
 				context.SetStatusToNotModified();
 				return;
 			}
+
+			byte[] bytes;
 			string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", ".");
-			using (var resource = asm.GetManifestResourceStream(resourceName))
+			using (var resource = typeof(IHttpContext).Assembly.GetManifestResourceStream(resourceName))
 			{
 				if (resource == null)
 				{
@@ -472,6 +468,8 @@ namespace Raven.Database.Extensions
 					return "image/gif";
 				case ".png":
 					return "image/png";
+				case ".xap":
+					return "application/x-silverlight-2";
 				default:
 					return "text/plain";
 			}

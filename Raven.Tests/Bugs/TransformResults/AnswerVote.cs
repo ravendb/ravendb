@@ -7,7 +7,7 @@ namespace Raven.Tests.Bugs.TransformResults
 		public string QuestionId { get; set; }
 		public string AnswerId { get; set; }
 		public int Delta { get; set; }
-	    public decimal DecimalValue { get; set; }
+		public decimal DecimalValue { get; set; }
 	}
 	public class AnswerVote2
 	{
@@ -15,6 +15,6 @@ namespace Raven.Tests.Bugs.TransformResults
 		public Guid QuestionId { get; set; }
 		public Guid AnswerId { get; set; }
 		public int Delta { get; set; }
-    }
+	}
 
 }

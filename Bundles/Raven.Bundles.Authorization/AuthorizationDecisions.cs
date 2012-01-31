@@ -142,7 +142,7 @@ namespace Raven.Bundles.Authorization
 		private static bool DocumentPermisionMatchesUser(DocumentPermission permission, AuthorizationUser user, string userId)
 		{
 			if (permission.User != null)
-				return permission.User == userId;
+				return string.Equals(permission.User, userId, StringComparison.InvariantCultureIgnoreCase);
 			if (permission.Role == null)
 				return false;
 
@@ -159,7 +159,7 @@ namespace Raven.Bundles.Authorization
 
 		private static IEnumerable<string> GetHierarchicalNames(IEnumerable<string> names)
 		{
-			var hierarchicalNames = new HashSet<string>();
+			var hierarchicalNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 			foreach (var name in names)
 			{
 				var copy = name;

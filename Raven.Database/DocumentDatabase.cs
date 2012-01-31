@@ -1,3 +1,5 @@
+//-----------------------------------------------------------------------
+// <copyright file="DocumentDatabase.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -277,12 +279,7 @@ namespace Raven.Database
 				return result;
 			}
 		}
-
-		public string SilverlightXapName
-		{
-			get { return "Raven.Studio.xap"; }
-		}
-
+		
 		public ConcurrentDictionary<string, object> ExternalState { get; set; }
 
 		public InMemoryRavenConfiguration Configuration
