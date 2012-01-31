@@ -95,7 +95,7 @@ namespace Raven.Studio.Models
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync()
 				.ContinueOnSuccess(names =>
 				{
-					var databaseModels = names.Select(db => new DatabaseModel(db, documentStore.AsyncDatabaseCommands.ForDatabase(db)));
+					var databaseModels = names.Select(db => new DatabaseModel(db, documentStore));
 					Databases.Match(defaultDatabase.Concat(databaseModels).ToArray());
 				})
 				.Catch();
@@ -138,7 +138,7 @@ namespace Raven.Studio.Models
 			var databaseName = urlParser.GetQueryParam("database");
 			if (databaseName == null)
 			{
-				defaultDatabase = new[] {new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands)};
+				defaultDatabase = new[] {new DatabaseModel(DefaultDatabaseName, documentStore)};
 				Databases.Set(defaultDatabase);
 				SelectedDatabase.Value = defaultDatabase[0];
 				return;
@@ -152,10 +152,7 @@ namespace Raven.Studio.Models
 				return;
 			}
 			singleTenant = urlParser.GetQueryParam("api-key") != null;
-			var databaseCommands = databaseName.Equals("default", StringComparison.OrdinalIgnoreCase)
-			                       	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
-			                       	: documentStore.AsyncDatabaseCommands.ForDatabase(databaseName);
-			var databaseModel = new DatabaseModel(databaseName, databaseCommands);
+			var databaseModel = new DatabaseModel(databaseName, documentStore);
 			Databases.Add(databaseModel);
 			SelectedDatabase.Value = databaseModel;
 		}

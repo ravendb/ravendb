@@ -1,6 +1,8 @@
+using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
+using Raven.Client.Document;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using System.Linq;
@@ -14,10 +16,9 @@ namespace Raven.Studio.Models
 
 		public Observable<TaskModel> SelectedTask { get; set; }
 
-		public DatabaseModel(string name, IAsyncDatabaseCommands asyncDatabaseCommands)
+		public DatabaseModel(string name, DocumentStore documentStore)
 		{
 			this.name = name;
-			this.asyncDatabaseCommands = asyncDatabaseCommands;
 
 			Tasks = new BindableCollection<TaskModel>(x => x.Name)
 			{
@@ -27,6 +28,10 @@ namespace Raven.Studio.Models
 			};
 			SelectedTask = new Observable<TaskModel> {Value = Tasks.FirstOrDefault()};
 			Statistics = new Observable<DatabaseStatistics>();
+
+			asyncDatabaseCommands = name.Equals("default", StringComparison.OrdinalIgnoreCase)
+			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
+			                             	: documentStore.AsyncDatabaseCommands.ForDatabase(name);
 		}
 
 		public BindableCollection<TaskModel> Tasks { get; private set; }
