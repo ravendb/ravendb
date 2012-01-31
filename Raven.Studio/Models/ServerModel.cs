@@ -12,7 +12,6 @@ namespace Raven.Studio.Models
 	public class ServerModel : Model, IDisposable
 	{
 		public readonly string Url;
-		public const string DefaultDatabaseName = "Default";
 		private DocumentStore documentStore;
 		private DatabaseModel[] defaultDatabase;
 
@@ -138,7 +137,7 @@ namespace Raven.Studio.Models
 			var databaseName = urlParser.GetQueryParam("database");
 			if (databaseName == null)
 			{
-				defaultDatabase = new[] {new DatabaseModel(DefaultDatabaseName, documentStore)};
+				defaultDatabase = new[] {new DatabaseModel(DatabaseModel.DefaultDatabaseName, documentStore)};
 				Databases.Set(defaultDatabase);
 				SelectedDatabase.Value = defaultDatabase[0];
 				return;
