@@ -130,6 +130,7 @@ namespace Raven.Client.Embedded
 		{
 			if (configuration != null && Url == null)
 			{
+				configuration.PostInit();
 				if(configuration.RunInMemory || configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
 				{
 					ResourceManagerId = Guid.NewGuid(); // avoid conflicts

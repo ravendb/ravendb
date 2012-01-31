@@ -47,6 +47,12 @@ namespace Raven.Database.Config
 
 		public string DatabaseName { get; set; }
 
+		public void PostInit()
+		{
+			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
+				SetupOAuth();
+		}
+
 		public void Initialize()
 		{
 			// Core settings
@@ -107,13 +113,10 @@ namespace Raven.Database.Config
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
 			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 
-			var transactionMode = Settings["Raven/TransactionMode"];
-			TransactionMode result;
-			if (Enum.TryParse(transactionMode, true, out result) == false)
-				result = TransactionMode.Safe;
-			TransactionMode = result;
+			SetupTransactionMode();
 
 			DataDirectory = Settings["Raven/DataDir"] ?? @"~\Data";
+			
 			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
 			{
 				IndexStoragePath = Settings["Raven/IndexStoragePath"];
@@ -143,9 +146,16 @@ namespace Raven.Database.Config
 
 			// OAuth
 			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? AuthenticationMode ?? "windows";
-			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
-				SetupOAuth();
+			PostInit();
+		}
 
+		private void SetupTransactionMode()
+		{
+			var transactionMode = Settings["Raven/TransactionMode"];
+			TransactionMode result;
+			if (Enum.TryParse(transactionMode, true, out result) == false)
+				result = TransactionMode.Safe;
+			TransactionMode = result;
 		}
 
 		private void SetVirtualDirectory()
@@ -165,10 +175,6 @@ namespace Raven.Database.Config
 
 			VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? defaultVirtualDirectory;
 
-			if (VirtualDirectory.EndsWith("/"))
-				VirtualDirectory = VirtualDirectory.Substring(0, VirtualDirectory.Length - 1);
-			if (VirtualDirectory.StartsWith("/") == false)
-				VirtualDirectory = "/" + VirtualDirectory;
 		}
 
 		private void SetupOAuth()
@@ -384,11 +390,25 @@ namespace Raven.Database.Config
 		/// </summary>
 		public string AccessControlRequestHeaders { get; set; }
 
+		private string virtualDirectory;
+
 		/// <summary>
 		/// The virtual directory to use when creating the http listener. 
 		/// Default: / 
 		/// </summary>
-		public string VirtualDirectory { get; set; }
+		public string VirtualDirectory
+		{
+			get { return virtualDirectory; }
+			set
+			{
+				virtualDirectory = value;
+
+				if (virtualDirectory.EndsWith("/"))
+					virtualDirectory = virtualDirectory.Substring(0, virtualDirectory.Length - 1);
+				if (virtualDirectory.StartsWith("/") == false)
+					virtualDirectory = "/" + virtualDirectory; 
+			}
+		}
 
 		/// <summary>
 		/// Whether to use http compression or not. 
