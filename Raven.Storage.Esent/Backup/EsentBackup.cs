@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.Data;
 using Raven.Database.Backup;
 
 namespace Raven.Storage.Esent.Backup

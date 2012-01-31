@@ -1,0 +1,80 @@
+﻿<Infrastructure:View x:Class="Raven.Studio.Features.Tasks.TaskView"
+                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                     mc:Ignorable="d"
+                     xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
+                     xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                     xmlns:Converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
+                     d:DesignWidth="640"
+                     d:DesignHeight="480"
+                     Title="TaskView Page"
+                     DataContext="{Binding Path=SelectedTask.Value}">
+
+    <Grid x:Name="LayoutRoot">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock FontSize="13"
+                   TextWrapping="Wrap"
+                   Text="{Binding Path=Description}"
+                   Margin="0,10" />
+
+        <StackPanel Grid.Row="1">
+            <ItemsControl ItemsSource="{Binding TaskInputs}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Name}"
+                                       Padding="5"
+                                       VerticalAlignment="Center" />
+                            <TextBox Text="{Binding Value, Mode=TwoWay}"
+                                     VerticalAlignment="Center"
+                                     MinWidth="150" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Button Content="{Binding Name}"
+                    Width="Auto"
+                    HorizontalAlignment="Left"
+                    Command="{Binding Action}"
+                    Padding="8,4"
+                    Style="{StaticResource Style_Button}"
+                    MinWidth="100"
+                    Margin="0,10" />
+
+        </StackPanel>
+
+        <ItemsControl Grid.Row="2"
+                      ItemsSource="{Binding Output}"
+                      BorderBrush="#FFEAE7E4"
+                      Background="{StaticResource Brush_SubtleBackground2}"
+                      BorderThickness="1"
+                      Margin="0,10,0,0">
+            <ItemsControl.Template>
+                <ControlTemplate TargetType="ItemsControl">
+                    <ScrollViewer x:Name="ScrollViewer"
+                                  VerticalScrollBarVisibility="Auto"
+                                  BorderThickness="{TemplateBinding BorderThickness}"
+                                  BorderBrush="{TemplateBinding BorderBrush}"
+                                  Background="{TemplateBinding Background}">
+                        <ItemsPresenter />
+                    </ScrollViewer>
+                </ControlTemplate>
+            </ItemsControl.Template>
+
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</Infrastructure:View>

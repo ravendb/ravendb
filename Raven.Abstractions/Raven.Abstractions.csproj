@@ -61,6 +61,7 @@
     <Compile Include="Data\AggregationOperation.cs" />
     <Compile Include="Data\AggregationOperationExtensions.cs" />
     <Compile Include="Data\Attachment.cs" />
+    <Compile Include="Data\BackupStatus.cs" />
     <Compile Include="Data\BatchResult.cs" />
     <Compile Include="Data\BoostedValue.cs" />
     <Compile Include="Data\BuildNumber.cs" />
@@ -128,7 +129,7 @@
     <Compile Include="Json\JsonToJsonConverter.cs" />
     <Compile Include="Extensions\MetadataExtensions.cs" />
     <Compile Include="Extensions\Reference.cs" />
-    <Compile Include="Extensions\StreamExtension.cs" />
+    <Compile Include="Extensions\StreamExtensions.cs" />
     <Compile Include="Indexing\FieldIndexing.cs" />
     <Compile Include="Indexing\FieldStorage.cs" />
     <Compile Include="Indexing\IndexDefinition.cs" />

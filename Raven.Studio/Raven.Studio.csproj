@@ -120,9 +120,14 @@
     <Compile Include="Behaviors\KeyboardBehavior.cs" />
     <Compile Include="Behaviors\OpenPageOnANewTabIfCtrlIsHold.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
+    <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
+    <Compile Include="Features\Tasks\StartBackupTask.cs" />
+    <Compile Include="Features\Tasks\TaskView.xaml.cs">
+      <DependentUpon>TaskView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Terms\TermsView.xaml.cs">
       <DependentUpon>TermsView.xaml</DependentUpon>
     </Compile>
@@ -406,6 +411,10 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Page Include="Controls\Taggers.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Tasks\TaskView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
