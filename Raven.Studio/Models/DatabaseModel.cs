@@ -38,8 +38,6 @@ namespace Raven.Studio.Models
 
 		public BindableCollection<TaskModel> Tasks { get; private set; }
 
-		public BindableCollection<string> Indexes { get; private set; }
-
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
 			get { return asyncDatabaseCommands; }
@@ -58,7 +56,6 @@ namespace Raven.Studio.Models
 				.GetStatisticsAsync()
 				.ContinueOnSuccess(stats => Statistics.Value = stats);
 		}
-
 
 		private bool Equals(DatabaseModel other)
 		{
