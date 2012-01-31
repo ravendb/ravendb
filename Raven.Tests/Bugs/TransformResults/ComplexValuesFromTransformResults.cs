@@ -120,9 +120,9 @@ namespace Raven.Tests.Bugs.TransformResults
 				const string questionId = @"question\259";
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
-					var vote1 = new AnswerVote { QuestionId = questionId, Delta = 2, DecimalValue = 20};
+					var vote1 = new AnswerVote { QuestionId = questionId, Delta = 2, DecimalValue = 20 };
 					session.Store(vote1);
-					var vote2 = new AnswerVote { QuestionId = questionId, Delta = 3, DecimalValue = 43};
+					var vote2 = new AnswerVote { QuestionId = questionId, Delta = 3, DecimalValue = 43 };
 					session.Store(vote2);
 
 					session.SaveChanges();

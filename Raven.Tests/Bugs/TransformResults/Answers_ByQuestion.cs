@@ -8,13 +8,13 @@ namespace Raven.Tests.Bugs.TransformResults
 		public Answers_ByQuestion()
 		{
 			Map = docs => from doc in docs
-						  select new
-						  {
-							  AnswerId = doc.AnswerId,
-							  QuestionId = doc.QuestionId,
-							  VoteTotal = doc.Delta,
-							  DecimalTotal = doc.DecimalValue
-						  };
+			              select new
+			              {
+			              	AnswerId = doc.AnswerId,
+			              	QuestionId = doc.QuestionId,
+			              	VoteTotal = doc.Delta,
+			              	DecimalTotal = doc.DecimalValue
+			              };
 
 			Reduce = mapped => from map in mapped
 							   group map by new

@@ -231,7 +231,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public T[] Load<T>(params string[] ids)
 		{
-			return LoadInternal<T>(ids, null);
+			return LoadInternal<T>(ids);
 		}
 
 		/// <summary>
@@ -240,7 +240,7 @@ namespace Raven.Client.Document
 		/// <param name="ids">The ids.</param>
 		public T[] Load<T>(IEnumerable<string> ids)
 		{
-			return LoadInternal<T>(ids.ToArray(), null);
+			return LoadInternal<T>(ids.ToArray());
 		}
 
 		/// <summary>
@@ -279,6 +279,41 @@ namespace Raven.Client.Document
 			} while (multiLoadOperation.SetResult(multiLoadResult));
 
 			return multiLoadOperation.Complete<T>();
+		}
+
+		internal T[] LoadInternal<T>(string[] ids)
+		{
+			if (ids.Length == 0)
+				return new T[0];
+
+			// only load documents that aren't already cached
+			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false)
+				.Distinct(StringComparer.InvariantCultureIgnoreCase)
+				.ToArray();
+
+			if (idsOfNotExistingObjects.Length > 0)
+			{
+				IncrementRequestCount();
+				var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, idsOfNotExistingObjects);
+				MultiLoadResult multiLoadResult;
+				do
+				{
+					multiLoadOperation.LogOperation();
+					using (multiLoadOperation.EnterMultiLoadContext())
+					{
+						multiLoadResult = DatabaseCommands.Get(idsOfNotExistingObjects, null);
+					}
+				} while (multiLoadOperation.SetResult(multiLoadResult));
+
+				multiLoadOperation.Complete<T>();
+			}
+
+			return ids.Select(id =>
+			{
+				object val;
+				entitiesByKey.TryGetValue(id, out val);
+				return (T)val;
+			}).ToArray();
 		}
 
 		/// <summary>

@@ -27,14 +27,21 @@ namespace Raven.Client.Connection
 		///</summary>
 		public static IEnumerable<JsonDocument> RavenJObjectsToJsonDocuments(IEnumerable<RavenJObject> responses)
 		{
-			return (from doc in responses
-					let metadata = doc["@metadata"] as RavenJObject
-					let _ = doc.Remove("@metadata")
-					let key = Extract(metadata, "@id", string.Empty)
-					let lastModified = Extract(metadata, Constants.LastModified, SystemTime.Now, (string d) => ConvertToUtcDate(d))
-					let etag = Extract(metadata, "@etag", Guid.Empty, (string g) => new Guid(g))
-					let nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b))
-					select new JsonDocument
+			var list = new List<JsonDocument>();
+			foreach (var doc in responses)
+			{
+				if(doc == null)
+				{
+					list.Add(null);
+					continue;
+				}
+				var metadata = (RavenJObject)doc["@metadata"];
+				doc.Remove("@metadata");
+				var key = Extract(metadata, "@id", string.Empty);
+				var lastModified = Extract(metadata, Constants.LastModified, SystemTime.Now, (string d) => ConvertToUtcDate(d));
+				var etag = Extract(metadata, "@etag", Guid.Empty, (string g) => new Guid(g));
+				var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
+				list.Add(new JsonDocument
 					{
 						Key = key,
 						LastModified = lastModified,
@@ -42,7 +49,9 @@ namespace Raven.Client.Connection
 						NonAuthoritativeInformation = nai,
 						Metadata = metadata.FilterHeaders(isServerDocument: false),
 						DataAsJson = doc,
-					}).ToList();
+					});
+			}
+			return list;
 		}
 
 		///<summary>

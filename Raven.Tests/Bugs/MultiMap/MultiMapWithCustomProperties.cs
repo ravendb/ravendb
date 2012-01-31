@@ -13,7 +13,7 @@ namespace Raven.Tests.Bugs.MultiMap
 			{
 				using (var session = store.OpenSession())
 				{
-					session.Store(new Cat { Name = "Tom", CatsOnlyProperty = "Miau"});
+					session.Store(new Cat { Name = "Tom", CatsOnlyProperty = "Miau" });
 					session.Store(new Dog { Name = "Oscar" });
 
 					session.SaveChanges();
@@ -25,7 +25,7 @@ namespace Raven.Tests.Bugs.MultiMap
 
 				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
 
-				using(var s = store.OpenSession())
+				using (var s = store.OpenSession())
 				{
 					Assert.NotEmpty(s.Query<Cat, CatsAndDogs>()
 										.Where(x => x.CatsOnlyProperty == "Miau")

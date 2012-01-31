@@ -750,27 +750,29 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			{
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
+			var uniqueIds = new HashSet<string>(ids);
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
 			// we are fine with that, requests to load that many items are probably going to be rare
 			HttpJsonRequest request;
-			if (ids.Sum(x=>x.Length) < 1024)
+			if (uniqueIds.Sum(x=>x.Length) < 1024)
 			{
-				path += "&" + string.Join("&", ids.Select(x => "id=" + x).ToArray());
+				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + x).ToArray());
 				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
 			}
 			else
 			{
 				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
-				request.Write(new RavenJArray(ids).ToString(Formatting.None));
+				request.Write(new RavenJArray(uniqueIds).ToString(Formatting.None));
 			}
 
 			request.AddOperationHeaders(OperationsHeaders);
 			var result = (RavenJObject) request.ReadResponseJson();
 
+			var results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList();
 			return new MultiLoadResult
 			{
 				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-				Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
+				Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id,StringComparison.InvariantCultureIgnoreCase))).ToList()
 			};
 		}
 

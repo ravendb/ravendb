@@ -149,6 +149,7 @@
     <Compile Include="Indexes\AbstractGenericIndexCreationTask.cs" />
     <Compile Include="Indexes\AbstractMultiMapIndexCreationTask.cs" />
     <Compile Include="Linq\Indexing\IndexingLinqExtensions.cs" />
+    <Compile Include="Linq\SearchOptions.cs" />
     <Compile Include="Listeners\IDocumentConversionListener.cs" />
     <Compile Include="Listeners\IDocumentDeleteListener.cs" />
     <Compile Include="IDocumentQuery.cs" />

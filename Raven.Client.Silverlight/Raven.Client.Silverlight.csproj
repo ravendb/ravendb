@@ -297,6 +297,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionHelper.cs">
       <Link>Imports\Indexes\IndexDefinitionHelper.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\SearchOptions.cs">
+      <Link>Imports\Linq\SearchOptions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentConversionListener.cs">
       <Link>Imports\Listeners\IDocumentConversionListener.cs</Link>
     </Compile>

@@ -123,6 +123,60 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
+		public void SearchCanUseOr()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					var ravenQueryable = session.Query<Image>("test")
+						.Customize(x => x.WaitForNonStaleResults())
+						.Search(x => x.Tags, "i love cats")
+						.Where(x => x.Name == "User");
+
+
+					Assert.Equal("Tags:<<i love cats>> Name:User", ravenQueryable.ToString());
+				}
+			}
+		}
+
+		[Fact]
+		public void SearchCanUseAnd2()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					var ravenQueryable = session.Query<Image>("test")
+						.Customize(x => x.WaitForNonStaleResults())
+						.Where(x => x.Name == "User")
+						.Search(x => x.Tags, "i love cats", options: SearchOptions.And);
+
+
+					Assert.Equal("Name:User AND Tags:<<i love cats>>", ravenQueryable.ToString());
+				}
+			}
+		}
+
+		[Fact]
+		public void SearchCanUseAnd()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					var ravenQueryable = session.Query<Image>("test")
+						.Customize(x => x.WaitForNonStaleResults())
+						.Search(x => x.Tags, "i love cats", options: SearchOptions.And)
+						.Where(x => x.Name == "User");
+
+
+					Assert.Equal("Tags:<<i love cats>> AND (Name:User)", ravenQueryable.ToString());
+				}
+			}
+		}
+
+		[Fact]
 		public void BoostingSearches()
 		{
 			using (var store = NewDocumentStore())
