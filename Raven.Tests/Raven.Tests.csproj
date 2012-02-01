@@ -695,6 +695,7 @@
     <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
+    <Compile Include="Track\RavenDB17.cs" />
     <Compile Include="Transactions\Deletes.cs" />
     <Compile Include="Transactions\Etags.cs" />
     <Compile Include="Transactions\MuiltipleDocuments.cs" />
