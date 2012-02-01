@@ -124,6 +124,7 @@
     <Compile Include="Indexing\Sorting\RandomFieldComparator.cs" />
     <Compile Include="Indexing\Sorting\RandomSortField.cs" />
     <Compile Include="Linq\Ast\TransformDynamicLambdaExpressions.cs" />
+    <Compile Include="Plugins\Builtins\InvalidDocumentNames.cs" />
     <Compile Include="Rhino.Licensing\AbstractLicenseValidator.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryClient.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryHost.cs" />
