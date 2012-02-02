@@ -540,7 +540,9 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\Alexander.cs" />
     <Compile Include="MailingList\AllPropertiesIndex.cs" />
+    <Compile Include="MailingList\Andrew.cs" />
     <Compile Include="MailingList\Asger.cs" />
     <Compile Include="MailingList\Benjamin.cs" />
     <Compile Include="MailingList\BrainV.cs" />
@@ -554,6 +556,7 @@
     <Compile Include="MailingList\JBA.cs" />
     <Compile Include="MailingList\JohanNilsson.cs" />
     <Compile Include="MailingList\Justin.cs" />
+    <Compile Include="MailingList\LastModifiedMetadataTest.cs" />
     <Compile Include="MailingList\ListCount.cs" />
     <Compile Include="MailingList\MapReduceIssue\CanPageThroughReduceResults.cs" />
     <Compile Include="MailingList\DynamicQueryIndexSelection.cs" />
