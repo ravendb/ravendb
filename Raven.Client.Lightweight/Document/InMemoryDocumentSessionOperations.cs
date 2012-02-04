@@ -725,7 +725,7 @@ more responsive application.
 				if (batchResult.Method != "PUT")
 					continue;
 
-				var entity = saveChangesData.Entities[i];
+				var entity = saveChangesData.Entities[i - saveChangesData.DeferredCommandsCount];
 				DocumentMetadata documentMetadata;
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
