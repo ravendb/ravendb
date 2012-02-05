@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
@@ -8,6 +9,65 @@ namespace Raven.Tests.MailingList.spokeypokey
 {
 	public class Spokey : RavenTest
 	{
+
+		private class Employee
+		{
+			public string FirstName { get; set; }
+			public string[] ZipCodes { get; set; }
+			public List<string> ZipCodes2 { get; set; }
+		}
+
+		[Fact]
+		public void Can_query_empty_list()
+		{
+			var user1 = new Employee() {FirstName = "Joe", ZipCodes2 = new List<string>()};
+			var length = user1.ZipCodes2.Count;
+			Assert.Equal(0, length);
+			using (var docStore = NewDocumentStore())
+			{
+				using (var session = docStore.OpenSession())
+				{
+
+					session.Store(user1);
+					session.SaveChanges();
+				}
+				using (var session = docStore.OpenSession())
+				{
+
+					var result = (from u in session.Query<Employee>().Customize(x => x.WaitForNonStaleResults())
+								  where u.ZipCodes2.Count == 0
+								  select u).ToArray();
+
+					Assert.Empty(docStore.DocumentDatabase.Statistics.Errors);
+					Assert.Equal(1, result.Count());
+				}
+			}
+		}
+		[Fact]
+		public void Can_query_empty_array()
+		{
+			var user1 = new Employee() { FirstName = "Joe", ZipCodes = new string[] { } };
+			var length = user1.ZipCodes.Length;
+			Assert.Equal(0, length);
+			using(var docStore = NewDocumentStore())
+			{
+				using (var session = docStore.OpenSession())
+				{
+
+					session.Store(user1);
+					session.SaveChanges();
+				}
+				using (var session = docStore.OpenSession())
+				{
+					var result = (from u in session.Query<Employee>().Customize(x=>x.WaitForNonStaleResults())
+								  where u.ZipCodes.Length == 0
+								  select u).ToArray();
+
+					Assert.Empty(docStore.DocumentDatabase.Statistics.Errors);
+					Assert.Equal(1, result.Count());
+				}
+			}
+		}
 		public class Reference
 		{
 			public string InternalId { get; set; }

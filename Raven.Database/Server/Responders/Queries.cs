@@ -60,6 +60,7 @@ namespace Raven.Database.Server.Responders
 					{
 						includedEtags.AddRange(documentByKey.Etag.Value.ToByteArray());
 					}
+					includedEtags.Add((documentByKey.NonAuthoritativeInformation ?? false) ? (byte)0 : (byte)1);
 					addIncludesCommand.Execute(documentByKey.DataAsJson);
 				}
 			});

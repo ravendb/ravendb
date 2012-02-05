@@ -21,13 +21,13 @@ namespace Raven.Tests.Bugs.Queries
 
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
-					var user1 = new User { Id = @"user\111", Name = "King Shaba" };
+					var user1 = new User { Id = @"user/111", Name = "King Shaba" };
 					session.Store(user1);
 
-					var user2 = new User { Id = @"user\222", Name = "Mrs. Shaba" };
+					var user2 = new User { Id = @"user/222", Name = "Mrs. Shaba" };
 					session.Store(user2);
 
-					var user3 = new User { Id = @"user\333", Name = "Martin Shaba" };
+					var user3 = new User { Id = @"user/333", Name = "Martin Shaba" };
 					session.Store(user3);
 
 					session.SaveChanges();

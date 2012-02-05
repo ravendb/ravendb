@@ -1,5 +1,6 @@
 using System.Linq;
 using Raven.Client;
+using Raven.Client.Document;
 using Raven.Tests.Bugs.TransformResults;
 using Xunit;
 
@@ -12,11 +13,12 @@ namespace Raven.Tests.Bugs.Queries
 		{
 			using (var store = NewDocumentStore())
 			{
-				const string questionId = @"question\259";
+
+				const string questionId = @"question/259";
 				using (var session = store.OpenSession())
 				{
 					var user = new User();
-					user.Id = @"user\222";
+					user.Id = @"user/222";
 					user.Name = "John Doe";
 					session.Store(user);
 
@@ -24,7 +26,7 @@ namespace Raven.Tests.Bugs.Queries
 					question.Id = questionId;
 					question.Title = "How to to this in RavenDb?";
 					question.Content = "I'm trying to find how to model documents for better DDD support.";
-					question.UserId = @"user\222";
+					question.UserId = @"user/222";
 					session.Store(question);
 
 					session.SaveChanges();
@@ -40,7 +42,7 @@ namespace Raven.Tests.Bugs.Queries
 
 					Question questionInfo3 = session.Query<Question>()
 						.Customize(y => y.WaitForNonStaleResults())
-						.Where(x => x.UserId == @"user\222")
+						.Where(x => x.UserId == @"user/222")
 						.SingleOrDefault();
 
 					Assert.NotNull(questionInfo3);

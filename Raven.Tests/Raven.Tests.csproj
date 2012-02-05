@@ -534,6 +534,7 @@
     <Compile Include="Linq\CommitInfo.cs" />
     <Compile Include="Linq\DynamicQueriesWithStaticIndexes.cs" />
     <Compile Include="Linq\OrderBy.cs" />
+    <Compile Include="Linq\RavenDB14.cs" />
     <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
     <Compile Include="Linq\SampleGeoLocation.cs" />
     <Compile Include="Linq\User.cs" />
@@ -694,6 +695,7 @@
     <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
+    <Compile Include="Track\RavenDB17.cs" />
     <Compile Include="Transactions\Deletes.cs" />
     <Compile Include="Transactions\Etags.cs" />
     <Compile Include="Transactions\MuiltipleDocuments.cs" />

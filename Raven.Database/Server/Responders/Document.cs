@@ -88,7 +88,7 @@ namespace Raven.Database.Server.Responders
 						return;
 					}
 					Debug.Assert(documentMetadata.Etag != null);
-					if (context.MatchEtag(documentMetadata.Etag.Value))
+					if (context.MatchEtag(documentMetadata.Etag.Value) && documentMetadata.NonAuthoritativeInformation == false)
 					{
 						context.SetStatusToNotModified();
 						return;
@@ -114,7 +114,7 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 			Debug.Assert(documentMetadata.Etag != null);
-			if (context.MatchEtag(documentMetadata.Etag.Value))
+			if (context.MatchEtag(documentMetadata.Etag.Value) && documentMetadata.NonAuthoritativeInformation == false)
 			{
 				context.SetStatusToNotModified();
 				return;
