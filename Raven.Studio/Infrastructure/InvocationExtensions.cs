@@ -71,8 +71,12 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task Finally(this Task task, Action action)
 		{
-			task.ContinueWith(t => action());
-			return task;
+			return task.ContinueWith(t => action());
+		}
+
+		public static Task FinallyInTheUIThread(this Task task, Action action)
+		{
+			return task.ContinueWith(t => Execute.OnTheUI(action));
 		}
 
 		public static Task<TResult> Catch<TResult>(this Task<TResult> parent)

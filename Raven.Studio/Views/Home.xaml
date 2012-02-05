@@ -20,14 +20,14 @@
 		
 		<StackPanel Grid.Row="2" HorizontalAlignment="Left">
 			<StackPanel Orientation="Horizontal"
-						Visibility="{Binding IsGeneratingSampleData, Converter={StaticResource VisibleWhenTrue}}">
+						Visibility="{Binding IsGeneratingSampleData, Converter={StaticResource BooleanToVisibility}}">
 				<ProgressBar IsIndeterminate="True"
 							 Width="24" />
 				<TextBlock Text="Generating Sample Data"
 						   Margin="4 0 0 0" />
 			</StackPanel>
 
-			<StackPanel Orientation="Horizontal" Visibility="{Binding Path=ShowCreateSampleData.Value, Converter={StaticResource VisibleWhenTrue}}">
+			<StackPanel Orientation="Horizontal" Visibility="{Binding Path=ShowCreateSampleData.Value, Converter={StaticResource BooleanToVisibility}}">
 				<TextBlock>
 					<Run Text="There are no documents in this database yet." />
 					<LineBreak />

@@ -9,16 +9,14 @@ namespace Raven.Studio.Infrastructure.Converters
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (value == null)
-				return Visibility.Collapsed;
-
-			var booleanValue = (bool)value;
-			return booleanValue ? Visibility.Collapsed : Visibility.Visible;
+			return System.Convert.ToBoolean(value)
+					   ? Visibility.Collapsed
+					   : Visibility.Visible;
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			throw new NotImplementedException();
+			return (Visibility)value == Visibility.Collapsed;
 		}
 	}
 }

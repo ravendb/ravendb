@@ -34,7 +34,7 @@
 							   Margin="4,0" />
 
 					<StackPanel Orientation="Horizontal"
-								Visibility="{Binding IsDynamicQuery, Converter={StaticResource VisibleWhenTrue}}">
+								Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToVisibility}}">
 						<TextBlock Text="Dynamic/"
 								   Margin="0,0,0,0"
 								   VerticalAlignment="Center"
@@ -45,7 +45,7 @@
 					</StackPanel>
 
 					<StackPanel Orientation="Horizontal"
-								Visibility="{Binding IsDynamicQuery, Converter={StaticResource VisibleWhenFalse}}">
+								Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}">
 						<HyperlinkButton Content="{Binding IndexName}"
 										 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
 										 Command="{StaticResource NavigateToCommand}"
@@ -155,14 +155,14 @@
 						<ColumnDefinition Width="Auto" />
 					</Grid.ColumnDefinitions>
 
-					<StackPanel Visibility="{Binding IsSpatialQuerySupported, Converter={StaticResource VisibleWhenTrue}}"
+					<StackPanel Visibility="{Binding IsSpatialQuerySupported, Converter={StaticResource BooleanToVisibility}}"
 								Margin="0,5">
 						<CheckBox Content="Make spatial queries"
 								  Foreground="{StaticResource Brush_ContrastColor}"
 								  IsChecked="{Binding IsSpatialQuery, Mode=TwoWay}" />
 
 						<StackPanel Orientation="Horizontal"
-									Visibility="{Binding IsSpatialQuery, Mode=TwoWay, Converter={StaticResource VisibleWhenTrue}}"
+									Visibility="{Binding IsSpatialQuery, Mode=TwoWay, Converter={StaticResource BooleanToVisibility}}"
 									Margin="0,3">
 							<TextBlock Text="Longitude:"
 									   VerticalAlignment="Center" />
