@@ -266,7 +266,7 @@
 
                         <Button x:Name="AddReduce"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
-                                Visibility="{Binding ShowReduce, Converter={StaticResource VisibleWhenFalse}}"
+                                Visibility="{Binding ShowReduce, Converter={StaticResource BooleanToOppositeVisibility}}"
                                 Command="{Binding AddReduce}"
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Left"
@@ -286,7 +286,7 @@
 
                         <Button x:Name="AddTransformResults"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
-                                Visibility="{Binding ShowTransformResults, Converter={StaticResource VisibleWhenFalse}}"
+                                Visibility="{Binding ShowTransformResults, Converter={StaticResource BooleanToOppositeVisibility}}"
                                 Command="{Binding AddTransformResults}"
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Left"
@@ -430,14 +430,14 @@
                         Grid.RowSpan="2" />
 
                 <TextBlock Text="Reduce"
-                           Visibility="{Binding ShowReduce, Converter={StaticResource VisibleWhenTrue}}"
+                           Visibility="{Binding ShowReduce, Converter={StaticResource BooleanToVisibility}}"
                            Grid.Row="3"
                            Margin="5,10,5,0"
                            Style="{StaticResource Style_TextBlock_PagePartHeader}"
                            VerticalAlignment="Top" />
                 <Grid Grid.Row="3"
                       Grid.Column="1"
-                      Visibility="{Binding ShowReduce, Converter={StaticResource VisibleWhenTrue}}"
+                      Visibility="{Binding ShowReduce, Converter={StaticResource BooleanToVisibility}}"
                       Margin="0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -464,7 +464,7 @@
 
                 <sdk:GridSplitter Grid.Row="4"
                                   Grid.Column="1"
-                                  Visibility="{Binding ShowReduce, Converter={StaticResource VisibleWhenTrue}}"
+                                  Visibility="{Binding ShowReduce, Converter={StaticResource BooleanToVisibility}}"
                                   Background="Transparent"
                                   HorizontalAlignment="Stretch" />
                 <Border Background="{StaticResource Brush_SubtleBackground2}"
@@ -473,14 +473,14 @@
                         Grid.RowSpan="2" />
 
                 <TextBlock Text="Transform"
-                           Visibility="{Binding ShowTransformResults, Converter={StaticResource VisibleWhenTrue}}"
+                           Visibility="{Binding ShowTransformResults, Converter={StaticResource BooleanToVisibility}}"
                            Grid.Row="5"
                            Margin="5,10,5,0"
                            Style="{StaticResource Style_TextBlock_PagePartHeader}"
                            VerticalAlignment="Top" />
                 <Grid Grid.Row="5"
                       Grid.Column="1"
-                      Visibility="{Binding ShowTransformResults, Converter={StaticResource VisibleWhenTrue}}"
+                      Visibility="{Binding ShowTransformResults, Converter={StaticResource BooleanToVisibility}}"
                       Margin="0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -507,7 +507,7 @@
 
                 <sdk:GridSplitter Grid.Row="6"
                                   Grid.Column="1"
-                                  Visibility="{Binding ShowTransformResults, Converter={StaticResource VisibleWhenTrue}}"
+                                  Visibility="{Binding ShowTransformResults, Converter={StaticResource BooleanToVisibility}}"
                                   Background="Transparent"
                                   HorizontalAlignment="Stretch" />
                 <Border Background="{StaticResource Brush_SubtleBackground2}"

@@ -6,7 +6,7 @@
 
 	<ContentControl FontSize="12"
 					DataContext="{Binding Value}"
-					Visibility="{Binding Path=SingleTenant, Converter={StaticResource VisibleWhenFalse}}"
+					Visibility="{Binding Path=SingleTenant, Converter={StaticResource BooleanToOppositeVisibility}}"
 					FontFamily="Tahoma">
 		<StackPanel Orientation="Horizontal">
 			<HyperlinkButton Content="Databases"

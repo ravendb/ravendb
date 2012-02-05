@@ -21,7 +21,7 @@
 						   Margin="0,0,10,0"
 						   VerticalAlignment="Center" />
 				<TextBlock Text="{Binding IndexName, StringFormat='for index: \{0\}'}"
-						   Visibility="{Binding IsShowingErrorForASpecificIndex, Converter={StaticResource VisibleWhenTrue}}"
+						   Visibility="{Binding IsShowingErrorForASpecificIndex, Converter={StaticResource BooleanToVisibility}}"
 						   FontSize="12"
 						   Margin="0,0,10,0"
 						   Style="{StaticResource Style_TextBlock_Breadcrumb}"
@@ -35,7 +35,7 @@
 					<DataTemplate>
 						<StackPanel Margin="0,0,0,10">
 							<TextBlock Text="{Binding Index}"
-									   Visibility="{Binding Path=DataContext.IsShowingErrorForASpecificIndex, ElementName=this, Converter={StaticResource VisibleWhenFalse}}" />
+									   Visibility="{Binding Path=DataContext.IsShowingErrorForASpecificIndex, ElementName=this, Converter={StaticResource BooleanToOppositeVisibility}}" />
 							<TextBlock Text="{Binding Error}" />
 							<TextBlock Text="{Binding Timestamp}" />
 							<TextBlock Text="{Binding Document}" />

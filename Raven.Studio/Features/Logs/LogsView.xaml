@@ -85,7 +85,7 @@
 		</Border>
 
 		<Grid Grid.Row="2"
-			  Visibility="{Binding IsLogsEnabled, Converter={StaticResource VisibleWhenTrue}}">
+			  Visibility="{Binding IsLogsEnabled, Converter={StaticResource BooleanToVisibility}}">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="2*" />
 				<RowDefinition Height="Auto" />
@@ -219,7 +219,7 @@
 		</Grid>
 
 		<Grid Grid.Row="2"
-			  Visibility="{Binding IsLogsEnabled, Converter={StaticResource VisibleWhenFalse}}">
+			  Visibility="{Binding IsLogsEnabled, Converter={StaticResource BooleanToOppositeVisibility}}">
 			
 			<StackPanel>
 				<TextBlock>
