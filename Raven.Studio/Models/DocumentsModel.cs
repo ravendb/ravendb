@@ -51,7 +51,10 @@ namespace Raven.Studio.Models
 		public override Task TimerTickedAsync()
 		{
 			if (SkipAutoRefresh && IsForced == false)
+			{
+				IsLoadingDocuments = false;
 				return null;
+			}
 
 			if (IsForced)
 				IsLoadingDocuments = true;
