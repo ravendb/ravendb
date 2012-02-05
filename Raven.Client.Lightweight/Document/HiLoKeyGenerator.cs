@@ -29,10 +29,11 @@ namespace Raven.Client.Document
 		private const string RavenKeyGeneratorsHilo = "Raven/Hilo/";
 		private readonly IDocumentStore documentStore;
 		private readonly string tag;
-		private readonly long capacity;
+		private long capacity;
 		private readonly object generatorLock = new object();
 		private long current;
 		private volatile Hodler currentMax = new Hodler(0);
+		private DateTime lastRequestedUtc;
 
 		private class Hodler
 		{
@@ -100,7 +101,15 @@ namespace Raven.Client.Document
 		{
 #if !SILVERLIGHT
 			using (new TransactionScope(TransactionScopeOption.Suppress))
+			{
 #endif
+			var span = DateTime.UtcNow - lastRequestedUtc;
+			if (span.TotalSeconds < 1)
+			{
+				capacity *= 2;
+			}
+
+			lastRequestedUtc = DateTime.UtcNow;
 			while (true)
 			{
 				try
@@ -110,7 +119,8 @@ namespace Raven.Client.Document
 					{
 						PutDocument(new JsonDocument
 						{
-							Etag = Guid.Empty, // sending empty guid means - ensure the that the document does NOT exists
+							Etag = Guid.Empty,
+							// sending empty guid means - ensure the that the document does NOT exists
 							Metadata = new RavenJObject(),
 							DataAsJson = RavenJObject.FromObject(new {Max = capacity}),
 							Key = RavenKeyGeneratorsHilo + tag
@@ -121,7 +131,7 @@ namespace Raven.Client.Document
 					if (document.DataAsJson.ContainsKey("ServerHi")) // convert from hi to max
 					{
 						var hi = document.DataAsJson.Value<long>("ServerHi");
-						max = ((hi- 1) * capacity);
+						max = ((hi - 1)*capacity);
 						document.DataAsJson.Remove("ServerHi");
 						document.DataAsJson["Max"] = max;
 					}
@@ -129,14 +139,17 @@ namespace Raven.Client.Document
 					document.DataAsJson["Max"] = max + capacity;
 					PutDocument(document);
 
-					current = max+1;
+					current = max + 1;
 					return max + capacity;
 				}
 				catch (ConcurrencyException)
 				{
-				   // expected, we need to retry
+					// expected, we need to retry
 				}
 			}
+#if !SILVERLIGHT
+		}
+#endif
 		}
 
 #if !SILVERLIGHT
