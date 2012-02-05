@@ -61,7 +61,7 @@ namespace Raven.Studio.Models
 
 			var fetchingDocuments = CustomFetchingOfDocuments != null ? CustomFetchingOfDocuments(this) : DefaultFetchingOfDocuments();
 			return fetchingDocuments
-				.ContinueOnSuccessInTheUIThread(() => IsLoadingDocuments = false);
+				.FinallyInTheUIThread(() => IsLoadingDocuments = false);
 		}
 
 		private Task DefaultFetchingOfDocuments()
