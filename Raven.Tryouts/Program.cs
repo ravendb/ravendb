@@ -11,7 +11,7 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			CertGenerator.GenerateNewCertificate("raven.cert");
+			Console.WriteLine(((double)10.000m).ToString());
 		}
 	}
 }

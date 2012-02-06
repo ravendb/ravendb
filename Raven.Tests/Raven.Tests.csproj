@@ -547,6 +547,7 @@
     <Compile Include="MailingList\BAM.cs" />
     <Compile Include="MailingList\Build570.cs" />
     <Compile Include="MailingList\CanDeleteIndex.cs" />
+    <Compile Include="MailingList\DecimalQueries.cs" />
     <Compile Include="MailingList\EnumInIndexDef.cs" />
     <Compile Include="MailingList\HierarchicalInheritanceIndexing.cs" />
     <Compile Include="MailingList\IisQueryLengthIssues.cs" />
@@ -564,6 +565,7 @@
     <Compile Include="MailingList\GuidProjection.cs" />
     <Compile Include="MailingList\LazyStats.cs" />
     <Compile Include="MailingList\Mark.cs" />
+    <Compile Include="MailingList\NullableEnums.cs" />
     <Compile Include="MailingList\RangeQueriesOverSum.cs" />
     <Compile Include="MailingList\MultiLoad.cs" />
     <Compile Include="MailingList\PhilJones.cs" />

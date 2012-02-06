@@ -1419,17 +1419,24 @@ If you really want to do in memory filtering on the data returned from the query
 				return Constants.EmptyStringNotAnalyzed;
 			}
 
-			if (whereParams.Value is bool)
+			var type = TypeSystem.GetNonNullableType(whereParams.Value.GetType());
+
+			if (type == typeof(bool))
 			{
 				return (bool)whereParams.Value ? "true" : "false";
 			}
 
-			if (whereParams.Value is DateTime)
+			if (type == typeof(DateTime))
 			{
 				return DateTools.DateToString(((DateTime)whereParams.Value), DateTools.Resolution.MILLISECOND);
 			}
 			
-			if (whereParams.Value is DateTimeOffset)
+			if(type == typeof(decimal))
+			{
+				return ((double) ((decimal) whereParams.Value)).ToString();
+			}
+
+			if (type == typeof(DateTimeOffset))
 			{
 				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).UtcDateTime, DateTools.Resolution.MILLISECOND);
 			}
