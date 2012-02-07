@@ -19,7 +19,7 @@ namespace Raven.Tests.Bugs.Entities
 
 				using(var s = store.OpenSession())
 				{
-					var jObject = s.Advanced.LuceneQuery<RavenJObject>().First();
+					var jObject = s.Advanced.LuceneQuery<RavenJObject>().WaitForNonStaleResults().First();
 					Assert.Equal("Ayende", jObject.Value<string>("Name"));
 				}
 			}

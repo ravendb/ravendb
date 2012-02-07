@@ -20,7 +20,7 @@ namespace Raven.Tests.Bugs
 
 				using(var session =store.OpenSession())
 				{
-					var postReference = session.Query<Post>()
+					var postReference = session.Query<Post>().Customize(x=>x.WaitForNonStaleResults())
 						.Select(p => new {Id = p.Id, p.Title})
 						.First();
 
