@@ -22,13 +22,13 @@ namespace Raven.Tests.MailingList
 				using(var s = store.OpenSession())
 				{
 					var list1 = s.Query<dynamic>()
-						.Customize(x=>x.RandomOrdering("seed1"))
+						.Customize(x=>x.WaitForNonStaleResults().RandomOrdering("seed1"))
 						.ToList()
 						.Select(x =>(int) x.Val)
 						.ToList();
 
 					var list2 = s.Query<dynamic>()
-						.Customize(x => x.RandomOrdering("seed2"))
+						.Customize(x => x.WaitForNonStaleResults().RandomOrdering("seed2"))
 						.ToList()
 						.Select(x=>(int)x.Val)
 						.ToList();
