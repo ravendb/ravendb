@@ -265,7 +265,8 @@ namespace Raven.Database.Config
 					var url = HttpContext.Current.Request.Url;
 					return new UriBuilder(url)
 					{
-						Path = HttpContext.Current.Request.ApplicationPath
+						Path = HttpContext.Current.Request.ApplicationPath,
+						Query = ""
 					}.Uri.ToString();
 				}
 				return new UriBuilder("http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
