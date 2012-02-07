@@ -42,7 +42,6 @@ using Raven.Database.Tasks;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
 using Index = Raven.Database.Indexing.Index;
-using Task = Raven.Database.Tasks.Task;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Database
@@ -116,7 +115,11 @@ namespace Raven.Database
 
 			ExternalState = new ConcurrentDictionary<string, object>();
 			Name = configuration.DatabaseName;
-			if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
+			if(configuration.CustomTaskScheduler != null)
+			{
+				backgroundTaskScheduler = configuration.CustomTaskScheduler;
+			}
+			else if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
 			{
 				backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(
 					// we need a minimum of four task threads - one for indexing dispatch, one for reducing dispatch, one for tasks, one for indexing/reducing ops

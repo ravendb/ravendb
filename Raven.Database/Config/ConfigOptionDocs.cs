@@ -11,6 +11,9 @@ namespace Raven.Database.Config
 			{"Raven/MaxPageSize", "int", null, "The maximum page size that can be specified on this server, default: 1,024."},
 			{"Raven/RunInMemory", "bool", "true,false", "Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing. Default: false."},
 			
+			// Studio
+			{"Raven/RedirectStudioUrl", "string", null, "The url to redirect the user to when then try to access the local studio"},
+
 			// Paths
 			{"Raven/DataDir", "string", null,"The path for the database directory. Can use ~\\ as the root, in which case the path will start from the server base directory. Default: ~\\Data."},
 			{"Raven/IndexStoragePath", "string", null,"The path for the indexes on disk. Useful if you want to store the indexes on another HD for performance reasons. Default: ~\\Data\\Indexes."},
@@ -45,7 +48,9 @@ namespace Raven.Database.Config
 
 			// Indexing
 			{"Raven/MaxNumberOfItemsToIndexInSingleBatch", "int", null, "The number of items that will be indexed in a single batch. Larger batch size result in faster indexing, but higher memory usage. Default: 2,500."},
-			
+			{"Raven/TaskScheduler", "string", "assembly qualified type name", "The TaskScheduler type to use for executing indexing."},
+			{"Raven/BackgroundTasksPriority", "string","Lowest,BelowNormal,Normal,AboveNormal,Highest", "The thread priority for indexing and other background tasks, (ignored if Raven/TaskScheduler is specified) default: Normal."},
+
 			// Temp Indexing
 			{"Raven/TempIndexPromotionMinimumQueryCount", "int", "1 or higher","The number of times a temporary index has to be queries during the promotion threshold to become a permanent auto index. Default: 100."},
 			{"Raven/TempIndexPromotionThreshold", "int", null, "The promotion threshold for promoting a temporary dynamic index into a permanent auto index. The value is in second and refer to the length of time that the index have to get to the minimum query count value. Default: 10 minutes."},
@@ -69,7 +74,6 @@ namespace Raven.Database.Config
 
 			// Advanced
 			{"Raven/TransactionMode", "string", "lazy,safe", "What transaction mode to use. Safe transaction mode ensures data consistency, but is slower. Lazy is faster, but may result in a data loss if the server crashes. Default: Safe."},
-			{"Raven/BackgroundTasksPriority", "string","Lowest,BelowNormal,Normal,AboveNormal,Highest", "The thread priority for indexing and other background tasks, default: Normal."},
 			{"Raven/MaxNumberOfParallelIndexTasks", "int", "1 or higher", "The number of indexing tasks that can be run in parallel. There is usually one or two indexing tasks for each index. Default: machine processor count."},
 			{"Raven/SkipCreatingStudioIndexes", "bool", "true,false", "Control whatever the Studio default indexes will be created or not. These default indexes are only used by the UI, and are not required for RavenDB to operate. Default: false"},
 			
