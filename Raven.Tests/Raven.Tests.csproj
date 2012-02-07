@@ -129,6 +129,7 @@
     <Compile Include="Bugs\BackwardCompatability.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
     <Compile Include="Bugs\CanAggregateOnDecimal.cs" />
+    <Compile Include="Bugs\CannotChangeId.cs" />
     <Compile Include="Bugs\CanUseReduceResultInOutput.cs" />
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
@@ -541,6 +542,7 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\Alexander.cs" />
     <Compile Include="MailingList\AllPropertiesIndex.cs" />
     <Compile Include="MailingList\Asger.cs" />
     <Compile Include="MailingList\Benjamin.cs" />
