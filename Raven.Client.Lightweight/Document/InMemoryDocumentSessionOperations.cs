@@ -893,6 +893,11 @@ more responsive application.
 			if (documentMetadata == null)
 				return true;
 
+			string id;
+			if (TryGetIdFromInstance(entity, out id) && 
+				string.Equals(documentMetadata.Key, id, StringComparison.InvariantCultureIgnoreCase) == false)
+				return true;
+
 			// prevent saves of a modified read only entity
 			if (documentMetadata.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) &&
 				documentMetadata.OriginalMetadata.Value<bool>(Constants.RavenReadOnly) &&
