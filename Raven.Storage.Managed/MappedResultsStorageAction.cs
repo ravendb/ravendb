@@ -90,7 +90,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData)
+		public IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take)
 		{
 			return storage.MappedResults["ByViewAndEtagDesc"]
 				// the index is sorted view ascending and then etag descending
@@ -112,7 +112,7 @@ namespace Raven.Storage.Managed
 							mappedResultInfo.Data = readResult.Data().ToJObject();
 					}
 					return mappedResultInfo;
-				});
+				}).Take(take);
 		}
 	}
 }

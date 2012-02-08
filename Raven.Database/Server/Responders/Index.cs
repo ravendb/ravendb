@@ -107,8 +107,10 @@ namespace Raven.Database.Server.Responders
 			List<MappedResultInfo> mappedResult = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				mappedResult = accessor.MappedResults.GetMappedResultsReduceKeysAfter(index, etag,loadData: true)
-							.Take(context.GetPageSize(Settings.MaxPageSize)).ToList();
+				mappedResult = accessor.MappedResults.GetMappedResultsReduceKeysAfter(index, etag, 
+					loadData: true, 
+					take: context.GetPageSize(Settings.MaxPageSize))
+					.ToList();
 			});
 			context.WriteJson(mappedResult);
 		}
