@@ -32,6 +32,12 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
+			if (string.IsNullOrEmpty(ResourceStore.Configuration.RedirectStudioUrl) == false)
+			{
+				context.Response.Redirect(ResourceStore.Configuration.RedirectStudioUrl);
+				return;
+			}
+
 			if (context.Request.Url.AbsolutePath == RavenRoot.RootPath && 
 				SilverlightUI.GetPaths(SilverlightXapName, ResourceStore.Configuration.WebDir).All(f => File.Exists(f) == false))
 			{

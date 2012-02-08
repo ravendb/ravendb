@@ -1069,6 +1069,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					value = Expression.Lambda(expression).Compile().DynamicInvoke();
 					return true;
 				case ExpressionType.Convert:
+					var unaryExpression = ((UnaryExpression) expression);
+					if (TypeSystem.IsNullableType(unaryExpression.Type))
+						return GetValueFromExpressionWithoutConversion(unaryExpression.Operand, out value);
 					value = Expression.Lambda(expression).Compile().DynamicInvoke();
 					return true;
 				case ExpressionType.NewArrayInit:

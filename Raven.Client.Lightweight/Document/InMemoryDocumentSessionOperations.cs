@@ -725,7 +725,7 @@ more responsive application.
 				if (batchResult.Method != "PUT")
 					continue;
 
-				var entity = saveChangesData.Entities[i];
+				var entity = saveChangesData.Entities[i - saveChangesData.DeferredCommandsCount];
 				DocumentMetadata documentMetadata;
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
@@ -891,6 +891,11 @@ more responsive application.
 		protected bool EntityChanged(object entity, DocumentMetadata documentMetadata)
 		{
 			if (documentMetadata == null)
+				return true;
+
+			string id;
+			if (TryGetIdFromInstance(entity, out id) && 
+				string.Equals(documentMetadata.Key, id, StringComparison.InvariantCultureIgnoreCase) == false)
 				return true;
 
 			// prevent saves of a modified read only entity

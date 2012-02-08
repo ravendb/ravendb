@@ -1,4 +1,5 @@
 ﻿
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Document;
@@ -10,6 +11,21 @@ namespace Raven.Tests
 {
 	public class ConnectionStrings : LocalClientTest
 	{
+		[Fact]
+		public void WillNotAffectResourceManagerId()
+		{
+			var resourceManagerId = Guid.NewGuid();
+			using (var store = new DocumentStore
+			{
+				ResourceManagerId = resourceManagerId
+			})
+			{
+				store.ParseConnectionString("Url=http://localhost:8079/;");
+
+				Assert.Equal(resourceManagerId, store.ResourceManagerId);
+			}
+		}
+
 		[Fact]
 		public void check_url()
 		{

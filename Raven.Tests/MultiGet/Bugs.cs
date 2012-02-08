@@ -26,6 +26,7 @@ namespace Raven.Tests.MultiGet
 				{
 					RavenQueryStatistics stats;
 					session.Query<User>()
+						.Customize(x=>x.WaitForNonStaleResults())
 						.Statistics(out stats)
 						.Lazily();
 

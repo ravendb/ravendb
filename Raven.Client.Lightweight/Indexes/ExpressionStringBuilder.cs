@@ -15,6 +15,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
 {
@@ -766,9 +767,17 @@ namespace Raven.Client.Indexes
 				}
 				if (node.Value is Enum)
 				{
-					Out(node.Value.GetType().FullName);
-					Out('.');
-					Out(s);
+					var enumType = node.Value.GetType();
+					if (TypeExistsOnServer(enumType))
+					{
+						Out(enumType.FullName);
+						Out('.');
+						Out(s);
+						return node;
+					}
+					Out('"');
+					Out(node.Value.ToString());
+					Out('"');
 					return node;
 				}
 				if (node.Value is decimal)
@@ -782,6 +791,17 @@ namespace Raven.Client.Indexes
 			}
 			Out("null");
 			return node;
+		}
+
+		private bool TypeExistsOnServer(Type type)
+		{
+			if (type.Assembly == typeof(object).Assembly)
+				return true;
+
+			if (type.Assembly == typeof(RavenJObject).Assembly)
+				return true;
+
+			return false;
 		}
 
 		/// <summary>

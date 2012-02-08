@@ -24,6 +24,7 @@ namespace Raven.Tests.Bugs.Queries
 				using (var session = store.OpenSession())
 				{
 					var array = session.Query<User>()
+						.Customize(x=>x.WaitForNonStaleResults())
 						.AsProjection<AgeAndEmail>()
 						.ToArray();
 

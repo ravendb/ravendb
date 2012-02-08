@@ -497,7 +497,9 @@ namespace Raven.Client.Document
 			{
 				if (string.IsNullOrEmpty(currentOauthToken))
 					return;
-				args.Request.Headers["Authorization"] = currentOauthToken;
+				
+				SetHeader(args.Request.Headers, "Authorization",currentOauthToken);
+				
 			};
 #if !SILVERLIGHT
 			Conventions.HandleUnauthorizedResponse = (response) =>
@@ -513,7 +515,7 @@ namespace Raven.Client.Document
 				using (var reader = new StreamReader(stream))
 				{
 					currentOauthToken = "Bearer " + reader.ReadToEnd();
-					return (Action<HttpWebRequest>)(request => request.Headers["Authorization"] = currentOauthToken);
+					return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization",currentOauthToken));
 
 				}
 			};
@@ -539,11 +541,23 @@ namespace Raven.Client.Document
 						using (var reader = new StreamReader(stream))
 						{
 							currentOauthToken = "Bearer " + reader.ReadToEnd();
-							return (Action<HttpWebRequest>)(request => request.Headers["Authorization"] = currentOauthToken);
+							return (Action<HttpWebRequest>)(request => SetHeader(request.Headers,"Authorization", currentOauthToken));
 						}
 					});
 			};
 #endif
+		}
+
+		private static void SetHeader(WebHeaderCollection headers, string key, string value)
+		{
+			try
+			{
+				headers[key] = value;
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException("Could not set '" + key + "' = '" + value + "'", e);
+			}
 		}
 
 		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
@@ -559,7 +573,7 @@ namespace Raven.Client.Document
 			authRequest.Accept = "application/json;charset=UTF-8";
 
 			if (string.IsNullOrEmpty(ApiKey) == false)
-				authRequest.Headers["Api-Key"] = ApiKey;
+				SetHeader(authRequest.Headers, "Api-Key", ApiKey);
 
 			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false &&
 			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
