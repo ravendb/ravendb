@@ -10,6 +10,9 @@ using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
 {
+	/// <summary>
+	/// Represents a JSON array.
+	/// </summary>
 	public class RavenJArray : RavenJToken, IEnumerable<RavenJToken>
 	{
 		/// <summary>

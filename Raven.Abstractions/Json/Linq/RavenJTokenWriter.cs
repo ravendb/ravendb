@@ -5,6 +5,9 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Json.Linq
 {
+	/// <summary>
+	/// Represents a writer that provides a fast, non-cached, forward-only way of generating Json data.
+	/// </summary>
 	public class RavenJTokenWriter : JsonWriter
 	{
 		private RavenJToken _token;

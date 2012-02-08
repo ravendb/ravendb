@@ -7,6 +7,9 @@ using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
 {
+	/// <summary>
+	/// Represents a value in JSON (string, integer, date, etc).
+	/// </summary>
 	public class RavenJValue : RavenJToken, IEquatable<RavenJValue>, IFormattable, IComparable, IComparable<RavenJValue>
 	{
 		private JTokenType _valueType;
