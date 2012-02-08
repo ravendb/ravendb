@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Xunit;
 using System.Linq;
 
@@ -32,8 +33,8 @@ namespace Raven.Tests.MailingList
 			public Dictionary<string, string> IdCards { get; set; }
 
 		}
-		
-		protected override void CreateDefaultIndexes(Client.Embedded.EmbeddableDocumentStore documentStore)
+
+		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
 		{
 		}
 
