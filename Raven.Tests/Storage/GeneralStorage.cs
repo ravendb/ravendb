@@ -270,7 +270,7 @@ namespace Raven.Tests.Storage
 			        var jsonDocuments = new JsonDocument[0];
 			        db.TransactionalStorage.Batch(actions =>
 			        {
-						jsonDocuments = actions.Documents.GetDocumentsAfter(etag, 5).Where(x => x != null).ToArray();
+						jsonDocuments = actions.Documents.GetDocumentsAfter(etag, 100).Where(x => x != null).ToArray();
 			        });
 					docs.AddRange(jsonDocuments.Select(x=>x.Key));
 			        total += jsonDocuments.Length;
