@@ -13,9 +13,12 @@ namespace Raven.Database.Storage
 	public interface IDocumentStorageActions 
 	{
 		Tuple<int, int> FirstAndLastDocumentIds();
+
 		IEnumerable<Tuple<JsonDocument, int>> DocumentsById(int startId, int endId);
-		IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start);
-		IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag);
+
+		IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take);
+		IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take);
+		IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take);
 
 		long GetDocumentsCount();
 
@@ -24,6 +27,5 @@ namespace Raven.Database.Storage
 
 		bool DeleteDocument(string key, Guid? etag, out RavenJObject metadata);
 		Guid AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata);
-		IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start);
 	}
 }

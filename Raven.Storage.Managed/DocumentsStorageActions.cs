@@ -72,24 +72,27 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start)
+		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
 		{
 			return storage.Documents["ByEtag"].SkipFromEnd(start)
-				.Select(result => DocumentByKey(result.Value<string>("key"), null));
+				.Select(result => DocumentByKey(result.Value<string>("key"), null))
+				.Take(take);
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take)
 		{
 			return storage.Documents["ByEtag"].SkipAfter(new RavenJObject{{"etag", etag.ToByteArray()}})
-				.Select(result => DocumentByKey(result.Value<string>("key"), null));
+				.Select(result => DocumentByKey(result.Value<string>("key"), null))
+				.Take(take);
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start)
+		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
 			return storage.Documents["ByKey"].SkipTo(new RavenJObject{{"key", idPrefix }})
 				.Skip(start)
 				.TakeWhile(x => x.Value<string>("key").StartsWith(idPrefix))
-				.Select(result => DocumentByKey(result.Value<string>("key"), null));
+				.Select(result => DocumentByKey(result.Value<string>("key"), null))
+				.Take(take);
 		}
 
 		public long GetDocumentsCount()

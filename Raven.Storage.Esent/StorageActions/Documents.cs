@@ -173,7 +173,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start)
+		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MoveAfterLast(session, Documents);
@@ -207,7 +207,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
@@ -237,7 +237,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start)
+		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
