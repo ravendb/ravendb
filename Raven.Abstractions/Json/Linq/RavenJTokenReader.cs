@@ -7,6 +7,9 @@ using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
 {
+	/// <summary>
+	/// Represents a reader that provides fast, non-cached, forward-only access to serialized Json data.
+	/// </summary>
 	public class RavenJTokenReader : JsonReader
 	{
 		private readonly RavenJToken _root;
@@ -29,9 +32,192 @@ namespace Raven.Json.Linq
 		/// <param name="token">The token to read from.</param>
 		public RavenJTokenReader(RavenJToken token)
 		{
+			if (token == null)
+				throw new ArgumentNullException("token");
+
 			_root = token;
 		}
 
+		/// <summary>
+		/// Reads the next JSON token from the stream as a <see cref="T:Byte[]"/>.
+		/// </summary>
+		/// <returns>
+		/// A <see cref="T:Byte[]"/> or a null reference if the next JSON token is null.
+		/// </returns>
+		public override byte[] ReadAsBytes()
+		{
+			Read();
+
+			if (IsWrappedInTypeObject())
+			{
+				byte[] data = ReadAsBytes();
+				Read();
+				SetToken(JsonToken.Bytes, data);
+				return data;
+			}
+
+			// attempt to convert possible base 64 string to bytes
+			if (TokenType == JsonToken.String)
+			{
+				var s = (string)Value;
+				byte[] data = (s.Length == 0) ? new byte[0] : Convert.FromBase64String(s);
+				SetToken(JsonToken.Bytes, data);
+			}
+
+			if (TokenType == JsonToken.Null)
+				return null;
+			if (TokenType == JsonToken.Bytes)
+				return (byte[])Value;
+
+			/*if (ReaderIsSerializerInArray())
+				return null;*/
+
+			throw CreateReaderException(this, "Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
+		}
+
+		private bool IsWrappedInTypeObject()
+		{
+			if (TokenType == JsonToken.StartObject)
+			{
+				Read();
+				if (Value.ToString() == "$type")
+				{
+					Read();
+					if (Value != null && Value.ToString().StartsWith("System.Byte[]"))
+					{
+						Read();
+						if (Value.ToString() == "$value")
+						{
+							return true;
+						}
+					}
+				}
+
+				throw CreateReaderException(this, "Unexpected token when reading bytes: {0}.".FormatWith(CultureInfo.InvariantCulture, JsonToken.StartObject));
+			}
+
+			return false;
+		}
+
+		/// <summary>
+		/// Reads the next JSON token from the stream as a <see cref="Nullable{Decimal}"/>.
+		/// </summary>
+		/// <returns>A <see cref="Nullable{Decimal}"/>.</returns>
+		public override decimal? ReadAsDecimal()
+		{
+			Read();
+
+			if (TokenType == JsonToken.Integer || TokenType == JsonToken.Float)
+			{
+				SetToken(JsonToken.Float, Convert.ToDecimal(Value, CultureInfo.InvariantCulture));
+				return (decimal)Value;
+			}
+
+			if (TokenType == JsonToken.Null)
+				return null;
+
+			decimal d;
+			if (TokenType == JsonToken.String)
+			{
+				if (decimal.TryParse((string)Value, NumberStyles.Number, Culture, out d))
+				{
+					SetToken(JsonToken.Float, d);
+					return d;
+				}
+				else
+				{
+					throw CreateReaderException(this, "Could not convert string to decimal: {0}.".FormatWith(CultureInfo.InvariantCulture, Value));
+				}
+			}
+
+			/*if (ReaderIsSerializerInArray())
+				return null;*/
+
+			throw CreateReaderException(this, "Error reading decimal. Expected a number but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
+		}
+
+		/// <summary>
+		/// Reads the next JSON token from the stream as a <see cref="Nullable{Int32}"/>.
+		/// </summary>
+		/// <returns>A <see cref="Nullable{Int32}"/>.</returns>
+		public override int? ReadAsInt32()
+		{
+			Read();
+
+			if (TokenType == JsonToken.Integer || TokenType == JsonToken.Float)
+			{
+				SetToken(JsonToken.Integer, Convert.ToInt32(Value, CultureInfo.InvariantCulture));
+				return (int)Value;
+			}
+
+			if (TokenType == JsonToken.Null)
+				return null;
+
+			int i;
+			if (TokenType == JsonToken.String)
+			{
+				if (int.TryParse((string)Value, NumberStyles.Integer, Culture, out i))
+				{
+					SetToken(JsonToken.Integer, i);
+					return i;
+				}
+				else
+				{
+					throw CreateReaderException(this, "Could not convert string to integer: {0}.".FormatWith(CultureInfo.InvariantCulture, Value));
+				}
+			}
+
+			/*if (ReaderIsSerializerInArray())
+				return null;*/
+
+			throw CreateReaderException(this, "Error reading integer. Expected a number but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
+		}
+
+#if !NET20
+		/// <summary>
+		/// Reads the next JSON token from the stream as a <see cref="Nullable{DateTimeOffset}"/>.
+		/// </summary>
+		/// <returns>A <see cref="Nullable{DateTimeOffset}"/>.</returns>
+		public override DateTimeOffset? ReadAsDateTimeOffset()
+		{
+			Read();
+
+			if (TokenType == JsonToken.Date)
+			{
+				SetToken(JsonToken.Date, new DateTimeOffset((DateTime)Value));
+				return (DateTimeOffset)Value;
+			}
+
+			if (TokenType == JsonToken.Null)
+				return null;
+
+			DateTimeOffset dt;
+			if (TokenType == JsonToken.String)
+			{
+				if (DateTimeOffset.TryParse((string)Value, Culture, DateTimeStyles.None, out dt))
+				{
+					SetToken(JsonToken.Date, dt);
+					return dt;
+				}
+				else
+				{
+					throw CreateReaderException(this, "Could not convert string to DateTimeOffset: {0}.".FormatWith(CultureInfo.InvariantCulture, Value));
+				}
+			}
+
+			/*if (ReaderIsSerializerInArray())
+				return null;*/
+
+			throw CreateReaderException(this, "Error reading date. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
+		}
+#endif
+
+		/// <summary>
+		/// Reads the next JSON token from the stream.
+		/// </summary>
+		/// <returns>
+		/// true if the next token was read successfully; false if there are no more tokens to read.
+		/// </returns>
 		public override bool Read()
 		{
 			if (CurrentState == State.Start)
@@ -103,88 +289,9 @@ namespace Raven.Json.Linq
 			}
 		}
 
-		public override byte[] ReadAsBytes()
+		private JsonReaderException CreateReaderException(JsonReader reader, string message)
 		{
-			Read();
-
-			// attempt to convert possible base 64 string to bytes
-			if (TokenType == JsonToken.String)
-			{
-				var s = (string)Value;
-				var data = (s.Length == 0) ? new byte[0] : Convert.FromBase64String(s);
-				SetToken(JsonToken.Bytes, data);
-			}
-
-			if (TokenType == JsonToken.Null)
-				return null;
-			switch (TokenType)
-			{
-				case JsonToken.Bytes:
-					return (byte[])Value;
-				case JsonToken.StartObject:
-					// maybe it is an array of bytes serialized with TypeNameHandling.All
-					Read(); // read the property name
-					if (!Equals(Value, "$type"))
-					{
-						throw new JsonReaderException(
-							"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, JsonToken.StartObject));
-					}
-					Read(); // reading the byte array
-					if (Value == null || !Equals(Value, "System.Byte[], mscorlib"))
-					{
-						throw new JsonReaderException(
-							"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, JsonToken.StartObject));
-					}
-					Read(); // read the $value property
-					if (!Equals(Value, "$value"))
-					{
-						throw new JsonReaderException(
-							"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, JsonToken.StartObject));
-					}
-					Read(); // read the value
-					return (byte[])Value;
-				default:
-					throw new JsonReaderException(
-						"Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
-			}
+			return new JsonReaderException(message);
 		}
-
-		public override decimal? ReadAsDecimal()
-		{
-			Read();
-
-			if (TokenType == JsonToken.Null)
-				return null;
-			if (TokenType == JsonToken.Integer || TokenType == JsonToken.Float)
-			{
-				SetToken(JsonToken.Float, Convert.ToDecimal(Value, CultureInfo.InvariantCulture));
-				return (decimal)Value;
-			}
-
-			throw new JsonReaderException(
-				"Error reading decimal. Expected a number but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
-		}
-
-#if !NET20
-		/// <summary>
-		/// Reads the next JSON token from the stream as a <see cref="Nullable{DateTimeOffset}"/>.
-		/// </summary>
-		/// <returns>A <see cref="Nullable{DateTimeOffset}"/>.</returns>
-		public override DateTimeOffset? ReadAsDateTimeOffset()
-		{
-			Read();
-
-			if (TokenType == JsonToken.Null)
-				return null;
-			if (TokenType == JsonToken.Date)
-			{
-				SetToken(JsonToken.Date, new DateTimeOffset((DateTime)Value));
-				return (DateTimeOffset)Value;
-			}
-
-			throw new JsonReaderException(
-				"Error reading date. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
-		}
-#endif
 	}
 }
