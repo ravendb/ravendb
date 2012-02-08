@@ -664,6 +664,13 @@
     <Compile Include="Security\OAuth\CertHelper.cs" />
     <Compile Include="Security\OAuth\GrantAccessTokenClientCredentialsFlow.cs" />
     <Compile Include="Security\OAuth\HttpWebRequestExtensions.cs" />
+    <Compile Include="Shard\BlogModel\Blog.cs" />
+    <Compile Include="Shard\BlogModel\BlogShardResolutionStrategy.cs" />
+    <Compile Include="Shard\BlogModel\BlogShardSelectionStrategy.cs" />
+    <Compile Include="Shard\BlogModel\CanQueryOnlyUsers.cs" />
+    <Compile Include="Shard\BlogModel\Post.cs" />
+    <Compile Include="Shard\BlogModel\ShardingScenario.cs" />
+    <Compile Include="Shard\BlogModel\User.cs" />
     <Compile Include="Shard\When_Using_Parallel_Access_Strategy.cs" />
     <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
     <Compile Include="Some.cs" />

@@ -1,4 +1,5 @@
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Xunit;
 using System.Linq;
 
@@ -6,7 +7,7 @@ namespace Raven.Tests.Bugs
 {
 	public class Reindexing : RavenTest
 	{
-		protected override void CreateDefaultIndexes(Client.Embedded.EmbeddableDocumentStore documentStore)
+		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
 		{
 			
 		}

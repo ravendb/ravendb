@@ -17,6 +17,11 @@ namespace Raven.Client.Shard.ShardStrategy
 	/// </summary>
 	public class ShardStrategy : IShardStrategy
 	{
+		public ShardStrategy()
+		{
+			ShardAccessStrategy = new SequentialShardAccessStrategy();
+		}
+
 		/// <summary>
 		/// Gets or sets the shard selection strategy.
 		/// </summary>
