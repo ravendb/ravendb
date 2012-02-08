@@ -28,6 +28,7 @@ namespace Raven.Studio.Features.Tasks
 		{
 			if (Status == null || Status.IsRunning == false)
 				return null;
+			TaskStatus = TaskStatus.Started;
 			return DatabaseCommands.GetAsync(@"Raven/Backup/Status")
 				.ContinueOnSuccessInTheUIThread(item =>
 				{
@@ -37,9 +38,10 @@ namespace Raven.Studio.Features.Tasks
 					Output.Clear();
 					foreach (var backupMessage in Status.Messages)
 					{
-						Output.Add(backupMessage.Message);
+						Output.Add("[" + backupMessage.Timestamp + "]   	" + backupMessage.Severity + " :    	"+ backupMessage.Message);	
 					}
-				});
+				})
+				.Finally(() => TaskStatus = TaskStatus.Ended);
 		}
 	}
 }
