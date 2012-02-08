@@ -131,6 +131,8 @@
     <Compile Include="Features\Terms\TermsView.xaml.cs">
       <DependentUpon>TermsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\Converters\TaskStatusConverter.cs" />
+    <Compile Include="Infrastructure\Converters\RedIfError.cs" />
     <Compile Include="Models\TermsModel.cs" />
     <Compile Include="Views\Terms.xaml.cs">
       <DependentUpon>Terms.xaml</DependentUpon>

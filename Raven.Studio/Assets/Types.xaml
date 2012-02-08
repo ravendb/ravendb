@@ -5,7 +5,8 @@
 
 	<Converters:BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
 	<Converters:BooleanToOppositeVisibilityConverter x:Key="BooleanToOppositeVisibility" />
-	
+	<Converters:RedIfError x:Key="RedIfError" />
+	<Converters:TaskStatusConverter x:Key="TaskStatusConverter" />
 	<Converters:NullToVisibilityConverter x:Key="HiddenWhenNull" />
 	<Converters:HiddenWhenStringEmptyOrNull x:Key="HiddenWhenStringEmptyOrNull" />
 	<Converters:NotNullToVisibilityConverter x:Key="HiddenWhenNotNull" />

@@ -1,14 +1,23 @@
-﻿using System.Windows.Input;
+﻿using System.ComponentModel;
+using System.Windows.Input;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
+	public enum TaskStatus
+	{
+		DidNotStart,
+		Started,
+		Ended
+	}
+
 	public abstract class TaskModel : ViewModel
 	{
 		public TaskModel()
 		{
 			Output = new BindableCollection<string>(x => x);
 			TaskInputs = new BindableCollection<TaskInput>(x => x.Name);
+			TaskStatus = TaskStatus.DidNotStart;
 		}
 
 		private string name;
@@ -19,6 +28,17 @@ namespace Raven.Studio.Models
 		}
 
 		public string Description { get; set; }
+
+		private TaskStatus taskStatus;
+		public TaskStatus TaskStatus
+		{
+			get { return taskStatus; }
+			set
+			{
+				taskStatus = value;
+				OnPropertyChanged();
+			}
+		}
 
 		public BindableCollection<string> Output { get; set; }
 		public BindableCollection<TaskInput> TaskInputs { get; set; }
