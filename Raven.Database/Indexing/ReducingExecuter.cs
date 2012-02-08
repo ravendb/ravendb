@@ -26,9 +26,9 @@ namespace Raven.Database.Indexing
 						(
 							indexToWorkOn.IndexName,
 							indexToWorkOn.LastIndexedEtag,
-							loadData: false
+							loadData: false,
+							take: maxNumberOfItemsToIndexInSingleBatch
 						)
-						.Take(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 						.ToList();
 
 					if(log.IsDebugEnabled)
