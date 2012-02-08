@@ -173,7 +173,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start)
+		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MoveAfterLast(session, Documents);
@@ -207,7 +207,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
@@ -237,7 +237,7 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start)
+		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -275,50 +275,6 @@ namespace Raven.Storage.Esent.StorageActions
 					Etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
 					Metadata = metadata
 				};
-			} while (Api.TryMoveNext(session, Documents));
-		}
-
-		public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(int startId, int endId)
-		{
-			Api.JetSetCurrentIndex(session, Documents, "by_id");
-			Api.MakeKey(session, Documents, startId, MakeKeyGrbit.NewKey);
-			// this sholdn't really happen, it means that the doc is missing
-			// probably deleted before we can get it?
-			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
-			{
-				logger.Debug("Document with id {0} or higher was not found", startId);
-				yield break;
-			}
-			do
-			{
-				var id = Api.RetrieveColumnAsInt32(session, Documents, tableColumnsCache.DocumentsColumns["id"],
-												   RetrieveColumnGrbit.RetrieveFromIndex).Value;
-				if (id > endId)
-					break;
-
-				logger.Debug("Document with id '{0}' was found", id);
-				var etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
-				var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
-				var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
-				var modified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]);
-
-				RavenJObject dataAsJson;
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-				{
-					using (var aggregate = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
-						dataAsJson = aggregate.ToJObject();
-				}
-
-				var doc = new JsonDocument
-				{
-					Key = key,
-					DataAsJson = dataAsJson,
-					NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
-					Etag = etag,
-					LastModified = modified.Value,
-					Metadata = metadata
-				};
-				yield return new Tuple<JsonDocument, int>(doc, id);
 			} while (Api.TryMoveNext(session, Documents));
 		}
 

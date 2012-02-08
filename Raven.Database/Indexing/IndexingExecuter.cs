@@ -76,14 +76,13 @@ namespace Raven.Database.Indexing
 			{
 				transactionalStorage.Batch(actions =>
 				{
-					jsonDocs = actions.Documents.GetDocumentsAfter(lastIndexedGuidForAllIndexes)
+					jsonDocs = actions.Documents.GetDocumentsAfter(lastIndexedGuidForAllIndexes, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 						.Where(x => x != null)
 						.Select(doc =>
 						{
 							DocumentRetriever.EnsureIdInMetadata(doc);
 							return doc;
 						})
-						.Take(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch) // ensure that we won't go overboard with reading and blow up with OOM
 						.ToArray();
 				});
 
