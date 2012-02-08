@@ -58,20 +58,6 @@ namespace Raven.Storage.Managed
 			return new Tuple<int, int>(first,last );
 		}
 
-		public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(int startId, int endId)
-		{
-			var results = storage.Documents["ById"].SkipTo(new RavenJObject{{"id", startId}})
-				.TakeWhile(x=>x.Value<int>("id") <= endId);
-
-			foreach (var result in results)
-			{
-				yield return new Tuple<JsonDocument, int>(
-					DocumentByKey(result.Value<string>("key"), null),
-					result.Value<int>("id")
-					);
-			}
-		}
-
 		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
 		{
 			return storage.Documents["ByEtag"].SkipFromEnd(start)
