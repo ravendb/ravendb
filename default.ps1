@@ -9,7 +9,7 @@ properties {
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
   
-  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles NLog), (Get-DependencyPackageFiles Newtonsoft.Json), 
+  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles NLog), (Get-DependencyPackageFiles Newtonsoft.Json), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???",
 				"ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", 
 				"Raven.Storage.Managed.???", "Raven.Munin.???" ) |
