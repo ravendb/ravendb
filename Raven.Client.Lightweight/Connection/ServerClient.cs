@@ -722,7 +722,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + name, "DELETE", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
-			request.ReadResponseJson();
+			request.ExecuteRequest();
 		}
 
 		/// <summary>

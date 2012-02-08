@@ -3,6 +3,9 @@
 					xmlns:Converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
 					xmlns:Models="clr-namespace:Raven.Studio.Models">
 
+	<Converters:BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
+	<Converters:BooleanToOppositeVisibilityConverter x:Key="BooleanToOppositeVisibility" />
+	
 	<Converters:NullToVisibilityConverter x:Key="HiddenWhenNull" />
 	<Converters:HiddenWhenStringEmptyOrNull x:Key="HiddenWhenStringEmptyOrNull" />
 	<Converters:NotNullToVisibilityConverter x:Key="HiddenWhenNotNull" />
@@ -14,8 +17,6 @@
 	<Converters:EnumToIntConverter x:Key="enumeratedValue" />
 	<Converters:EnumToEnumerableConverter x:Key="enumerationFromValue" />
 	<Converters:FirstLineOnlyConverter x:Key="FirstLineOnly" />
-	<Converters:BooleanToVisibilityConverter x:Key="VisibleWhenTrue" />
-	<Converters:BooleanToOppositeVisibilityConverter x:Key="VisibleWhenFalse" />
 	<Converters:StringEmptyToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedForValue"
 												 ValueWhenEmpty="0"
 												 ValueWhenNonEmpty="*" />

@@ -37,6 +37,7 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					var faces = session.Query<Person>()
+						.Customize(x=>x.WaitForNonStaleResults())
 						.Select(x=>x.Face)
 						.ToList();
 

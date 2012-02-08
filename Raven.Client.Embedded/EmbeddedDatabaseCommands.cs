@@ -318,9 +318,9 @@ namespace Raven.Client.Embedded
 				string entityName = null;
 				if (index.StartsWith("dynamic/"))
 					entityName = index.Substring("dynamic/".Length);
-				return database.ExecuteDynamicQuery(entityName, query);
+				return database.ExecuteDynamicQuery(entityName, query.Clone());
 			}
-			var queryResult = database.Query(index, query);
+			var queryResult = database.Query(index, query.Clone());
 			EnsureLocalDate(queryResult.Results);
 			EnsureLocalDate(queryResult.Includes);
 			return queryResult;

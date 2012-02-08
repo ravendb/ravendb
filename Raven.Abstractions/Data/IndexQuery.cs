@@ -170,5 +170,10 @@ namespace Raven.Abstractions.Data
 		{
 			return string.Empty;
 		}
+
+		public IndexQuery Clone()
+		{
+			return (IndexQuery)MemberwiseClone();
+		}
 	}
 }

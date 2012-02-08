@@ -37,6 +37,7 @@ namespace Raven.Tests.Bugs
 				using (var session = store.OpenSession())
 				{
 					var result = session.Query<SampleDocument>()
+						.Customize(x=>x.WaitForNonStaleResults())
 						.Select(x => new ProjectedDocument
 						{
 							MyDocId = x.DocId,

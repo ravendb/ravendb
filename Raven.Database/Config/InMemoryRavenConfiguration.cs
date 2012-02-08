@@ -13,6 +13,7 @@ using System.Linq;
 using System.Runtime.Caching;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
@@ -139,15 +140,28 @@ namespace Raven.Database.Config
 
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
+			RedirectStudioUrl = Settings["Raven/RedirectStudioUrl"];
+
 			// Misc settings
 			WebDir = Settings["Raven/WebDir"] ?? GetDefaultWebDir();
 
 			PluginsDirectory = (Settings["Raven/PluginsDirectory"] ?? @"~\Plugins").ToFullPath();
 
+			var taskSchedulerType = Settings["Raven/TaskScheduler"];
+			if(taskSchedulerType != null)
+			{
+				var type = Type.GetType(taskSchedulerType);
+				CustomTaskScheduler = (TaskScheduler)Activator.CreateInstance(type);
+			}
+
 			// OAuth
 			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? AuthenticationMode ?? "windows";
 			PostInit();
 		}
+
+		public TaskScheduler CustomTaskScheduler { get; set; }
+
+		public string RedirectStudioUrl { get; set; }
 
 		private void SetupTransactionMode()
 		{
@@ -251,7 +265,8 @@ namespace Raven.Database.Config
 					var url = HttpContext.Current.Request.Url;
 					return new UriBuilder(url)
 					{
-						Path = HttpContext.Current.Request.ApplicationPath
+						Path = HttpContext.Current.Request.ApplicationPath,
+						Query = ""
 					}.Uri.ToString();
 				}
 				return new UriBuilder("http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();

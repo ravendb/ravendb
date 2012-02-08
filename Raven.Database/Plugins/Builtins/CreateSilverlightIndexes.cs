@@ -15,7 +15,6 @@ namespace Raven.Database.Plugins.Builtins
 					Map =
 						@"from doc in docs 
 let Tag = doc[""@metadata""][""Raven-Entity-Name""]
-where  Tag != null 
 select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""] };",
 					Indexes =
 					{

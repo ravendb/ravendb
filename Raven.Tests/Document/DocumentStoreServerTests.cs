@@ -586,7 +586,7 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
-		public void Can_defer_commands_until_savechanges_async()
+		public void Can_defer_commands_until_savechanges()
 		{
 			using (var server = GetNewServer(port, path))
 			{
@@ -621,6 +621,8 @@ namespace Raven.Tests.Document
 						Key = "rhino2"
 					});
 
+					session.Store(new Company { Name = "Hibernating Rhinos", Id = "rhino3" });
+
 					Assert.Equal(0, session.Advanced.NumberOfRequests);
 
 					session.SaveChanges();
@@ -633,6 +635,7 @@ namespace Raven.Tests.Document
 
 				Assert.Null(documentStore.DatabaseCommands.Get("rhino2"));
 				Assert.NotNull(documentStore.DatabaseCommands.Get("rhino1"));
+				Assert.NotNull(documentStore.DatabaseCommands.Get("rhino3"));
 			}
 		}
 

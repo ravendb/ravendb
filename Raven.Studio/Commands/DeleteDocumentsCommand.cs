@@ -27,17 +27,10 @@ namespace Raven.Studio.Commands
 			                                            	: string.Format("Are you sure that you want to delete this document? ({0})", documentsIds.First()))
 				.ContinueWhenTrueInTheUIThread(() =>
 				                               	{
-													var model = (DocumentsModel)Context;
-													model.IsLoadingDocuments = true;
-
+				                               		((DocumentsModel)Context).IsLoadingDocuments = true;
 													ApplicationModel.Current.AddNotification(new Notification("Deleting documents..."));
 				                               	})
-				.ContinueWhenTrue(() => DeleteDocuments(documentsIds))
-				.ContinueWhenTrueInTheUIThread(() =>
-				                               	{
-				                               		var model = (DocumentsModel) Context;
-				                               		model.ForceTimerTicked();
-				                               	});
+				.ContinueWhenTrue(() => DeleteDocuments(documentsIds));
 		}
 
 		private void DeleteDocuments(IList<string> documentIds)
@@ -53,12 +46,13 @@ namespace Raven.Studio.Commands
 
 		private void DeleteDocumentSuccess(IList<string> documentIds)
 		{
-			View.UpdateAllFromServer();
-
 			var notification = documentIds.Count > 1
-			                   	? string.Format("{0} documents were deleted", documentIds.Count)
-			                   	: string.Format("Document {0} was deleted", documentIds.First());
+								? string.Format("{0} documents were deleted", documentIds.Count)
+								: string.Format("Document {0} was deleted", documentIds.First());
 			ApplicationModel.Current.AddNotification(new Notification(notification));
+
+			View.UpdateAllFromServer();
+			((DocumentsModel)Context).ForceTimerTicked();
 		}
 	}
 }

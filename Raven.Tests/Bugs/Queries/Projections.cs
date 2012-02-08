@@ -6,6 +6,7 @@
 
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Json.Linq;
@@ -42,12 +43,18 @@ namespace Raven.Tests.Bugs.Queries
 					s.SaveChanges();
 				}
 
-				var queryResult = store.DatabaseCommands.Query("dynamic",
-															   new IndexQuery
-															   {
-																   FieldsToFetch = new[] { "Addresses,Name" }
-															   }, 
-															   new string[0]);
+				QueryResult queryResult;
+				do
+				{
+					queryResult = store.DatabaseCommands.Query("dynamic",
+														   new IndexQuery
+														   {
+															   FieldsToFetch = new[] { "Addresses,Name" }
+														   },
+														   new string[0]);
+					if(queryResult.IsStale)
+						Thread.Sleep(100);
+				} while (queryResult.IsStale);
 
 				var array = (RavenJArray)queryResult.Results[0]["Addresses"];
 				Assert.Equal(2, array.Length);
@@ -98,7 +105,7 @@ namespace Raven.Tests.Bugs.Queries
 
 				using (var session = store.OpenSession())
 				{
-					var results = session.Query<Company>().ToArray();
+					var results = session.Query<Company>().Customize(x=>x.WaitForNonStaleResults()).ToArray();
 					var a = results[0];
 
 					Assert.NotNull(a);
@@ -120,7 +127,7 @@ namespace Raven.Tests.Bugs.Queries
 				using (var session = store.OpenSession())
 				{
 					var results =
-						session.Query<Company>().Select(x => new
+						session.Query<Company>().Customize(x=>x.WaitForNonStaleResults()).Select(x => new
 						                                     	{
 						                                     		CompanyName = x.Name,
 						                                     		Address = x.Address1

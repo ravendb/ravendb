@@ -51,14 +51,17 @@ namespace Raven.Studio.Models
 		public override Task TimerTickedAsync()
 		{
 			if (SkipAutoRefresh && IsForced == false)
+			{
+				IsLoadingDocuments = false;
 				return null;
+			}
 
 			if (IsForced)
 				IsLoadingDocuments = true;
 
 			var fetchingDocuments = CustomFetchingOfDocuments != null ? CustomFetchingOfDocuments(this) : DefaultFetchingOfDocuments();
 			return fetchingDocuments
-				.ContinueOnSuccessInTheUIThread(() => IsLoadingDocuments = false);
+				.FinallyInTheUIThread(() => IsLoadingDocuments = false);
 		}
 
 		private Task DefaultFetchingOfDocuments()

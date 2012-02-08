@@ -72,7 +72,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var results = s.Query<MyEntity>();
+					var results = s.Query<MyEntity>().Customize(x=>x.WaitForNonStaleResults());
 					var l1 = results.ToList();
 					Assert.Equal(id, l1[0].Id);
 
