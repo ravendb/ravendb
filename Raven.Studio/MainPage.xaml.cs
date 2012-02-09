@@ -13,6 +13,7 @@ namespace Raven.Studio
 		public MainPage()
 		{
 			InitializeComponent();
+			KeyBoard.Register(this);
 		}
 
 		// After the Frame navigates, ensure the HyperlinkButton representing the current page is selected
