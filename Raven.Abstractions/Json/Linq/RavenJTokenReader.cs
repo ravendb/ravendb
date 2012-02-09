@@ -69,8 +69,8 @@ namespace Raven.Json.Linq
 			if (TokenType == JsonToken.Bytes)
 				return (byte[])Value;
 
-			/*if (ReaderIsSerializerInArray())
-				return null;*/
+			if (ReaderIsSerializerInArray())
+				return null;
 
 			throw CreateReaderException(this, "Error reading bytes. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
 		}
@@ -130,8 +130,8 @@ namespace Raven.Json.Linq
 				}
 			}
 
-			/*if (ReaderIsSerializerInArray())
-				return null;*/
+			if (ReaderIsSerializerInArray())
+				return null;
 
 			throw CreateReaderException(this, "Error reading decimal. Expected a number but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
 		}
@@ -167,8 +167,8 @@ namespace Raven.Json.Linq
 				}
 			}
 
-			/*if (ReaderIsSerializerInArray())
-				return null;*/
+			if (ReaderIsSerializerInArray())
+				return null;
 
 			throw CreateReaderException(this, "Error reading integer. Expected a number but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
 		}
@@ -205,8 +205,8 @@ namespace Raven.Json.Linq
 				}
 			}
 
-			/*if (ReaderIsSerializerInArray())
-				return null;*/
+			if (ReaderIsSerializerInArray())
+				return null;
 
 			throw CreateReaderException(this, "Error reading date. Expected bytes but got {0}.".FormatWith(CultureInfo.InvariantCulture, TokenType));
 		}
@@ -287,6 +287,11 @@ namespace Raven.Json.Linq
 				default:
 					throw MiscellaneousUtils.CreateArgumentOutOfRangeException("Type", token.Type, "Unexpected JTokenType.");
 			}
+		}
+
+		internal bool ReaderIsSerializerInArray()
+		{
+			return TokenType == JsonToken.EndArray;
 		}
 
 		private JsonReaderException CreateReaderException(JsonReader reader, string message)
