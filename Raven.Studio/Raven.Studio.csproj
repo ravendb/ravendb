@@ -118,7 +118,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Behaviors\KeyboardBehavior.cs" />
+    <Compile Include="Behaviors\KeyBoard.cs" />
     <Compile Include="Behaviors\OpenPageOnANewTabIfCtrlIsHold.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />

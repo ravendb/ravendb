@@ -21,9 +21,6 @@
 			<RowDefinition Height="35" />
 		</Grid.RowDefinitions>
 
-		<i:Interaction.Behaviors>
-			<Behaviors:KeyboardBehavior />
-		</i:Interaction.Behaviors>
 		<i:Interaction.Triggers>
 			<Behaviors:StudioKeyTrigger Key="O"
 										Modifiers="Control">

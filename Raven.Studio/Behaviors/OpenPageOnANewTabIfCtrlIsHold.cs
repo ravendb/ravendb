@@ -26,7 +26,7 @@ namespace Raven.Studio.Behaviors
 			if (string.IsNullOrEmpty(url) || url.StartsWith("http://"))
 				return;
 
-			if (KeyboardBehavior.IsCtrlHold == false)
+			if (KeyBoard.IsCtrlHold == false)
 				return;
 
 			var hostUrl = HtmlPage.Document.DocumentUri.OriginalString;
