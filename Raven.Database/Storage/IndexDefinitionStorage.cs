@@ -222,9 +222,8 @@ namespace Raven.Database.Storage
 			{
 				prefix = index.Substring(0, 5);
 			}
-			var fixupIndexName = MonoHttpUtility.UrlEncode(index);
-			if (path.Length + fixupIndexName.Length > 230 ||
-				Encoding.Unicode.GetByteCount(fixupIndexName) >= 255)
+			if (path.Length + index.Length > 230 ||
+				Encoding.Unicode.GetByteCount(index) >= 255)
 			{
 				using (var md5 = MD5.Create())
 				{

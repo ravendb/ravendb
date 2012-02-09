@@ -23,7 +23,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					var doc = session.Advanced.LuceneQuery<dynamic>().First();
+					var doc = session.Advanced.LuceneQuery<dynamic>().WaitForNonStaleResults().First();
 					Assert.Equal("Test", doc.Property);
 					session.SaveChanges();
 				}

@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs
 
 				using(var session = store.OpenSession())
 				{
-					Assert.NotEmpty(session.Query<User>().ToList());
+					Assert.NotEmpty(session.Query<User>().Customize(x=>x.WaitForNonStaleResults()).ToList());
 					Assert.Empty(session.Query<User>().Take(0).ToList());
 				}
 			}
@@ -37,7 +37,7 @@ namespace Raven.Tests.Bugs
 
 				using (var session = store.OpenSession())
 				{
-					Assert.NotEmpty(session.Query<User>().ToList());
+					Assert.NotEmpty(session.Query<User>().Customize(x => x.WaitForNonStaleResults()).ToList());
 					Assert.Empty(session.Query<User>().Take(-1).ToList());
 				}
 			}

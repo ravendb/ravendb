@@ -47,7 +47,7 @@ Usage:
 				switch (args[0])
 				{
 					case "in":
-						ImportData(instanceUrl, file);
+						ImportData(instanceUrl, file, skipIndexes: args.Any(arg=> string.Equals(arg, "/skipIndexes",StringComparison.InvariantCultureIgnoreCase)));
 						break;
 					case "out":
 						bool exportIndexesOnly = args.Any(arg => arg.Equals("--only-indexes"));
@@ -229,15 +229,15 @@ Usage:
 			return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
 		}
 
-		public static void ImportData(string instanceUrl, string file)
+		public static void ImportData(string instanceUrl, string file, bool skipIndexes = false)
 		{
 			using (FileStream fileStream = File.OpenRead(file))
 			{
-				ImportData(fileStream, instanceUrl);
+				ImportData(fileStream, instanceUrl, skipIndexes);
 			}
 		}
 
-		public static void ImportData(Stream stream, string instanceUrl)
+		public static void ImportData(Stream stream, string instanceUrl, bool skipIndexes = false)
 		{
 			var sw = Stopwatch.StartNew();
 			// Try to read the stream compressed, otherwise continue uncompressed.
@@ -285,6 +285,8 @@ Usage:
 				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 				{
 					var index = RavenJToken.ReadFrom(jsonReader);
+					if(skipIndexes)
+						continue;
 					var indexName = index.Value<string>("name");
 					if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
 						continue;

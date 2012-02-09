@@ -179,7 +179,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var documents = actions.Documents.GetDocumentsAfter(Guid.Empty).ToArray();
+				var documents = actions.Documents.GetDocumentsAfter(Guid.Empty,5).ToArray();
 				Assert.Equal(1, documents.Length);
 			});
 		}
@@ -197,7 +197,7 @@ namespace Raven.Tests.Storage
 			db.TransactionalStorage.Batch(actions =>
 			{
 				var doc = actions.Documents.DocumentByKey("a",null);
-				var documents = actions.Documents.GetDocumentsAfter(doc.Etag.Value).Select(x => x.Key).ToArray();
+				var documents = actions.Documents.GetDocumentsAfter(doc.Etag.Value, 5).Select(x => x.Key).ToArray();
 				Assert.Equal(2, documents.Length);
 				Assert.Equal("b", documents[0]);
 				Assert.Equal("c", documents[1]);
@@ -224,7 +224,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var documents = actions.Documents.GetDocumentsAfter(guid).Select(x => x.Key).ToArray();
+				var documents = actions.Documents.GetDocumentsAfter(guid, 5).Select(x => x.Key).ToArray();
 				Assert.Equal(3, documents.Length);
 				Assert.Equal("b", documents[0]);
 				Assert.Equal("c", documents[1]);
@@ -270,7 +270,7 @@ namespace Raven.Tests.Storage
 			        var jsonDocuments = new JsonDocument[0];
 			        db.TransactionalStorage.Batch(actions =>
 			        {
-			            jsonDocuments = actions.Documents.GetDocumentsAfter(etag).Where(x => x != null).ToArray();
+						jsonDocuments = actions.Documents.GetDocumentsAfter(etag, 100).Where(x => x != null).ToArray();
 			        });
 					docs.AddRange(jsonDocuments.Select(x=>x.Key));
 			        total += jsonDocuments.Length;

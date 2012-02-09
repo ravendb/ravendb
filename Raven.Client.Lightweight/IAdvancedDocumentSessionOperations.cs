@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
@@ -126,6 +127,13 @@ namespace Raven.Client
 		/// <returns>
 		/// 	<c>true</c> if the specified entity has changed; otherwise, <c>false</c>.
 		/// </returns>
-		bool HasChanged(object entity);       
+		bool HasChanged(object entity);
+
+
+		/// <summary>
+		/// Defer commands to be executed on SaveChanges()
+		/// </summary>
+		/// <param name="commands">The commands to be executed</param>
+		void Defer(params ICommandData[] commands);
 	}
 }

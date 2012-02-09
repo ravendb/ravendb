@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 using Raven.Database.Backup;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
@@ -25,7 +26,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			if(context.IsAdministrator() == false)
+			if (context.User.IsAdministrator() == false)
 			{
 				context.SetStatusToUnauthorized();
 				context.WriteJson(new
@@ -36,9 +37,9 @@ namespace Raven.Database.Server.Responders
 			}
 
 			var backupRequest = context.ReadJsonObject<BackupRequest>();
-			var incremetalString = context.Request.QueryString["incremental"];
+			var incrementalString = context.Request.QueryString["incremental"];
 			bool incrementalBackup;
-			if (bool.TryParse(incremetalString, out incrementalBackup) == false)
+			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
 				incrementalBackup = false;
 			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup);
 			context.SetStatusToCreated(BackupStatus.RavenBackupStatusDocumentKey);

@@ -36,6 +36,10 @@ namespace Raven.Client.Embedded
 		private readonly DocumentDatabase database;
 		private readonly DocumentConvention convention;
 		private readonly ProfilingInformation profilingInformation;
+		private TransactionInformation TransactionInformation
+		{
+			get { return convention.EnlistInDistributedTransactions ? RavenTransactionAccessor.GetTransactionInformation() : null; }
+		}
 
 		///<summary>
 		/// Create a new instance
@@ -106,7 +110,7 @@ namespace Raven.Client.Embedded
 		public JsonDocument Get(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var jsonDocument = database.Get(key, RavenTransactionAccessor.GetTransactionInformation());
+			var jsonDocument = database.Get(key, TransactionInformation);
 			return EnsureLocalDate(jsonDocument);
 		}
 
@@ -139,7 +143,7 @@ namespace Raven.Client.Embedded
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return database.Put(key, etag, document, metadata, RavenTransactionAccessor.GetTransactionInformation());
+			return database.Put(key, etag, document, metadata, TransactionInformation);
 		}
 
 		/// <summary>
@@ -150,7 +154,7 @@ namespace Raven.Client.Embedded
 		public void Delete(string key, Guid? etag)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			database.Delete(key, etag, RavenTransactionAccessor.GetTransactionInformation());
+			database.Delete(key, etag, TransactionInformation);
 		}
 
 		/// <summary>
@@ -314,9 +318,9 @@ namespace Raven.Client.Embedded
 				string entityName = null;
 				if (index.StartsWith("dynamic/"))
 					entityName = index.Substring("dynamic/".Length);
-				return database.ExecuteDynamicQuery(entityName, query);
+				return database.ExecuteDynamicQuery(entityName, query.Clone());
 			}
-			var queryResult = database.Query(index, query);
+			var queryResult = database.Query(index, query.Clone());
 			EnsureLocalDate(queryResult.Results);
 			EnsureLocalDate(queryResult.Includes);
 			return queryResult;
@@ -359,7 +363,7 @@ namespace Raven.Client.Embedded
 			return new MultiLoadResult
 			{
 				Results = ids
-					.Select(id => database.Get(id, RavenTransactionAccessor.GetTransactionInformation()))
+					.Select(id => database.Get(id, TransactionInformation))
 					.Where(document => document != null)
 					.Select(x => EnsureLocalDate(x).ToJson())
 					.ToList()
@@ -374,7 +378,7 @@ namespace Raven.Client.Embedded
 		{
 			foreach (var commandData in commandDatas)
 			{
-				commandData.TransactionInformation = RavenTransactionAccessor.GetTransactionInformation();
+				commandData.TransactionInformation = TransactionInformation;
 			}
 			CurrentOperationContext.Headers.Value = OperationsHeaders; 
 			return database.Batch(commandDatas);
@@ -478,7 +482,7 @@ namespace Raven.Client.Embedded
 		public void DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
+			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
 			databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
 		}
 
@@ -492,7 +496,7 @@ namespace Raven.Client.Embedded
 		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
+			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
 			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
 		}
 
@@ -617,7 +621,7 @@ namespace Raven.Client.Embedded
 		public JsonDocumentMetadata Head(string key)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var jsonDocumentMetadata = database.GetDocumentMetadata(key, RavenTransactionAccessor.GetTransactionInformation());
+			var jsonDocumentMetadata = database.GetDocumentMetadata(key, TransactionInformation);
 			return EnsureLocalDate(jsonDocumentMetadata);
 		}
 

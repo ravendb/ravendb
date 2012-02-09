@@ -8,30 +8,35 @@ namespace Raven.Studio.Commands
 	public class DeleteDocumentCommand : Command
 	{
 		private readonly string key;
-		private readonly bool navigateToHome;
+		private readonly bool navigateOnSuccess;
 
-		public DeleteDocumentCommand(string key, bool navigateToHome)
+		public DeleteDocumentCommand(string key, bool navigateOnSuccess)
 		{
 			this.key = key;
-			this.navigateToHome = navigateToHome;
+			this.navigateOnSuccess = navigateOnSuccess;
+		}
+
+		public override bool CanExecute(object parameter)
+		{
+			return string.IsNullOrWhiteSpace(key) == false;
 		}
 
 		public override void Execute(object parameter)
 		{
-			AskUser.ConfirmationAsync("Confirm Delete", "Really delete " + key + " ?")
+			AskUser.ConfirmationAsync("Confirm Delete", string.Format("Really delete {0} ?", key))
 				.ContinueWhenTrue(DeleteDocument);
 		}
 
 		private void DeleteDocument()
 		{
 			DatabaseCommands.DeleteDocumentAsync(key)
-				.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was deleted", key))))
-				.ContinueOnSuccess(() =>
-								   {
-									   if (navigateToHome)
-										   UrlUtil.Navigate("/home");
-								   })
-								   .Catch();
+				.ContinueOnSuccessInTheUIThread(() =>
+				                                	{
+				                                		ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was deleted", key)));
+														if (navigateOnSuccess)
+															UrlUtil.Navigate("/documents");
+				                                	})
+				.Catch();
 		}
 	}
 }

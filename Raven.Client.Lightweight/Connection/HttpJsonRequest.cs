@@ -15,12 +15,14 @@ using System.Threading;
 #if !NET_3_5
 using System.Threading.Tasks;
 #endif
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Connection
 {
@@ -42,6 +44,8 @@ namespace Raven.Client.Connection
 		private string postedData;
 		private Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
+		public object Headers;
+		private Stream postedStream;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -72,10 +76,27 @@ namespace Raven.Client.Connection
 		}
 
 #if !NET_3_5
+		public Task<RavenJToken> ReadResponseJsonAsync()
+		{
+			return ReadResponseStringAsync()
+				.ContinueWith(x =>
+				{
+					var result = x.Result;
+
+					return RavenJToken.Parse(result);
+					
+				});
+		}
+
+		public Task ExecuteRequestAsync()
+		{
+			return ReadResponseStringAsync();
+		}
+
 		/// <summary>
 		/// Begins the read response string.
 		/// </summary>
-		public Task<string> ReadResponseStringAsync()
+		private Task<string> ReadResponseStringAsync()
 		{
 			if (SkipServerCheck)
 			{
@@ -128,6 +149,20 @@ namespace Raven.Client.Connection
 				}).Unwrap();
 		}
 #endif
+		public void ExecuteRequest()
+		{
+			ReadResponseString();
+		}
+
+		public byte[] ReadResponseBytes()
+		{
+			using(var webResponse = webRequest.GetResponse())
+			using(var stream = webResponse.GetResponseStreamWithHttpDecompression())
+			{
+				ResponseHeaders = new NameValueCollection(webResponse.Headers);
+				return stream.ReadData();
+			}
+		}
 
 		/// <summary>
 		/// Reads the response string.
@@ -215,6 +250,15 @@ namespace Raven.Client.Connection
 			{
 				HttpJsonRequestHelper.WriteDataToRequest(newWebRequest, postedData);
 			}
+			if(postedStream != null)
+			{
+				postedStream.Position = 0;
+				using (var stream = newWebRequest.GetRequestStream())
+				{
+					postedStream.CopyTo(stream);
+					stream.Flush();
+				}
+			}
 			webRequest = newWebRequest;
 		}
 
@@ -289,6 +333,32 @@ namespace Raven.Client.Connection
 						PostedData = postedData
 					});
 
+					RavenJObject ravenJObject;
+					try
+					{
+						ravenJObject = RavenJObject.Parse(readToEnd);
+					}
+					catch (Exception )
+					{
+						throw new InvalidOperationException(readToEnd, e);
+					}
+
+					if(ravenJObject.ContainsKey("Error"))
+					{
+						var sb = new StringBuilder();
+						foreach (var prop in ravenJObject)
+						{
+							if(prop.Key == "Error")
+								continue;
+
+							sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
+						}
+
+						sb.AppendLine()
+							.AppendLine(ravenJObject.Value<string>("Error"));
+
+						throw new InvalidOperationException(sb.ToString());
+					}
 					throw new InvalidOperationException(readToEnd, e);
 				}
 			}
@@ -321,6 +391,9 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		/// <summary>
+		/// The request duration
+		/// </summary>
 		public double CalculateDuration()
 		{
 			return sp.ElapsedMilliseconds;
@@ -336,6 +409,15 @@ namespace Raven.Client.Connection
 		/// Whatever we can skip the server check and directly return the cached result
 		///</summary>
 		public bool SkipServerCheck { get; set; }
+
+		/// <summary>
+		/// The underlying request content type
+		/// </summary>
+		public string ContentType
+		{
+			get { return webRequest.ContentType; }
+			set { webRequest.ContentType = value; }
+		}
 
 		private void WriteMetadata(RavenJObject metadata)
 		{
@@ -506,6 +588,21 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		
+
+		public RavenJToken ReadResponseJson()
+		{
+			return RavenJToken.Parse(ReadResponseString());
+		}
+
+		public void Write(Stream streamToWrite)
+		{
+			postedStream = streamToWrite;
+			webRequest.ContentLength = streamToWrite.Length;
+			using(var stream = webRequest.GetRequestStream())
+			{
+				streamToWrite.CopyTo(stream);
+				stream.Flush();
+			}
+		}
 	}
 }

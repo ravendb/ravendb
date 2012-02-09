@@ -107,8 +107,10 @@ namespace Raven.Database.Server.Responders
 			List<MappedResultInfo> mappedResult = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				mappedResult = accessor.MappedResults.GetMappedResultsReduceKeysAfter(index, etag,loadData: true)
-							.Take(context.GetPageSize(Settings.MaxPageSize)).ToList();
+				mappedResult = accessor.MappedResults.GetMappedResultsReduceKeysAfter(index, etag, 
+					loadData: true, 
+					take: context.GetPageSize(Settings.MaxPageSize))
+					.ToList();
 			});
 			context.WriteJson(mappedResult);
 		}
@@ -181,7 +183,7 @@ namespace Raven.Database.Server.Responders
 		private QueryResult PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
 		{
 			string entityName = null;
-			if (index.StartsWith("dynamic/"))
+			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
 				entityName = index.Substring("dynamic/".Length);
 
 			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);

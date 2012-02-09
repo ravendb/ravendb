@@ -15,6 +15,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
 {
@@ -31,6 +32,7 @@ namespace Raven.Client.Indexes
 		private readonly bool translateIdentityProperty;
 		private ExpressionOperatorPrecedence _currentPrecedence;
 		private Dictionary<object, int> _ids;
+		private bool castLambdas;
 
 		// Methods
 		private ExpressionStringBuilder(DocumentConvention convention, bool translateIdentityProperty, Type queryRoot,
@@ -217,17 +219,19 @@ namespace Raven.Client.Indexes
 
 		private void OutMember(Expression instance, MemberInfo member)
 		{
-			OutputTypeIfNeeded(member);
+			if (instance == null || instance.NodeType != ExpressionType.MemberAccess)
+			{
+				OutputTypeIfNeeded(member);
+			}
 			var name = member.Name;
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
 				// only translate from the root type or deriatives
 				(queryRoot == null || (member.DeclaringType.IsAssignableFrom(queryRoot))) &&
 				// only translate from the root alias
-				(queryRootName == null || ( 
-					instance.NodeType == ExpressionType.Parameter  &&	
+				(queryRootName == null || (
+					instance.NodeType == ExpressionType.Parameter &&
 					((ParameterExpression)instance).Name == queryRootName)))
-
 			{
 				name = Constants.DocumentIdFieldName;
 			}
@@ -249,7 +253,10 @@ namespace Raven.Client.Indexes
 
 				Out(member.DeclaringType.Name + "." + name);
 			}
-			CloseOutputTypeIfNeeded(member);
+			if (instance == null || instance.NodeType != ExpressionType.MemberAccess)
+			{
+				CloseOutputTypeIfNeeded(member);
+			}
 		}
 
 		private void CloseOutputTypeIfNeeded(MemberInfo member)
@@ -641,8 +648,8 @@ namespace Raven.Client.Indexes
 					if (constantExpression == null)
 						return;
 					left = expression;
-					right = convention.SaveEnumsAsIntegers ? 
-						Expression.Constant((int)constantExpression.Value) : 
+					right = convention.SaveEnumsAsIntegers ?
+						Expression.Constant((int)constantExpression.Value) :
 						Expression.Constant(Enum.ToObject(expression.Type, constantExpression.Value).ToString());
 					break;
 			}
@@ -738,7 +745,7 @@ namespace Raven.Client.Indexes
 		{
 			if (node.Value != null)
 			{
-				var s = node.Value.ToString();
+				var s = Convert.ToString(node.Value, CultureInfo.InvariantCulture);
 				if (node.Value is string)
 				{
 					Out("\"");
@@ -760,9 +767,23 @@ namespace Raven.Client.Indexes
 				}
 				if (node.Value is Enum)
 				{
-					Out(node.Value.GetType().FullName);
-					Out('.');
+					var enumType = node.Value.GetType();
+					if (TypeExistsOnServer(enumType))
+					{
+						Out(enumType.FullName);
+						Out('.');
+						Out(s);
+						return node;
+					}
+					Out('"');
+					Out(node.Value.ToString());
+					Out('"');
+					return node;
+				}
+				if (node.Value is decimal)
+				{
 					Out(s);
+					Out('M');
 					return node;
 				}
 				Out(s);
@@ -770,6 +791,17 @@ namespace Raven.Client.Indexes
 			}
 			Out("null");
 			return node;
+		}
+
+		private bool TypeExistsOnServer(Type type)
+		{
+			if (type.Assembly == typeof(object).Assembly)
+				return true;
+
+			if (type.Assembly == typeof(RavenJObject).Assembly)
+				return true;
+
+			return false;
 		}
 
 		/// <summary>
@@ -973,7 +1005,20 @@ namespace Raven.Client.Indexes
 				VisitExpressions('(', node.Parameters, ')');
 			}
 			Out(" => ");
-			Visit(node.Body);
+			var body = node.Body;
+			if(castLambdas)
+			{
+				switch (body.NodeType)
+				{
+					case ExpressionType.Convert:
+					case ExpressionType.ConvertChecked:
+						break;
+					default:
+						body = Expression.Convert(body, body.Type);
+						break;
+				}
+			}
+			Visit(body);
 			return node;
 		}
 
@@ -1135,7 +1180,7 @@ namespace Raven.Client.Indexes
 		{
 			var num = 0;
 			var expression = node.Object;
-			if (Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) != null)
+			if (IsExtensionMethod(node))
 			{
 				num = 1;
 				expression = node.Arguments[0];
@@ -1147,6 +1192,9 @@ namespace Raven.Client.Indexes
 					case "MetadataFor":
 						Visit(node.Arguments[0]);
 						Out("[\"@metadata\"]");
+						return node;
+					case "AsDocument":
+						Visit(node.Arguments[0]);
 						return node;
 					case "Hierarchy":
 						VisitHierarchy(node, expression);
@@ -1173,8 +1221,7 @@ namespace Raven.Client.Indexes
 					Out(".");
 				}
 			}
-			if (node.Method.IsStatic &&
-				Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) == null)
+			if (node.Method.IsStatic && IsExtensionMethod(node) == false)
 			{
 				Out(node.Method.DeclaringType.Name);
 				Out(".");
@@ -1196,102 +1243,62 @@ namespace Raven.Client.Indexes
 				{
 					Out(", ");
 				}
-				MaybeAddCastingToLambdaExpression(node, num2);
-				Visit(node.Arguments[num2]);
-				MaybeCloseCastingForLambdaExpression(node, num2);
+				var old = castLambdas;
+				try
+				{
+					switch (node.Method.Name)
+					{
+						case "Sum":
+						case "Average":
+						case "Min":
+						case "Max":
+							castLambdas = true;
+							break;
+						default:
+							castLambdas = false;
+							break;
+					}
+					Visit(node.Arguments[num2]);
+				}
+				finally
+				{
+					castLambdas = old;
+				}
 				num2++;
 			}
 			Out(node.Method.Name != "get_Item" ? ")" : "]");
 			return node;
 		}
 
-		private void MaybeCloseCastingForLambdaExpression(MethodCallExpression node, int argPos)
+		private static bool IsExtensionMethod(MethodCallExpression node)
 		{
-#if !SILVERLIGHT
-			var lambdaExpression = node.Arguments[argPos] as LambdaExpression;
-			if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
-			{
-				Out(")");
-			}
-			else if (lambdaExpression != null && node.Method.DeclaringType == typeof(Enumerable))
-			{
-				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
-				if (ShouldAvoidCastingToLambda(expression))
-					return;
-
-				switch (node.Method.Name)
-				{
-					case "Select":
-					case "SelectMany":
-					case "First":
-					case "FirstOrDefault":
-					case "Single":
-					case "Count":
-					case "Where":
-					case "Sum":
-					case "Any":
-					case "SingleOrDefault":
-						Out(")");
-						break;
-				}
-			}
-#endif
-		}
-
-		private void MaybeAddCastingToLambdaExpression(MethodCallExpression node, int argPos)
-		{
-#if !SILVERLIGHT
-			var lambdaExpression = node.Arguments[argPos] as LambdaExpression;
-			if (lambdaExpression != null && typeof(AbstractIndexCreationTask).IsAssignableFrom(node.Method.DeclaringType))
-			{
-				Out("(Func<dynamic, dynamic>)(");
-			}
-			else if (lambdaExpression != null && node.Method.DeclaringType == typeof(Enumerable))
-			{
-				if (argPos == 0)
-					return;
-				var expression = node.Arguments[argPos - 1]; // heuroistic only, might be a source of bugs, need to rethink this
-				if (ShouldAvoidCastingToLambda(expression))
-					return;
-				switch (node.Method.Name)
-				{
-					case "Sum":
-						Out("(Func<dynamic, decimal>)(");
-						break;
-					case "Select":
-						Out("(Func<dynamic, dynamic>)(");
-						break;
-					case "SelectMany":
-						Out("(Func<dynamic, IEnumerable<dynamic>>)(");
-						break;
-					case "Any":
-					case "First":
-					case "FirstOrDefault":
-					case "Single":
-					case "Where":
-					case "Count":
-					case "SingleOrDefault":
-						Out("(Func<dynamic, bool>)(");
-						break;
-				}
-			}
-#endif
-		}
-
-		private static bool ShouldAvoidCastingToLambda(Expression expression)
-		{
-			if (expression.NodeType == ExpressionType.Parameter)
-				return true;
-
-			if (expression.NodeType == ExpressionType.MemberAccess)
+			if (Attribute.GetCustomAttribute(node.Method, typeof(ExtensionAttribute)) == null)
 				return false;
 
-			if (expression.NodeType == ExpressionType.Call)
+			if (node.Method.DeclaringType.Name == "Enumerable")
 			{
-				var name = ((MethodCallExpression)expression).Method.Name;
-				return name != "Select";
+				switch (node.Method.Name)
+				{
+					case "Select":
+					case "SelectMany":
+					case "Where":
+					case "GroupBy":
+					case "OrderBy":
+					case "OrderByDescending":
+					case "DefaultIfEmpty":
+					case "Count":
+					case "First":
+					case "FirstOrDefault":
+					case "Single":
+					case "SingleOrDefault":
+					case "Last":
+					case "LastOrDefault":
+					case "Sum":
+					case "Reverse":
+						return true;
+				}
+				return false;
 			}
-
 			return true;
 		}
 
@@ -1365,8 +1372,11 @@ namespace Raven.Client.Indexes
 			{
 				case ExpressionType.NewArrayInit:
 					Out("new ");
-					Out(node.Type.GetElementType().FullName);
-					Out(" []");
+					if (!CheckIfAnonymousType(node.Type.GetElementType()))
+					{
+						Out(node.Type.GetElementType().FullName + " ");
+					}
+					Out("[]");
 					VisitExpressions('{', node.Expressions, '}');
 					return node;
 
@@ -1378,6 +1388,14 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
+		private static bool CheckIfAnonymousType(Type type)
+		{
+			// hack: the only way to detect anonymous types right now
+			return Attribute.IsDefined(type, typeof(CompilerGeneratedAttribute), false)
+				&& type.IsGenericType && type.Name.Contains("AnonymousType")
+				&& (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
+				&& (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
+		}
 
 		private static readonly HashSet<string> keywordsInCSharp = new HashSet<string>(new[]
 		{

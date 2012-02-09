@@ -27,9 +27,19 @@ namespace Raven.Tests.Spatial
 			Date = date;
 		}
 
+		public Event(string venue, double lat, double lng, DateTime date, int capacity)
+		{
+			this.Venue = venue;
+			this.Latitude = lat;
+			this.Longitude = lng;
+			Date = date;
+			this.Capacity = capacity;
+		}
+
 		public string Venue { get; set; }
 		public double Latitude { get; set; }
 		public double Longitude { get; set; }
 		public DateTime Date { get; set; }
+		public int Capacity { get; set; }
 	}
 }

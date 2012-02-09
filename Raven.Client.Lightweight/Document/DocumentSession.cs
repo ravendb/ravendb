@@ -12,6 +12,7 @@ using System.Reflection;
 using System;
 using System.Text;
 using System.Threading;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -33,7 +34,7 @@ namespace Raven.Client.Document
 	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
 		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 #if !NET_3_5
-		, ILazySessionOperations, IEagerSessionOperations
+, ILazySessionOperations, IEagerSessionOperations
 #endif
 	{
 #if !NET_3_5
@@ -230,7 +231,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public T[] Load<T>(params string[] ids)
 		{
-			return LoadInternal<T>(ids, null);
+			return LoadInternal<T>(ids);
 		}
 
 		/// <summary>
@@ -239,7 +240,7 @@ namespace Raven.Client.Document
 		/// <param name="ids">The ids.</param>
 		public T[] Load<T>(IEnumerable<string> ids)
 		{
-			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray(), null);
+			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray());
 		}
 
 		/// <summary>
@@ -278,6 +279,41 @@ namespace Raven.Client.Document
 			} while (multiLoadOperation.SetResult(multiLoadResult));
 
 			return multiLoadOperation.Complete<T>();
+		}
+
+		internal T[] LoadInternal<T>(string[] ids)
+		{
+			if (ids.Length == 0)
+				return new T[0];
+
+			// only load documents that aren't already cached
+			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false)
+				.Distinct(StringComparer.InvariantCultureIgnoreCase)
+				.ToArray();
+
+			if (idsOfNotExistingObjects.Length > 0)
+			{
+				IncrementRequestCount();
+				var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, idsOfNotExistingObjects);
+				MultiLoadResult multiLoadResult;
+				do
+				{
+					multiLoadOperation.LogOperation();
+					using (multiLoadOperation.EnterMultiLoadContext())
+					{
+						multiLoadResult = DatabaseCommands.Get(idsOfNotExistingObjects, null);
+					}
+				} while (multiLoadOperation.SetResult(multiLoadResult));
+
+				multiLoadOperation.Complete<T>();
+			}
+
+			return ids.Select(id =>
+			{
+				object val;
+				entitiesByKey.TryGetValue(id, out val);
+				return (T)val;
+			}).ToArray();
 		}
 
 		/// <summary>
@@ -403,11 +439,14 @@ namespace Raven.Client.Document
 			using (EntitiesToJsonCachingScope())
 			{
 				var data = PrepareForSaveChanges();
+
 				if (data.Commands.Count == 0)
 					return; // nothing to do here
 				IncrementRequestCount();
 				LogBatch(data);
-				UpdateBatchResults(DatabaseCommands.Batch(data.Commands), data.Entities);
+
+				var batchResults = DatabaseCommands.Batch(data.Commands);
+				UpdateBatchResults(batchResults, data);
 			}
 		}
 
@@ -549,11 +588,11 @@ namespace Raven.Client.Document
 			var lazyValue = new Lazy<T>(() =>
 			{
 				ExecuteAllPendingLazyOperations();
-				return (T) operation.Result;
+				return (T)operation.Result;
 			});
 
 			if (onEval != null)
-				onEvaluateLazy[operation] = theResult => onEval((T) theResult);
+				onEvaluateLazy[operation] = theResult => onEval((T)theResult);
 
 			return lazyValue;
 		}
@@ -627,7 +666,6 @@ namespace Raven.Client.Document
 		}
 
 #endif
-
 	}
 #endif
 }

@@ -7,12 +7,13 @@ using System.Text;
 using Raven.Abstractions.Commands;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Util
 {
-	public class RunExternalProcess
+	public class RunExternalProcess : IDisposable
 	{
 		[Fact]
 		public void can_use_RavenDB_in_a_remote_process()
@@ -143,6 +144,15 @@ namespace Raven.Tests.Util
 				Assert.Equal("hello", result.Item1);
 				Assert.Equal("world", result.Item2);
 			}
+		}
+
+		/// <summary>
+		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+		/// </summary>
+		/// <filterpriority>2</filterpriority>
+		public void Dispose()
+		{
+			IOExtensions.DeleteDirectory("HelloShard");
 		}
 	}
 }

@@ -21,7 +21,6 @@ namespace Raven.Database.Indexing
 {
 	public class SimpleIndex : Index
 	{
-		
 		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
 			: base(directory, name, indexDefinition, viewGenerator)
 		{
@@ -39,7 +38,6 @@ namespace Raven.Database.Indexing
 			Write(context, (indexWriter, analyzer) =>
 			{
 				bool madeChanges = false;
-				PropertyDescriptorCollection properties = null;
 				var processedKeys = new HashSet<string>();
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
 					.Where(x => x != null)
@@ -77,7 +75,7 @@ namespace Raven.Database.Indexing
 					count++;
 
 					float boost;
-					var indexingResult = GetIndexingResult(ref properties, doc, anonymousObjectToLuceneDocumentConverter, out boost);
+					var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
 
 					if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
 					{
@@ -121,7 +119,7 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Indexed {0} documents for {1}", count, name);
 		}
 
-		private IndexingResult GetIndexingResult(ref PropertyDescriptorCollection properties, object doc, AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, out float boost)
+		private IndexingResult GetIndexingResult(object doc, AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, out float boost)
 		{
 			boost = 1;
 
@@ -136,7 +134,7 @@ namespace Raven.Database.Indexing
 			if (doc is DynamicJsonObject)
 				indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, (DynamicJsonObject) doc);
 			else
-				indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, ref properties, doc);
+				indexingResult = ExtractIndexDataFromDocument(anonymousObjectToLuceneDocumentConverter, doc);
 
 			if (Math.Abs(boost - 1) > float.Epsilon)
 			{
@@ -161,20 +159,24 @@ namespace Raven.Database.Indexing
 			var newDocId = dynamicJsonObject.GetDocumentId();
 			return new IndexingResult
 			{
-				Fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)dynamicJsonObject).Inner, indexDefinition,
-																  Field.Store.NO).ToList(),
+				Fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)dynamicJsonObject).Inner, Field.Store.NO).ToList(),
 				NewDocId = newDocId is DynamicNullObject ? null : (string)newDocId,
 				ShouldSkip = false
 			};
 		}
 
-		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, ref PropertyDescriptorCollection properties, object doc)
+		private readonly Dictionary<Type, PropertyDescriptorCollection> propertyDescriptorCache = new Dictionary<Type, PropertyDescriptorCollection>();
+
+		private IndexingResult ExtractIndexDataFromDocument(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, object doc)
 		{
-			if (properties == null)
+		    PropertyDescriptorCollection properties;
+			Type type = doc.GetType();
+			if(propertyDescriptorCache.TryGetValue(type, out properties) == false)
 			{
-				properties = TypeDescriptor.GetProperties(doc);
+				propertyDescriptorCache[type] = properties = TypeDescriptor.GetProperties(doc);
 			}
-			var abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, indexDefinition, Field.Store.NO).ToList();
+			
+			var abstractFields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.NO).ToList();
 			return new IndexingResult()
 			{
 				Fields = abstractFields,

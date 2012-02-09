@@ -1,3 +1,5 @@
+//-----------------------------------------------------------------------
+// <copyright file="DocumentDatabase.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,6 +10,7 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -39,7 +42,6 @@ using Raven.Database.Tasks;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
 using Index = Raven.Database.Indexing.Index;
-using Task = Raven.Database.Tasks.Task;
 using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Database
@@ -113,7 +115,11 @@ namespace Raven.Database
 
 			ExternalState = new ConcurrentDictionary<string, object>();
 			Name = configuration.DatabaseName;
-			if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
+			if(configuration.CustomTaskScheduler != null)
+			{
+				backgroundTaskScheduler = configuration.CustomTaskScheduler;
+			}
+			else if (configuration.BackgroundTasksPriority != ThreadPriority.Normal)
 			{
 				backgroundTaskScheduler = new TaskSchedulerWithCustomPriority(
 					// we need a minimum of four task threads - one for indexing dispatch, one for reducing dispatch, one for tasks, one for indexing/reducing ops
@@ -159,7 +165,7 @@ namespace Raven.Database
 				configuration.DataDirectory,
 				configuration.Container.GetExportedValues<AbstractViewGenerator>(),
 				Extensions);
-			IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration);
+			IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
 
 			workContext.Configuration = configuration;
 			workContext.IndexStorage = IndexStorage;
@@ -238,7 +244,6 @@ namespace Raven.Database
 		{
 			get
 			{
-
 				var result = new DatabaseStatistics
 				{
 					CountOfIndexes = IndexStorage.Indexes.Length,
@@ -246,8 +251,7 @@ namespace Raven.Database
 					Triggers = PutTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Put"})
 						.Concat(DeleteTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Delete"}))
 						.Concat(ReadTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Read"}))
-						.Concat(
-							IndexUpdateTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Index Update"}))
+						.Concat(IndexUpdateTriggers.Select(x => new DatabaseStatistics.TriggerInfo {Name = x.ToString(), Type = "Index Update"}))
 						.ToArray(),
 					Extensions = Configuration.ReportExtensions(
 						typeof (IStartupTask),
@@ -278,14 +282,7 @@ namespace Raven.Database
 				return result;
 			}
 		}
-
-
-		public string SilverlightXapName
-		{
-			get { return "Raven.Studio.xap"; }
-			
-		}
-
+		
 		public ConcurrentDictionary<string, object> ExternalState { get; set; }
 
 		public InMemoryRavenConfiguration Configuration
@@ -703,6 +700,10 @@ namespace Raven.Database
 			}
 		}
 
+		// only one index can be created at any given time
+		// the method already handle attempts to create the same index, so we don't have to 
+		// worry about this.
+		[MethodImpl(MethodImplOptions.Synchronized)]
 		public string PutIndex(string name, IndexDefinition definition)
 		{
 			definition.Name = name = IndexDefinitionStorage.FixupIndexName(name);
@@ -991,8 +992,7 @@ namespace Raven.Database
 			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start)
-					.Take(pageSize);
+				var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 				foreach (var doc in documents)
 				{
@@ -1015,11 +1015,11 @@ namespace Raven.Database
 			{
 				IEnumerable<JsonDocument> documents;
 				if (etag == null)
-					documents = actions.Documents.GetDocumentsByReverseUpdateOrder(start);
+					documents = actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize);
 				else
-					documents = actions.Documents.GetDocumentsAfter(etag.Value);
+					documents = actions.Documents.GetDocumentsAfter(etag.Value, pageSize);
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
-				foreach (var doc in documents.Take(pageSize))
+				foreach (var doc in documents)
 				{
 					DocumentRetriever.EnsureIdInMetadata(doc);
 					var document = documentRetriever

@@ -76,7 +76,7 @@
 
 						<Button Command="{StaticResource NavigateToDocumentByIdCommand}"
 								Style="{StaticResource Style_Button_MouseOverChrome}"
-								Visibility="{Binding ShowEditControls, Converter={StaticResource VisibleWhenTrue}}">
+								Visibility="{Binding ShowEditControls, Converter={StaticResource BooleanToVisibility}}">
 							<Button.Content>
 								<StackPanel Orientation="Horizontal">
 									<Image Source="{StaticResource Image_OpenDocument_Small}"
@@ -92,7 +92,7 @@
 						<Button Command="{StaticResource NavigateToCommand}"
 								CommandParameter="/edit?mode=new"
 								Style="{StaticResource Style_Button_MouseOverChrome}"
-								Visibility="{Binding ShowEditControls, Converter={StaticResource VisibleWhenTrue}}">
+								Visibility="{Binding ShowEditControls, Converter={StaticResource BooleanToVisibility}}">
 							<Button.Content>
 								<StackPanel Orientation="Horizontal">
 									<Image Source="{StaticResource Image_AddDocument_Tiny}"
@@ -117,7 +117,14 @@
 						 Style="{StaticResource DocumentList}"
 						 Margin="10"
 						 ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
-				
+
+					<i:Interaction.Triggers>
+						<Behaviors:StudioKeyTrigger Key="Delete">
+							<i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
+												   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+						</Behaviors:StudioKeyTrigger>
+					</i:Interaction.Triggers>
+
 					<i:Interaction.Behaviors>
 						<Behaviors:SelectItemOnRightClick />
 						<Behaviors:ShowItemsBasedOnControlDimensions Model="{Binding}" />

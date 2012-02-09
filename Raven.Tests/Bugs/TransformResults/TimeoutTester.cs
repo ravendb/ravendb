@@ -34,7 +34,7 @@ namespace Raven.Tests.Bugs.TransformResults
 						.Statistics(out stats)
 						.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
 						.OrderBy(x => x.Content)
-						.Where(x => x.Content.Contains(content))
+						.Where(x => x.Content == (content))
 						.Skip(0).Take(1)
 						.As<AnswerEntity>()
 						.FirstOrDefault();

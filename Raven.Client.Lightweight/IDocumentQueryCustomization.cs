@@ -94,5 +94,17 @@ namespace Raven.Client
 		/// <param name="latitude">The latitude.</param>
 		/// <param name="longitude">The longitude.</param>
 		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude);
+
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		IDocumentQueryCustomization RandomOrdering();
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		IDocumentQueryCustomization RandomOrdering(string seed);
 	}
 }

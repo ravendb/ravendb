@@ -23,22 +23,24 @@ namespace Raven.Studio.Models
 		private readonly Observable<JsonDocument> document;
 		private string jsonData;
 		private bool isLoaded;
-		private string documentKey;
+		public string DocumentKey { get; private set; }
 		private readonly string currentDatabase;
 
 		public EditableDocumentModel()
 		{
 			ModelUrl = "/edit";
-			
+
 			References = new ObservableCollection<LinkModel>();
 			Related = new BindableCollection<LinkModel>(model => model.Title);
+			SearchEnabled = false;
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
-			document.Value = new JsonDocument { DataAsJson = new RavenJObject
-			{
-				{"Name", "..."}
-			}, Metadata = new RavenJObject() };
+			document.Value = new JsonDocument
+								{
+									DataAsJson = { { "Name", "..." } },
+									Etag = Guid.Empty
+								};
 
 			currentDatabase = Database.Value.Name;
 		}
@@ -59,16 +61,16 @@ namespace Raven.Studio.Models
 				Mode = DocumentMode.DocumentWithId;
 				SetCurrentDocumentKey(docId);
 				DatabaseCommands.GetAsync(docId)
-					.ContinueOnSuccess(newdoc =>
-					                   {
-					                   	if (newdoc == null)
-					                   	{
-					                   		HandleDocumentNotFound();
-					                   		return;
-					                   	}
-					                   	document.Value = newdoc;
-					                   	isLoaded = true;
-					                   })
+					.ContinueOnSuccessInTheUIThread(newdoc =>
+					                                	{
+					                                		if (newdoc == null)
+					                                		{
+					                                			HandleDocumentNotFound();
+					                                			return;
+					                                		}
+					                                		document.Value = newdoc;
+					                                		isLoaded = true;
+					                                	})
 					.Catch();
 				return;
 			}
@@ -103,7 +105,10 @@ namespace Raven.Studio.Models
 
 		public void SetCurrentDocumentKey(string docId)
 		{
-			documentKey = Key = docId;
+			if (DocumentKey != null && DocumentKey != docId)
+				UrlUtil.Navigate("/edit?id=" + docId);
+
+			DocumentKey = Key = docId;
 		}
 
 		private void UpdateFromDocument()
@@ -120,9 +125,9 @@ namespace Raven.Studio.Models
 		{
 			metadata = metadataAsJson.ToDictionary(x => x.Key, x =>
 															   {
-																if (x.Value.Type == JTokenType.String)
-																	return x.Value.Value<string>();
-																return x.Value.ToString(Formatting.None);
+																   if (x.Value.Type == JTokenType.String)
+																	   return x.Value.Value<string>();
+																   return x.Value.ToString(Formatting.None);
 															   });
 			OnPropertyChanged("Metadata");
 			JsonMetadata = metadataAsJson.ToString(Formatting.Indented);
@@ -130,6 +135,17 @@ namespace Raven.Studio.Models
 
 		public ObservableCollection<LinkModel> References { get; private set; }
 		public BindableCollection<LinkModel> Related { get; private set; }
+
+		private bool searchEnabled;
+		public bool SearchEnabled
+		{
+			get { return searchEnabled; }
+			set
+			{
+				searchEnabled = value;
+				OnPropertyChanged();
+			}
+		}
 
 		public string DisplayId
 		{
@@ -139,30 +155,15 @@ namespace Raven.Studio.Models
 					return "Projection";
 				if (Mode == DocumentMode.New)
 					return "New Document";
-				return Key;
+				return DocumentKey;
 			}
 		}
 
-		public string Seperator { get; private set; }
-		public string CollectionNavigate
-		{
-			get { return "/collections?name=" + CollectionId; }
-		}
-
-		public string CollectionId
+		public string Collection
 		{
 			get
 			{
-				var collection = metadata.FirstOrDefault(x => x.Key == "Raven-Entity-Name");
-
-				if (collection.Key == null)
-				{
-					Seperator = "";
-					return "";
-				}
-
-				Seperator = ">";
-				return collection.Value ;
+				return metadata.FirstOrDefault(x => x.Key == "Raven-Entity-Name").Value;
 			}
 		}
 
@@ -208,18 +209,18 @@ namespace Raven.Studio.Models
 			{
 				double byteCount = Encoding.UTF8.GetByteCount(JsonData) + Encoding.UTF8.GetByteCount(JsonMetadata);
 				string sizeTerm = "Bytes";
-				if(byteCount > 1024*1024)
+				if (byteCount > 1024 * 1024)
 				{
 					sizeTerm = "MBytes";
-					byteCount = byteCount/1024*1024;
+					byteCount = byteCount / 1024 * 1024;
 				}
-				else if(byteCount > 1024)
+				else if (byteCount > 1024)
 				{
 					sizeTerm = "KBytes";
 					byteCount = byteCount / 1024;
-			
+
 				}
-				return string.Format("Content-Length: {0:#,#.##;;0} {1}", byteCount,sizeTerm);
+				return string.Format("Content-Length: {0:#,#.##;;0} {1}", byteCount, sizeTerm);
 			}
 		}
 
@@ -228,11 +229,11 @@ namespace Raven.Studio.Models
 		protected override Task LoadedTimerTickedAsync()
 		{
 			if (isLoaded == false ||
-				Mode != DocumentMode.DocumentWithId || 
+				Mode != DocumentMode.DocumentWithId ||
 				currentDatabase != Database.Value.Name)
 				return null;
 
-			return DatabaseCommands.GetAsync(documentKey)
+			return DatabaseCommands.GetAsync(DocumentKey)
 				.ContinueOnSuccess(docOnServer =>
 				{
 					if (docOnServer == null)
@@ -261,7 +262,7 @@ namespace Raven.Studio.Models
 				References.Add(new LinkModel
 							   {
 								   Title = source,
-								   HRef = "/Edit?id="+source
+								   HRef = "/Edit?id=" + source
 							   });
 			}
 		}
@@ -271,15 +272,15 @@ namespace Raven.Studio.Models
 			DatabaseCommands.GetDocumentsStartingWithAsync(Key + "/", 0, 15)
 				.ContinueOnSuccess(items =>
 								   {
-									if (items == null)
-										return;
+									   if (items == null)
+										   return;
 
-									var linkModels = items.Select(doc => new LinkModel
-																		 {
-																			Title = doc.Key,
-																			HRef = "/Edit?id=" + doc.Key
-																		 }).ToArray();
-									Related.Set(linkModels);
+									   var linkModels = items.Select(doc => new LinkModel
+																			{
+																				Title = doc.Key,
+																				HRef = "/Edit?id=" + doc.Key
+																			}).ToArray();
+									   Related.Set(linkModels);
 								   });
 		}
 
@@ -290,7 +291,6 @@ namespace Raven.Studio.Models
 			{
 				document.Value.Key = value;
 				OnPropertyChanged();
-				OnPropertyChanged("DisplayId");
 			}
 		}
 
@@ -299,7 +299,7 @@ namespace Raven.Studio.Models
 			get { return document.Value.Etag; }
 			set
 			{
-				document.Value.Etag = value; 
+				document.Value.Etag = value;
 				OnPropertyChanged();
 				OnPropertyChanged("Metadata");
 			}
@@ -308,7 +308,8 @@ namespace Raven.Studio.Models
 		public DateTime? LastModified
 		{
 			get { return document.Value.LastModified; }
-			set {
+			set
+			{
 				document.Value.LastModified = value;
 				OnPropertyChanged();
 				OnPropertyChanged("Metadata");
@@ -336,7 +337,7 @@ namespace Raven.Studio.Models
 
 		public ICommand Delete
 		{
-			get { return new DeleteDocumentCommand(Key, navigateToHome: true); }
+			get { return new DeleteDocumentCommand(Key, true); }
 		}
 
 		public ICommand Prettify
@@ -349,6 +350,21 @@ namespace Raven.Studio.Models
 			get { return new RefreshDocumentCommand(this); }
 		}
 
+		public ICommand EnableSearch
+		{
+			get { return new ChangeFieldValueCommand<EditableDocumentModel>(this, x => x.SearchEnabled = true); }
+		}
+
+		public ICommand DisableSearch
+		{
+			get { return new ChangeFieldValueCommand<EditableDocumentModel>(this, x => x.SearchEnabled = false); }
+		}
+
+		public ICommand ToggleSearch
+		{
+			get{return new ChangeFieldValueCommand<EditableDocumentModel>(this, x => x.SearchEnabled = !x.searchEnabled); }
+		}
+
 		private class RefreshDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel parent;
@@ -358,19 +374,24 @@ namespace Raven.Studio.Models
 				this.parent = parent;
 			}
 
+			public override bool CanExecute(object parameter)
+			{
+				return string.IsNullOrWhiteSpace(parent.DocumentKey) == false;
+			}
+
 			public override void Execute(object _)
 			{
-				parent.DatabaseCommands.GetAsync(parent.Key)
+				parent.DatabaseCommands.GetAsync(parent.DocumentKey)
 					.ContinueOnSuccess(doc =>
-					                   	{
-					                   		if (doc == null)
-					                   		{
-					                   			parent.HandleDocumentNotFound();
+										{
+											if (doc == null)
+											{
+												parent.HandleDocumentNotFound();
 												return;
-					                   		}
+											}
 
-					                   		parent.document.Value = doc;
-					                   	})
+											parent.document.Value = doc;
+										})
 					.Catch();
 			}
 		}
@@ -405,11 +426,11 @@ namespace Raven.Studio.Models
 				{
 					doc = RavenJObject.Parse(document.JsonData);
 					metadata = RavenJObject.Parse(document.JsonMetadata);
-					if (document.Key != null && document.Key.Contains("/") && 
+					if (document.Key != null && document.Key.Contains("/") &&
 						metadata.Value<string>(Constants.RavenEntityName) == null)
 					{
-						var entityName = document.Key.Split(new[] {"/"}, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-						if(entityName!=null && entityName.Length > 1)
+						var entityName = document.Key.Split(new[] { "/" }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+						if (entityName != null && entityName.Length > 1)
 						{
 							metadata[Constants.RavenEntityName] = char.ToUpper(entityName[0]) + entityName.Substring(1);
 						}
@@ -422,15 +443,13 @@ namespace Raven.Studio.Models
 				}
 				catch (JsonReaderException ex)
 				{
-					ErrorPresenter.Show(ex.Message, string.Empty);
+					ErrorPresenter.Show(ex.Message);
 					return;
 				}
-				
+
 				document.UpdateMetadata(metadata);
 				ApplicationModel.Current.AddNotification(new Notification("Saving document " + document.Key + " ..."));
-				DatabaseCommands.PutAsync(document.Key, document.Etag,
-										  doc,
-										  metadata)
+				DatabaseCommands.PutAsync(document.Key, document.Etag, doc, metadata)
 					.ContinueOnSuccess(result =>
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
@@ -462,7 +481,7 @@ namespace Raven.Studio.Models
 				}
 				catch (JsonReaderException ex)
 				{
-					ErrorPresenter.Show(ex.Message, string.Empty);
+					ErrorPresenter.Show(ex.Message);
 					return;
 				}
 				editableDocumentModel.UpdateMetadata(metadata);

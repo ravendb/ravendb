@@ -30,10 +30,12 @@ namespace Raven.Studio.Commands
 					DatabaseCommands.EnsureDatabaseExistsAsync(databaseName)
 						.ContinueOnSuccess(() => DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
 						.ContinueOnSuccessInTheUIThread(() =>
-											{
-												ApplicationModel.Current.Server.Value.Databases.Add(new DatabaseModel(databaseName, DatabaseCommands.ForDatabase(databaseName)));
-												ApplicationModel.Current.AddNotification(new Notification("Database " + databaseName + " created"));
-											})
+															{
+																var model = parameter as DatabasesListModel;
+																if (model != null)
+																	model.ForceTimerTicked();
+																ApplicationModel.Current.AddNotification(new Notification("Database " + databaseName + " created"));
+															})
 						.Catch();
 				});
 		}

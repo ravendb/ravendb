@@ -11,12 +11,18 @@ namespace Raven.Studio.Models
 {
 	public class ServerModel : Model, IDisposable
 	{
-		private readonly string url;
-		public const string DefaultDatabaseName = "Default";
+		public readonly string Url;
 		private DocumentStore documentStore;
 		private DatabaseModel[] defaultDatabase;
 
 		private string buildNumber;
+		private bool singleTenant;
+
+		
+		public DocumentConvention Conventions
+		{
+			get { return this.documentStore.Conventions; }
+		}
 		public string BuildNumber
 		{
 			get { return buildNumber; }
@@ -31,7 +37,7 @@ namespace Raven.Studio.Models
 
 		private ServerModel(string url)
 		{
-			this.url = url;
+			Url = url;
 			Databases = new BindableCollection<DatabaseModel>(model => model.Name);
 			SelectedDatabase = new Observable<DatabaseModel>();
 			License = new Observable<LicensingStatus>();
@@ -42,7 +48,7 @@ namespace Raven.Studio.Models
 		{
 			documentStore = new DocumentStore
 			{
-				Url = url
+				Url = Url
 			};
 
 			var urlParser = new UrlParser(UrlUtil.Url);
@@ -65,13 +71,12 @@ namespace Raven.Studio.Models
 					onWebRequest(eventArgs.Request);
 			};
 
+			defaultDatabase = new[] { new DatabaseModel(DatabaseModel.DefaultDatabaseName, documentStore) };
+			Databases.Set(defaultDatabase);
+			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
+
 			DisplayBuildNumber();
 			DisplyaLicenseStatus();
-
-			defaultDatabase = new[] { new DatabaseModel(DefaultDatabaseName, documentStore.AsyncDatabaseCommands) };
-			Databases.Set(defaultDatabase);
-			SelectedDatabase.Value = defaultDatabase[0];
-			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
 
 			var changeDatabaseCommand = new ChangeDatabaseCommand();
 			SelectedDatabase.PropertyChanged += (sender, args) =>
@@ -79,20 +84,27 @@ namespace Raven.Studio.Models
 				if (SelectedDatabase.Value == null)
 					return;
 				var databaseName = SelectedDatabase.Value.Name;
-				if (changeDatabaseCommand.CanExecute(databaseName))
-					changeDatabaseCommand.Execute(databaseName);
+				Command.ExecuteCommand(changeDatabaseCommand, databaseName);
 			};
 		}
 
 		public override Task TimerTickedAsync()
 		{
+			if (singleTenant)
+				return null;
+
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync()
 				.ContinueOnSuccess(names =>
 				{
-					var databaseModels = names.Select(db => new DatabaseModel(db, documentStore.AsyncDatabaseCommands.ForDatabase(db)));
+					var databaseModels = names.Select(db => new DatabaseModel(db, documentStore));
 					Databases.Match(defaultDatabase.Concat(databaseModels).ToArray());
 				})
 				.Catch();
+		}
+
+		public bool SingleTenant
+		{
+			get { return singleTenant; }
 		}
 
 		public Observable<DatabaseModel> SelectedDatabase { get; private set; }
@@ -126,32 +138,34 @@ namespace Raven.Studio.Models
 		{
 			var databaseName = urlParser.GetQueryParam("database");
 			if (databaseName == null)
+			{
+				SelectedDatabase.Value = defaultDatabase[0];
 				return;
+			}
 			if (SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
 				return;
 			var database = Databases.FirstOrDefault(x => x.Name == databaseName);
 			if (database != null)
 			{
 				SelectedDatabase.Value = database;
+				return;
 			}
-			else
-			{
-				var databaseModel = new DatabaseModel(databaseName, documentStore.AsyncDatabaseCommands.ForDatabase(databaseName));
-				Databases.Add(databaseModel);
-				SelectedDatabase.Value = databaseModel;
-			}
+			singleTenant = urlParser.GetQueryParam("api-key") != null;
+			var databaseModel = new DatabaseModel(databaseName, documentStore);
+			Databases.Add(databaseModel);
+			SelectedDatabase.Value = databaseModel;
 		}
 
 		private void DisplayBuildNumber()
 		{
-			documentStore.AsyncDatabaseCommands.GetBuildNumber()
+			SelectedDatabase.Value.AsyncDatabaseCommands.GetBuildNumber()
 				.ContinueOnSuccessInTheUIThread(x => BuildNumber = x.BuildVersion)
 				.Catch();
 		}
 
 		private void DisplyaLicenseStatus()
 		{
-			documentStore.AsyncDatabaseCommands.GetLicenseStatus()
+			SelectedDatabase.Value.AsyncDatabaseCommands.GetLicenseStatus()
 				.ContinueOnSuccessInTheUIThread(x =>
 				{
 					License.Value = x;

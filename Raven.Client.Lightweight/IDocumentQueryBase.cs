@@ -127,17 +127,26 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		///   Matches substrings of the field
 		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		TSelf WhereContains(string fieldName, object value);
 
 		/// <summary>
 		///   Matches substrings of the field
 		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		TSelf WhereContains(string fieldName, params object[] values);
 
 		/// <summary>
 		///   Matches substrings of the field
 		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		TSelf WhereContains(string fieldName, IEnumerable<object> values);
+
+
+		/// <summary>
+		/// Check that the field has one of the specified value
+		/// </summary>
+		TSelf WhereIn(string fieldName, IEnumerable<object> values);
 
 		/// <summary>
 		///   Matches fields which starts with the specified value.
@@ -314,6 +323,19 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		/// <param name = "waitTimeout">The wait timeout.</param>
 		TSelf WaitForNonStaleResults(TimeSpan waitTimeout);
+
+
+		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		TSelf RandomOrdering();
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		TSelf RandomOrdering(string seed);
+
 
 		/// <summary>
 		///   Adds an ordering for a specific field to the query

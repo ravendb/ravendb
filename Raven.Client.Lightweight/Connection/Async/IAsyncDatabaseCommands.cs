@@ -235,6 +235,8 @@ namespace Raven.Client.Connection.Async
 		Task<LicensingStatus> GetLicenseStatus();
 
 		Task<BuildNumber> GetBuildNumber();
+
+		Task StartBackupAsync(string backupLocation);
 	}
 }
 #endif

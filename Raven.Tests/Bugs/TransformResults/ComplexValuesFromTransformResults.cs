@@ -41,7 +41,7 @@ namespace Raven.Tests.Bugs.TransformResults
 
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
-					var user = new User { Id = @"user\222", DisplayName = "John Doe" };
+					var user = new User { Id = @"user/222", DisplayName = "John Doe" };
 					session.Store(user);
 
 					var question = new Question2
@@ -49,7 +49,7 @@ namespace Raven.Tests.Bugs.TransformResults
 						Id = questionId,
 						Title = "How to do this in RavenDb?",
 						Content = "I'm trying to find how to model documents for better DDD support.",
-						UserId = @"user\222"
+						UserId = @"user/222"
 					};
 					session.Store(question);
 
@@ -111,16 +111,46 @@ namespace Raven.Tests.Bugs.TransformResults
 		}
 
 		[Fact]
+		public void DecimalValues()
+		{
+			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
+			{
+				new Answers_ByQuestion().Execute(documentStore);
+
+				const string questionId = @"question/259";
+				using (IDocumentSession session = documentStore.OpenSession())
+				{
+					var vote1 = new AnswerVote { QuestionId = questionId, Delta = 2, DecimalValue = 20 };
+					session.Store(vote1);
+					var vote2 = new AnswerVote { QuestionId = questionId, Delta = 3, DecimalValue = 43 };
+					session.Store(vote2);
+
+					session.SaveChanges();
+				}
+
+				using (IDocumentSession session = documentStore.OpenSession())
+				{
+					AnswerViewItem questionInfo = session.Query<AnswerViewItem, Answers_ByQuestion>()
+						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
+						.Where(x => x.QuestionId == questionId)
+						.SingleOrDefault();
+					Assert.NotNull(questionInfo);
+					Assert.Equal(63, questionInfo.DecimalTotal);
+				}
+			}
+		}
+
+		[Fact]
 		public void write_then_read_from_stack_over_flow_types()
 		{
 			using (EmbeddableDocumentStore documentStore = NewDocumentStore())
 			{
 				new QuestionWithVoteTotalIndex().Execute(documentStore);
 
-				const string questionId = @"question\259";
+				const string questionId = @"question/259";
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
-					var user = new User { Id = @"user\222", DisplayName = "John Doe" };
+					var user = new User { Id = @"user/222", DisplayName = "John Doe" };
 					session.Store(user);
 
 					var question = new Question
@@ -128,7 +158,7 @@ namespace Raven.Tests.Bugs.TransformResults
 						Id = questionId,
 						Title = "How to do this in RavenDb?",
 						Content = "I'm trying to find how to model documents for better DDD support.",
-						UserId = @"user\222"
+						UserId = @"user/222"
 					};
 					session.Store(question);
 
@@ -159,7 +189,7 @@ namespace Raven.Tests.Bugs.TransformResults
 			{
 				new Answers_ByAnswerEntity().Execute(documentStore);
 
-				const string questionId = @"question\259";
+				const string questionId = @"question/259";
 				string answerId = CreateEntities(documentStore);
 
 				using (IDocumentSession session = documentStore.OpenSession())
@@ -228,7 +258,7 @@ namespace Raven.Tests.Bugs.TransformResults
 
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
-					var user = new User { Id = @"user\222", DisplayName = "John Doe" };
+					var user = new User { Id = @"user/222", DisplayName = "John Doe" };
 					session.Store(user);
 
 					var question = new Question2
@@ -236,7 +266,7 @@ namespace Raven.Tests.Bugs.TransformResults
 						Id = questionId,
 						Title = "How to do this in RavenDb?",
 						Content = "I'm trying to find how to model documents for better DDD support.",
-						UserId = @"user\222"
+						UserId = @"user/222"
 					};
 					session.Store(question);
 
@@ -292,7 +322,7 @@ namespace Raven.Tests.Bugs.TransformResults
 
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
-					var user = new User { Id = @"user\222", DisplayName = "John Doe" };
+					var user = new User { Id = @"user/222", DisplayName = "John Doe" };
 					session.Store(user);
 
 					var question = new Question2
@@ -300,7 +330,7 @@ namespace Raven.Tests.Bugs.TransformResults
 						Id = questionId,
 						Title = "How to do this in RavenDb?",
 						Content = "I'm trying to find how to model documents for better DDD support.",
-						UserId = @"user\222"
+						UserId = @"user/222"
 					};
 					session.Store(question);
 
@@ -369,12 +399,12 @@ namespace Raven.Tests.Bugs.TransformResults
 				new Answers_ByAnswerEntity().Execute(documentStore);
 
 				const string Content = "This is doable";
-				const string UserId = @"user\222";
+				const string UserId = @"user/222";
 
-				const string answerId = @"answer\540";
+				const string answerId = @"answer/540";
 				using (IDocumentSession session = documentStore.OpenSession())
 				{
-					var user = new User { Id = @"user\222", DisplayName = "John Doe" };
+					var user = new User { Id = @"user/222", DisplayName = "John Doe" };
 					session.Store(user);
 
 
@@ -430,11 +460,11 @@ namespace Raven.Tests.Bugs.TransformResults
 
 		public static string CreateEntities(IDocumentStore documentStore)
 		{
-			const string questionId = @"question\259";
-			const string answerId = @"answer\540";
+			const string questionId = @"question/259";
+			const string answerId = @"answer/540";
 			using (IDocumentSession session = documentStore.OpenSession())
 			{
-				var user = new User { Id = @"user\222", DisplayName = "John Doe" };
+				var user = new User { Id = @"user/222", DisplayName = "John Doe" };
 				session.Store(user);
 
 				var question = new Question
@@ -442,7 +472,7 @@ namespace Raven.Tests.Bugs.TransformResults
 					Id = questionId,
 					Title = "How to do this in RavenDb?",
 					Content = "I'm trying to find how to model documents for better DDD support.",
-					UserId = @"user\222"
+					UserId = @"user/222"
 				};
 				session.Store(question);
 

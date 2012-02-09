@@ -79,13 +79,26 @@ namespace Raven.Client.Silverlight.Connection
 				webRequest.ContentType = "application/json; charset=utf-8";
 		}
 
+		public Task<RavenJToken> ReadResponseJsonAsync()
+		{
+			return ReadResponseStringAsync()
+				.ContinueWith(task => RavenJToken.Parse(task.Result));
+		}
+
+		public Task ExecuteRequest()
+		{
+			return ReadResponseStringAsync();
+		}
+
 		/// <summary>
 		/// Begins the read response string.
 		/// </summary>
-		public Task<string> ReadResponseStringAsync()
+		private Task<string> ReadResponseStringAsync()
 		{
 			return WaitForTask.ContinueWith(_ => webRequest
 			                                     	.GetResponseAsync()
+													.ConvertSecurityExceptionToServerNotFound()
+													.AddUrlIfFaulting(webRequest.RequestUri)
 			                                     	.ContinueWith(t => ReadStringInternal(() => t.Result))
 			                                     	.ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
 			                                     	.Unwrap())
@@ -134,6 +147,8 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			return WaitForTask.ContinueWith(_ => webRequest
 			                                     	.GetResponseAsync()
+													.ConvertSecurityExceptionToServerNotFound()
+													.AddUrlIfFaulting(webRequest.RequestUri)
 			                                     	.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes))
 			                                     	.ContinueWith(task => RetryIfNeedTo(task, ReadResponseBytesAsync))
 			                                     	.Unwrap())

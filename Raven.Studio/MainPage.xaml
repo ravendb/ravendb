@@ -10,7 +10,8 @@
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 			 xmlns:System="clr-namespace:System;assembly=mscorlib"
 			 xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
-			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit">
+			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
@@ -19,6 +20,16 @@
 			<RowDefinition Height="*" />
 			<RowDefinition Height="35" />
 		</Grid.RowDefinitions>
+
+		<i:Interaction.Behaviors>
+			<Behaviors:KeyboardBehavior />
+		</i:Interaction.Behaviors>
+		<i:Interaction.Triggers>
+			<Behaviors:StudioKeyTrigger Key="O"
+										Modifiers="Control">
+				<i:InvokeCommandAction Command="{StaticResource NavigateToDocumentByIdCommand}"/>
+			</Behaviors:StudioKeyTrigger>
+		</i:Interaction.Triggers>
 
 		<Grid x:Name="HeaderGrid"
 			  Grid.Row="0"
@@ -77,7 +88,8 @@
 				<HyperlinkButton Grid.Column="1"
 								 HorizontalAlignment="Left"
 								 Margin="0,5,5,1"
-								 NavigateUri="http://beta.ravendb.net/"
+								 Command="{StaticResource NavigateToExternalUrlCommand}"
+								 CommandParameter="http://beta.ravendb.net/"
 								 TargetName="_blank">
 					<Image Source="{StaticResource Image_RavenDBLogo}"
 						   Stretch="Uniform"
@@ -197,6 +209,11 @@
 							  Navigated="ContentFrame_Navigated"
 							  NavigationFailed="ContentFrame_NavigationFailed"
 							  Margin="15,0">
+
+				<i:Interaction.Behaviors>
+					<Behaviors:OpenPageOnANewTabIfCtrlIsHold />
+				</i:Interaction.Behaviors>
+
 				<navigation:Frame.UriMapper>
 					<uriMapper:UriMapper>
 						<uriMapper:UriMapping Uri=""
@@ -211,8 +228,11 @@
 											  MappedUri="/Views/Query.xaml" />
 						<uriMapper:UriMapping Uri="/logs/{errors}"
 											  MappedUri="/Views/Logs.xaml" />
+						<uriMapper:UriMapping Uri="/terms/{indexName}"
+											  MappedUri="/Views/Terms.xaml" />
 						<uriMapper:UriMapping Uri="/{pageName}"
 											  MappedUri="/Views/{pageName}.xaml" />
+						
 					</uriMapper:UriMapper>
 				</navigation:Frame.UriMapper>
 			</navigation:Frame>
@@ -256,5 +276,4 @@
 			</toolkit:DockPanel>
 		</Grid>
 	</Grid>
-
 </UserControl>

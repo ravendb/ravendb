@@ -51,16 +51,8 @@ param(
 	[string]$fileVersion,
 	[string]$file = $(throw "file is a required parameter.")
 )
-  
-  if($env:buildlabel -eq 13 -and (Test-Path $file))
-	{
-      return
-	}
-   
-   $commit = Get-Git-Commit
- 
-  
-  $asmInfo = "using System;
+	$commit = Get-Git-Commit
+	$asmInfo = "using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -89,4 +81,12 @@ using System.Runtime.InteropServices;
 	}
 	Write-Host "Generating assembly info file: $file"
 	Write-Output $asmInfo > $file
+}
+
+function Get-DependencyPackageFiles
+{
+	param([string]$packageName, [string]$frameworkVersion = "net40")
+	
+	$fullPackageName = Get-ChildItem "$base_dir\packages\$packageName.*" | Sort-Object Name -Descending | Select-Object -First 1
+	Return "$fullPackageName\lib\$frameworkVersion\*"
 }

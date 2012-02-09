@@ -135,11 +135,19 @@ namespace Raven.Client.Linq
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms, decimal boost = 1)
+		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms, decimal boost = 1, SearchOptions options = SearchOptions.Or)
 		{
 			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof (T)), self.Expression,
-			                                                          fieldSelector, Expression.Constant(searchTerms), Expression.Constant(boost)));
+			Expression expression = self.Expression;
+			if(expression.Type != typeof(IRavenQueryable<T>))
+			{
+				expression = Expression.Convert(expression, typeof (IRavenQueryable<T>));
+			}
+			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof (T)), expression,
+			                                                          fieldSelector, 
+																	  Expression.Constant(searchTerms), 
+																	  Expression.Constant(boost),
+																	  Expression.Constant(options)));
 			return (IRavenQueryable<T>)queryable;
 		}
 

@@ -58,38 +58,27 @@ namespace Raven.Storage.Managed
 			return new Tuple<int, int>(first,last );
 		}
 
-		public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(int startId, int endId)
-		{
-			var results = storage.Documents["ById"].SkipTo(new RavenJObject{{"id", startId}})
-				.TakeWhile(x=>x.Value<int>("id") <= endId);
-
-			foreach (var result in results)
-			{
-				yield return new Tuple<JsonDocument, int>(
-					DocumentByKey(result.Value<string>("key"), null),
-					result.Value<int>("id")
-					);
-			}
-		}
-
-		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start)
+		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
 		{
 			return storage.Documents["ByEtag"].SkipFromEnd(start)
-				.Select(result => DocumentByKey(result.Value<string>("key"), null));
+				.Select(result => DocumentByKey(result.Value<string>("key"), null))
+				.Take(take);
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take)
 		{
 			return storage.Documents["ByEtag"].SkipAfter(new RavenJObject{{"etag", etag.ToByteArray()}})
-				.Select(result => DocumentByKey(result.Value<string>("key"), null));
+				.Select(result => DocumentByKey(result.Value<string>("key"), null))
+				.Take(take);
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start)
+		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
-			return storage.Documents["ByKey"].SkipAfter(new RavenJObject{{"key", idPrefix }})
+			return storage.Documents["ByKey"].SkipTo(new RavenJObject{{"key", idPrefix }})
 				.Skip(start)
 				.TakeWhile(x => x.Value<string>("key").StartsWith(idPrefix))
-				.Select(result => DocumentByKey(result.Value<string>("key"), null));
+				.Select(result => DocumentByKey(result.Value<string>("key"), null))
+				.Take(take);
 		}
 
 		public long GetDocumentsCount()
@@ -132,10 +121,7 @@ namespace Raven.Storage.Managed
 
 					var txEtag = new Guid(resultInTx.Key.Value<byte[]>("etag"));
 					Tuple<MemoryStream, RavenJObject> resultTx = null;
-					if (resultInTx.Position != -1)
-					{
-						resultTx = ReadMetadata(key, txEtag, resultInTx.Data, out metadata);
-					}
+					resultTx = ReadMetadata(key, txEtag, resultInTx.Data, out metadata);
 					return createResult(resultTx, new JsonDocumentMetadata
 					{
 						Key = key,

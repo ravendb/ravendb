@@ -34,6 +34,17 @@ namespace Raven.Client.Document
 		IEnumerable<string> GetProjectionFields();
 
 		/// <summary>
+		/// Order the search results randomly
+		/// </summary>
+		void RandomOrdering();
+
+		/// <summary>
+		/// Order the search results randomly using the specified seed
+		/// this is useful if you want to have repeatable random queries
+		/// </summary>
+		void RandomOrdering(string seed);
+
+		/// <summary>
 		///   Adds an ordering for a specific field to the query
 		/// </summary>
 		/// <param name = "fieldName">Name of the field.</param>
@@ -127,18 +138,26 @@ namespace Raven.Client.Document
 		void NegateNext();
 
 		/// <summary>
-		///   Matches substrings of the field
+		/// Check that the field has one of the specified value
 		/// </summary>
+		void WhereIn(string fieldName, IEnumerable<object> values);
+
+		/// <summary>
+		///   Avoid using WhereConatins(), use Search() instead
+		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		void WhereContains(string fieldName, object value);
 
 		/// <summary>
-		///   Matches substrings of the field
+		///   Avoid using WhereConatins(), use Search() instead
 		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		void WhereContains(string fieldName, params object [] values);
 
 		/// <summary>
-		///   Matches substrings of the field
+		///   Avoid using WhereConatins(), use Search() instead
 		/// </summary>
+		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
 		void WhereContains(string fieldName, IEnumerable<object> values);
 
 		/// <summary>

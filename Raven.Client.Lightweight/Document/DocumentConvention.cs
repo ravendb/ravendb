@@ -45,6 +45,7 @@ namespace Raven.Client.Document
 				new Int32Converter(),
 				new Int64Converter(),
 			};
+			EnlistInDistributedTransactions = true;
 			UseParallelMultiGet = true;
 			DefaultQueryingConsistency = ConsistencyOptions.MonotonicRead;
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
@@ -416,6 +417,11 @@ namespace Raven.Client.Document
 		/// Translate the type tag name to the document key prefix
 		/// </summary>
 		public Func<string, string> TransformTypeTagNameToDocumentKeyPrefix { get; set; }
+
+		///<summary>
+		/// Whatever or not RavenDB will automatically enlist in distributed transactions
+		///</summary>
+		public bool EnlistInDistributedTransactions { get; set; }
 	}
 
 

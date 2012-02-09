@@ -7,9 +7,8 @@ namespace Raven.Database.Server.Security.OAuth
 	public class AccessTokenBody
 	{
 		public string UserId { get; set; }
-		public string[] AuthorizedDatabases { get; set; }
+		public DatabaseAccess[] AuthorizedDatabases { get; set; }
 		public double Issued { get; set; }
-		public bool ReadOnly { get; set; }
 
 		public bool IsExpired()
 		{
@@ -17,9 +16,32 @@ namespace Raven.Database.Server.Security.OAuth
 			return !(issued < SystemTime.UtcNow && SystemTime.UtcNow.Subtract(issued) < TimeSpan.FromMinutes(30));
 		}
 
-		public bool IsAuthorized(string tenantId)
+		public bool IsAuthorized(string tenantId, bool writeAccess)
 		{
-			return AuthorizedDatabases != null && AuthorizedDatabases.Any(a => a.Equals(tenantId, StringComparison.OrdinalIgnoreCase) || a == "*");
+			if (AuthorizedDatabases == null)
+				return false;
+			var db = AuthorizedDatabases.FirstOrDefault(a => 
+				
+					string.Equals(a.TenantId,tenantId, StringComparison.OrdinalIgnoreCase) || 
+					string.Equals(a.TenantId, "*")
+
+				);
+			if (db == null)
+				return false;
+
+			if (writeAccess && db.ReadOnly)
+				return false;
+
+			return true;
+		}
+
+		public class DatabaseAccess
+		{
+			public bool Admin { get; set; }
+			public string TenantId { get; set; }
+			public bool ReadOnly { get; set; }
 		}
 	}
+
+	
 }

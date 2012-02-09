@@ -41,8 +41,8 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\SharedLibs\Newtonsoft.Json\Net\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.4.0.5\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -61,6 +61,7 @@
     <Compile Include="Data\AggregationOperation.cs" />
     <Compile Include="Data\AggregationOperationExtensions.cs" />
     <Compile Include="Data\Attachment.cs" />
+    <Compile Include="Data\BackupStatus.cs" />
     <Compile Include="Data\BatchResult.cs" />
     <Compile Include="Data\BoostedValue.cs" />
     <Compile Include="Data\BuildNumber.cs" />
@@ -128,7 +129,7 @@
     <Compile Include="Json\JsonToJsonConverter.cs" />
     <Compile Include="Extensions\MetadataExtensions.cs" />
     <Compile Include="Extensions\Reference.cs" />
-    <Compile Include="Extensions\StreamExtension.cs" />
+    <Compile Include="Extensions\StreamExtensions.cs" />
     <Compile Include="Indexing\FieldIndexing.cs" />
     <Compile Include="Indexing\FieldStorage.cs" />
     <Compile Include="Indexing\IndexDefinition.cs" />
@@ -156,6 +157,7 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />

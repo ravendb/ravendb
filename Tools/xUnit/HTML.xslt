@@ -40,43 +40,41 @@
                 </script>
             </head>
             <body>
-                <xsl:apply-templates/>
+                <h3 class="divided"><b>Assemblies Run</b></h3>
+                <xsl:apply-templates select="//assembly"/>
+
+                <h3 class="divided"><b>Summary</b></h3>
+                <div>
+                    Tests run: <a href="#all"><b><xsl:value-of select="sum(//assembly/@total)"/></b></a> &#160;
+                    Failures: <a href="#failures"><b><xsl:value-of select="sum(//assembly/@failed)"/></b></a>,
+                    Skipped: <a href="#skipped"><b><xsl:value-of select="sum(//assembly/@skipped)"/></b></a>,
+                    Run time: <b><xsl:value-of select="sum(//assembly/@time)"/>s</b>
+                </div>
+                <xsl:if test="//assembly/class/test[@result='Fail']">
+                    <br />
+                    <h2><a name="failures"></a>Failed tests</h2>
+                    <xsl:apply-templates select="//assembly/class/test[@result='Fail']"><xsl:sort select="@name"/></xsl:apply-templates>
+                </xsl:if>
+                <xsl:if test="//assembly/class/failure">
+                    <br />
+                    <h2><a name="failures"></a>Failed fixtures</h2>
+                    <xsl:apply-templates select="//assembly/class/failure"><xsl:sort select="../@name"/></xsl:apply-templates>
+                </xsl:if>
+                <xsl:if test="//assembly/@skipped > 0">
+                    <br />
+                    <h2><a name="skipped"></a>Skipped tests</h2>
+                    <xsl:apply-templates select="//assembly/class/test[@result='Skip']"><xsl:sort select="@name"/></xsl:apply-templates>
+                </xsl:if>
+                <br />
+                <h2><a name="all"></a>All tests</h2>
+                <h5>Click test class name to expand/collapse test details</h5>
+                <xsl:apply-templates select="//assembly/class"><xsl:sort select="@name"/></xsl:apply-templates>
             </body>
         </html>
     </xsl:template>
 
-    <xsl:template match="assemblies">
-        <xsl:apply-templates/>
-    </xsl:template>
-
     <xsl:template match="assembly">
-        <h3 class="divided"><b>Results for <xsl:value-of select="@name"/></b></h3>
-        <div>
-            Tests run: <a href="#all"><b><xsl:value-of select="@total"/></b></a> &#160;
-            Failures: <a href="#failures"><b><xsl:value-of select="@failed"/></b></a>,
-            Skipped: <a href="#skipped"><b><xsl:value-of select="@skipped"/></b></a>,
-            Run time: <b><xsl:value-of select="@time"/>s</b>
-        </div>
-        <xsl:if test="class/test[@result='Fail']">
-            <br />
-            <h2><a name="failures"></a>Failed tests</h2>
-            <xsl:apply-templates select="class/test[@result='Fail']"><xsl:sort select="@name"/></xsl:apply-templates>
-        </xsl:if>
-        <xsl:if test="class/failure">
-            <br />
-            <h2><a name="failures"></a>Failed fixtures</h2>
-            <xsl:apply-templates select="class/failure"><xsl:sort select="../@name"/></xsl:apply-templates>
-        </xsl:if>
-        <xsl:if test="@skipped > 0">
-            <br />
-            <h2><a name="skipped"></a>Skipped tests</h2>
-            <xsl:apply-templates select="class/test[@result='Skip']"><xsl:sort select="@name"/></xsl:apply-templates>
-        </xsl:if>
-        <br />
-        <h2><a name="all"></a>All tests</h2>
-        <h5>Click test class name to expand/collapse test details</h5>
-        <xsl:apply-templates select="class"><xsl:sort select="@name"/></xsl:apply-templates>
-        <br /><h5>Results generated <xsl:value-of select="@run-date"/> at <xsl:value-of select="@run-time"/></h5>
+        <div><xsl:value-of select="@name"/></div>
     </xsl:template>
 
     <xsl:template match="test">
@@ -109,8 +107,8 @@
         <h3>
             <span class="timing"><xsl:value-of select="@time"/>s</span>
             <span class="clickable">
-                <xsl:attribute name="onclick">ToggleClass('class<xsl:value-of select="position()"/>')</xsl:attribute>
-                <xsl:attribute name="ondblclick">ToggleClass('class<xsl:value-of select="position()"/>')</xsl:attribute>
+                <xsl:attribute name="onclick">ToggleClass('class<xsl:value-of select="generate-id()"/>')</xsl:attribute>
+                <xsl:attribute name="ondblclick">ToggleClass('class<xsl:value-of select="generate-id()"/>')</xsl:attribute>
                 <xsl:if test="@failed > 0"><span class="failure">&#x2718;</span></xsl:if>
                 <xsl:if test="@failed = 0"><span class="success">&#x2714;</span></xsl:if>
                 &#160;<xsl:value-of select="@name"/>
@@ -120,7 +118,7 @@
         </h3>
         <div class="indent">
             <xsl:if test="@failed = 0"><xsl:attribute name="style">display: none;</xsl:attribute></xsl:if>
-            <xsl:attribute name="id">class<xsl:value-of select="position()"/></xsl:attribute>
+            <xsl:attribute name="id">class<xsl:value-of select="generate-id()"/></xsl:attribute>
             <xsl:apply-templates select="test"><xsl:sort select="@name"/></xsl:apply-templates>
         </div>
     </xsl:template>

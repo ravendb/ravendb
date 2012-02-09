@@ -54,25 +54,23 @@ namespace Raven.Database.Server.Security.OAuth
 				return false;
 			}
 
-			if(!tokenBody.IsAuthorized(TenantId))
+			var writeAccess = isGetRequest == false;
+			if(!tokenBody.IsAuthorized(TenantId, writeAccess))
 			{
 				if (allowUnauthenticatedUsers)
 					return true;
 
-				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope", "Not authorized for tenant " + TenantId);
+				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope", 
+					writeAccess ?
+					"Not authorized for read/write access for tenant " + TenantId :
+					"Not authorized for tenant " + TenantId);
 	   
 				return false;
 			}
-
-			if(tokenBody.ReadOnly && isGetRequest)
-			{
-				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope", "Not authorized for writing to tenant " + TenantId);
-
-				return false;
-			}
 			
-			ctx.User = new OAuthPrincipal(tokenBody);
+			ctx.User = new OAuthPrincipal(tokenBody, TenantId);
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = tokenBody.UserId;
+			CurrentOperationContext.User.Value = ctx.User;
 			return true;
 		}
 
@@ -104,20 +102,25 @@ namespace Raven.Database.Server.Security.OAuth
 	public class OAuthPrincipal : IPrincipal, IIdentity
 	{
 		private readonly AccessTokenBody tokenBody;
+		private readonly string tenantId;
 
-		public OAuthPrincipal(AccessTokenBody tokenBody)
+		public OAuthPrincipal(AccessTokenBody tokenBody, string tenantId)
 		{
 			this.tokenBody = tokenBody;
+			this.tenantId = tenantId;
 		}
 
 		public bool IsInRole(string role)
 		{
-			return false;
-		}
+			if ("Administrators".Equals(role, StringComparison.InvariantCultureIgnoreCase) == false)
+				return false;
 
-		public string[] AuthorizedDatabases
-		{
-			get { return tokenBody.AuthorizedDatabases; }
+			var databaseAccess = tokenBody.AuthorizedDatabases.FirstOrDefault(x=>string.Equals(x.TenantId, tenantId, StringComparison.InvariantCultureIgnoreCase) || x.TenantId == "*");
+
+			if (databaseAccess == null)
+				return false;
+
+			return databaseAccess.Admin;
 		}
 
 		public IIdentity Identity

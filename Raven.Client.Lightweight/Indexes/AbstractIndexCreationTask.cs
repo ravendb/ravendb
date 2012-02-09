@@ -49,6 +49,22 @@ namespace Raven.Client.Indexes
 		/// <value>The document store.</value>
 		public DocumentConvention Conventions { get; set; }
 
+		/// <summary>
+		/// Provide a way to dynamically index values with runtime known values
+		/// </summary>
+		protected object CreateField(string name, object value, bool stored, bool indexed)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		/// <summary>
+		/// Provide a way to dynamically index values with runtime known values
+		/// </summary>
+		protected object CreateField(string name, object value)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
 #if !NET_3_5
 		/// <summary>
 		/// Allows to use lambdas recursively
@@ -62,6 +78,14 @@ namespace Raven.Client.Indexes
 		/// Allow to get to the metadata of the document
 		/// </summary>
 		protected RavenJObject MetadataFor(object doc)
+		{
+			throw new NotSupportedException("This is here as a marker only");
+		}
+
+		/// <summary>
+		/// Allow to get to the metadata of the document
+		/// </summary>
+		protected RavenJObject AsDocument(object doc)
 		{
 			throw new NotSupportedException("This is here as a marker only");
 		}

@@ -11,7 +11,7 @@ namespace Raven.Studio.Infrastructure.Converters
 		{
 			int greaterThan;
 			if (value is int && int.TryParse(parameter as string, out greaterThan))
-				return ((int)value) < greaterThan ? Visibility.Visible : Visibility.Collapsed;
+				return ((int)value) <= greaterThan ? Visibility.Visible : Visibility.Collapsed;
 
 			return Visibility.Visible;
 		}

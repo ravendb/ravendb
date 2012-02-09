@@ -11,16 +11,14 @@ using System.Xml.Linq;
 
 namespace Raven.ProjectRewriter
 {
-    class Program
-    {
+	class Program
+	{
 		static XNamespace xmlns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
 		static void Main(string[] args)
 		{
-            if (args.Length == 1 && args[0] == "commercial")
-                MarkDatabaseProjectAsCommercial(xmlns);
+			if (args.Length == 1 && args[0] == "commercial")
+				MarkDatabaseProjectAsCommercial(xmlns);
 
-			Generate35(@"Modules\Json\Raven.Json\Raven.Json.csproj",
-				@"Modules\Json\Raven.Json\Raven.Json.g.3.5.csproj");
 			Generate35(@"Raven.Abstractions\Raven.Abstractions.csproj",
 				@"Raven.Abstractions\Raven.Abstractions.g.3.5.csproj",
 				"Raven.Json");
@@ -28,10 +26,10 @@ namespace Raven.ProjectRewriter
 				@"Raven.Client.Lightweight\Raven.Client.Lightweight.g.3.5.csproj",
 				"Raven.Json",
 				"Raven.Abstractions");
-        }
+		}
 
-    	private static void Generate35(string srcPath, string destFile, params string[] references)
-    	{
+		private static void Generate35(string srcPath, string destFile, params string[] references)
+		{
 			var database = XDocument.Load(srcPath);
 			foreach (var element in database.Root.Descendants(xmlns + "DefineConstants").ToArray())
 			{
@@ -56,9 +54,11 @@ namespace Raven.ProjectRewriter
 					element.Remove();
 				if (element.Attribute("Include").Value == "System.ComponentModel.Composition")
 					element.Remove();
-				if (element.Attribute("Include").Value == "Newtonsoft.Json")
+
+				var nugetPakcages = new[] {"Newtonsoft.Json", "NLog"};
+				if (nugetPakcages.Any(x => element.Attribute("Include").Value.StartsWith(x)))
 				{
-					element.Element(xmlns + "HintPath").Value = @"..\SharedLibs\NewtonSoft.Json\Net35\Newtonsoft.Json.dll";
+					element.Element(xmlns + "HintPath").Value = element.Element(xmlns + "HintPath").Value.Replace("net40", "net35");
 				}
 			}
 
@@ -87,26 +87,26 @@ namespace Raven.ProjectRewriter
 				database.WriteTo(xmlWriter);
 				xmlWriter.Flush();
 			}
-    	}
+		}
 
-        private static void MarkDatabaseProjectAsCommercial(XNamespace xmlns)
-        {
-            var database = XDocument.Load(@"Raven.Database\Raven.Database.csproj");
-            foreach (var element in database.Root.Descendants(xmlns + "DefineConstants").ToArray())
-            {
-                if (element.Value.EndsWith(";") == false)
-                    element.Value += ";";
-                element.Value += "COMMERCIAL";
-            }
-            using (var xmlWriter = XmlWriter.Create(@"Raven.Database\Raven.Database.g.csproj",
-                                                    new XmlWriterSettings
-                                                    {
-                                                        Indent = true
-                                                    }))
-            {
-                database.WriteTo(xmlWriter);
-                xmlWriter.Flush();
-            }
-        }
-    }
+		private static void MarkDatabaseProjectAsCommercial(XNamespace xmlns)
+		{
+			var database = XDocument.Load(@"Raven.Database\Raven.Database.csproj");
+			foreach (var element in database.Root.Descendants(xmlns + "DefineConstants").ToArray())
+			{
+				if (element.Value.EndsWith(";") == false)
+					element.Value += ";";
+				element.Value += "COMMERCIAL";
+			}
+			using (var xmlWriter = XmlWriter.Create(@"Raven.Database\Raven.Database.g.csproj",
+													new XmlWriterSettings
+													{
+														Indent = true
+													}))
+			{
+				database.WriteTo(xmlWriter);
+				xmlWriter.Flush();
+			}
+		}
+	}
 }

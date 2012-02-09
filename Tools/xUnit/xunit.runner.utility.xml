@@ -663,10 +663,10 @@
         </member>
         <member name="M:Xunit.XunitFilters.Filter(Xunit.TestMethod)">
             <summary>
-            Filters the given methods using the defined filter values.
+            Filters the given method using the defined filter values.
             </summary>
-            <param name="methods">The methods to filter.</param>
-            <returns>The filtered methods.</returns>
+            <param name="method">The methods to filter.</param>
+            <returns>Returns true if the method passed the filter; return false otherwise.</returns>
         </member>
         <member name="P:Xunit.XunitFilters.ExcludedTraits">
             <summary>

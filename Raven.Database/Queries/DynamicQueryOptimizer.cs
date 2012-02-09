@@ -29,6 +29,15 @@ namespace Raven.Database.Queries
 			if(indexQuery.AggregationOperation != AggregationOperation.None)
 				return null;
 
+			if (string.IsNullOrEmpty(indexQuery.Query) && // we optimize for empty queries to use Raven/DocumentsByEntityName
+			    (indexQuery.SortedFields == null || indexQuery.SortedFields.Length == 0) && // and no sorting was requested
+				database.IndexDefinitionStorage.Contains("Raven/DocumentsByEntityName")) // and Raven/DocumentsByEntityName exists
+			{
+				if (string.IsNullOrEmpty(entityName) == false)
+					indexQuery.Query = "Tag:" + entityName;
+				return "Raven/DocumentsByEntityName";
+			}
+
 			var fieldsQueriedUpon = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2).ToArray();
 			var normalizedFieldsQueriedUpon =
 				fieldsQueriedUpon.Select(DynamicQueryMapping.ReplaceIndavlidCharactersForFields).ToArray();
@@ -92,6 +101,9 @@ namespace Raven.Database.Queries
 
 							foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
 							{
+								if(sortedField.Field.StartsWith(Constants.RandomFieldName))
+									continue;
+
 								// if the field is not in the output, then we can't sort on it. 
 								if (abstractViewGenerator.ContainsField(sortedField.Field) == false)
 									return false;

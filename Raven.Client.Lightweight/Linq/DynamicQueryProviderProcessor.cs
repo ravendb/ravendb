@@ -54,6 +54,9 @@ namespace Raven.Client.Linq
 			//for standard queries, we take just the last part. But for dynamic queries, we take the whole part
 			path = path.Substring(path.IndexOf('.') + 1);
 
+			if (expression.NodeType == ExpressionType.ArrayLength)
+				path += ".Length";
+
 			return new ExpressionInfo(
 				queryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, CurrentPath, path), 
 				memberType,

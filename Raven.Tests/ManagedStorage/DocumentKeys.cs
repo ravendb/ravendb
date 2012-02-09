@@ -24,7 +24,7 @@ namespace Raven.Tests.ManagedStorage
 
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(viewer => Assert.Equal(new[] { "Ayende" }, viewer.Documents.GetDocumentsAfter(Guid.Empty).Select(x=>x.Key).ToArray()));
+				tx.Batch(viewer => Assert.Equal(new[] { "Ayende" }, viewer.Documents.GetDocumentsAfter(Guid.Empty,5).Select(x=>x.Key).ToArray()));
 			}
 		}
 	}

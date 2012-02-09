@@ -148,12 +148,10 @@ namespace Raven.Client.Connection.Async
 					request.AddOperationHeaders(OperationsHeaders);
 					var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
 					return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite,serializeObject, null)
-						.ContinueWith(writeTask =>  request.ReadResponseStringAsync()
-													.ContinueWith(readStrTask =>
+						.ContinueWith(writeTask =>  request.ReadResponseJsonAsync()
+													.ContinueWith(readJsonTask =>
 													{
-														var obj = new { index = "" };
-														obj = JsonConvert.DeserializeAnonymousType(readStrTask.Result, obj);
-														return obj.index;
+														return readJsonTask.Result.Value<string>("index");
 													})).Unwrap();
 				}).Unwrap();
 		}
@@ -172,7 +170,7 @@ namespace Raven.Client.Connection.Async
 			string path = queryToDelete.GetIndexQueryUrl(url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "DELETE", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
-			return request.ReadResponseStringAsync()
+			return request.ExecuteRequestAsync()
 				.ContinueWith(task =>
 				{
 					var aggregateException = task.Exception;
@@ -221,12 +219,12 @@ namespace Raven.Client.Connection.Async
 					if (task.Exception != null)
 						throw new InvalidOperationException("Unable to write to server");
 
-					return request.ReadResponseStringAsync()
+					return request.ReadResponseJsonAsync()
 						.ContinueWith(task1 =>
 						{
 							try
 							{
-								return JsonConvert.DeserializeObject<PutResult>(task1.Result, Default.Converters);
+								return convention.CreateSerializer().Deserialize<PutResult>(new RavenJTokenReader(task1.Result));
 							}
 							catch (WebException e)
 							{
@@ -315,13 +313,13 @@ namespace Raven.Client.Connection.Async
 			AddTransactionInformation(metadata);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, "GET", metadata, credentials, convention);
 
-			return request.ReadResponseStringAsync()
+			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
 				{
 					try
 					{
-						var responseString = task.Result;
-						return SerializationHelper.DeserializeJsonDocument(key, responseString, request.ResponseHeaders, request.ResponseStatusCode);
+						var requestJson = task.Result;
+						return SerializationHelper.DeserializeJsonDocument(key, requestJson, request.ResponseHeaders, request.ResponseStatusCode);
 					}
 					catch (WebException e)
 					{
@@ -364,21 +362,21 @@ namespace Raven.Client.Connection.Async
 			{
 				path += "&" + string.Join("&", keys.Select(x => "id=" + x).ToArray());
 				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
-				return request.ReadResponseStringAsync()
+				return request.ReadResponseJsonAsync()
 					.ContinueWith(task => CompleteMultiGetAsync(task));
 			}
 			request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
 			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, new RavenJArray(keys).ToString(Formatting.None), null)
-				.ContinueWith(writeTask => request.ReadResponseStringAsync())
+				.ContinueWith(writeTask => request.ReadResponseJsonAsync())
 				.Unwrap()
 				.ContinueWith(task => CompleteMultiGetAsync(task));
 		}
 
-		private static MultiLoadResult CompleteMultiGetAsync(Task<string> task)
+		private static MultiLoadResult CompleteMultiGetAsync(Task<RavenJToken> task)
 		{
 			try
 			{
-				var result = RavenJObject.Parse(task.Result);
+				var result = task.Result;
 
 				return new MultiLoadResult
 				{
@@ -406,8 +404,8 @@ namespace Raven.Client.Connection.Async
 		{
 			var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
 			return jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention)
-						.ReadResponseStringAsync()
-						.ContinueWith(task => RavenJArray.Parse(task.Result)
+						.ReadResponseJsonAsync()
+						.ContinueWith(task => ((RavenJArray)task.Result)
 												.Cast<RavenJObject>()
 												.ToJsonDocuments()
 												.ToArray());
@@ -426,15 +424,11 @@ namespace Raven.Client.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ReadResponseStringAsync()
+			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
 				{
-					using (var reader = new JsonTextReader(new StringReader(task.Result)))
-					{
-						var json = (RavenJObject)RavenJToken.Load(reader);
-						var jsonAsType = json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
-						return jsonAsType;
-					}
+					var json = (RavenJObject) task.Result;
+					return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
 				});
 		}
 
@@ -449,6 +443,11 @@ namespace Raven.Client.Connection.Async
 		}
 
 		public Task<BuildNumber> GetBuildNumber()
+		{
+			throw new NotImplementedException();
+		}
+
+		public Task StartBackupAsync(string backupLocation)
 		{
 			throw new NotImplementedException();
 		}
@@ -480,10 +479,10 @@ namespace Raven.Client.Connection.Async
 					task =>
 					{
 						task.Wait();// will throw on error
-						return httpJsonRequest.ReadResponseStringAsync()
+						return httpJsonRequest.ReadResponseJsonAsync()
 							.ContinueWith(replyTask =>
 							{
-								var responses = JsonConvert.DeserializeObject<GetResponse[]>(replyTask.Result);
+								var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(new RavenJTokenReader(replyTask.Result));
 								return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
 							})
 						;
@@ -522,12 +521,10 @@ namespace Raven.Client.Connection.Async
 			}
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
 
-			return request.ReadResponseStringAsync()
+			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
 				{
-					RavenJObject json;
-					using (var reader = new JsonTextReader(new StringReader(task.Result)))
-						json = (RavenJObject)RavenJToken.Load(reader);
+					var json = (RavenJObject) task.Result;
 
 					return new QueryResult
 					{
@@ -564,17 +561,14 @@ namespace Raven.Client.Connection.Async
 			request.AddOperationHeaders(OperationsHeaders);
 			var serializer = convention.CreateSerializer();
 
-			return request.ReadResponseStringAsync()
+			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
 				{
-					using (var reader = new JsonTextReader(new StringReader(task.Result)))
+					var json = (RavenJObject) task.Result;
+					return new SuggestionQueryResult
 					{
-						var json = (RavenJObject)serializer.Deserialize(reader);
-						return new SuggestionQueryResult
-						{
-							Suggestions = ((RavenJArray)json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
-						};
-					}
+						Suggestions = ((RavenJArray) json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
+					};
 				});
 		}
 
@@ -592,14 +586,14 @@ namespace Raven.Client.Connection.Async
 			var data = jArray.ToString(Formatting.None);
 
 			return Task.Factory.FromAsync(req.BeginWrite, req.EndWrite, data, null)
-				.ContinueWith(writeTask => req.ReadResponseStringAsync())
+				.ContinueWith(writeTask => req.ReadResponseJsonAsync())
 				.Unwrap()
 				.ContinueWith(task =>
 				{
-					string response;
+					RavenJArray response;
 					try
 					{
-						response = task.Result;
+						response = (RavenJArray)task.Result;
 					}
 					catch (WebException e)
 					{
@@ -609,7 +603,7 @@ namespace Raven.Client.Connection.Async
 							throw;
 						throw ThrowConcurrencyException(e);
 					}
-					return JsonConvert.DeserializeObject<BatchResult[]>(response, new JsonToJsonConverter());
+					return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 				});
 
 		}
@@ -666,10 +660,10 @@ namespace Raven.Client.Connection.Async
 			return url.Databases()
 				.NoCache()
 				.ToJsonRequest(this, credentials, convention)
-				.ReadResponseStringAsync()
+				.ReadResponseJsonAsync()
 				.ContinueWith(task =>
 				{
-					var json = (RavenJArray)RavenJToken.Parse(task.Result);
+					var json = (RavenJArray)task.Result;
 					return json
 						.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
 						.ToArray();

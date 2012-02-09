@@ -1,13 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
+using Raven.Studio.Controls;
 
 namespace Raven.Studio
 {
@@ -19,15 +13,33 @@ namespace Raven.Studio
 			InitializeComponent();
 		}
 
+		public static readonly DependencyProperty IsActiveProperty =
+			DependencyProperty.Register("IsActive", typeof (bool), typeof (SearchControl), new PropertyMetadata(default(bool), IsActiveCallback));
+
+		private static void IsActiveCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs args)
+		{
+			var searchTool = (SearchControl) dependencyObject;
+			if(searchTool == null)
+				return;
+
+			if((bool)args.NewValue)
+			{
+				searchTool.Visibility = Visibility.Visible;
+				searchTool.Text = WordHighlightTagger.SearchBeforeClose;
+				searchTool.searchField.Focus();
+			}
+			else
+			{
+				searchTool.Visibility = Visibility.Collapsed;
+				WordHighlightTagger.SearchBeforeClose = searchTool.Text;
+				searchTool.Text = "";
+			}
+		}
+
 		public bool IsActive
 		{
-			get { return this.Visibility == Visibility.Visible; }
-			set
-			{
-				Visibility = value ? Visibility.Visible : Visibility.Collapsed;
-				if (value)
-					searchField.Focus();
-			}
+			get { return (bool) GetValue(IsActiveProperty); }
+			set { SetValue(IsActiveProperty, value); }
 		}
 
 		public string Text
@@ -36,17 +48,9 @@ namespace Raven.Studio
 			set { searchField.Text = value; }
 		}
 
-		public int NumberOfResults { get; set; }
-		public int SelectedResult { get; set; }
-
 		private void Close_Click(object sender, RoutedEventArgs e)
 		{
 			IsActive = false;
-		}
-
-		private void searchField_TextChanged(object sender, TextChangedEventArgs e)
-		{
-			//TODO: will it get the string of text to search in ?
 		}
 	}
 }

@@ -26,6 +26,7 @@ using Raven.Client.Listeners;
 using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
+
 #endif
 
 namespace Raven.Client.Document
@@ -111,7 +112,6 @@ namespace Raven.Client.Document
 
 #if !SILVERLIGHT
 			MaxNumberOfCachedRequests = 2048;
-			EnlistInDistributedTransactions = true;
 			SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
 #else
 			SharedOperationsHeaders = new System.Collections.Generic.Dictionary<string,string>();
@@ -214,6 +214,15 @@ namespace Raven.Client.Document
 			var connectionStringOptions = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionStringName(connectionStringName);
 			connectionStringOptions.Parse();
 			return connectionStringOptions.ConnectionStringOptions;
+		}
+
+		///<summary>
+		/// Whatever or not we will automatically enlist in distributed transactions
+		///</summary>
+		public bool EnlistInDistributedTransactions
+		{
+			get { return Conventions.EnlistInDistributedTransactions; }
+			set { Conventions.EnlistInDistributedTransactions = value; }
 		}
 #endif
 
@@ -420,7 +429,9 @@ namespace Raven.Client.Document
 			{
 				if (string.IsNullOrEmpty(currentOauthToken))
 					return;
-				args.Request.Headers["Authorization"] = currentOauthToken;
+				
+				SetHeader(args.Request.Headers, "Authorization",currentOauthToken);
+				
 			};
 #if !SILVERLIGHT
 			Conventions.HandleUnauthorizedResponse = (response) =>
@@ -436,7 +447,7 @@ namespace Raven.Client.Document
 				using (var reader = new StreamReader(stream))
 				{
 					currentOauthToken = "Bearer " + reader.ReadToEnd();
-					return (Action<HttpWebRequest>)(request => request.Headers["Authorization"] = currentOauthToken);
+					return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization",currentOauthToken));
 
 				}
 			};
@@ -450,6 +461,8 @@ namespace Raven.Client.Document
 
 				var authRequest = PrepareOAuthRequest(oauthSource);
 				return authRequest.GetResponseAsync()
+					.AddUrlIfFaulting(authRequest.RequestUri)
+					.ConvertSecurityExceptionToServerNotFound()
 					.ContinueWith(task =>
 					{
 #if !SILVERLIGHT
@@ -460,11 +473,23 @@ namespace Raven.Client.Document
 						using (var reader = new StreamReader(stream))
 						{
 							currentOauthToken = "Bearer " + reader.ReadToEnd();
-							return (Action<HttpWebRequest>)(request => request.Headers["Authorization"] = currentOauthToken);
+							return (Action<HttpWebRequest>)(request => SetHeader(request.Headers,"Authorization", currentOauthToken));
 						}
 					});
 			};
 #endif
+		}
+
+		private static void SetHeader(WebHeaderCollection headers, string key, string value)
+		{
+			try
+			{
+				headers[key] = value;
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException("Could not set '" + key + "' = '" + value + "'", e);
+			}
 		}
 
 		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
@@ -480,7 +505,7 @@ namespace Raven.Client.Document
 			authRequest.Accept = "application/json;charset=UTF-8";
 
 			if (string.IsNullOrEmpty(ApiKey) == false)
-				authRequest.Headers["Api-Key"] = ApiKey;
+				SetHeader(authRequest.Headers, "Api-Key", ApiKey);
 
 			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false &&
 			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
@@ -638,7 +663,7 @@ Your OAuth endpoint should be using HTTPS, not HTTP, as the transport mechanism.
 You can setup the OAuth endpoint in the RavenDB server settings ('Raven/OAuthTokenServer' configuration value), or setup your own behavior by providing a value for:
 	documentStore.Conventions.HandleUnauthorizedResponse
 If you are on an internal network or requires this for testing, you can disable this warning by calling:
-	documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = false;
+	documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = true;
 ";
 	}
 }

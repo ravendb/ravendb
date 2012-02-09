@@ -71,8 +71,12 @@ namespace Raven.Studio.Infrastructure
 
 		public static Task Finally(this Task task, Action action)
 		{
-			task.ContinueWith(t => action());
-			return task;
+			return task.ContinueWith(t => action());
+		}
+
+		public static Task FinallyInTheUIThread(this Task task, Action action)
+		{
+			return task.ContinueWith(t => Execute.OnTheUI(action));
 		}
 
 		public static Task<TResult> Catch<TResult>(this Task<TResult> parent)
@@ -89,9 +93,8 @@ namespace Raven.Studio.Infrastructure
 					return task;
 
 				var ex = task.Exception.ExtractSingleInnerException();
-				if (ErrorHandler.Handle(ex) == false)
-					Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
-						.ContinueWith(_ => action(task.Exception));
+				Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
+					.ContinueWith(_ => action(task.Exception));
 				return task;
 			}).Unwrap();
 		}
@@ -110,9 +113,8 @@ namespace Raven.Studio.Infrastructure
 			        return;
 
 			    var ex = task.Exception.ExtractSingleInnerException();
-			    if (ErrorHandler.Handle(ex) == false)
-			        Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
-			            .ContinueWith(_ => action(task.Exception));
+			    Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
+			        .ContinueWith(_ => action(task.Exception));
 			});
 
 		}

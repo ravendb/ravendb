@@ -16,12 +16,8 @@ namespace Raven.Client.Document
 		private readonly double lat, lng, radius;
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="SpatialDocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="AsyncSpatialDocumentQuery{T}"/> class.
 		/// </summary>
-		/// <param name="session">The session.</param>
-		/// <param name="databaseCommands">The database commands.</param>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="projectionFields">The projection fields.</param>
 		public AsyncSpatialDocumentQuery(
 			InMemoryDocumentSessionOperations session,
 #if !SILVERLIGHT
@@ -47,7 +43,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="SpatialDocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="AsyncSpatialDocumentQuery{T}"/> class.
 		/// </summary>
 		/// <param name="documentQuery">The document query.</param>
 		/// <param name="radius">The radius.</param>
@@ -62,7 +58,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="SpatialDocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="AsyncSpatialDocumentQuery{T}"/> class.
 		/// </summary>
 		/// <param name="documentQuery">The document query.</param>
 		public AsyncSpatialDocumentQuery(AsyncDocumentQuery<T> documentQuery)

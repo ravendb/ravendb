@@ -41,7 +41,7 @@ namespace Raven.Tests.Storage
 			base.Dispose();
 		}
 
-		private void DeleteIfExists(string DirectoryName)
+		private static void DeleteIfExists(string DirectoryName)
 		{
 			string directoryFullName = null;
 
@@ -56,6 +56,8 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterBackupRestoreCanReadDocument()
 		{
+			DeleteIfExists("raven.db.test.backup"); // for full backups, we can't have anything in the target dir
+
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
 
 			db.StartBackup("raven.db.test.backup", false);
@@ -73,9 +75,12 @@ namespace Raven.Tests.Storage
 			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 		}
 
+
 		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedAfterRestore()
 		{
+			DeleteIfExists("raven.db.test.backup"); // for full backups, we can't have anything in the target dir
+
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 			db.StartBackup("raven.db.test.backup", false);
@@ -104,6 +109,8 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterBackupRestoreCanQueryIndex_CreatedBeforeRestore()
 		{
+			DeleteIfExists("raven.db.test.backup"); // for full backups, we can't have anything in the target dir
+
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
@@ -139,6 +146,8 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void AfterFailedBackupRestoreCanDetectError()
 		{
+			DeleteIfExists("raven.db.test.backup"); // for full backups, we can't have anything in the target dir
+
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
@@ -179,7 +188,9 @@ namespace Raven.Tests.Storage
 				{
 					if (checkError)
 					{
-						Assert.False(backupStatus.Messages.Any(x => x.Severity == BackupStatus.BackupMessageSeverity.Error));
+						var firstOrDefault = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
+						if (firstOrDefault != null)
+							Assert.False(true, firstOrDefault.Message);
 					}
 
 					return;

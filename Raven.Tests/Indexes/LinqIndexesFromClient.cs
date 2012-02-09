@@ -158,7 +158,7 @@ namespace Raven.Tests.Indexes
 			}.ToIndexDefinition(new DocumentConvention());
 			var original = new IndexDefinition {
 				Map = @"docs.Users
-	.Where(user => user.Name.Contains('C'))"
+	.Where(user => Enumerable.Contains(user.Name, 'C'))"
 			};
 			Assert.Equal(original, generated);
 		}
@@ -181,10 +181,11 @@ namespace Raven.Tests.Indexes
 	.Select(user => new {Location = user.Location, Count = 1})",
 				Reduce = @"results
 	.GroupBy(agg => agg.Location)
-	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count)})"
+	.Select(g => new {Location = g.Key, Count = g.Sum(x => (System.Int32)(x.Count))})"
 			};
 
-			Assert.Equal(original, generated);
+			Assert.Equal(original.Map, generated.Map);
+			Assert.Equal(original.Reduce, generated.Reduce);
 		}
 
 
@@ -204,10 +205,11 @@ namespace Raven.Tests.Indexes
 				Map = expectedIndexString,
 				Reduce = @"results
 	.GroupBy(agg => agg.Location)
-	.Select(g => new {Location = g.Key, Count = g.Sum(x => x.Count)})"
+	.Select(g => new {Location = g.Key, Count = g.Sum(x => (System.Int32)(x.Count))})"
 			};
 
-			Assert.Equal(original, generated);
+			Assert.Equal(expectedIndexString, generated.Map);
+			Assert.Equal(original.Reduce, generated.Reduce);
 		}
 
 		[Fact]

@@ -3,8 +3,7 @@
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" 
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-					 DataContext="{Binding Path=SelectedCollection.Value}">
+					 DataContext="{Binding Path=DocumentsForSelectedCollection.Value}">
 
-	<Documents:DocumentsView DataContext="{Binding Path=Documents.Value}"
-							 Visibility="{Binding Converter={StaticResource HiddenWhenNull}}" />
+	<Documents:DocumentsView Visibility="{Binding Converter={StaticResource HiddenWhenNull}}" />
 </Infrastructure:View>

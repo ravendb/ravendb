@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using NLog;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database;
 using Raven.Database.Backup;
@@ -44,15 +45,15 @@ namespace Raven.Storage.Managed.Backup
 				logger.Info("Starting backup of '{0}' to '{1}'", src, to);
 				var directoryBackups = new List<DirectoryBackup>
 				{
-					new DirectoryBackup(src, to, Path.Combine("TempData" + Guid.NewGuid().ToString("N"))),
+					new DirectoryBackup(src, to, Path.Combine("TempData" + Guid.NewGuid().ToString("N")), false),
 					new DirectoryBackup(Path.Combine(src, "IndexDefinitions"), Path.Combine(to, "IndexDefinitions"),
-										Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N")))
+										Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N")), false)
 				};
 				directoryBackups.AddRange(from index in Directory.GetDirectories(database.Configuration.IndexStoragePath)
 										  let fromIndex = Path.Combine(database.Configuration.IndexStoragePath, Path.GetFileName(index))
 										  let toIndex = Path.Combine(to, "Indexes", Path.GetFileName(index))
 										  let tempIndex = Path.Combine(src, Path.Combine("BackupTempDirectories",Guid.NewGuid().ToString("N")))
-										  select new DirectoryBackup(fromIndex, toIndex, tempIndex));
+										  select new DirectoryBackup(fromIndex, toIndex, tempIndex, false));
 
 
 				persistentSource.Read(log =>

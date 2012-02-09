@@ -384,7 +384,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					jsonDocuments = new RavenJArray(actions.Documents.GetDocumentsAfter(destinationsReplicationInformationForSource.LastDocumentEtag)
+					jsonDocuments = new RavenJArray(actions.Documents.GetDocumentsAfter(destinationsReplicationInformationForSource.LastDocumentEtag, 100)
 						.Where(destination.FilterDocuments)
 						.Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationId) // prevent replicating back to source
 						.Select(x=>
@@ -392,7 +392,6 @@ namespace Raven.Bundles.Replication.Tasks
 							DocumentRetriever.EnsureIdInMetadata(x);
 							return x;
 						})
-						.Take(100)
 						.Select(x => x.ToJson()));
 				});
 			}

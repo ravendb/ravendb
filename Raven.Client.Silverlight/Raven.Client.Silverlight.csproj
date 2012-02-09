@@ -35,6 +35,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>Bin\Debug\Raven.Client.Silverlight.XML</DocumentationFile>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -62,11 +63,11 @@
       <HintPath>..\SharedLibs\MissingBitFromSilverlight.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\SharedLibs\Newtonsoft.Json\Silverlight\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.4.0.5\lib\sl4\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
-      <HintPath>..\SharedLibs\Silverlight\NLog.dll</HintPath>
+      <HintPath>..\packages\NLog.2.0.0.2000\lib\sl4\NLog.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows" />
@@ -77,6 +78,9 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Abstractions\Data\BackupStatus.cs">
+      <Link>Imports\Data\BackupStatus.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\BuildNumber.cs">
       <Link>Imports\Data\BuildNumber.cs</Link>
     </Compile>
@@ -263,6 +267,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
       <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\TaskExtensions.cs">
+      <Link>Imports\Extensions\TaskExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentQuery.cs">
       <Link>Imports\IAsyncDocumentQuery.cs</Link>
     </Compile>
@@ -292,6 +299,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionHelper.cs">
       <Link>Imports\Indexes\IndexDefinitionHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\SearchOptions.cs">
+      <Link>Imports\Linq\SearchOptions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentConversionListener.cs">
       <Link>Imports\Listeners\IDocumentConversionListener.cs</Link>
@@ -331,6 +341,7 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>Imports\RavenDB.snk</Link>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Raven.Abstractions\Commands\DeleteCommandData.cs">
@@ -423,8 +434,8 @@
     <Compile Include="..\Raven.Abstractions\Extensions\Reference.cs">
       <Link>Imports\Extensions\Reference.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Extensions\StreamExtension.cs">
-      <Link>Imports\Extensions\StreamExtension.cs</Link>
+    <Compile Include="..\Raven.Abstractions\Extensions\StreamExtensions.cs">
+      <Link>Imports\Extensions\StreamExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Indexing\FieldIndexing.cs">
       <Link>Imports\Indexing\FieldIndexing.cs</Link>

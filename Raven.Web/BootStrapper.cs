@@ -15,7 +15,6 @@ namespace Raven.Web
 
 		public void Dispose()
 		{
-			ForwardToRavenRespondersFactory.Shutdown();
 		}
 	}
 

@@ -13,7 +13,9 @@ using System.Linq;
 using System.Runtime.Caching;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web;
+using Microsoft.VisualBasic.Devices;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -35,7 +37,8 @@ namespace Raven.Database.Config
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
 			BackgroundTasksPriority = ThreadPriority.Normal;
-			MaxNumberOfItemsToIndexInSingleBatch = 2500;
+			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 5000 : 2500;
+			AvailableMemoryForRaisingIndexBatchSizeLimit = 512;
 			MaxNumberOfParallelIndexTasks = 8;
 
 			Catalog = new AggregateCatalog(
@@ -46,6 +49,12 @@ namespace Raven.Database.Config
 		}
 
 		public string DatabaseName { get; set; }
+
+		public void PostInit()
+		{
+			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
+				SetupOAuth();
+		}
 
 		public void Initialize()
 		{
@@ -64,7 +73,10 @@ namespace Raven.Database.Config
 											? GetDefaultMemoryCacheLimitMegabytes()
 											: int.Parse(cacheMemoryLimitMegabytes);
 
-
+			var memoryCacheExpiration = Settings["Raven/MemoryCacheExpiration"];
+			MemoryCacheExpiration = memoryCacheExpiration == null
+			                        	? TimeSpan.FromMinutes(5)
+			                        	: TimeSpan.FromSeconds(int.Parse(memoryCacheExpiration));
 
 			var memoryCacheLimitPercentage = Settings["Raven/MemoryCacheLimitPercentage"];
 			MemoryCacheLimitPercentage = memoryCacheLimitPercentage == null
@@ -77,8 +89,19 @@ namespace Raven.Database.Config
 
 			// Index settings
 			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
-			MaxNumberOfItemsToIndexInSingleBatch = maxNumberOfItemsToIndexInSingleBatch != null ? int.Parse(maxNumberOfItemsToIndexInSingleBatch) : 2500;
-			MaxNumberOfItemsToIndexInSingleBatch = Math.Max(MaxNumberOfItemsToIndexInSingleBatch, 128);
+			if (maxNumberOfItemsToIndexInSingleBatch != null)
+			{
+				MaxNumberOfItemsToIndexInSingleBatch = int.Parse(maxNumberOfItemsToIndexInSingleBatch);
+				MaxNumberOfItemsToIndexInSingleBatch = Math.Max(MaxNumberOfItemsToIndexInSingleBatch, 128);
+				
+				// if we explicitly specify this, we disable the auto raising, unless this is also specified
+				AvailableMemoryForRaisingIndexBatchSizeLimit = int.MaxValue;
+			}
+			var availableMemoryForRaisingIndexBatchSizeLimit = Settings["Raven/AvailableMemoryForRaisingIndexBatchSizeLimit"];
+			if (availableMemoryForRaisingIndexBatchSizeLimit != null)
+			{
+				MaxNumberOfItemsToIndexInSingleBatch = int.Parse(availableMemoryForRaisingIndexBatchSizeLimit);
+			}
 
 			var maxNumberOfParallelIndexTasks = Settings["Raven/MaxNumberOfParallelIndexTasks"];
 			MaxNumberOfParallelIndexTasks = maxNumberOfParallelIndexTasks != null ? int.Parse(maxNumberOfParallelIndexTasks) : Environment.ProcessorCount;
@@ -104,13 +127,10 @@ namespace Raven.Database.Config
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
 			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 
-			var transactionMode = Settings["Raven/TransactionMode"];
-			TransactionMode result;
-			if (Enum.TryParse(transactionMode, true, out result) == false)
-				result = TransactionMode.Safe;
-			TransactionMode = result;
+			SetupTransactionMode();
 
 			DataDirectory = Settings["Raven/DataDir"] ?? @"~\Data";
+			
 			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
 			{
 				IndexStoragePath = Settings["Raven/IndexStoragePath"];
@@ -133,16 +153,36 @@ namespace Raven.Database.Config
 
 			AnonymousUserAccessMode = GetAnonymousUserAccessMode();
 
+			RedirectStudioUrl = Settings["Raven/RedirectStudioUrl"];
+
 			// Misc settings
 			WebDir = Settings["Raven/WebDir"] ?? GetDefaultWebDir();
 
 			PluginsDirectory = (Settings["Raven/PluginsDirectory"] ?? @"~\Plugins").ToFullPath();
 
+			var taskSchedulerType = Settings["Raven/TaskScheduler"];
+			if(taskSchedulerType != null)
+			{
+				var type = Type.GetType(taskSchedulerType);
+				CustomTaskScheduler = (TaskScheduler)Activator.CreateInstance(type);
+			}
+
 			// OAuth
 			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? AuthenticationMode ?? "windows";
-			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
-				SetupOAuth();
+			PostInit();
+		}
 
+		public TaskScheduler CustomTaskScheduler { get; set; }
+
+		public string RedirectStudioUrl { get; set; }
+
+		private void SetupTransactionMode()
+		{
+			var transactionMode = Settings["Raven/TransactionMode"];
+			TransactionMode result;
+			if (Enum.TryParse(transactionMode, true, out result) == false)
+				result = TransactionMode.Safe;
+			TransactionMode = result;
 		}
 
 		private void SetVirtualDirectory()
@@ -162,10 +202,6 @@ namespace Raven.Database.Config
 
 			VirtualDirectory = Settings["Raven/VirtualDirectory"] ?? defaultVirtualDirectory;
 
-			if (VirtualDirectory.EndsWith("/"))
-				VirtualDirectory = VirtualDirectory.Substring(0, VirtualDirectory.Length - 1);
-			if (VirtualDirectory.StartsWith("/") == false)
-				VirtualDirectory = "/" + VirtualDirectory;
 		}
 
 		private void SetupOAuth()
@@ -184,9 +220,9 @@ namespace Raven.Database.Config
 				var pwd = Settings["Raven/OAuthTokenCertificatePassword"];
 				if (string.IsNullOrEmpty(pwd) == false)
 				{
-					return new X509Certificate2(path, pwd);
+					return new X509Certificate2(path, pwd, X509KeyStorageFlags.MachineKeySet);
 				}
-				return new X509Certificate2(path);
+				return new X509Certificate2(path, string.Empty, X509KeyStorageFlags.MachineKeySet);
 			}
 
 			return CertGenerator.GenerateNewCertificate("RavenDB");
@@ -198,10 +234,7 @@ namespace Raven.Database.Config
 			int totalPhysicalMemoryMegabytes;
 			if (Type.GetType("Mono.Runtime") != null)
 			{
-				var pc = new System.Diagnostics.PerformanceCounter("Mono Memory", "Total Physical Memory");
-				totalPhysicalMemoryMegabytes = (int)(pc.RawValue / 1024 / 1024);
-				if (totalPhysicalMemoryMegabytes == 0)
-					totalPhysicalMemoryMegabytes = 128; // 128MB, the Mono runtime default
+				totalPhysicalMemoryMegabytes = GetDefaultMemoryCacheLimitMegabytesOnMono();
 			}
 			else
 			{
@@ -225,6 +258,15 @@ namespace Raven.Database.Config
 			return val;
 		}
 
+		private static int GetDefaultMemoryCacheLimitMegabytesOnMono()
+		{
+			var pc = new System.Diagnostics.PerformanceCounter("Mono Memory", "Total Physical Memory");
+			var totalPhysicalMemoryMegabytes = (int)(pc.RawValue / 1024 / 1024);
+			if (totalPhysicalMemoryMegabytes == 0)
+				totalPhysicalMemoryMegabytes = 128; // 128MB, the Mono runtime default
+			return totalPhysicalMemoryMegabytes;
+		}
+
 		public NameValueCollection Settings { get; set; }
 
 		public string ServerUrl
@@ -236,7 +278,8 @@ namespace Raven.Database.Config
 					var url = HttpContext.Current.Request.Url;
 					return new UriBuilder(url)
 					{
-						Path = HttpContext.Current.Request.ApplicationPath
+						Path = HttpContext.Current.Request.ApplicationPath,
+						Query = ""
 					}.Uri.ToString();
 				}
 				return new UriBuilder("http", (HostName ?? Environment.MachineName), Port, VirtualDirectory).Uri.ToString();
@@ -375,11 +418,25 @@ namespace Raven.Database.Config
 		/// </summary>
 		public string AccessControlRequestHeaders { get; set; }
 
+		private string virtualDirectory;
+
 		/// <summary>
 		/// The virtual directory to use when creating the http listener. 
 		/// Default: / 
 		/// </summary>
-		public string VirtualDirectory { get; set; }
+		public string VirtualDirectory
+		{
+			get { return virtualDirectory; }
+			set
+			{
+				virtualDirectory = value;
+
+				if (virtualDirectory.EndsWith("/"))
+					virtualDirectory = virtualDirectory.Substring(0, virtualDirectory.Length - 1);
+				if (virtualDirectory.StartsWith("/") == false)
+					virtualDirectory = "/" + virtualDirectory; 
+			}
+		}
 
 		/// <summary>
 		/// Whether to use http compression or not. 
@@ -526,6 +583,11 @@ namespace Raven.Database.Config
 		}
 
 		private string indexStoragePath;
+		/// <summary>
+		/// The expiration value for documents in the internal managed cache
+		/// </summary>
+		public TimeSpan MemoryCacheExpiration { get; set; }
+
 		public string IndexStoragePath
 		{
 			get
@@ -540,6 +602,35 @@ namespace Raven.Database.Config
 				indexStoragePath = value.ToFullPath();
 			}
 		}
+
+		private bool failedToGetAvailablePhysicalMemory;
+		public int AvailablePhysicalMemoryInMegabytes
+		{
+		
+				get
+				{
+					if (failedToGetAvailablePhysicalMemory)
+						return -1;
+
+					try
+					{
+						var availablePhysicalMemoryInMb = new ComputerInfo().AvailablePhysicalMemory / 1024 / 1024;
+						return (int)availablePhysicalMemoryInMb;
+					}
+					catch (Exception)
+					{
+						if (Type.GetType("Mono.Runtime") == null)
+							throw;
+
+
+						// I don't know how to figur eout free RAM on mono, so we disable this behavior
+						failedToGetAvailablePhysicalMemory = true;
+						return -1;
+					}
+				}
+		}
+
+		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }
 
 		protected void ResetContainer()
 		{

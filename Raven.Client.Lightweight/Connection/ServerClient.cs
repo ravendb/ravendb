@@ -119,13 +119,13 @@ namespace Raven.Client.Connection
 
 		/// <summary>
 		/// Execute a GET request against the provided url
-		/// and return the result as a string
+		/// and return the result as a json object
 		/// </summary>
 		/// <param name="requestUrl">The relative url to the server</param>
 		/// <remarks>
 		/// This method respects the replication semantics against the database.
 		/// </remarks>
-		public string ExecuteGetRequest(string requestUrl)
+		public RavenJToken ExecuteGetRequest(string requestUrl)
 		{
 			EnsureIsNotNullOrEmpty(requestUrl, "url");
 			return ExecuteWithReplication("GET", serverUrl =>
@@ -135,7 +135,7 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, serverUrl + requestUrl, "GET", metadata, credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
 
-				return request.ReadResponseString();
+				return request.ReadResponseJson();
 			});
 		}
 		private void ExecuteWithReplication(string method, Action<string> operation)
@@ -228,8 +228,8 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			request.AddOperationHeaders(OperationsHeaders);
 			try
 			{
-				var requestString = request.ReadResponseString();
-				return SerializationHelper.DeserializeJsonDocument(key, requestString, request.ResponseHeaders, request.ResponseStatusCode);
+				var responseJson = request.ReadResponseJson();
+				return SerializationHelper.DeserializeJsonDocument(key, responseJson, request.ResponseHeaders, request.ResponseStatusCode);
 			}
 			catch (WebException e)
 			{
@@ -281,10 +281,10 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", metadata, credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
 
-			string readResponseString;
+			RavenJToken responseJson;
 			try
 			{
-				readResponseString = request.ReadResponseString();
+				responseJson = request.ReadResponseJson();
 			}
 			catch (WebException e)
 			{
@@ -294,7 +294,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 					throw;
 				throw ThrowConcurrencyException(e);
 			}
-			return SerializationHelper.RavenJObjectsToJsonDocuments(RavenJArray.Parse(readResponseString).OfType<RavenJObject>()).ToArray();
+			return SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)responseJson).OfType<RavenJObject>()).ToArray();
 		}
 
 		private PutResult DirectPut(RavenJObject metadata, string key, Guid? etag, RavenJObject document, string operationUrl)
@@ -309,10 +309,10 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			request.AddOperationHeaders(OperationsHeaders);
 			request.Write(document.ToString());
 
-			string readResponseString;
+			RavenJToken responseJson;
 			try
 			{
-				readResponseString = request.ReadResponseString();
+				responseJson = request.ReadResponseJson();
 			}
 			catch (WebException e)
 			{
@@ -322,11 +322,15 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 					throw;
 				throw ThrowConcurrencyException(e);
 			}
-			return JsonConvert.DeserializeObject<PutResult>(readResponseString, Default.Converters);
+			var jsonSerializer = convention.CreateSerializer();
+			return jsonSerializer.Deserialize<PutResult>(new RavenJTokenReader(responseJson));
 		}
 
-		private static void AddTransactionInformation(RavenJObject metadata)
+		private void AddTransactionInformation(RavenJObject metadata)
 		{
+			if (convention.EnlistInDistributedTransactions == false)
+				return;
+
 			var transactionInformation = RavenTransactionAccessor.GetTransactionInformation();
 			if (transactionInformation == null)
 				return;
@@ -364,47 +368,16 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		private void DirectPutAttachment(string key, RavenJObject metadata, Guid? etag, Stream data, string operationUrl)
 		{
-			var webRequest = WebRequest.Create(operationUrl + "/static/" + key);
-			webRequest.Method = "PUT";
-			webRequest.Credentials = credentials;
-			foreach (var header in metadata)
+			if(etag != null)
 			{
-				if (header.Key.StartsWith("@"))
-					continue;
-
-				//need to handle some headers differently, see http://msdn.microsoft.com/en-us/library/system.net.webheadercollection.aspx
-				string matchString = header.Key;
-				string formattedHeaderValue = StripQuotesIfNeeded(header.Value.ToString(Formatting.None));
-
-				//Just let an exceptions (from Parse(..) functions) bubble-up, so that the user can see they've provided an invalid value
-				if (matchString == "Content-Length")
-				{
-					// we filter out content length, because getting it wrong will cause errors 
-					// in the server side when serving the wrong value for this header.
-					// worse, if we are using http compression, this value is known to be wrong
-					// instead, we rely on the actual size of the data provided for us
-					//webRequest.ContentLength = long.Parse(formattedHeaderValue); 	
-				}
-				else if (matchString == "Content-Type")
-					webRequest.ContentType = formattedHeaderValue;
-				else
-					webRequest.Headers[header.Key] = formattedHeaderValue;
+				metadata["ETag"] = etag.Value.ToString();
 			}
-			if (etag != null)
-			{
-				webRequest.Headers["If-None-Match"] = etag.Value.ToString();
-			}
-			using (var stream = webRequest.GetRequestStream())
-			{
-				data.CopyTo(stream);
-				stream.Flush();
-			}
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/static/" + key, "PUT", metadata, credentials, convention);
+			
+			webRequest.Write(data);
 			try
 			{
-				using (webRequest.GetResponse())
-				{
-
-				}
+				webRequest.ExecuteRequest();
 			}
 			catch (WebException e)
 			{
@@ -420,13 +393,6 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			}
 		}
 
-		private static string StripQuotesIfNeeded(string str)
-		{
-			if (str.StartsWith("\"") && str.EndsWith("\""))
-				return str.Substring(1, str.Length - 2);
-			return str;
-		}
-
 		/// <summary>
 		/// Gets the attachment by the specified key
 		/// </summary>
@@ -439,27 +405,17 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		private Attachment DirectGetAttachment(string key, string operationUrl)
 		{
-			var webRequest = WebRequest.Create(operationUrl + "/static/" + key);
-			webRequest.Credentials = credentials;
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,operationUrl + "/static/" + key,"GET", credentials, convention);
 			try
 			{
-				using (var response = webRequest.GetResponse())
-				using (var responseStream = response.GetResponseStream())
+				var memoryStream = new MemoryStream(webRequest.ReadResponseBytes());
+				return new Attachment
 				{
-					if (responseStream == null)
-						throw new InvalidOperationException("couldn't get response stream from attachment request");
-
-					var memoryStream = new MemoryStream();
-					responseStream.CopyTo(memoryStream);
-					memoryStream.Position = 0;
-					return new Attachment
-					{
-						Data = ()=>memoryStream, 
-						Size = (int)memoryStream.Length,
-						Etag = new Guid(response.Headers["ETag"]),
-						Metadata = response.Headers.FilterHeaders(isServerDocument: false)
-					};
-				}
+					Data = () => memoryStream,
+					Size = (int) memoryStream.Length,
+					Etag = new Guid(webRequest.ResponseHeaders["ETag"]),
+					Metadata = webRequest.ResponseHeaders.FilterHeaders(isServerDocument: false)
+				};
 			}
 			catch (WebException e)
 			{
@@ -497,7 +453,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			var result = ExecuteGetRequest("".Databases().NoCache());
 
-			var json = (RavenJArray) RavenJToken.Parse(result);
+			var json = (RavenJArray) result;
 		
 			return json
 				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
@@ -506,18 +462,13 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		private void DirectDeleteAttachment(string key, Guid? etag, string operationUrl)
 		{
-			var webRequest = WebRequest.Create(operationUrl + "/static/" + key);
-			webRequest.Method = "DELETE";
-			webRequest.Credentials = credentials;
-			if (etag != null)
+			var metadata = new RavenJObject();
+			if(etag != null)
 			{
-				webRequest.Headers["If-None-Match"] = etag.Value.ToString();
+				metadata["ETag"] = etag.Value.ToString();
 			}
-
-			using (webRequest.GetResponse())
-			{
-
-			}
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/static/" + key, "DELETE", metadata,credentials, convention);
+			webRequest.ExecuteRequest();
 		}
 
 		/// <summary>
@@ -544,7 +495,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + name, "RESET", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
-			httpJsonRequest.ReadResponseString();
+			httpJsonRequest.ReadResponseJson();
 			return null;
 		}
 
@@ -552,8 +503,8 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
-			var responseString = httpJsonRequest.ReadResponseString();
-			return RavenJArray.Parse(responseString).Select(x => x.Value<string>()).ToArray();
+			var responseJson = httpJsonRequest.ReadResponseJson();
+			return ((RavenJArray)responseJson).Select(x => x.Value<string>()).ToArray();
 		}
 
 		/// <summary>
@@ -571,10 +522,10 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + indexName + "?definition=yes", "GET", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
-			string indexDefAsString;
+			RavenJToken indexDef;
 			try
 			{
-				indexDefAsString = httpJsonRequest.ReadResponseString();
+				indexDef = httpJsonRequest.ReadResponseJson();
 			}
 			catch (WebException e)
 			{
@@ -584,9 +535,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 					return null;
 				throw;
 			}
-			var indexDefResultAsJson = RavenJObject.Load(new JsonTextReader(new StringReader(indexDefAsString)));
+			var value = indexDef.Value<RavenJObject>("Index");
 			return convention.CreateSerializer().Deserialize<IndexDefinition>(
-				new RavenJTokenReader(indexDefResultAsJson["Index"])
+				new RavenJTokenReader(value)
 				);
 		}
 
@@ -600,7 +551,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
 			try
 			{
-				httpJsonRequest.ReadResponseString();
+				httpJsonRequest.ExecuteRequest();
 			}
 			catch (WebException e)
 			{
@@ -666,7 +617,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 			try
 			{
-				checkIndexExists.ReadResponseString();
+				checkIndexExists.ExecuteRequest();
 				if (overwrite == false)
 					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 			}
@@ -681,17 +632,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			request.AddOperationHeaders(OperationsHeaders);
 			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
 
-			var obj = new { index = "" };
-			obj = JsonConvert.DeserializeAnonymousType(request.ReadResponseString(), obj);
-			return obj.index;
-		}
 
-		private void AddOperationHeaders(HttpWebRequest webRequest)
-		{
-			foreach (string header in OperationsHeaders)
-			{
-				webRequest.Headers[header] = OperationsHeaders[header];
-			}
+			var responseJson = (RavenJObject)request.ReadResponseJson();
+			return responseJson.Value<string>("index");
 		}
 
 		/// <summary>
@@ -748,14 +691,18 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			RavenJObject json;
 			try
 			{
-				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-					json = (RavenJObject)RavenJToken.Load(reader);
+				json = (RavenJObject)request.ReadResponseJson();
 			}
 			catch (WebException e)
 			{
 				var httpWebResponse = e.Response as HttpWebResponse;
 				if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+				{
+					var text = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression()).ReadToEnd();
+					if (text.Contains("maxQueryString"))
+						throw new InvalidOperationException(text, e);
 					throw new InvalidOperationException("There is no index named: " + index);
+				}
 				throw;
 			}
 			return SerializationHelper.ToQueryResult(json, request.ResponseHeaders["ETag"]);
@@ -775,7 +722,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/indexes/" + name, "DELETE", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
-			request.ReadResponseString();
+			request.ExecuteRequest();
 		}
 
 		/// <summary>
@@ -803,27 +750,29 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			{
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
+			var uniqueIds = new HashSet<string>(ids);
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
 			// we are fine with that, requests to load that many items are probably going to be rare
 			HttpJsonRequest request;
-			if (ids.Sum(x=>x.Length) < 1024)
+			if (uniqueIds.Sum(x=>x.Length) < 1024)
 			{
-				path += "&" + string.Join("&", ids.Select(x => "id=" + x).ToArray());
+				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + x).ToArray());
 				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
 			}
 			else
 			{
 				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
-				request.Write(new RavenJArray(ids).ToString(Formatting.None));
+				request.Write(new RavenJArray(uniqueIds).ToString(Formatting.None));
 			}
 
 			request.AddOperationHeaders(OperationsHeaders);
-			var result = RavenJObject.Parse(request.ReadResponseString());
+			var result = (RavenJObject) request.ReadResponseJson();
 
+			var results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList();
 			return new MultiLoadResult
 			{
 				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-				Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
+				Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id,StringComparison.InvariantCultureIgnoreCase))).ToList()
 			};
 		}
 
@@ -846,10 +795,10 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 			req.Write(jArray.ToString(Formatting.None));
 
-			string response;
+			RavenJArray response;
 			try
 			{
-				response = req.ReadResponseString();
+				response = (RavenJArray) req.ReadResponseJson();
 			}
 			catch (WebException e)
 			{
@@ -859,7 +808,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 					throw;
 				throw ThrowConcurrencyException(e);
 			}
-			return JsonConvert.DeserializeObject<BatchResult[]>(response, Default.Converters);
+			return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 		}
 
 		/// <summary>
@@ -879,7 +828,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/transaction/commit?tx=" + txId, "POST", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
-			httpJsonRequest.ReadResponseString();
+			httpJsonRequest.ReadResponseJson();
 		}
 
 		/// <summary>
@@ -915,49 +864,34 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			ExecuteWithReplication<object>("PUT", u =>
 			{
-				var webRequest = (HttpWebRequest)WebRequest.Create(u + "/static/transactions/recoveryInformation/" + txId);
-				AddOperationHeaders(webRequest);
-				webRequest.Method = "PUT";
-				webRequest.Headers["Resource-Manager-Id"] = resourceManagerId.ToString();
-				webRequest.Headers[Constants.NotForReplication] = "true";
-				webRequest.Credentials = credentials;
-				webRequest.UseDefaultCredentials = true;
-
-				using (var stream = webRequest.GetRequestStream())
+				var metadata = new RavenJObject
 				{
-					stream.Write(recoveryInformation, 0, recoveryInformation.Length);
-				}
+					{"Resource-Manager-Id", resourceManagerId.ToString()},
+					{Constants.NotForReplication, true}
+				};
+				var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, u + "/static/transactions/recoveryInformation/" + txId, "PUT", metadata, credentials, convention);
 
-				webRequest.GetResponse()
-					.Close();
+				webRequest.Write(new MemoryStream(recoveryInformation));
 
+				webRequest.ExecuteRequest();
 				return null;
 			});
 		}
 
 		private byte[] DirectPromoteTransaction(Guid fromTxId, string operationUrl)
 		{
-			var webRequest = (HttpWebRequest)WebRequest.Create(operationUrl + "/transaction/promote?fromTxId=" + fromTxId);
-			AddOperationHeaders(webRequest);
-			webRequest.Method = "POST";
-			webRequest.ContentLength = 0;
-			webRequest.Credentials = credentials;
-			webRequest.UseDefaultCredentials = true;
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,
+			                                                          operationUrl + "/transaction/promote?fromTxId=" + fromTxId,
+			                                                          "POST", credentials, convention);
 
-			using (var response = webRequest.GetResponse())
-			{
-				using (var stream = response.GetResponseStreamWithHttpDecompression())
-				{
-					return stream.ReadData();
-				}
-			}
+			return webRequest.ReadResponseBytes();
 		}
 
 		private void DirectRollback(Guid txId, string operationUrl)
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials, convention);
 			httpJsonRequest.AddOperationHeaders(OperationsHeaders);
-			httpJsonRequest.ReadResponseString();
+			httpJsonRequest.ReadResponseJson();
 		}
 
 		/// <summary>
@@ -1060,7 +994,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				request.AddOperationHeaders(OperationsHeaders);
 				try
 				{
-					request.ReadResponseString();
+					request.ReadResponseJson();
 				}
 				catch (WebException e)
 				{
@@ -1113,7 +1047,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				request.Write(new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented));
 				try
 				{
-					request.ReadResponseString();
+					request.ReadResponseJson();
 				}
 				catch (WebException e)
 				{
@@ -1153,8 +1087,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				RavenJObject json;
 				try
 				{
-					using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-						json = (RavenJObject) RavenJToken.Load(reader);
+					json = (RavenJObject) request.ReadResponseJson();
 				}
 				catch (WebException e)
 				{
@@ -1178,8 +1111,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this,url +"/stats", "GET", credentials, convention);
 
-			var response = httpJsonRequest.ReadResponseString();
-			var jo = RavenJObject.Parse(response);
+			var jo = (RavenJObject) httpJsonRequest.ReadResponseJson();
 			return jo.Deserialize<DatabaseStatistics>(convention);
 		}
 
@@ -1194,6 +1126,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			return ExecuteWithReplication("HEAD", u => DirectHead(u, key));
 		}
 
+		/// <summary>
+		/// Do a direct HEAD request against the server for the specified document
+		/// </summary>
 		public JsonDocumentMetadata DirectHead(string serverUrl, string key)
 		{
 			var metadata = new RavenJObject();
@@ -1202,7 +1137,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			request.AddOperationHeaders(OperationsHeaders);
 			try
 			{
-				request.ReadResponseString();
+				request.ExecuteRequest();
 				return SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders, request.ResponseStatusCode);
 			}
 			catch (WebException e)
@@ -1255,8 +1190,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			                              	}
 
 			                              	httpJsonRequest.Write(postedData);
-			                              	var responses =
-			                              		JsonConvert.DeserializeObject<GetResponse[]>(httpJsonRequest.ReadResponseString());
+			                              	var results = (RavenJArray) httpJsonRequest.ReadResponseJson();
+			                              	var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(
+																				new RavenJTokenReader(results));
 
 			                              	return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
 			                              });
@@ -1281,10 +1217,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
 
-				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-				{
-					return RavenJToken.Load(reader).Values<string>();
-				}
+				return request.ReadResponseJson().Values<string>();
 			});
 		}
 
@@ -1300,19 +1233,14 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
 				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
-				                                     Uri.EscapeUriString(index),
-				                                     Uri.EscapeDataString(facetSetupDoc),
-				                                     Uri.EscapeDataString(query.Query));
+				                                              Uri.EscapeUriString(index),
+				                                              Uri.EscapeDataString(facetSetupDoc),
+				                                              Uri.EscapeDataString(query.Query));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
-
-				using (var reader = new JsonTextReader(new StringReader(request.ReadResponseString())))
-				{
-					var json = (RavenJObject) RavenJToken.Load(reader);
-					var jsonAsType = json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
-					return jsonAsType;
-				}
+				var json = (RavenJObject) request.ReadResponseJson();
+				return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
 			});
 		}
 

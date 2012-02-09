@@ -12,9 +12,7 @@ namespace Raven.Database.Server.Security
 				"/favicon.ico",
 				"/clientaccesspolicy.xml",
 				"/build/version",
-
 				"/OAuth/AccessToken",
-				
 			};
 	}
 }

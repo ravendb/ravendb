@@ -19,7 +19,7 @@ namespace Raven.Client.Connection.Profiling
 		private const int NumberOfSessionsToTrack = 128;
 
 		/// <summary>
-		/// Register the action as associated with <param name="sender"/>
+		/// Register the action as associated with the sender
 		/// </summary>
 		public void RecordAction(object sender, RequestResultArgs requestResultArgs)
 		{

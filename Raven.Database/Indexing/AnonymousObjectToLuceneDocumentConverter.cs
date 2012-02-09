@@ -34,23 +34,23 @@ namespace Raven.Database.Indexing
 			this.indexDefinition = indexDefinition;
 		}
 
-		public IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, IndexDefinition indexDefinition, Field.Store defaultStorage)
+		public IEnumerable<AbstractField> Index(object val, PropertyDescriptorCollection properties, Field.Store defaultStorage)
 		{
 			return (from property in properties.Cast<PropertyDescriptor>()
 			        let name = property.Name
 					where name != Constants.DocumentIdFieldName
 			        let value = property.GetValue(val)
-			        from field in CreateFields(name, value, indexDefinition, defaultStorage)
+					from field in CreateFields(name, value, defaultStorage)
 			        select field);
 		}
 
-		public IEnumerable<AbstractField> Index(RavenJObject document, IndexDefinition indexDefinition, Field.Store defaultStorage)
+		public IEnumerable<AbstractField> Index(RavenJObject document, Field.Store defaultStorage)
 		{
 			return (from property in document
 			        let name = property.Key
 					where name != Constants.DocumentIdFieldName
 			        let value = GetPropertyValue(property.Value)
-			        from field in CreateFields(name, value, indexDefinition, defaultStorage)
+			        from field in CreateFields(name, value, defaultStorage)
 			        select field);
 		}
 
@@ -77,7 +77,7 @@ namespace Raven.Database.Indexing
 		///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
 		///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
 		/// </summary>
-		private IEnumerable<AbstractField> CreateFields(string name, object value, IndexDefinition indexDefinition, Field.Store defaultStorage)
+		public IEnumerable<AbstractField> CreateFields(string name, object value, Field.Store defaultStorage)
 		{
 			if(string.IsNullOrWhiteSpace(name))
 				throw new ArgumentException("Field must be not null, not empty and cannot contain whitespace", "name");
@@ -88,31 +88,33 @@ namespace Raven.Database.Indexing
 				name = "_" + name;
 			}
 
+			var storage = indexDefinition.GetStorage(name, defaultStorage);
 			if (value == null)
 			{
-				yield return CreateFieldWithCaching(name, Constants.NullValue, indexDefinition.GetStorage(name, defaultStorage),
+				yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
 								 Field.Index.NOT_ANALYZED_NO_NORMS);
 				yield break;
 			}
 			if(Equals(value, string.Empty))
 			{
-				yield return CreateFieldWithCaching(name, Constants.EmptyString, indexDefinition.GetStorage(name, defaultStorage),
+				yield return CreateFieldWithCaching(name, Constants.EmptyString, storage,
 							 Field.Index.NOT_ANALYZED_NO_NORMS);
 				yield break;
 			}
-			if (value is DynamicNullObject)
+			var dynamicNullObject = value as DynamicNullObject;
+			if (ReferenceEquals(dynamicNullObject, null) == false)
 			{
-				if(((DynamicNullObject)value ).IsExplicitNull)
+				if((dynamicNullObject ).IsExplicitNull)
 				{
-					yield return CreateFieldWithCaching(name, Constants.NullValue, indexDefinition.GetStorage(name, defaultStorage),
-							 Field.Index.NOT_ANALYZED_NO_NORMS);
+					yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
+					                                    Field.Index.NOT_ANALYZED_NO_NORMS);
 				}
 				yield break;
 			}
-			if(value is BoostedValue)
+			var boostedValue = value as BoostedValue;
+			if (boostedValue != null)
 			{
-				var boostedValue = (BoostedValue)value;
-				foreach (var field in CreateFields(name, boostedValue.Value, indexDefinition, defaultStorage))
+				foreach (var field in CreateFields(name, boostedValue.Value, storage))
 				{
 					field.SetBoost(boostedValue.Boost);
 					field.SetOmitNorms(false);
@@ -121,14 +123,16 @@ namespace Raven.Database.Indexing
 				yield break;
 			}
 
-			if(value is AbstractField)
+			var abstractField = value as AbstractField;
+			if (abstractField != null)
 			{
-				yield return (AbstractField)value;
+				yield return abstractField;
 				yield break;
 			}
-			if(value is byte[])
+			var bytes = value as byte[];
+			if (bytes != null)
 			{
-				yield return CreateBinaryFieldWithCaching(name, (byte[])value, indexDefinition.GetStorage(name, defaultStorage));
+				yield return CreateBinaryFieldWithCaching(name, bytes, storage);
 				yield break;
 			}
 
@@ -140,7 +144,7 @@ namespace Raven.Database.Indexing
 				foreach (var itemToIndex in itemsToIndex)
 				{
 					multipleItemsSameFieldCount.Add(count++);
-					foreach (var field in CreateFields(name, itemToIndex, indexDefinition, defaultStorage))
+					foreach (var field in CreateFields(name, itemToIndex, storage))
 					{
 						yield return field;
 					}
@@ -156,18 +160,18 @@ namespace Raven.Database.Indexing
 				{
 				    var val = (DateTime) value;
 					var postFix = val.Kind == DateTimeKind.Utc ? "Z" : "";
-					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeFormatsToWrite) + postFix, indexDefinition.GetStorage(name, defaultStorage),
+					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeFormatsToWrite) + postFix, storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
 				else if(value is DateTimeOffset)
 				{
 					var val = (DateTimeOffset)value;
-					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeOffsetFormatsToWrite), indexDefinition.GetStorage(name, defaultStorage),
+					yield return CreateFieldWithCaching(name, val.ToString(Default.DateTimeOffsetFormatsToWrite), storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
 				else
 				{
-					yield return CreateFieldWithCaching(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
+					yield return CreateFieldWithCaching(name, value.ToString(), storage,
 										   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 				}
 				yield break;
@@ -176,7 +180,7 @@ namespace Raven.Database.Indexing
 			if (value is string) 
 			{
 			    var index = indexDefinition.GetIndex(name, Field.Index.ANALYZED);
-				yield return CreateFieldWithCaching(name, value.ToString(), indexDefinition.GetStorage(name, defaultStorage),
+				yield return CreateFieldWithCaching(name, value.ToString(), storage,
 								 index); 
 				yield break;
 			}
@@ -184,43 +188,43 @@ namespace Raven.Database.Indexing
 			if (value is DateTime)
 			{
 				yield return CreateFieldWithCaching(name, DateTools.DateToString((DateTime)value, DateTools.Resolution.MILLISECOND),
-					indexDefinition.GetStorage(name, defaultStorage),
+					storage,
 					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 			else if (value is DateTimeOffset)
 			{
 				yield return CreateFieldWithCaching(name, DateTools.DateToString(((DateTimeOffset)value).UtcDateTime, DateTools.Resolution.MILLISECOND),
-					indexDefinition.GetStorage(name, defaultStorage),
+					storage,
 					indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 			else if(value is bool)
 			{
-				yield return new Field(name, ((bool) value) ? "true" : "false", indexDefinition.GetStorage(name, defaultStorage),
+				yield return new Field(name, ((bool) value) ? "true" : "false", storage,
 							  indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 
 			}
 			else if(value is IConvertible) // we need this to store numbers in invariant format, so JSON could read them
 			{
 				var convert = ((IConvertible) value);
-				yield return CreateFieldWithCaching(name, convert.ToString(CultureInfo.InvariantCulture), indexDefinition.GetStorage(name, defaultStorage),
+				yield return CreateFieldWithCaching(name, convert.ToString(CultureInfo.InvariantCulture), storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 			else if (value is IDynamicJsonObject)
 			{
 				var inner = ((IDynamicJsonObject)value).Inner;
 				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-				yield return CreateFieldWithCaching(name, inner.ToString(), indexDefinition.GetStorage(name, defaultStorage),
+				yield return CreateFieldWithCaching(name, inner.ToString(), storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 			else 
 			{
 				yield return CreateFieldWithCaching(name + "_ConvertToJson", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-				yield return CreateFieldWithCaching(name, RavenJToken.FromObject(value).ToString(), indexDefinition.GetStorage(name, defaultStorage),
+				yield return CreateFieldWithCaching(name, RavenJToken.FromObject(value).ToString(), storage,
 									   indexDefinition.GetIndex(name, Field.Index.NOT_ANALYZED_NO_NORMS));
 			}
 
 
-			foreach (var numericField in CreateNumericFieldWithCaching(name, value, defaultStorage)) 
+			foreach (var numericField in CreateNumericFieldWithCaching(name, value, storage)) 
 				yield return numericField;
 		}
 
@@ -273,7 +277,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static bool ShouldTreatAsEnumerable(IEnumerable itemsToIndex)
+		private static bool ShouldTreatAsEnumerable(object itemsToIndex)
 	    {
 			if (itemsToIndex == null)
 				return false;

@@ -8,8 +8,7 @@ namespace Raven.Studio.Controls
 	{
 		public ListBoxMenu()
 		{
-			Interaction.GetBehaviors(this).Add(new SelectItemOnRightClick());
-			
+			Interaction.GetBehaviors(this).Add(new SelectItemOnRightClick());	
 		}
 	}
 }

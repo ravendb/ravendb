@@ -172,9 +172,16 @@ namespace Raven.Json.Linq
 		/// <returns>A <see cref="RavenJToken"/> populated from the string that contains JSON.</returns>
 		public static RavenJToken Parse(string json)
 		{
-			JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+			try
+			{
+				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
 
-			return Load(jsonReader);
+				return Load(jsonReader);
+			}
+			catch (Exception e)
+			{
+				throw new JsonSerializationException("Could not parse: [" + json +"]", e);
+			}
 		}
 
 		/// <summary>
@@ -237,63 +244,82 @@ namespace Raven.Json.Linq
 				var curOtherReader = otherStack.Pop();
 				var curThisReader = thisStack.Pop();
 
-				if (curThisReader.Type != curOtherReader.Type) return false;
-
-				if (curOtherReader.Type == JTokenType.Array)
+				if (curThisReader.Type == curOtherReader.Type)
 				{
-					var selfArray = (RavenJArray) curThisReader;
-					var otherArray = (RavenJArray) curOtherReader;
-					if (selfArray.Length != otherArray.Length)
-						return false;
-
-					for (int i = 0; i < selfArray.Length; i++)
+					switch (curOtherReader.Type)
 					{
-						thisStack.Push(selfArray[i]);
-						otherStack.Push(otherArray[i]);
-					}
-				}
-				else if (curOtherReader.Type == JTokenType.Object)
-				{
-					var selfObj = (RavenJObject) curThisReader;
-					var otherObj = (RavenJObject) curOtherReader;
-					if (selfObj.Count != otherObj.Count)
-						return false;
+						case JTokenType.Array:
+							var selfArray = (RavenJArray) curThisReader;
+							var otherArray = (RavenJArray) curOtherReader;
+							if (selfArray.Length != otherArray.Length)
+								return false;
 
-					foreach (var kvp in selfObj.Properties)
-					{
-						RavenJToken token;
-						if (otherObj.TryGetValue(kvp.Key, out token) == false)
-							return false;
-						switch (kvp.Value.Type)
-						{
-							case JTokenType.Array:
-							case JTokenType.Object:
-								otherStack.Push(token);
-								thisStack.Push(kvp.Value);
-								break;
-							case JTokenType.Bytes:
-								var bytes = kvp.Value.Value<byte[]>();
-								byte[] tokenBytes = token.Type == JTokenType.String ? Convert.FromBase64String(token.Value<string>()) : token.Value<byte[]>();
-								if (bytes.Length != tokenBytes.Length)
+							for (int i = 0; i < selfArray.Length; i++)
+							{
+								thisStack.Push(selfArray[i]);
+								otherStack.Push(otherArray[i]);
+							}
+							break;
+						case JTokenType.Object:
+							var selfObj = (RavenJObject) curThisReader;
+							var otherObj = (RavenJObject) curOtherReader;
+							if (selfObj.Count != otherObj.Count)
+								return false;
+
+							foreach (var kvp in selfObj.Properties)
+							{
+								RavenJToken token;
+								if (otherObj.TryGetValue(kvp.Key, out token) == false)
 									return false;
-
-								if (tokenBytes.Where((t, i) => t != bytes[i]).Any())
+								switch (kvp.Value.Type)
 								{
-									return false;
-								}
+									case JTokenType.Array:
+									case JTokenType.Object:
+										otherStack.Push(token);
+										thisStack.Push(kvp.Value);
+										break;
+									case JTokenType.Bytes:
+										var bytes = kvp.Value.Value<byte[]>();
+										byte[] tokenBytes = token.Type == JTokenType.String
+										                    	? Convert.FromBase64String(token.Value<string>())
+										                    	: token.Value<byte[]>();
+										if (bytes.Length != tokenBytes.Length)
+											return false;
 
-								break;
-							default:
-								if (!kvp.Value.DeepEquals(token)) 
-									return false;
-								break;
-						}
-					
+										if (tokenBytes.Where((t, i) => t != bytes[i]).Any())
+										{
+											return false;
+										}
+
+										break;
+									default:
+										if (!kvp.Value.DeepEquals(token))
+											return false;
+										break;
+								}
+							}
+							break;
+						default:
+							if (!curOtherReader.DeepEquals(curThisReader))
+								return false;
+							break;
 					}
 				}
-				else // value
+				else
 				{
-					if (!curOtherReader.DeepEquals(curThisReader)) return false;
+					switch (curThisReader.Type)
+					{
+						case JTokenType.Guid:
+							if (curOtherReader.Type != JTokenType.String)
+								return false;
+
+							if (curThisReader.Value<string>() != curOtherReader.Value<string>())
+								return false;
+
+							break;
+						default:
+							return false;
+					}
 				}
 			}
 

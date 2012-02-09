@@ -10,6 +10,7 @@ using System.Linq;
 using Microsoft.Isam.Esent.Interop;
 using NLog;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database;
 using Raven.Database.Backup;
@@ -23,9 +24,9 @@ namespace Raven.Storage.Esent.Backup
 		private readonly JET_INSTANCE instance;
 		private readonly DocumentDatabase database;
 		private string to;
-		private readonly bool incrementalBackup;
+		private bool incrementalBackup;
 		private string src;
-
+		private int backupCount;
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		public BackupOperation(DocumentDatabase database, string src, string to, bool incrementalBackup)
@@ -35,27 +36,39 @@ namespace Raven.Storage.Esent.Backup
 			this.to = to;
 			this.incrementalBackup = incrementalBackup;
 			this.database = database;
-			this.src = src;
-			this.to = to;
 		}
 
 		public void Execute(object ignored)
 		{
 			try
 			{
-				to = to.ToFullPath();
 				src = src.ToFullPath();
-		
+				to = to.ToFullPath();
+
+				var backupConfigPath = Path.Combine(to, "RavenDB.Backup");
+				if (Directory.Exists(to) && File.Exists(backupConfigPath)) // trying to backup to an existing backup folder
+				{
+					if (!incrementalBackup) 
+						throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
+
+					var incrementalTag = DateTime.UtcNow.ToString("Inc yyyy-MM-dd hh-mm-ss");
+					to = Path.Combine(to, incrementalTag);
+				}
+				else
+				{
+					incrementalBackup = false; // destination wasn't detected as a backup folder, automatically revert to a full backup if incremental was specified
+				}
+
 				log.Info("Starting backup of '{0}' to '{1}'", src, to);
 				var directoryBackups = new List<DirectoryBackup>
 				{
-					new DirectoryBackup(Path.Combine(src, "IndexDefinitions"), Path.Combine(to, "IndexDefinitions"), Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N")))
+					new DirectoryBackup(Path.Combine(src, "IndexDefinitions"), Path.Combine(to, "IndexDefinitions"), Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N")), incrementalBackup)
 				};
 				directoryBackups.AddRange(from index in Directory.GetDirectories(database.Configuration.IndexStoragePath)
 										  let fromIndex = Path.Combine(database.Configuration.IndexStoragePath, Path.GetFileName(index))
 										  let toIndex = Path.Combine(to, "Indexes", Path.GetFileName(index))
 										  let tempIndex = Path.Combine(src, Path.Combine("BackupTempDirectories",Guid.NewGuid().ToString("N")))
-										  select new DirectoryBackup(fromIndex, toIndex, tempIndex));
+										  select new DirectoryBackup(fromIndex, toIndex, tempIndex, incrementalBackup));
 
 				foreach (var directoryBackup in directoryBackups)
 				{
@@ -69,8 +82,10 @@ namespace Raven.Storage.Esent.Backup
 				}
 
 				var esentBackup = new EsentBackup(instance, to, incrementalBackup ? BackupGrbit.Incremental : BackupGrbit.Atomic);
-				esentBackup.Notify+=UpdateBackupStatus;
+				esentBackup.Notify += UpdateBackupStatus;
 				esentBackup.Execute();
+
+				File.WriteAllText(backupConfigPath, "Backup completed " + DateTime.Now);
 			}
 			catch (Exception e)
 			{

@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Web;
+using System.Web.Hosting;
+using NLog;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -17,10 +19,24 @@ namespace Raven.Web
 		internal static HttpServer server;
 		private static readonly object locker = new object();
 
+		private static Logger log = LogManager.GetCurrentClassLogger();
+
+		public class ReleaseRavenDBWhenAppDomainIsTornDown : IRegisteredObject
+		{
+			public void Stop(bool immediate)
+			{
+				Shutdown();
+				HostingEnvironment.UnregisterObject(this);
+			}
+		}
+
 		public IHttpHandler GetHandler(HttpContext context, string requestType, string url, string pathTranslated)
 		{
 			if (database == null)
 				throw new InvalidOperationException("Database has not been initialized properly");
+			if (server == null)
+				throw new InvalidOperationException("Server has not been initialized properly");
+
 			return new ForwardToRavenResponders(server);
 		}
 
@@ -38,6 +54,7 @@ namespace Raven.Web
 				if (database != null)
 					return;
 
+				log.Info("Setting up RavenDB Http Integration to the ASP.Net Pipeline");
 				try
 				{
 					var ravenConfiguration = new RavenConfiguration();
@@ -61,6 +78,8 @@ namespace Raven.Web
 					}
 					throw;
 				}
+
+				HostingEnvironment.RegisterObject(new ReleaseRavenDBWhenAppDomainIsTornDown());
 			}
 		}
 
@@ -68,6 +87,7 @@ namespace Raven.Web
 		{
 			lock (locker)
 			{
+				log.Info("Disposing of RavenDB Http Integration to the ASP.Net Pipeline");
 				if (server != null)
 					server.Dispose();
 
