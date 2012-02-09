@@ -9,6 +9,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using Raven.Abstractions;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
@@ -74,7 +75,7 @@ namespace Raven.Tests
 			return documentStore;
 		}
 
-		protected virtual void CreateDefaultIndexes(EmbeddableDocumentStore documentStore)
+		protected virtual void CreateDefaultIndexes(IDocumentStore documentStore)
 		{
 			new RavenDocumentsByEntityName().Execute(documentStore);
 		}
@@ -210,7 +211,7 @@ namespace Raven.Tests
 					Url = "http://localhost:" + port
 				}.Initialize())
 				{
-					new RavenDocumentsByEntityName().Execute(documentStore);
+					CreateDefaultIndexes(documentStore);
 				}
 			}
 			catch 

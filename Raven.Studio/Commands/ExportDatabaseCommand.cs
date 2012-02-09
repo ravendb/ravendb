@@ -8,7 +8,10 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Silverlight.Connection;
 using Raven.Json.Linq;
+using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
+using TaskStatus = Raven.Studio.Models.TaskStatus;
 
 namespace Raven.Studio.Commands
 {
@@ -21,10 +24,12 @@ namespace Raven.Studio.Commands
 		private GZipStream gZipStream;
 		private StreamWriter streamWriter;
 		private JsonTextWriter jsonWriter;
+		private TaskModel taskModel;
 
-		public ExportDatabaseCommand(Action<string> output)
+		public ExportDatabaseCommand(TaskModel taskModel, Action<string> output)
 		{
 			this.output = output;
+			this.taskModel = taskModel;
 		}
 
 		public override void Execute(object parameter)
@@ -46,7 +51,7 @@ namespace Raven.Studio.Commands
 						 {
 							 Formatting = Formatting.Indented
 						 };
-
+			taskModel.TaskStatus = TaskStatus.Started;
 			output(String.Format("Exporting to {0}", saveFile.SafeFileName));
 
 			output("Begin reading indexes");
@@ -55,7 +60,8 @@ namespace Raven.Studio.Commands
 			jsonWriter.WritePropertyName("Indexes");
 			jsonWriter.WriteStartArray();
 
-			ReadIndexes(0).Catch(exception => Infrastructure.Execute.OnTheUI(() => Finish(exception)));
+			ReadIndexes(0)
+				.Catch(exception => Infrastructure.Execute.OnTheUI(() => Finish(exception)));
 		}
 
 		private Task ReadIndexes(int totalCount)
@@ -130,6 +136,7 @@ namespace Raven.Studio.Commands
 			stream.Dispose();
 
 			output("Export complete");
+			taskModel.TaskStatus = TaskStatus.Ended;
 			if (exception != null)
 				output(exception.ToString());
 		}

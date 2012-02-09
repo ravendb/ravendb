@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using Raven.Studio.Behaviors;
 
 namespace Raven.Studio.Features.Util
 {
@@ -9,6 +10,8 @@ namespace Raven.Studio.Features.Util
 		{
 			InitializeComponent();
 			ErrorTextBox.Text = text;
+			KeyBoard.Register(this);
+			KeyBoard.IsCtrlHold = false;
 		}
 
 		private void OKButton_Click(object sender, RoutedEventArgs e)

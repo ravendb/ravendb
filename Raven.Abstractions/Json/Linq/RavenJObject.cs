@@ -10,6 +10,9 @@ using System.Linq;
 
 namespace Raven.Json.Linq
 {
+	/// <summary>
+	/// Represents a JSON object.
+	/// </summary>
 	public class RavenJObject : RavenJToken, IEnumerable<KeyValuePair<string, RavenJToken>>
 	{
 		private readonly IEqualityComparer<string> comparer;

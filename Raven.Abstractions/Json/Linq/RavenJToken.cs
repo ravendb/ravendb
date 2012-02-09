@@ -9,6 +9,9 @@ using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
 {
+	/// <summary>
+	/// Represents an abstract JSON token.
+	/// </summary>
 	public abstract class RavenJToken
 	{
 		/// <summary>

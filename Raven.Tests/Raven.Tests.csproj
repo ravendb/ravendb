@@ -83,8 +83,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE\ReferenceAssemblies\v2.0\Microsoft.VisualStudio.DebuggerVisualizers.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.4.0.5\lib\net40\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.7.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Newtonsoft.Json.4.0.7\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
@@ -664,6 +665,13 @@
     <Compile Include="Security\OAuth\CertHelper.cs" />
     <Compile Include="Security\OAuth\GrantAccessTokenClientCredentialsFlow.cs" />
     <Compile Include="Security\OAuth\HttpWebRequestExtensions.cs" />
+    <Compile Include="Shard\BlogModel\Blog.cs" />
+    <Compile Include="Shard\BlogModel\BlogShardResolutionStrategy.cs" />
+    <Compile Include="Shard\BlogModel\BlogShardSelectionStrategy.cs" />
+    <Compile Include="Shard\BlogModel\CanQueryOnlyUsers.cs" />
+    <Compile Include="Shard\BlogModel\Post.cs" />
+    <Compile Include="Shard\BlogModel\ShardingScenario.cs" />
+    <Compile Include="Shard\BlogModel\User.cs" />
     <Compile Include="Shard\When_Using_Parallel_Access_Strategy.cs" />
     <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
     <Compile Include="Some.cs" />

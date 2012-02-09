@@ -53,8 +53,7 @@ namespace Raven.Tests.MailingList
 				{
 					session.Store(new ModelWithEnum
 					{
-						NullableCategory =
-							MonitorCategory.Normal
+						NullableCategory = MonitorCategory.Normal
 					});
 					session.SaveChanges();
 				}
