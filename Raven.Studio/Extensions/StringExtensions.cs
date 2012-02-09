@@ -1,8 +1,7 @@
-﻿using System;
-using System.IO;
+using System;
 using System.Text.RegularExpressions;
 
-namespace Raven.Studio.Infrastructure
+namespace Raven.Studio.Extensions
 {
 	public static class StringExtensions
 	{
