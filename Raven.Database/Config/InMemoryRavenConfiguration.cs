@@ -37,7 +37,9 @@ namespace Raven.Database.Config
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
 			BackgroundTasksPriority = ThreadPriority.Normal;
-			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 5000 : 2500;
+			MaxNumberOfItemsToIndexInSingleBatch = 250000;
+			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 5000 : 2500;
+
 			AvailableMemoryForRaisingIndexBatchSizeLimit = 512;
 			MaxNumberOfParallelIndexTasks = 8;
 
@@ -91,16 +93,17 @@ namespace Raven.Database.Config
 			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
 			if (maxNumberOfItemsToIndexInSingleBatch != null)
 			{
-				MaxNumberOfItemsToIndexInSingleBatch = int.Parse(maxNumberOfItemsToIndexInSingleBatch);
-				MaxNumberOfItemsToIndexInSingleBatch = Math.Max(MaxNumberOfItemsToIndexInSingleBatch, 128);
-				
-				// if we explicitly specify this, we disable the auto raising, unless this is also specified
-				AvailableMemoryForRaisingIndexBatchSizeLimit = int.MaxValue;
+				MaxNumberOfItemsToIndexInSingleBatch = Math.Max(int.Parse(maxNumberOfItemsToIndexInSingleBatch), 128);
 			}
 			var availableMemoryForRaisingIndexBatchSizeLimit = Settings["Raven/AvailableMemoryForRaisingIndexBatchSizeLimit"];
 			if (availableMemoryForRaisingIndexBatchSizeLimit != null)
 			{
-				MaxNumberOfItemsToIndexInSingleBatch = int.Parse(availableMemoryForRaisingIndexBatchSizeLimit);
+				AvailableMemoryForRaisingIndexBatchSizeLimit = int.Parse(availableMemoryForRaisingIndexBatchSizeLimit);
+			}
+			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
+			if (initialNumberOfItemsToIndexInSingleBatch != null)
+			{
+				InitialNumberOfItemsToIndexInSingleBatch = int.Parse(initialNumberOfItemsToIndexInSingleBatch);
 			}
 
 			var maxNumberOfParallelIndexTasks = Settings["Raven/MaxNumberOfParallelIndexTasks"];
@@ -326,10 +329,15 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// Max number of items to take for indexing in a batch
-		/// Default: 2500
 		/// Minimum: 128
 		/// </summary>
 		public int MaxNumberOfItemsToIndexInSingleBatch { get; set; }
+
+		/// <summary>
+		/// The intial number of items to take when indexing a batch
+		/// Default: 5,000
+		/// </summary>
+		public int InitialNumberOfItemsToIndexInSingleBatch { get; set; }
 
 		/// <summary>
 		/// The maximum number of indexing tasks allowed to run in parallel
