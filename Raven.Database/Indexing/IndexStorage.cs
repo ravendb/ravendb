@@ -76,7 +76,7 @@ namespace Raven.Database.Indexing
 			{
 				try
 				{
-					var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition);
+					var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
 					indexImplementation = CreateIndexImplementation(indexName, indexDefinition, luceneDirectory);
 					break;
 				}
@@ -94,7 +94,7 @@ namespace Raven.Database.Indexing
 							accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
 						});
 
-						var indexDirectory = indexName ?? IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
+						var indexDirectory = indexName;
 						var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
 						IOExtensions.DeleteDirectory(indexFullPath);
 					}
@@ -108,7 +108,10 @@ namespace Raven.Database.Indexing
 		}
 
 
-		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(IndexDefinition indexDefinition, string indexName = null)
+		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(
+			IndexDefinition indexDefinition, 
+			string indexName = null,
+			bool createIfMissing = true)
 		{
 			Lucene.Net.Store.Directory directory;
 			if (indexDefinition.IsTemp || configuration.RunInMemory)
@@ -124,6 +127,9 @@ namespace Raven.Database.Indexing
 
 				if (!IndexReader.IndexExists(directory))
 				{
+					if(createIfMissing == false)
+						throw new InvalidOperationException("Index does not exists: " + indexDirectory);
+
 					//creating index structure if we need to
 					new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
 				}
