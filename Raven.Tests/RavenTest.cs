@@ -203,7 +203,7 @@ namespace Raven.Tests
 				RunInMemory = true,
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All
 			});
-
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			try
 			{
 				using (var documentStore = new DocumentStore
