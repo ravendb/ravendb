@@ -130,6 +130,9 @@ namespace Raven.Database.Config
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
 			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 
+
+			ResetIndexOnUncleanShutdown = GetConfigurationValue<bool>("Raven/ResetIndexOnUncleanShutdown") ?? false;
+			
 			SetupTransactionMode();
 
 			DataDirectory = Settings["Raven/DataDir"] ?? @"~\Data";
@@ -290,6 +293,12 @@ namespace Raven.Database.Config
 		}
 
 		#region Core settings
+
+		/// <summary>
+		/// When the database is shut down rudely, determine whatever to reset the index or to check it.
+		/// Checking the index may take some time on large databases
+		/// </summary>
+		public bool ResetIndexOnUncleanShutdown { get; set; }
 
 		/// <summary>
 		/// What thread priority to give the various background tasks RavenDB uses (mostly for indexing)
