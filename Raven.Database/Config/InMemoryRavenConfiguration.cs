@@ -226,9 +226,23 @@ namespace Raven.Database.Config
 				var pwd = Settings["Raven/OAuthTokenCertificatePassword"];
 				if (string.IsNullOrEmpty(pwd) == false)
 				{
-					return new X509Certificate2(path, pwd, X509KeyStorageFlags.MachineKeySet);
+					try
+					{
+						return new X509Certificate2(path, pwd);
+					}
+					catch (Exception)
+					{
+						return new X509Certificate2(path, pwd, X509KeyStorageFlags.MachineKeySet);
+					}
 				}
-				return new X509Certificate2(path, string.Empty, X509KeyStorageFlags.MachineKeySet);
+				try
+				{
+					return new X509Certificate2(path);
+				}
+				catch (Exception)
+				{
+					return new X509Certificate2(path, string.Empty, X509KeyStorageFlags.MachineKeySet);
+				}
 			}
 
 			return CertGenerator.GenerateNewCertificate("RavenDB");

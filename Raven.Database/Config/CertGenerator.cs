@@ -68,7 +68,14 @@ namespace Raven.Database.Config
 
 			GenerateNewCertificate(name, memoryStream);
 
-			return new X509Certificate2(memoryStream.ToArray(),string.Empty, X509KeyStorageFlags.MachineKeySet);
+			try
+			{
+				return new X509Certificate2(memoryStream.ToArray());
+			}
+			catch (Exception)
+			{
+				return new X509Certificate2(memoryStream.ToArray(), string.Empty, X509KeyStorageFlags.MachineKeySet);
+			}
 		}
 	}
 }
