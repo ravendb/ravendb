@@ -992,8 +992,7 @@ namespace Raven.Database
 			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
-				var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start)
-					.Take(pageSize);
+				var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 				foreach (var doc in documents)
 				{
@@ -1016,11 +1015,11 @@ namespace Raven.Database
 			{
 				IEnumerable<JsonDocument> documents;
 				if (etag == null)
-					documents = actions.Documents.GetDocumentsByReverseUpdateOrder(start);
+					documents = actions.Documents.GetDocumentsByReverseUpdateOrder(start, pageSize);
 				else
-					documents = actions.Documents.GetDocumentsAfter(etag.Value);
+					documents = actions.Documents.GetDocumentsAfter(etag.Value, pageSize);
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
-				foreach (var doc in documents.Take(pageSize))
+				foreach (var doc in documents)
 				{
 					DocumentRetriever.EnsureIdInMetadata(doc);
 					var document = documentRetriever

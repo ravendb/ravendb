@@ -6,15 +6,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Json;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
-using Raven.Database.Tasks;
 using Raven.Json.Linq;
 using System.Linq;
 
@@ -48,67 +45,44 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
 		{
-			// optimized according to this: http://managedesent.codeplex.com/discussions/274843#post680337
-			var primaryKeyIndexes = new List<Tuple<byte[], GetMappedResultsParams>>();
-
+			var optimizedIndexReader = new OptimizedIndexReader<GetMappedResultsParams>(Session, MappedResults);
+			
 			Api.JetSetCurrentIndex(session, MappedResults, "by_reduce_key_and_view_hashed");
+			
 			foreach (var item in getMappedResultsParams)
 			{
 				Api.MakeKey(session, MappedResults, item.ViewAndReduceKeyHashed, MakeKeyGrbit.NewKey);
 				if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
 					continue;
 
-				var bookmarkBuffer = new byte[SystemParameters.BookmarkMost];
-				var ignoredBuffer = new byte[SystemParameters.BookmarkMost];
 				Api.MakeKey(session, MappedResults, item.ViewAndReduceKeyHashed, MakeKeyGrbit.NewKey);
 				Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
 				do
 				{
-					int actualBookmarkSize;
-					int ignored;
-					Api.JetGetSecondaryIndexBookmark(session, MappedResults, ignoredBuffer, ignoredBuffer.Length, out ignored, bookmarkBuffer,
-					                                 bookmarkBuffer.Length, out actualBookmarkSize, GetSecondaryIndexBookmarkGrbit.None);
-
-					primaryKeyIndexes.Add(Tuple.Create(bookmarkBuffer.Take(actualBookmarkSize).ToArray(), item));
+					optimizedIndexReader.Add(item);
 				} while (Api.TryMoveNext(session, MappedResults));
 			}
 
-			primaryKeyIndexes.Sort((x, y) =>
-			{
-				var bytes1 = x.Item1;
-				var bytes2 = y.Item1;
-				for (int i = 0; i < Math.Min(bytes1.Length, bytes2.Length); i++)
+			return optimizedIndexReader
+				.Where(item =>
 				{
-					if (bytes1[i] != bytes2[i])
-						return bytes1[i] - bytes2[i];
-				}
-				return bytes1.Length - bytes2.Length;
-			});
+					// we need to check that we don't have hash collisions
+					var currentReduceKey = Api.RetrieveColumnAsString(session, MappedResults,
+					                                                  tableColumnsCache.MappedResultsColumns["reduce_key"]);
+					if (currentReduceKey != item.ReduceKey)
+						return false;
 
-			foreach (var primaryKeyIndexTuple in primaryKeyIndexes)
-			{
-				var bookmark = primaryKeyIndexTuple.Item1;
-				var item = primaryKeyIndexTuple.Item2;
-				Api.JetGotoBookmark(session, MappedResults, bookmark, bookmark.Length);
-
-				// we need to check that we don't have hash collisions
-				var currentReduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
-				if (currentReduceKey != item.ReduceKey)
-					continue;
-
-				var currentView = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
-				if (currentView != item.View)
-					continue;
-
-				RavenJObject obj;
-				using(var stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
+					var currentView = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
+					
+					return currentView == item.View;
+				})
+				.Select(item =>
 				{
-					obj = stream.ToJObject();
-				}
-
-				yield return obj;
-
-			}
+					using (var stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
+					{
+						return stream.ToJObject();
+					}
+				});
 		}
 
 		public IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view)
@@ -159,31 +133,37 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
 
-	    public IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData)
+	    public IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take)
 	    {
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
 			Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, MappedResults, lastReducedEtag, MakeKeyGrbit.None);
 			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekLE) == false)
-				yield break;
+				return Enumerable.Empty<MappedResultInfo>();
 
-	        while (Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]) == indexName)
+	    	var optimizer = new OptimizedIndexReader(Session, MappedResults);
+	        while (
+				optimizer.Count < take && 
+				Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex) == indexName)
 	        {
-	        	var result = new MappedResultInfo
-	        	{
-	        		ReduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]),
-	        		Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
-	        		Timestamp = Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value,
-	        	};
-				if (loadData)
-					result.Data = Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]).ToJObject();
-	        	yield return result;
+				
+				optimizer.Add();
 
 				// the index is view ascending and etag descending
 				// that means that we are going backward to go up
 				if (Api.TryMovePrevious(session, MappedResults) == false)
-					yield break;
+					break;
 	        }
+
+	    	return optimizer.Select(() => new MappedResultInfo
+	    	{
+	    		ReduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]),
+	    		Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
+	    		Timestamp = Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value,
+	    		Data = loadData
+					? Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]).ToJObject()
+					: null,
+	    	});
 	    }
 	}
 }

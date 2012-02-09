@@ -55,11 +55,11 @@ namespace Raven.Tests.ManagedStorage
 			{
 				tx.Batch(viewer =>
 				{
-					Assert.Equal(2, viewer.Documents.GetDocumentsAfter(Guid.Empty).Count());
+					Assert.Equal(2, viewer.Documents.GetDocumentsAfter(Guid.Empty,5).Count());
 					var doc1 = viewer.Documents.DocumentByKey("Ayende", null);
-					Assert.Equal(1, viewer.Documents.GetDocumentsAfter(doc1.Etag.Value).Count());
+					Assert.Equal(1, viewer.Documents.GetDocumentsAfter(doc1.Etag.Value,5).Count());
 					var doc2 = viewer.Documents.DocumentByKey("Oren", null);
-					Assert.Equal(0, viewer.Documents.GetDocumentsAfter(doc2.Etag.Value).Count());
+					Assert.Equal(0, viewer.Documents.GetDocumentsAfter(doc2.Etag.Value,5).Count());
 				});
 			}
 		}
@@ -81,14 +81,14 @@ namespace Raven.Tests.ManagedStorage
 			{
 				tx.Batch(viewer =>
 				{
-					Assert.Equal(2, viewer.Documents.GetDocumentsByReverseUpdateOrder(0).Count());
-					var tuples = viewer.Documents.GetDocumentsByReverseUpdateOrder(0).ToArray();
+					Assert.Equal(2, viewer.Documents.GetDocumentsByReverseUpdateOrder(0, 5).Count());
+					var tuples = viewer.Documents.GetDocumentsByReverseUpdateOrder(0, 5).ToArray();
 					Assert.Equal(2, tuples.Length);
 					Assert.Equal("Oren", tuples[0].Key);
 					Assert.Equal("Ayende", tuples[1].Key);
 
-					Assert.Equal(1, viewer.Documents.GetDocumentsByReverseUpdateOrder(1).Count());
-					tuples = viewer.Documents.GetDocumentsByReverseUpdateOrder(1).ToArray();
+					Assert.Equal(1, viewer.Documents.GetDocumentsByReverseUpdateOrder(1, 5).Count());
+					tuples = viewer.Documents.GetDocumentsByReverseUpdateOrder(1, 5).ToArray();
 					Assert.Equal("Ayende", tuples[0].Key);
 				});
 			}

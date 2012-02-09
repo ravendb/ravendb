@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
@@ -173,153 +174,93 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start)
+		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MoveAfterLast(session, Documents);
 			for (int i = 0; i < start; i++)
 			{
 				if (Api.TryMovePrevious(session, Documents) == false)
-					yield break;
+					return Enumerable.Empty<JsonDocument>();
 			}
-			while (Api.TryMovePrevious(session, Documents))
+			var optimizer = new OptimizedIndexReader(Session, Documents);
+			while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
 			{
-				var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
-				var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
-
-				RavenJObject dataAsJson;
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-				{
-					using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
-						dataAsJson = aggregate.ToJObject();
-				}
-
-				yield return new JsonDocument
-				{
-					Key = key,
-					DataAsJson = dataAsJson,
-					NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
-					LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
-					Etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
-					Metadata = metadata
-				};
+				optimizer.Add();
 			}
+
+			return optimizer.Select(ReadCurrentDocument);
+		}
+
+		private JsonDocument ReadCurrentDocument()
+		{
+			var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+			var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
+
+			RavenJObject dataAsJson;
+			using (
+				Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
+			{
+				using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+					dataAsJson = aggregate.ToJObject();
+			}
+
+			return new JsonDocument
+			{
+				Key = key,
+				DataAsJson = dataAsJson,
+				NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
+				LastModified =
+					Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
+				Etag =
+					Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
+				Metadata = metadata
+			};
 		}
 
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
-				yield break;
+				return Enumerable.Empty<JsonDocument>();
+			var optimizer = new OptimizedIndexReader(Session, Documents);
 			do
 			{
-				var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
-				var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+				optimizer.Add();
+			} while (Api.TryMoveNext(session, Documents) && optimizer.Count < take);
 
-				RavenJObject dataAsJson;
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-				{
-					using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
-						dataAsJson = aggregate.ToJObject();
-				}
-				yield return new JsonDocument
-				{
-					Key = key,
-					DataAsJson = dataAsJson,
-					NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
-					LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
-					Etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
-					Metadata = metadata
-				};
-			} while (Api.TryMoveNext(session, Documents));
+			return optimizer.Select(ReadCurrentDocument);
 		}
 
 
-		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start)
+		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
-				yield break;
+				return Enumerable.Empty<JsonDocument>();
+
+			var optimizer = new OptimizedIndexReader(Session, Documents);
 			do
 			{
 				Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
 				if (Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
-					yield break;
+					return Enumerable.Empty<JsonDocument>();
 
 				while (start > 0)
 				{
 					if (Api.TryMoveNext(session, Documents) == false)
-						yield break;
+						return Enumerable.Empty<JsonDocument>();
 					start--;
 				}
 
-				var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
-				var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+				optimizer.Add();
 
-				RavenJObject dataAsJson;
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-				{
-					using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
-						dataAsJson = aggregate.ToJObject();
-				}
+			} while (Api.TryMoveNext(session, Documents) && optimizer.Count < take);
 
-				yield return new JsonDocument
-				{
-					Key = key,
-					DataAsJson = dataAsJson,
-					NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
-					LastModified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]).Value,
-					Etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting(),
-					Metadata = metadata
-				};
-			} while (Api.TryMoveNext(session, Documents));
-		}
-
-		public IEnumerable<Tuple<JsonDocument, int>> DocumentsById(int startId, int endId)
-		{
-			Api.JetSetCurrentIndex(session, Documents, "by_id");
-			Api.MakeKey(session, Documents, startId, MakeKeyGrbit.NewKey);
-			// this sholdn't really happen, it means that the doc is missing
-			// probably deleted before we can get it?
-			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
-			{
-				logger.Debug("Document with id {0} or higher was not found", startId);
-				yield break;
-			}
-			do
-			{
-				var id = Api.RetrieveColumnAsInt32(session, Documents, tableColumnsCache.DocumentsColumns["id"],
-												   RetrieveColumnGrbit.RetrieveFromIndex).Value;
-				if (id > endId)
-					break;
-
-				logger.Debug("Document with id '{0}' was found", id);
-				var etag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
-				var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
-				var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
-				var modified = Api.RetrieveColumnAsDateTime(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"]);
-
-				RavenJObject dataAsJson;
-				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-				{
-					using (var aggregate = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
-						dataAsJson = aggregate.ToJObject();
-				}
-
-				var doc = new JsonDocument
-				{
-					Key = key,
-					DataAsJson = dataAsJson,
-					NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
-					Etag = etag,
-					LastModified = modified.Value,
-					Metadata = metadata
-				};
-				yield return new Tuple<JsonDocument, int>(doc, id);
-			} while (Api.TryMoveNext(session, Documents));
+			return optimizer.Select(ReadCurrentDocument);
 		}
 
 		public Guid AddDocument(string key, Guid? etag, RavenJObject data, RavenJObject metadata)

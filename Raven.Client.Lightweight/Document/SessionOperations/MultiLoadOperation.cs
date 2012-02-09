@@ -17,16 +17,17 @@ namespace Raven.Client.Document.SessionOperations
 		bool firstRequest = true;
 		JsonDocument[] results;
 		JsonDocument[] includeResults;
-				
+
 		private Stopwatch sp;
 
-		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, 
-			Func<IDisposable> disableAllCaching) : this(sessionOperations, disableAllCaching, null)
+		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations,
+			Func<IDisposable> disableAllCaching)
+			: this(sessionOperations, disableAllCaching, null)
 		{
-			
+
 		}
 
-		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, 
+		public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations,
 			Func<IDisposable> disableAllCaching,
 			string[] ids)
 		{
@@ -60,8 +61,8 @@ namespace Raven.Client.Document.SessionOperations
 			includeResults = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();
 			results = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Results).ToArray();
 
-			return	sessionOperations.AllowNonAuthoritativeInformation == false &&
-					results.Any(x => x.NonAuthoritativeInformation ?? false) &&
+			return sessionOperations.AllowNonAuthoritativeInformation == false &&
+					results.Where(x => x != null).Any(x => x.NonAuthoritativeInformation ?? false) &&
 					sp.Elapsed < sessionOperations.NonAuthoritativeInformationTimeout
 				;
 		}

@@ -15,6 +15,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Microsoft.VisualBasic.Devices;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -36,7 +37,8 @@ namespace Raven.Database.Config
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
 			BackgroundTasksPriority = ThreadPriority.Normal;
-			MaxNumberOfItemsToIndexInSingleBatch = 2500;
+			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 5000 : 2500;
+			AvailableMemoryForRaisingIndexBatchSizeLimit = 512;
 			MaxNumberOfParallelIndexTasks = 8;
 
 			Catalog = new AggregateCatalog(
@@ -87,8 +89,19 @@ namespace Raven.Database.Config
 
 			// Index settings
 			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
-			MaxNumberOfItemsToIndexInSingleBatch = maxNumberOfItemsToIndexInSingleBatch != null ? int.Parse(maxNumberOfItemsToIndexInSingleBatch) : 2500;
-			MaxNumberOfItemsToIndexInSingleBatch = Math.Max(MaxNumberOfItemsToIndexInSingleBatch, 128);
+			if (maxNumberOfItemsToIndexInSingleBatch != null)
+			{
+				MaxNumberOfItemsToIndexInSingleBatch = int.Parse(maxNumberOfItemsToIndexInSingleBatch);
+				MaxNumberOfItemsToIndexInSingleBatch = Math.Max(MaxNumberOfItemsToIndexInSingleBatch, 128);
+				
+				// if we explicitly specify this, we disable the auto raising, unless this is also specified
+				AvailableMemoryForRaisingIndexBatchSizeLimit = int.MaxValue;
+			}
+			var availableMemoryForRaisingIndexBatchSizeLimit = Settings["Raven/AvailableMemoryForRaisingIndexBatchSizeLimit"];
+			if (availableMemoryForRaisingIndexBatchSizeLimit != null)
+			{
+				MaxNumberOfItemsToIndexInSingleBatch = int.Parse(availableMemoryForRaisingIndexBatchSizeLimit);
+			}
 
 			var maxNumberOfParallelIndexTasks = Settings["Raven/MaxNumberOfParallelIndexTasks"];
 			MaxNumberOfParallelIndexTasks = maxNumberOfParallelIndexTasks != null ? int.Parse(maxNumberOfParallelIndexTasks) : Environment.ProcessorCount;
@@ -589,6 +602,35 @@ namespace Raven.Database.Config
 				indexStoragePath = value.ToFullPath();
 			}
 		}
+
+		private bool failedToGetAvailablePhysicalMemory;
+		public int AvailablePhysicalMemoryInMegabytes
+		{
+		
+				get
+				{
+					if (failedToGetAvailablePhysicalMemory)
+						return -1;
+
+					try
+					{
+						var availablePhysicalMemoryInMb = new ComputerInfo().AvailablePhysicalMemory / 1024 / 1024;
+						return (int)availablePhysicalMemoryInMb;
+					}
+					catch (Exception)
+					{
+						if (Type.GetType("Mono.Runtime") == null)
+							throw;
+
+
+						// I don't know how to figur eout free RAM on mono, so we disable this behavior
+						failedToGetAvailablePhysicalMemory = true;
+						return -1;
+					}
+				}
+		}
+
+		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }
 
 		protected void ResetContainer()
 		{
