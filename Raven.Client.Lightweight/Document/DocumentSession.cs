@@ -281,7 +281,7 @@ namespace Raven.Client.Document
 			return multiLoadOperation.Complete<T>();
 		}
 
-		internal T[] LoadInternal<T>(string[] ids)
+		public T[] LoadInternal<T>(string[] ids)
 		{
 			if (ids.Length == 0)
 				return new T[0];

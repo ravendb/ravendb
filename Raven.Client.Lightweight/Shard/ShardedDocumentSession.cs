@@ -433,6 +433,11 @@ namespace Raven.Client.Shard
 			return allResults.OrderBy(item => Array.IndexOf(ids, GetDocumentId(item))).ToArray();
 		}
 
+		public T[] LoadInternal<T>(string[] ids)
+		{
+			throw new NotImplementedException();
+		}
+
 		internal class DbCmdsListComparer : IEqualityComparer<IList<IDatabaseCommands>>
 		{
 			public bool Equals(IList<IDatabaseCommands> x, IList<IDatabaseCommands> y)

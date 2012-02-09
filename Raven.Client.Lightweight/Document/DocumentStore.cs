@@ -37,7 +37,7 @@ namespace Raven.Client.Document
 	public class DocumentStore : DocumentStoreBase
 	{
 		/// <summary>
-		/// The current session id - only used during contsruction
+		/// The current session id - only used during construction
 		/// </summary>
 		[ThreadStatic]
 		protected static Guid? currentSessionId;
@@ -214,15 +214,6 @@ namespace Raven.Client.Document
 			var connectionStringOptions = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionStringName(connectionStringName);
 			connectionStringOptions.Parse();
 			return connectionStringOptions.ConnectionStringOptions;
-		}
-
-		///<summary>
-		/// Whatever or not we will automatically enlist in distributed transactions
-		///</summary>
-		public bool EnlistInDistributedTransactions
-		{
-			get { return Conventions.EnlistInDistributedTransactions; }
-			set { Conventions.EnlistInDistributedTransactions = value; }
 		}
 #endif
 

@@ -79,8 +79,11 @@ namespace Raven.Client
 		///<summary>
 		/// Whatever or not we will automatically enlist in distributed transactions
 		///</summary>
-		public bool EnlistInDistributedTransactions { get; set; }
-
+		public bool EnlistInDistributedTransactions
+		{
+			get { return Conventions.EnlistInDistributedTransactions; }
+			set { Conventions.EnlistInDistributedTransactions = value; }
+		}
 		/// <summary>
 		/// The resource manager id for the document store.
 		/// IMPORTANT: Using Guid.NewGuid() to set this value is almost certainly a mistake, you should set

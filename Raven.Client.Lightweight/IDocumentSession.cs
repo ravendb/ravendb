@@ -149,6 +149,7 @@ namespace Raven.Client
 	{
 		DocumentConvention Conventions { get; }
 		T[] LoadInternal<T>(string[] ids, string[] includes);
+		T[] LoadInternal<T>(string[] ids);
 	}
 #endif
 }
