@@ -37,10 +37,10 @@ namespace Raven.Database.Config
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
 			BackgroundTasksPriority = ThreadPriority.Normal;
-			MaxNumberOfItemsToIndexInSingleBatch = 250000;
-			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 5000 : 2500;
+			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128*1024 : 64*1024;
+			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
-			AvailableMemoryForRaisingIndexBatchSizeLimit = 512;
+			AvailableMemoryForRaisingIndexBatchSizeLimit = Environment.Is64BitProcess ? 512 : 128;
 			MaxNumberOfParallelIndexTasks = 8;
 
 			Catalog = new AggregateCatalog(
