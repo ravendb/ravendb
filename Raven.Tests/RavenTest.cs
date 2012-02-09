@@ -196,6 +196,7 @@ namespace Raven.Tests
 
 		protected RavenDbServer GetNewServer(int port, string path)
 		{
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var ravenDbServer = new RavenDbServer(new RavenConfiguration
 			{
 				Port = port,
@@ -203,7 +204,6 @@ namespace Raven.Tests
 				RunInMemory = true,
 				AnonymousUserAccessMode = AnonymousUserAccessMode.All
 			});
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			try
 			{
 				using (var documentStore = new DocumentStore
