@@ -45,6 +45,8 @@ namespace Raven.Database.Indexing
 			get { return serverErrors.ToArray(); }
 		}
 
+		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
+
 		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter)
 		{
 			return WaitForWork(timeout, ref workerWorkCounter, null);

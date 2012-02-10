@@ -16,7 +16,7 @@ namespace Raven.Database.Indexing
 		protected ITransactionalStorage transactionalStorage;
 		protected int workCounter;
 		protected int lastFlushedWorkCounter;
-		protected int numberOfItemsToIndexInSingleBatch;
+		private int numberOfItemsToIndexInSingleBatch;
 		protected int lastAmountOfItemsToIndex;
 
 		protected AbstractIndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
@@ -24,7 +24,17 @@ namespace Raven.Database.Indexing
 			this.transactionalStorage = transactionalStorage;
 			this.context = context;
 			this.scheduler = scheduler;
-			numberOfItemsToIndexInSingleBatch = context.Configuration.InitialNumberOfItemsToIndexInSingleBatch;
+			NumberOfItemsToIndexInSingleBatch = context.Configuration.InitialNumberOfItemsToIndexInSingleBatch;
+		}
+
+		public int NumberOfItemsToIndexInSingleBatch
+		{
+			get { return numberOfItemsToIndexInSingleBatch; }
+			set
+			{
+				numberOfItemsToIndexInSingleBatch = value;
+				context.CurrentNumberOfItemsToIndexInSingleBatch = numberOfItemsToIndexInSingleBatch;
+			}
 		}
 
 		protected void AutoThrottleBatchSize(int amountOfItemsToIndex)

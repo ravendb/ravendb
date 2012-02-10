@@ -18,6 +18,8 @@ namespace Raven.Abstractions.Data
 
 		public string[] StaleIndexes { get; set; }
 
+		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
+
 		public IndexStats[] Indexes { get; set; }
 
 		public ServerError[] Errors { get; set; }
