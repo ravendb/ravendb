@@ -94,6 +94,8 @@ namespace Raven.Database.Config
 			if (maxNumberOfItemsToIndexInSingleBatch != null)
 			{
 				MaxNumberOfItemsToIndexInSingleBatch = Math.Max(int.Parse(maxNumberOfItemsToIndexInSingleBatch), 128);
+				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(MaxNumberOfItemsToIndexInSingleBatch,
+				                                                    InitialNumberOfItemsToIndexInSingleBatch);
 			}
 			var availableMemoryForRaisingIndexBatchSizeLimit = Settings["Raven/AvailableMemoryForRaisingIndexBatchSizeLimit"];
 			if (availableMemoryForRaisingIndexBatchSizeLimit != null)
@@ -103,7 +105,8 @@ namespace Raven.Database.Config
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
 			if (initialNumberOfItemsToIndexInSingleBatch != null)
 			{
-				InitialNumberOfItemsToIndexInSingleBatch = int.Parse(initialNumberOfItemsToIndexInSingleBatch);
+				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
+				                                                    MaxNumberOfItemsToIndexInSingleBatch);
 			}
 
 			var maxNumberOfParallelIndexTasks = Settings["Raven/MaxNumberOfParallelIndexTasks"];
