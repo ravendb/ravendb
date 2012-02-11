@@ -40,7 +40,7 @@ namespace Raven.Database.Config
 			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128*1024 : 64*1024;
 			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
-			AvailableMemoryForRaisingIndexBatchSizeLimit = Environment.Is64BitProcess ? 768 : 196;
+			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, GetTotalPhysicalMemoryMegabytes()/2);
 			MaxNumberOfParallelIndexTasks = 8;
 
 			Catalog = new AggregateCatalog(
@@ -254,20 +254,7 @@ namespace Raven.Database.Config
 
 		private int GetDefaultMemoryCacheLimitMegabytes()
 		{
-			int totalPhysicalMemoryMegabytes;
-			if (Type.GetType("Mono.Runtime") != null)
-			{
-				totalPhysicalMemoryMegabytes = GetDefaultMemoryCacheLimitMegabytesOnMono();
-			}
-			else
-			{
-#if __MonoCS__
-				throw new PlatformNotSupportedException("This build can only run on Mono");
-#else
-				totalPhysicalMemoryMegabytes =
-					(int)(new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory / 1024 / 1024);
-#endif
-			}
+			var totalPhysicalMemoryMegabytes = GetTotalPhysicalMemoryMegabytes();
 
 			// we need to leave ( a lot ) of room for other things as well, so we limit the cache size
 
@@ -279,6 +266,25 @@ namespace Raven.Database.Config
 				return 128; // if machine has less than 1024 MB, then only use 128 MB 
 
 			return val;
+		}
+
+		private static int GetTotalPhysicalMemoryMegabytes()
+		{
+			int totalPhysicalMemoryMegabytes;
+			if (Type.GetType("Mono.Runtime") != null)
+			{
+				totalPhysicalMemoryMegabytes = GetDefaultMemoryCacheLimitMegabytesOnMono();
+			}
+			else
+			{
+#if __MonoCS__
+				throw new PlatformNotSupportedException("This build can only run on Mono");
+#else
+				totalPhysicalMemoryMegabytes =
+					(int) (new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory/1024/1024);
+#endif
+			}
+			return totalPhysicalMemoryMegabytes;
 		}
 
 		private static int GetDefaultMemoryCacheLimitMegabytesOnMono()
