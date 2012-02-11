@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database.Config;
-using Raven.Database.Plugins;
-using Raven.Database.Server;
-using Raven.Database.Extensions;
 using System.Linq;
 
 namespace Raven.Tryouts
@@ -17,7 +12,7 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			using(var store = new DocumentStore
+			using (var store = new DocumentStore
 			{
 				Url = "http://localhost:8080"
 			}.Initialize())
@@ -40,6 +35,22 @@ select new
 						}
 				});
 
+
+
+				store.DatabaseCommands.PutIndex("Disks/Simple", new IndexDefinition
+								{
+									Map =
+										@"
+from disk in docs.Disks 
+select new 
+{ 
+    disk.Artist,
+    disk.Title
+}"
+								});
+
+				new RavenDocumentsByEntityName().Execute(store);
+
 				var sp = Stopwatch.StartNew();
 				while (true)
 				{
@@ -47,15 +58,15 @@ select new
 					if (statistics.StaleIndexes.Length == 0)
 						break;
 
-					Console.Write("\r                                                                     \r");
-
+					Console.Clear();
 					foreach (var stat in statistics.Indexes.Where(x => statistics.StaleIndexes.Contains(x.Name)))
 					{
-						Console.Write("{0}: {1:#,#}  ", stat.Name, stat.IndexingAttempts);
+						Console.WriteLine("{0}: {1:#,#}  ", stat.Name, stat.IndexingAttempts);
 					}
 
+					Console.WriteLine("{0:#,#}",statistics.CurrentNumberOfItemsToIndexInSingleBatch);
 					Console.Write(sp.Elapsed);
-					Thread.Sleep(1000);
+					Thread.Sleep(2500);
 				}
 
 				Console.WriteLine(sp.Elapsed);
