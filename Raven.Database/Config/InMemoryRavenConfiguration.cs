@@ -40,7 +40,7 @@ namespace Raven.Database.Config
 			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128*1024 : 64*1024;
 			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
-			AvailableMemoryForRaisingIndexBatchSizeLimit = Environment.Is64BitProcess ? 512 : 128;
+			AvailableMemoryForRaisingIndexBatchSizeLimit = Environment.Is64BitProcess ? 768 : 196;
 			MaxNumberOfParallelIndexTasks = 8;
 
 			Catalog = new AggregateCatalog(

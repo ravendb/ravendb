@@ -75,6 +75,20 @@ namespace Raven.Database.Indexing
 				// we are using too much memory, let us use a little less next time...
 				if (availablePhysicalMemoryInMegabytes < context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 				{
+					// maybe it is us? we generate a lot of garbage when doing indexing, so we ask the GC if it would kindly try to do something
+					// about it.
+					// Note that this order for this to happen we need:
+					// * We had two full run when we were doing nothing but indexing at full throttle
+					// * The system is over the configured limit, and there is a strong likelihood that this is us
+					// * By forcing a GC, we ensure that we use less memory, and it is not frequent enough to cause perf problems
+
+					GC.Collect(0, GCCollectionMode.Optimized);
+
+					// let us check again after the GC call
+
+					if (context.Configuration.AvailablePhysicalMemoryInMegabytes > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+						return;
+
 					NumberOfItemsToIndexInSingleBatch = Math.Max(context.Configuration.InitialNumberOfItemsToIndexInSingleBatch,
 															NumberOfItemsToIndexInSingleBatch / 2);
 				}

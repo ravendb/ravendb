@@ -86,7 +86,6 @@ namespace Raven.Database.Indexing
 						.ToArray();
 				});
 
-				AutoThrottleBatchSize(jsonDocs.Length, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
 				if (jsonDocs.Length > 0)
 				{
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
@@ -116,6 +115,8 @@ namespace Raven.Database.Indexing
 							MarkIndexes(indexToWorkOn, lastIndexedEtag, actions, lastEtag, lastModified);
 						}
 					});
+
+					AutoThrottleBatchSize(jsonDocs.Length, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
 				}
 			}
 		}
