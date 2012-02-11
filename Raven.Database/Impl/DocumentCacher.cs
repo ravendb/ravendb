@@ -49,11 +49,12 @@ namespace Raven.Database.Impl
 			return new CachedDocument
 			{
 				Document = cachedDocument.Document.CreateSnapshot(),
-				Metadata = cachedDocument.Metadata.CreateSnapshot()
+				Metadata = cachedDocument.Metadata.CreateSnapshot(),
+				Size = cachedDocument.Size
 			};
 		}
 
-		public void SetCachedDocument(string key, Guid etag, RavenJObject doc, RavenJObject metadata)
+		public void SetCachedDocument(string key, Guid etag, RavenJObject doc, RavenJObject metadata, int size)
 		{
 			if (skipSettingDocumentInCache)
 				return;
@@ -65,7 +66,8 @@ namespace Raven.Database.Impl
 			cachedSerializedDocuments.Set("Doc/" + key + "/" + etag, new CachedDocument
 			{
 				Document = documentClone,
-				Metadata = metadataClone
+				Metadata = metadataClone,
+				Size = size
 			}, new CacheItemPolicy
 			{
 				SlidingExpiration = configuration.MemoryCacheExpiration,

@@ -136,10 +136,11 @@ namespace Raven.Storage.Esent.StorageActions
 
 			using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
 			{
+				var size = stream.Length;
 				using(var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 				{
 					var data = aggregate.ToJObject();
-					cacher.SetCachedDocument(key, etag, data, metadata);
+					cacher.SetCachedDocument(key, etag, data, metadata, (int) size);
 					return data;
 				}
 			}
@@ -163,11 +164,12 @@ namespace Raven.Storage.Esent.StorageActions
 
 			using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
+				var size = stream.Length;
 				using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
 				{
 					var data = columnStream.ToJObject();
 
-					cacher.SetCachedDocument(key, existingEtag, data, metadata);
+					cacher.SetCachedDocument(key, existingEtag, data, metadata, (int)size);
 
 					return data;
 				}
