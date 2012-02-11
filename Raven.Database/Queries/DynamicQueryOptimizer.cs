@@ -73,7 +73,7 @@ namespace Raven.Database.Queries
 						// rather than selecting the optimal one
 						// in order to handle that, we count the number of select many that would happen because of the query
 						// and match it to the number of select many in the index
-						if (Math.Abs(abstractViewGenerator.CountOfSelectMany - distinctSelectManyFields.Count) > 1 /* There is also the root to consider*/) 
+						if (abstractViewGenerator.CountOfSelectMany != distinctSelectManyFields.Count)
 							return false;
 
 						if(entityName == null)
