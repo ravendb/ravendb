@@ -183,7 +183,7 @@ namespace Raven.Storage.Esent.StorageActions
 				if (Api.TryMovePrevious(session, Documents) == false)
 					return Enumerable.Empty<JsonDocument>();
 			}
-			var optimizer = new OptimizedIndexReader(Session, Documents);
+			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
 			{
 				optimizer.Add();
@@ -229,7 +229,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
 				return Enumerable.Empty<JsonDocument>();
-			var optimizer = new OptimizedIndexReader(Session, Documents);
+			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			do
 			{
 				optimizer.Add();
@@ -246,7 +246,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
 				return Enumerable.Empty<JsonDocument>();
 
-			var optimizer = new OptimizedIndexReader(Session, Documents);
+			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			do
 			{
 				Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);

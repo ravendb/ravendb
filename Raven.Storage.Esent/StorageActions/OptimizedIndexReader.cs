@@ -9,7 +9,7 @@ namespace Raven.Storage.Esent.StorageActions
 	// optimized according to this: http://managedesent.codeplex.com/discussions/274843#post680337
 	public class OptimizedIndexReader<T> where T : class
 	{
-		private readonly List<Key> primaryKeyIndexes = new List<Key>();
+		private readonly List<Key> primaryKeyIndexes;
 
 		private class Key
 		{
@@ -24,8 +24,9 @@ namespace Raven.Storage.Esent.StorageActions
 		private readonly JET_TABLEID table;
 		private Func<T, bool> filter;
 
-		public OptimizedIndexReader(JET_SESID session, JET_TABLEID table)
+		public OptimizedIndexReader(JET_SESID session, JET_TABLEID table, int size)
 		{
+			primaryKeyIndexes = new List<Key>(size);
 			this.table = table;
 			this.session = session;
 			bookmarkBuffer = new byte[SystemParameters.BookmarkMost];
@@ -53,7 +54,7 @@ namespace Raven.Storage.Esent.StorageActions
 			});
 		}
 
-		public void Get()
+		public IEnumerable<TResult> Select<TResult>(Func<T,TResult> func)
 		{
 			primaryKeyIndexes.Sort((x, y) =>
 			{
@@ -64,10 +65,7 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 				return x.Buffer.Length - y.Buffer.Length;
 			});
-		}
 
-		public IEnumerable<TResult> Select<TResult>(Func<T,TResult> func)
-		{
 			return primaryKeyIndexes.Select(key =>
 			{
 				var bookmark = key.Buffer;
@@ -84,14 +82,14 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public OptimizedIndexReader<T> Where(Func<T, bool> predicate)
 		{
-			this.filter = predicate;
+			filter = predicate;
 			return this;
 		}
 	}
 
 	public class OptimizedIndexReader : OptimizedIndexReader<object>
 	{
-		public OptimizedIndexReader(JET_SESID session, JET_TABLEID table) : base(session, table)
+		public OptimizedIndexReader(JET_SESID session, JET_TABLEID table, int size) : base(session, table, size)
 		{
 		}
 
