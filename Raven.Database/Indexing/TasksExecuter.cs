@@ -15,7 +15,6 @@ namespace Raven.Database.Indexing
 		private readonly WorkContext context;
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		private readonly ITransactionalStorage transactionalStorage;
-		private int lastFlushedWorkCounter;
 		private int workCounter;
 
 		public TasksExecuter(ITransactionalStorage transactionalStorage, WorkContext context)
@@ -24,7 +23,6 @@ namespace Raven.Database.Indexing
 			this.context = context;
 		}
 
-		
 		public void Execute()
 		{
 			while (context.DoWork)
@@ -40,18 +38,9 @@ namespace Raven.Database.Indexing
 				}
 				if (foundWork == false)
 				{
-					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexesOnIdle);
+					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter);
 				}
 			}
-		}
-
-		private void FlushIndexesOnIdle()
-		{
-			if (lastFlushedWorkCounter == workCounter || context.DoWork == false)
-				return;
-			lastFlushedWorkCounter = workCounter;
-			context.IndexStorage.FlushMapIndexes(true);
-			context.IndexStorage.FlushReduceIndexes(true);
 		}
 
 		private bool ExecuteTasks()
