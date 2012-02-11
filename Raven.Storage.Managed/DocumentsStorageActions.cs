@@ -90,6 +90,7 @@ namespace Raven.Storage.Managed
 		{
 			return DocumentByKeyInternal(key, transactionInformation, (stream, metadata) => new JsonDocument
 			{
+				SerializedSizeOnDisk = (int)stream.Item1.Length,
 				Metadata = metadata.Metadata,
 				Etag = metadata.Etag,
 				Key = metadata.Key,

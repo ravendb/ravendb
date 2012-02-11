@@ -86,7 +86,7 @@ namespace Raven.Database.Indexing
 						.ToArray();
 				});
 
-				AutoThrottleBatchSize(jsonDocs.Length);
+				AutoThrottleBatchSize(jsonDocs.Length, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
 				if (jsonDocs.Length > 0)
 				{
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();

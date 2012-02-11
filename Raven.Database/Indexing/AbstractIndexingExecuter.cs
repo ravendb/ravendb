@@ -36,7 +36,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected void AutoThrottleBatchSize(int amountOfItemsToIndex)
+		protected void AutoThrottleBatchSize(int amountOfItemsToIndex, int size)
 		{
 			var lastTime = lastAmountOfItemsToIndex;
 
@@ -47,7 +47,6 @@ namespace Raven.Database.Indexing
 				if (NumberOfItemsToIndexInSingleBatch == context.Configuration.InitialNumberOfItemsToIndexInSingleBatch)
 					return;
 				
-
 				// we were above the max the last time, we can't reduce the work load now
 				if (lastTime > NumberOfItemsToIndexInSingleBatch)
 					return;
@@ -61,12 +60,20 @@ namespace Raven.Database.Indexing
 			// in the previous run, we also hit the current limit, we need to check if we can increase the max batch size
 			else if (lastTime >= NumberOfItemsToIndexInSingleBatch)
 			{
-				if(context.Configuration.AvailablePhysicalMemoryInMegabytes >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+				// here we make the assumptions that the average size of documents are the same. We check if we doubled the amount of memory
+				// that we used for the last batch (note that this is only an estimate number, but should be close enough), would we still be
+				// within the limits that governs us
+
+				var sizeInMegabytes = size / 1024/1024;
+				var availablePhysicalMemoryInMegabytes = context.Configuration.AvailablePhysicalMemoryInMegabytes;
+				var remainingMemoryAfterBatchSizeIncrease = availablePhysicalMemoryInMegabytes - sizeInMegabytes;
+				if(remainingMemoryAfterBatchSizeIncrease >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 				{
 					NumberOfItemsToIndexInSingleBatch = Math.Min(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch,
 																 NumberOfItemsToIndexInSingleBatch * 2);
 				}
-				else // we are using too much memory, let us use a little lett next time...
+				// we are using too much memory, let us use a little less next time...
+				if (availablePhysicalMemoryInMegabytes < context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 				{
 					NumberOfItemsToIndexInSingleBatch = Math.Max(context.Configuration.InitialNumberOfItemsToIndexInSingleBatch,
 															NumberOfItemsToIndexInSingleBatch / 2);

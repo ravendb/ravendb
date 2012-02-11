@@ -194,6 +194,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private JsonDocument ReadCurrentDocument()
 		{
+			var metadataSize = Api.RetrieveColumnSize(session, Documents,tableColumnsCache.DocumentsColumns["metadata"]) ?? 0;
+			var docSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? 0;
+
 			var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 			var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
 
@@ -207,6 +210,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			return new JsonDocument
 			{
+				SerializedSizeOnDisk = metadataSize + docSize,
 				Key = key,
 				DataAsJson = dataAsJson,
 				NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
