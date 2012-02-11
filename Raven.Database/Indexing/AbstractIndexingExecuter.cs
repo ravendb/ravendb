@@ -32,8 +32,7 @@ namespace Raven.Database.Indexing
 			get { return numberOfItemsToIndexInSingleBatch; }
 			set
 			{
-				numberOfItemsToIndexInSingleBatch = value;
-				context.CurrentNumberOfItemsToIndexInSingleBatch = numberOfItemsToIndexInSingleBatch;
+				context.CurrentNumberOfItemsToIndexInSingleBatch  = numberOfItemsToIndexInSingleBatch = value;
 			}
 		}
 
@@ -42,31 +41,35 @@ namespace Raven.Database.Indexing
 			var lastTime = lastAmountOfItemsToIndex;
 
 			lastAmountOfItemsToIndex = amountOfItemsToIndex;
-			if(amountOfItemsToIndex < numberOfItemsToIndexInSingleBatch) // we didn't have a lot of work to do
+			if(amountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch) // we didn't have a lot of work to do
 			{
 				// we are at the configured default, nothing to do
-				if (numberOfItemsToIndexInSingleBatch == context.Configuration.InitialNumberOfItemsToIndexInSingleBatch)
+				if (NumberOfItemsToIndexInSingleBatch == context.Configuration.InitialNumberOfItemsToIndexInSingleBatch)
 					return;
 				
 
 				// we were above the max the last time, we can't reduce the work load now
-				if (lastTime > numberOfItemsToIndexInSingleBatch)
+				if (lastTime > NumberOfItemsToIndexInSingleBatch)
 					return;
 
 				// we have had a couple of times were we didn't get to the current max, so we can probably
 				// reduce the max again now.
 
-				numberOfItemsToIndexInSingleBatch = Math.Max(context.Configuration.InitialNumberOfItemsToIndexInSingleBatch,
-				                                                numberOfItemsToIndexInSingleBatch/2);
+				NumberOfItemsToIndexInSingleBatch = Math.Max(context.Configuration.InitialNumberOfItemsToIndexInSingleBatch,
+																NumberOfItemsToIndexInSingleBatch / 2);
 			}
 			// in the previous run, we also hit the current limit, we need to check if we can increase the max batch size
-			else if (lastTime >= numberOfItemsToIndexInSingleBatch)
+			else if (lastTime >= NumberOfItemsToIndexInSingleBatch)
 			{
-				if(context.Configuration.AvailablePhysicalMemoryInMegabytes > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit &&
-					numberOfItemsToIndexInSingleBatch < context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+				if(context.Configuration.AvailablePhysicalMemoryInMegabytes >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 				{
-					numberOfItemsToIndexInSingleBatch = Math.Min(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch,
-					                                             numberOfItemsToIndexInSingleBatch*2);
+					NumberOfItemsToIndexInSingleBatch = Math.Min(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch,
+																 NumberOfItemsToIndexInSingleBatch * 2);
+				}
+				else // we are using too much memory, let us use a little lett next time...
+				{
+					NumberOfItemsToIndexInSingleBatch = Math.Max(context.Configuration.InitialNumberOfItemsToIndexInSingleBatch,
+															NumberOfItemsToIndexInSingleBatch / 2);
 				}
 			}
 		}
