@@ -96,7 +96,7 @@ namespace Raven.Database.Indexing
 			// * The system is over the configured limit, and there is a strong likelihood that this is us causing this
 			// * By forcing a GC, we ensure that we use less memory, and it is not frequent enough to cause perf problems
 
-			GC.Collect(0, GCCollectionMode.Optimized);
+			GC.Collect(1, GCCollectionMode.Optimized);
 
 			// let us check again after the GC call, do we still need to reduce the batch size?
 
@@ -146,7 +146,7 @@ namespace Raven.Database.Indexing
 			// At any rate, there is a strong likelyhood of having a lot of garbage in the system
 			// let us ask the GC nicely to clean it
 
-			GC.Collect(0, GCCollectionMode.Optimized);
+			GC.Collect(1, GCCollectionMode.Optimized);
 
 			return true;
 		}
