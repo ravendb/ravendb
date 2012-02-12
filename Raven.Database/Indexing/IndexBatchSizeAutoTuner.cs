@@ -134,6 +134,7 @@ namespace Raven.Database.Indexing
 			if (lastAmountOfItemsToIndex > NumberOfItemsToIndexInSingleBatch)
 				return true;
 
+			var old = NumberOfItemsToIndexInSingleBatch;
 			// we have had a couple of times were we didn't get to the current max, so we can probably
 			// reduce the max again now, this will reduce the memory consumption eventually, and will cause 
 			// faster indexing times in case we get a big batch again
@@ -146,7 +147,11 @@ namespace Raven.Database.Indexing
 			// At any rate, there is a strong likelyhood of having a lot of garbage in the system
 			// let us ask the GC nicely to clean it
 
-			GC.Collect(1, GCCollectionMode.Optimized);
+			// but we only want to do it if the change was significant 
+			if ( NumberOfItemsToIndexInSingleBatch - old > 4096)
+			{
+				GC.Collect(1, GCCollectionMode.Optimized);
+			}
 
 			return true;
 		}
