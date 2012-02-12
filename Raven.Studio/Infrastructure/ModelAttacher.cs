@@ -3,7 +3,6 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -41,18 +40,27 @@ namespace Raven.Studio.Infrastructure
 
 				SetPageTitle(modelType, model, view);
 
-				view.Loaded += (sender, eventArgs) =>
-				{
-					var viewModel = model as ViewModel;
-					if (viewModel == null) return;
-					viewModel.LoadModel(UrlUtil.Url);
-					modelModel.ForceTimerTicked();
-				};
+				view.Loaded += ViewOnLoaded;
+				view.Unloaded -= ViewOnLoaded;
 			}
 			catch (Exception ex)
 			{
 				throw new InvalidOperationException(string.Format("Cannot create instance of model type: {0}", modelType), ex);
 			}
+		}
+
+		private static void ViewOnLoaded(object sender, RoutedEventArgs routedEventArgs)
+		{
+			var view = (FrameworkElement)sender;
+			var observable = view.DataContext as IObservable;
+			if (observable == null)
+				return;
+			var model = (Model)observable.Value;
+			model.ForceTimerTicked();
+
+			var viewModel = model as ViewModel;
+			if (viewModel == null) return;
+			viewModel.LoadModel(UrlUtil.Url);
 		}
 
 		private static void SetPageTitle(Type modelType, object model, FrameworkElement view)
