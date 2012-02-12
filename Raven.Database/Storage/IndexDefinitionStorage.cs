@@ -104,6 +104,7 @@ namespace Raven.Database.Storage
 					var indexDefinition = JsonConvert.DeserializeObject<IndexDefinition>(File.ReadAllText(index), Default.Converters);
 					if (indexDefinition.Name == null)
 						indexDefinition.Name = MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index));
+					ResolveAnalyzers(indexDefinition);
 					AddAndCompileIndex(indexDefinition);
 				}
 				catch (Exception e)
