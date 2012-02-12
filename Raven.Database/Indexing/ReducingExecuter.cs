@@ -105,11 +105,14 @@ namespace Raven.Database.Indexing
 
 		protected override void ExecuteIndexingWorkOnMultipleThreads(IList<IndexToWorkOn> indexesToWorkOn)
 		{
-			Parallel.ForEach(indexesToWorkOn, new ParallelOptions
+			foreach (var partitionedIndexes in Partition(indexesToWorkOn, context.Configuration.MaxNumberOfParallelIndexTasks))
 			{
-				MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
-				TaskScheduler = scheduler
-			}, HandleReduceForIndex);
+				Parallel.ForEach(partitionedIndexes, new ParallelOptions
+				{
+					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
+					TaskScheduler = scheduler
+				}, HandleReduceForIndex);
+			}
 		}
 
 		protected override void ExecuteIndexingWorkOnSingleThread(IList<IndexToWorkOn> indexesToWorkOn)

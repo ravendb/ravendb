@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Storage;
 using System.Linq;
 
@@ -26,8 +27,6 @@ namespace Raven.Database.Indexing
 
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 		}
-
-		
 
 		public void Execute()
 		{
@@ -103,6 +102,30 @@ namespace Raven.Database.Indexing
 
 		protected abstract void ExecuteIndexingWorkOnSingleThread(IList<IndexToWorkOn> indexesToWorkOn);
 
+
+		protected static IEnumerable<IEnumerable<T>> Partition<T>(IEnumerable<T> source, int size)
+		{
+			var shouldContinue = new Reference<bool>
+			{
+				Value = true
+			};
+			var enumerator = source.GetEnumerator();
+			while (shouldContinue.Value)
+			{
+				yield return ParitionInternal(enumerator, size, shouldContinue);
+			}
+		}
+
+		private static IEnumerable<T> ParitionInternal<T>(IEnumerator<T> enumerator, int size, Reference<bool> shouldContinue)
+		{
+			for (int i = 0; i < size; i++)
+			{
+				shouldContinue.Value = enumerator.MoveNext();
+				if (shouldContinue.Value == false)
+					break;
+				yield return enumerator.Current;
+			}
+		}
 
 		protected abstract bool IsValidIndex(IndexStats indexesStat);
 

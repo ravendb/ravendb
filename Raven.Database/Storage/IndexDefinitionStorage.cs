@@ -113,9 +113,9 @@ namespace Raven.Database.Storage
 			}
 		}
 
-		public int MapIndexesCount
+		public int IndexesCount
 		{
-			get { return indexCache.Count(x=>x.Value.ReduceDefinition == null); }
+			get { return indexCache.Count; }
 		}
 
 		public string[] IndexNames

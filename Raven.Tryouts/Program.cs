@@ -12,6 +12,12 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
+			DateTime? xx1 = null;
+			DateTime? xx2 = DateTime.MinValue;
+
+			Console.WriteLine(xx1 > xx2);
+			return;
+
 			using (var store = new DocumentStore
 			{
 				Url = "http://localhost:8080"

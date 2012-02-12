@@ -27,6 +27,8 @@ namespace Raven.Database.Indexing
 		{
 			try
 			{
+				if (ReduceBatchSizeIfCloseToMemoryCeiling())
+					return;
 				if (ConsiderDecreasingBatchSize(amountOfItemsToIndex))
 					return;
 				ConsiderIncreasingBatchSize(amountOfItemsToIndex, size);
@@ -60,9 +62,9 @@ namespace Raven.Database.Indexing
 			var sizeInMegabytes = size / 1024 / 1024;
 
 			// we don't actually *know* what the actual cost of indexing, beause that depends on many factors (how the index
-			// is structured, is it analyzed/default/not analyzed, etc). We just assume for now that it takes 10% of the actual
+			// is structured, is it analyzed/default/not analyzed, etc). We just assume for now that it takes 25% of the actual
 			// on disk structure per each active index. That should give us a good guesstimate about the value.
-			var sizedPlusIndexingCost = sizeInMegabytes * (1 + (0.1 * context.IndexDefinitionStorage.MapIndexesCount));
+			var sizedPlusIndexingCost = sizeInMegabytes * (1 + (0.25 * context.IndexDefinitionStorage.IndexesCount));
 
 			var availablePhysicalMemoryInMegabytes = context.Configuration.AvailablePhysicalMemoryInMegabytes;
 			var remainingMemoryAfterBatchSizeIncrease = availablePhysicalMemoryInMegabytes - sizedPlusIndexingCost;
@@ -74,10 +76,16 @@ namespace Raven.Database.Indexing
 				return;
 			}
 
-			if (availablePhysicalMemoryInMegabytes >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+			
+		}
+
+		private bool ReduceBatchSizeIfCloseToMemoryCeiling()
+		{
+			if (context.Configuration.AvailablePhysicalMemoryInMegabytes >= 
+				context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 			{
 				// there is enough memory available for the next indexing run
-				return;
+				return false;
 			}
 
 			// we are using too much memory, let us use a less next time...
@@ -90,13 +98,21 @@ namespace Raven.Database.Indexing
 
 			GC.Collect(0, GCCollectionMode.Optimized);
 
-			// let us check again after the GC call
+			// let us check again after the GC call, do we still need to reduce the batch size?
 
-			if (context.Configuration.AvailablePhysicalMemoryInMegabytes > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
-				return;
+			if (context.Configuration.AvailablePhysicalMemoryInMegabytes > 
+				context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+			{
+				// we don't want to try increasing things, we just hit the ceiling, maybe on the next try
+				return true;
+			} 
+
+			// we are still too high, let us reduce the size and see what is going on.
 
 			NumberOfItemsToIndexInSingleBatch = Math.Max(context.Configuration.InitialNumberOfItemsToIndexInSingleBatch,
-														 NumberOfItemsToIndexInSingleBatch / 2);
+			                                             NumberOfItemsToIndexInSingleBatch / 2);
+
+			return true;
 		}
 
 		private bool ConsiderDecreasingBatchSize(int amountOfItemsToIndex)
