@@ -461,11 +461,11 @@ namespace Raven.Database
 					if (transactionInformation == null)
 					{
 						AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
+						
 						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, transactionInformation));
-
+						
 						newEtag = actions.Documents.AddDocument(key, etag, document, metadata);
-						// We detect this by using the etags
-						// AddIndexingTask(actions, metadata, () => new IndexDocumentsTask { Keys = new[] { key } });
+						
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, transactionInformation));
 					}
 					else
