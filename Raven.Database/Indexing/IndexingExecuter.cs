@@ -134,7 +134,7 @@ namespace Raven.Database.Indexing
 			actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
 		}
 
-		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(IEnumerable<IndexToWorkOn> indexesToWorkOn, JsonDocument[] jsonDocs)
+		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(ICollection<IndexToWorkOn> indexesToWorkOn, IEnumerable<JsonDocument> jsonDocs)
 		{
 			var last = jsonDocs.Last();
 
@@ -145,33 +145,35 @@ namespace Raven.Database.Indexing
 			var lastModified = last.LastModified.Value;
 
 			var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
-			Action<IStorageActionsAccessor> action = null;
 
 			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
 
-			var filteredDocs = jsonDocs
+			var filteredDocs = jsonDocs.AsParallel()
 				.Select(doc => documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index))
 				.Where(doc => doc != null)
 				.Select(x => new { Doc = x, Json = JsonToExpando.Convert(x.ToJson()) })
 				.ToList();
 
-			foreach (var indexToWorkOn in indexesToWorkOn)
+			var results = new Tuple<IndexToWorkOn, IndexingBatch>[indexesToWorkOn.Count];
+			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
+
+			Parallel.ForEach(indexesToWorkOn, (indexToWorkOn, _, i) =>
 			{
 				var indexLastInedexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
-				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0) 
-					continue;
+				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0)
+					return;
 
 				var indexName = indexToWorkOn.IndexName;
 				var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexName);
 				if (viewGenerator == null)
-					continue; // probably deleted
+					return; // probably deleted
 
 				var batch = new IndexingBatch
 				{
 					Docs = new List<dynamic>(),
 				};
 
-				foreach(var item in filteredDocs)
+				foreach (var item in filteredDocs)
 				{
 					if (indexLastInedexEtag.CompareTo(new ComparableByteArray(item.Doc.Etag.Value.ToByteArray())) >= 0)
 						continue;
@@ -192,20 +194,26 @@ namespace Raven.Database.Indexing
 						                 	: batch.DateTime;
 				}
 
-				if(batch.Docs.Count == 0)
+				if (batch.Docs.Count == 0)
 				{
 					// we use it this way to batch all the updates together
-					action += accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
-					continue;
+					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
+					return;
 				}
+				results[i] = Tuple.Create(indexToWorkOn, batch);
 
-				yield return Tuple.Create(indexToWorkOn, batch);
-			}
+			});
 
-			if (action != null)
+			transactionalStorage.Batch(actionsAccessor =>
 			{
-				transactionalStorage.Batch(action);
-			}
+				foreach (var action in actions)
+				{
+					if (action != null)
+						action(actionsAccessor);
+				}
+			});
+
+			return results.Where(x => x != null);
 		}
 
 		protected override bool IsValidIndex(IndexStats indexesStat)
