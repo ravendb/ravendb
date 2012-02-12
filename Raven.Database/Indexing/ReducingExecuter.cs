@@ -27,7 +27,10 @@ namespace Raven.Database.Indexing
 							indexToWorkOn.IndexName,
 							indexToWorkOn.LastIndexedEtag,
 							loadData: false,
-							take: NumberOfItemsToIndexInSingleBatch
+							// for reduce operations, we use the smaller value, rather than tuning stuff on the fly
+							// the reason for that is that we may have large number of map values to reduce anyway, 
+							// so we don't want to try to load too much all at once.
+							take: context.Configuration.InitialNumberOfItemsToIndexInSingleBatch
 						)
 						.ToList();
 
