@@ -14,36 +14,36 @@ namespace Raven.Studio.Models
 	public class CollectionsModel : ViewModel
 	{
 		private static string initialSelectedDatabaseName;
-		public static WeakReference<BindableCollection<CollectionModel>> Collections { get; set; }
-		public static WeakReference<Observable<CollectionModel>> SelectedCollection { get; set; }
-		public static WeakReference<Observable<DocumentsModel>> DocumentsForSelectedCollection { get; set; }
+		public static BindableCollection<CollectionModel> Collections { get; set; }
+		public static Observable<CollectionModel> SelectedCollection { get; set; }
+		public static Observable<DocumentsModel> DocumentsForSelectedCollection { get; set; }
 
 		static CollectionsModel()
 		{
-			Collections = new WeakReference<BindableCollection<CollectionModel>>(new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count)));
-			SelectedCollection = new WeakReference<Observable<CollectionModel>>(new Observable<CollectionModel>());
-			DocumentsForSelectedCollection = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel> {Value = new DocumentsModel {CustomFetchingOfDocuments = GetFetchDocumentsMethod}});
+			Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
+			SelectedCollection = new Observable<CollectionModel>();
+			DocumentsForSelectedCollection = new Observable<DocumentsModel> { Value = new DocumentsModel { CustomFetchingOfDocuments = GetFetchDocumentsMethod } };
 
-			SelectedCollection.Target.PropertyChanged += (sender, args) =>
-			                                      	{
-			                                      		PutCollectionNameInTheUrl();
-														DocumentsForSelectedCollection.Target.Value.ForceTimerTicked();
-			                                      	};
+			SelectedCollection.PropertyChanged += (sender, args) =>
+			{
+				PutCollectionNameInTheUrl();
+				DocumentsForSelectedCollection.Value.ForceTimerTicked();
+			};
 		}
 
 		private static Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
 		{
-			if (SelectedCollection.Target.Value == null || string.IsNullOrWhiteSpace(SelectedCollection.Target.Value.Name))
+			if (SelectedCollection.Value == null || string.IsNullOrWhiteSpace(SelectedCollection.Value.Name))
 				return Execute.EmptyResult<string>();
 
-			var name = SelectedCollection.Target.Value.Name;
+			var name = SelectedCollection.Value.Name;
 			return ApplicationModel.DatabaseCommands
 				.QueryAsync("Raven/DocumentsByEntityName", new IndexQuery { Start = documentsModel.Pager.Skip, PageSize = documentsModel.Pager.PageSize, Query = "Tag:" + name }, new string[] { })
 				.ContinueOnSuccess(queryResult =>
 				{
 					var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results);
 					documentsModel.Documents.Match(documents.Select(x => new ViewableDocument(x)).ToArray());
-					DocumentsForSelectedCollection.Target.Value.Pager.TotalResults.Value = queryResult.TotalResults;
+					DocumentsForSelectedCollection.Value.Pager.TotalResults.Value = queryResult.TotalResults;
 				})
 				.CatchIgnore<InvalidOperationException>(() => ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error)));
 		}
@@ -51,7 +51,7 @@ namespace Raven.Studio.Models
 		private static void PutCollectionNameInTheUrl()
 		{
 			var urlParser = new UrlParser(UrlUtil.Url);
-			var collection = SelectedCollection.Target.Value;
+			var collection = SelectedCollection.Value;
 			if (collection == null)
 				return;
 			var name = collection.Name;
@@ -68,16 +68,16 @@ namespace Raven.Studio.Models
 		{
 			OnPropertyChanged();
 			ModelUrl = "/collections";
-			SelectedCollection.Target.PropertyChanged += (sender, args) => OnPropertyChanged("ViewTitle");
+			SelectedCollection.PropertyChanged += (sender, args) => OnPropertyChanged("ViewTitle");
 		}
 
 		public override void LoadModelParameters(string parameters)
 		{
 			var urlParser = new UrlParser(parameters);
 			var name = urlParser.GetQueryParam("name");
-			if (DocumentsForSelectedCollection.Target.Value != null)
+			if (DocumentsForSelectedCollection.Value != null)
 			{
-				DocumentsForSelectedCollection.Target.Value.Pager.SetSkip(urlParser);
+				DocumentsForSelectedCollection.Value.Pager.SetSkip(urlParser);
 				ForceTimerTicked();
 			}
 			initialSelectedDatabaseName = name;
@@ -88,12 +88,12 @@ namespace Raven.Studio.Models
 			return DatabaseCommands.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 100)
 				.ContinueOnSuccess(Update)
 				.CatchIgnore<WebException>(() =>
-				       	{
-							var urlParser = new UrlParser(UrlUtil.Url);
-				       		if (urlParser.RemoveQueryParam("name"))
-				       			UrlUtil.Navigate(urlParser.BuildUrl());
-				       		ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error));
-				       	});
+				{
+					var urlParser = new UrlParser(UrlUtil.Url);
+					if (urlParser.RemoveQueryParam("name"))
+						UrlUtil.Navigate(urlParser.BuildUrl());
+					ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error));
+				});
 		}
 
 		private void Update(NameAndCount[] collections)
@@ -104,28 +104,28 @@ namespace Raven.Studio.Models
 				Count = col.Count
 			}).ToArray();
 
-			Collections.Target.Match(collectionModels, AfterUpdate);
+			Collections.Match(collectionModels, AfterUpdate);
 		}
 
 		private void AfterUpdate()
 		{
 			if (initialSelectedDatabaseName != null &&
-				(SelectedCollection.Target.Value == null || SelectedCollection.Target.Value.Name != initialSelectedDatabaseName || Collections.Target.Contains(SelectedCollection.Target.Value) == false))
+				(SelectedCollection.Value == null || SelectedCollection.Value.Name != initialSelectedDatabaseName || Collections.Contains(SelectedCollection.Value) == false))
 			{
-				SelectedCollection.Target.Value = Collections.Target.FirstOrDefault(x => x.Name == initialSelectedDatabaseName);
+				SelectedCollection.Value = Collections.FirstOrDefault(x => x.Name == initialSelectedDatabaseName);
 			}
 
-			if (SelectedCollection.Target.Value == null)
-				SelectedCollection.Target.Value = Collections.Target.FirstOrDefault();
+			if (SelectedCollection.Value == null)
+				SelectedCollection.Value = Collections.FirstOrDefault();
 		}
 
 		public string ViewTitle
 		{
 			get
 			{
-				if (SelectedCollection.Target.Value == null || string.IsNullOrEmpty(SelectedCollection.Target.Value.Name))
+				if (SelectedCollection.Value == null || string.IsNullOrEmpty(SelectedCollection.Value.Name))
 					return "Collections";
-				return "Collection: " + SelectedCollection.Target.Value.Name;
+				return "Collection: " + SelectedCollection.Value.Name;
 			}
 		}
 	}
