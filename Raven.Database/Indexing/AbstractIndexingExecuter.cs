@@ -86,11 +86,8 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 
-			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
-				ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
-			else
-				ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
-
+			ExecuteIndxingWork(indexesToWorkOn);
+			
 			return true;
 		}
 
@@ -98,34 +95,10 @@ namespace Raven.Database.Indexing
 
 		protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions);
 
-		protected abstract void ExecuteIndexingWorkOnMultipleThreads(IList<IndexToWorkOn> indexesToWorkOn);
 
-		protected abstract void ExecuteIndexingWorkOnSingleThread(IList<IndexToWorkOn> indexesToWorkOn);
+		protected abstract void ExecuteIndxingWork(IList<IndexToWorkOn> indexesToWorkOn);
 
-
-		protected static IEnumerable<IEnumerable<T>> Partition<T>(IEnumerable<T> source, int size)
-		{
-			var shouldContinue = new Reference<bool>
-			{
-				Value = true
-			};
-			var enumerator = source.GetEnumerator();
-			while (shouldContinue.Value)
-			{
-				yield return ParitionInternal(enumerator, size, shouldContinue);
-			}
-		}
-
-		private static IEnumerable<T> ParitionInternal<T>(IEnumerator<T> enumerator, int size, Reference<bool> shouldContinue)
-		{
-			for (int i = 0; i < size; i++)
-			{
-				shouldContinue.Value = enumerator.MoveNext();
-				if (shouldContinue.Value == false)
-					break;
-				yield return enumerator.Current;
-			}
-		}
+	
 
 		protected abstract bool IsValidIndex(IndexStats indexesStat);
 

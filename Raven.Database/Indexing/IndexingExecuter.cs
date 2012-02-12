@@ -44,36 +44,8 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		protected override void ExecuteIndexingWorkOnMultipleThreads(IList<IndexToWorkOn> indexesToWorkOn)
-		{
-			ExecuteIndexingInternal(indexesToWorkOn, results =>
-			{
-				foreach (var partitionedReults in Partition(results, context.Configuration.MaxNumberOfParallelIndexTasks))
-				{
-					Parallel.ForEach(partitionedReults, new ParallelOptions
-					{
-						MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
-						TaskScheduler = scheduler,
-					}, result => transactionalStorage.Batch(actions => IndexDocuments(actions, result.Item1.IndexName, result.Item2)));
-				}
-			});
-		}
 
-		protected override void ExecuteIndexingWorkOnSingleThread(IList<IndexToWorkOn> indexesToWorkOn)
-		{
-			ExecuteIndexingInternal(indexesToWorkOn, results =>
-			{
-				foreach (var indexToWorkOn in results)
-				{
-					var index = indexToWorkOn.Item1;
-					var docs = indexToWorkOn.Item2;
-					transactionalStorage.Batch(
-						actions => IndexDocuments(actions, index.IndexName, docs));
-				}
-			});
-		}
-
-		private void ExecuteIndexingInternal(IList<IndexToWorkOn> indexesToWorkOn, Action<IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>>> indexingOp)
+		protected override void ExecuteIndxingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
 			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
 
@@ -96,7 +68,14 @@ namespace Raven.Database.Indexing
 				{
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 					indexesToWorkOn = result.Select(x => x.Item1).ToList();
-					indexingOp(result);
+					IndexingTaskExecuter.ExecuteAll(context.Configuration, scheduler, result, (indexToWorkOn,_) =>
+					{
+						var index = indexToWorkOn.Item1;
+						var docs = indexToWorkOn.Item2;
+						transactionalStorage.Batch(
+							actions => IndexDocuments(actions, index.IndexName, docs));
+					
+					});
 				}
 			}
 			finally
@@ -134,7 +113,7 @@ namespace Raven.Database.Indexing
 			actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
 		}
 
-		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(ICollection<IndexToWorkOn> indexesToWorkOn, IEnumerable<JsonDocument> jsonDocs)
+		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(ICollection<IndexToWorkOn> indexesToWorkOn, JsonDocument[] jsonDocs)
 		{
 			var last = jsonDocs.Last();
 
@@ -157,7 +136,7 @@ namespace Raven.Database.Indexing
 			var results = new Tuple<IndexToWorkOn, IndexingBatch>[indexesToWorkOn.Count];
 			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
 
-			Parallel.ForEach(indexesToWorkOn, (indexToWorkOn, _, i) =>
+			IndexingTaskExecuter.ExecuteAll(context.Configuration, scheduler, indexesToWorkOn, (indexToWorkOn, i) =>
 			{
 				var indexLastInedexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
 				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0)

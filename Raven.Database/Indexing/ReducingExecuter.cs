@@ -102,25 +102,9 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-
-		protected override void ExecuteIndexingWorkOnMultipleThreads(IList<IndexToWorkOn> indexesToWorkOn)
+		protected override void ExecuteIndxingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
-			foreach (var partitionedIndexes in Partition(indexesToWorkOn, context.Configuration.MaxNumberOfParallelIndexTasks))
-			{
-				Parallel.ForEach(partitionedIndexes, new ParallelOptions
-				{
-					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
-					TaskScheduler = scheduler
-				}, HandleReduceForIndex);
-			}
-		}
-
-		protected override void ExecuteIndexingWorkOnSingleThread(IList<IndexToWorkOn> indexesToWorkOn)
-		{
-			foreach (var indexToWorkOn in indexesToWorkOn)
-			{
-				HandleReduceForIndex(indexToWorkOn);
-			}
+			IndexingTaskExecuter.ExecuteAll(context.Configuration, scheduler, indexesToWorkOn, (indexToWorkOn, l) => HandleReduceForIndex(indexToWorkOn));
 		}
 
 		protected override bool IsValidIndex(IndexStats indexesStat)
