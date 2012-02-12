@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -43,14 +44,19 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-
 		protected override void ExecuteIndexingWorkOnMultipleThreads(IList<IndexToWorkOn> indexesToWorkOn)
 		{
-			ExecuteIndexingInternal(indexesToWorkOn, (results) => Parallel.ForEach(results, new ParallelOptions
+			ExecuteIndexingInternal(indexesToWorkOn, results =>
 			{
-				MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
-				TaskScheduler = scheduler,
-			}, result => transactionalStorage.Batch(actions => IndexDocuments(actions, result.Item1.IndexName, result.Item2))));
+				foreach (var partitionedReults in Partition(results, context.Configuration.MaxNumberOfParallelIndexTasks))
+				{
+					Parallel.ForEach(partitionedReults, new ParallelOptions
+					{
+						MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
+						TaskScheduler = scheduler,
+					}, result => transactionalStorage.Batch(actions => IndexDocuments(actions, result.Item1.IndexName, result.Item2)));
+				}
+			});
 		}
 
 		protected override void ExecuteIndexingWorkOnSingleThread(IList<IndexToWorkOn> indexesToWorkOn)
@@ -67,7 +73,7 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-		private void ExecuteIndexingInternal(IList<IndexToWorkOn> indexesToWorkOn, Action<IEnumerable<Tuple<IndexToWorkOn, IEnumerable<JsonDocument>>>> indexingOp)
+		private void ExecuteIndexingInternal(IList<IndexToWorkOn> indexesToWorkOn, Action<IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>>> indexingOp)
 		{
 			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
 
@@ -76,7 +82,7 @@ namespace Raven.Database.Indexing
 			{
 				transactionalStorage.Batch(actions =>
 				{
-					jsonDocs = actions.Documents.GetDocumentsAfter(lastIndexedGuidForAllIndexes, NumberOfItemsToIndexInSingleBatch)
+					jsonDocs = actions.Documents.GetDocumentsAfter(lastIndexedGuidForAllIndexes, autoTuner.NumberOfItemsToIndexInSingleBatch)
 						.Where(x => x != null)
 						.Select(doc =>
 						{
@@ -116,7 +122,7 @@ namespace Raven.Database.Indexing
 						}
 					});
 
-					AutoThrottleBatchSize(jsonDocs.Length, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
+					autoTuner.AutoThrottleBatchSize(jsonDocs.Length, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
 				}
 			}
 		}
@@ -128,7 +134,7 @@ namespace Raven.Database.Indexing
 			actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
 		}
 
-		private IEnumerable<Tuple<IndexToWorkOn, IEnumerable<JsonDocument>>> FilterIndexes(IEnumerable<IndexToWorkOn> indexesToWorkOn, JsonDocument[] jsonDocs)
+		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(ICollection<IndexToWorkOn> indexesToWorkOn, IEnumerable<JsonDocument> jsonDocs)
 		{
 			var last = jsonDocs.Last();
 
@@ -139,41 +145,75 @@ namespace Raven.Database.Indexing
 			var lastModified = last.LastModified.Value;
 
 			var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
-			Action<IStorageActionsAccessor> action = null;
-			foreach (var indexToWorkOn in indexesToWorkOn)
+
+			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
+
+			var filteredDocs = jsonDocs.AsParallel()
+				.Select(doc => documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index))
+				.Where(doc => doc != null)
+				.Select(x => new { Doc = x, Json = JsonToExpando.Convert(x.ToJson()) })
+				.ToList();
+
+			var results = new Tuple<IndexToWorkOn, IndexingBatch>[indexesToWorkOn.Count];
+			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
+
+			Parallel.ForEach(indexesToWorkOn, (indexToWorkOn, _, i) =>
 			{
 				var indexLastInedexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
-				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0) 
-					continue;
-
-				var filteredDocs = jsonDocs.Where(doc => indexLastInedexEtag.CompareTo(new ComparableByteArray(doc.Etag.Value.ToByteArray())) < 0);
+				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0)
+					return;
 
 				var indexName = indexToWorkOn.IndexName;
 				var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexName);
-				if(viewGenerator == null)
-					continue; // probably deleted
+				if (viewGenerator == null)
+					return; // probably deleted
 
-				if (viewGenerator.ForEntityNames.Count != 0) // limit for the items that it care for
+				var batch = new IndexingBatch
 				{
-					filteredDocs = filteredDocs.Where(x => viewGenerator.ForEntityNames.Contains(x.Metadata.Value<string>(Constants.RavenEntityName)));
+					Docs = new List<dynamic>(),
+				};
+
+				foreach (var item in filteredDocs)
+				{
+					if (indexLastInedexEtag.CompareTo(new ComparableByteArray(item.Doc.Etag.Value.ToByteArray())) >= 0)
+						continue;
+
+					if (viewGenerator.ForEntityNames.Count != 0 &&
+					    viewGenerator.ForEntityNames.Contains(item.Doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
+					{
+						continue;
+					}
+
+					batch.Docs.Add(item.Json);
+
+					if (batch.DateTime == null)
+						batch.DateTime = item.Doc.LastModified;
+					else
+						batch.DateTime = batch.DateTime > item.Doc.LastModified
+						                 	? item.Doc.LastModified
+						                 	: batch.DateTime;
 				}
 
-				List<JsonDocument> jsonDocuments = filteredDocs.ToList();
-				
-				if(jsonDocuments.Count == 0)
+				if (batch.Docs.Count == 0)
 				{
 					// we use it this way to batch all the updates together
-					action += accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
-					continue;
+					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
+					return;
 				}
+				results[i] = Tuple.Create(indexToWorkOn, batch);
 
-				yield return Tuple.Create<IndexToWorkOn, IEnumerable<JsonDocument>>(indexToWorkOn, jsonDocuments);
-			}
+			});
 
-			if (action != null)
+			transactionalStorage.Batch(actionsAccessor =>
 			{
-				transactionalStorage.Batch(action);
-			}
+				foreach (var action in actions)
+				{
+					if (action != null)
+						action(actionsAccessor);
+				}
+			});
+
+			return results.Where(x => x != null);
 		}
 
 		protected override bool IsValidIndex(IndexStats indexesStat)
@@ -181,25 +221,21 @@ namespace Raven.Database.Indexing
 			return true;
 		}
 
+		private class IndexingBatch
+		{
+			public List<dynamic> Docs;
+			public DateTime? DateTime;
+		}
 
-		private void IndexDocuments(IStorageActionsAccessor actions, string index, IEnumerable<JsonDocument> jsonDocs)
+		private void IndexDocuments(IStorageActionsAccessor actions, string index, IndexingBatch batch)
 		{
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(index);
 			if (viewGenerator == null)
 				return; // index was deleted, probably
-			var jsonDocsArray = jsonDocs.ToArray();
-			var dateTime = jsonDocsArray.Min(x => x.LastModified) ?? DateTime.MinValue;
-
-			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
 			try
 			{
-				log.Debug("Indexing {0} documents for index: {1}", jsonDocsArray.Length, index);
-				context.IndexStorage.Index(index, viewGenerator,
-					jsonDocsArray
-					.Select(doc => documentRetriever
-						.ExecuteReadTriggers(doc, null, ReadOperation.Index))
-					.Where(doc => doc != null)
-					.Select(x => JsonToExpando.Convert(x.ToJson())), context, actions, dateTime);
+				log.Debug("Indexing {0} documents for index: {1}", batch.Docs.Count, index);
+				context.IndexStorage.Index(index, viewGenerator, batch.Docs, context, actions, batch.DateTime ?? DateTime.MinValue);
 			}
 			catch (Exception e)
 			{

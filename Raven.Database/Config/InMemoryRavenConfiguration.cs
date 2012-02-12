@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
@@ -654,14 +655,19 @@ namespace Raven.Database.Config
 
 					try
 					{
-						var availablePhysicalMemoryInMb = new ComputerInfo().AvailablePhysicalMemory / 1024 / 1024;
-						return (int)availablePhysicalMemoryInMb;
+						var availablePhysicalMemoryInMb = (int) (new ComputerInfo().AvailablePhysicalMemory/1024/1024);
+						if(Environment.Is64BitProcess)
+							return availablePhysicalMemoryInMb;
+
+						// we are in 32 bits mode, but the _system_ may have more than 4 GB available
+						// so we have to check the _address space_ as well as the available memory
+						var workingSetMb = (int) (Process.GetCurrentProcess().WorkingSet64/1024/1024);
+						return Math.Min(4096 - workingSetMb, availablePhysicalMemoryInMb);
 					}
 					catch (Exception)
 					{
 						if (Type.GetType("Mono.Runtime") == null)
 							throw;
-
 
 						// I don't know how to figur eout free RAM on mono, so we disable this behavior
 						failedToGetAvailablePhysicalMemory = true;

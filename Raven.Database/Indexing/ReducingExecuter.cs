@@ -27,7 +27,10 @@ namespace Raven.Database.Indexing
 							indexToWorkOn.IndexName,
 							indexToWorkOn.LastIndexedEtag,
 							loadData: false,
-							take: NumberOfItemsToIndexInSingleBatch
+							// for reduce operations, we use the smaller value, rather than tuning stuff on the fly
+							// the reason for that is that we may have large number of map values to reduce anyway, 
+							// so we don't want to try to load too much all at once.
+							take: context.Configuration.InitialNumberOfItemsToIndexInSingleBatch
 						)
 						.ToList();
 
@@ -102,11 +105,14 @@ namespace Raven.Database.Indexing
 
 		protected override void ExecuteIndexingWorkOnMultipleThreads(IList<IndexToWorkOn> indexesToWorkOn)
 		{
-			Parallel.ForEach(indexesToWorkOn, new ParallelOptions
+			foreach (var partitionedIndexes in Partition(indexesToWorkOn, context.Configuration.MaxNumberOfParallelIndexTasks))
 			{
-				MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
-				TaskScheduler = scheduler
-			}, HandleReduceForIndex);
+				Parallel.ForEach(partitionedIndexes, new ParallelOptions
+				{
+					MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
+					TaskScheduler = scheduler
+				}, HandleReduceForIndex);
+			}
 		}
 
 		protected override void ExecuteIndexingWorkOnSingleThread(IList<IndexToWorkOn> indexesToWorkOn)
