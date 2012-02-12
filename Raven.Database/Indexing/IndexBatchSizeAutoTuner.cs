@@ -81,9 +81,8 @@ namespace Raven.Database.Indexing
 			}
 
 			// we are using too much memory, let us use a less next time...
-
-			// maybe it is us? we generate a lot of garbage when doing indexing, so we ask the GC if it would kindly try to do something
-			// about it.
+			// maybe it is us? we generate a lot of garbage when doing indexing, so we ask the GC if it would kindly try to
+			// do something about it.
 			// Note that this order for this to happen we need:
 			// * We had two full run when we were doing nothing but indexing at full throttle
 			// * The system is over the configured limit, and there is a strong likelihood that this is us causing this
@@ -124,6 +123,14 @@ namespace Raven.Database.Indexing
 			// faster indexing times in case we get a big batch again
 			NumberOfItemsToIndexInSingleBatch = Math.Max(context.Configuration.InitialNumberOfItemsToIndexInSingleBatch,
 														 NumberOfItemsToIndexInSingleBatch / 2);
+
+			// we just reduced the batch size because we have two concurrent runs where we had
+			// less to do than the previous runs. That indicate the the busy period is over, maybe we
+			// run out of data? Or the rate of data entry into the system was just reduce?
+			// At any rate, there is a strong likelyhood of having a lot of garbage in the system
+			// let us ask the GC nicely to clean it
+
+			GC.Collect(0, GCCollectionMode.Optimized);
 
 			return true;
 		}
