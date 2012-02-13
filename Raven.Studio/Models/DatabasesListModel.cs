@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 
@@ -31,7 +32,7 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		protected override System.Threading.Tasks.Task LoadedTimerTickedAsync()
+		public override Task TimerTickedAsync()
 		{
 			// Fetch databases names from the server
 			return ApplicationModel.Current.Server.Value.TimerTickedAsync();
