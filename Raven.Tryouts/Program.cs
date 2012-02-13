@@ -16,7 +16,6 @@ namespace Raven.Tryouts
 		{
 			for (int i = 0; i < 1000; i++)
 			{
-				MappedResultsStorageAction.count = 0;
 				Console.Clear();
 				Console.WriteLine(i);
 				new MultiMapReduce().CanQueryFromMultipleSources2();
