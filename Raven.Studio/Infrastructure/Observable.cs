@@ -49,6 +49,7 @@ namespace Raven.Studio.Infrastructure
 		object IObservable.Value
 		{
 			get { return value; }
+			set { Value = (T)value; }
 		}
 
 		private event Action actions;
@@ -61,6 +62,6 @@ namespace Raven.Studio.Infrastructure
 
 	public interface IObservable : INotifyPropertyChanged
 	{
-		object Value { get; }
+		object Value { get; set; }
 	}
 }
