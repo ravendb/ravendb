@@ -2,13 +2,12 @@ using System;
 using System.Reactive.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Interactivity;
 using Raven.Studio.Models;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Behaviors
 {
-	public class ShowItemsBasedOnControlDimensions : Behavior<ListBox>
+	public class ShowItemsBasedOnControlDimensions : RavenBehavior<ListBox>
 	{
 		public DocumentsModel Model
 		{
@@ -23,6 +22,7 @@ namespace Raven.Studio.Behaviors
 
 		protected override void OnAttached()
 		{
+			base.OnAttached();
 			var events = Observable.FromEventPattern<SizeChangedEventHandler, SizeChangedEventArgs>(e => AssociatedObject.SizeChanged += e, e => AssociatedObject.SizeChanged -= e).NoSignature()
 				.Merge(Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentsModel.DocumentSize.SizeChanged += e, e => DocumentsModel.DocumentSize.SizeChanged -= e))
 				.Throttle(TimeSpan.FromSeconds(0.5))
@@ -34,6 +34,7 @@ namespace Raven.Studio.Behaviors
 
 		protected override void OnDetaching()
 		{
+			base.OnDetaching();
 			if (disposable != null)
 				disposable.Dispose();
 		}
