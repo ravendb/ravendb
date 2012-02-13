@@ -28,16 +28,12 @@ namespace Raven.Studio.Infrastructure
 
 			try
 			{
-				var modelInstance = Activator.CreateInstance(modelType);
-				var observableType = typeof(Observable<>).MakeGenericType(modelType);
-				var observable = Activator.CreateInstance(observableType) as IObservable;
-				observable.Value = modelInstance;
-				view.DataContext = observable;
-
-				var model = modelInstance as Model;
-				if (model == null) 
-					return;
+				var model = (Model)Activator.CreateInstance(modelType);
 				model.ForceTimerTicked();
+
+				var observable = (IObservable)Activator.CreateInstance(typeof(Observable<>).MakeGenericType(modelType));
+				observable.Value = model;
+				view.DataContext = observable;
 
 				SetPageTitle(model, view);
 				
