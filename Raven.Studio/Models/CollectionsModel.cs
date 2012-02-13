@@ -33,18 +33,20 @@ namespace Raven.Studio.Models
 
 		private static Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
 		{
-			if (SelectedCollection.Value == null || string.IsNullOrWhiteSpace(SelectedCollection.Value.Name))
+			string name;
+			if (SelectedCollection.Value == null || string.IsNullOrWhiteSpace(name = SelectedCollection.Value.Name))
 				return Execute.EmptyResult<string>();
 
-			var name = SelectedCollection.Value.Name;
 			return ApplicationModel.DatabaseCommands
-				.QueryAsync("Raven/DocumentsByEntityName", new IndexQuery { Start = documentsModel.Pager.Skip, PageSize = documentsModel.Pager.PageSize, Query = "Tag:" + name }, new string[] { })
+				.QueryAsync("Raven/DocumentsByEntityName", new IndexQuery {Start = documentsModel.Pager.Skip, PageSize = documentsModel.Pager.PageSize, Query = "Tag:" + name}, new string[] {})
 				.ContinueOnSuccess(queryResult =>
-				{
-					var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results);
-					documentsModel.Documents.Match(documents.Select(x => new ViewableDocument(x)).ToArray());
-					DocumentsForSelectedCollection.Value.Pager.TotalResults.Value = queryResult.TotalResults;
-				})
+				                   	{
+				                   		var documents = SerializationHelper.RavenJObjectsToJsonDocuments(queryResult.Results)
+				                   			.Select(x => new ViewableDocument(x))
+				                   			.ToArray();
+				                   		documentsModel.Documents.Match(documents);
+				                   		DocumentsForSelectedCollection.Value.Pager.TotalResults.Value = queryResult.TotalResults;
+				                   	})
 				.CatchIgnore<InvalidOperationException>(() => ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error)));
 		}
 
