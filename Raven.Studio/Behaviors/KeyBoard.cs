@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace Raven.Studio.Behaviors
@@ -14,12 +13,6 @@ namespace Raven.Studio.Behaviors
 			element.KeyDown += OnElementOnKeyDown;
 			element.KeyUp += OnElementOnKeyUp;
 			element.Unloaded += Unregister;
-
-			var childWindow = element as ChildWindow;
-			if (childWindow != null)
-			{
-				childWindow.Closed += Unregister;
-			}
 		}
 
 		private static void Unregister(object sender, EventArgs routedEventArgs)
@@ -28,12 +21,6 @@ namespace Raven.Studio.Behaviors
 			element.KeyDown -= OnElementOnKeyDown;
 			element.KeyUp -= OnElementOnKeyUp;
 			element.Unloaded -= Unregister;
-
-			var childWindow = element as ChildWindow;
-			if (childWindow != null)
-			{
-				childWindow.Closed -= Unregister;
-			}
 		}
 
 		private static void OnElementOnKeyDown(object sender, KeyEventArgs args)

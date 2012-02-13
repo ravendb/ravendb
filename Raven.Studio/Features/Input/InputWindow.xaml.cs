@@ -1,17 +1,14 @@
 ﻿using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
-using Raven.Studio.Behaviors;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Input
 {
-	public partial class InputWindow : ChildWindow
+	public partial class InputWindow : PopupWindow
 	{
 		public InputWindow()
 		{
 			InitializeComponent();
-			KeyBoard.Register(this);
-			KeyBoard.IsCtrlHold = false;
 		}
 
 		private void OKButton_Click(object sender, RoutedEventArgs e)

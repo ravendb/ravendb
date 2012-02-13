@@ -1,17 +1,14 @@
 ﻿using System.Windows;
-using System.Windows.Controls;
-using Raven.Studio.Behaviors;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Util
 {
-	public partial class ErrorWindow : ChildWindow
+	public partial class ErrorWindow : PopupWindow
 	{
 		public ErrorWindow(string text)
 		{
 			InitializeComponent();
 			ErrorTextBox.Text = text;
-			KeyBoard.Register(this);
-			KeyBoard.IsCtrlHold = false;
 		}
 
 		private void OKButton_Click(object sender, RoutedEventArgs e)
