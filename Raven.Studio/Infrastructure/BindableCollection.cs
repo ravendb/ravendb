@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Windows;
-using System.Windows.Threading;
 using System.Linq;
-using Raven.Abstractions.Data;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -80,6 +77,25 @@ namespace Raven.Studio.Infrastructure
 					Add(v);
 				}
 			});
+		}
+
+		protected override void RemoveItem(int index)
+		{
+			var disposable = this[index] as IDisposable;
+			if (disposable != null)
+				disposable.Dispose();
+
+			base.RemoveItem(index);
+		}
+
+		protected override void ClearItems()
+		{
+			foreach (var disposable in this.OfType<IDisposable>())
+			{
+				disposable.Dispose();
+			}
+
+			base.ClearItems();
 		}
 	}
 }
