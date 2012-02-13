@@ -3,7 +3,7 @@ using System.Windows.Interactivity;
 
 namespace Raven.Studio.Behaviors
 {
-	public class RavenBehavior<T> : Behavior<T> where T : FrameworkElement
+	public class StudioBehavior<T> : Behavior<T> where T : FrameworkElement
 	{
 		protected override void OnAttached()
 		{

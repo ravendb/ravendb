@@ -7,7 +7,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Behaviors
 {
-	public class ShowItemsBasedOnControlDimensions : RavenBehavior<ListBox>
+	public class ShowItemsBasedOnControlDimensions : StudioBehavior<ListBox>
 	{
 		public DocumentsModel Model
 		{

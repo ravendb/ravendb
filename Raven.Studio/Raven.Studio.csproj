@@ -120,7 +120,7 @@
     </Compile>
     <Compile Include="Behaviors\KeyBoard.cs" />
     <Compile Include="Behaviors\OpenPageOnANewTabIfCtrlIsHold.cs" />
-    <Compile Include="Behaviors\RavenBehavior.cs" />
+    <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Controls\UpdateSourceTrigger.cs" />

@@ -11,7 +11,7 @@ using System.Windows.Interactivity;
 
 namespace Raven.Studio.Behaviors
 {
-	public class UpdateTextBindingOnPropertyChanged : Behavior<TextBox>
+	public class UpdateTextBindingOnPropertyChanged : StudioBehavior<TextBox>
 	{
 		private BindingExpression expression;
 
