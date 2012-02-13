@@ -54,11 +54,9 @@ namespace Raven.Studio.Infrastructure
 
 		private static void OnViewLoaded(IObservable observable, object sender, RoutedEventArgs arg)
 		{
-			var model = (Model)observable.Value;
-			model.ForceTimerTicked();
-
-			var viewModel = model as ViewModel;
-			if (viewModel == null) return;
+			var viewModel = (Model) observable.Value as ViewModel;
+			if (viewModel == null) 
+				return;
 			viewModel.LoadModel(UrlUtil.Url);
 		}
 
