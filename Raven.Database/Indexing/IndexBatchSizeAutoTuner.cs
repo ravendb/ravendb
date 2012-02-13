@@ -64,7 +64,10 @@ namespace Raven.Database.Indexing
 			// we don't actually *know* what the actual cost of indexing, beause that depends on many factors (how the index
 			// is structured, is it analyzed/default/not analyzed, etc). We just assume for now that it takes 25% of the actual
 			// on disk structure per each active index. That should give us a good guesstimate about the value.
-			var sizedPlusIndexingCost = sizeInMegabytes * (1 + (0.25 * context.IndexDefinitionStorage.IndexesCount));
+			// Because of the way we are executing indexes, only N are running at once, where N is the parallel level, so we take
+			// that into account, you may have 10 indexes but only 2 CPUs, so we only consider the cost of executing 2 indexes,
+			// not all 10
+			var sizedPlusIndexingCost = sizeInMegabytes * (1 + (0.25 * Math.Min(context.IndexDefinitionStorage.IndexesCount, context.Configuration.MaxNumberOfParallelIndexTasks)));
 
 			var availablePhysicalMemoryInMegabytes = context.Configuration.AvailablePhysicalMemoryInMegabytes;
 			var remainingMemoryAfterBatchSizeIncrease = availablePhysicalMemoryInMegabytes - sizedPlusIndexingCost;
