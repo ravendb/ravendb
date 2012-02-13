@@ -3,8 +3,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Silverlight.Connection;
-using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {

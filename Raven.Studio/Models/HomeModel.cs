@@ -24,7 +24,7 @@ namespace Raven.Studio.Models
 			                  {
 			                  	Value = new DocumentsModel
 			                  	        {
-			                  	        	ViewTitle = "Recent Documents",
+			                  	        	Header = "Recent Documents",
 			                  	        	Pager = {PageSize = 15},
 			                  	        }
 			                  };

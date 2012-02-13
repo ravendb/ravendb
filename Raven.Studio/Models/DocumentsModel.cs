@@ -72,11 +72,15 @@ namespace Raven.Studio.Models
 
 		public PagerModel Pager { get; private set; }
 
-		private string viewTitle;
-		public string ViewTitle
+		private string header;
+		public string Header
 		{
-			get { return viewTitle ?? (viewTitle = "Documents"); }
-			set { viewTitle = value; OnPropertyChanged(); }
+			get { return header ?? (header = "Documents"); }
+			set
+			{
+				header = value;
+				OnPropertyChanged();
+			}
 		}
 
 		public static DocumentSize DocumentSize { get; private set; }

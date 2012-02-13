@@ -11,7 +11,7 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class CollectionsModel : ViewModel
+	public class CollectionsModel : ViewModel, IHasPageTitle
 	{
 		private static string initialSelectedDatabaseName;
 		public static BindableCollection<CollectionModel> Collections { get; set; }
@@ -68,7 +68,6 @@ namespace Raven.Studio.Models
 		{
 			OnPropertyChanged();
 			ModelUrl = "/collections";
-			SelectedCollection.PropertyChanged += (sender, args) => OnPropertyChanged("ViewTitle");
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -119,7 +118,7 @@ namespace Raven.Studio.Models
 				SelectedCollection.Value = Collections.FirstOrDefault();
 		}
 
-		public string ViewTitle
+		public string PageTitle
 		{
 			get
 			{
