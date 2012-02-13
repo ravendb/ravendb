@@ -26,6 +26,7 @@ namespace Raven.Studio.Infrastructure
 				ModelUrlIgnoreList.Any(state.StartsWith) == false)
 			{
 				LoadModelParameters(state.Substring(ModelUrl.Length));
+				ForceTimerTicked();
 			}
 		}
 
@@ -33,7 +34,7 @@ namespace Raven.Studio.Infrastructure
 
 		public override Task TimerTickedAsync()
 		{
-			return IsLoaded == false ? null : LoadedTimerTickedAsync();
+			return IsLoaded ? LoadedTimerTickedAsync() : null;
 		}
 
 		protected virtual Task LoadedTimerTickedAsync()

@@ -50,7 +50,7 @@ namespace Raven.Studio.Infrastructure
 
 		private static void OnViewLoaded(IObservable observable, object sender, RoutedEventArgs arg)
 		{
-			var viewModel = (Model) observable.Value as ViewModel;
+			var viewModel = observable.Value as ViewModel;
 			if (viewModel == null) 
 				return;
 			viewModel.LoadModel(UrlUtil.Url);
