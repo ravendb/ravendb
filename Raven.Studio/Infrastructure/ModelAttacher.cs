@@ -27,21 +27,24 @@ namespace Raven.Studio.Infrastructure
 
 			try
 			{
-				var model = Activator.CreateInstance(modelType);
+				var modelInstance = Activator.CreateInstance(modelType);
 				var observableType = typeof(Observable<>).MakeGenericType(modelType);
-				var observable = Activator.CreateInstance(observableType);
+				var observable = Activator.CreateInstance(observableType) as IObservable;
 				var piValue = observableType.GetProperty("Value");
-				piValue.SetValue(observable, model, null);
+				piValue.SetValue(observable, modelInstance, null);
 				view.DataContext = observable;
 
-				var modelModel = model as Model;
-				if (modelModel == null)	return;
-				modelModel.ForceTimerTicked();
+				var model = modelInstance as Model;
+				if (model == null) 
+					return;
+				model.ForceTimerTicked();
 
-				SetPageTitle(modelType, model, view);
-
-				view.Loaded += ViewOnLoaded;
-				view.Unloaded -= ViewOnLoaded;
+				SetPageTitle(modelType, modelInstance, view);
+				
+				var weakListener = new WeakEventListener<IObservable, object, RoutedEventArgs>(observable);
+				view.Loaded += weakListener.OnEvent;
+				weakListener.OnEventAction = OnViewLoaded;
+				weakListener.OnDetachAction = listener => view.Loaded -= listener.OnEvent;
 			}
 			catch (Exception ex)
 			{
@@ -49,12 +52,8 @@ namespace Raven.Studio.Infrastructure
 			}
 		}
 
-		private static void ViewOnLoaded(object sender, RoutedEventArgs routedEventArgs)
+		private static void OnViewLoaded(IObservable observable, object sender, RoutedEventArgs arg)
 		{
-			var view = (FrameworkElement)sender;
-			var observable = view.DataContext as IObservable;
-			if (observable == null)
-				return;
 			var model = (Model)observable.Value;
 			model.ForceTimerTicked();
 

@@ -135,6 +135,7 @@
     </Compile>
     <Compile Include="Infrastructure\Converters\TaskStatusConverter.cs" />
     <Compile Include="Infrastructure\Converters\RedIfError.cs" />
+    <Compile Include="Infrastructure\WeakEventListener.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />
     <Compile Include="Models\TermsModel.cs" />
     <Compile Include="Views\Terms.xaml.cs">
