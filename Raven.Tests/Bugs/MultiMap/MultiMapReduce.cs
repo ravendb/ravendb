@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
@@ -122,9 +124,15 @@ namespace Raven.Tests.Bugs.MultiMap
 				using (var session = store.OpenSession())
 				{
 					var ups = session.Query<UserPostingStats, PostCountsByUser_WithName>()
-						.Customize(x => x.WaitForNonStaleResults())
+						.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(100)))
 						.Where(x => x.UserName.StartsWith("rah"))
 						.ToList();
+
+					if(1 != ups.Count || ups[0].PostCount != 5)
+					{
+						Debugger.Launch();
+						WaitForUserToContinueTheTest(store);
+					}
 
 					Assert.Equal(1, ups.Count);
 

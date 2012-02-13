@@ -5,6 +5,8 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using System.Linq;
+using Raven.Storage.Managed;
+using Raven.Tests.Bugs.MultiMap;
 
 namespace Raven.Tryouts
 {
@@ -12,10 +14,12 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			DateTime? xx1 = null;
-			DateTime? xx2 = DateTime.MinValue;
-
-			Console.WriteLine(xx1 > xx2);
+			for (int i = 0; i < 1000; i++)
+			{
+				Console.Clear();
+				Console.WriteLine(i);
+				new MultiMapReduce().CanQueryFromMultipleSources2();
+			}
 			return;
 
 			using (var store = new DocumentStore

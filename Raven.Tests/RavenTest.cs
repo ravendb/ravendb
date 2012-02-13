@@ -6,8 +6,10 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
+using NLog;
 using Raven.Abstractions;
 using Raven.Client;
 using Raven.Client.Document;
@@ -16,6 +18,7 @@ using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Server;
@@ -243,6 +246,18 @@ namespace Raven.Tests
 
 		public RavenTest()
 		{
+			
+			BoundedMemoryTarget boundedMemoryTarget = null;
+			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
+			{
+				boundedMemoryTarget = LogManager.Configuration.AllTargets.OfType<BoundedMemoryTarget>().FirstOrDefault();
+			}
+			if (boundedMemoryTarget != null)
+			{
+				boundedMemoryTarget.Clear();
+			}
+
+
 			try
 			{
 				new Uri("http://fail/first/time?only=%2bplus");

@@ -12,8 +12,8 @@ namespace Raven.Database.Util
 {
 	public class BoundedMemoryTarget : Target
 	{
-		private readonly ConcurrentQueue<LogEventInfo> generalLog = new ConcurrentQueue<LogEventInfo>();
-		private readonly ConcurrentQueue<LogEventInfo> warnLog = new ConcurrentQueue<LogEventInfo>();
+		private ConcurrentQueue<LogEventInfo> generalLog = new ConcurrentQueue<LogEventInfo>();
+		private ConcurrentQueue<LogEventInfo> warnLog = new ConcurrentQueue<LogEventInfo>();
 
 		protected override void Write(LogEventInfo logEvent)
 		{
@@ -40,6 +40,12 @@ namespace Raven.Database.Util
 		public IEnumerable<LogEventInfo> WarnLog
 		{
 			get { return warnLog; }
+		}
+
+		public void Clear()
+		{
+			generalLog = new ConcurrentQueue<LogEventInfo>();
+			warnLog = new ConcurrentQueue<LogEventInfo>();
 		}
 	}
 }
