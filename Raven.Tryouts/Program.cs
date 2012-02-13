@@ -5,6 +5,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using System.Linq;
+using Raven.Storage.Managed;
 using Raven.Tests.Bugs.MultiMap;
 
 namespace Raven.Tryouts
@@ -15,8 +16,10 @@ namespace Raven.Tryouts
 		{
 			for (int i = 0; i < 1000; i++)
 			{
+				MappedResultsStorageAction.count = 0;
+				Console.Clear();
+				Console.WriteLine(i);
 				new MultiMapReduce().CanQueryFromMultipleSources2();
-				Console.Write("\r{0}", i);
 			}
 			return;
 

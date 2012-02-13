@@ -128,7 +128,7 @@ namespace Raven.Tests.Bugs.MultiMap
 						.Where(x => x.UserName.StartsWith("rah"))
 						.ToList();
 
-					if(1 != ups.Count)
+					if(1 != ups.Count || ups[0].PostCount != 5)
 					{
 						Debugger.Launch();
 						WaitForUserToContinueTheTest(store);
