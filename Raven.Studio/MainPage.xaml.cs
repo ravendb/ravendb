@@ -13,12 +13,12 @@ namespace Raven.Studio
 		public MainPage()
 		{
 			InitializeComponent();
-			KeyBoard.Register(this);
 		}
 
 		// After the Frame navigates, ensure the HyperlinkButton representing the current page is selected
 		private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
 		{
+			GC.Collect();
 			HighlightCurrentPage(e.Uri);
 		}
 

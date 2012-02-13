@@ -1,9 +1,9 @@
 ﻿using System.Windows;
-using Raven.Studio.Infrastructure;
+using System.Windows.Controls;
 
 namespace Raven.Studio.Features.Util
 {
-	public partial class MessageBoxWindow : PopupWindow
+	public partial class MessageBoxWindow : ChildWindow
 	{
 		public MessageBoxWindow(string title, string message)
 		{

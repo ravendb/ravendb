@@ -207,10 +207,6 @@
 							  NavigationFailed="ContentFrame_NavigationFailed"
 							  Margin="15,0">
 
-				<i:Interaction.Behaviors>
-					<Behaviors:OpenPageOnANewTabIfCtrlIsHold />
-				</i:Interaction.Behaviors>
-
 				<navigation:Frame.UriMapper>
 					<uriMapper:UriMapper>
 						<uriMapper:UriMapping Uri=""

@@ -104,7 +104,7 @@ namespace Raven.Studio.Models
 				Count = col.Count
 			}).ToArray();
 
-			Collections.Match(collectionModels, AfterUpdate);
+			Collections.Set(collectionModels, AfterUpdate);
 		}
 
 		private void AfterUpdate()

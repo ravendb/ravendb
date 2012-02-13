@@ -1,8 +1,8 @@
-﻿<Infrastructure:PopupWindow x:Class="Raven.Studio.Features.Input.ConfirmWindow"
-							xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-							xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-							xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-							Title="{Binding Path=Title}">
+﻿<sdk:ChildWindow x:Class="Raven.Studio.Features.Input.ConfirmWindow"
+				 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+				 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+				 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+				 Title="{Binding Path=Title}">
 
 	<Grid Margin="2"
 		  KeyDown="LayoutRoot_OnKeyDown">
@@ -35,4 +35,4 @@
 					Click="CancelButton_Click" />
 		</StackPanel>
 	</Grid>
-</Infrastructure:PopupWindow>
+</sdk:ChildWindow>

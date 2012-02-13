@@ -1,10 +1,10 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
-using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Input
 {
-	public partial class ConfirmWindow : PopupWindow
+	public partial class ConfirmWindow : ChildWindow
 	{
 		public ConfirmWindow()
 		{

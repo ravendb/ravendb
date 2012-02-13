@@ -1,9 +1,9 @@
 ﻿using System.Windows;
-using Raven.Studio.Infrastructure;
+using System.Windows.Controls;
 
 namespace Raven.Studio.Features.Util
 {
-	public partial class ErrorWindow : PopupWindow
+	public partial class ErrorWindow : ChildWindow
 	{
 		public ErrorWindow(string text)
 		{

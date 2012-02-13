@@ -118,8 +118,6 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Behaviors\KeyBoard.cs" />
-    <Compile Include="Behaviors\OpenPageOnANewTabIfCtrlIsHold.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
@@ -136,7 +134,6 @@
     </Compile>
     <Compile Include="Infrastructure\Converters\TaskStatusConverter.cs" />
     <Compile Include="Infrastructure\Converters\RedIfError.cs" />
-    <Compile Include="Infrastructure\PopupWindow.cs" />
     <Compile Include="Infrastructure\WeakEventListener.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />
     <Compile Include="Models\TermsModel.cs" />

@@ -1,7 +1,7 @@
-﻿<Infrastructure:PopupWindow x:Class="Raven.Studio.Features.Util.MessageBoxWindow"
-							xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-							xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-							xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure">
+﻿<sdk:ChildWindow x:Class="Raven.Studio.Features.Util.MessageBoxWindow"
+				 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+				 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+				 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="*" />
@@ -25,4 +25,4 @@
 				TabIndex="0"
 				Content="OK" />
 	</Grid>
-</Infrastructure:PopupWindow>
+</sdk:ChildWindow>

@@ -56,7 +56,7 @@ namespace Raven.Studio.Infrastructure
 			return primaryKeyExtractor(obj) ?? obj;
 		}
 
-		public void Set(IEnumerable<T> enumerable)
+		public void Set(IEnumerable<T> enumerable, Action after = null)
 		{
 			Execute.OnTheUI(() =>
 			{
@@ -65,6 +65,9 @@ namespace Raven.Studio.Infrastructure
 				{
 					Add(v);
 				}
+
+				if (after != null)
+					after();
 			});
 		}
 
