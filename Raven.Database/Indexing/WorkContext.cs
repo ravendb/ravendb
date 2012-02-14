@@ -15,6 +15,7 @@ using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using System.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -25,7 +26,7 @@ namespace Raven.Database.Indexing
 		private volatile bool doWork = true;
 		private int workCounter;
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
-		private readonly ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
+		private readonly ThreadLocal<List<Func<string>>> shouldNotifyOnWork = new ThreadLocal<List<Func<string>>>(() => new List<Func<string>>());
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
 		public bool DoWork
@@ -79,27 +80,29 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void ShouldNotifyAboutWork()
+		public void ShouldNotifyAboutWork(Func<string> why)
 		{
-			shouldNotifyOnWork.Value = true;
+			shouldNotifyOnWork.Value.Add(why);
 		}
 
 		public void HandleWorkNotifications()
 		{
-			if (shouldNotifyOnWork.Value == false)
+			if (shouldNotifyOnWork.Value.Count == 0)
 				return;
-			shouldNotifyOnWork.Value = false;
 			NotifyAboutWork();
 		}
 
 		public void NotifyAboutWork()
 		{
-			int increment = Interlocked.Increment(ref workCounter);
-			log.Debug("Incremented work counter to {0} - step 1/2", increment);
 			lock (waitForWork)
 			{
-				increment= Interlocked.Increment(ref workCounter);
-				log.Debug("Incremented work counter to {0} - step 2/2", increment);
+				var increment = Interlocked.Increment(ref workCounter);
+				if(log.IsDebugEnabled)
+				{
+					log.Debug("Incremented work counter to {0} because: {1}", increment,
+					          string.Join(", ", shouldNotifyOnWork.Value.Select(action => action()).Where(x => x != null)));
+				}
+				shouldNotifyOnWork.Value.Clear();
 				Monitor.PulseAll(waitForWork);
 			}
 		}

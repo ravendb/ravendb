@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using NLog;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Database.Storage;
 using System.Linq;
 

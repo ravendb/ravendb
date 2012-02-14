@@ -71,7 +71,9 @@ namespace Raven.Database.Indexing
 		}
 
 
-		private MappedResultInfo GetLastByEtag(List<MappedResultInfo> reduceKeyAndEtags)
+// ReSharper disable ParameterTypeCanBeEnumerable.Local
+		private static MappedResultInfo GetLastByEtag(List<MappedResultInfo> reduceKeyAndEtags)
+// ReSharper restore ParameterTypeCanBeEnumerable.Local
 		{
 			// the last item is either the first or the last
 

@@ -473,7 +473,7 @@ namespace Raven.Database
 						newEtag = actions.Transactions.AddDocumentInTransaction(key, etag,
 						                                                        document, metadata, transactionInformation);
 					}
-					workContext.ShouldNotifyAboutWork();
+					workContext.ShouldNotifyAboutWork(() => "PUT " + key);
 				});
 			}
 			TransactionalStorage
@@ -599,7 +599,7 @@ namespace Raven.Database
 				{
 					deleted = actions.Transactions.DeleteDocumentInTransaction(transactionInformation, key, etag);
 				}
-				workContext.ShouldNotifyAboutWork();
+				workContext.ShouldNotifyAboutWork(() => "DEL " + key);
 			});
 			TransactionalStorage
 				.ExecuteImmediatelyOrRegisterForSyncronization(() => DeleteTriggers.Apply(trigger => trigger.AfterCommit(key)));
@@ -637,7 +637,7 @@ namespace Raven.Database
 								    doc.Metadata, null);
 						});
 						actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
-						workContext.ShouldNotifyAboutWork();
+						workContext.ShouldNotifyAboutWork(() => "COMMIT " + txId);
 					});
 				}
 				TryCompletePromotedTransaction(txId);
@@ -688,7 +688,7 @@ namespace Raven.Database
 				{
 					actions.Transactions.RollbackTransaction(txId);
 					actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
-					workContext.ShouldNotifyAboutWork();
+					workContext.ShouldNotifyAboutWork(() => "ROLLBACK " + txId);
 				});
 				TryUndoPromotedTransaction(txId);
 			}
@@ -724,7 +724,7 @@ namespace Raven.Database
 		    TransactionalStorage.Batch(actions =>
 		    {
 		        actions.Indexing.AddIndex(name, definition.IsMapReduce);
-		        workContext.ShouldNotifyAboutWork();
+		        workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
 		    });
 			workContext.ClearErrorsFor(name);
 			return name;
@@ -746,7 +746,7 @@ namespace Raven.Database
 
 					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, query.CutoffEtag);
 
-					AskForIndexUpdateIfStale(stale);
+					AskForIndexUpdateIfStale(stale, index);
 
 					indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
 					var indexFailureInformation = actions.Indexing.GetFailureRate(index);
@@ -811,7 +811,7 @@ namespace Raven.Database
 			};
 		}
 
-		private void AskForIndexUpdateIfStale(bool stale)
+		private void AskForIndexUpdateIfStale(bool stale, string index)
 		{
 			if (stale == false) 
 				return;
@@ -821,7 +821,7 @@ namespace Raven.Database
 			// kick up indexing, anyway, because the querying for this would trigger that.
 			// This doesn't mean that we don't have a problem with losing updates, mind, just that we have
 			// no way to reproduce this.
-			workContext.ShouldNotifyAboutWork();
+			workContext.ShouldNotifyAboutWork(() => "QUERY ON STALE INDEX: " + index);
 		}
 
 		public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
@@ -862,7 +862,7 @@ namespace Raven.Database
 					{
 						action.Indexing.DeleteIndex(name);
 
-						workContext.ShouldNotifyAboutWork();
+						workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
 					});
 					return;
 				}
@@ -959,7 +959,7 @@ namespace Raven.Database
 
 				AttachmentPutTriggers.Apply(trigger => trigger.AfterPut(name, data, metadata, newEtag));
 
-				workContext.ShouldNotifyAboutWork();
+				workContext.ShouldNotifyAboutWork(() => "PUT ATTACHMENT " + name);
 			});
 
 			TransactionalStorage
@@ -979,7 +979,7 @@ namespace Raven.Database
 
 				AttachmentDeleteTriggers.Apply(x => x.AfterDelete(name));
 
-				workContext.ShouldNotifyAboutWork();
+				workContext.ShouldNotifyAboutWork(() => "DELETE ATTACHMENT " + name);
 			});
 
 			TransactionalStorage
@@ -1118,7 +1118,7 @@ namespace Raven.Database
 						result = PatchResult.Patched;
 					}
 					if (shouldRetry == false)
-						workContext.ShouldNotifyAboutWork();
+						workContext.ShouldNotifyAboutWork(() => "PATCH " + docId);
 				});
 
 			} while (shouldRetry);
@@ -1156,7 +1156,7 @@ namespace Raven.Database
 									Metadata = command.Metadata
 								});
 							}
-							workContext.ShouldNotifyAboutWork();
+							workContext.ShouldNotifyAboutWork(() => null);
 						});
 					}
 					catch (ConcurrencyException)
@@ -1259,7 +1259,7 @@ namespace Raven.Database
 			{
 				actions.Indexing.DeleteIndex(index);
 			    actions.Indexing.AddIndex(index, indexDefinition.IsMapReduce);
-			    workContext.ShouldNotifyAboutWork();
+				workContext.ShouldNotifyAboutWork(() => "RESET INDEX " + index);
 			});
 		}
 

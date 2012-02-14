@@ -147,10 +147,7 @@ namespace Raven.Database.Indexing
 				if (viewGenerator == null)
 					return; // probably deleted
 
-				var batch = new IndexingBatch
-				{
-					Docs = new List<dynamic>(),
-				};
+				var batch = new IndexingBatch();
 
 				foreach (var item in filteredDocs)
 				{
@@ -163,7 +160,7 @@ namespace Raven.Database.Indexing
 						continue;
 					}
 
-					batch.Docs.Add(item.Json);
+					batch.Add(item.Doc, item.Json);
 
 					if (batch.DateTime == null)
 						batch.DateTime = item.Doc.LastModified;
@@ -202,8 +199,21 @@ namespace Raven.Database.Indexing
 
 		private class IndexingBatch
 		{
-			public List<dynamic> Docs;
+			public IndexingBatch()
+			{
+				Ids = new List<string>();
+				Docs = new List<dynamic>();
+			}
+
+			public readonly List<string> Ids;
+			public readonly List<dynamic> Docs;
 			public DateTime? DateTime;
+
+			public void Add(JsonDocument doc, object asJson)
+			{
+				Ids.Add(doc.Key);
+				Docs.Add(asJson);
+			}
 		}
 
 		private void IndexDocuments(IStorageActionsAccessor actions, string index, IndexingBatch batch)
@@ -213,7 +223,10 @@ namespace Raven.Database.Indexing
 				return; // index was deleted, probably
 			try
 			{
-				log.Debug("Indexing {0} documents for index: {1}", batch.Docs.Count, index);
+				if(log.IsDebugEnabled)
+				{
+					log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, index, string.Join(",",batch.Ids));
+				}
 				context.IndexStorage.Index(index, viewGenerator, batch.Docs, context, actions, batch.DateTime ?? DateTime.MinValue);
 			}
 			catch (Exception e)
