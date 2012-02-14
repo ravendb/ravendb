@@ -34,17 +34,7 @@ namespace Raven.Tests
 
 		private string path;
 
-		public EmbeddableDocumentStore NewDocumentStore()
-		{
-			return NewDocumentStore("munin", true, null);
-		}
-
-		public EmbeddableDocumentStore NewDocumentStore(string storageType, bool inMemory)
-		{
-			return NewDocumentStore(storageType, inMemory, null);
-		}
-
-		public EmbeddableDocumentStore NewDocumentStore(string storageType, bool inMemory, int? allocatedMemory)
+		public EmbeddableDocumentStore NewDocumentStore(string storageType = "munin", bool inMemory = true, int? allocatedMemory = null)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
