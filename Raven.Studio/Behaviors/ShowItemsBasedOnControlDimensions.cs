@@ -24,9 +24,9 @@ namespace Raven.Studio.Behaviors
 		{
 			base.OnAttached();
 			var events = Observable.FromEventPattern<SizeChangedEventHandler, SizeChangedEventArgs>(e => AssociatedObject.SizeChanged += e, e => AssociatedObject.SizeChanged -= e).NoSignature()
-				.Merge(Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentsModel.DocumentSize.SizeChanged += e, e => DocumentsModel.DocumentSize.SizeChanged -= e))
+				.Merge(Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentSize.Current.SizeChanged += e, e => DocumentSize.Current.SizeChanged -= e))
 				.Throttle(TimeSpan.FromSeconds(0.5))
-				.Merge(Observable.FromEventPattern<RoutedEventHandler, EventArgs>(e => AssociatedObject.Loaded += e, e => AssociatedObject.Loaded -= e))  // Loaded should execute immediately.
+				.Merge(Observable.FromEventPattern<RoutedEventHandler, EventArgs>(e => AssociatedObject.Loaded += e, e => AssociatedObject.Loaded -= e)) // Loaded should execute immediately.
 				.ObserveOnDispatcher();
 
 			disposable = events.Subscribe(_ => CalculatePageSize());
@@ -49,9 +49,9 @@ namespace Raven.Studio.Behaviors
 				return;
 			// ReSharper restore CompareOfFloatsByEqualityOperator
 
-			int row = (int) Math.Max(1, (AssociatedObject.ActualWidth/(DocumentsModel.DocumentSize.Width + 28)));
-			int column = (int) Math.Max(1, AssociatedObject.ActualHeight/(DocumentsModel.DocumentSize.Height + 24));
-			int pageSize = row * column;
+			int row = (int) Math.Max(1, (AssociatedObject.ActualWidth/(DocumentSize.Current.Width + 28)));
+			int column = (int) Math.Max(1, AssociatedObject.ActualHeight/(DocumentSize.Current.Height + 24));
+			int pageSize = row*column;
 			Model.Pager.PageSize = pageSize;
 			Model.Pager.OnPagerChanged();
 		}

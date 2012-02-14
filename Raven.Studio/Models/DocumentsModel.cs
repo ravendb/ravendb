@@ -8,21 +8,12 @@ namespace Raven.Studio.Models
 {
 	public class DocumentsModel : Model
 	{
-		public const double DefaultDocumentHeight = 66;
-		public const double ExpandedDocumentHeight = 130;
-		public const double ExpandedMinimumHeight = 110;
-
 		public BindableCollection<ViewableDocument> Documents { get; private set; }
 
 		public bool SkipAutoRefresh { get; set; }
 		public bool ShowEditControls { get; set; }
 
 		public Func<DocumentsModel, Task> CustomFetchingOfDocuments { get; set; }
-
-		static DocumentsModel()
-		{
-			DocumentSize = new DocumentSize {Height = DefaultDocumentHeight};
-		}
 
 		public DocumentsModel()
 		{
@@ -44,7 +35,7 @@ namespace Raven.Studio.Models
 
 			if (document.CollectionType == "Projection")
 			{
-				DocumentSize.Height = Math.Max(DocumentSize.Height, ExpandedDocumentHeight);
+				DocumentSize.Current.Height = Math.Max(DocumentSize.Current.Height, DocumentSize.ExpandedDocumentHeight);
 			}
 		}
 
@@ -83,8 +74,6 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public static DocumentSize DocumentSize { get; private set; }
-
 		private bool isLoadingDocuments;
 		public bool IsLoadingDocuments
 		{
@@ -100,6 +89,12 @@ namespace Raven.Studio.Models
 
 	public class DocumentSize : NotifyPropertyChangedBase
 	{
+		public const double DefaultDocumentHeight = 66;
+		public const double ExpandedDocumentHeight = 130;
+		public const double ExpandedMinimumHeight = 110;
+		
+		public readonly static DocumentSize Current = new DocumentSize {Height = DefaultDocumentHeight};
+
 		public event EventHandler SizeChanged;
 		
 		private double height;
