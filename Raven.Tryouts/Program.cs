@@ -37,7 +37,7 @@ namespace Raven.Tryouts
 					Environment.SetEnvironmentVariable("Run", i.ToString());
 					Console.Clear();
 					Console.WriteLine(i);
-					new MultiMapReduce().CanQueryFromMultipleSources2();
+					new MultiMapReduce().JustQuerying();
 				}
 			}
 			finally
