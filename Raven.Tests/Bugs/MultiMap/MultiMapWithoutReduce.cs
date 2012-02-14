@@ -1,5 +1,8 @@
+using System;
+using System.Diagnostics;
 using System.Linq;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Raven.Tests.Bugs.MultiMap
 {
@@ -13,18 +16,18 @@ namespace Raven.Tests.Bugs.MultiMap
 				using (var session = store.OpenSession())
 				{
 					var user = new User
-					{
-						Name = "Ayende Rahien"
-					};
+					           {
+					           	Name = "Ayende Rahien"
+					           };
 					session.Store(user);
 
 					for (int i = 0; i < 5; i++)
 					{
 						session.Store(new Post
-						{
-							AuthorId = user.Id,
-							Title = "blah"
-						});
+						              {
+						              	AuthorId = user.Id,
+						              	Title = "blah"
+						              });
 					}
 
 					session.SaveChanges();
@@ -32,11 +35,19 @@ namespace Raven.Tests.Bugs.MultiMap
 
 				using (var session = store.OpenSession())
 				{
-					var users = session.Query<User>().Customize(x=>x.WaitForNonStaleResults()).Count();
+					var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Count();
 					var posts = session.Query<Post>().Customize(x => x.WaitForNonStaleResults()).Count();
 
-					Assert.Equal(1, users);
-					Assert.Equal(5, posts);
+					try
+					{
+						Assert.Equal(1, users);
+						Assert.Equal(5, posts);
+					}
+					catch (AssertException e)
+					{
+						Debugger.Launch();
+						WaitForUserToContinueTheTest(store);
+					}
 				}
 			}
 		}
