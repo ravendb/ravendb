@@ -18,7 +18,7 @@ namespace Raven.Tryouts
 			{
 				Console.Clear();
 				Console.WriteLine(i);
-				new MultiMapReduce().CanQueryFromMultipleSources2();
+				new MultiMapWithoutReduce().CanQueryFromMultipleSources();
 			}
 			return;
 
@@ -54,8 +54,8 @@ select new
 from disk in docs.Disks 
 select new 
 { 
-    disk.Artist,
-    disk.Title
+	disk.Artist,
+	disk.Title
 }"
 								});
 
