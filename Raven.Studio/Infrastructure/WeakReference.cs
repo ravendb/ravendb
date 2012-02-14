@@ -1,9 +1,8 @@
 using System;
-using System.Security;
 
 namespace Raven.Studio.Infrastructure
 {
-	public class WeakReference<T> where T : class
+	public class WeakReference<T> where T : class, new()
 	{
 		private readonly WeakReference inner;
 
@@ -22,7 +21,7 @@ namespace Raven.Studio.Infrastructure
 
 		public T Target
 		{
-			get { return (T) inner.Target; }
+			get { return (T) inner.Target ?? new T(); }
 			set { inner.Target = value; }
 		}
 

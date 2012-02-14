@@ -18,7 +18,7 @@ namespace Raven.Studio.Infrastructure
 	/// <typeparam name="TInstance">Type of instance listening for the event.</typeparam>
 	/// <typeparam name="TSource">Type of source for the event.</typeparam>
 	/// <typeparam name="TEventArgs">Type of event arguments for the event.</typeparam>
-	public class WeakEventListener<TInstance, TSource, TEventArgs> where TInstance : class
+	public class WeakEventListener<TInstance, TSource, TEventArgs> : IWeakEventListener where TInstance : class
 	{
 		/// <summary>
 		/// WeakReference to the instance listening for the event.
@@ -84,5 +84,10 @@ namespace Raven.Studio.Infrastructure
 				this.OnDetachAction = null;
 			}
 		}
+	}
+
+	public interface IWeakEventListener
+	{
+		void Detach();
 	}
 }

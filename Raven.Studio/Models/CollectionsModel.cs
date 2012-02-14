@@ -16,13 +16,22 @@ namespace Raven.Studio.Models
 		private static string initialSelectedDatabaseName;
 		public static BindableCollection<CollectionModel> Collections { get; set; }
 		public static Observable<CollectionModel> SelectedCollection { get; set; }
-		public static Observable<DocumentsModel> DocumentsForSelectedCollection { get; set; }
+
+		private static WeakReference<Observable<DocumentsModel>> documentsForSelectedCollection;
+		public static Observable<DocumentsModel> DocumentsForSelectedCollection
+		{
+			get
+			{
+				if (documentsForSelectedCollection == null || documentsForSelectedCollection.IsAlive == false)
+					documentsForSelectedCollection = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel> {Value = new DocumentsModel {CustomFetchingOfDocuments = GetFetchDocumentsMethod}});
+				return documentsForSelectedCollection.Target;
+			}
+		}
 
 		static CollectionsModel()
 		{
 			Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
 			SelectedCollection = new Observable<CollectionModel>();
-			DocumentsForSelectedCollection = new Observable<DocumentsModel> { Value = new DocumentsModel { CustomFetchingOfDocuments = GetFetchDocumentsMethod } };
 
 			SelectedCollection.PropertyChanged += (sender, args) =>
 			{
@@ -45,7 +54,10 @@ namespace Raven.Studio.Models
 				                   			.Select(x => new ViewableDocument(x))
 				                   			.ToArray();
 				                   		documentsModel.Documents.Match(documents);
-				                   		DocumentsForSelectedCollection.Value.Pager.TotalResults.Value = queryResult.TotalResults;
+										//if (DocumentsForSelectedCollection.Value.Pager.TotalResults.Value.HasValue == false || DocumentsForSelectedCollection.Value.Pager.TotalResults.Value.Value != queryResult.TotalResults)
+										{
+											DocumentsForSelectedCollection.Value.Pager.TotalResults.Value = queryResult.TotalResults;
+										}
 				                   	})
 				.CatchIgnore<InvalidOperationException>(() => ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error)));
 		}
@@ -87,25 +99,21 @@ namespace Raven.Studio.Models
 		public override Task TimerTickedAsync()
 		{
 			return DatabaseCommands.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 100)
-				.ContinueOnSuccess(Update)
+				.ContinueOnSuccess(collections =>
+				                   	{
+										var collectionModels = collections.OrderByDescending(x => x.Count)
+											.Select(col => new CollectionModel { Name = col.Name, Count = col.Count })
+											.ToArray();
+
+				                   		Collections.Match(collectionModels, AfterUpdate);
+				                   	})
 				.CatchIgnore<WebException>(() =>
-				{
-					var urlParser = new UrlParser(UrlUtil.Url);
-					if (urlParser.RemoveQueryParam("name"))
-						UrlUtil.Navigate(urlParser.BuildUrl());
-					ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error));
-				});
-		}
-
-		private void Update(NameAndCount[] collections)
-		{
-			var collectionModels = collections.OrderByDescending(x => x.Count).Select(col => new CollectionModel
-			{
-				Name = col.Name,
-				Count = col.Count
-			}).ToArray();
-
-			Collections.Set(collectionModels, AfterUpdate);
+				                           	{
+				                           		var urlParser = new UrlParser(UrlUtil.Url);
+				                           		if (urlParser.RemoveQueryParam("name"))
+				                           			UrlUtil.Navigate(urlParser.BuildUrl());
+				                           		ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error));
+				                           	});
 		}
 
 		private void AfterUpdate()
