@@ -14,6 +14,7 @@ using System.Linq;
 using Raven.Database.Server;
 using Raven.Storage.Managed;
 using Raven.Tests.Bugs.MultiMap;
+using Raven.Tests.Storage;
 
 namespace Raven.Tryouts
 {
@@ -37,7 +38,8 @@ namespace Raven.Tryouts
 					Environment.SetEnvironmentVariable("Run", i.ToString());
 					Console.Clear();
 					Console.WriteLine(i);
-					new MultiMapReduce().JustQuerying();
+					using (var x = new MultiThreaded())
+						x.ShoudlGetEverything();
 				}
 			}
 			finally

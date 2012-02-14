@@ -542,11 +542,7 @@ namespace Raven.Database
 
 		private static void RemoveReservedProperties(RavenJObject document)
 		{
-			var toRemove = new HashSet<string>();
-			foreach (var propertyName in document.Keys.Where(propertyName => propertyName.StartsWith("@")))
-			{
-			    toRemove.Add(propertyName);
-			}
+			var toRemove = document.Keys.Where(propertyName => propertyName.StartsWith("@")).ToList();
 			foreach (var propertyName in toRemove)
 			{
 				document.Remove(propertyName);
@@ -1155,7 +1151,6 @@ namespace Raven.Database
 									Metadata = command.Metadata
 								});
 							}
-							workContext.ShouldNotifyAboutWork(() => null);
 						});
 					}
 					catch (ConcurrencyException)
