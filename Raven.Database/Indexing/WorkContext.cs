@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using NLog;
 using Raven.Abstractions;
@@ -15,6 +16,7 @@ using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using System.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -25,7 +27,7 @@ namespace Raven.Database.Indexing
 		private volatile bool doWork = true;
 		private int workCounter;
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
-		private readonly ThreadLocal<bool> shouldNotifyOnWork = new ThreadLocal<bool>();
+		private readonly ThreadLocal<List<Func<string>>> shouldNotifyOnWork = new ThreadLocal<List<Func<string>>>(() => new List<Func<string>>());
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
 		public bool DoWork
@@ -47,12 +49,12 @@ namespace Raven.Database.Indexing
 
 		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
 
-		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter)
+		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, string name)
 		{
-			return WaitForWork(timeout, ref workerWorkCounter, null);
+			return WaitForWork(timeout, ref workerWorkCounter, null, name);
 		}
 
-		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, Action beforeWait)
+		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, Action beforeWait, string name)
 		{
 			if (!doWork)
 				return false;
@@ -74,32 +76,39 @@ namespace Raven.Database.Indexing
 					workerWorkCounter = currentWorkCounter;
 					return true;
 				}
-				log.Debug("No work was found, workerWorkCounter: {0}, currentWorkCounter: {1}, will wait for additional work", workerWorkCounter, currentWorkCounter);
+				log.Debug("No work was found, workerWorkCounter: {0}, for: {1}, will wait for additional work", workerWorkCounter, name);
 				return Monitor.Wait(waitForWork, timeout);
 			}
 		}
 
-		public void ShouldNotifyAboutWork()
+		public void ShouldNotifyAboutWork(Func<string> why)
 		{
-			shouldNotifyOnWork.Value = true;
+			shouldNotifyOnWork.Value.Add(why);
 		}
 
 		public void HandleWorkNotifications()
 		{
-			if (shouldNotifyOnWork.Value == false)
+			if (shouldNotifyOnWork.Value.Count == 0)
 				return;
-			shouldNotifyOnWork.Value = false;
 			NotifyAboutWork();
 		}
 
 		public void NotifyAboutWork()
 		{
-			int increment = Interlocked.Increment(ref workCounter);
-			log.Debug("Incremented work counter to {0} - step 1/2", increment);
 			lock (waitForWork)
 			{
-				increment= Interlocked.Increment(ref workCounter);
-				log.Debug("Incremented work counter to {0} - step 2/2", increment);
+				var increment = Interlocked.Increment(ref workCounter);
+				if(log.IsDebugEnabled)
+				{
+					var reason = string.Join(", ", shouldNotifyOnWork.Value.Select(action => action()).Where(x => x != null));
+					if(string.IsNullOrWhiteSpace(reason))
+					{
+						Debugger.Launch();
+					}
+					log.Debug("Incremented work counter to {0} because: {1}", increment,
+					          reason);
+				}
+				shouldNotifyOnWork.Value.Clear();
 				Monitor.PulseAll(waitForWork);
 			}
 		}

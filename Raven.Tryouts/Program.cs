@@ -1,10 +1,17 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
+using System.Xml;
+using NLog;
+using NLog.Config;
+using NLog.Layouts;
+using NLog.Targets;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using System.Linq;
+using Raven.Database.Server;
 using Raven.Storage.Managed;
 using Raven.Tests.Bugs.MultiMap;
 
@@ -14,11 +21,28 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			for (int i = 0; i < 1000; i++)
+			if (Directory.Exists("Logs"))
 			{
-				Console.Clear();
-				Console.WriteLine(i);
-				new MultiMapWithoutReduce().CanQueryFromMultipleSources();
+				foreach (var file in Directory.GetFiles("Logs"))
+				{
+					File.Delete(file);
+				}
+			}
+			SetupLogging();
+
+			try
+			{
+				for (int i = 0; i < 1000; i++)
+				{
+					Environment.SetEnvironmentVariable("Run", i.ToString());
+					Console.Clear();
+					Console.WriteLine(i);
+					new MultiMapReduce().JustQuerying();
+				}
+			}
+			finally
+			{
+				LogManager.Flush();
 			}
 			return;
 
@@ -54,8 +78,8 @@ select new
 from disk in docs.Disks 
 select new 
 { 
-	disk.Artist,
-	disk.Title
+    disk.Artist,
+    disk.Title
 }"
 								});
 
@@ -81,6 +105,18 @@ select new
 
 				Console.WriteLine(sp.Elapsed);
 			}
+		}
+
+		private static void SetupLogging()
+		{
+			HttpEndpointRegistration.RegisterHttpEndpointTarget();
+
+			using (var stream = typeof(Program).Assembly.GetManifestResourceStream("Raven.Tryouts.DefaultLogging.config"))
+			using (var reader = XmlReader.Create(stream))
+			{
+				LogManager.Configuration = new XmlLoggingConfiguration(reader, "default-config");
+			}
+
 		}
 	}
 }

@@ -64,6 +64,11 @@ namespace Raven.Database.Indexing
 						.ToArray();
 				});
 
+				
+
+				log.Debug("Found a total of {0} documents that requires indexing since etag: {1}",
+										  jsonDocs.Length, lastIndexedGuidForAllIndexes);
+				
 				if (jsonDocs.Length > 0)
 				{
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
@@ -133,6 +138,8 @@ namespace Raven.Database.Indexing
 				.Select(x => new { Doc = x, Json = JsonToExpando.Convert(x.ToJson()) })
 				.ToList();
 
+			log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
+
 			var results = new Tuple<IndexToWorkOn, IndexingBatch>[indexesToWorkOn.Count];
 			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
 
@@ -147,23 +154,23 @@ namespace Raven.Database.Indexing
 				if (viewGenerator == null)
 					return; // probably deleted
 
-				var batch = new IndexingBatch
-				{
-					Docs = new List<dynamic>(),
-				};
+				var batch = new IndexingBatch();
 
 				foreach (var item in filteredDocs)
 				{
+					// did we already indexed this document in this index?
 					if (indexLastInedexEtag.CompareTo(new ComparableByteArray(item.Doc.Etag.Value.ToByteArray())) >= 0)
 						continue;
 
+
+					// is the Raven-Entity-Name a match for the things the index executes on?
 					if (viewGenerator.ForEntityNames.Count != 0 &&
 					    viewGenerator.ForEntityNames.Contains(item.Doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
 					{
 						continue;
 					}
 
-					batch.Docs.Add(item.Json);
+					batch.Add(item.Doc, item.Json);
 
 					if (batch.DateTime == null)
 						batch.DateTime = item.Doc.LastModified;
@@ -175,10 +182,13 @@ namespace Raven.Database.Indexing
 
 				if (batch.Docs.Count == 0)
 				{
+					log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName,
+						lastEtag, lastModified);
 					// we use it this way to batch all the updates together
 					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
 					return;
 				}
+				log.Debug("Going to index {0} documents in {1}", batch.Ids.Count, indexToWorkOn);
 				results[i] = Tuple.Create(indexToWorkOn, batch);
 
 			});
@@ -202,8 +212,21 @@ namespace Raven.Database.Indexing
 
 		private class IndexingBatch
 		{
-			public List<dynamic> Docs;
+			public IndexingBatch()
+			{
+				Ids = new List<string>();
+				Docs = new List<dynamic>();
+			}
+
+			public readonly List<string> Ids;
+			public readonly List<dynamic> Docs;
 			public DateTime? DateTime;
+
+			public void Add(JsonDocument doc, object asJson)
+			{
+				Ids.Add(doc.Key);
+				Docs.Add(asJson);
+			}
 		}
 
 		private void IndexDocuments(IStorageActionsAccessor actions, string index, IndexingBatch batch)
@@ -213,7 +236,17 @@ namespace Raven.Database.Indexing
 				return; // index was deleted, probably
 			try
 			{
-				log.Debug("Indexing {0} documents for index: {1}", batch.Docs.Count, index);
+				if(log.IsDebugEnabled)
+				{
+					string ids;
+					if (batch.Ids.Count < 256) 
+						ids = string.Join(",", batch.Ids);
+					else
+					{
+						ids = string.Join(", ", batch.Ids.Take(128)) + " ... " + string.Join(", ", batch.Ids.Skip(batch.Ids.Count - 128));
+					}
+					log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, index, ids);
+				}
 				context.IndexStorage.Index(index, viewGenerator, batch.Docs, context, actions, batch.DateTime ?? DateTime.MinValue);
 			}
 			catch (Exception e)

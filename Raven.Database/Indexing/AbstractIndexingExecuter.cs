@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using NLog;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Database.Storage;
 using System.Linq;
 
@@ -30,6 +29,9 @@ namespace Raven.Database.Indexing
 
 		public void Execute()
 		{
+			var name = GetType().Name;
+			var workComment = "WORK BY " + name;
+
 			while (context.DoWork)
 			{
 				var foundWork = false;
@@ -43,10 +45,11 @@ namespace Raven.Database.Indexing
 				}
 				if (foundWork == false)
 				{
-					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes);
+					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes, name);
 				}
 				else // notify the tasks executer that it has work to do
 				{
+					context.ShouldNotifyAboutWork(() => workComment);
 					context.NotifyAboutWork();
 				}
 			}
