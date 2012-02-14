@@ -8,9 +8,8 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Globalization;
 using System.Linq;
-using System.Threading;
+using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -19,7 +18,6 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using NLog;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
@@ -553,6 +551,34 @@ namespace Raven.Database.Indexing
 			return clonedDocument;
 		}
 
+		protected void LogIndexedDocument(string key, Document luceneDoc)
+		{
+			if (logIndexing.IsDebugEnabled)
+			{
+				var fieldsForLogging = luceneDoc.GetFields().Cast<Fieldable>().Select(x => new
+				{
+					Name = x.Name(),
+					Value = x.IsBinary() ? "<binary>" : x.StringValue(),
+					Indexed = x.IsIndexed(),
+					Stored = x.IsStored(),
+				});
+				var sb = new StringBuilder();
+				foreach (var fieldForLogging in fieldsForLogging)
+				{
+					sb.Append("\t").Append(fieldForLogging.Name)
+						.Append(" ")
+						.Append(fieldForLogging.Indexed ? "I" : "-")
+						.Append(fieldForLogging.Stored ? "S" : "-")
+						.Append(": ")
+						.Append(fieldForLogging.Value)
+						.AppendLine();
+				}
+
+				logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, name,
+								  sb.ToString());
+			}
+		}
+
 
 		#region Nested type: IndexQueryOperation
 
@@ -775,5 +801,7 @@ namespace Raven.Database.Indexing
 		}
 
 		#endregion
+
+
 	}
 }

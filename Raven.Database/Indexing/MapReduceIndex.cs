@@ -311,7 +311,9 @@ namespace Raven.Database.Indexing
 								);
 						},
 						trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
-					logIndexing.Debug("Reduce key {0} result in index {1} gave document: {2}", reduceKeyAsString, name, luceneDoc);
+
+					LogIndexedDocument(reduceKeyAsString, luceneDoc);
+
 					AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
 					actions.Indexing.IncrementReduceSuccessIndexing();
 				}
@@ -327,7 +329,6 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name,
 							  string.Join(", ", reduceKeys)));
 		}
-
 
 		private string ExtractReduceKey(AbstractViewGenerator viewGenerator, object doc)
 		{

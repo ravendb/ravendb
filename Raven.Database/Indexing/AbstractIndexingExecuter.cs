@@ -30,6 +30,7 @@ namespace Raven.Database.Indexing
 		public void Execute()
 		{
 			var name = GetType().Name;
+			var workComment = "WORK BY " + name;
 
 			while (context.DoWork)
 			{
@@ -48,6 +49,7 @@ namespace Raven.Database.Indexing
 				}
 				else // notify the tasks executer that it has work to do
 				{
+					context.ShouldNotifyAboutWork(() => workComment);
 					context.NotifyAboutWork();
 				}
 			}

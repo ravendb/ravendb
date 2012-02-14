@@ -101,7 +101,7 @@ namespace Raven.Database.Indexing
 									);
 							},
 							trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
-						logIndexing.Debug("Index '{0}' resulted in: {1}", name, luceneDoc);
+						LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
 						AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
 					}
 

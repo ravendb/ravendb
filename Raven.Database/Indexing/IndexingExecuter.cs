@@ -64,6 +64,11 @@ namespace Raven.Database.Indexing
 						.ToArray();
 				});
 
+				
+
+				log.Debug("Found a total of {0} documents that requires indexing since etag: {1}",
+										  jsonDocs.Length, lastIndexedGuidForAllIndexes);
+				
 				if (jsonDocs.Length > 0)
 				{
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
@@ -133,6 +138,8 @@ namespace Raven.Database.Indexing
 				.Select(x => new { Doc = x, Json = JsonToExpando.Convert(x.ToJson()) })
 				.ToList();
 
+			log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
+
 			var results = new Tuple<IndexToWorkOn, IndexingBatch>[indexesToWorkOn.Count];
 			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
 
@@ -151,9 +158,12 @@ namespace Raven.Database.Indexing
 
 				foreach (var item in filteredDocs)
 				{
+					// did we already indexed this document in this index?
 					if (indexLastInedexEtag.CompareTo(new ComparableByteArray(item.Doc.Etag.Value.ToByteArray())) >= 0)
 						continue;
 
+
+					// is the Raven-Entity-Name a match for the things the index executes on?
 					if (viewGenerator.ForEntityNames.Count != 0 &&
 					    viewGenerator.ForEntityNames.Contains(item.Doc.Metadata.Value<string>(Constants.RavenEntityName)) == false)
 					{
@@ -172,10 +182,13 @@ namespace Raven.Database.Indexing
 
 				if (batch.Docs.Count == 0)
 				{
+					log.Debug("All documents have been filtered for {0}, no indexing will be performed, updating to {1}, {2}", indexName,
+						lastEtag, lastModified);
 					// we use it this way to batch all the updates together
 					actions[i] = accessor => accessor.Indexing.UpdateLastIndexed(indexName, lastEtag, lastModified);
 					return;
 				}
+				log.Debug("Going to index {0} documents in {1}", batch.Ids.Count, indexToWorkOn);
 				results[i] = Tuple.Create(indexToWorkOn, batch);
 
 			});
@@ -225,7 +238,14 @@ namespace Raven.Database.Indexing
 			{
 				if(log.IsDebugEnabled)
 				{
-					log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, index, string.Join(",",batch.Ids));
+					string ids;
+					if (batch.Ids.Count < 256) 
+						ids = string.Join(",", batch.Ids);
+					else
+					{
+						ids = string.Join(", ", batch.Ids.Take(128)) + " ... " + string.Join(", ", batch.Ids.Skip(batch.Ids.Count - 128));
+					}
+					log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, index, ids);
 				}
 				context.IndexStorage.Index(index, viewGenerator, batch.Docs, context, actions, batch.DateTime ?? DateTime.MinValue);
 			}

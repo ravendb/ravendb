@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using NLog;
 using Raven.Abstractions;
@@ -99,8 +100,13 @@ namespace Raven.Database.Indexing
 				var increment = Interlocked.Increment(ref workCounter);
 				if(log.IsDebugEnabled)
 				{
+					var reason = string.Join(", ", shouldNotifyOnWork.Value.Select(action => action()).Where(x => x != null));
+					if(string.IsNullOrWhiteSpace(reason))
+					{
+						Debugger.Launch();
+					}
 					log.Debug("Incremented work counter to {0} because: {1}", increment,
-					          string.Join(", ", shouldNotifyOnWork.Value.Select(action => action()).Where(x => x != null)));
+					          reason);
 				}
 				shouldNotifyOnWork.Value.Clear();
 				Monitor.PulseAll(waitForWork);

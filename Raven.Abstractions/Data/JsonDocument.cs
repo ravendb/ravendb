@@ -95,5 +95,10 @@ namespace Raven.Abstractions.Data
 
 			return doc;
 		}
+
+		public override string ToString()
+		{
+			return Key;
+		}
 	}
 }

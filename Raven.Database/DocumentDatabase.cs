@@ -439,8 +439,6 @@ namespace Raven.Database
 
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			log.Debug("Putting a document with key: {0} and etag {1}", key, etag);
-
 			if (string.IsNullOrEmpty(key))
 			{
 				// we no longer sort by the key, so it doesn't matter
@@ -479,6 +477,7 @@ namespace Raven.Database
 			TransactionalStorage
 				.ExecuteImmediatelyOrRegisterForSyncronization(() => PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag)));
 
+			log.Debug("Put document {0} with etag {1}", key, newEtag);
 			return new PutResult
 			{
 				Key = key,
@@ -1138,7 +1137,7 @@ namespace Raven.Database
 				Monitor.Enter(putSerialLock);
 			try
 			{
-				log.Debug("Executing batched commands in a single transaction");
+				var sp = Stopwatch.StartNew();
 				do
 				{
 					try
@@ -1170,7 +1169,7 @@ namespace Raven.Database
 						throw;
 					}
 				} while (shouldRetry);
-				log.Debug("Successfully executed {0} commands", results.Count);
+				log.Debug("Successfully executed {0} commands in {1}", results.Count, sp.Elapsed);
 			}
 			finally
 			{
