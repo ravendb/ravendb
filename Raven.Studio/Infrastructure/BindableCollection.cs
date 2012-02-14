@@ -27,6 +27,7 @@ namespace Raven.Studio.Infrastructure
 			{
 				var toAdd = items.Except(this, objectComparer).ToList();
 				var toRemove = this.Except(items, objectComparer).ToArray();
+				var toDispose = items.Except(toAdd, objectComparer).OfType<IDisposable>().ToArray();
 
 				for (int i = 0; i < toRemove.Length; i++)
 				{
@@ -44,11 +45,13 @@ namespace Raven.Studio.Infrastructure
 				{
 					Add(add);
 				}
+				foreach (var disposable in toDispose)
+				{
+					disposable.Dispose();
+				}
 
 				if (afterUpdate != null) afterUpdate();
 			});
-
-			if (afterUpdate != null) afterUpdate();
 		}
 
 		private object ExtractKey(T obj)
@@ -66,8 +69,7 @@ namespace Raven.Studio.Infrastructure
 					Add(v);
 				}
 
-				if (after != null)
-					after();
+				if (after != null) after();
 			});
 		}
 
