@@ -83,7 +83,7 @@ namespace Raven.Database.Indexing
 
 					var data = GetMapedData(doc);
 
-					logIndexing.Debug("Mapped result for '{0}': '{1}'", name, data);
+					logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId ,data);
 
 					var hash = ComputeHash(name, reduceKey);
 

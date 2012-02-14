@@ -47,12 +47,12 @@ namespace Raven.Database.Indexing
 
 		public int CurrentNumberOfItemsToIndexInSingleBatch { get; set; }
 
-		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter)
+		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, string name)
 		{
-			return WaitForWork(timeout, ref workerWorkCounter, null);
+			return WaitForWork(timeout, ref workerWorkCounter, null, name);
 		}
 
-		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, Action beforeWait)
+		public bool WaitForWork(TimeSpan timeout, ref int workerWorkCounter, Action beforeWait, string name)
 		{
 			if (!doWork)
 				return false;
@@ -74,7 +74,7 @@ namespace Raven.Database.Indexing
 					workerWorkCounter = currentWorkCounter;
 					return true;
 				}
-				log.Debug("No work was found, workerWorkCounter: {0}, currentWorkCounter: {1}, will wait for additional work", workerWorkCounter, currentWorkCounter);
+				log.Debug("No work was found, workerWorkCounter: {0}, for: {1}, will wait for additional work", workerWorkCounter, name);
 				return Monitor.Wait(waitForWork, timeout);
 			}
 		}

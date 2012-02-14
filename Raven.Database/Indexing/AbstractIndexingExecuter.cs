@@ -30,6 +30,8 @@ namespace Raven.Database.Indexing
 
 		public void Execute()
 		{
+			var name = GetType().Name;
+
 			while (context.DoWork)
 			{
 				var foundWork = false;
@@ -43,7 +45,7 @@ namespace Raven.Database.Indexing
 				}
 				if (foundWork == false)
 				{
-					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes);
+					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes, name);
 				}
 				else // notify the tasks executer that it has work to do
 				{
