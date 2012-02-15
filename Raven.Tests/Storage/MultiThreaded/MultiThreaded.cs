@@ -55,7 +55,7 @@ namespace Raven.Tests.Storage.MultiThreaded
 			{
 				DataDirectory = DataDirectory,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInUnreliableMode,
-				DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName,
+				DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName,
 			});
 		}
 
