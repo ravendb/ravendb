@@ -101,10 +101,7 @@ namespace Raven.Database.Indexing
 				if(log.IsDebugEnabled)
 				{
 					var reason = string.Join(", ", shouldNotifyOnWork.Value.Select(action => action()).Where(x => x != null));
-					if(string.IsNullOrWhiteSpace(reason))
-					{
-						Debugger.Launch();
-					}
+					
 					log.Debug("Incremented work counter to {0} because: {1}", increment,
 					          reason);
 				}
