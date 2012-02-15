@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Globalization;
 using System.Xml;
 using NLog;
 using NLog.Config;
@@ -26,7 +27,7 @@ namespace Raven.StressTests
 			{
 				for (int i = 0; i < 1000; i++)
 				{
-					// Environment.SetEnvironmentVariable("Run", i.ToString());
+					Environment.SetEnvironmentVariable("Run", i.ToString(CultureInfo.InvariantCulture));
 
 					var test = new T();
 					action(test);
