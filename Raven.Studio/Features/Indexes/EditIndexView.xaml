@@ -145,7 +145,7 @@
                     <TextBlock Text=">"
                                VerticalAlignment="Center"
                                Margin="4,0" />
-                    <TextBlock Text="{Binding ViewTitle}"
+                    <TextBlock Text="{Binding Header}"
                                Style="{StaticResource Style_TextBlock_Breadcrumb}"
                                VerticalAlignment="Center" />
                 </StackPanel>

@@ -1,12 +1,11 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Interactivity;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Behaviors
 {
-	public class RaiseCanExecuteOnSelectionChanged : Behavior<Selector>
+	public class RaiseCanExecuteOnSelectionChanged : StudioBehavior<Selector>
 	{
 		public ButtonBase CommandButton
 		{

@@ -3,8 +3,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Silverlight.Connection;
-using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -37,7 +35,8 @@ namespace Raven.Studio.Infrastructure
 					return;
 
 				var timeFromLastRefresh = DateTime.Now - lastRefresh;
-				if (timeFromLastRefresh < GetRefreshRate())
+				var refreshRate = GetRefreshRate();
+				if (timeFromLastRefresh < refreshRate)
 					return;
 
 				using(OnWebRequest(request => request.Headers["Raven-Timer-Request"] = "true"))
@@ -60,9 +59,9 @@ namespace Raven.Studio.Infrastructure
 		private TimeSpan GetRefreshRate()
 		{
 			if (IsForced)
-				return TimeSpan.FromSeconds(0.5);
-			if (Debugger.IsAttached)
-				return RefreshRate.Add(TimeSpan.FromSeconds(60));
+				return TimeSpan.FromSeconds(1);
+			/*if (Debugger.IsAttached)
+				return RefreshRate.Add(TimeSpan.FromSeconds(60));*/
 			return RefreshRate;
 		}
 

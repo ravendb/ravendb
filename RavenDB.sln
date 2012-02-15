@@ -39,6 +39,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Munin", "Raven.Munin\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Json", "Raven.Json\Raven.Json.csproj", "{B9DD0239-3476-48CB-A541-1B3EC6679BB6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.StressTests", "Raven.StressTests\Raven.StressTests.csproj", "{005A5143-4E38-424B-A2D1-25EF88DA05CB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -239,6 +241,16 @@ Global
 		{B9DD0239-3476-48CB-A541-1B3EC6679BB6}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{B9DD0239-3476-48CB-A541-1B3EC6679BB6}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{B9DD0239-3476-48CB-A541-1B3EC6679BB6}.Release|x86.ActiveCfg = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

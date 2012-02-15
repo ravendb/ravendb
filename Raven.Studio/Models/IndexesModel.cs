@@ -20,7 +20,7 @@ namespace Raven.Studio.Models
 			ModelUrl = "/indexes";
 		}
 
-		protected override Task LoadedTimerTickedAsync()
+		public override Task TimerTickedAsync()
 		{
 			return DatabaseCommands
 				.GetIndexNamesAsync(0, 256)

@@ -1,5 +1,7 @@
 using System;
 using System.Windows;
+using System.Windows.Browser;
+using System.Windows.Input;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -24,7 +26,26 @@ namespace Raven.Studio.Infrastructure
 				return;
 
 			url = new UrlParser(url).BuildUrl();
-			Navigate((new Uri(url, UriKind.Relative)));
+
+			Execute.OnTheUI(() =>
+			                	{
+			                		if (Keyboard.Modifiers == ModifierKeys.Control)
+			                		{
+			                			OpenUrlOnANewTab(url);
+										return;
+			                		}
+
+			                		Navigate((new Uri(url, UriKind.Relative)));
+			                	});
+		}
+
+		private static void OpenUrlOnANewTab(string url)
+		{
+			var hostUrl = HtmlPage.Document.DocumentUri.OriginalString;
+			var fregmentIndex = hostUrl.IndexOf('#');
+			string host = fregmentIndex != -1 ? hostUrl.Substring(0, fregmentIndex) : hostUrl;
+
+			HtmlPage.Window.Navigate(new Uri(host + "#" + url, UriKind.Absolute), "_blank");
 		}
 	}
 }

@@ -3,10 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -28,26 +28,19 @@ namespace Raven.Studio.Infrastructure
 
 			try
 			{
-				var model = Activator.CreateInstance(modelType);
-				var observableType = typeof(Observable<>).MakeGenericType(modelType);
-				var observable = Activator.CreateInstance(observableType);
-				var piValue = observableType.GetProperty("Value");
-				piValue.SetValue(observable, model, null);
+				var model = (Model)Activator.CreateInstance(modelType);
+				model.ForceTimerTicked();
+
+				var observable = (IObservable)Activator.CreateInstance(typeof(Observable<>).MakeGenericType(modelType));
+				observable.Value = model;
 				view.DataContext = observable;
 
-				var modelModel = model as Model;
-				if (modelModel == null)	return;
-				modelModel.ForceTimerTicked();
-
-				SetPageTitle(modelType, model, view);
-
-				view.Loaded += (sender, eventArgs) =>
-				{
-					var viewModel = model as ViewModel;
-					if (viewModel == null) return;
-					viewModel.LoadModel(UrlUtil.Url);
-					modelModel.ForceTimerTicked();
-				};
+				SetPageTitle(model, view);
+				
+				var weakListener = new WeakEventListener<IObservable, object, RoutedEventArgs>(observable);
+				view.Loaded += weakListener.OnEvent;
+				weakListener.OnEventAction = OnViewLoaded;
+				weakListener.OnDetachAction = listener => view.Loaded -= listener.OnEvent;
 			}
 			catch (Exception ex)
 			{
@@ -55,13 +48,24 @@ namespace Raven.Studio.Infrastructure
 			}
 		}
 
-		private static void SetPageTitle(Type modelType, object model, FrameworkElement view)
+		private static void OnViewLoaded(IObservable observable, object sender, RoutedEventArgs arg)
 		{
-			var piTitle = modelType.GetProperty("ViewTitle");
-			if (piTitle == null) return;
+			var viewModel = observable.Value as ViewModel;
+			if (viewModel == null) 
+				return;
+			viewModel.LoadModel(UrlUtil.Url);
+		}
+
+		private static void SetPageTitle(Model model, FrameworkElement view)
+		{
+			var hasPageTitle = model as IHasPageTitle;
+			if (hasPageTitle == null)
+				return;
+
 			var page = view as Page;
-			if (page == null) return;
-			page.Title = piTitle.GetValue(model, null) as string;
+			if (page == null)
+				return;
+			page.Title = hasPageTitle.PageTitle;
 		}
 
 		public static string GetAttachObservableModel(UIElement element)

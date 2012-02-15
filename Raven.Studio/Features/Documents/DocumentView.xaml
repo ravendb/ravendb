@@ -10,8 +10,8 @@
 			 d:DesignWidth="400">
 
 	<Grid Background="Transparent"
-		  Width="{Binding Path=DocumentSize.Width, Source={StaticResource DocumentsModel}}"
-		  Height="{Binding Path=DocumentSize.Height, Source={StaticResource DocumentsModel}}"
+		  Width="{Binding Path=Current.Width, Source={StaticResource DocumentSize}}"
+		  Height="{Binding Path=Current.Height, Source={StaticResource DocumentSize}}"
 		  ToolTipService.ToolTip="{Binding ToolTipText}">
 
 		<i:Interaction.Behaviors>

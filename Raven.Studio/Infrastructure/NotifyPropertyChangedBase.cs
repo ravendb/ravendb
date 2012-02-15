@@ -1,8 +1,5 @@
-using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Windows;
-using System.Windows.Threading;
 using System.Linq;
 
 namespace Raven.Studio.Infrastructure
