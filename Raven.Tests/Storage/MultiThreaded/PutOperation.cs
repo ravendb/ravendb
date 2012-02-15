@@ -3,11 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Json.Linq;
 using Xunit;
 
-namespace Raven.Tests.Storage
+namespace Raven.Tests.Storage.MultiThreaded
 {
-	public class MultiThreadedStorages : MultiThreaded
+	public class PutOperation : MultiThreaded
 	{
 		[Fact]
 		public void WhenUsingEsentOnDisk()
@@ -35,6 +36,14 @@ namespace Raven.Tests.Storage
 		{
 			SetupDatabase(typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName, true);
 			ShoudlGetEverything();
+		}
+
+		protected override int SetupData()
+		{
+			DocumentDatabase.Put("Raven/Hilo/users", null, new RavenJObject(), new RavenJObject(), null);
+			DocumentDatabase.Put("Raven/Hilo/posts", null, new RavenJObject(), new RavenJObject(), null);
+
+			return 2;
 		}
 	}
 }

@@ -3,35 +3,35 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Storage;
+using Raven.Tests.Storage.MultiThreaded;
 using Xunit;
 
-namespace Raven.StressTests.Storage
+namespace Raven.StressTests.Storage.MultiThreadedStress
 {
-	public class MultiThreadedStress : StressTest
+	public class BatchOperationStress : StressTest
 	{
 		[Fact]
 		public void WhenUsingEsentInMemory()
 		{
-			Run<MultiThreadedStorages>(storages => storages.WhenUsingEsentInMemory());
+			Run<BatchOperation>(storages => storages.WhenUsingEsentInMemory());
 		}
 
 		[Fact]
 		public void WhenUsingEsentOnDisk()
 		{
-			Run<MultiThreadedStorages>(storages => storages.WhenUsingEsentOnDisk());
+			Run<BatchOperation>(storages => storages.WhenUsingEsentOnDisk());
 		}
 
 		[Fact]
 		public void WhenUsingMuninInMemory()
 		{
-			Run<MultiThreadedStorages>(storages => storages.WhenUsingMuninInMemory());
+			Run<BatchOperation>(storages => storages.WhenUsingMuninInMemory());
 		}
 
 		[Fact]
 		public void WhenUsingMuninOnDisk()
 		{
-			Run<MultiThreadedStorages>(storages => storages.WhenUsingMuninOnDisk());
+			Run<BatchOperation>(storages => storages.WhenUsingMuninOnDisk());
 		}
 	}
 }

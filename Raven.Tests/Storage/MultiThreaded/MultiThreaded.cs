@@ -5,24 +5,22 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
-using Raven.Abstractions.Commands;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
-using Raven.Json.Linq;
 using Xunit;
-using System.Linq;
 
-namespace Raven.Tests.Storage
+namespace Raven.Tests.Storage.MultiThreaded
 {
-	public class MultiThreaded : IDisposable
+	public abstract class MultiThreaded : IDisposable
 	{
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
-		private DocumentDatabase documentDatabase;
+		protected DocumentDatabase DocumentDatabase;
 		private readonly ConcurrentQueue<GetDocumentState> getDocumentsState = new ConcurrentQueue<GetDocumentState>();
 
 		private volatile bool run = true;
@@ -52,15 +50,14 @@ namespace Raven.Tests.Storage
 		{
 			SafeRun(() =>
 			        	{
-			        		documentDatabase.Dispose();
+			        		DocumentDatabase.Dispose();
 			        		IOExtensions.DeleteDirectory(DataDirectory);
 			        	});
-
 		}
 
 		protected void SetupDatabase(string defaultStorageTypeName, bool runInMemory)
 		{
-			documentDatabase = new DocumentDatabase(new RavenConfiguration
+			DocumentDatabase = new DocumentDatabase(new RavenConfiguration
 			                                        {
 			                                        	DataDirectory = DataDirectory,
 			                                        	RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
@@ -93,9 +90,9 @@ namespace Raven.Tests.Storage
 		protected void ShoudlGetEverything()
 		{
 			var task = Task.Factory.StartNew(StartGetDocumentOnBackground);
-			SetupData();
+			var count = SetupData();
 
-			var final = new Guid("00000000-0000-0100-0000-000000000008");
+			var final = new Guid("00000000-0000-0100-0000-" + count.ToString("X12"));
 			while (lastEtagSeen != final)
 			{
 				Thread.Sleep(10);
@@ -107,72 +104,16 @@ namespace Raven.Tests.Storage
 			var states = getDocumentsState.ToArray();
 			
 			Assert.Equal(final, states.Last().Etag);
-			Assert.Equal(8, states.Sum(x => x.Count));
+			Assert.Equal(count, states.Sum(x => x.Count));
 		}
 
-		private void SetupData()
-		{
-			documentDatabase.Put("Raven/Hilo/users", null, new RavenJObject(), new RavenJObject(), null);
-			documentDatabase.Put("Raven/Hilo/posts", null, new RavenJObject(), new RavenJObject(), null);
-
-			documentDatabase.Batch(new[]
-			                       {
-			                       	new PutCommandData
-			                       	{
-			                       		Document = new RavenJObject(),
-			                       		Etag = null,
-			                       		Key = "users/1",
-			                       		Metadata = new RavenJObject(),
-			                       		TransactionInformation = null
-			                       	},
-			                       	new PutCommandData
-			                       	{
-			                       		Document = new RavenJObject(),
-			                       		Etag = null,
-			                       		Key = "posts/1",
-			                       		Metadata = new RavenJObject(),
-			                       		TransactionInformation = null
-			                       	},
-			                       	new PutCommandData
-			                       	{
-			                       		Document = new RavenJObject(),
-			                       		Etag = null,
-			                       		Key = "posts/2",
-			                       		Metadata = new RavenJObject(),
-			                       		TransactionInformation = null
-			                       	},
-			                       	new PutCommandData
-			                       	{
-			                       		Document = new RavenJObject(),
-			                       		Etag = null,
-			                       		Key = "posts/3",
-			                       		Metadata = new RavenJObject(),
-			                       		TransactionInformation = null
-			                       	},
-			                       	new PutCommandData
-			                       	{
-			                       		Document = new RavenJObject(),
-			                       		Etag = null,
-			                       		Key = "posts/4",
-			                       		Metadata = new RavenJObject(),
-			                       		TransactionInformation = null
-			                       	},
-			                       	new PutCommandData
-			                       	{
-			                       		Document = new RavenJObject(),
-			                       		Etag = null,
-			                       		Key = "posts/5",
-			                       		Metadata = new RavenJObject(),
-			                       		TransactionInformation = null
-			                       	},
-			                       });
-		}
+		protected abstract int SetupData();
 
 		private void StartGetDocumentOnBackground()
 		{
 			while (run)
 			{
-				documentDatabase.TransactionalStorage.Batch(accessor =>
+				DocumentDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					var documents = accessor.Documents.GetDocumentsAfter(lastEtagSeen, 128)
 						.Where(x => x != null)

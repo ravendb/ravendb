@@ -27,7 +27,7 @@ namespace Raven.StressTests
 			{
 				for (int i = 0; i < 1000; i++)
 				{
-					Environment.SetEnvironmentVariable("Run", i.ToString(CultureInfo.InvariantCulture));
+					Environment.SetEnvironmentVariable("RunId", i.ToString(CultureInfo.InvariantCulture));
 
 					var test = new T();
 					action(test);
