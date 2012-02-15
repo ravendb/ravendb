@@ -11,9 +11,9 @@ namespace Raven.StressTests.Storage.MultiThreadedStress
 	public class BatchOperationStress : StressTest
 	{
 		[Fact]
-		public void WhenUsingEsentInMemory()
+		public void WhenUsingEsentInUnreliableMode()
 		{
-			Run<BatchOperation>(storages => storages.WhenUsingEsentInMemory());
+			Run<BatchOperation>(storages => storages.WhenUsingEsentInUnreliableMode());
 		}
 
 		[Fact]

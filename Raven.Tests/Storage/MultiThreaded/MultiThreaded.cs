@@ -34,19 +34,34 @@ namespace Raven.Tests.Storage.MultiThreaded
 			DocumentDatabase.Dispose();
 			lock (Lock)
 			{
-				IOExtensions.DeleteDirectory(DataDirectory); ;
+				IOExtensions.DeleteDirectory(DataDirectory);
 			}
 		}
 
-		protected void SetupDatabase(string defaultStorageTypeName, bool runInMemory)
+		protected void SetupDatabaseMunin(bool runInMemory)
 		{
 			DocumentDatabase = new DocumentDatabase(new RavenConfiguration
 			                                        {
 			                                        	DataDirectory = DataDirectory,
 														RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 			                                        	RunInMemory = runInMemory,
-														DefaultStorageTypeName = defaultStorageTypeName,
+														DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName,
 			                                        });
+		}
+
+		protected void SetupDatabaseEsent(bool runInUnreliableMode)
+		{
+			DocumentDatabase = new DocumentDatabase(new RavenConfiguration
+			{
+				DataDirectory = DataDirectory,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInUnreliableMode,
+				DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName,
+			});
+		}
+
+		protected void SetupDatabase(DocumentDatabase documentDatabase)
+		{
+			DocumentDatabase = documentDatabase;
 		}
 
 		private class GetDocumentState
@@ -117,6 +132,34 @@ namespace Raven.Tests.Storage.MultiThreaded
 					getDocumentsState.Enqueue(new GetDocumentState(lastEtagSeen, documents.Length));
 				});
 			}
+		}
+
+		[Fact]
+		public void WhenUsingEsentOnDisk()
+		{
+			SetupDatabaseEsent(false);
+			ShoudlGetEverything();
+		}
+
+		[Fact]
+		public void WhenUsingEsentInUnreliableMode()
+		{
+			SetupDatabaseEsent(true);
+			ShoudlGetEverything();
+		}
+
+		[Fact]
+		public void WhenUsingMuninOnDisk()
+		{
+			SetupDatabaseMunin(false);
+			ShoudlGetEverything();
+		}
+
+		[Fact]
+		public void WhenUsingMuninInMemory()
+		{
+			SetupDatabaseMunin(true);
+			ShoudlGetEverything();
 		}
 	}
 }

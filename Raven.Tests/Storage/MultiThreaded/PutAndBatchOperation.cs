@@ -5,40 +5,11 @@
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Commands;
 using Raven.Json.Linq;
-using Xunit;
 
 namespace Raven.Tests.Storage.MultiThreaded
 {
 	public class PutAndBatchOperation : MultiThreaded
 	{
-		[Fact]
-		public void WhenUsingEsentOnDisk()
-		{
-			SetupDatabase(typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName, false);
-			ShoudlGetEverything();
-		}
-
-		[Fact]
-		public void WhenUsingEsentInMemory()
-		{
-			SetupDatabase(typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName, true);
-			ShoudlGetEverything();
-		}
-
-		[Fact]
-		public void WhenUsingMuninOnDisk()
-		{
-			SetupDatabase(typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName, false);
-			ShoudlGetEverything();
-		}
-
-		[Fact]
-		public void WhenUsingMuninInMemory()
-		{
-			SetupDatabase(typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName, true);
-			ShoudlGetEverything();
-		}
-
 		protected override int SetupData()
 		{
 			DocumentDatabase.Put("Raven/Hilo/users", null, new RavenJObject(), new RavenJObject(), null);
