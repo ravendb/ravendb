@@ -1155,7 +1155,6 @@ namespace Raven.Database
 									Metadata = command.Metadata
 								});
 							}
-							workContext.ShouldNotifyAboutWork(() => null);
 						});
 					}
 					catch (ConcurrencyException)
