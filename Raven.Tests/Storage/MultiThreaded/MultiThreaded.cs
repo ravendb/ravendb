@@ -27,16 +27,15 @@ namespace Raven.Tests.Storage.MultiThreaded
 		private static readonly string DataDirectory = typeof(MultiThreaded).FullName + "-Data";
 		
 		private Guid lastEtagSeen = Guid.Empty;
-
-		public MultiThreaded()
-		{
-			IOExtensions.DeleteDirectory(DataDirectory);
-		}
+		private readonly object Lock = new object();
 
 		public void Dispose()
 		{
 			DocumentDatabase.Dispose();
-			IOExtensions.DeleteDirectory(DataDirectory); ;
+			lock (Lock)
+			{
+				IOExtensions.DeleteDirectory(DataDirectory); ;
+			}
 		}
 
 		protected void SetupDatabase(string defaultStorageTypeName, bool runInMemory)
@@ -44,7 +43,7 @@ namespace Raven.Tests.Storage.MultiThreaded
 			DocumentDatabase = new DocumentDatabase(new RavenConfiguration
 			                                        {
 			                                        	DataDirectory = DataDirectory,
-			                                        	RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+														RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 			                                        	RunInMemory = runInMemory,
 														DefaultStorageTypeName = defaultStorageTypeName,
 			                                        });
