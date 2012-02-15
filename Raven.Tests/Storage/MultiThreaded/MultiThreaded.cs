@@ -30,29 +30,13 @@ namespace Raven.Tests.Storage.MultiThreaded
 
 		public MultiThreaded()
 		{
-			SafeRun(() => IOExtensions.DeleteDirectory(DataDirectory));
-		}
-
-		private void SafeRun(Action action)
-		{
-			try
-			{
-				action();
-			}
-			catch (Exception ex)
-			{
-				log.ErrorException("An error occurred. See exception for full details.", ex);
-				throw;
-			}
+			IOExtensions.DeleteDirectory(DataDirectory);
 		}
 
 		public void Dispose()
 		{
-			SafeRun(() =>
-			        	{
-			        		DocumentDatabase.Dispose();
-			        		IOExtensions.DeleteDirectory(DataDirectory);
-			        	});
+			DocumentDatabase.Dispose();
+			IOExtensions.DeleteDirectory(DataDirectory); ;
 		}
 
 		protected void SetupDatabase(string defaultStorageTypeName, bool runInMemory)

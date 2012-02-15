@@ -34,4 +34,62 @@ namespace Raven.StressTests.Storage.MultiThreadedStress
 			Run<PutOperation>(storages => storages.WhenUsingMuninOnDisk());
 		}
 	}
+
+	public class BigPutOperationStress : StressTest
+	{
+		private const int Iterations = 1;
+
+		[Fact]
+		public void WhenUsingEsentInMemory()
+		{
+			Run<BigPutOperation>(storages => storages.WhenUsingEsentInMemory(), Iterations);
+		}
+
+		[Fact]
+		public void WhenUsingEsentOnDisk()
+		{
+			Run<BigPutOperation>(storages => storages.WhenUsingEsentOnDisk(), Iterations);
+		}
+
+		[Fact]
+		public void WhenUsingMuninInMemory()
+		{
+			Run<BigPutOperation>(storages => storages.WhenUsingMuninInMemory(), Iterations);
+		}
+
+		[Fact]
+		public void WhenUsingMuninOnDisk()
+		{
+			Run<BigPutOperation>(storages => storages.WhenUsingMuninOnDisk(), Iterations);
+		}
+	}
+
+	public class MediumPutOperationStress : StressTest
+	{
+		private const int Iterations = 1000;
+
+		[Fact]
+		public void WhenUsingEsentInMemory()
+		{
+			Run<MediumPutOperation>(storages => storages.WhenUsingEsentInMemory(), Iterations);
+		}
+
+		[Fact]
+		public void WhenUsingEsentOnDisk()
+		{
+			Run<MediumPutOperation>(storages => storages.WhenUsingEsentOnDisk(), Iterations);
+		}
+
+		[Fact]
+		public void WhenUsingMuninInMemory()
+		{
+			Run<MediumPutOperation>(storages => storages.WhenUsingMuninInMemory(), Iterations);
+		}
+
+		[Fact]
+		public void WhenUsingMuninOnDisk()
+		{
+			Run<MediumPutOperation>(storages => storages.WhenUsingMuninOnDisk(), Iterations);
+		}
+	}
 }
