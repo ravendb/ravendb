@@ -10,6 +10,7 @@ using NLog;
 using NLog.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Xunit;
 
 namespace Raven.StressTests
 {
@@ -17,7 +18,7 @@ namespace Raven.StressTests
 	{
 		public StressTest()
 		{
-			IOExtensions.DeleteDirectory("Logs");
+			Assert.DoesNotThrow(() => IOExtensions.DeleteDirectory("Logs"));
 			SetupLogging();
 		}
 
