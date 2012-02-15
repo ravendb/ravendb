@@ -46,7 +46,7 @@ namespace Raven.StressTests
 		{
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
-			using (var stream = typeof(StressTest).Assembly.GetManifestResourceStream(typeof(StressTest).Namespace + "DefaultLogging.config"))
+			using (var stream = typeof(StressTest).Assembly.GetManifestResourceStream(typeof(StressTest).Namespace + ".DefaultLogging.config"))
 			using (var reader = XmlReader.Create(stream))
 			{
 				LogManager.Configuration = new XmlLoggingConfiguration(reader, "default-config");
