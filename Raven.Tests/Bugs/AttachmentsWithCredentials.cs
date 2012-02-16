@@ -19,20 +19,7 @@ namespace Raven.Tests.Bugs
 	public class AttachmentsWithCredentials : RemoteClientTest, IDisposable
 	{
 		private readonly string path;
-
-		#region IDisposable Members
-
-		public void Dispose()
-		{
-			server.Dispose();
-			store.Dispose();
-			IOExtensions.DeleteDirectory(path);
-		}
-
-		#endregion
-
-
-	  private readonly IDocumentStore store;
+		private readonly IDocumentStore store;
 		private readonly RavenDbServer server;
 
 		public AttachmentsWithCredentials()
@@ -44,6 +31,13 @@ namespace Raven.Tests.Bugs
 			{
 				Url = "http://localhost:8079"
 			}.Initialize();
+		}
+
+		public void Dispose()
+		{
+			server.Dispose();
+			store.Dispose();
+			IOExtensions.DeleteDirectory(path);
 		}
 
 		protected override void ConfigureServer(Database.Config.RavenConfiguration ravenConfiguration)
