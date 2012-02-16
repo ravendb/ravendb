@@ -64,6 +64,12 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		public void MarkReadOnly(object entity)
+		{
+			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
+			GetSingleShardSession(shardIds).Advanced.MarkReadOnly(entity);
+		}
+
 		/// <summary>
 		/// Gets or sets a value indicating whether non authoritative information is allowed.
 		/// Non authoritative information is document that has been modified by a transaction that hasn't been committed.

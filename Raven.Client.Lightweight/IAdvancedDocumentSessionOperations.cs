@@ -57,6 +57,13 @@ namespace Raven.Client
 		bool UseOptimisticConcurrency { get; set; }
 
 		/// <summary>
+		/// Mark the entity as read only, change tracking won't apply 
+		/// to such an entity. This can be done as an optimization step, so 
+		/// we don't need to check the entity for changes.
+		/// </summary>
+		void MarkReadOnly(object entity);
+
+		/// <summary>
 		/// Gets or sets a value indicating whether non authoritative information is allowed.
 		/// Non authoritative information is document that has been modified by a transaction that hasn't been committed.
 		/// The server provides the latest committed version, but it is known that attempting to write to a non authoritative document
