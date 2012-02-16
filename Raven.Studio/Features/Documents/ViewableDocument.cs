@@ -14,9 +14,13 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Documents
 {
-	public class ViewableDocument : NotifyPropertyChangedBase
+	public class ViewableDocument : NotifyPropertyChangedBase, IDisposable
 	{
 		private readonly JsonDocument inner;
+		private string id;
+		private string clrType;
+		private string collectionType;
+		private IDisposable disposable;
 
 		public ViewableDocument(JsonDocument inner)
 		{
@@ -29,7 +33,7 @@ namespace Raven.Studio.Features.Documents
 			ClrType = inner.Metadata.IfPresent<string>(Constants.RavenClrType);
 			CollectionType = DetermineCollectionType(inner.Metadata);
 
-			Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentsModel.DocumentSize.SizeChanged += e, e => DocumentsModel.DocumentSize.SizeChanged -= e)
+			disposable = Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentSize.Current.SizeChanged += e, e => DocumentSize.Current.SizeChanged -= e)
 				.Throttle(TimeSpan.FromSeconds(0.5))
 				.Subscribe(_ => CalculateData());
 
@@ -73,9 +77,9 @@ namespace Raven.Studio.Features.Documents
 		private void CalculateData()
 		{
 			string d = null;
-			if (DocumentsModel.DocumentSize.Height >= DocumentsModel.ExpandedMinimumHeight)
+			if (DocumentSize.Current.Height >= DocumentSize.ExpandedMinimumHeight)
 			{
-				var margin = Math.Sqrt(DocumentsModel.DocumentSize.Width) - 4;
+				var margin = Math.Sqrt(DocumentSize.Current.Width) - 4;
 				d = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, (int)margin);
 			}
 			Execute.OnTheUI(() => Data = d);
@@ -185,10 +189,6 @@ namespace Raven.Studio.Features.Documents
 			set { lastModified = value; OnPropertyChanged(); }
 		}
 
-		private string id;
-		private string clrType;
-		private string collectionType;
-
 		public string Id
 		{
 			get { return id; }
@@ -203,6 +203,12 @@ namespace Raven.Studio.Features.Documents
 		public override string ToString()
 		{
 			return inner.DataAsJson.ToString();
+		}
+
+		public void Dispose()
+		{
+			if (disposable != null)
+				disposable.Dispose();
 		}
 
 		public static string DetermineCollectionType(RavenJObject metadata)

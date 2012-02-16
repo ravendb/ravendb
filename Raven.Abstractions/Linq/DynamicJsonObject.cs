@@ -486,6 +486,16 @@ namespace Raven.Abstractions.Linq
 		{
 			return new DynamicList(parent, inner.SelectMany(func));
 		}
+
+		public IEnumerable<object> Where(Func<object, bool> func)
+		{
+			return new DynamicList(parent, inner.Where(func));
+		}
+
+		public dynamic DefaultIfEmpty(object defaultValue = null)
+		{
+			return inner.DefaultIfEmpty(defaultValue ?? new DynamicNullObject());
+		}
 	}
 
 }

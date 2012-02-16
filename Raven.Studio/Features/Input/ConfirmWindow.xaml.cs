@@ -1,7 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using Raven.Studio.Behaviors;
 
 namespace Raven.Studio.Features.Input
 {
@@ -10,8 +9,6 @@ namespace Raven.Studio.Features.Input
 		public ConfirmWindow()
 		{
 			InitializeComponent();
-			KeyBoard.Register(this);
-			KeyBoard.IsCtrlHold = false;
 		}
 
 		private void OKButton_Click(object sender, RoutedEventArgs e)
@@ -38,4 +35,3 @@ namespace Raven.Studio.Features.Input
 		}
 	}
 }
-

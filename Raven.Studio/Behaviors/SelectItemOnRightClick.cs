@@ -3,27 +3,25 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
 using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Interactivity;
 using System.Windows.Media;
 
 namespace Raven.Studio.Behaviors
 {
-	public class SelectItemOnRightClick : Behavior<ListBox>
+	public class SelectItemOnRightClick : StudioBehavior<ListBox>
 	{
 		protected override void OnAttached()
 		{
-			AssociatedObject.MouseRightButtonDown += AssociatedObjectOnMouseRightButtonDown;
 			base.OnAttached();
+			AssociatedObject.MouseRightButtonDown += AssociatedObjectOnMouseRightButtonDown;
 		}
 
 		protected override void OnDetaching()
 		{
-			AssociatedObject.MouseRightButtonDown -= AssociatedObjectOnMouseRightButtonDown;
 			base.OnDetaching();
+			AssociatedObject.MouseRightButtonDown -= AssociatedObjectOnMouseRightButtonDown;
 		}
 
 		void AssociatedObjectOnMouseRightButtonDown(object sender, MouseButtonEventArgs e)

@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Interactivity;
 using System.Windows.Threading;
 
 namespace Raven.Studio.Behaviors
 {
-	public class DoubleClickBehavior : Behavior<UIElement>
+	public class DoubleClickBehavior : StudioBehavior<FrameworkElement>
 	{
 		private const int dblclickDelay = 200;
 		private readonly DispatcherTimer timer;

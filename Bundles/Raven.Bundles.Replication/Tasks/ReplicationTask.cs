@@ -58,6 +58,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void Execute()
 		{
+			var name = GetType().Name;
+
 			var timeToWaitInMinutes = TimeSpan.FromMinutes(5);
 			bool runningBecauseOfDataModifications = false;
 			var context = docDb.WorkContext;
@@ -114,7 +116,7 @@ namespace Raven.Bundles.Replication.Tasks
 					log.ErrorException("Failed to perform replication", e);
 				}
 
-				runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter);
+				runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
 				timeToWaitInMinutes = runningBecauseOfDataModifications
 				                      	? TimeSpan.FromSeconds(30)
 				                      	: TimeSpan.FromMinutes(5);

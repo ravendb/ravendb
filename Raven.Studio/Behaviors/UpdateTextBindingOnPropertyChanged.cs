@@ -3,15 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
 using System;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Interactivity;
 
 namespace Raven.Studio.Behaviors
 {
-	public class UpdateTextBindingOnPropertyChanged : Behavior<TextBox>
+	public class UpdateTextBindingOnPropertyChanged : StudioBehavior<TextBox>
 	{
 		private BindingExpression expression;
 

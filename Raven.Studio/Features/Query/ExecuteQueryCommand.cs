@@ -38,7 +38,7 @@ namespace Raven.Studio.Features.Query
 			                              {
 			                              	SkipAutoRefresh = true,
 			                              	ShowEditControls = false,
-			                              	ViewTitle = "Results",
+			                              	Header = "Results",
 			                              	CustomFetchingOfDocuments = GetFetchDocumentsMethod, 
 											Pager = {IsSkipBasedOnTheUrl = false},
 			                              };
