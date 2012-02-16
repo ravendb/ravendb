@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Client;
 using Raven.Client.Document;
@@ -36,8 +37,8 @@ namespace Raven.Tests.Bugs
 
 		public AttachmentsWithCredentials()
 		{
-		    path = GetPath(DbName);
-			server = GetNewServerWithoutAnonymousAccess(8079, path);
+			path = GetPath(DbName);
+			server = GetNewServer(8079, path);
 
 			store = new DocumentStore
 			{
@@ -45,6 +46,10 @@ namespace Raven.Tests.Bugs
 			}.Initialize();
 		}
 
+		protected override void ConfigureServer(Database.Config.RavenConfiguration ravenConfiguration)
+		{
+			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+		}
 
 		[Fact]
 		public void CanPutAndGetAttachmentWithAccessModeNone()

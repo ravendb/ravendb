@@ -180,19 +180,6 @@ namespace Raven.Tests
 			return ravenDbServer;
 		}
 
-		protected RavenDbServer GetNewServerWithoutAnonymousAccess(int port, string path)
-		{
-			var newServerWithoutAnonymousAccess = new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.None });
-			using (var documentStore = new DocumentStore
-			{
-				Url = "http://localhost:" + port
-			}.Initialize())
-			{
-				new RavenDocumentsByEntityName().Execute(documentStore);
-			}
-			return newServerWithoutAnonymousAccess;
-		}
-
 		protected string GetPath(string subFolderName)
 		{
 			string retPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
