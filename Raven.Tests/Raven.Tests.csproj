@@ -544,6 +544,7 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\Adrian.cs" />
     <Compile Include="MailingList\Alexander.cs" />
     <Compile Include="MailingList\AllPropertiesIndex.cs" />
     <Compile Include="MailingList\Andrew.cs" />
