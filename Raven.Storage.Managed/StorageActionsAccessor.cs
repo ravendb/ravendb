@@ -21,7 +21,8 @@ namespace Raven.Storage.Managed
 {
 	public class StorageActionsAccessor : IStorageActionsAccessor
 	{
-		readonly DateTime createdAt = SystemTime.UtcNow;
+		private readonly DateTime createdAt = SystemTime.UtcNow;
+
 		public StorageActionsAccessor(TableStorage storage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, IDocumentCacher documentCacher)
 		{
 			General = new GeneralStorageActions(storage);
@@ -36,61 +37,26 @@ namespace Raven.Storage.Managed
 		}
 
 
-		public ITransactionStorageActions Transactions
-		{
-			get;
-			private set;
-		}
+		public ITransactionStorageActions Transactions { get; private set; }
 
-		public IDocumentStorageActions Documents
-		{
-			get;
-			private set;
-		}
+		public IDocumentStorageActions Documents { get; private set; }
 
-		public IQueueStorageActions Queue
-		{
-			get;
-			private set;
-		}
+		public IQueueStorageActions Queue { get; private set; }
 
-		public ITasksStorageActions Tasks
-		{
-			get;
-			private set;
-		}
+		public ITasksStorageActions Tasks { get; private set; }
 
-		public IStalenessStorageActions Staleness
-		{
-			get;
-			private set;
-		}
+		public IStalenessStorageActions Staleness { get; private set; }
 
-		public IAttachmentsStorageActions Attachments
-		{
-			get;
-			private set;
-		}
+		public IAttachmentsStorageActions Attachments { get; private set; }
 
-		public IIndexingStorageActions Indexing
-		{
-			get;
-			private set;
-		}
+		public IIndexingStorageActions Indexing { get; private set; }
 
-		public IGeneralStorageActions General
-		{
-			get;
-			private set;
-		}
+		public IGeneralStorageActions General { get; private set; }
 
-		public IMappedResultsStorageAction MappedResults
-		{
-			get;
-			private set;
-		}
+		public IMappedResultsStorageAction MappedResults { get; private set; }
 
 		public event Action OnCommit;
+
 		public bool IsWriteConflict(Exception exception)
 		{
 			return exception is ConcurrencyException;
@@ -101,7 +67,7 @@ namespace Raven.Storage.Managed
 		public T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Task
 		{
 			T task = tasks.OfType<T>().FirstOrDefault(predicate);
-			if(task == null)
+			if (task == null)
 			{
 				tasks.Add(newTask);
 				return newTask;
