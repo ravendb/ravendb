@@ -1,4 +1,5 @@
-using Newtonsoft.Json;
+using System.Linq;
+using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Documents
@@ -23,12 +24,16 @@ namespace Raven.Studio.Features.Documents
 
 			if (string.IsNullOrEmpty(viewableDocument.Id))
 			{
-				var projection = viewableDocument.InnerDocument.ToJson().ToString(Formatting.None);
-				urlParser.SetQueryParam("projection", projection);
+				var key = ProjectionData.Projections.First(x => x.Value == viewableDocument).Key;
+				urlParser.SetQueryParam("projection", key);
 			}
 			else
 			{
 				urlParser.SetQueryParam("id", viewableDocument.Id);
+			}
+			if (viewableDocument.NeighborsIds != null)
+			{
+				urlParser.SetQueryParam("neighbors", string.Join(",", viewableDocument.NeighborsIds));
 			}
 
 			UrlUtil.Navigate(urlParser.BuildUrl());

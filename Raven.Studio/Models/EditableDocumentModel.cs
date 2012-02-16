@@ -12,7 +12,9 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
+using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Input;
+using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 
@@ -33,6 +35,7 @@ namespace Raven.Studio.Models
 			References = new ObservableCollection<LinkModel>();
 			Related = new BindableCollection<LinkModel>(model => model.Title);
 			SearchEnabled = false;
+			NeighborIds = new List<string>();
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
@@ -56,9 +59,13 @@ namespace Raven.Studio.Models
 			}
 
 			var docId = url.GetQueryParam("id");
+			var neighbors = url.GetQueryParam("neighbors");
+			if (neighbors != null)
+				NeighborIds = neighbors.Split(',').ToList();
 			if (string.IsNullOrWhiteSpace(docId) == false)
 			{
 				Mode = DocumentMode.DocumentWithId;
+				LocalId = docId;
 				SetCurrentDocumentKey(docId);
 				DatabaseCommands.GetAsync(docId)
 					.ContinueOnSuccessInTheUIThread(newdoc =>
@@ -75,20 +82,41 @@ namespace Raven.Studio.Models
 				return;
 			}
 
-			var projection = url.GetQueryParam("projection");
-			if (string.IsNullOrWhiteSpace(projection) == false)
+			projectionId = url.GetQueryParam("projection");
+			if (string.IsNullOrWhiteSpace(projectionId) == false)
 			{
 				Mode = DocumentMode.Projection;
 				try
 				{
-					var newdoc = RavenJObject.Parse(projection).ToJsonDocument();
+					ViewableDocument viewableDocument;
+					ProjectionData.Projections.TryGetValue(projectionId, out viewableDocument);
+
+					var ravenJObject = RavenJObject.Parse(viewableDocument.InnerDocument.ToJson().ToString(Formatting.None));
+					var newdoc = ravenJObject.ToJsonDocument();
 					document.Value = newdoc;
+					LocalId = projectionId;
 				}
 				catch
 				{
 					HandleDocumentNotFound();
 					throw; // Display why we couldn't parse the projection from the URL correctly
 				}
+			}
+		}
+
+		private string projectionId;
+
+		private List<string> neighborIds;
+		public List<string> NeighborIds
+		{
+			get { return neighborIds; }
+			set
+			{
+				neighborIds = value;
+				OnPropertyChanged();
+				OnPropertyChanged("CurrentIndexDisplay");
+				OnPropertyChanged("PrevDocument");
+				OnPropertyChanged("NextDocument");
 			}
 		}
 
@@ -101,6 +129,68 @@ namespace Raven.Studio.Models
 				notification = new Notification(string.Format("Could not find '{0}' document", Key), NotificationLevel.Warning);
 			ApplicationModel.Current.AddNotification(notification);
 			UrlUtil.Navigate("/documents");
+		}
+
+		public FriendlyDocument PrevDocument
+		{
+			get
+			{
+				if (CurrentIndex < 1)
+					return null;
+
+				return new FriendlyDocument
+				{
+					Id = NeighborIds[CurrentIndex - 1],
+					NeighborsIds = NeighborIds,
+					IsProjection = (!string.IsNullOrEmpty(projectionId)),
+				};
+			}
+		}
+
+		public FriendlyDocument NextDocument
+		{
+			get
+			{
+				if (CurrentIndex == LastIndex && CurrentIndex + 1 >= NeighborIds.Count)
+					return null;
+				return new FriendlyDocument
+				{
+					Id = NeighborIds[CurrentIndex + 1],
+					NeighborsIds = NeighborIds,
+					IsProjection = (!string.IsNullOrEmpty(projectionId)),
+				};
+			}
+		}
+
+		public int CurrentIndexDisplay
+		{
+			get { return CurrentIndex + 1; }
+		}
+
+
+		public int CurrentIndex
+		{
+			get
+			{
+				if (LocalId == null)
+					return -1;
+				return NeighborIds.IndexOf(this.LocalId);
+			}
+		}
+
+		public int LastIndexDisplay
+		{
+			get { return LastIndex + 1; }
+		}
+
+		public int LastIndex
+		{
+			get
+			{
+				if (NeighborIds == null)
+					return -1;
+				return NeighborIds.Count - 1;
+			}
 		}
 
 		public void SetCurrentDocumentKey(string docId)
@@ -144,6 +234,20 @@ namespace Raven.Studio.Models
 			{
 				searchEnabled = value;
 				OnPropertyChanged();
+			}
+		}
+
+		private string localId;
+		public string LocalId
+		{
+			get { return localId; }
+			set
+			{
+				localId = value;
+				OnPropertyChanged();
+				OnPropertyChanged("CurrentIndexDisplay");
+				OnPropertyChanged("PrevDocument");
+				OnPropertyChanged("NextDocument");
 			}
 		}
 
