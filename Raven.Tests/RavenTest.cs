@@ -119,46 +119,6 @@ namespace Raven.Tests
 				Thread.Sleep(25);
 		}
 
-		protected RavenDbServer GetNewServer(bool initializeDocumentsByEntitiyName = true)
-		{
-			var ravenConfiguration = new RavenConfiguration
-			{
-				Port = 8079,
-				RunInMemory = true,
-				DataDirectory = "Data",
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All
-			};
-
-			ConfigureServer(ravenConfiguration);
-
-			if(ravenConfiguration.RunInMemory == false)
-				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
-
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
-			var ravenDbServer = new RavenDbServer(ravenConfiguration);
-
-			if (initializeDocumentsByEntitiyName)
-			{
-				try
-				{
-					using (var documentStore = new DocumentStore
-					{
-						Url = "http://localhost:8079"
-					}.Initialize())
-					{
-						new RavenDocumentsByEntityName().Execute(documentStore);
-					}
-				}
-				catch
-				{
-					ravenDbServer.Dispose();
-					throw;
-				}
-			}
-
-			return ravenDbServer;
-		}
-
 		protected virtual void ConfigureServer(RavenConfiguration ravenConfiguration)
 		{
 		}
@@ -187,27 +147,32 @@ namespace Raven.Tests
 
 		}
 
-		protected RavenDbServer GetNewServer(int port, string path)
+		protected RavenDbServer GetNewServer(int port = 8079, string dataDirectory = "Data")
 		{
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-			var ravenDbServer = new RavenDbServer(new RavenConfiguration
-			{
-				Port = port,
-				DataDirectory = path,
-				RunInMemory = true,
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All
-			});
+			var ravenConfiguration = new RavenConfiguration
+			                         {
+			                         	Port = port,
+			                         	DataDirectory = dataDirectory,
+			                         	RunInMemory = true,
+			                         	AnonymousUserAccessMode = AnonymousUserAccessMode.All
+			                         };
+
+			ConfigureServer(ravenConfiguration);
+
+			if (ravenConfiguration.RunInMemory == false)
+				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
+
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
+			var ravenDbServer = new RavenDbServer(ravenConfiguration);
+
 			try
 			{
-				using (var documentStore = new DocumentStore
-				{
-					Url = "http://localhost:" + port
-				}.Initialize())
+				using (var documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize())
 				{
 					CreateDefaultIndexes(documentStore);
 				}
 			}
-			catch 
+			catch
 			{
 				ravenDbServer.Dispose();
 				throw;
