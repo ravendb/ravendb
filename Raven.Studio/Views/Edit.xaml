@@ -57,8 +57,13 @@
 				Grid.ColumnSpan="3"
 				Background="{StaticResource Brush_HeaderBackground}"
 				CornerRadius="4,4,0,0">
-			<toolkit:DockPanel Margin="4"
-							   LastChildFill="False">
+			<Grid Margin="4">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
+
 				<StackPanel Orientation="Horizontal">
 					<Image Source="{StaticResource Image_Document_Tiny}"
 						   Stretch="None"
@@ -86,15 +91,53 @@
 							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
 							   VerticalAlignment="Center" />
 				</StackPanel>
+
+				<StackPanel Grid.Column="1"
+							HorizontalAlignment="Center"
+							Orientation="Horizontal"
+							Visibility="{Binding NeighborIds, Converter={StaticResource HiddenWhenEmpty}}">
+
+					<HyperlinkButton Command="{StaticResource EditNeighbouringDocumentCommand}"
+									 CommandParameter="{Binding PrevDocument}"
+									 Style="{StaticResource Style_Link_MouseOverChrome}"
+									 ToolTipService.ToolTip="Previous Document">
+						<HyperlinkButton.Content>
+							<Image Source="{StaticResource Image_PreviousPage_Tiny}"
+								   Stretch="None"
+								   VerticalAlignment="Center" />
+						</HyperlinkButton.Content>
+					</HyperlinkButton>
+
+					<TextBlock Text="Document "
+							   VerticalAlignment="Center" />
+					<TextBlock Text="{Binding CurrentIndexDisplay}"
+							   VerticalAlignment="Center" />
+					<TextBlock Text=" of "
+							   VerticalAlignment="Center" />
+					<TextBlock Text="{Binding LastIndexDisplay}"
+							   VerticalAlignment="Center" />
+					<HyperlinkButton Command="{StaticResource EditNeighbouringDocumentCommand}"
+									 CommandParameter="{Binding NextDocument}"
+									 Style="{StaticResource Style_Link_MouseOverChrome}"
+									 ToolTipService.ToolTip="Next Document">
+						<HyperlinkButton.Content>
+							<Image Source="{StaticResource Image_NextPage_Tiny}"
+								   Stretch="None"
+								   VerticalAlignment="Center" />
+						</HyperlinkButton.Content>
+					</HyperlinkButton>
+
+				</StackPanel>
+
 				<StackPanel Orientation="Horizontal"
-							toolkit:DockPanel.Dock="Right"
+							Grid.Column="2"
 							VerticalAlignment="Center">
 
 					<Studio:SearchControl x:Name="SearchTool"
 										  Visibility="Collapsed"
 										  VerticalAlignment="Bottom"
 										  HorizontalAlignment="Left"
-										  IsActive="{Binding SearchEnabled, Mode=TwoWay}"/>
+										  IsActive="{Binding SearchEnabled, Mode=TwoWay}" />
 
 					<Button Command="{Binding ToggleSearch}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
@@ -137,7 +180,7 @@
 					</Button>
 
 				</StackPanel>
-			</toolkit:DockPanel>
+			</Grid>
 		</Border>
 
 		<Grid x:Name="document"
