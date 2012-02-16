@@ -346,7 +346,7 @@ namespace Raven.Munin
 
 			if (itemsCount < 10000) // for small data sizes, we cleanup on 100% waste
 				return wasteCount > itemsCount;
-			if (itemsCount < 100000) // for meduim data sizes, we cleanup on 50% waste
+			if (itemsCount < 100000) // for medium data sizes, we cleanup on 50% waste
 				return wasteCount > (itemsCount / 2);
 			return wasteCount > (itemsCount / 10); // on large data size, we cleanup on 10% waste
 		}
