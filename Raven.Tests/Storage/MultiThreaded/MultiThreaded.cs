@@ -148,14 +148,14 @@ namespace Raven.Tests.Storage.MultiThreaded
 			ShoudlGetEverything();
 		}
 
-		[Fact]
+		[Fact(Skip = "There is a race condition we need to fix")]
 		public void WhenUsingMuninOnDisk()
 		{
 			SetupDatabaseMunin(false);
 			ShoudlGetEverything();
 		}
 
-		[Fact]
+		[Fact(Skip = "There is a race condition we need to fix")]
 		public void WhenUsingMuninInMemory()
 		{
 			SetupDatabaseMunin(true);
