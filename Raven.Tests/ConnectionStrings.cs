@@ -113,5 +113,17 @@ namespace Raven.Tests
 				Assert.True(store.EnlistInDistributedTransactions);
 			}
 		}
+
+		public void can_set_api_key()
+		{
+			var apiKey = "6599be1b-abe5-423d-9f55-b8dc98805e3f";
+			var connectionstring = string.Format("Url=http://localhost:8079/;ApiKey={0}", apiKey);
+			using (var store = new DocumentStore())
+			{
+				store.ParseConnectionString(connectionstring);
+
+				Assert.Equal(apiKey, store.ApiKey);
+			}
+		}
 	}
 }
