@@ -4,12 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Linq;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
@@ -87,10 +89,44 @@ namespace Raven.Studio.Features.Query
 					};
 			}
 
+			var queryStartTime = DateTime.Now;
+			var queryEndtime = DateTime.MinValue;
 			return DatabaseCommands.QueryAsync(model.IndexName, q, null)
+				.ContinueWith(task =>
+				{
+					queryEndtime = DateTime.Now;
+					return task;
+				})
+				.Unwrap()
 				.ContinueOnSuccessInTheUIThread(qr =>
 				{
+					model.QueryTime = queryEndtime - queryStartTime;
+					model.Results = new RavenQueryStatistics
+					{
+						IndexEtag = qr.IndexEtag,
+						IndexName = qr.IndexName,
+						IndexTimestamp = qr.IndexTimestamp,
+						IsStale = qr.IsStale,
+						SkippedResults = qr.SkippedResults,
+						Timestamp = DateTime.Now,
+						TotalResults = qr.TotalResults
+					};
 					var viewableDocuments = qr.Results.Select(obj => new ViewableDocument(obj.ToJsonDocument())).ToArray();
+					
+					var documetsIds = new List<string>();
+					ProjectionData.Projections.Clear();
+					foreach (var viewableDocument in viewableDocuments)
+					{
+						var id = string.IsNullOrEmpty(viewableDocument.Id) == false ? viewableDocument.Id : Guid.NewGuid().ToString();
+
+						if (string.IsNullOrEmpty(viewableDocument.Id))
+							ProjectionData.Projections.Add(id, viewableDocument);
+
+						documetsIds.Add(id);
+
+						viewableDocument.NeighborsIds = documetsIds;
+					}
+					
 					documentsModel.Documents.Match(viewableDocuments);
 					documentsModel.Pager.TotalResults.Value = qr.TotalResults;
 

@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
+using Raven.Client.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
@@ -297,6 +299,27 @@ namespace Raven.Studio.Models
 		public ICommand Execute { get { return new ExecuteQueryCommand(this); } }
 
 		public Observable<string> Query { get; set; }
+
+		private TimeSpan queryTime;
+		public TimeSpan QueryTime
+		{
+			get { return queryTime; }
+			set
+			{
+				queryTime = value;
+				OnPropertyChanged();
+			}
+		}
+		private RavenQueryStatistics results;
+		public RavenQueryStatistics Results
+		{
+			get { return results; }
+			set
+			{
+				results = value;
+				OnPropertyChanged();
+			}
+		}
 
 		private string error;
 		public string Error
