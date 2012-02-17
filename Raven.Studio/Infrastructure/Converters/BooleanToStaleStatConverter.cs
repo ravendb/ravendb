@@ -11,7 +11,7 @@ namespace Raven.Studio.Infrastructure.Converters
 		{
 			return System.Convert.ToBoolean(value)
 					   ? "Stale"
-					   : "Not stale";
+					   : "Up to date";
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
