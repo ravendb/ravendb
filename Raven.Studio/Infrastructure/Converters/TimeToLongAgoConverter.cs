@@ -10,18 +10,18 @@ namespace Raven.Studio.Infrastructure.Converters
 		{
 			if (value is DateTime)
 			{
-				var timeAgo = DateTime.Now - (DateTime)value;
+				var timeAgo = DateTime.UtcNow - (DateTime)value;
 
 				if (timeAgo.TotalDays >= 1)
-					return string.Format("     Last updated: {0:#,#:##} days ago", timeAgo.TotalDays);
+					return string.Format("{0:#,#} days ago", timeAgo.TotalDays);
 				if (timeAgo.TotalHours >= 1)
-					return string.Format("     Last updated: {0:#,#:##} hours ago", timeAgo.TotalHours);
+					return string.Format("{0:#,#} hours ago", timeAgo.TotalHours);
 				if (timeAgo.TotalMinutes >= 1)
-					return string.Format("     Last updated: {0:#,#:##} minutes ago", timeAgo.TotalMinutes);
+					return string.Format("{0:#,#} minutes ago", timeAgo.TotalMinutes);
 				if (timeAgo.TotalSeconds >= 1)
-					return string.Format("     Last updated: {0:#,#:##} secounds ago", timeAgo.TotalSeconds);
+					return string.Format("{0:#,#} secounds ago", timeAgo.TotalSeconds);
 
-				return string.Format("     Last updated: {0:#,#:##} milli-secounds ago", timeAgo.TotalMilliseconds);
+				return string.Format("{0:#,#} milli-secounds ago", timeAgo.TotalMilliseconds);
 			}
 			return null;
 

@@ -89,18 +89,18 @@ namespace Raven.Studio.Features.Query
 					};
 			}
 
-			var queryStartTime = DateTime.Now;
-			var queryEndtime = DateTime.MinValue;
+			var queryStartTime = DateTime.Now.Ticks;
+			var queryEndtime = DateTime.MinValue.Ticks;
 			return DatabaseCommands.QueryAsync(model.IndexName, q, null)
 				.ContinueWith(task =>
 				{
-					queryEndtime = DateTime.Now;
+					queryEndtime = DateTime.Now.Ticks;
 					return task;
 				})
 				.Unwrap()
 				.ContinueOnSuccessInTheUIThread(qr =>
 				{
-					model.QueryTime = queryEndtime - queryStartTime;
+					model.QueryTime = new TimeSpan(queryEndtime - queryStartTime);
 					model.Results = new RavenQueryStatistics
 					{
 						IndexEtag = qr.IndexEtag,

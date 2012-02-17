@@ -283,14 +283,19 @@
 							VerticalAlignment="Bottom"
 							Orientation="Horizontal">
 
-					<TextBlock Text="Total: " />
+					<TextBlock Text="Total results: " />
 					<TextBlock Text="{Binding Results.TotalResults, StringFormat='#,#'}" />
-					<TextBlock Text="{Binding Results.IsStale, Converter={StaticResource BooleanToStaleStatConverter},StringFormat='      {0}'}" />
+					<TextBlock Text="        Status: " />
+					<TextBlock Text="{Binding Results.IsStale, Converter={StaticResource BooleanToStaleStatConverter},StringFormat='\{0\}'}" />
+					<TextBlock Text="        Last update: " />
 					<TextBlock Text="{Binding Results.IndexTimestamp, Converter={StaticResource TimeToLongAgoConverter}}"
-							   ToolTipService.ToolTip="{Binding Results.IndexTimestamp, StringFormat='       Indexed at {0} '}" />
-					<TextBlock Text="{Binding QueryTime.TotalMilliseconds, StringFormat='       Query: {0} ms '}" />
-					<TextBlock Text="{Binding Results.IndexName, StringFormat='       Index name: {0}'}" />
-					<TextBlock Text="{Binding Results.IndexEtag, StringFormat='       Etag: {0}'}" />
+							   ToolTipService.ToolTip="{Binding Results.IndexTimestamp, StringFormat='Indexed at {0}'}" />
+					<TextBlock Text="        Duration (query+network+parsing): " />
+					<TextBlock Text="{Binding QueryTime.TotalMilliseconds, StringFormat='\{0:#,#\} ms'}" />
+					<TextBlock Text="        Index: " />
+					<TextBlock Text="{Binding Results.IndexName}" />
+					<TextBlock Text="        Etag: " />
+					<TextBlock Text="{Binding Results.IndexEtag}" />
 				</StackPanel>
 			</Grid>
 		</Grid>
