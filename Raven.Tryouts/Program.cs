@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
-using System.Threading;
 using System.Xml;
 using NLog;
 using NLog.Config;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using System.Linq;
 using Raven.Database.Server;
 using Raven.Tests.Storage.MultiThreaded;
 
