@@ -46,7 +46,7 @@ namespace Raven.Tests
 						DataDirectory = path,
 						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 						DefaultStorageTypeName = storageType,
-						RunInMemory = inMemory,
+						RunInMemory = storageType == "munin" && inMemory,
 					}
 			};
 
