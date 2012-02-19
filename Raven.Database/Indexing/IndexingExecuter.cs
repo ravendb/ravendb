@@ -73,7 +73,7 @@ namespace Raven.Database.Indexing
 				{
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 					indexesToWorkOn = result.Select(x => x.Item1).ToList();
-					IndexingTaskExecuter.ExecuteAll(context.Configuration, scheduler, result, (indexToWorkOn,_) =>
+					IndexingTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, result, (indexToWorkOn,_) =>
 					{
 						var index = indexToWorkOn.Item1;
 						var docs = indexToWorkOn.Item2;
@@ -143,7 +143,7 @@ namespace Raven.Database.Indexing
 			var results = new Tuple<IndexToWorkOn, IndexingBatch>[indexesToWorkOn.Count];
 			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
 
-			IndexingTaskExecuter.ExecuteAll(context.Configuration, scheduler, indexesToWorkOn, (indexToWorkOn, i) =>
+			IndexingTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, indexesToWorkOn, (indexToWorkOn, i) =>
 			{
 				var indexLastInedexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
 				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0)

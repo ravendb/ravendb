@@ -116,6 +116,8 @@
     <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Impl\ExceptionAggregator.cs" />
+    <Compile Include="Indexing\DefaultIndexingTaskExecuter.cs" />
+    <Compile Include="Indexing\IIndexingTaskExecuter.cs" />
     <Compile Include="Indexing\IndexingTaskExecuter.cs" />
     <Compile Include="Indexing\IndexBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\NotForQueryingAttribute.cs" />
