@@ -118,7 +118,6 @@ namespace Raven.Bundles.Tests.Replication
 			}
 		}
 
-
 		public class Item
 		{
 		}
