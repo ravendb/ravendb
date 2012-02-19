@@ -118,7 +118,7 @@ namespace Raven.Database.Indexing
 			actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
 		}
 
-		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(ICollection<IndexToWorkOn> indexesToWorkOn, JsonDocument[] jsonDocs)
+		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, JsonDocument[] jsonDocs)
 		{
 			var last = jsonDocs.Last();
 
