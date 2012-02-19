@@ -41,6 +41,8 @@ namespace Raven.Database.Server
 		public InMemoryRavenConfiguration DefaultConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
+		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { }; 
+
 		private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
 		private readonly ThreadLocal<DocumentDatabase> currentDatabase = new ThreadLocal<DocumentDatabase>();
 		private readonly ThreadLocal<InMemoryRavenConfiguration> currentConfiguration = new ThreadLocal<InMemoryRavenConfiguration>();
@@ -625,6 +627,8 @@ namespace Raven.Database.Server
 				{
 					Settings = new NameValueCollection(DefaultConfiguration.Settings),
 				};
+
+				SetupTenantDatabaseConfiguration(config);
 
 				config.CustomizeValuesForTenant(tenantId);
 
