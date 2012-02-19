@@ -50,10 +50,11 @@ namespace Raven.Bundles.Tests.Replication
 				Catalog = {Catalogs = {new AssemblyCatalog(typeof (replication::Raven.Bundles.Replication.Triggers.AncestryPutTrigger).Assembly)}},
 				DataDirectory = "Data #" + servers.Count,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				RunInMemory = true,
 				Port = port
 			});
 			servers.Add(ravenDbServer);
-			var documentStore = new DocumentStore{Url = ravenDbServer.Database.Configuration.ServerUrl};
+			var documentStore = new DocumentStore {Url = ravenDbServer.Database.Configuration.ServerUrl};
 			documentStore.Initialize();
 			stores.Add(documentStore);
 			return documentStore;
