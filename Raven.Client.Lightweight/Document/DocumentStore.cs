@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 #if SILVERLIGHT
@@ -36,7 +37,7 @@ namespace Raven.Client.Document
 	public class DocumentStore : IDocumentStore
 	{
 		/// <summary>
-		/// The current session id - only used during contsruction
+		/// The current session id - only used during construction
 		/// </summary>
 		[ThreadStatic]
 		protected static Guid? currentSessionId;
@@ -49,6 +50,8 @@ namespace Raven.Client.Document
 #endif
 
 		private HttpJsonRequestFactory jsonRequestFactory;
+
+		private ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
 
 		/// <summary>
 		/// Gets the shared operations headers.
@@ -482,7 +485,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			if (string.IsNullOrEmpty(DefaultDatabase) == false)
 			{
-				DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
+				DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 			}
 #endif
 
@@ -598,10 +601,9 @@ namespace Raven.Client.Document
 		protected virtual void InitializeInternal()
 		{
 #if !SILVERLIGHT
-			var replicationInformer = new ReplicationInformer(Conventions);
 			databaseCommandsGenerator = () =>
 			{
-				var serverClient = new ServerClient(Url, Conventions, credentials, replicationInformer, jsonRequestFactory, currentSessionId);
+				var serverClient = new ServerClient(Url, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId);
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return serverClient;
 				return serverClient.ForDatabase(DefaultDatabase);
@@ -616,6 +618,11 @@ namespace Raven.Client.Document
 				return asyncServerClient.ForDatabase(DefaultDatabase);
 			};
 #endif
+		}
+
+		public ReplicationInformer GetReplicationInformerForDatabase(string dbName)
+		{
+			return replicationInformers.GetOrAddAtomically(dbName ?? "default", s => new ReplicationInformer(Conventions));
 		}
 
 		/// <summary>
