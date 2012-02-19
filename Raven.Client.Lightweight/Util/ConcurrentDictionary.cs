@@ -6,7 +6,30 @@ namespace Raven.Client.Util
 {
 	public class ConcurrentDictionary<K,V>
 	{
-		readonly Dictionary<K,V> items = new Dictionary<K, V>();
+		readonly Dictionary<K,V> items;
+
+		public ConcurrentDictionary()
+		{
+			items = new Dictionary<K, V>();
+		}
+
+		public V GetOrAddAtomically(K key, Func<K, V> valueFactory)
+		{
+			lock(items)
+			{
+				V value;
+				if(items.TryGetValue(key, out value))
+					return value;
+				var val = valueFactory(key);
+				items[key] = val;
+				return value;
+			}
+		}
+
+		public ConcurrentDictionary(IEqualityComparer<K> comparer)
+		{
+			items = new Dictionary<K, V>(comparer);
+		}
 
 		public void AddOrUpdate(K key, V actualValue, Func<K,V,V> updateFactory)
 		{

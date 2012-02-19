@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 #if SILVERLIGHT
@@ -17,7 +16,10 @@ using Raven.Client.Extensions;
 using Raven.Client.Connection.Profiling;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
+using System.Collections.Concurrent;
 using Raven.Client.Document.Async;
+#else
+using Raven.Client.Util;
 #endif
 using System.Linq;
 #if !SILVERLIGHT
@@ -47,11 +49,12 @@ namespace Raven.Client.Document
 		/// Generate new instance of database commands
 		/// </summary>
 		protected Func<IDatabaseCommands> databaseCommandsGenerator;
+
+		private ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
 #endif
 
 		private HttpJsonRequestFactory jsonRequestFactory;
 
-		private ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
 
 		/// <summary>
 		/// Gets the shared operations headers.
@@ -620,10 +623,12 @@ namespace Raven.Client.Document
 #endif
 		}
 
+#if !SILVERLIGHT
 		public ReplicationInformer GetReplicationInformerForDatabase(string dbName)
 		{
 			return replicationInformers.GetOrAddAtomically(dbName ?? "default", s => new ReplicationInformer(Conventions));
 		}
+#endif
 
 		/// <summary>
 		/// Registers the delete listener.
