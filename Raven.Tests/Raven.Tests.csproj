@@ -544,6 +544,7 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\TypeNameHandlingWithCollectionsTest.cs" />
     <Compile Include="MailingList\Adrian.cs" />
     <Compile Include="MailingList\Alexander.cs" />
     <Compile Include="MailingList\AllPropertiesIndex.cs" />
@@ -561,6 +562,7 @@
     <Compile Include="MailingList\IndexMetadata.cs" />
     <Compile Include="MailingList\IndexWithUnion.cs" />
     <Compile Include="MailingList\IndexWithWhere.cs" />
+    <Compile Include="MailingList\Jabber\Games.cs" />
     <Compile Include="MailingList\JBA.cs" />
     <Compile Include="MailingList\JohanNilsson.cs" />
     <Compile Include="MailingList\Justin.cs" />
@@ -575,6 +577,7 @@
     <Compile Include="MailingList\Mark.cs" />
     <Compile Include="MailingList\Micha.cs" />
     <Compile Include="MailingList\NullableEnums.cs" />
+    <Compile Include="MailingList\PhilJones88.cs" />
     <Compile Include="MailingList\RangeQueriesOverSum.cs" />
     <Compile Include="MailingList\MultiLoad.cs" />
     <Compile Include="MailingList\PhilJones.cs" />

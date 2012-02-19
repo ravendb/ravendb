@@ -1,12 +1,14 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					xmlns:Commands="clr-namespace:Raven.Studio.Commands">
+					xmlns:Commands="clr-namespace:Raven.Studio.Commands"
+					xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents">
 
 	<Commands:CopyDocumentsIdsCommand x:Name="CopyDocumentsIdsCommand" />
 	<Commands:CopyToClipboardCommand x:Name="CopyToClipboardCommand" />
 	<Commands:DeleteDocumentsCommand x:Name="DeleteDocumentsCommand" />
 	<Commands:DeleteAllDocumentsOfCollectionCommand	x:Name="DeleteAllDocumentsOfCollectionCommand" />
 	<Commands:NavigateToCommand x:Name="NavigateToCommand" />
+	<Documents:EditNeighbouringDocumentCommand x:Name="EditNeighbouringDocumentCommand" />
 	<Commands:ChangeDatabaseCommand x:Name="ChangeDatabaseCommand" />
 	<Commands:NavigateToExternalUrlCommand x:Name="NavigateToExternalUrlCommand" />
 	<Commands:NavigateToDocumentByIdCommand x:Name="NavigateToDocumentByIdCommand" />

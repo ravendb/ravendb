@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Bundles.Tests.Replication
 {
-	public class WritesDuringFailover: ReplicationBase
+	public class WritesDuringFailover : ReplicationBase
 	{
 		[Fact]
 		public void Can_failover_reads()

@@ -30,7 +30,7 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public class ReplicationInformer
 	{
-		private Logger log = LogManager.GetCurrentClassLogger();
+		private readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		private readonly DocumentConvention conventions;
 		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";

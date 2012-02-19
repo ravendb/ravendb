@@ -9,6 +9,7 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using NLog;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -89,7 +90,6 @@ namespace Raven.Storage.Managed
 			get; private set;
 		}
 
-		[DebuggerNonUserCode]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
 			if (disposerLock.IsReadLockHeld) // we are currently in a nested Batch call
@@ -108,26 +108,31 @@ namespace Raven.Storage.Managed
 					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
 					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 				}
-					
 
-				Interlocked.Exchange(ref lastUsageTime, SystemTime.Now.ToBinary());
-				using (tableStroage.BeginTransaction())
-				{
-					var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs, documentCacher);
-					current.Value = storageActionsAccessor;
-					action(current.Value);
-					storageActionsAccessor.SaveAllTasks();
-					tableStroage.Commit();
-					storageActionsAccessor.InvokeOnCommit();
-				}
+				ExecuteBatch(action);
 			}
 			finally
 			{
 				disposerLock.ExitReadLock();
-				if(disposed ==false)
+				if (disposed == false)
 					current.Value = null;
 			}
 			onCommit(); // call user code after we exit the lock
+		}
+
+		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+		private void ExecuteBatch(Action<IStorageActionsAccessor> action)
+		{
+			Interlocked.Exchange(ref lastUsageTime, SystemTime.Now.ToBinary());
+			using (tableStroage.BeginTransaction())
+			{
+				var storageActionsAccessor = new StorageActionsAccessor(tableStroage, uuidGenerator, DocumentCodecs, documentCacher);
+				current.Value = storageActionsAccessor;
+				action(current.Value);
+				storageActionsAccessor.SaveAllTasks();
+				tableStroage.Commit();
+				storageActionsAccessor.InvokeOnCommit();
+			}
 		}
 
 		public void ExecuteImmediatelyOrRegisterForSyncronization(Action action)

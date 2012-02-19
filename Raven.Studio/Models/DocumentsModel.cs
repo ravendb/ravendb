@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Studio.Features.Documents;
+using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 using System.Linq;
 
@@ -58,7 +60,18 @@ namespace Raven.Studio.Models
 		private Task DefaultFetchingOfDocuments()
 		{
 			return ApplicationModel.DatabaseCommands.GetDocumentsAsync(Pager.Skip, Pager.PageSize)
-				.ContinueOnSuccess(docs => Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
+				.ContinueOnSuccess(docs =>
+				{
+					Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray());
+					ProjectionData.Projections = new Dictionary<string, ViewableDocument>();
+					var documetsIds = new List<string>();
+					foreach (var viewableDocument in Documents)
+					{
+						documetsIds.Add(viewableDocument.Id);
+
+						viewableDocument.NeighborsIds = documetsIds;
+					}
+				});
 		}
 
 		public PagerModel Pager { get; private set; }
@@ -84,6 +97,5 @@ namespace Raven.Studio.Models
 				OnPropertyChanged();
 			}
 		}
-
 	}
 }

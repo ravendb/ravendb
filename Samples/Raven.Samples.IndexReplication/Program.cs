@@ -9,11 +9,25 @@ using System.Configuration;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 
 namespace Raven.Samples.IndexReplication
 {
+	public class Questions_VoteTotals : AbstractIndexCreationTask<Question>
+	{
+		public Questions_VoteTotals()
+		{
+			Map = questions => from question in questions
+			                   select new
+			                   {
+			                   	question.Title,
+			                   	VoteCount = question.Votes.Count
+							   };
+		}
+	}
+
 	class Program
 	{
 		static void Main(string[] args)
@@ -22,17 +36,7 @@ namespace Raven.Samples.IndexReplication
 
 			using (var documentStore = new DocumentStore { Url = "http://localhost:8080" }.Initialize())
 			{
-				documentStore.DatabaseCommands.PutIndex("Questions/VoteTotals",
-														new IndexDefinitionBuilder<Question>
-														{
-															Map = questions => from question in questions
-																			   select new
-																			   {
-																				   question.Title,
-																				   VoteCount = question.Votes.Count
-																			   }
-														},
-														overwrite: true);
+				new Questions_VoteTotals().Execute(documentStore);	
 
 				using(var s = documentStore.OpenSession())
 				{
