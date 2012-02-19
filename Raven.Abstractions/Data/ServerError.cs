@@ -14,5 +14,11 @@ namespace Raven.Abstractions.Data
 		public DateTime Timestamp { get; set; }
 
 		public string Document { get; set; }
+
+
+		public override string ToString()
+		{
+			return string.Format("Index: {0}, Error: {1}, Document: {2}", Index, Error, Document);
+		}
 	}
 }

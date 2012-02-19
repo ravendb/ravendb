@@ -85,7 +85,7 @@ namespace Raven.Tests.Storage.MultiThreaded
 			}
 		}
 
-		protected void ShoudlGetEverything()
+		protected void ShouldGetEverything()
 		{
 			var task = Task.Factory.StartNew(StartGetDocumentOnBackground);
 			var count = SetupData();
@@ -138,28 +138,28 @@ namespace Raven.Tests.Storage.MultiThreaded
 		public void WhenUsingEsentOnDisk()
 		{
 			SetupDatabaseEsent(false);
-			ShoudlGetEverything();
+			ShouldGetEverything();
 		}
 
 		[Fact]
 		public void WhenUsingEsentInUnreliableMode()
 		{
 			SetupDatabaseEsent(true);
-			ShoudlGetEverything();
+			ShouldGetEverything();
 		}
 
 		[Fact]
 		public void WhenUsingMuninOnDisk()
 		{
 			SetupDatabaseMunin(false);
-			ShoudlGetEverything();
+			ShouldGetEverything();
 		}
 
 		[Fact]
 		public void WhenUsingMuninInMemory()
 		{
 			SetupDatabaseMunin(true);
-			ShoudlGetEverything();
+			ShouldGetEverything();
 		}
 	}
 }

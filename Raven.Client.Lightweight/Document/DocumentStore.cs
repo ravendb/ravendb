@@ -212,6 +212,8 @@ namespace Raven.Client.Document
 				Url = options.Url;
 			if (string.IsNullOrEmpty(options.DefaultDatabase) == false)
 				DefaultDatabase = options.DefaultDatabase;
+			if (options.ApiKey != null)
+				ApiKey = options.ApiKey;
 
 			EnlistInDistributedTransactions = options.EnlistInDistributedTransactions;
 		}

@@ -15,8 +15,12 @@ namespace Raven.Tests.Track
 	{
 		public string ChildId { get; set; }
 		public string TransportId { get; set; }
-		public string EntityType { get; set; }
 		public string Name { get; set; }
+
+		public override string ToString()
+		{
+			return string.Format("ChildId: {0}, TransportId: {1}, Name: {2}", ChildId, TransportId, Name);
+		}
 	}
 
 	public class Child
@@ -33,88 +37,6 @@ namespace Raven.Tests.Track
 
 	public class LinqTest : RavenTest
 	{
-		[Fact]
-		public void ChildrenHasMultipleTransports_Memory()
-		{
-			// Hardcoded output of map
-			IList<JoinedChildTransport> mapResults = new List<JoinedChildTransport>
-			{
-				new JoinedChildTransport
-				{
-					ChildId = "B1",
-					TransportId = null,
-					EntityType = "Barn",
-					Name = "Thor Arne"
-				},
-				new JoinedChildTransport
-				{
-					ChildId = "B1",
-					TransportId = "A1",
-					EntityType = "Skyss",
-					Name = null
-				},
-				new JoinedChildTransport
-				{
-					ChildId = "B1",
-					TransportId = "A2",
-					EntityType = "Skyss",
-					Name = null
-				},
-				new JoinedChildTransport
-				{
-					ChildId = "B2",
-					TransportId = null,
-					EntityType = "Barn",
-					Name = "Ståle"
-				},
-				new JoinedChildTransport
-				{
-					ChildId = "B2",
-					TransportId = "A3",
-					EntityType = "Skyss",
-					Name = null
-				},
-				new JoinedChildTransport
-				{
-					ChildId = "B2",
-					TransportId = "A4",
-					EntityType = "Skyss",
-					Name = null
-				}
-			};
-
-			// "index"
-			var skyssavtaler = (from result in mapResults
-			                    group result by result.ChildId
-			                    into g
-									from transport in g.Where(transport => transport.EntityType == "Skyss").DefaultIfEmpty(new JoinedChildTransport())
-									from barn in g.Where(barn => barn.EntityType == "Barn").DefaultIfEmpty(new JoinedChildTransport())
-
-									select new { transport.ChildId, transport.TransportId, barn.Name }).ToList();
-
-			Assert.Equal(4, skyssavtaler.Count);
-
-			// skyssavtaler for B1
-			Assert.Equal("A1", skyssavtaler[0].TransportId);
-			Assert.Equal("B1", skyssavtaler[0].ChildId);
-			Assert.Equal("Thor Arne", skyssavtaler[0].Name);
-
-			Assert.Equal("A2", skyssavtaler[1].TransportId);
-			Assert.Equal("B1", skyssavtaler[1].ChildId);
-			Assert.Equal("Thor Arne", skyssavtaler[0].Name);
-
-			// skyssavtaler for B2
-			Assert.Equal("A3", skyssavtaler[2].TransportId);
-			Assert.Equal("B2", skyssavtaler[2].ChildId);
-			Assert.Equal("Ståle", skyssavtaler[2].Name);
-
-			Assert.Equal("A4", skyssavtaler[3].TransportId);
-			Assert.Equal("B2", skyssavtaler[3].ChildId);
-			Assert.Equal("Ståle", skyssavtaler[3].Name);
-		}
-
-
-
 		public class TransportsIndex : AbstractMultiMapIndexCreationTask<JoinedChildTransport>
 		{
 			public TransportsIndex()
@@ -123,31 +45,28 @@ namespace Raven.Tests.Track
 				                           select new
 				                           {
 				                           	ChildId = child.Id,
-				                           	TransportId = (dynamic) null,
-				                           	Name = child.Name,
-				                           	EntityType = "Child"
+				                           	TransportId = (dynamic) null, 
+											child.Name,
 				                           });
 
 				AddMap<Transport>(transportList => from transport in transportList
 				                                   select new
 				                                   {
-				                                   	ChildId = transport.ChildId,
+				                                   	transport.ChildId,
 				                                   	TransportId = transport.Id,
 				                                   	Name = (dynamic) null,
-				                                   	EntityType = "Transport"
 				                                   });
 
 				Reduce = results => from result in results
 				                    group result by result.ChildId
 				                    into g
-										from transport in g.Where(transport=>transport.EntityType == "Transport").DefaultIfEmpty()
-										from barn in g.Where(barn=>barn.EntityType == "Child").DefaultIfEmpty()
-				                    select new {transport.EntityType, transport.ChildId, transport.TransportId, transport.Name};
+										from transport in g.Where(transport => transport.TransportId != null).DefaultIfEmpty()
+										from child in g.Where(barn=>barn.Name != null).DefaultIfEmpty()
+									select new { ChildId = g.Key, transport.TransportId, child.Name };
 
 				Store(x => x.ChildId, FieldStorage.Yes);
 				Store(x => x.TransportId, FieldStorage.Yes);
 				Store(x => x.Name, FieldStorage.Yes);
-				Store(x => x.EntityType, FieldStorage.Yes);
 			}
 		}
 
@@ -176,14 +95,14 @@ namespace Raven.Tests.Track
 
 					var transports = session.Query<JoinedChildTransport, TransportsIndex>()
 						.Customize(x=>x.WaitForNonStaleResults(TimeSpan.FromMinutes(100)))
+						.OrderBy(x=>x.TransportId)
+						.OrderBy(x=>x.ChildId)
 						.AsProjection<JoinedChildTransport>()
 						.ToList();
 
 					Assert.Empty(docStore.DocumentDatabase.Statistics.Errors);
 
 					Assert.Equal(4, transports.Count);
-
-					// The test below may have to change to accound for unpredictable order, but we never even get the correct number of hits
 
 					// skyssavtaler for B1
 					Assert.Equal("A1", transports[0].TransportId);

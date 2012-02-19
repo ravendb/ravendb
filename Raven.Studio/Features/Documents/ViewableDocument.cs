@@ -14,6 +14,13 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Documents
 {
+	public class FriendlyDocument
+	{
+		public string Id { get; set; }
+		public List<string> NeighborsIds { get; set; }
+		public bool IsProjection { get; set; }
+	}
+
 	public class ViewableDocument : NotifyPropertyChangedBase, IDisposable
 	{
 		private readonly JsonDocument inner;
@@ -199,6 +206,8 @@ namespace Raven.Studio.Features.Documents
 		{
 			get { return inner; }
 		}
+
+		public List<string> NeighborsIds { get; set; }
 
 		public override string ToString()
 		{

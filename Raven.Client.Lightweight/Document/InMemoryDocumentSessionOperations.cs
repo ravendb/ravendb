@@ -882,6 +882,18 @@ more responsive application.
 		}
 #endif
 
+
+		/// <summary>
+		/// Mark the entity as read only, change tracking won't apply 
+		/// to such an entity. This can be done as an optimization step, so 
+		/// we don't need to check the entity for changes.
+		/// </summary>
+		public void MarkReadOnly(object entity)
+		{
+			GetMetadataFor(entity)[Constants.RavenReadOnly] = true;
+		}
+
+
 		/// <summary>
 		/// Determines if the entity have changed.
 		/// </summary>
