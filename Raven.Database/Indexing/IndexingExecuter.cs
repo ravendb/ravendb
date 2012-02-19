@@ -132,11 +132,12 @@ namespace Raven.Database.Indexing
 
 			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
 
-			var filteredDocs = jsonDocs.AsParallel()
-				.Select(doc => documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index))
-				.Where(doc => doc != null)
-				.Select(x => new { Doc = x, Json = JsonToExpando.Convert(x.ToJson()) })
-				.ToList();
+			var filteredDocs =
+				IndexingTaskExecuter.Instance.Apply(jsonDocs, doc =>
+				{
+					doc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
+					return doc == null ? null : new {Doc = doc, Json = JsonToExpando.Convert(doc.ToJson())};
+				});
 
 			log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
 

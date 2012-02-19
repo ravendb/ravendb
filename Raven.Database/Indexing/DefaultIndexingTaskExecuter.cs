@@ -8,6 +8,15 @@ namespace Raven.Database.Indexing
 {
 	public class DefaultIndexingTaskExecuter : IIndexingTaskExecuter
 	{
+		public IList<TResult> Apply<T, TResult>(IEnumerable<T> source, Func<T, TResult> func)
+			where TResult : class
+		{
+			return source.AsParallel()
+				.Select(func)
+				.Where(x => x != null)
+				.ToList();
+		}
+
 		/// <summary>
 		/// Note that we assume that source is a relatively small number, expected to be 
 		/// the number of indexes, not the number of documents.
