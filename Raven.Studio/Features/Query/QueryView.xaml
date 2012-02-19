@@ -259,7 +259,7 @@
 					</StackPanel>
 
 					<toolkit:BusyIndicator IsBusy="{Binding DocumentsResult.Value.IsLoadingDocuments, Mode=TwoWay}"
-										   BusyContent="Quering..." />
+										   BusyContent="Querying..." />
 					<ItemsControl ItemsSource="{Binding Suggestions}">
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
