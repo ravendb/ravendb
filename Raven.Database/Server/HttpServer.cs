@@ -27,6 +27,7 @@ using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins.Builtins;
+using Raven.Database.Plugins.Builtins.Tenants;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Security.OAuth;
@@ -132,10 +133,9 @@ namespace Raven.Database.Server
 			}
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
-			RemoveTenantDatabase.Occured.Subscribe(TenantDatabaseRemoved);
 		}
 
-		private void TenantDatabaseRemoved(object sender, RemoveTenantDatabase.Event @event)
+		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
 		{
 			if (@event.Database != DefaultResourceStore)
 				return; // we ignore anything that isn't from the root db
@@ -150,6 +150,7 @@ namespace Raven.Database.Server
 			disposerLock.EnterWriteLock();
 			try
 			{
+				TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
 				var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
 				exceptionAggregator.Execute(() =>
 				{
@@ -205,6 +206,9 @@ namespace Raven.Database.Server
 
 			Init();
 			listener.Start();
+	
+			TenantDatabaseModified.Occured += TenantDatabaseRemoved;
+
 			listener.BeginGetContext(GetContext, null);
 		}
 

@@ -73,7 +73,7 @@ namespace Raven.Database.Indexing
 				{
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 					indexesToWorkOn = result.Select(x => x.Item1).ToList();
-					IndexingTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, result, (indexToWorkOn,_) =>
+					BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, result, (indexToWorkOn,_) =>
 					{
 						var index = indexToWorkOn.Item1;
 						var docs = indexToWorkOn.Item2;
@@ -133,7 +133,7 @@ namespace Raven.Database.Indexing
 			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
 
 			var filteredDocs =
-				IndexingTaskExecuter.Instance.Apply(jsonDocs, doc =>
+				BackgroundTaskExecuter.Instance.Apply(jsonDocs, doc =>
 				{
 					doc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
 					return doc == null ? null : new {Doc = doc, Json = JsonToExpando.Convert(doc.ToJson())};
@@ -144,7 +144,7 @@ namespace Raven.Database.Indexing
 			var results = new Tuple<IndexToWorkOn, IndexingBatch>[indexesToWorkOn.Count];
 			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
 
-			IndexingTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, indexesToWorkOn, (indexToWorkOn, i) =>
+			BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, indexesToWorkOn, (indexToWorkOn, i) =>
 			{
 				var indexLastInedexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
 				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0)
