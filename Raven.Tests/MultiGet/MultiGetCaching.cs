@@ -243,6 +243,7 @@ namespace Raven.Tests.MultiGet
 						.Where(x => x.Name == "test")
 						.ToList();
 				}
+
 				using (var session = store.OpenSession())
 				{
 					var items = session.Advanced.Lazily.Load<User>("users/2", "users/4");
