@@ -230,9 +230,9 @@ namespace Raven.Bundles.Replication.Tasks
 				if (IsFirstFailue(destination))
 				{
 					log.Info(
-						"This is the first failure for {0}, assuming transient failure and trying again",
+						"This is the first failure for {0}, assuming transinet failure and trying again",
 						destination);
-					if (TryReplicationAttachments(destination, attachments))// success on second fail
+					if (TryReplicationAttachments(destination, attachments))// success on second faile
 						return true;
 				}
 				IncrementFailureCount(destination);
@@ -252,9 +252,9 @@ namespace Raven.Bundles.Replication.Tasks
 				if (IsFirstFailue(destination))
 				{
 					log.Info(
-						"This is the first failure for {0}, assuming transient failure and trying again",
+						"This is the first failure for {0}, assuming transinet failure and trying again",
 						destination);
-					if (TryReplicationDocuments(destination, jsonDocuments))// success on second fail
+					if (TryReplicationDocuments(destination, jsonDocuments))// success on second faile
 						return true;
 				}
 				IncrementFailureCount(destination);
@@ -541,7 +541,7 @@ namespace Raven.Bundles.Replication.Tasks
 				return false;
 			if(document.Metadata.ContainsKey(Constants.NotForReplication) && document.Metadata.Value<bool>(Constants.NotForReplication) ) // not explicitly marked to skip
 				return false;
-			if (document.Metadata[ReplicationConstants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propagate the conflict
+			if (document.Metadata[ReplicationConstants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propgate the conflict
 				return false;
 
 			switch (ReplicationOptionsBehavior)
@@ -564,7 +564,7 @@ namespace Raven.Bundles.Replication.Tasks
 			if(attachment.Metadata.ContainsKey(Constants.NotForReplication) && attachment.Metadata.Value<bool>(Constants.NotForReplication) )
 				return false;
 
-			if(attachment.Metadata.ContainsKey(ReplicationConstants.RavenReplicationConflict))// don't replicate conflicted documents, that just propagate the conflict
+			if(attachment.Metadata.ContainsKey(ReplicationConstants.RavenReplicationConflict))// don't replicate conflicted documents, that just propgate the conflict
 				return false;
 
 			switch (ReplicationOptionsBehavior)
