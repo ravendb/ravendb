@@ -12,6 +12,7 @@ namespace Raven.Abstractions.Connection
 		private readonly string url;
 		private readonly string method;
 		private readonly ICredentials credentials;
+		private readonly int timeout;
 
 		private HttpWebRequest webRequest;
 		private Stream postedStream;
@@ -22,30 +23,22 @@ namespace Raven.Abstractions.Connection
 			this.url = url;
 			this.method = method;
 			this.credentials = credentials;
+			this.timeout = timeout;
 
-			webRequest = (HttpWebRequest) WebRequest.Create(url);
-			webRequest.Method = method;
-			webRequest.Timeout = timeout;
-			webRequest.Headers["Accept-Encoding"] = "deflate,gzip";
-			webRequest.ContentType = "application/json; charset=utf-8";
-			webRequest.UseDefaultCredentials = true;
-			webRequest.Credentials = credentials;
-			webRequest.PreAuthenticate = true;
+			webRequest = CreateRequest();
 		}
 
-		public ICredentials Credentials
+		private HttpWebRequest CreateRequest()
 		{
-			get { return credentials; }
-		}
-
-		public string Method
-		{
-			get { return method; }
-		}
-
-		public string Url
-		{
-			get { return url; }
+			var request = (HttpWebRequest) WebRequest.Create(url);
+			request.Method = method;
+			request.Timeout = timeout;
+			request.Headers["Accept-Encoding"] = "deflate,gzip";
+			request.ContentType = "application/json; charset=utf-8";
+			request.UseDefaultCredentials = true;
+			request.Credentials = credentials;
+			request.PreAuthenticate = true;
+			return request;
 		}
 
 		public void Write(Stream streamToWrite)
@@ -126,11 +119,8 @@ namespace Raven.Abstractions.Connection
 		private void HandleUnauthorizedResponse()
 		{
 			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
-
-			var newWebRequest = (HttpWebRequest)WebRequest.Create(Url);
-			newWebRequest.Method = webRequest.Method;
+			var newWebRequest = CreateRequest();
 			HttpRequestHelper.CopyHeaders(webRequest, newWebRequest);
-			newWebRequest.Credentials = webRequest.Credentials;
 			ConfigureAuthentication(newWebRequest);
 
 			if (postedToken != null)
@@ -151,6 +141,7 @@ namespace Raven.Abstractions.Connection
 
 		private void ConfigureAuthentication(HttpWebRequest newWebRequest)
 		{
+
 		}
 	}
 }
