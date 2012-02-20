@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 #endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Connection;
+using Raven.Abstractions.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -29,12 +29,8 @@ namespace Raven.Client.Connection
 	/// <summary>
 	/// A representation of an HTTP json request to the RavenDB server
 	/// </summary>
-	public class HttpJsonRequest
+	public class HttpJsonRequest : HttpRavenRequest
 	{
-		internal readonly string Url;
-		internal readonly string Method;
-
-		internal volatile HttpWebRequest webRequest;
 		// temporary create a strong reference to the cached data for this request
 		// avoid the potential for clearing the cache from a cached item
 		internal CachedRequest CachedRequestDetails;
@@ -61,18 +57,12 @@ namespace Raven.Client.Connection
 			HttpJsonRequestFactory factory, 
 			IHoldProfilingInformation owner,
 			DocumentConvention conventions)
+			: base(url, method, credentials)
 		{
-			this.Url = url;
 			this.factory = factory;
 			this.owner = owner;
 			this.conventions = conventions;
-			this.Method = method;
-			webRequest = (HttpWebRequest)WebRequest.Create(url);
-			webRequest.Credentials = credentials;
 			WriteMetadata(metadata);
-			webRequest.Method = method;
-			webRequest.Headers["Accept-Encoding"] = "deflate,gzip";
-			webRequest.ContentType = "application/json; charset=utf-8";
 		}
 
 #if !NET_3_5
