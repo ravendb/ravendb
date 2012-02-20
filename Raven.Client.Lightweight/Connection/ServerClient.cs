@@ -18,6 +18,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;

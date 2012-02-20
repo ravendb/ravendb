@@ -8,7 +8,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 
-namespace Raven.Client.Connection
+namespace Raven.Abstractions.Connection
 {
 	/// <summary>
 	/// Extensions for web requests

@@ -12,7 +12,9 @@ namespace Raven.Abstractions.Connection
 
 		public volatile HttpWebRequest webRequest;
 
-		public HttpRavenRequest(string url, string method, ICredentials credentials)
+		public Action<WebRequest> ConfigureRequest = delegate { };
+
+		public HttpRavenRequest(string url, string method = "GET", ICredentials credentials = null)
 		{
 			this.url = url;
 			this.method = method;
@@ -64,13 +66,15 @@ namespace Raven.Abstractions.Connection
 		{
 			using (webRequest.GetResponse())
 			{
-				
 			}
 		}
-	
-		public virtual void ConfigureRequest(HttpWebRequest request)
+
+		public Stream GetResponseStream()
 		{
-			webRequest.ContentType = "application/json; charset=utf-8";
+			using (var response = webRequest.GetResponse())
+			{
+				return response.GetResponseStreamWithHttpDecompression();
+			}
 		}
 	}
 }

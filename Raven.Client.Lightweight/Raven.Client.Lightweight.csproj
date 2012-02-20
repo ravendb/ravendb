@@ -93,7 +93,6 @@
     <Compile Include="Connection\SerializationHelper.cs" />
     <Compile Include="Connection\ServerClient.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
-    <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Converters\GuidConverter.cs" />
     <Compile Include="Converters\Int32Converter.cs" />
     <Compile Include="Converters\Int64Converter.cs" />

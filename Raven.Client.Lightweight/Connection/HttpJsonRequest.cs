@@ -63,6 +63,7 @@ namespace Raven.Client.Connection
 			this.owner = owner;
 			this.conventions = conventions;
 			WriteMetadata(metadata);
+			ConfigureRequest += request => request.PreAuthenticate = false;
 		}
 
 #if !NET_3_5

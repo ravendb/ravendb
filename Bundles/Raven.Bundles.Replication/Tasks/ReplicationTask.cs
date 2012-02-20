@@ -431,15 +431,13 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			try
 			{
-				var request = (HttpWebRequest)WebRequest.Create(destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl());
-				request.Credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
-				request.PreAuthenticate = true;
-				request.UseDefaultCredentials = true;
-				request.Timeout = replicationRequestTimeoutInMs;
-				using (var response = request.GetResponse())
-				using (var stream = response.GetResponseStream())
+				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl();
+				var credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
+				var request = new HttpRavenRequest(url, "GET", credentials);
+				request.ConfigureRequest = r => r.Timeout = replicationRequestTimeoutInMs;
+				using (var stream = request.GetResponseStream())
 				{
-					var etagFromServer = (SourceReplicationInformation)new JsonSerializer().Deserialize(new StreamReader(stream), typeof(SourceReplicationInformation));
+					var etagFromServer = new StreamReader(stream).JsonDeserialization<SourceReplicationInformation>();
 					return etagFromServer;
 				}
 			}
