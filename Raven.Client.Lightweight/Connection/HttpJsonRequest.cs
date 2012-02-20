@@ -139,7 +139,8 @@ namespace Raven.Client.Connection
 				}).Unwrap();
 		}
 #endif
-		public void ExecuteRequest()
+
+		public override void ExecuteRequest()
 		{
 			ReadResponseString();
 		}

@@ -60,7 +60,7 @@ namespace Raven.Abstractions.Connection
 			webRequest.GetResponse();
 		}
 
-		public void ExecuteRequest()
+		public virtual void ExecuteRequest()
 		{
 			using (webRequest.GetResponse())
 			{
