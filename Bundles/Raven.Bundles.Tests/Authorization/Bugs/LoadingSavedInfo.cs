@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 extern alias client;
 using System;
+using client::Raven.Client.Authorization;
 using client::Raven.Bundles.Authorization.Model;
 
 using Raven.Bundles.Tests.Versioning;
