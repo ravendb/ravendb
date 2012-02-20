@@ -81,6 +81,8 @@ namespace Raven.Client.Connection
 		/// <param name="serverClient">The server client.</param>
 		public void UpdateReplicationInformationIfNeeded(ServerClient serverClient)
 		{
+			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+				return;
 			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 				return;
 			lock (replicationLock)
