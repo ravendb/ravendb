@@ -293,8 +293,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl();
 				var request = new HttpRavenRequest(url, "POST", credentials);
-				request.Write(stream => jsonAttachments.WriteTo(new BsonWriter(stream)));
-				request.ExecuteRequest();
+				request.Write(jsonAttachments);
 				log.Info("Replicated {0} attachments to {1}", jsonAttachments.Length, destination);
 				return true;
 			}
@@ -327,23 +326,11 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
-				var request = (HttpWebRequest)WebRequest.Create(destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl());
-				request.UseDefaultCredentials = true;
-				request.PreAuthenticate = true;
-				request.ContentType = "application/json; charset=utf-8";
-				request.Credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
-				request.Method = "POST";
-				using (var stream = request.GetRequestStream())
-				using (var streamWriter = new StreamWriter(stream, Encoding.UTF8))
-				{
-					jsonDocuments.WriteTo(new JsonTextWriter(streamWriter));
-					streamWriter.Flush();
-					stream.Flush();
-				}
-				using (request.GetResponse())
-				{
-					log.Info("Replicated {0} documents to {1}", jsonDocuments.Length, destination);
-				}
+				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl();
+				var credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
+				var request = new HttpRavenRequest(url, "POST", credentials);
+				request.Write(jsonDocuments);
+				log.Info("Replicated {0} documents to {1}", jsonDocuments.Length, destination);
 				return true;
 			}
 			catch (WebException e)

@@ -1,6 +1,10 @@
 using System;
+
 using System.IO;
 using System.Net;
+using System.Text;
+using Newtonsoft.Json.Bson;
+using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Connection
 {
@@ -11,6 +15,7 @@ namespace Raven.Abstractions.Connection
 		private readonly ICredentials credentials;
 
 		public volatile HttpWebRequest webRequest;
+		private Stream postedStream;
 
 		public Action<WebRequest> ConfigureRequest = delegate { };
 
@@ -52,14 +57,37 @@ namespace Raven.Abstractions.Connection
 			get { return url; }
 		}
 
-		public void Write(Action<Stream> action)
+		public void Write(Stream streamToWrite)
+		{
+			postedStream = streamToWrite;
+			webRequest.ContentLength = streamToWrite.Length;
+			using (var stream = webRequest.GetRequestStream())
+			{
+				streamToWrite.CopyTo(stream);
+				stream.Flush();
+			}
+			ExecuteRequest();
+		}
+
+		public void Write(RavenJToken ravenJToken)
+		{
+			var streamToWrite = new MemoryStream();
+			ravenJToken.WriteTo(new BsonWriter(streamToWrite));
+			Write(streamToWrite);
+		}
+
+		public void Write(Action<StreamWriter> action)
 		{
 			using (var stream = webRequest.GetRequestStream())
 			{
-				action(stream);
+				using (var streamWriter = new StreamWriter(stream, Encoding.UTF8))
+				{
+					action(streamWriter);
+					streamWriter.Flush();
+				}
 				stream.Flush();
 			}
-			webRequest.GetResponse();
+			ExecuteRequest();
 		}
 
 		public virtual void ExecuteRequest()
@@ -68,7 +96,7 @@ namespace Raven.Abstractions.Connection
 			{
 			}
 		}
-
+		
 		public Stream GetResponseStream()
 		{
 			using (var response = webRequest.GetResponse())
