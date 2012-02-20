@@ -17,9 +17,13 @@ namespace Raven.Abstractions.Connection
 		private HttpWebRequest webRequest;
 		private Stream postedStream;
 		private RavenJToken postedToken;
-
-		public string ApiKey { get; set; }
 		private string currentOauthToken;
+
+		/// <summary>
+		/// The API Key to use when authenticating against a RavenDB server that
+		/// supports API Key authentication
+		/// </summary>
+		public string ApiKey { get; set; }
 
 		public HttpRavenRequest(string url, string method = "GET", ICredentials credentials = null, int timeout = 15000)
 		{
