@@ -5,6 +5,7 @@ using NLog;
 using NLog.Config;
 using Raven.Database.Server;
 using Raven.Tests.MultiGet;
+using Raven.Tests.Shard.BlogModel;
 using Raven.Tests.Storage.MultiThreaded;
 
 namespace Raven.Tryouts
@@ -29,8 +30,8 @@ namespace Raven.Tryouts
 					Environment.SetEnvironmentVariable("Run", i.ToString());
 					Console.Clear();
 					Console.WriteLine(i);
-					var x = new MultiGetNonStaleRequslts();
-						x.ShouldBeAbleToGetNonStaleResults();
+					using(var x = new CanQueryOnlyUsers())
+						x.WhenQueryingForUserById();
 				}
 			}
 			finally
