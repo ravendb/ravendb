@@ -70,6 +70,7 @@ namespace Raven.Tests.Shard.BlogModel
 
 			foreach (var shard in shards)
 			{
+				shard.Conventions.FailoverBehavior=FailoverBehavior.FailImmediately;
 				shard.Initialize();
 			}
 

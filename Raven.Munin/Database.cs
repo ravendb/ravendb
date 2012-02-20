@@ -12,6 +12,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using Newtonsoft.Json.Bson;
+using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Munin
@@ -151,10 +152,10 @@ namespace Raven.Munin
 		public IDisposable BeginTransaction()
 		{
 			if (CurrentTransactionId.Value != Guid.Empty)
-				return new StreamsPool.DisposableAction(() => { }); // no op, already in tx
+				return new DisposableAction(() => { }); // no op, already in tx
 
 			CurrentTransactionId.Value = Guid.NewGuid();
-			return new StreamsPool.DisposableAction(() =>
+			return new DisposableAction(() =>
 			{
 				if (CurrentTransactionId.Value != Guid.Empty) // tx not committed
 					Rollback();
@@ -167,7 +168,7 @@ namespace Raven.Munin
 
 			CurrentTransactionId.Value = Guid.Empty;
 
-			return new StreamsPool.DisposableAction(() =>
+			return new DisposableAction(() =>
 			{
 				CurrentTransactionId.Value = old;
 			});
@@ -345,7 +346,7 @@ namespace Raven.Munin
 
 			if (itemsCount < 10000) // for small data sizes, we cleanup on 100% waste
 				return wasteCount > itemsCount;
-			if (itemsCount < 100000) // for meduim data sizes, we cleanup on 50% waste
+			if (itemsCount < 100000) // for medium data sizes, we cleanup on 50% waste
 				return wasteCount > (itemsCount / 2);
 			return wasteCount > (itemsCount / 10); // on large data size, we cleanup on 10% waste
 		}

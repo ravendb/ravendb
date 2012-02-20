@@ -31,7 +31,6 @@ namespace Raven.Database.Config
 		private bool containerExternallySet;
 		private string dataDirectory;
 		private string pluginsDirectory;
-		private bool runInUnreliableYetFastModeThatIsNotSuitableForProduction;
 
 		public InMemoryRavenConfiguration()
 		{
@@ -613,15 +612,7 @@ namespace Raven.Database.Config
 
 		public AggregateCatalog Catalog { get; set; }
 
-		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction
-		{
-			get { return runInUnreliableYetFastModeThatIsNotSuitableForProduction; }
-			set
-			{
-				RunInMemory = value;
-				runInUnreliableYetFastModeThatIsNotSuitableForProduction = value;
-			}
-		}
+		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
 		private string indexStoragePath;
 		/// <summary>

@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json;
+using Raven.Client;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -34,6 +35,11 @@ namespace Raven.Tests.Security.OAuth
 			ravenConfiguration.OAuthTokenCertificate = CertGenerator.GenerateNewCertificate("RavenDB.Test");
 		}
 
+		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
+		{
+			// Do not create the default index "RavenDocumentsByEntityName".
+		}
+
 		public void Dispose()
 		{
 			IOExtensions.DeleteDirectory(path);
@@ -63,8 +69,7 @@ namespace Raven.Tests.Security.OAuth
 		[Fact]
 		public void RequestsWithAValidAccessTokenShouldBeAccepted()
 		{
-
-			using (var server = GetNewServer(false))
+			using (var server = GetNewServer())
 			{
 				var token = GetAccessToken(server);
 
@@ -83,7 +88,7 @@ namespace Raven.Tests.Security.OAuth
 		{
 			var request = GetNewWebRequest();
 
-			using (var server = GetNewServer(false))
+			using (var server = GetNewServer())
 			using (var response = request.MakeRequest())
 			{
 				Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -98,7 +103,7 @@ namespace Raven.Tests.Security.OAuth
 		public void RequestsWithAnInvalidAccessTokenShouldBeRejected()
 		{
 
-			using (var server = GetNewServer(false))
+			using (var server = GetNewServer())
 			{
 				var token = GetAccessToken(server, valid: false);
 
@@ -120,7 +125,7 @@ namespace Raven.Tests.Security.OAuth
 		public void RequestsWithAnExpiredAccessTokenShouldBeRejected()
 		{
 
-			using (var server = GetNewServer(false))
+			using (var server = GetNewServer())
 			{
 				var token = GetAccessToken(server, expired: true);
 
@@ -140,7 +145,7 @@ namespace Raven.Tests.Security.OAuth
 		[Fact]
 		public void RequestsWithAnAccessTokenThatDoesNotHaveTheNeededScopeShouldBeRejected()
 		{
-			using (var server = GetNewServer(false))
+			using (var server = GetNewServer())
 			{
 				var token = GetAccessToken(server, databases: "");
 

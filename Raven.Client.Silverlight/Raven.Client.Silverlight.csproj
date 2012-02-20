@@ -79,6 +79,9 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
+      <Link>Imports\Connection\WebResponseExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\BackupStatus.cs">
       <Link>Imports\Data\BackupStatus.cs</Link>
     </Compile>
@@ -505,9 +508,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\WebRequestEventArgs.cs">
       <Link>Imports\Connection\WebRequestEventArgs.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\WebResponseExtensions.cs">
-      <Link>Imports\Connection\WebResponseExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Converters\GuidConverter.cs">
       <Link>Imports\Converters\GuidConverter.cs</Link>

@@ -12,7 +12,9 @@ using System.ComponentModel.Composition.Hosting;
 using System.Threading;
 using Raven.Abstractions.Replication;
 using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
 using IOExtensions = database::Raven.Database.Extensions.IOExtensions;
@@ -44,19 +46,34 @@ namespace Raven.Bundles.Tests.Replication
 		private IDocumentStore CreateStoreAtPort(int port)
 		{
 			database::Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-			var ravenDbServer = new RavenDbServer(new database::Raven.Database.Config.RavenConfiguration
-			{
-				AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.All,
-				Catalog = {Catalogs = {new AssemblyCatalog(typeof (replication::Raven.Bundles.Replication.Triggers.AncestryPutTrigger).Assembly)}},
-				DataDirectory = "Data #" + servers.Count,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				Port = port
-			});
+			var assemblyCatalog = new AssemblyCatalog(typeof (replication::Raven.Bundles.Replication.Triggers.AncestryPutTrigger).Assembly);
+			var serverConfiguration = new database::Raven.Database.Config.RavenConfiguration
+			                          {
+			                          	AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.All,
+			                          	Catalog = {Catalogs = {assemblyCatalog}},
+			                          	DataDirectory = "Data #" + servers.Count,
+			                          	RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+			                          	RunInMemory = true,
+			                          	Port = port
+			                          };
+			ConfigureServer(serverConfiguration);
+			var ravenDbServer = new RavenDbServer(serverConfiguration);
+			ravenDbServer.Server.SetupTenantDatabaseConfiguration += configuration => configuration.Catalog.Catalogs.Add(assemblyCatalog);
 			servers.Add(ravenDbServer);
-			var documentStore = new DocumentStore{Url = ravenDbServer.Database.Configuration.ServerUrl};
+			var documentStore = new DocumentStore {Url = ravenDbServer.Database.Configuration.ServerUrl};
+			ConfigureStore(documentStore);
 			documentStore.Initialize();
+			documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = true;
 			stores.Add(documentStore);
 			return documentStore;
+		}
+
+		protected virtual void ConfigureServer(database::Raven.Database.Config.RavenConfiguration serverConfiguration)
+		{
+		}
+
+		protected virtual void ConfigureStore(DocumentStore documentStore)
+		{
 		}
 
 		public void Dispose()
@@ -99,22 +116,45 @@ namespace Raven.Bundles.Tests.Replication
 			RunReplication(stores[src], stores[dest]);
 		}
 
-		protected void RunReplication(IDocumentStore source, IDocumentStore destination, TransitiveReplicationOptions  transitiveReplicationBehavior = TransitiveReplicationOptions.None)
+		protected void RunReplication(IDocumentStore source, IDocumentStore destination, TransitiveReplicationOptions transitiveReplicationBehavior = TransitiveReplicationOptions.None)
 		{
 			Console.WriteLine("Replicating from {0} to {1}.", source.Url, destination.Url);
 			using (var session = source.OpenSession())
 			{
+				var replicationDestination = new ReplicationDestination
+				{
+					Url = destination.Url,
+					TransitiveReplicationBehavior = transitiveReplicationBehavior,
+				};
+				SetupDestination(replicationDestination);
 				session.Store(new ReplicationDocument
 				{
-					Destinations = {new ReplicationDestination
-					{
-						Url = destination.Url,
-						TransitiveReplicationBehavior = transitiveReplicationBehavior
-						// servers[dest].Database.Configuration.ServerUrl
-					}}
+					Destinations = {replicationDestination}
 				});
 				session.SaveChanges();
 			}
+		}
+
+		protected virtual void SetupDestination(ReplicationDestination replicationDestination)
+		{
+			
+		}
+
+		protected void SetupReplication(IDatabaseCommands source, string url)
+		{
+			source.Put(replication::Raven.Bundles.Replication.ReplicationConstants.RavenReplicationDestinations,
+			           null, new RavenJObject
+			                 {
+			                 	{
+			                 	"Destinations", new RavenJArray
+			                 	                {
+			                 	                	new RavenJObject
+			                 	                	{
+			                 	                		{"Url", url}
+			                 	                	}
+			                 	                }
+			                 	}
+			                 }, new RavenJObject());
 		}
 
 		protected TDocument WaitForDocument<TDocument>(IDocumentStore store2, string expectedId) where TDocument : class
@@ -133,6 +173,17 @@ namespace Raven.Bundles.Tests.Replication
 			}
 			Assert.NotNull(document);
 			return document;
+		}
+
+		protected void WaitForDocument(IDatabaseCommands commands, string expectedId)
+		{
+			for (int i = 0; i < RetriesCount; i++)
+			{
+				if (commands.Head(expectedId) != null)
+					break;
+				Thread.Sleep(100);
+			}
+			Assert.NotNull(commands.Head(expectedId));
 		}
 	}
 }

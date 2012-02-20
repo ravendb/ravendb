@@ -6,9 +6,9 @@ using Raven.Client.Linq;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace Raven.Tests.MailingList.PhilJones
 {
-	public class PhilJones
+	public class PhilJones1
 	{
 		public class Bar
 		{

@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using NLog;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
@@ -40,14 +41,15 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private int replicationAttempts;
 		private int workCounter;
-		private int replicationRequestTimeoutInMs;
-
+		private HttpRavenRequestFactory httpRavenRequestFactory;
 		public void Execute(DocumentDatabase database)
 		{
 			docDb = database;
-			replicationRequestTimeoutInMs =
+			var replicationRequestTimeoutInMs =
 				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 7500;
 			
+			httpRavenRequestFactory = new HttpRavenRequestFactory(replicationRequestTimeoutInMs);
+
 			new Thread(Execute)
 			{
 				IsBackground = true,
@@ -230,9 +232,9 @@ namespace Raven.Bundles.Replication.Tasks
 				if (IsFirstFailue(destination))
 				{
 					log.Info(
-						"This is the first failure for {0}, assuming transinet failure and trying again",
+						"This is the first failure for {0}, assuming transient failure and trying again",
 						destination);
-					if (TryReplicationAttachments(destination, attachments))// success on second faile
+					if (TryReplicationAttachments(destination, attachments))// success on second fail
 						return true;
 				}
 				IncrementFailureCount(destination);
@@ -252,9 +254,9 @@ namespace Raven.Bundles.Replication.Tasks
 				if (IsFirstFailue(destination))
 				{
 					log.Info(
-						"This is the first failure for {0}, assuming transinet failure and trying again",
+						"This is the first failure for {0}, assuming transient failure and trying again",
 						destination);
-					if (TryReplicationDocuments(destination, jsonDocuments))// success on second faile
+					if (TryReplicationDocuments(destination, jsonDocuments))// success on second fail
 						return true;
 				}
 				IncrementFailureCount(destination);
@@ -289,20 +291,11 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			try
 			{
-				var request = (HttpWebRequest)WebRequest.Create(destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl());
-				request.UseDefaultCredentials = true;
-				request.PreAuthenticate = true;
-				request.Credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
-				request.Method = "POST";
-				using (var stream = request.GetRequestStream())
-				{
-					jsonAttachments.WriteTo(new BsonWriter(stream));
-					stream.Flush();
-				}
-				using (request.GetResponse())
-				{
-					log.Info("Replicated {0} attachments to {1}", jsonAttachments.Length, destination);
-				}
+				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl();
+				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
+				request.WriteBson(jsonAttachments);
+				request.ExecuteRequest();
+				log.Info("Replicated {0} attachments to {1}", jsonAttachments.Length, destination);
 				return true;
 			}
 			catch (WebException e)
@@ -310,9 +303,19 @@ namespace Raven.Bundles.Replication.Tasks
 				var response = e.Response as HttpWebResponse;
 				if (response != null)
 				{
-					using (var streamReader = new StreamReader(response.GetResponseStream()))
+					using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
 					{
 						var error = streamReader.ReadToEnd();
+						try
+						{
+							var ravenJObject = RavenJObject.Parse(error);
+							log.WarnException("Replication to " + destination + " had failed\r\n" + ravenJObject.Value<string>("Error"), e);
+							return false;
+						}
+						catch (Exception)
+						{
+						}
+
 						log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
 					}
 				}
@@ -334,23 +337,11 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
-				var request = (HttpWebRequest)WebRequest.Create(destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl());
-				request.UseDefaultCredentials = true;
-				request.PreAuthenticate = true;
-				request.ContentType = "application/json; charset=utf-8";
-				request.Credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
-				request.Method = "POST";
-				using (var stream = request.GetRequestStream())
-				using (var streamWriter = new StreamWriter(stream, Encoding.UTF8))
-				{
-					jsonDocuments.WriteTo(new JsonTextWriter(streamWriter));
-					streamWriter.Flush();
-					stream.Flush();
-				}
-				using (request.GetResponse())
-				{
-					log.Info("Replicated {0} documents to {1}", jsonDocuments.Length, destination);
-				}
+				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl();
+				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
+				request.Write(jsonDocuments);
+				request.ExecuteRequest();
+				log.Info("Replicated {0} documents to {1}", jsonDocuments.Length, destination);
 				return true;
 			}
 			catch (WebException e)
@@ -438,17 +429,9 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			try
 			{
-				var request = (HttpWebRequest)WebRequest.Create(destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl());
-				request.Credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
-				request.PreAuthenticate = true;
-				request.UseDefaultCredentials = true;
-				request.Timeout = replicationRequestTimeoutInMs;
-				using (var response = request.GetResponse())
-				using (var stream = response.GetResponseStream())
-				{
-					var etagFromServer = (SourceReplicationInformation)new JsonSerializer().Deserialize(new StreamReader(stream), typeof(SourceReplicationInformation));
-					return etagFromServer;
-				}
+				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl();
+				var request = httpRavenRequestFactory.Create(url, "GET", destination.ConnectionStringOptions);
+				return request.ExecuteRequest<SourceReplicationInformation>();
 			}
 			catch (WebException e)
 			{
@@ -508,15 +491,13 @@ namespace Raven.Bundles.Replication.Tasks
 				ReplicationOptionsBehavior = x.TransitiveReplicationBehavior,
 				CurrentDatabaseId = docDb.TransactionalStorage.Id.ToString()
 			};
-			if (string.IsNullOrEmpty(x.ConnectionStringName))
-			{
-				replicationStrategy.ConnectionStringOptions = new RavenConnectionStringOptions
-				{
-					Url = x.Url
-				};
-				return replicationStrategy;
-			}
+			return string.IsNullOrEmpty(x.ConnectionStringName) ?
+				CreateReplicationStrategyFromDocument(x, replicationStrategy) : 
+				CreateReplicationStrategyFromConnectionString(x, replicationStrategy);
+		}
 
+		private static ReplicationStrategy CreateReplicationStrategyFromConnectionString(ReplicationDestination x, ReplicationStrategy replicationStrategy)
+		{
 			var connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionStringName(x.ConnectionStringName);
 			connectionStringParser.Parse();
 			var options = connectionStringParser.ConnectionStringOptions;
@@ -531,6 +512,24 @@ namespace Raven.Bundles.Replication.Tasks
 			replicationStrategy.ConnectionStringOptions = options;
 			return replicationStrategy;
 		}
+
+		private ReplicationStrategy CreateReplicationStrategyFromDocument(ReplicationDestination x, ReplicationStrategy replicationStrategy)
+		{
+			var url = x.Url;
+			if (string.IsNullOrEmpty(x.Database) == false)
+			{
+				url = "databases/" + x.Database;
+			}
+			replicationStrategy.ConnectionStringOptions = new RavenConnectionStringOptions
+			{
+				Url = url,
+				ApiKey = x.ApiKey,
+				Credentials = string.IsNullOrEmpty(x.Domain) ?
+				                                             	new NetworkCredential(x.Username, x.Password) :
+				                                             	                                              	new NetworkCredential(x.Username, x.Password, x.Domain),
+			};
+			return replicationStrategy;
+		}
 	}
 
 	public class ReplicationStrategy
@@ -541,7 +540,7 @@ namespace Raven.Bundles.Replication.Tasks
 				return false;
 			if(document.Metadata.ContainsKey(Constants.NotForReplication) && document.Metadata.Value<bool>(Constants.NotForReplication) ) // not explicitly marked to skip
 				return false;
-			if (document.Metadata[ReplicationConstants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propgate the conflict
+			if (document.Metadata[ReplicationConstants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propagate the conflict
 				return false;
 
 			switch (ReplicationOptionsBehavior)
@@ -564,7 +563,7 @@ namespace Raven.Bundles.Replication.Tasks
 			if(attachment.Metadata.ContainsKey(Constants.NotForReplication) && attachment.Metadata.Value<bool>(Constants.NotForReplication) )
 				return false;
 
-			if(attachment.Metadata.ContainsKey(ReplicationConstants.RavenReplicationConflict))// don't replicate conflicted documents, that just propgate the conflict
+			if(attachment.Metadata.ContainsKey(ReplicationConstants.RavenReplicationConflict))// don't replicate conflicted documents, that just propagate the conflict
 				return false;
 
 			switch (ReplicationOptionsBehavior)

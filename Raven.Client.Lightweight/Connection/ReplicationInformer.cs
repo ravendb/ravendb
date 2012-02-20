@@ -30,7 +30,7 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public class ReplicationInformer
 	{
-		private Logger log = LogManager.GetCurrentClassLogger();
+		private readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		private readonly DocumentConvention conventions;
 		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
@@ -81,6 +81,8 @@ namespace Raven.Client.Connection
 		/// <param name="serverClient">The server client.</param>
 		public void UpdateReplicationInformationIfNeeded(ServerClient serverClient)
 		{
+			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+				return;
 			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 				return;
 			lock (replicationLock)

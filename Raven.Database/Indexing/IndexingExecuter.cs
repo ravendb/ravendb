@@ -73,7 +73,7 @@ namespace Raven.Database.Indexing
 				{
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 					indexesToWorkOn = result.Select(x => x.Item1).ToList();
-					IndexingTaskExecuter.ExecuteAll(context.Configuration, scheduler, result, (indexToWorkOn,_) =>
+					BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, result, (indexToWorkOn,_) =>
 					{
 						var index = indexToWorkOn.Item1;
 						var docs = indexToWorkOn.Item2;
@@ -118,7 +118,7 @@ namespace Raven.Database.Indexing
 			actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
 		}
 
-		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(ICollection<IndexToWorkOn> indexesToWorkOn, JsonDocument[] jsonDocs)
+		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, JsonDocument[] jsonDocs)
 		{
 			var last = jsonDocs.Last();
 
@@ -132,18 +132,19 @@ namespace Raven.Database.Indexing
 
 			var documentRetriever = new DocumentRetriever(null, context.ReadTriggers);
 
-			var filteredDocs = jsonDocs.AsParallel()
-				.Select(doc => documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index))
-				.Where(doc => doc != null)
-				.Select(x => new { Doc = x, Json = JsonToExpando.Convert(x.ToJson()) })
-				.ToList();
+			var filteredDocs =
+				BackgroundTaskExecuter.Instance.Apply(jsonDocs, doc =>
+				{
+					doc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
+					return doc == null ? null : new {Doc = doc, Json = JsonToExpando.Convert(doc.ToJson())};
+				});
 
 			log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
 
 			var results = new Tuple<IndexToWorkOn, IndexingBatch>[indexesToWorkOn.Count];
 			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
 
-			IndexingTaskExecuter.ExecuteAll(context.Configuration, scheduler, indexesToWorkOn, (indexToWorkOn, i) =>
+			BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, indexesToWorkOn, (indexToWorkOn, i) =>
 			{
 				var indexLastInedexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
 				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0)

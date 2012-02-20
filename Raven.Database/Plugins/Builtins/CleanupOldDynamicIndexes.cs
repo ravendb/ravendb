@@ -4,27 +4,43 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Threading;
 using System.Linq;
+using Raven.Database.Indexing;
 using Raven.Database.Queries;
 
 namespace Raven.Database.Plugins.Builtins
 {
-	public class CleanupOldDynamicIndexes : AbstractBackgroundTask
+	public class CleanupOldDynamicIndexes : IStartupTask, IRepeatedAction
 	{
-		protected override bool HandleWork()
-		{
-			var dynamicQueryRunner = Database.ExtensionsState.Values.OfType<DynamicQueryRunner>().FirstOrDefault();
-			if (dynamicQueryRunner == null)
-				return false;
+		private DocumentDatabase database;
 
-			dynamicQueryRunner.CleanupCache();
-			return false;
+		public void Execute(DocumentDatabase theDatabase)
+		{
+			if (theDatabase == null) 
+				throw new ArgumentNullException("theDatabase");
+			
+			database = theDatabase;
+
+			BackgroundTaskExecuter.Instance.Repeat(this);
 		}
 
-		protected override TimeSpan TimeoutForNextWork()
+		public TimeSpan RepeatDuration
 		{
-			return Database.Configuration.TempIndexCleanupPeriod;
+			get { return database.Configuration.TempIndexCleanupPeriod; }
+		}
+
+		public bool IsValid
+		{
+			get { return database.Disposed == false; }
+		}
+
+		public void Execute()
+		{
+			var dynamicQueryRunner = database.ExtensionsState.Values.OfType<DynamicQueryRunner>().FirstOrDefault();
+			if (dynamicQueryRunner == null)
+				return;
+
+			dynamicQueryRunner.CleanupCache();
 		}
 	}
 }

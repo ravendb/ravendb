@@ -28,6 +28,9 @@ namespace Raven.Database.Extensions
 					catch (IOException)
 					{
 					}
+					catch (UnauthorizedAccessException)
+					{
+					}
 					Directory.Delete(directory, true);
 					return;
 				}
@@ -40,6 +43,9 @@ namespace Raven.Database.Extensions
 							File.SetAttributes(childDir, FileAttributes.Normal);
 						}
 						catch (IOException)
+						{
+						}
+						catch (UnauthorizedAccessException)
 						{
 						}
 					}

@@ -82,6 +82,19 @@ namespace Raven.Abstractions.Extensions
 		{
 			return (T)CreateDefaultJsonSerializer().Deserialize(new RavenJTokenReader(self), typeof(T));
 		}
+		
+		/// <summary>
+		/// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
+		/// </summary>
+		public static T JsonDeserialization<T>(this StreamReader self)
+		{
+			return CreateDefaultJsonSerializer().Deserialize<T>(self);
+		}
+
+		public static T Deserialize<T>(this JsonSerializer self, TextReader reader)
+		{
+			return (T)self.Deserialize(reader, typeof(T));
+		}
 
 		private static readonly IContractResolver contractResolver = new DefaultServerContractResolver(shareCache: true)
 		{
@@ -129,6 +142,5 @@ namespace Raven.Abstractions.Extensions
 			}
 			return jsonSerializer;
 		}
-
 	}
 }

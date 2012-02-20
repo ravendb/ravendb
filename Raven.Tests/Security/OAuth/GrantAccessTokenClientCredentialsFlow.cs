@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Net;
+using Raven.Client;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -31,12 +32,17 @@ namespace Raven.Tests.Security.OAuth
 
 		}
 
-		protected override void ConfigureServer(Database.Config.RavenConfiguration ravenConfiguration)
+		protected override void ConfigureServer(RavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 			ravenConfiguration.AuthenticationMode = "OAuth";
 			ravenConfiguration.OAuthTokenCertificate = CertGenerator.GenerateNewCertificate("RavenDB.Test");
 			ravenConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(FakeAuthenticateClient)));
+		}
+
+		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
+		{
+			// Do not create the default index "RavenDocumentsByEntityName".
 		}
 
 		public class FakeAuthenticateClient : IAuthenticateClient
@@ -75,7 +81,7 @@ namespace Raven.Tests.Security.OAuth
 
 			var request = GetNewValidTokenRequest();
 
-			using (var server = GetNewServer(false))
+			using (var server = GetNewServer())
 			using (var response = request.MakeRequest())
 			{
 				Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -98,7 +104,7 @@ namespace Raven.Tests.Security.OAuth
 			var request = GetNewValidTokenRequest()
 				.WithAccept("text/plain");
 
-			using (var server = GetNewServer(false))
+			using (var server = GetNewServer())
 			using (var response = request.MakeRequest())
 			{
 				Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -118,7 +124,7 @@ namespace Raven.Tests.Security.OAuth
 			var request = GetNewValidTokenRequest()
 				.WithoutHeader("grant_type");
 
-			using (var server = GetNewServer(false))
+			using (var server = GetNewServer())
 			using (var response = request.MakeRequest())
 			{
 				Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -139,7 +145,7 @@ namespace Raven.Tests.Security.OAuth
 			var request = GetNewValidTokenRequest()
 				.WithHeader("grant_type", "another");
 
-			using (var server = GetNewServer(false))
+			using (var server = GetNewServer())
 			using (var response = request.MakeRequest())
 			{
 				Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -159,7 +165,7 @@ namespace Raven.Tests.Security.OAuth
 			var request = GetNewValidTokenRequest()
 				.WithoutCredentials();
 
-			using (var server = GetNewServer(false))
+			using (var server = GetNewServer())
 			using (var response = request.MakeRequest())
 			{
 				Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -178,7 +184,7 @@ namespace Raven.Tests.Security.OAuth
 			var request = GetNewValidTokenRequest()
 				.WithBasicCredentials(baseUrl, validClientUsername, "");
 
-			using (var server = GetNewServer(false))
+			using (var server = GetNewServer())
 			using (var response = request.MakeRequest())
 			{
 				Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);

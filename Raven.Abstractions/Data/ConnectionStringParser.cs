@@ -19,6 +19,8 @@ namespace Raven.Abstractions.Data
 		public string Url { get; set; }
 		public string ApiKey { get; set; }
 
+		internal string CurrentOAuthToken { get; set; }
+
 		public override string ToString()
 		{
 			var user = Credentials == null ? "<none>" : Credentials.UserName;

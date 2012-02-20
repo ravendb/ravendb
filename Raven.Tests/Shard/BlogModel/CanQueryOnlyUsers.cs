@@ -11,13 +11,12 @@ namespace Raven.Tests.Shard.BlogModel
 			{
 				var user = session.Load<User>("users/1");
 
-				// one request for the replication destination support
-				Assert.Equal(2, servers["Users"].Server.NumberOfRequests);
+				Assert.Equal(1, servers["Users"].Server.NumberOfRequests);
 				foreach (var ravenDbServer in servers)
 				{
 					if (ravenDbServer.Key == "Users")
 						continue;
-					Assert.Equal(1, ravenDbServer.Value.Server.NumberOfRequests);
+					Assert.Equal(0, ravenDbServer.Value.Server.NumberOfRequests);
 				}
 			}
 		}

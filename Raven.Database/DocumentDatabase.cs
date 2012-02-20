@@ -298,12 +298,18 @@ namespace Raven.Database
 
 		public IndexStorage IndexStorage { get; private set; }
 
+		public event EventHandler Disposing;
+
 		#region IDisposable Members
 
 		public void Dispose()
 		{
 			if (disposed)
 				return;
+
+			var onDisposing = Disposing;
+			if(onDisposing!=null)
+				onDisposing(this, EventArgs.Empty);
 
 			var exceptionAggregator = new ExceptionAggregator(log, "Could not properly dispose of DatabaseDocument");
 

@@ -116,7 +116,9 @@
     <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Impl\ExceptionAggregator.cs" />
-    <Compile Include="Indexing\IndexingTaskExecuter.cs" />
+    <Compile Include="Indexing\DefaultBackgroundTaskExecuter.cs" />
+    <Compile Include="Indexing\IBackgroundTaskExecuter.cs" />
+    <Compile Include="Indexing\BackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IndexBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\NotForQueryingAttribute.cs" />
     <Compile Include="Indexing\Sorting\RandomFieldComparatorSource.cs" />
@@ -124,6 +126,8 @@
     <Compile Include="Indexing\Sorting\RandomSortField.cs" />
     <Compile Include="Linq\Ast\TransformDynamicLambdaExpressions.cs" />
     <Compile Include="Plugins\Builtins\InvalidDocumentNames.cs" />
+    <Compile Include="Plugins\Builtins\Tenants\ModifiedTenantDatabase.cs" />
+    <Compile Include="Plugins\Builtins\Tenants\TenantDatabaseModified.cs" />
     <Compile Include="Rhino.Licensing\AbstractLicenseValidator.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryClient.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryHost.cs" />
@@ -207,7 +211,7 @@
     <Compile Include="Linq\Ast\TransformNullCoalasingOperatorTransformer.cs" />
     <Compile Include="Plugins\AbstractAnalyzerGenerator.cs" />
     <Compile Include="Plugins\Builtins\CreateSilverlightIndexes.cs" />
-    <Compile Include="Plugins\Builtins\RemoveTenantDatabase.cs" />
+    <Compile Include="Plugins\Builtins\Tenants\RemoveTenantDatabase.cs" />
     <Compile Include="Plugins\IAlterConfiguration.cs" />
     <Compile Include="Queries\FacetedQueryRunner.cs" />
     <Compile Include="Queries\FacetedQueryRunnerExtensions.cs" />
@@ -467,8 +471,8 @@
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Util\BoundedMemoryTarget.cs" />
+    <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\PortUtil.cs" />
-    <Compile Include="Util\WeakEvent.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
