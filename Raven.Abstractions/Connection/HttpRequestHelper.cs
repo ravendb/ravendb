@@ -3,9 +3,9 @@ using System.IO;
 using System.Net;
 using System.Text;
 
-namespace Raven.Client.Connection
+namespace Raven.Abstractions.Connection
 {
-	public class HttpJsonRequestHelper
+	public class HttpRequestHelper
 	{
 		public static void WriteDataToRequest(HttpWebRequest req, string data)
 		{
@@ -83,6 +83,5 @@ namespace Raven.Client.Connection
 				}
 			}
 		}
-
 	}
 }

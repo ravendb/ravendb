@@ -74,7 +74,6 @@
     <Compile Include="Connection\CachedRequest.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
-    <Compile Include="Connection\HttpJsonRequestHelper.cs" />
     <Compile Include="Connection\IDatabaseCommands.cs" />
     <Compile Include="Connection\IRavenQueryInspector.cs" />
     <Compile Include="Connection\JsonExtensions.cs" />
@@ -93,7 +92,6 @@
     <Compile Include="Connection\SerializationHelper.cs" />
     <Compile Include="Connection\ServerClient.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
-    <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Converters\GuidConverter.cs" />
     <Compile Include="Converters\Int32Converter.cs" />
     <Compile Include="Converters\Int64Converter.cs" />

@@ -47,22 +47,29 @@ namespace Raven.Bundles.Tests.Replication
 		{
 			database::Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var assemblyCatalog = new AssemblyCatalog(typeof (replication::Raven.Bundles.Replication.Triggers.AncestryPutTrigger).Assembly);
-			var ravenDbServer = new RavenDbServer(new database::Raven.Database.Config.RavenConfiguration
-			{
-			AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.All,
-			Catalog = {Catalogs = {assemblyCatalog}},
-			DataDirectory = "Data #" + servers.Count,
-			RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-			RunInMemory = true,
-			Port = port
-			});
+			var serverConfiguration = new database::Raven.Database.Config.RavenConfiguration
+			                          {
+			                          	AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.All,
+			                          	Catalog = {Catalogs = {assemblyCatalog}},
+			                          	DataDirectory = "Data #" + servers.Count,
+			                          	RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+			                          	RunInMemory = true,
+			                          	Port = port
+			                          };
+			ConfigureServer(serverConfiguration);
+			var ravenDbServer = new RavenDbServer(serverConfiguration);
 			ravenDbServer.Server.SetupTenantDatabaseConfiguration += configuration => configuration.Catalog.Catalogs.Add(assemblyCatalog);
 			servers.Add(ravenDbServer);
 			var documentStore = new DocumentStore {Url = ravenDbServer.Database.Configuration.ServerUrl};
 			ConfigureStore(documentStore);
 			documentStore.Initialize();
+			documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = true;
 			stores.Add(documentStore);
 			return documentStore;
+		}
+
+		protected virtual void ConfigureServer(database::Raven.Database.Config.RavenConfiguration serverConfiguration)
+		{
 		}
 
 		protected virtual void ConfigureStore(DocumentStore documentStore)

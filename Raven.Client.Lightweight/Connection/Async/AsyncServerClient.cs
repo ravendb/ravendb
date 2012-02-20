@@ -17,6 +17,7 @@ using System.Transactions;
 using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;

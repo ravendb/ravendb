@@ -9,6 +9,7 @@ using System.Net;
 #if SILVERLIGHT
 using System.Net.Browser;
 #endif
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
