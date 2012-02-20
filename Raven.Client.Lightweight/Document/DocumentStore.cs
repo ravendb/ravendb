@@ -8,8 +8,9 @@ using System.IO;
 using System.Net;
 #if SILVERLIGHT
 using System.Net.Browser;
-#endif
+#else
 using Raven.Abstractions.Connection;
+#endif
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
