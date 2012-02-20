@@ -3,63 +3,104 @@ using System.IO;
 using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Connection
 {
+	public class HttpRavenRequestFactory
+	{
+		private readonly int replicationRequestTimeoutInMs;
+
+		public HttpRavenRequestFactory(int replicationRequestTimeoutInMs)
+		{
+			this.replicationRequestTimeoutInMs = replicationRequestTimeoutInMs;
+		}
+
+		private bool RefreshOauthToken(RavenConnectionStringOptions options, WebResponse response)
+		{
+			var oauthSource = response.Headers["OAuth-Source"];
+			if (string.IsNullOrEmpty(oauthSource))
+				return false;
+
+			var authRequest = PrepareOAuthRequest(options, oauthSource);
+			using (var authResponse = authRequest.GetResponse())
+			using (var stream = authResponse.GetResponseStreamWithHttpDecompression())
+			using (var reader = new StreamReader(stream))
+			{
+				options.CurrentOAuthToken = "Bearer " + reader.ReadToEnd();
+			}
+			return true;
+		}
+		private HttpWebRequest PrepareOAuthRequest(RavenConnectionStringOptions options,string oauthSource)
+		{
+			var authRequest = (HttpWebRequest)System.Net.WebRequest.Create(oauthSource);
+			authRequest.Credentials = options.Credentials;
+			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
+			authRequest.Accept = "application/json;charset=UTF-8";
+
+			authRequest.Headers["grant_type"] = "client_credentials";
+
+			if (string.IsNullOrEmpty(options.ApiKey) == false)
+				authRequest.Headers["Api-Key"] = options.ApiKey;
+
+			return authRequest;
+		}
+
+		public void ConfigureRequest(RavenConnectionStringOptions options,WebRequest request)
+		{
+			request.Credentials = options.Credentials ?? CredentialCache.DefaultNetworkCredentials;
+			request.Timeout = replicationRequestTimeoutInMs;
+			if (string.IsNullOrEmpty(options.CurrentOAuthToken) == false)
+				request.Headers["Authorization"] = options.CurrentOAuthToken;
+		}
+
+		public HttpRavenRequest Create(string url, string method, RavenConnectionStringOptions connectionStringOptions)
+		{
+			return new HttpRavenRequest(url, method, ConfigureRequest, RefreshOauthToken, connectionStringOptions);
+		}
+	}
+
 	public class HttpRavenRequest
 	{
 		private readonly string url;
 		private readonly string method;
-		private readonly int timeout;
+		private readonly Action<RavenConnectionStringOptions,WebRequest> configureRequest;
+		private readonly Func<RavenConnectionStringOptions,WebResponse, bool> handleUnauthorizedResponse;
+		private readonly RavenConnectionStringOptions connectionStringOptions;
 
 		private HttpWebRequest webRequest;
 
 		private Stream postedStream;
 		private RavenJToken postedToken;
-		private string currentOauthToken;
 		private bool writeBson;
 
-		/// <summary>
-		/// The API Key to use when authenticating against a RavenDB server that
-		/// supports API Key authentication
-		/// </summary>
-		public string ApiKey { get; set; }
-
-		/// <summary>
-		/// The credentials to use when authenticating against a RavenDB server that
-		/// supports credentials authentication
-		/// </summary>
-		public ICredentials Credentials { get; set; }
-
+	
 		public HttpWebRequest WebRequest
 		{
 			get { return webRequest ?? (webRequest = CreateRequest()); }
 			set { webRequest = value; }
 		}
 
-		public HttpRavenRequest(string url, string method = "GET", int timeout = 15000)
+		public HttpRavenRequest(string url, string method, Action<RavenConnectionStringOptions, WebRequest> configureRequest, Func<RavenConnectionStringOptions,WebResponse, bool> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions)
 		{
 			this.url = url;
 			this.method = method;
-			this.timeout = timeout;
+			this.configureRequest = configureRequest;
+			this.handleUnauthorizedResponse = handleUnauthorizedResponse;
+			this.connectionStringOptions = connectionStringOptions;
 		}
 
 		private HttpWebRequest CreateRequest()
 		{
 			var request = (HttpWebRequest)System.Net.WebRequest.Create(url);
 			request.Method = method;
-			request.Timeout = timeout;
 			request.Headers["Accept-Encoding"] = "deflate,gzip";
 			request.ContentType = "application/json; charset=utf-8";
 			request.UseDefaultCredentials = true;
 			request.PreAuthenticate = true;
-			request.Credentials = Credentials;
-
-			if (string.IsNullOrEmpty(currentOauthToken) == false)
-				request.Headers["Authorization"] = currentOauthToken;
-
+			configureRequest(connectionStringOptions, request);
 			return request;
 		}
 
@@ -150,29 +191,11 @@ namespace Raven.Abstractions.Connection
 						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
 						throw;
 
-					HandleUnauthorizedResponse(e.Response);
+					if (handleUnauthorizedResponse != null && handleUnauthorizedResponse(connectionStringOptions, e.Response))
+					{
+						RecreateWebRequest();
+					}
 				}
-			}
-		}
-
-		private void HandleUnauthorizedResponse(WebResponse response)
-		{
-			RefreshOauthToken(response);
-			RecreateWebRequest();
-		}
-
-		private void RefreshOauthToken(WebResponse response)
-		{
-			var oauthSource = response.Headers["OAuth-Source"];
-			if (string.IsNullOrEmpty(oauthSource))
-				return;
-
-			var authRequest = PrepareOAuthRequest(oauthSource);
-			using (var authResponse = authRequest.GetResponse())
-			using (var stream = authResponse.GetResponseStreamWithHttpDecompression())
-			using (var reader = new StreamReader(stream))
-			{
-				currentOauthToken = "Bearer " + reader.ReadToEnd();
 			}
 		}
 
@@ -196,21 +219,6 @@ namespace Raven.Abstractions.Connection
 				}
 			}
 			WebRequest = newWebRequest;
-		}
-
-		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
-		{
-			var authRequest = (HttpWebRequest)System.Net.WebRequest.Create(oauthSource);
-			authRequest.Credentials = Credentials;
-			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
-			authRequest.Accept = "application/json;charset=UTF-8";
-
-			authRequest.Headers["grant_type"] = "client_credentials";
-
-			if (string.IsNullOrEmpty(ApiKey) == false)
-				WebRequest.Headers["Api-Key"] = ApiKey;
-
-			return authRequest;
 		}
 
 	}

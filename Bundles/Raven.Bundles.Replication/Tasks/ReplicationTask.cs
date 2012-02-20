@@ -41,14 +41,15 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private int replicationAttempts;
 		private int workCounter;
-		private int replicationRequestTimeoutInMs;
-
+		private HttpRavenRequestFactory httpRavenRequestFactory;
 		public void Execute(DocumentDatabase database)
 		{
 			docDb = database;
-			replicationRequestTimeoutInMs =
+			var replicationRequestTimeoutInMs =
 				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 7500;
 			
+			httpRavenRequestFactory = new HttpRavenRequestFactory(replicationRequestTimeoutInMs);
+
 			new Thread(Execute)
 			{
 				IsBackground = true,
@@ -291,11 +292,7 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl();
-				var request = new HttpRavenRequest(url, "POST")
-				{
-					Credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials,
-					ApiKey = destination.ConnectionStringOptions.ApiKey
-				};
+				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 				request.WriteBson(jsonAttachments);
 				request.ExecuteRequest();
 				log.Info("Replicated {0} attachments to {1}", jsonAttachments.Length, destination);
@@ -341,11 +338,7 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl();
-				var request = new HttpRavenRequest(url, "POST")
-				{
-					Credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials,
-					ApiKey = destination.ConnectionStringOptions.ApiKey
-				};
+				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 				request.Write(jsonDocuments);
 				request.ExecuteRequest();
 				log.Info("Replicated {0} documents to {1}", jsonDocuments.Length, destination);
@@ -437,11 +430,7 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl();
-				var request = new HttpRavenRequest(url, "GET", replicationRequestTimeoutInMs)
-				{
-					Credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials,
-					ApiKey = destination.ConnectionStringOptions.ApiKey
-				};
+				var request = httpRavenRequestFactory.Create(url, "GET", destination.ConnectionStringOptions);
 				return request.ExecuteRequest<SourceReplicationInformation>();
 			}
 			catch (WebException e)
