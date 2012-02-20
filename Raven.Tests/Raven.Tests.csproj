@@ -544,6 +544,7 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\PhilJones\Projections.cs" />
     <Compile Include="MailingList\TypeNameHandlingWithCollectionsTest.cs" />
     <Compile Include="MailingList\Adrian.cs" />
     <Compile Include="MailingList\Alexander.cs" />
@@ -577,10 +578,10 @@
     <Compile Include="MailingList\Mark.cs" />
     <Compile Include="MailingList\Micha.cs" />
     <Compile Include="MailingList\NullableEnums.cs" />
-    <Compile Include="MailingList\PhilJones88.cs" />
+    <Compile Include="MailingList\PhilJones\PhilJones88.cs" />
     <Compile Include="MailingList\RangeQueriesOverSum.cs" />
     <Compile Include="MailingList\MultiLoad.cs" />
-    <Compile Include="MailingList\PhilJones.cs" />
+    <Compile Include="MailingList\PhilJones\PhilJones.cs" />
     <Compile Include="MailingList\Random.cs" />
     <Compile Include="MailingList\RavenDbPutTest.cs" />
     <Compile Include="MailingList\NicolasGarfinkiel.cs" />
