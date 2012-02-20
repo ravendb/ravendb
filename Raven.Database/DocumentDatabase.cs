@@ -1343,7 +1343,7 @@ namespace Raven.Database
 			return totalIndexSize + TransactionalStorage.GetDatabaseSizeInBytes();
 		}
 
-		public Guid GetIndexEtag(string indexName)
+		public Guid GetIndexEtag(string indexName, Guid? expectedIndexEtag)
 		{
 			Guid lastDocEtag = Guid.Empty;
 			Guid? lastReducedEtag = null;
@@ -1371,7 +1371,18 @@ namespace Raven.Database
 				{
 					list.AddRange(lastReducedEtag.Value.ToByteArray());
 				}
-				return new Guid(md5.ComputeHash(list.ToArray()));
+				var actualIndexEtag = new Guid(md5.ComputeHash(list.ToArray()));
+				if (expectedIndexEtag != null &&
+					actualIndexEtag.Equals(expectedIndexEtag.Value) == false)
+				{
+					// the index changed between the time when we got it and the time 
+					// we actually call this, we need to return something random so that
+					// the next time we won't get 304
+					var indexEtag = Guid.NewGuid();
+					return indexEtag;
+				}
+
+				return actualIndexEtag;
 			}
 		}
 	}
