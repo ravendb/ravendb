@@ -293,7 +293,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl();
 				var request = new HttpRavenRequest(url, "POST", credentials){ApiKey = destination.ConnectionStringOptions.ApiKey};
-				request.Write(jsonAttachments);
+				request.WriteBson(jsonAttachments);
 				request.ExecuteRequest();
 				log.Info("Replicated {0} attachments to {1}", jsonAttachments.Length, destination);
 				return true;
@@ -303,9 +303,19 @@ namespace Raven.Bundles.Replication.Tasks
 				var response = e.Response as HttpWebResponse;
 				if (response != null)
 				{
-					using (var streamReader = new StreamReader(response.GetResponseStream()))
+					using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
 					{
 						var error = streamReader.ReadToEnd();
+						try
+						{
+							var ravenJObject = RavenJObject.Parse(error);
+							log.WarnException("Replication to " + destination + " had failed\r\n" + ravenJObject.Value<string>("Error"), e);
+							return false;
+						}
+						catch (Exception)
+						{
+						}
+
 						log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
 					}
 				}

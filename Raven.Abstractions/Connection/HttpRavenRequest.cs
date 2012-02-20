@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 
@@ -18,6 +19,7 @@ namespace Raven.Abstractions.Connection
 		private Stream postedStream;
 		private RavenJToken postedToken;
 		private string currentOauthToken;
+		private bool writeBson;
 
 		/// <summary>
 		/// The API Key to use when authenticating against a RavenDB server that
@@ -37,7 +39,7 @@ namespace Raven.Abstractions.Connection
 
 		private HttpWebRequest CreateRequest()
 		{
-			var request = (HttpWebRequest) WebRequest.Create(url);
+			var request = (HttpWebRequest)WebRequest.Create(url);
 			request.Method = method;
 			request.Timeout = timeout;
 			request.Headers["Accept-Encoding"] = "deflate,gzip";
@@ -66,16 +68,33 @@ namespace Raven.Abstractions.Connection
 		public void Write(RavenJToken ravenJToken)
 		{
 			postedToken = ravenJToken;
-			WriteToken(ravenJToken, webRequest);
+			WriteToken(webRequest);
 		}
 
-		private void WriteToken(RavenJToken ravenJToken, HttpWebRequest httpWebRequest)
+
+		public void WriteBson(RavenJToken ravenJToken)
+		{
+			writeBson = true;
+			postedToken = ravenJToken;
+			WriteToken(webRequest);
+		}
+
+		private void WriteToken(WebRequest httpWebRequest)
 		{
 			using (var stream = httpWebRequest.GetRequestStream())
-			using (var streamWriter = new StreamWriter(stream))
 			{
-				ravenJToken.WriteTo(new JsonTextWriter(streamWriter));
-				streamWriter.Flush();
+				if (writeBson)
+				{
+					postedToken.WriteTo(new BsonWriter(stream));
+				}
+				else
+				{
+					using (var streamWriter = new StreamWriter(stream))
+					{
+						postedToken.WriteTo(new JsonTextWriter(streamWriter));
+						streamWriter.Flush();
+					}
+				}
 				stream.Flush();
 			}
 		}
@@ -84,13 +103,13 @@ namespace Raven.Abstractions.Connection
 		{
 			T result = default(T);
 			SendRequestToServer(response =>
-			                    	{
+									{
 										using (var stream = response.GetResponseStreamWithHttpDecompression())
-										using(var reader = new StreamReader(stream))
+										using (var reader = new StreamReader(stream))
 										{
 											result = reader.JsonDeserialization<T>();
 										}
-			                    	});
+									});
 			return result;
 		}
 
@@ -156,7 +175,7 @@ namespace Raven.Abstractions.Connection
 
 			if (postedToken != null)
 			{
-				WriteToken(postedToken, newWebRequest);
+				WriteToken(newWebRequest);
 			}
 			if (postedStream != null)
 			{
@@ -184,5 +203,6 @@ namespace Raven.Abstractions.Connection
 
 			return authRequest;
 		}
+
 	}
 }
