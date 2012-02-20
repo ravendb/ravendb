@@ -18,6 +18,9 @@ namespace Raven.Abstractions.Connection
 		private Stream postedStream;
 		private RavenJToken postedToken;
 
+		public string ApiKey { get; set; }
+		private string currentOauthToken;
+
 		public HttpRavenRequest(string url, string method = "GET", ICredentials credentials = null, int timeout = 15000)
 		{
 			this.url = url;
@@ -38,6 +41,10 @@ namespace Raven.Abstractions.Connection
 			request.UseDefaultCredentials = true;
 			request.Credentials = credentials;
 			request.PreAuthenticate = true;
+
+			if (string.IsNullOrEmpty(currentOauthToken) == false)
+				request.Headers["Authorization"] = currentOauthToken;
+
 			return request;
 		}
 
@@ -111,17 +118,37 @@ namespace Raven.Abstractions.Connection
 						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
 						throw;
 
-					HandleUnauthorizedResponse();
+					HandleUnauthorizedResponse(e.Response);
 				}
 			}
 		}
 
-		private void HandleUnauthorizedResponse()
+		private void HandleUnauthorizedResponse(WebResponse response)
+		{
+			RefreshOauthToken(response);
+			RecreateWebRequest();
+		}
+
+		private void RefreshOauthToken(WebResponse response)
+		{
+			var oauthSource = response.Headers["OAuth-Source"];
+			if (string.IsNullOrEmpty(oauthSource))
+				return;
+
+			var authRequest = PrepareOAuthRequest(oauthSource);
+			using (var authResponse = authRequest.GetResponse())
+			using (var stream = authResponse.GetResponseStreamWithHttpDecompression())
+			using (var reader = new StreamReader(stream))
+			{
+				currentOauthToken = "Bearer " + reader.ReadToEnd();
+			}
+		}
+
+		private void RecreateWebRequest()
 		{
 			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
 			var newWebRequest = CreateRequest();
 			HttpRequestHelper.CopyHeaders(webRequest, newWebRequest);
-			ConfigureAuthentication(newWebRequest);
 
 			if (postedToken != null)
 			{
@@ -139,9 +166,19 @@ namespace Raven.Abstractions.Connection
 			webRequest = newWebRequest;
 		}
 
-		private void ConfigureAuthentication(HttpWebRequest newWebRequest)
+		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
 		{
+			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
+			authRequest.Credentials = credentials;
+			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
+			authRequest.Accept = "application/json;charset=UTF-8";
 
+			authRequest.Headers["grant_type"] = "client_credentials";
+
+			if (string.IsNullOrEmpty(ApiKey) == false)
+				webRequest.Headers["Api-Key"] = ApiKey;
+
+			return authRequest;
 		}
 	}
 }
