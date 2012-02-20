@@ -118,9 +118,10 @@ namespace Raven.Storage.Esent.StorageActions
 				yield break;
 			do
 			{
+				var columnSize = Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]);
 				yield return new AttachmentInformation
 				{
-					Size = Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]).Value,
+					Size = columnSize ?? 0,
 					Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
 					Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
 					Metadata = RavenJObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
