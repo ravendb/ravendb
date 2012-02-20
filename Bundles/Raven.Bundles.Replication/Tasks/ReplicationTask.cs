@@ -290,9 +290,12 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			try
 			{
-				var credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl();
-				var request = new HttpRavenRequest(url, "POST", credentials){ApiKey = destination.ConnectionStringOptions.ApiKey};
+				var request = new HttpRavenRequest(url, "POST")
+				{
+					Credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials,
+					ApiKey = destination.ConnectionStringOptions.ApiKey
+				};
 				request.WriteBson(jsonAttachments);
 				request.ExecuteRequest();
 				log.Info("Replicated {0} attachments to {1}", jsonAttachments.Length, destination);
@@ -338,8 +341,11 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl();
-				var credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
-				var request = new HttpRavenRequest(url, "POST", credentials) {ApiKey = destination.ConnectionStringOptions.ApiKey};
+				var request = new HttpRavenRequest(url, "POST")
+				{
+					Credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials,
+					ApiKey = destination.ConnectionStringOptions.ApiKey
+				};
 				request.Write(jsonDocuments);
 				request.ExecuteRequest();
 				log.Info("Replicated {0} documents to {1}", jsonDocuments.Length, destination);
@@ -431,8 +437,11 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl();
-				var credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
-				var request = new HttpRavenRequest(url, "GET", credentials, replicationRequestTimeoutInMs){ApiKey = destination.ConnectionStringOptions.ApiKey};
+				var request = new HttpRavenRequest(url, "GET", replicationRequestTimeoutInMs)
+				{
+					Credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials,
+					ApiKey = destination.ConnectionStringOptions.ApiKey
+				};
 				return request.ExecuteRequest<SourceReplicationInformation>();
 			}
 			catch (WebException e)
@@ -493,15 +502,13 @@ namespace Raven.Bundles.Replication.Tasks
 				ReplicationOptionsBehavior = x.TransitiveReplicationBehavior,
 				CurrentDatabaseId = docDb.TransactionalStorage.Id.ToString()
 			};
-			if (string.IsNullOrEmpty(x.ConnectionStringName))
-			{
-				replicationStrategy.ConnectionStringOptions = new RavenConnectionStringOptions
-				{
-					Url = x.Url
-				};
-				return replicationStrategy;
-			}
+			return string.IsNullOrEmpty(x.ConnectionStringName) ?
+				CreateReplicationStrategyFromDocument(x, replicationStrategy) : 
+				CreateReplicationStrategyFromConnectionString(x, replicationStrategy);
+		}
 
+		private static ReplicationStrategy CreateReplicationStrategyFromConnectionString(ReplicationDestination x, ReplicationStrategy replicationStrategy)
+		{
 			var connectionStringParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionStringName(x.ConnectionStringName);
 			connectionStringParser.Parse();
 			var options = connectionStringParser.ConnectionStringOptions;
@@ -514,6 +521,24 @@ namespace Raven.Bundles.Replication.Tasks
 				options.Url += "databases/" + options.DefaultDatabase;
 			}
 			replicationStrategy.ConnectionStringOptions = options;
+			return replicationStrategy;
+		}
+
+		private ReplicationStrategy CreateReplicationStrategyFromDocument(ReplicationDestination x, ReplicationStrategy replicationStrategy)
+		{
+			var url = x.Url;
+			if (string.IsNullOrEmpty(x.Database) == false)
+			{
+				url = "databases/" + x.Database;
+			}
+			replicationStrategy.ConnectionStringOptions = new RavenConnectionStringOptions
+			{
+				Url = url,
+				ApiKey = x.ApiKey,
+				Credentials = string.IsNullOrEmpty(x.Domain) ?
+				                                             	new NetworkCredential(x.Username, x.Password) :
+				                                             	                                              	new NetworkCredential(x.Username, x.Password, x.Domain),
+			};
 			return replicationStrategy;
 		}
 	}

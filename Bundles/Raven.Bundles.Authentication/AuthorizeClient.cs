@@ -11,7 +11,7 @@ namespace Raven.Bundles.Authentication
 		{
 			allowedDatabases = new AccessTokenBody.DatabaseAccess[0];
 
-			var jsonDocument = ((DocumentDatabase)currentStore).Get("Raven/Users/"+username, null);
+			var jsonDocument = currentStore.Get("Raven/Users/"+username, null);
 			if (jsonDocument == null)
 			{
 				return false;

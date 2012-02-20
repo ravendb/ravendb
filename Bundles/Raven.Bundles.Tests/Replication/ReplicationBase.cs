@@ -121,17 +121,23 @@ namespace Raven.Bundles.Tests.Replication
 			Console.WriteLine("Replicating from {0} to {1}.", source.Url, destination.Url);
 			using (var session = source.OpenSession())
 			{
+				var replicationDestination = new ReplicationDestination
+				{
+					Url = destination.Url,
+					TransitiveReplicationBehavior = transitiveReplicationBehavior,
+				};
+				SetupDestination(replicationDestination);
 				session.Store(new ReplicationDocument
 				{
-					Destinations = {new ReplicationDestination
-					{
-						Url = destination.Url,
-						TransitiveReplicationBehavior = transitiveReplicationBehavior
-						// servers[dest].Database.Configuration.ServerUrl
-					}}
+					Destinations = {replicationDestination}
 				});
 				session.SaveChanges();
 			}
+		}
+
+		protected virtual void SetupDestination(ReplicationDestination replicationDestination)
+		{
+			
 		}
 
 		protected void SetupReplication(IDatabaseCommands source, string url)

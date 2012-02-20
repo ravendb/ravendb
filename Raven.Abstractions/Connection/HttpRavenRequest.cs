@@ -12,10 +12,10 @@ namespace Raven.Abstractions.Connection
 	{
 		private readonly string url;
 		private readonly string method;
-		private readonly ICredentials credentials;
 		private readonly int timeout;
 
 		private HttpWebRequest webRequest;
+
 		private Stream postedStream;
 		private RavenJToken postedToken;
 		private string currentOauthToken;
@@ -27,26 +27,35 @@ namespace Raven.Abstractions.Connection
 		/// </summary>
 		public string ApiKey { get; set; }
 
-		public HttpRavenRequest(string url, string method = "GET", ICredentials credentials = null, int timeout = 15000)
+		/// <summary>
+		/// The credentials to use when authenticating against a RavenDB server that
+		/// supports credentials authentication
+		/// </summary>
+		public ICredentials Credentials { get; set; }
+
+		public HttpWebRequest WebRequest
+		{
+			get { return webRequest ?? (webRequest = CreateRequest()); }
+			set { webRequest = value; }
+		}
+
+		public HttpRavenRequest(string url, string method = "GET", int timeout = 15000)
 		{
 			this.url = url;
 			this.method = method;
-			this.credentials = credentials;
 			this.timeout = timeout;
-
-			webRequest = CreateRequest();
 		}
 
 		private HttpWebRequest CreateRequest()
 		{
-			var request = (HttpWebRequest)WebRequest.Create(url);
+			var request = (HttpWebRequest)System.Net.WebRequest.Create(url);
 			request.Method = method;
 			request.Timeout = timeout;
 			request.Headers["Accept-Encoding"] = "deflate,gzip";
 			request.ContentType = "application/json; charset=utf-8";
 			request.UseDefaultCredentials = true;
-			request.Credentials = credentials;
 			request.PreAuthenticate = true;
+			request.Credentials = Credentials;
 
 			if (string.IsNullOrEmpty(currentOauthToken) == false)
 				request.Headers["Authorization"] = currentOauthToken;
@@ -57,8 +66,8 @@ namespace Raven.Abstractions.Connection
 		public void Write(Stream streamToWrite)
 		{
 			postedStream = streamToWrite;
-			webRequest.ContentLength = streamToWrite.Length;
-			using (var stream = webRequest.GetRequestStream())
+			WebRequest.ContentLength = streamToWrite.Length;
+			using (var stream = WebRequest.GetRequestStream())
 			{
 				streamToWrite.CopyTo(stream);
 				stream.Flush();
@@ -68,7 +77,7 @@ namespace Raven.Abstractions.Connection
 		public void Write(RavenJToken ravenJToken)
 		{
 			postedToken = ravenJToken;
-			WriteToken(webRequest);
+			WriteToken(WebRequest);
 		}
 
 
@@ -76,7 +85,7 @@ namespace Raven.Abstractions.Connection
 		{
 			writeBson = true;
 			postedToken = ravenJToken;
-			WriteToken(webRequest);
+			WriteToken(WebRequest);
 		}
 
 		private void WriteToken(WebRequest httpWebRequest)
@@ -125,7 +134,7 @@ namespace Raven.Abstractions.Connection
 			{
 				try
 				{
-					using (var res = webRequest.GetResponse())
+					using (var res = WebRequest.GetResponse())
 					{
 						action(res);
 					}
@@ -171,7 +180,7 @@ namespace Raven.Abstractions.Connection
 		{
 			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
 			var newWebRequest = CreateRequest();
-			HttpRequestHelper.CopyHeaders(webRequest, newWebRequest);
+			HttpRequestHelper.CopyHeaders(WebRequest, newWebRequest);
 
 			if (postedToken != null)
 			{
@@ -186,20 +195,20 @@ namespace Raven.Abstractions.Connection
 					stream.Flush();
 				}
 			}
-			webRequest = newWebRequest;
+			WebRequest = newWebRequest;
 		}
 
 		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
 		{
-			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
-			authRequest.Credentials = credentials;
+			var authRequest = (HttpWebRequest)System.Net.WebRequest.Create(oauthSource);
+			authRequest.Credentials = Credentials;
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 			authRequest.Accept = "application/json;charset=UTF-8";
 
 			authRequest.Headers["grant_type"] = "client_credentials";
 
 			if (string.IsNullOrEmpty(ApiKey) == false)
-				webRequest.Headers["Api-Key"] = ApiKey;
+				WebRequest.Headers["Api-Key"] = ApiKey;
 
 			return authRequest;
 		}
