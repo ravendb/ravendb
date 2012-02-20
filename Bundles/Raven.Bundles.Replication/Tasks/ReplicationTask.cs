@@ -294,6 +294,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl();
 				var request = new HttpRavenRequest(url, "POST", credentials);
 				request.Write(jsonAttachments);
+				request.ExecuteRequest();
 				log.Info("Replicated {0} attachments to {1}", jsonAttachments.Length, destination);
 				return true;
 			}
@@ -330,6 +331,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
 				var request = new HttpRavenRequest(url, "POST", credentials);
 				request.Write(jsonDocuments);
+				request.ExecuteRequest();
 				log.Info("Replicated {0} documents to {1}", jsonDocuments.Length, destination);
 				return true;
 			}
@@ -420,13 +422,8 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl();
 				var credentials = destination.ConnectionStringOptions.Credentials ?? CredentialCache.DefaultNetworkCredentials;
-				var request = new HttpRavenRequest(url, "GET", credentials);
-				request.ConfigureRequest = r => r.Timeout = replicationRequestTimeoutInMs;
-				using (var stream = request.GetResponseStream())
-				{
-					var etagFromServer = new StreamReader(stream).JsonDeserialization<SourceReplicationInformation>();
-					return etagFromServer;
-				}
+				var request = new HttpRavenRequest(url, "GET", credentials, replicationRequestTimeoutInMs);
+				return request.ExecuteRequest<SourceReplicationInformation>();
 			}
 			catch (WebException e)
 			{

@@ -1,10 +1,9 @@
 using System;
-
 using System.IO;
 using System.Net;
-using System.Text;
-using Newtonsoft.Json.Bson;
+using Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Connection
 {
@@ -14,12 +13,11 @@ namespace Raven.Abstractions.Connection
 		private readonly string method;
 		private readonly ICredentials credentials;
 
-		public volatile HttpWebRequest webRequest;
+		private HttpWebRequest webRequest;
 		private Stream postedStream;
+		private RavenJToken postedToken;
 
-		public Action<WebRequest> ConfigureRequest = delegate { };
-
-		public HttpRavenRequest(string url, string method = "GET", ICredentials credentials = null)
+		public HttpRavenRequest(string url, string method = "GET", ICredentials credentials = null, int timeout = 15000)
 		{
 			this.url = url;
 			this.method = method;
@@ -27,19 +25,12 @@ namespace Raven.Abstractions.Connection
 
 			webRequest = (HttpWebRequest) WebRequest.Create(url);
 			webRequest.Method = method;
+			webRequest.Timeout = timeout;
 			webRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
-			if (credentials == null)
-			{
-				webRequest.UseDefaultCredentials = true;
-			}
-			else
-			{
-				webRequest.Credentials = credentials;
-			}
+			webRequest.UseDefaultCredentials = true;
+			webRequest.Credentials = credentials;
 			webRequest.PreAuthenticate = true;
-
-			ConfigureRequest(webRequest);
 		}
 
 		public ICredentials Credentials
@@ -66,43 +57,100 @@ namespace Raven.Abstractions.Connection
 				streamToWrite.CopyTo(stream);
 				stream.Flush();
 			}
-			ExecuteRequest();
 		}
 
 		public void Write(RavenJToken ravenJToken)
 		{
-			var streamToWrite = new MemoryStream();
-			ravenJToken.WriteTo(new BsonWriter(streamToWrite));
-			Write(streamToWrite);
+			postedToken = ravenJToken;
+			WriteToken(ravenJToken, webRequest);
 		}
 
-		public void Write(Action<StreamWriter> action)
+		private void WriteToken(RavenJToken ravenJToken, HttpWebRequest httpWebRequest)
 		{
-			using (var stream = webRequest.GetRequestStream())
+			using (var stream = httpWebRequest.GetRequestStream())
+			using (var streamWriter = new StreamWriter(stream))
 			{
-				using (var streamWriter = new StreamWriter(stream, Encoding.UTF8))
-				{
-					action(streamWriter);
-					streamWriter.Flush();
-				}
+				ravenJToken.WriteTo(new JsonTextWriter(streamWriter));
+				streamWriter.Flush();
 				stream.Flush();
 			}
-			ExecuteRequest();
 		}
 
-		public virtual void ExecuteRequest()
+		public T ExecuteRequest<T>()
 		{
-			using (webRequest.GetResponse())
+			T result = default(T);
+			SendRequestToServer(response =>
+			                    	{
+										using (var stream = response.GetResponseStreamWithHttpDecompression())
+										using(var reader = new StreamReader(stream))
+										{
+											result = reader.JsonDeserialization<T>();
+										}
+			                    	});
+			return result;
+		}
+
+		public void ExecuteRequest()
+		{
+			SendRequestToServer(response => { });
+		}
+
+		private void SendRequestToServer(Action<WebResponse> action)
+		{
+			int retries = 0;
+			while (true)
 			{
+				try
+				{
+					using (var res = webRequest.GetResponse())
+					{
+						action(res);
+					}
+					return;
+				}
+				catch (WebException e)
+				{
+					if (++retries >= 3)
+						throw;
+
+					var httpWebResponse = e.Response as HttpWebResponse;
+					if (httpWebResponse == null ||
+						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+						throw;
+
+					HandleUnauthorizedResponse();
+				}
 			}
 		}
-		
-		public Stream GetResponseStream()
+
+		private void HandleUnauthorizedResponse()
 		{
-			using (var response = webRequest.GetResponse())
+			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
+
+			var newWebRequest = (HttpWebRequest)WebRequest.Create(Url);
+			newWebRequest.Method = webRequest.Method;
+			HttpRequestHelper.CopyHeaders(webRequest, newWebRequest);
+			newWebRequest.Credentials = webRequest.Credentials;
+			ConfigureAuthentication(newWebRequest);
+
+			if (postedToken != null)
 			{
-				return response.GetResponseStreamWithHttpDecompression();
+				WriteToken(postedToken, newWebRequest);
 			}
+			if (postedStream != null)
+			{
+				postedStream.Position = 0;
+				using (var stream = newWebRequest.GetRequestStream())
+				{
+					postedStream.CopyTo(stream);
+					stream.Flush();
+				}
+			}
+			webRequest = newWebRequest;
+		}
+
+		private void ConfigureAuthentication(HttpWebRequest newWebRequest)
+		{
 		}
 	}
 }
