@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 extern alias client;
-using client::Raven.Client.Authorization;
+using System;
 using client::Raven.Bundles.Authorization.Model;
 
 using Raven.Bundles.Tests.Versioning;
@@ -111,7 +111,7 @@ namespace Raven.Bundles.Tests.Authorization.Bugs
 				{
 					s.SecureFor(UserId, "Company/Bid");
 
-					var c = s.Query<Company>().Customize(x => x.WaitForNonStaleResults()).First();
+					var c = s.Query<Company>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(3))).First();
 					c.Name = "other " + i;
 
 					s.SaveChanges();
