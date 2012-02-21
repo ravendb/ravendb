@@ -35,6 +35,10 @@ namespace Raven.Tryouts
 						x.CanUpdateReduceValue_WhenChangingReduceKey();
 				}
 			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
+			}
 			finally
 			{
 				LogManager.Flush();
