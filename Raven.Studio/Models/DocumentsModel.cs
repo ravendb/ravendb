@@ -63,7 +63,6 @@ namespace Raven.Studio.Models
 				.ContinueOnSuccess(docs =>
 				{
 					Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray());
-					ProjectionData.Projections = new Dictionary<string, ViewableDocument>();
 					var documetsIds = new List<string>();
 					foreach (var viewableDocument in Documents)
 					{
