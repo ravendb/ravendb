@@ -201,7 +201,7 @@ namespace Raven.Database.Server.Responders
 			// as we make a switch from temp to auto, and we need to refresh the etag
 			// if that is the case. This can also happen when the optmizer
 			// decided to switch indexes for a query.
-			indexEtag = queryResult.IndexName == dynamicIndexName ?
+			indexEtag = (dynamicIndexName  == null || queryResult.IndexName == dynamicIndexName) ?
 				Database.GetIndexEtag(queryResult.IndexName, queryResult) : 
 				Guid.NewGuid();
 

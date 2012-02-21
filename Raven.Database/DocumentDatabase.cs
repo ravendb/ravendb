@@ -1356,6 +1356,15 @@ namespace Raven.Database
 				lastReducedEtag = accessor.Staleness.GetMostRecentReducedEtag(indexName);
 				touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
 			});
+			if (queryResult != null &&
+					queryResult.IndexEtag != lastDocEtag)
+			{
+				// the index changed between the time when we got it and the time 
+				// we actually call this, we need to return something random so that
+				// the next time we won't get 304
+				return Guid.NewGuid();
+			}
+
 			var indexDefinition = GetIndexDefinition(indexName);
 			if (indexDefinition == null)
 				return Guid.NewGuid(); // this ensures that we will get the normal reaction of IndexNotFound later on.
@@ -1371,18 +1380,9 @@ namespace Raven.Database
 				{
 					list.AddRange(lastReducedEtag.Value.ToByteArray());
 				}
-				var actualIndexEtag = new Guid(md5.ComputeHash(list.ToArray()));
-				if (queryResult != null &&
-					queryResult.IndexEtag != lastDocEtag)
-				{
-					// the index changed between the time when we got it and the time 
-					// we actually call this, we need to return something random so that
-					// the next time we won't get 304
-					var indexEtag = Guid.NewGuid();
-					return indexEtag;
-				}
+				
 
-				return actualIndexEtag;
+				return new Guid(md5.ComputeHash(list.ToArray()));
 			}
 		}
 	}
