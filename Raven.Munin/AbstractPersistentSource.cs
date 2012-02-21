@@ -98,7 +98,7 @@ namespace Raven.Munin
 						globalStates.Select(x => new PersistentDictionaryState(x.Comparer)
 						{
 							KeyToFilePositionInFiles = x.KeyToFilePositionInFiles,
-							SecondaryIndicesState = x.SecondaryIndicesState
+							SecondaryIndicesState = x.SecondaryIndicesState.ToList()
 						}));
 
 					readWriteAction(Log);

@@ -13,7 +13,10 @@ namespace Raven.Tests.Storage
 
 		public SimilarIndexNames()
 		{
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true });
+			db = new DocumentDatabase(new RavenConfiguration
+			{
+				RunInMemory= true
+			});
 		}
 
 

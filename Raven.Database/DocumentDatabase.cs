@@ -298,12 +298,18 @@ namespace Raven.Database
 
 		public IndexStorage IndexStorage { get; private set; }
 
+		public event EventHandler Disposing;
+
 		#region IDisposable Members
 
 		public void Dispose()
 		{
 			if (disposed)
 				return;
+
+			var onDisposing = Disposing;
+			if(onDisposing!=null)
+				onDisposing(this, EventArgs.Empty);
 
 			var exceptionAggregator = new ExceptionAggregator(log, "Could not properly dispose of DatabaseDocument");
 
@@ -542,11 +548,7 @@ namespace Raven.Database
 
 		private static void RemoveReservedProperties(RavenJObject document)
 		{
-			var toRemove = new HashSet<string>();
-			foreach (var propertyName in document.Keys.Where(propertyName => propertyName.StartsWith("@")))
-			{
-			    toRemove.Add(propertyName);
-			}
+			var toRemove = document.Keys.Where(propertyName => propertyName.StartsWith("@")).ToList();
 			foreach (var propertyName in toRemove)
 			{
 				document.Remove(propertyName);

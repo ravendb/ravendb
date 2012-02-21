@@ -17,6 +17,7 @@ using System.Transactions;
 using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -255,6 +256,23 @@ namespace Raven.Client.Connection.Async
 		{
 			var databaseUrl = RootDatabaseUrl;
 			databaseUrl = databaseUrl + "databases/" + database + "/";
+			if (databaseUrl == url)
+				return this;
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId)
+			{
+				operationsHeaders = operationsHeaders
+			};
+		}
+
+		/// <summary>
+		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
+		/// with the root database. Useful if the database has works against a tenant database.
+		/// </summary>
+		public IAsyncDatabaseCommands ForDefaultDatabase()
+		{
+			var databaseUrl = RootDatabaseUrl;
+			if (databaseUrl == url)
+				return this;
 			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId)
 			{
 				operationsHeaders = operationsHeaders
@@ -274,22 +292,7 @@ namespace Raven.Client.Connection.Async
 				return databaseUrl;
 			}
 		}
-
-		/// <summary>
-		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
-		/// with the root database. Useful if the database has works against a tenant database.
-		/// </summary>
-		public IAsyncDatabaseCommands ForDefaultDatabase()
-		{
-			var databaseUrl = RootDatabaseUrl;
-			if (databaseUrl == url)
-				return this;
-
-			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId)
-			       {
-			       	operationsHeaders = operationsHeaders
-			       };
-		}
+		
 
 		/// <summary>
 		/// Gets or sets the operations headers.

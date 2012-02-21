@@ -34,17 +34,7 @@ namespace Raven.Tests
 
 		private string path;
 
-		public EmbeddableDocumentStore NewDocumentStore()
-		{
-			return NewDocumentStore("munin", true, null);
-		}
-
-		public EmbeddableDocumentStore NewDocumentStore(string storageType, bool inMemory)
-		{
-			return NewDocumentStore(storageType, inMemory, null);
-		}
-
-		public EmbeddableDocumentStore NewDocumentStore(string storageType, bool inMemory, int? allocatedMemory)
+		public EmbeddableDocumentStore NewDocumentStore(string storageType = "munin", bool inMemory = true, int? allocatedMemory = null)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
@@ -129,46 +119,6 @@ namespace Raven.Tests
 				Thread.Sleep(25);
 		}
 
-		protected RavenDbServer GetNewServer(bool initializeDocumentsByEntitiyName = true)
-		{
-			var ravenConfiguration = new RavenConfiguration
-			{
-				Port = 8079,
-				RunInMemory = true,
-				DataDirectory = "Data",
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All
-			};
-
-			ConfigureServer(ravenConfiguration);
-
-			if(ravenConfiguration.RunInMemory == false)
-				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
-
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
-			var ravenDbServer = new RavenDbServer(ravenConfiguration);
-
-			if (initializeDocumentsByEntitiyName)
-			{
-				try
-				{
-					using (var documentStore = new DocumentStore
-					{
-						Url = "http://localhost:8079"
-					}.Initialize())
-					{
-						new RavenDocumentsByEntityName().Execute(documentStore);
-					}
-				}
-				catch
-				{
-					ravenDbServer.Dispose();
-					throw;
-				}
-			}
-
-			return ravenDbServer;
-		}
-
 		protected virtual void ConfigureServer(RavenConfiguration ravenConfiguration)
 		{
 		}
@@ -197,45 +147,37 @@ namespace Raven.Tests
 
 		}
 
-		protected RavenDbServer GetNewServer(int port, string path)
+		protected RavenDbServer GetNewServer(int port = 8079, string dataDirectory = "Data")
 		{
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-			var ravenDbServer = new RavenDbServer(new RavenConfiguration
-			{
-				Port = port,
-				DataDirectory = path,
-				RunInMemory = true,
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All
-			});
+			var ravenConfiguration = new RavenConfiguration
+			                         {
+			                         	Port = port,
+			                         	DataDirectory = dataDirectory,
+			                         	RunInMemory = true,
+			                         	AnonymousUserAccessMode = AnonymousUserAccessMode.All
+			                         };
+
+			ConfigureServer(ravenConfiguration);
+
+			if (ravenConfiguration.RunInMemory == false)
+				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
+
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
+			var ravenDbServer = new RavenDbServer(ravenConfiguration);
+
 			try
 			{
-				using (var documentStore = new DocumentStore
-				{
-					Url = "http://localhost:" + port
-				}.Initialize())
+				using (var documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize())
 				{
 					CreateDefaultIndexes(documentStore);
 				}
 			}
-			catch 
+			catch
 			{
 				ravenDbServer.Dispose();
 				throw;
 			}
 			return ravenDbServer;
-		}
-
-		protected RavenDbServer GetNewServerWithoutAnonymousAccess(int port, string path)
-		{
-			var newServerWithoutAnonymousAccess = new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.None });
-			using (var documentStore = new DocumentStore
-			{
-				Url = "http://localhost:" + port
-			}.Initialize())
-			{
-				new RavenDocumentsByEntityName().Execute(documentStore);
-			}
-			return newServerWithoutAnonymousAccess;
 		}
 
 		protected string GetPath(string subFolderName)

@@ -37,7 +37,7 @@
       <HintPath>..\..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\Packages\Newtonsoft.Json.4.0.7\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\Packages\Newtonsoft.Json.4.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -83,9 +83,11 @@
     <Compile Include="Replication\Bugs\ReplicatingDanish.cs" />
     <Compile Include="Replication\Bugs\SameEtagFromDifferentServers.cs" />
     <Compile Include="Replication\Bugs\Vlad.cs" />
+    <Compile Include="Replication\FailoverBetweenTwoMultiTenantDatabases.cs" />
     <Compile Include="Replication\MultihopReplication.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailureHandling.cs" />
+    <Compile Include="Replication\ReplicationWithOAuth.cs" />
     <Compile Include="Replication\ReplicationBase.cs" />
     <Compile Include="Replication\SimpleReplication.cs" />
     <Compile Include="Replication\WritesDuringFailover.cs" />

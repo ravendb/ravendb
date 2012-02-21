@@ -98,12 +98,10 @@ namespace Raven.Database.Indexing
 			lock (waitForWork)
 			{
 				var increment = Interlocked.Increment(ref workCounter);
-				if(log.IsDebugEnabled)
+				if (log.IsDebugEnabled)
 				{
 					var reason = string.Join(", ", shouldNotifyOnWork.Value.Select(action => action()).Where(x => x != null));
-					
-					log.Debug("Incremented work counter to {0} because: {1}", increment,
-					          reason);
+					log.Debug("Incremented work counter to {0} because: {1}", increment, reason);
 				}
 				shouldNotifyOnWork.Value.Clear();
 				Monitor.PulseAll(waitForWork);

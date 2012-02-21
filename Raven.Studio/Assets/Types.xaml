@@ -5,7 +5,9 @@
 
 	<Converters:BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
 	<Converters:BooleanToOppositeVisibilityConverter x:Key="BooleanToOppositeVisibility" />
+	<Converters:BooleanToStaleStatConverter x:Key="BooleanToStaleStatConverter" />
 	<Converters:RedIfError x:Key="RedIfError" />
+	<Converters:TimeToLongAgoConverter x:Key="TimeToLongAgoConverter" />
 	<Converters:TaskStatusConverter x:Key="TaskStatusConverter" />
 	<Converters:NullToVisibilityConverter x:Key="HiddenWhenNull" />
 	<Converters:HiddenWhenStringEmptyOrNull x:Key="HiddenWhenStringEmptyOrNull" />
@@ -23,6 +25,6 @@
 												 ValueWhenNonEmpty="*" />
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
 	<Converters:CollectionCountToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedWhenNonEmpty"/>
-	
-	<Models:DocumentsModel x:Key="DocumentsModel" />
+
+	<Models:DocumentSize x:Key="DocumentSize" />
 </ResourceDictionary>

@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Transactions;
 using Raven.Client.Document;
-using Raven.Tests;
 using Raven.Tests.Bugs;
 using Xunit;
 
-namespace Raven.Database.Track
+namespace Raven.Tests.Track
 {
 	public class RavenDB17 : RavenTest
 	{

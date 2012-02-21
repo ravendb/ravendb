@@ -8,7 +8,6 @@ namespace Raven.Studio.Models
 	{
 		static AllDocumentsModel()
 		{
-			Documents = new Observable<DocumentsModel> {Value = new DocumentsModel()};
 			SetTotalResults();
 			ApplicationModel.Database.PropertyChanged += (sender, args) => SetTotalResults();
 		}
@@ -23,7 +22,16 @@ namespace Raven.Studio.Models
 			ModelUrl = "/documents";
 		}
 
-		public static Observable<DocumentsModel> Documents { get; private set; }
+		private static WeakReference<Observable<DocumentsModel>> documents;
+		public static Observable<DocumentsModel> Documents
+		{
+			get
+			{
+				if (documents == null || documents.IsAlive == false)
+					documents = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel> { Value = new DocumentsModel() });
+				return documents.Target;
+			}
+		}
 
 		public override void LoadModelParameters(string parameters)
 		{

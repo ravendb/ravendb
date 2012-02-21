@@ -36,14 +36,15 @@ namespace Raven.Tests.MultiGet
 
 				using (var session = store.OpenSession())
 				{
-					var result1 = session.Query<User>().Customize(x=>x.WaitForNonStaleResults()).Where(x => x.Name == "oren").Lazily();
+					var result1 = session.Query<User>()
+						.Customize(x=>x.WaitForNonStaleResults())
+						.Where(x => x.Name == "oren")
+						.Lazily();
+
 					Assert.NotEmpty(result1.Value);
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
-
-					Assert.True(server.Server.NumberOfRequests > 1);
 				}
 			}
 		}
-
 	}
 }

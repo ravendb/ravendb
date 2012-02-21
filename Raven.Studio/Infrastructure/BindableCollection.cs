@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Windows;
-using System.Windows.Threading;
 using System.Linq;
-using Raven.Abstractions.Data;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -30,6 +27,7 @@ namespace Raven.Studio.Infrastructure
 			{
 				var toAdd = items.Except(this, objectComparer).ToList();
 				var toRemove = this.Except(items, objectComparer).ToArray();
+				var toDispose = items.Except(toAdd, objectComparer).OfType<IDisposable>().ToArray();
 
 				for (int i = 0; i < toRemove.Length; i++)
 				{
@@ -47,11 +45,13 @@ namespace Raven.Studio.Infrastructure
 				{
 					Add(add);
 				}
+				foreach (var disposable in toDispose)
+				{
+					disposable.Dispose();
+				}
 
 				if (afterUpdate != null) afterUpdate();
 			});
-
-			if (afterUpdate != null) afterUpdate();
 		}
 
 		private object ExtractKey(T obj)
@@ -59,7 +59,7 @@ namespace Raven.Studio.Infrastructure
 			return primaryKeyExtractor(obj) ?? obj;
 		}
 
-		public void Set(IEnumerable<T> enumerable)
+		public void Set(IEnumerable<T> enumerable, Action after = null)
 		{
 			Execute.OnTheUI(() =>
 			{
@@ -68,6 +68,8 @@ namespace Raven.Studio.Infrastructure
 				{
 					Add(v);
 				}
+
+				if (after != null) after();
 			});
 		}
 
@@ -80,6 +82,25 @@ namespace Raven.Studio.Infrastructure
 					Add(v);
 				}
 			});
+		}
+
+		protected override void RemoveItem(int index)
+		{
+			var disposable = this[index] as IDisposable;
+			if (disposable != null)
+				disposable.Dispose();
+
+			base.RemoveItem(index);
+		}
+
+		protected override void ClearItems()
+		{
+			foreach (var disposable in this.OfType<IDisposable>())
+			{
+				disposable.Dispose();
+			}
+
+			base.ClearItems();
 		}
 	}
 }

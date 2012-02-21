@@ -1,16 +1,18 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
+using Raven.Client.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class QueryModel : ViewModel
+	public class QueryModel : ViewModel, IHasPageTitle
 	{
 		
 		#region SpatialQuery
@@ -87,7 +89,6 @@ namespace Raven.Studio.Models
 				}
 
 				indexName = value;
-				ViewTitle = "Query: " + IndexName;
 				OnPropertyChanged();
 				RestoreHistory();
 			}
@@ -215,8 +216,6 @@ namespace Raven.Studio.Models
 			Query.PropertyChanged += GetTermsForUsedFields;
 			CompletionProvider = new Observable<ICompletionProvider>();
 			CompletionProvider.Value = new RavenQueryCompletionProvider(fields, fieldsTermsDictionary);
-
-			ViewTitle = "Query Index";
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -301,6 +300,27 @@ namespace Raven.Studio.Models
 
 		public Observable<string> Query { get; set; }
 
+		private TimeSpan queryTime;
+		public TimeSpan QueryTime
+		{
+			get { return queryTime; }
+			set
+			{
+				queryTime = value;
+				OnPropertyChanged();
+			}
+		}
+		private RavenQueryStatistics results;
+		public RavenQueryStatistics Results
+		{
+			get { return results; }
+			set
+			{
+				results = value;
+				OnPropertyChanged();
+			}
+		}
+
 		private string error;
 		public string Error
 		{
@@ -309,17 +329,6 @@ namespace Raven.Studio.Models
 		}
 
 		public Observable<DocumentsModel> DocumentsResult { get; private set; }
-
-		private string viewTitle;
-		public string ViewTitle
-		{
-			get { return viewTitle; }
-			set
-			{
-				viewTitle = value;
-				OnPropertyChanged();
-			}
-		}
 
 		public BindableCollection<FieldAndTerm> Suggestions { get; private set; }
 		public ICommand RepairTermInQuery
@@ -348,6 +357,11 @@ namespace Raven.Studio.Models
 				model.Query.Value = model.Query.Value.Replace(fieldAndTerm.Term, fieldAndTerm.SuggestedTerm);
 				model.Execute.Execute(null);
 			}
+		}
+
+		public string PageTitle
+		{
+			get { return "Query Index"; }
 		}
 	}
 }

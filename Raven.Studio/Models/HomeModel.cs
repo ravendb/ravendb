@@ -16,18 +16,22 @@ namespace Raven.Studio.Models
 {
 	public class HomeModel : ViewModel
 	{
-		public static Observable<DocumentsModel> RecentDocuments { get; private set; }
-
-		static HomeModel()
+		private static WeakReference<Observable<DocumentsModel>> recentDocuments;
+		public static Observable<DocumentsModel> RecentDocuments
 		{
-			RecentDocuments = new Observable<DocumentsModel>
-			                  {
-			                  	Value = new DocumentsModel
-			                  	        {
-			                  	        	ViewTitle = "Recent Documents",
-			                  	        	Pager = {PageSize = 15},
-			                  	        }
-			                  };
+			get
+			{
+				if (recentDocuments == null || recentDocuments.IsAlive == false)
+					recentDocuments = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel>
+					                                                                {
+					                                                                	Value = new DocumentsModel
+					                                                                	        {
+					                                                                	        	Header = "Recent Documents",
+					                                                                	        	Pager = {PageSize = 15},
+					                                                                	        }
+					                                                                });
+				return recentDocuments.Target;
+			}
 		}
 
 		public HomeModel()

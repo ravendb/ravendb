@@ -3,11 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Net;
+
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 #endif
+
 namespace Raven.Client.Connection
 {
 	/// <summary>
@@ -19,11 +22,12 @@ namespace Raven.Client.Connection
 		/// Gets or sets the web request.
 		/// </summary>
 		/// <value>The request.</value>
-		public WebRequest Request{ get; set;}
+		public WebRequest Request { get; set; }
+
 #if SILVERLIGHT
-		/// <summary>
-		/// The RavenDB json request
-		/// </summary>
+	/// <summary>
+	/// The RavenDB json request
+	/// </summary>
 		public HttpJsonRequest JsonRequest { get; set; }
 #endif
 	}

@@ -77,7 +77,7 @@ namespace Raven.Database.Indexing
 		///		1. with the supplied name, containing the numeric value as an unanalyzed string - useful for direct queries
 		///		2. with the name: name +'_Range', containing the numeric value in a form that allows range queries
 		/// </summary>
-		public IEnumerable<AbstractField> CreateFields(string name, object value, Field.Store defaultStorage)
+		public IEnumerable<AbstractField> CreateFields(string name, object value, Field.Store defaultStorage, bool nestedArray = false)
 		{
 			if(string.IsNullOrWhiteSpace(name))
 				throw new ArgumentException("Field must be not null, not empty and cannot contain whitespace", "name");
@@ -139,12 +139,15 @@ namespace Raven.Database.Indexing
 			var itemsToIndex = value as IEnumerable;
 			if( itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
 			{
-				yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+				if (nestedArray	 == false)
+				{
+					yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+				}
 				int count = 1;
 				foreach (var itemToIndex in itemsToIndex)
 				{
 					multipleItemsSameFieldCount.Add(count++);
-					foreach (var field in CreateFields(name, itemToIndex, storage))
+					foreach (var field in CreateFields(name, itemToIndex, storage, nestedArray: true))
 					{
 						yield return field;
 					}

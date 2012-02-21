@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Client;
 using Raven.Client.Document;
@@ -18,8 +19,19 @@ namespace Raven.Tests.Bugs
 	public class AttachmentsWithCredentials : RemoteClientTest, IDisposable
 	{
 		private readonly string path;
+		private readonly IDocumentStore store;
+		private readonly RavenDbServer server;
 
-		#region IDisposable Members
+		public AttachmentsWithCredentials()
+		{
+			path = GetPath(DbName);
+			server = GetNewServer(8079, path);
+
+			store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize();
+		}
 
 		public void Dispose()
 		{
@@ -28,23 +40,10 @@ namespace Raven.Tests.Bugs
 			IOExtensions.DeleteDirectory(path);
 		}
 
-		#endregion
-
-
-	  private readonly IDocumentStore store;
-		private readonly RavenDbServer server;
-
-		public AttachmentsWithCredentials()
+		protected override void ConfigureServer(Database.Config.RavenConfiguration ravenConfiguration)
 		{
-		    path = GetPath(DbName);
-			server = GetNewServerWithoutAnonymousAccess(8079, path);
-
-			store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize();
+			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 		}
-
 
 		[Fact]
 		public void CanPutAndGetAttachmentWithAccessModeNone()

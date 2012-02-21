@@ -31,8 +31,6 @@ namespace Raven.Bundles.Tests.Authentication
 			}
 		}
 
-
-
 		protected AuthenticationTest()
 		{
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");

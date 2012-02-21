@@ -82,9 +82,9 @@
       <HintPath>..\SharedLibs\Silverlight\Microsoft.Expression.Interactions.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
-    <Reference Include="Newtonsoft.Json, Version=4.0.7.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+    <Reference Include="Newtonsoft.Json, Version=4.0.8.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.4.0.7\lib\sl4\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.4.0.8\lib\sl4\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System.Reactive, Version=1.0.10621.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Rx-Main.1.0.11226\lib\SL4\System.Reactive.dll</HintPath>
@@ -118,14 +118,15 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Behaviors\KeyBoard.cs" />
-    <Compile Include="Behaviors\OpenPageOnANewTabIfCtrlIsHold.cs" />
+    <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
+    <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
+    <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
     <Compile Include="Features\Tasks\TaskView.xaml.cs">
       <DependentUpon>TaskView.xaml</DependentUpon>
@@ -133,8 +134,15 @@
     <Compile Include="Features\Terms\TermsView.xaml.cs">
       <DependentUpon>TermsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
     <Compile Include="Infrastructure\Converters\TaskStatusConverter.cs" />
     <Compile Include="Infrastructure\Converters\RedIfError.cs" />
+    <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
+    <Compile Include="Infrastructure\WeakEventListener.cs" />
+    <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
+    <Compile Include="Infrastructure\WeakReference.cs" />
+    <Compile Include="Models\DocumentSize.cs" />
+    <Compile Include="Models\IHasPageTitle.cs" />
     <Compile Include="Models\TermsModel.cs" />
     <Compile Include="Views\Terms.xaml.cs">
       <DependentUpon>Terms.xaml</DependentUpon>
