@@ -182,6 +182,9 @@
 					<Controls:MenuItem Header="Promote to auto index"
 									   Command="{Binding Source={StaticResource PromoteToAutoIndexCommand}}"
 									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+					<Controls:MenuItem Header="Reset index"
+									   Command="{Binding Source={StaticResource ResetIndexCommand}}"
+									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
 				</Controls:ContextMenu>
 			</Controls:ContextMenuService.ContextMenu>
 		</Controls1:ListBoxMenu>
