@@ -257,7 +257,7 @@ namespace Raven.Client.Document
 			get
 			{
 				return deletedEntities.Count > 0 ||
-						entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).Any();
+						entitiesAndMetadata.Any(pair => EntityChanged(pair.Key, pair.Value));
 			}
 		}
 
