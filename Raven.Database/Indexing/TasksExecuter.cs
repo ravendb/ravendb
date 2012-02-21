@@ -46,29 +46,30 @@ namespace Raven.Database.Indexing
 
 		private bool ExecuteTasks()
 		{
-			bool foundWork = false;
+			Task task = null;
 			transactionalStorage.Batch(actions =>
 			{
 				int tasks;
-				Task task = actions.Tasks.GetMergedTask(out tasks);
-				if (task == null)
-					return;
-
-				log.Debug("Executing {0}", task);
-				foundWork = true;
-
-				try
-				{
-					task.Execute(context);
-				}
-				catch (Exception e)
-				{
-					log.WarnException(
-						string.Format("Task {0} has failed and was deleted without completing any work", task),
-						e);
-				}
+				task = actions.Tasks.GetMergedTask(out tasks);
 			});
-			return foundWork;
+
+			if (task == null)
+				return false;
+
+
+			log.Debug("Executing {0}", task);
+
+			try
+			{
+				task.Execute(context);
+			}
+			catch (Exception e)
+			{
+				log.WarnException(
+					string.Format("Task {0} has failed and was deleted without completing any work", task),
+					e);
+			}
+			return true;
 		}
 
 	}
