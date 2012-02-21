@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
@@ -72,7 +73,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void IncrementReduceIndexingFailure()
 		{
-			Api.EscrowUpdate(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["reduce_errors"], 1);
+			Api.EscrowUpdate(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_errors"], 1);
 		}
 
 		public IEnumerable<IndexStats> GetIndexesStats()
