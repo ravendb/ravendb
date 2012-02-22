@@ -562,6 +562,7 @@
     <Compile Include="MailingList\Build570.cs" />
     <Compile Include="MailingList\CanDeleteIndex.cs" />
     <Compile Include="MailingList\DecimalQueries.cs" />
+    <Compile Include="MailingList\Dmitry.cs" />
     <Compile Include="MailingList\EnumInIndexDef.cs" />
     <Compile Include="MailingList\HierarchicalInheritanceIndexing.cs" />
     <Compile Include="MailingList\IisQueryLengthIssues.cs" />
@@ -630,7 +631,6 @@
     </Compile>
     <Compile Include="ManagedStorage\Indexes.cs" />
     <Compile Include="ManagedStorage\MappedResults.cs" />
-    <Compile Include="ManagedStorage\MyTask.cs" />
     <Compile Include="ManagedStorage\Queues.cs" />
     <Compile Include="ManagedStorage\Storage.cs" />
     <Compile Include="ManagedStorage\Tasks.cs" />

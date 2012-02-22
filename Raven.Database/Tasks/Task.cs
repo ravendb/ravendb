@@ -15,19 +15,6 @@ namespace Raven.Database.Tasks
 	{
 		public string Index { get; set; }
 
-		public string Type
-		{
-			get
-			{
-				var type = GetType();
-				if(type.Assembly == typeof(Task).Assembly)
-				{
-					return type.FullName;
-				}
-				return type.AssemblyQualifiedName;
-			}
-		}
-
 		public virtual bool SupportsMerging
 		{
 			get
@@ -48,7 +35,7 @@ namespace Raven.Database.Tasks
 
 		public static Task ToTask(string taskType, byte[] task)
 		{
-			var type = typeof(Task).Assembly.GetType(taskType) ?? System.Type.GetType(taskType);
+			var type = typeof(Task).Assembly.GetType(taskType);
 			return (Task) new JsonSerializer().Deserialize(new BsonReader(new MemoryStream(task)), type);
 		}
 

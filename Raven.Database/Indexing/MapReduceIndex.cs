@@ -48,9 +48,8 @@ namespace Raven.Database.Indexing
 			IStorageActionsAccessor actions,
 			DateTime minimumTimestamp)
 		{
-			actions.Indexing.SetCurrentIndexStatsTo(name);
 			var count = 0;
-			
+
 			// we mark the reduce keys to delete when we delete the mapped results, then we remove
 			// any reduce key that is actually being used to generate new mapped results
 			// this way, only reduces that removed data will force us to use the tasks approach
@@ -64,7 +63,8 @@ namespace Raven.Database.Indexing
 				}
 				return doc;
 			});
-			foreach (var mappedResultFromDocument in GroupByDocumentId(RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context)))
+			var stats = new IndexingWorkStats();
+			foreach (var mappedResultFromDocument in GroupByDocumentId(RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context,stats)))
 			{
 				foreach (var doc in RobustEnumerationReduceDuringMapPhase(mappedResultFromDocument, viewGenerator.ReduceDefinition, actions, context))
 				{
@@ -83,16 +83,14 @@ namespace Raven.Database.Indexing
 
 					var data = GetMapedData(doc);
 
-					logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId ,data);
+					logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId, data);
 
 					var hash = ComputeHash(name, reduceKey);
 
 					actions.MappedResults.PutMappedResult(name, docId, reduceKey, data, hash);
-
-					actions.Indexing.IncrementSuccessIndexing();
 				}
 			}
-
+			UpdateIndexingStats(context, stats);
 			if (reduceKeysToDelete.Count > 0)
 			{
 				actions.Tasks.AddTask(new ReduceTask
@@ -111,7 +109,7 @@ namespace Raven.Database.Indexing
 		private static IEnumerable<IGrouping<object, dynamic>> GroupByDocumentId(IEnumerable<object> docs)
 		{
 			var enumerator = docs.GetEnumerator();
-			if(enumerator.MoveNext()==false)
+			if (enumerator.MoveNext() == false)
 				yield break;
 
 			while (true)
@@ -130,7 +128,7 @@ namespace Raven.Database.Indexing
 			public bool Done { get; private set; }
 			public IEnumerator<object> GetEnumerator()
 			{
-				if(newKeyFound || Done)
+				if (newKeyFound || Done)
 					yield break;
 				yield return enumerator.Current;
 
@@ -165,15 +163,15 @@ namespace Raven.Database.Indexing
 		}
 
 		private static readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache = new ConcurrentDictionary<Type, Func<object, object>>();
-	
+
 		private static object GetDocumentId(object doc)
 		{
 			var docIdFetcher = documentIdFetcherCache.GetOrAdd(doc.GetType(), type =>
 			{
 				// document may be DynamicJsonObject if we are using compiled views
-				if (typeof (DynamicJsonObject) == type)
+				if (typeof(DynamicJsonObject) == type)
 				{
-					return i => ((dynamic) i).__document_id;
+					return i => ((dynamic)i).__document_id;
 				}
 				var docIdProp = TypeDescriptor.GetProperties(doc).Find(Constants.DocumentIdFieldName, false);
 				return docIdProp.GetValue;
@@ -232,11 +230,12 @@ namespace Raven.Database.Indexing
 				}, SystemTime.UtcNow);
 
 			});
-			Write(context, (writer, analyzer) =>
+			Write(context, (writer, analyzer, stats) =>
 			{
+				stats.Operation = IndexingWorkStats.Status.Ignore;
 				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));
 				writer.DeleteDocuments(
-					keys.Select(k => new Term(Abstractions.Data.Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
+					keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
 				return true;
 			});
 		}
@@ -252,9 +251,9 @@ namespace Raven.Database.Indexing
 									string[] reduceKeys)
 		{
 			var count = 0;
-			Write(context, (indexWriter, analyzer) =>
+			Write(context, (indexWriter, analyzer, stats) =>
 			{
-				actions.Indexing.SetCurrentIndexStatsTo(name);
+				stats.Operation = IndexingWorkStats.Status.Reduce;
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
 					.Where(x => x != null)
 					.ToList();
@@ -267,11 +266,11 @@ namespace Raven.Database.Indexing
 						{
 							logIndexing.WarnException(
 								string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
-								              name, entryKey),
+											  name, entryKey),
 								exception);
 							context.AddError(name,
-							                 entryKey,
-							                 exception.Message
+											 entryKey,
+											 exception.Message
 								);
 						},
 						trigger => trigger.OnIndexEntryDeleted(entryKey));
@@ -280,8 +279,8 @@ namespace Raven.Database.Indexing
 				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
 				var luceneDoc = new Document();
 				var reduceKeyField = new Field(Constants.ReduceKeyFieldName, "dummy",
-				                      Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
-				foreach (var doc in RobustEnumerationReduce(mappedResults, viewGenerator.ReduceDefinition, actions, context))
+									  Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
+				foreach (var doc in RobustEnumerationReduce(mappedResults, viewGenerator.ReduceDefinition, actions, context, stats))
 				{
 					count++;
 					float boost;
@@ -303,11 +302,11 @@ namespace Raven.Database.Indexing
 						{
 							logIndexing.WarnException(
 								string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-								              name, reduceKeyAsString),
+											  name, reduceKeyAsString),
 								exception);
 							context.AddError(name,
-							                 reduceKeyAsString,
-							                 exception.Message
+											 reduceKeyAsString,
+											 exception.Message
 								);
 						},
 						trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
@@ -315,7 +314,7 @@ namespace Raven.Database.Indexing
 					LogIndexedDocument(reduceKeyAsString, luceneDoc);
 
 					AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
-					actions.Indexing.IncrementReduceSuccessIndexing();
+					stats.ReduceSuccesses++;
 				}
 				batchers.ApplyAndIgnoreAllErrors(
 					e =>

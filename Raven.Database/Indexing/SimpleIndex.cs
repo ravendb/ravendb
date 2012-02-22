@@ -33,9 +33,8 @@ namespace Raven.Database.Indexing
 
 		public override void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents, WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp)
 		{
-			actions.Indexing.SetCurrentIndexStatsTo(name);
 			var count = 0;
-			Write(context, (indexWriter, analyzer) =>
+			Write(context, (indexWriter, analyzer, stats) =>
 			{
 				bool madeChanges = false;
 				var processedKeys = new HashSet<string>();
@@ -70,7 +69,7 @@ namespace Raven.Database.Indexing
 				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
 				var luceneDoc = new Document();
 				var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES, Field.Index.ANALYZED_NO_NORMS);
-				foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context))
+				foreach (var doc in RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context, stats))
 				{
 					count++;
 
@@ -105,7 +104,7 @@ namespace Raven.Database.Indexing
 						AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
 					}
 
-					actions.Indexing.IncrementSuccessIndexing();
+					stats.IndexingSuccesses++;
 				}
 				batchers.ApplyAndIgnoreAllErrors(
 					e =>
@@ -189,8 +188,9 @@ namespace Raven.Database.Indexing
 
 		public override void Remove(string[] keys, WorkContext context)
 		{
-			Write(context, (writer, analyzer) =>
+			Write(context, (writer, analyzer,stats) =>
 			{
+				stats.Operation = IndexingWorkStats.Status.Ignore;
 				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
 					.Where(x => x != null)

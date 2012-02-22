@@ -66,7 +66,9 @@ namespace Raven.Tests.MultiGet
 
 				using (var session = store.OpenSession())
 				{
-					session.Query<User>().Where(x => x.Name == "oren").ToArray();
+					session.Query<User>().Where(x => x.Name == "oren")
+						.Customize(x=>x.WaitForNonStaleResults())
+						.ToArray();
 				}
 				Guid id;
 				

@@ -228,8 +228,11 @@ namespace Raven.Client.Document.SessionOperations
 									  sp.ElapsedMilliseconds));
 				}
 				log.Debug(
-						"Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried",
-						indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
+						"Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
+						indexQuery.Query, 
+						indexName, 
+						sessionOperations.StoreIdentifier, 
+						result.IndexEtag);
 				return false;
 			}
 			currentQueryResults = result;
