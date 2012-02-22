@@ -10,15 +10,23 @@ namespace Raven.Database.Server.Security.Windows
 	public class WindowsRequestAuthorizer : AbstractRequestAuthorizer
 	{
 		private readonly List<string> requiredGroups = new List<string>();
+		private readonly List<string> requiredUsers = new List<string>();
 
 		protected override void Initialize()
 		{
 			var requiredGroupsString = server.Configuration.Settings["Raven/Authorization/Windows/RequiredGroups"];
-			if (requiredGroupsString == null)
-				return;
+			var requiredUsersString = server.Configuration.Settings["Raven/Authorization/Windows/RequiredUsers"];
+			if (requiredGroupsString != null)
+			{
+				var groups = requiredGroupsString.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries);
+				requiredGroups.AddRange(groups);
+			}
 
-			var groups = requiredGroupsString.Split(new[]{';'}, StringSplitOptions.RemoveEmptyEntries);
-			requiredGroups.AddRange(groups);
+			if (requiredUsersString != null)
+			{
+				var users = requiredUsersString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+				requiredUsers.AddRange(users);
+			}
 		}
 
 		public override bool Authorize(IHttpContext ctx)
@@ -29,7 +37,6 @@ namespace Raven.Database.Server.Security.Windows
 				if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
 					return true;
 
-				ctx.SetStatusToUnauthorized();
 				return false;
 			}
 
@@ -43,7 +50,6 @@ namespace Raven.Database.Server.Security.Windows
 				if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
 					return true;
 
-				ctx.SetStatusToUnauthorized();
 				return false;
 			}
 
@@ -59,10 +65,19 @@ namespace Raven.Database.Server.Security.Windows
 		{
 			var invalidUser = (ctx.User == null ||
 			                   ctx.User.Identity.IsAuthenticated == false);
-			if (invalidUser == false && requiredGroups.Count > 0)
+			if (invalidUser == false && (requiredGroups.Count > 0 || requiredUsers.Count > 0))
 			{
-				return requiredGroups.All(requiredGroup => !ctx.User.IsInRole(requiredGroup));
+				if (requiredGroups.Any(requiredGroup => ctx.User.IsInRole(requiredGroup)))
+					return true;
+
+				if (requiredUsers.Any(requiredUser => string.Compare(ctx.User.Identity.Name, requiredUser, StringComparison.OrdinalIgnoreCase) == 0))
+					return true;
+
+				ctx.SetStatusToUnauthorized();
+				return false;
 			}
+
+			ctx.SetStatusToForbidden();
 			return invalidUser;
 		}
 	}
