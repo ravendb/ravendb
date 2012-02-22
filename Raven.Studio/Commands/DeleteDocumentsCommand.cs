@@ -16,17 +16,24 @@ namespace Raven.Studio.Commands
 {
 	public class DeleteDocumentsCommand : ListBoxCommand<ViewableDocument>
 	{
+		public override bool CanExecute(object parameter)
+		{
+			if (base.CanExecute(parameter))
+			{
+				var documentsIds = SelectedItems.FirstOrDefault();
+
+				if (documentsIds != null && documentsIds.Id != null)
+					return true;
+			}
+
+			return false;
+		}
+
 		public override void Execute(object parameter)
 		{
 			var documentsIds = SelectedItems
 				.Select(x => x.Id)
 				.ToList();
-
-			if (documentsIds[0] == null)
-			{
-				ApplicationModel.Current.AddNotification(new Notification("Can not delete projections!", NotificationLevel.Warning));
-				return;
-			}
 
 			AskUser.ConfirmationAsync("Confirm Delete", documentsIds.Count > 1
 			                                            	? string.Format("Are you sure you want to delete these {0} documents?", documentsIds.Count)
