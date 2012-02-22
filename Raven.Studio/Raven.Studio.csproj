@@ -128,6 +128,7 @@
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
+    <Compile Include="Features\Query\QueryIndexAutoComplete.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
     <Compile Include="Features\Tasks\TaskView.xaml.cs">
       <DependentUpon>TaskView.xaml</DependentUpon>

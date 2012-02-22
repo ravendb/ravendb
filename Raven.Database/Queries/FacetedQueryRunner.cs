@@ -5,6 +5,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Extensions;
 
 namespace Raven.Database.Queries
 {
@@ -53,6 +54,7 @@ namespace Raven.Database.Queries
 		private void HandleRangeFacet(string index, Facet facet, IndexQuery indexQuery, IndexSearcher currentIndexSearcher, Dictionary<string, IEnumerable<FacetValue>> results)
 		{
 			var rangeResults = new List<FacetValue>();
+			var filter = indexQuery.GetFilter();
 			foreach (var range in facet.Ranges)
 			{
 				var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery, database.IndexQueryTriggers);
@@ -67,7 +69,7 @@ namespace Raven.Database.Queries
 				joinedQuery.Add(baseQuery, BooleanClause.Occur.MUST);
 				joinedQuery.Add(rangeQuery, BooleanClause.Occur.MUST);
 
-				var topDocs = currentIndexSearcher.Search(joinedQuery, 1);
+				var topDocs = currentIndexSearcher.Search(joinedQuery, filter, 1);
 
 				if (topDocs.TotalHits > 0)
 				{
@@ -89,7 +91,7 @@ namespace Raven.Database.Queries
 													  database.Configuration.MaxPageSize);
 			var termResults = new List<FacetValue>();
 			var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery, database.IndexQueryTriggers);
-
+			var filter = indexQuery.GetFilter();
 			foreach (var term in terms)
 			{
 				var termQuery = new TermQuery(new Term(facet.Name, term));
@@ -98,7 +100,7 @@ namespace Raven.Database.Queries
 				joinedQuery.Add(baseQuery, BooleanClause.Occur.MUST);
 				joinedQuery.Add(termQuery, BooleanClause.Occur.MUST);
 
-				var topDocs = currentIndexSearcher.Search(joinedQuery, 1);
+				var topDocs = currentIndexSearcher.Search(joinedQuery, filter, 1);
 
 				if (topDocs.TotalHits > 0)
 				{

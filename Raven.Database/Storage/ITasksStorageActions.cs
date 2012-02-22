@@ -13,6 +13,6 @@ namespace Raven.Database.Storage
 		void AddTask(Task task, DateTime addedAt);
 		bool HasTasks { get; }
 		long ApproximateTaskCount { get; }
-		Task GetMergedTask(out int countOfMergedTasks);
+		T GetMergedTask<T>() where T : Task;
 	}
 }

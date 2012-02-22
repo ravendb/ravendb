@@ -135,12 +135,7 @@ namespace Raven.Tests.Storage
 				}
 			});
 
-			db.TransactionalStorage.Batch(actions =>
-			{
-				int tasks;
-				actions.Tasks.GetMergedTask(out tasks);
-				Assert.Equal(3, tasks);
-			});
+			db.TransactionalStorage.Batch(actions => actions.Tasks.GetMergedTask<RemoveFromIndexTask>());
 
 
 			db.TransactionalStorage.Batch(actions =>

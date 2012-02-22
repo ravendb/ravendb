@@ -127,7 +127,7 @@ namespace Raven.Bundles.MoreLikeThis
 				var result = new MultiLoadResult();
 
 				var includedEtags = new List<byte>(jsonDocuments.SelectMany(x => x.Etag.Value.ToByteArray()));
-				includedEtags.AddRange(Database.GetIndexEtag(indexName).ToByteArray());
+				includedEtags.AddRange(Database.GetIndexEtag(indexName, null).ToByteArray());
 				var loadedIds = new HashSet<string>(jsonDocuments.Select(x => x.Key));
 				var addIncludesCommand = new AddIncludesCommand(Database, GetRequestTransaction(context), (etag, includedDoc) =>
 				{

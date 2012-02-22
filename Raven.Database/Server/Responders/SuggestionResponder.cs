@@ -33,7 +33,7 @@ namespace Raven.Database.Server.Responders
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var index = match.Groups[1].Value;
 
-			var indexEtag = Database.GetIndexEtag(index);
+			var indexEtag = Database.GetIndexEtag(index, null);
 			if (context.MatchEtag(indexEtag))
 			{
 				context.SetStatusToNotModified();
@@ -66,7 +66,7 @@ namespace Raven.Database.Server.Responders
 							};
 
 			var suggestionQueryResult = Database.ExecuteSuggestionQuery(index, query);
-			context.Response.AddHeader("ETag", Database.GetIndexEtag(index).ToString());
+			context.Response.AddHeader("ETag", Database.GetIndexEtag(index, null).ToString());
 			context.WriteJson(suggestionQueryResult);
 		}
 	}

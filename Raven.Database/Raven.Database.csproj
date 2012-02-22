@@ -120,6 +120,7 @@
     <Compile Include="Indexing\IBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\BackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IndexBatchSizeAutoTuner.cs" />
+    <Compile Include="Indexing\IndexingWorkStats.cs" />
     <Compile Include="Indexing\NotForQueryingAttribute.cs" />
     <Compile Include="Indexing\Sorting\RandomFieldComparatorSource.cs" />
     <Compile Include="Indexing\Sorting\RandomFieldComparator.cs" />
@@ -205,7 +206,6 @@
     <Compile Include="Indexing\IndexSearcherHolder.cs" />
     <Compile Include="Indexing\ReducingExecuter.cs" />
     <Compile Include="Indexing\TaskSchedulerWithCustomPriority.cs" />
-    <Compile Include="Indexing\TasksExecuter.cs" />
     <Compile Include="Linq\Ast\CaptureQueryParameterNamesVisitor.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCalls.cs" />
     <Compile Include="Linq\Ast\TransformNullCoalasingOperatorTransformer.cs" />

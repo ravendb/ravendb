@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : ITasksStorageActions
 	{
-	    public void AddTask(Task task, DateTime addedAt)
+		public void AddTask(Task task, DateTime addedAt)
 		{
 			int actualBookmarkSize;
 			var bookmark = new byte[SystemParameters.BookmarkMost];
@@ -21,7 +21,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task"], task.AsBytes());
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["for_index"], task.Index, Encoding.Unicode);
-				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task_type"], task.Type, Encoding.Unicode);
+				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task_type"], task.GetType().FullName, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["supports_merging"], task.SupportsMerging);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["added_at"], addedAt);
 
@@ -53,13 +53,15 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public Task GetMergedTask(out int countOfMergedTasks)
+		public T GetMergedTask<T>() where T : Task
 		{
 			Api.MoveBeforeFirst(session, Tasks);
 			while (Api.TryMoveNext(session, Tasks))
 			{
-				var taskAsBytes = Api.RetrieveColumn(session, Tasks, tableColumnsCache.TasksColumns["task"]);
 				var taskType = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
+				if (taskType != typeof(T).FullName)
+					continue;
+				var taskAsBytes = Api.RetrieveColumn(session, Tasks, tableColumnsCache.TasksColumns["task"]);
 				try
 				{
 					Api.JetDelete(session, Tasks);
@@ -82,23 +84,23 @@ namespace Raven.Storage.Esent.StorageActions
 					continue;
 				}
 
-				MergeSimilarTasks(task, out countOfMergedTasks);
-				return task;
+				MergeSimilarTasks(task);
+				return (T)task;
 			}
-			countOfMergedTasks = 0;
 			return null;
 		}
 
-		public void MergeSimilarTasks(Task task, out int taskCount)
+		public void MergeSimilarTasks(Task task)
 		{
-			taskCount = 1;
 			if (task.SupportsMerging == false)
 				return;
+
+			var expectedTaskType = task.GetType().FullName;
 
 			Api.JetSetCurrentIndex(session, Tasks, "mergables_by_task_type");
 			Api.MakeKey(session, Tasks, true, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
 			// there are no tasks matching the current one, just return
 			if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
 			{
@@ -107,7 +109,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			Api.MakeKey(session, Tasks, true, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.MakeKey(session, Tasks, task.Type, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 			do
 			{
@@ -116,7 +118,7 @@ namespace Raven.Storage.Esent.StorageActions
 					continue;
 				if (Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["for_index"]) != task.Index)
 					continue;
-				if (Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"]) != task.Type)
+				if (Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"]) != expectedTaskType)
 					continue;
 
 				try
@@ -139,7 +141,6 @@ namespace Raven.Storage.Esent.StorageActions
 					if (task.TryMerge(existingTask) == false)
 						continue;
 					Api.JetDelete(session, Tasks);
-					taskCount += 1;
 				}
 				catch (EsentErrorException e)
 				{
