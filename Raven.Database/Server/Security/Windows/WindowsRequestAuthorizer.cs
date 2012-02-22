@@ -15,13 +15,13 @@ namespace Raven.Database.Server.Security.Windows
 		protected override void Initialize()
 		{
 			var requiredGroupsString = server.Configuration.Settings["Raven/Authorization/Windows/RequiredGroups"];
-			var requiredUsersString = server.Configuration.Settings["Raven/Authorization/Windows/RequiredUsers"];
 			if (requiredGroupsString != null)
 			{
-				var groups = requiredGroupsString.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries);
+				var groups = requiredGroupsString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
 				requiredGroups.AddRange(groups);
 			}
 
+			var requiredUsersString = server.Configuration.Settings["Raven/Authorization/Windows/RequiredUsers"];
 			if (requiredUsersString != null)
 			{
 				var users = requiredUsersString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
@@ -68,13 +68,13 @@ namespace Raven.Database.Server.Security.Windows
 			if (invalidUser == false && (requiredGroups.Count > 0 || requiredUsers.Count > 0))
 			{
 				if (requiredGroups.Any(requiredGroup => ctx.User.IsInRole(requiredGroup)))
-					return true;
+					return false;
 
 				if (requiredUsers.Any(requiredUser => string.Compare(ctx.User.Identity.Name, requiredUser, StringComparison.OrdinalIgnoreCase) == 0))
-					return true;
+					return false;
 
 				ctx.SetStatusToUnauthorized();
-				return false;
+				return true;
 			}
 
 			ctx.SetStatusToForbidden();
