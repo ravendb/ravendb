@@ -630,7 +630,6 @@
     </Compile>
     <Compile Include="ManagedStorage\Indexes.cs" />
     <Compile Include="ManagedStorage\MappedResults.cs" />
-    <Compile Include="ManagedStorage\MyTask.cs" />
     <Compile Include="ManagedStorage\Queues.cs" />
     <Compile Include="ManagedStorage\Storage.cs" />
     <Compile Include="ManagedStorage\Tasks.cs" />
