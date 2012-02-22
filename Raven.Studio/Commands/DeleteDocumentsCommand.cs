@@ -22,6 +22,12 @@ namespace Raven.Studio.Commands
 				.Select(x => x.Id)
 				.ToList();
 
+			if (documentsIds[0] == null)
+			{
+				ApplicationModel.Current.AddNotification(new Notification("Can not delete projections!", NotificationLevel.Warning));
+				return;
+			}
+
 			AskUser.ConfirmationAsync("Confirm Delete", documentsIds.Count > 1
 			                                            	? string.Format("Are you sure you want to delete these {0} documents?", documentsIds.Count)
 			                                            	: string.Format("Are you sure that you want to delete this document? ({0})", documentsIds.First()))

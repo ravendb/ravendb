@@ -16,4 +16,5 @@
 	<Commands:CreateDatabaseCommand x:Name="CreateDatabaseCommand" />
 	<Commands:DeleteIndexCommand x:Name="DeleteIndexCommand" />
 	<Commands:PromoteToAutoIndexCommand x:Name="PromoteToAutoIndexCommand" />
+	<Commands:ResetIndexCommand x:Name="ResetIndexCommand" />
 </ResourceDictionary>

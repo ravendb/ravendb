@@ -275,13 +275,13 @@ namespace Raven.Studio.Models
 				if (fieldsTermsDictionary.ContainsKey(field))
 					continue;
 				var terms = fieldsTermsDictionary[field] = new List<string>();
-				GetTermsForField(field, terms);
+				GetTermsForField(field, string.Empty, terms);
 			}
 		}
 
-		private void GetTermsForField(string field, List<string> terms)
+		private void GetTermsForField(string field, string currentTerm, List<string> terms)
 		{
-			DatabaseCommands.GetTermsAsync(IndexName, field, string.Empty, 1024)
+			DatabaseCommands.GetTermsAsync(IndexName, field, currentTerm, 1024)
 				.ContinueOnSuccess(termsFromServer =>
 				{
 					foreach (var term in termsFromServer)
