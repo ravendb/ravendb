@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenQueryCompletionProvider.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="QueryIntelliPromptProvider.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -12,12 +12,12 @@ using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation
 
 namespace Raven.Studio.Features.Query
 {
-	public class RavenQueryCompletionProvider : ICompletionProvider
+	public class QueryIntelliPromptProvider : ICompletionProvider
 	{
 		private readonly IList<string> fields;
 		private readonly Dictionary<string, List<string>> termsDictionary;
 
-		public RavenQueryCompletionProvider(IList<string> fields, Dictionary<string, List<string>> termsDictionary)
+		public QueryIntelliPromptProvider(IList<string> fields, Dictionary<string, List<string>> termsDictionary)
 		{
 			this.fields = fields;
 			this.termsDictionary = termsDictionary;

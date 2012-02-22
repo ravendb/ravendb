@@ -240,7 +240,7 @@
     <Compile Include="Features\Indexes\IndexesErrorsView.xaml.cs">
       <DependentUpon>IndexesErrorsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Query\RavenQueryCompletionProvider.cs" />
+    <Compile Include="Features\Query\QueryIntelliPromptProvider.cs" />
     <Compile Include="Features\Query\ExecuteQueryCommand.cs" />
     <Compile Include="Features\Query\QueryView.xaml.cs">
       <DependentUpon>QueryView.xaml</DependentUpon>

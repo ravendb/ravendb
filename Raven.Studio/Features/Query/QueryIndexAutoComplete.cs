@@ -40,7 +40,7 @@ namespace Raven.Studio.Features.Query
             this.fields.Match(fields);
 
             this.query.PropertyChanged += GetTermsForUsedFields;
-            CompletionProvider = new RavenQueryCompletionProvider(fields, fieldsTermsDictionary);
+            CompletionProvider = new QueryIntelliPromptProvider(fields, fieldsTermsDictionary);
         }
 
         private void GetTermsForUsedFields(object sender, PropertyChangedEventArgs e)
