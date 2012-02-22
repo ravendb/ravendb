@@ -19,11 +19,6 @@ namespace Raven.Database.Tasks
 
 		public string[] ReduceKeys { get; set; }
 
-		public ReduceTask()
-		{
-			
-		}
-
 		public override bool SupportsMerging
 		{
 			get

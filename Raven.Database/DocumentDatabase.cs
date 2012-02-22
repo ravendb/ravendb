@@ -101,7 +101,6 @@ namespace Raven.Database
 		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
 		private System.Threading.Tasks.Task indexingBackgroundTask;
 		private System.Threading.Tasks.Task reducingBackgroundTask;
-		private System.Threading.Tasks.Task tasksBackgroundTask;
 	    private readonly TaskScheduler backgroundTaskScheduler;
 
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
@@ -339,11 +338,6 @@ namespace Raven.Database
 
 			exceptionAggregator.Execute(() =>
 			{
-				if (tasksBackgroundTask != null)
-					tasksBackgroundTask.Wait(); 
-			});
-			exceptionAggregator.Execute(() =>
-			{
 				if (indexingBackgroundTask != null)
 					indexingBackgroundTask.Wait();
 			});
@@ -375,7 +369,6 @@ namespace Raven.Database
 		public void StopBackgroundWokers()
 		{
 			workContext.StopWork();
-			tasksBackgroundTask.Wait();
 			indexingBackgroundTask.Wait();
 		    reducingBackgroundTask.Wait();
 		}
@@ -395,9 +388,6 @@ namespace Raven.Database
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
-				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-			tasksBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-				new TasksExecuter(TransactionalStorage, workContext).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 

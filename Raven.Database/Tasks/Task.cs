@@ -15,19 +15,6 @@ namespace Raven.Database.Tasks
 	{
 		public string Index { get; set; }
 
-		public string Type
-		{
-			get
-			{
-				var type = GetType();
-				if(type.Assembly == typeof(Task).Assembly)
-				{
-					return type.FullName;
-				}
-				return type.AssemblyQualifiedName;
-			}
-		}
-
 		public virtual bool SupportsMerging
 		{
 			get

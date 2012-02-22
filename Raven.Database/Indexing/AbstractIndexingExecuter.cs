@@ -5,6 +5,8 @@ using NLog;
 using Raven.Abstractions.Data;
 using Raven.Database.Storage;
 using System.Linq;
+using Raven.Database.Tasks;
+using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
@@ -38,6 +40,13 @@ namespace Raven.Database.Indexing
 				try
 				{
 					foundWork = ExecuteIndexing();
+					while(context.DoWork) // we want to drain all of the pending tasks before the next run
+					{
+						if (ExecuteTasks() == false)
+							break;
+						foundWork = true;
+					}
+					
 				}
 				catch (Exception e)
 				{
@@ -54,6 +63,34 @@ namespace Raven.Database.Indexing
 				}
 			}
 		}
+
+		private bool ExecuteTasks()
+		{
+			bool foundWork = false;
+			transactionalStorage.Batch(actions =>
+			{
+				Task task = GetApplicableTask(actions);
+				if (task == null)
+					return;
+
+				log.Debug("Executing {0}", task);
+				foundWork = true;
+
+				try
+				{
+					task.Execute(context);
+				}
+				catch (Exception e)
+				{
+					log.WarnException(
+						string.Format("Task {0} has failed and was deleted without completing any work", task),
+						e);
+				}
+			});
+			return foundWork;
+		}
+
+		protected abstract Task GetApplicableTask(IStorageActionsAccessor actions);
 
 		private void FlushIndexes()
 		{

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
@@ -88,6 +89,11 @@ namespace Raven.Database.Indexing
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
 		{
 			return actions.Staleness.IsReduceStale(indexesStat.Name);
+		}
+
+		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
+		{
+			return actions.Tasks.GetMergedTask<ReduceTask>();
 		}
 
 		protected override void FlushAllIndexes()
