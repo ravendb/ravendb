@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -12,14 +11,14 @@ namespace Raven.Studio.Infrastructure
 		{
 			add
 			{
-				var state = new EventState(this, value);
+				var state = new EventState(value);
 				PropertyChangedInternal += state.Invoke;
 			}
 			remove
 			{
 				EventState firstOrDefault = PropertyChangedInternal.GetInvocationList()
 					.Select(x => ((EventState) x.Target))
-					.FirstOrDefault(x => ReferenceEquals(x.Value.Target, value));
+					.FirstOrDefault(x => x.Value == value);
 				
 				if (firstOrDefault == null)
 					return;
@@ -30,26 +29,16 @@ namespace Raven.Studio.Infrastructure
 
 		private class EventState
 		{
-			private readonly NotifyPropertyChangedBase parent;
-			public WeakReference Value { get; private set; }
+			public PropertyChangedEventHandler Value { get; private set; }
 
-			public EventState(NotifyPropertyChangedBase parent, PropertyChangedEventHandler value)
+			public EventState(PropertyChangedEventHandler value)
 			{
-				this.parent = parent;
-				this.Value = new WeakReference(value);
+				this.Value = value;
 			}
 
 			public void Invoke(object sender, PropertyChangedEventArgs e)
 			{
-				var progressChangedEventHandler = Value.Target as PropertyChangedEventHandler;
-
-				if (progressChangedEventHandler == null)
-				{
-					parent.PropertyChangedInternal -= Invoke;
-					return;
-				}
-
-				Execute.OnTheUI(() => progressChangedEventHandler(sender, e));
+				Execute.OnTheUI(() => Value(sender, e));
 			}
 		}
 
