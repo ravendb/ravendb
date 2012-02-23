@@ -24,6 +24,7 @@ namespace Raven.Tests.Bugs
 				using (var session = documentStore.OpenSession())
 				{
 					var viewModel = (from entity in session.Query<Entity>()
+										.Customize(x=>x.WaitForNonStaleResults())
 					                 select new EntityViewModel
 					                        	{
 					                        		Id = entity.Id,
