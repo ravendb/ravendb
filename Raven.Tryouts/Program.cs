@@ -31,8 +31,8 @@ namespace Raven.Tryouts
 					Environment.SetEnvironmentVariable("Run", i.ToString());
 					Console.Clear();
 					Console.WriteLine(i);
-					using (var x = new MapReduce())
-						x.CanUpdateReduceValue_WhenChangingReduceKey();
+					var x = new Raven.Tests.MailingList.MapReduceIssue.CanPageThroughReduceResults();
+						x.Test();
 				}
 			}
 			catch (Exception e)

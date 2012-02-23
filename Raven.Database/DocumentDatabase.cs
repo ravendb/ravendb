@@ -1331,13 +1331,14 @@ namespace Raven.Database
 				lastReducedEtag = accessor.Staleness.GetMostRecentReducedEtag(indexName);
 				touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
 			});
-			if (queryResult != null &&
-					queryResult.IndexEtag != lastDocEtag)
+			if (queryResult != null)
 			{
 				// the index changed between the time when we got it and the time 
 				// we actually call this, we need to return something random so that
 				// the next time we won't get 304
-				return Guid.NewGuid();
+				if (lastReducedEtag != null && queryResult.IndexEtag != lastReducedEtag.Value ||
+					lastDocEtag != queryResult.IndexEtag)
+					return Guid.NewGuid();
 			}
 
 			var indexDefinition = GetIndexDefinition(indexName);
