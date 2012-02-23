@@ -31,29 +31,32 @@ namespace Raven.Database.Server.Security.Windows
 
 		public override bool Authorize(IHttpContext ctx)
 		{
-			if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx))
+			Action onRejectingRequest;
+			if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx, out onRejectingRequest))
 			{
 				var requestUrl = ctx.GetRequestUrl();
 				if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
 					return true;
 
+				onRejectingRequest();
 				return false;
 			}
 
 			var httpRequest = ctx.Request;
 
 			if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
-				IsInvalidUser(ctx) &&
+				IsInvalidUser(ctx, out onRejectingRequest) &&
 				IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) == false)
 			{
 				var requestUrl = ctx.GetRequestUrl();
 				if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
 					return true;
 
+				onRejectingRequest();
 				return false;
 			}
 
-			if (IsInvalidUser(ctx) == false)
+			if (IsInvalidUser(ctx, out onRejectingRequest) == false)
 			{
 				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
 				CurrentOperationContext.User.Value = ctx.User;
@@ -61,24 +64,30 @@ namespace Raven.Database.Server.Security.Windows
 			return true;
 		}
 
-		private bool IsInvalidUser(IHttpContext ctx)
+		private bool IsInvalidUser(IHttpContext ctx, out Action onRejectingRequest)
 		{
 			var invalidUser = (ctx.User == null ||
-			                   ctx.User.Identity.IsAuthenticated == false);
-			if (invalidUser == false && (requiredGroups.Count > 0 || requiredUsers.Count > 0))
+							   ctx.User.Identity.IsAuthenticated == false);
+			if (invalidUser)
 			{
-				if (requiredGroups.Any(requiredGroup => ctx.User.IsInRole(requiredGroup)))
-					return false;
-
-				if (requiredUsers.Any(requiredUser => string.Compare(ctx.User.Identity.Name, requiredUser, StringComparison.OrdinalIgnoreCase) == 0))
-					return false;
-
-				ctx.SetStatusToUnauthorized();
+				onRejectingRequest = () => ctx.SetStatusToForbidden();
 				return true;
 			}
 
-			ctx.SetStatusToForbidden();
-			return invalidUser;
+
+			onRejectingRequest = () => ctx.SetStatusToUnauthorized();
+
+			if (requiredGroups.Count > 0 || requiredUsers.Count > 0)
+			{
+			
+				if (requiredGroups.Any(requiredGroup => ctx.User.IsInRole(requiredGroup)) ||
+					requiredUsers.Any(requiredUser => string.Equals(ctx.User.Identity.Name, requiredUser, StringComparison.InvariantCultureIgnoreCase)))
+					return false;
+
+				return true;
+			}
+			
+			return false;
 		}
 	}
 }

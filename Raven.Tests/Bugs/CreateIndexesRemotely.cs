@@ -19,7 +19,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanDoSo_DirectUrl()
 		{
-			using(GetNewServer())
+			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				var container = new CompositionContainer(new TypeCatalog(typeof(Posts_ByMonthPublished_Count), typeof(Tags_Count)));
