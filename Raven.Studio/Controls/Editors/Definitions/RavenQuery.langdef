@@ -28,10 +28,10 @@ Actipro Syntax Language Definition (.langdef)
 					<RegexPattern Value="AND" />
 					<RegexPattern Value="OR" />
 				</RegexPatternGroup>
+				<RegexPatternGroup ClassificationTypeKey="StringValue" Pattern="\&quot;[^\&quot;]*\&quot;" CaseSensitivity="Insensitive" />
 				<RegexPatternGroup Key="Field" ClassificationTypeKey="Field" Pattern="([^\s\r\n:]+)\s*:" CaseSensitivity="Sensitive" />
 				<RegexPatternGroup ClassificationTypeKey="SearchValue" Pattern="&lt;&lt;[^&gt;]+&gt;&gt;" />
 				<RegexPatternGroup ClassificationTypeKey="KeywordValue" Pattern="\[\[[^\]]+\]\]" />
-				<RegexPatternGroup ClassificationTypeKey="StringValue" Pattern="\&quot;[^\&quot;]*\&quot;" CaseSensitivity="Insensitive" />
 				<RegexPatternGroup Key="String" ClassificationTypeKey="Value" Pattern="[^\s\r\n:]*" CaseSensitivity="Insensitive" />
 			</State>
 		</DynamicLexer>

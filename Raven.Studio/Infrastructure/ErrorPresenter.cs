@@ -7,6 +7,8 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
+using Raven.Json.Linq;
 using Raven.Studio.Features.Util;
 
 namespace Raven.Studio.Infrastructure
@@ -21,9 +23,11 @@ namespace Raven.Studio.Infrastructure
 
 			if (customMessage != null)
 			{
-				writer.WriteLine(customMessage);
-				writer.WriteLine();
-				writer.WriteLine();
+				WriteCustomMessage(customMessage, writer);
+			}
+			else
+			{
+				SetCustomMessageBasedOnTheActualError(writer, e);
 			}
 
 			writer.Write("Message: ");
@@ -48,6 +52,39 @@ namespace Raven.Studio.Infrastructure
 			}
 		
 			Show(writer.ToString());
+		}
+
+		private static void WriteCustomMessage(string customMessage, StringWriter writer)
+		{
+			writer.WriteLine(customMessage);
+			writer.WriteLine();
+			writer.WriteLine();
+		}
+
+		private static void SetCustomMessageBasedOnTheActualError(StringWriter writer, Exception e)
+		{
+			var webException = e as WebException;
+			if (webException != null)
+			{
+				var webResponse = webException.Response as HttpWebResponse;
+				if (webResponse != null)
+				{
+					switch (webResponse.StatusCode)
+					{
+						case HttpStatusCode.Unauthorized:
+						case HttpStatusCode.Forbidden:
+							WriteCustomMessage("Could not authenticate against server", writer);
+							break;
+						default:
+							using (var streamReader = new StreamReader(webResponse.GetResponseStream()))
+							{
+								var error = streamReader.ReadToEnd();
+								WriteCustomMessage(error, writer);
+							}
+							break;
+					}
+				}
+			}
 		}
 
 		public static void Show(string text)

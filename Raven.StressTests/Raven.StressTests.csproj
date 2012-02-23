@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Races\RaceConditions.cs" />
+    <Compile Include="GeneralStressTest.cs" />
     <Compile Include="Storage\MultiThreadedStress\BatchOperationStress.cs" />
     <Compile Include="Storage\MultiThreadedStress\PutOperationStress.cs" />
     <Compile Include="StressTest.cs" />
