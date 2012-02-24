@@ -326,7 +326,7 @@ namespace Raven.Client.Document
 		/// Instruct RavenDB to parallel Multi Get processing 
 		/// when handling lazy requests
 		/// </summary>
-		public bool UseParallelMultiGet { get; private set; }
+		public bool UseParallelMultiGet { get; set; }
 
 		/// <summary>
 		/// Creates the serializer.

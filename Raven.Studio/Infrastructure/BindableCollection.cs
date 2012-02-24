@@ -41,9 +41,10 @@ namespace Raven.Studio.Infrastructure
 					SetItem(Items.IndexOf(remove), add);
 					toAdd.Remove(add);
 				}
-				foreach (var add in toAdd)
+				for (int i = 0; i < toAdd.Count; i++)
 				{
-					Add(add);
+					var add = toAdd[i];
+					Insert(i, add);
 				}
 				foreach (var disposable in toDispose)
 				{

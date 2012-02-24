@@ -16,6 +16,19 @@ namespace Raven.Studio.Commands
 {
 	public class DeleteDocumentsCommand : ListBoxCommand<ViewableDocument>
 	{
+		public override bool CanExecute(object parameter)
+		{
+			if (base.CanExecute(parameter))
+			{
+				var documentsIds = SelectedItems.FirstOrDefault();
+
+				if (documentsIds != null && documentsIds.Id != null)
+					return true;
+			}
+
+			return false;
+		}
+
 		public override void Execute(object parameter)
 		{
 			var documentsIds = SelectedItems

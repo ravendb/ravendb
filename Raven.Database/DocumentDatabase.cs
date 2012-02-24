@@ -101,7 +101,6 @@ namespace Raven.Database
 		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
 		private System.Threading.Tasks.Task indexingBackgroundTask;
 		private System.Threading.Tasks.Task reducingBackgroundTask;
-		private System.Threading.Tasks.Task tasksBackgroundTask;
 	    private readonly TaskScheduler backgroundTaskScheduler;
 
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
@@ -339,11 +338,6 @@ namespace Raven.Database
 
 			exceptionAggregator.Execute(() =>
 			{
-				if (tasksBackgroundTask != null)
-					tasksBackgroundTask.Wait(); 
-			});
-			exceptionAggregator.Execute(() =>
-			{
 				if (indexingBackgroundTask != null)
 					indexingBackgroundTask.Wait();
 			});
@@ -375,7 +369,6 @@ namespace Raven.Database
 		public void StopBackgroundWokers()
 		{
 			workContext.StopWork();
-			tasksBackgroundTask.Wait();
 			indexingBackgroundTask.Wait();
 		    reducingBackgroundTask.Wait();
 		}
@@ -395,9 +388,6 @@ namespace Raven.Database
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
-				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-			tasksBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-				new TasksExecuter(TransactionalStorage, workContext).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
@@ -747,8 +737,6 @@ namespace Raven.Database
 
 					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, query.CutoffEtag);
 
-					AskForIndexUpdateIfStale(stale, index);
-
 					indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index);
 					var indexFailureInformation = actions.Indexing.GetFailureRate(index);
 					if (indexFailureInformation.IsInvalidIndex)
@@ -810,19 +798,6 @@ namespace Raven.Database
 				IndexTimestamp = indexTimestamp.Item1,
 				IndexEtag = indexTimestamp.Item2
 			};
-		}
-
-		private void AskForIndexUpdateIfStale(bool stale, string index)
-		{
-			if (stale == false) 
-				return;
-
-			// This is a sort of a hack
-			// Using it in this manner ensures that even if we somehow lost an update, we would still
-			// kick up indexing, anyway, because the querying for this would trigger that.
-			// This doesn't mean that we don't have a problem with losing updates, mind, just that we have
-			// no way to reproduce this.
-			workContext.ShouldNotifyAboutWork(() => "QUERY ON STALE INDEX: " + index);
 		}
 
 		public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
@@ -1343,7 +1318,7 @@ namespace Raven.Database
 			return totalIndexSize + TransactionalStorage.GetDatabaseSizeInBytes();
 		}
 
-		public Guid GetIndexEtag(string indexName)
+		public Guid GetIndexEtag(string indexName, QueryResult queryResult)
 		{
 			Guid lastDocEtag = Guid.Empty;
 			Guid? lastReducedEtag = null;
@@ -1356,6 +1331,16 @@ namespace Raven.Database
 				lastReducedEtag = accessor.Staleness.GetMostRecentReducedEtag(indexName);
 				touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
 			});
+			if (queryResult != null)
+			{
+				// the index changed between the time when we got it and the time 
+				// we actually call this, we need to return something random so that
+				// the next time we won't get 304
+				if (lastReducedEtag != null && queryResult.IndexEtag != lastReducedEtag.Value ||
+					lastDocEtag != queryResult.IndexEtag)
+					return Guid.NewGuid();
+			}
+
 			var indexDefinition = GetIndexDefinition(indexName);
 			if (indexDefinition == null)
 				return Guid.NewGuid(); // this ensures that we will get the normal reaction of IndexNotFound later on.
@@ -1371,6 +1356,8 @@ namespace Raven.Database
 				{
 					list.AddRange(lastReducedEtag.Value.ToByteArray());
 				}
+				
+
 				return new Guid(md5.ComputeHash(list.ToArray()));
 			}
 		}

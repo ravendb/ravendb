@@ -65,6 +65,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
+    <Reference Include="FizzWare.NBuilder">
+      <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
+    </Reference>
     <Reference Include="ICSharpCode.NRefactory">
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>
@@ -544,8 +547,14 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\Afif.cs" />
+    <Compile Include="MailingList\IndexWhereClause .cs" />
+    <Compile Include="MailingList\Mark2.cs" />
     <Compile Include="MailingList\JoelAsync.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />
+    <Compile Include="MailingList\Stacey\Image.cs" />
+    <Compile Include="MailingList\Stacey\ImageByName.cs" />
+    <Compile Include="MailingList\Stacey\InServerTesting.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />
     <Compile Include="MailingList\Thor\LinqTest.cs" />
@@ -608,7 +617,7 @@
     <Compile Include="MailingList\spokeypokey\spokeypokey2.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey3.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey4.cs" />
-    <Compile Include="MailingList\Stacey.cs" />
+    <Compile Include="MailingList\Stacey2.cs" />
     <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\TimeZoneQueries.cs" />
     <Compile Include="MailingList\transformedresults_customid_test.cs" />
@@ -632,7 +641,6 @@
     </Compile>
     <Compile Include="ManagedStorage\Indexes.cs" />
     <Compile Include="ManagedStorage\MappedResults.cs" />
-    <Compile Include="ManagedStorage\MyTask.cs" />
     <Compile Include="ManagedStorage\Queues.cs" />
     <Compile Include="ManagedStorage\Storage.cs" />
     <Compile Include="ManagedStorage\Tasks.cs" />

@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
+using Raven.Database.Indexing;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Storage.Managed.Impl;
@@ -20,84 +21,11 @@ namespace Raven.Storage.Managed
 	{
 		private readonly TableStorage storage;
 
-		private readonly ThreadLocal<string> currentIndex = new ThreadLocal<string>();
-
 		public IndexingStorageActions(TableStorage storage)
 		{
 			this.storage = storage;
 		}
 
-		public void SetCurrentIndexStatsTo(string index)
-		{
-			currentIndex.Value = index;
-		}
-
-		public void IncrementIndexingAttempt()
-		{
-			var index = GetCurrentIndex();
-			index["attempts"] = index.Value<int>("attempts") + 1;
-			storage.IndexingStats.UpdateKey(index);
-		}
-
-		public void IncrementReduceIndexingAttempt()
-		{
-			var index = GetCurrentIndex();
-			index["reduce_attempts"] = index.Value<int>("reduce_attempts") + 1;
-			storage.IndexingStats.UpdateKey(index);
-		}
-
-		private RavenJObject GetCurrentIndex()
-		{
-			var readResult = storage.IndexingStats.Read(currentIndex.Value);
-			if (readResult == null)
-				throw new ArgumentException(string.Format("There is no index with the name: '{0}'", currentIndex.Value));
-			var key = (RavenJObject)readResult.Key;
-			return key;
-		}
-
-		public void IncrementSuccessIndexing()
-		{
-			var index = GetCurrentIndex();
-			index["successes"] = index.Value<int>("successes") + 1;
-			storage.IndexingStats.UpdateKey(index);
-		}
-
-		public void IncrementIndexingFailure()
-		{
-			var index = GetCurrentIndex();
-			index["failures"] = index.Value<int>("failures") + 1;
-			storage.IndexingStats.UpdateKey(index);
-		}
-
-		public void DecrementIndexingAttempt()
-		{
-			var index = GetCurrentIndex();
-			index["attempts"] = index.Value<int>("attempts") - 1;
-			storage.IndexingStats.UpdateKey(index);
-	   
-		}
-
-		public void IncrementReduceSuccessIndexing()
-		{
-			var index = GetCurrentIndex();
-			index["reduce_successes"] = index.Value<int?>("reduce_successes") + 1;
-			storage.IndexingStats.UpdateKey(index);
-		}
-
-		public void IncrementReduceIndexingFailure()
-		{
-			var index = GetCurrentIndex();
-			index["reduce_failures"] = index.Value<int?>("reduce_failures") + 1;
-			storage.IndexingStats.UpdateKey(index);
-		}
-
-		public void DecrementReduceIndexingAttempt()
-		{
-			var index = GetCurrentIndex();
-			index["reduce_attempts"] = index.Value<int?>("reduce_attempts") - 1;
-			storage.IndexingStats.UpdateKey(index);
-
-		}
 
 		public IEnumerable<IndexStats> GetIndexesStats()
 		{
@@ -151,6 +79,36 @@ namespace Raven.Storage.Managed
 			});
 		}
 
+		private RavenJObject GetCurrentIndex(string index)
+		{
+			var readResult = storage.IndexingStats.Read(index);
+			if (readResult == null)
+				throw new ArgumentException(string.Format("There is no index with the name: '{0}'", index));
+			var key = (RavenJObject)readResult.Key;
+			return key;
+		}
+
+
+		public void UpdateIndexingStats(string index, IndexingWorkStats stats)
+		{
+			var indexStats = GetCurrentIndex(index);
+			indexStats["attempts"] = indexStats.Value<int>("attempts") + stats.IndexingAttempts;
+			indexStats["successes"] = indexStats.Value<int>("successes") + stats.IndexingSuccesses;
+			indexStats["failures"] = indexStats.Value<int>("failures") + stats.IndexingErrors;
+			storage.IndexingStats.UpdateKey(indexStats);
+		
+		}
+
+		public void UpdateReduceStats(string index, IndexingWorkStats stats)
+		{
+			var indexStats = GetCurrentIndex(index);
+			indexStats["reduce_attempts"] = indexStats.Value<int>("reduce_attempts") + stats.ReduceAttempts;
+			indexStats["reduce_successes"] = indexStats.Value<int>("reduce_successes") + stats.ReduceSuccesses;
+			indexStats["reduce_failures"] = indexStats.Value<int>("reduce_failures") + stats.ReduceSuccesses;
+			storage.IndexingStats.UpdateKey(indexStats);
+		
+		}
+
 		public void DeleteIndex(string name)
 		{
 			storage.IndexingStats.Remove(name);
@@ -178,7 +136,7 @@ namespace Raven.Storage.Managed
 		{
 			var readResult = storage.IndexingStats.Read(index);
 			if (readResult == null)
-				throw new ArgumentException(string.Format("There is no index with the name: '{0}'", currentIndex.Value));
+				throw new ArgumentException(string.Format("There is no index with the name: '{0}'", index));
 			var key = (RavenJObject)readResult.Key;
 			key["touches"] = key.Value<int>("touches") + 1;
 			storage.IndexingStats.UpdateKey(key);
@@ -212,7 +170,6 @@ namespace Raven.Storage.Managed
 
 		public void Dispose()
 		{
-			currentIndex.Dispose();
 		}
 	}
 }

@@ -121,12 +121,14 @@
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
+    <Compile Include="Features\Query\QueryIndexAutoComplete.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
     <Compile Include="Features\Tasks\TaskView.xaml.cs">
       <DependentUpon>TaskView.xaml</DependentUpon>
@@ -238,7 +240,7 @@
     <Compile Include="Features\Indexes\IndexesErrorsView.xaml.cs">
       <DependentUpon>IndexesErrorsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Query\RavenQueryCompletionProvider.cs" />
+    <Compile Include="Features\Query\QueryIntelliPromptProvider.cs" />
     <Compile Include="Features\Query\ExecuteQueryCommand.cs" />
     <Compile Include="Features\Query\QueryView.xaml.cs">
       <DependentUpon>QueryView.xaml</DependentUpon>

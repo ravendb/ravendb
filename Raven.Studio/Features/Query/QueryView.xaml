@@ -137,7 +137,7 @@
 				<Editors:QueryEditor x:Name="QueryEditor"
 									 Grid.Row="1"
 									 Text="{Binding Path=Query.Value, Mode=TwoWay}"
-									 CompletionProvider="{Binding Path=CompletionProvider.Value}">
+									 CompletionProvider="{Binding Path=QueryIndexAutoComplete.CompletionProvider}">
 					<i:Interaction.Triggers>
 						<ei:KeyTrigger Key="Enter"
 									   Modifiers="Control">

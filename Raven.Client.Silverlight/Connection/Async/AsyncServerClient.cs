@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Text;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
@@ -710,7 +711,9 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="name">The name.</param>
 		public Task ResetIndexAsync(string name)
 		{
-			throw new NotImplementedException();
+			var httpJsonRequestAsync = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/indexes/" + name, "RESET", credentials, convention);
+			httpJsonRequestAsync.AddOperationHeaders(OperationsHeaders);
+			return httpJsonRequestAsync.ReadResponseJsonAsync();
 		}
 
 		/// <summary>

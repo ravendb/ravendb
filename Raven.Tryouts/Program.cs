@@ -7,6 +7,7 @@ using Raven.Database.Server;
 using Raven.Tests.MultiGet;
 using Raven.Tests.Shard.BlogModel;
 using Raven.Tests.Storage.MultiThreaded;
+using Raven.Tests.Views;
 
 namespace Raven.Tryouts
 {
@@ -30,9 +31,13 @@ namespace Raven.Tryouts
 					Environment.SetEnvironmentVariable("Run", i.ToString());
 					Console.Clear();
 					Console.WriteLine(i);
-					using(var x = new CanQueryOnlyUsers())
-						x.WhenQueryingForUserById();
+					var x = new Raven.Tests.MailingList.MapReduceIssue.CanPageThroughReduceResults();
+						x.Test();
 				}
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
 			}
 			finally
 			{
