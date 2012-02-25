@@ -56,6 +56,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Server\FromMono\Options.cs">
+      <Link>Options.cs</Link>
+    </Compile>
     <Compile Include="Smuggler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

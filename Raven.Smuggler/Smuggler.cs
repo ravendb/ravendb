@@ -13,48 +13,69 @@ using System.Net;
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Json.Linq;
+using NDesk.Options;
 
 namespace Raven.Smuggler
 {
 	public class Smuggler
-	{
+	{       
 		static void Main(string[] args)
 		{
-			if (args.Length < 3 || args[0] != "in" && args[0] != "out")
-			{
-				Console.WriteLine(@"
-Raven Smuggler - Import/Export utility
-Usage:
-	- Import the dump.raven file to a local instance:
-		Raven.Smuggler in http://localhost:8080/ dump.raven
-	- Export a local instance to dump.raven:
-		Raven.Smuggler out http://localhost:8080/ dump.raven
+            var options = new SmugglerOptions();
 
-	  Optional arguments (after required arguments): 
-			--only-indexes : exports only index definitions
-			--include-attachments : also export attachments
-");
+            var optionSet = new OptionSet
+			                	{
+			                		{"filter=", "Filter documents by", param => options.Filter = param },
+			                		{"only-indexes", _ => options.ExportIndexesOnly = true },
+									{"include-attachments", s => options.IncludeAttachments = true }
+			                	};
 
-				Environment.Exit(-1);
-			}
+            // Do these arguments the traditional way to maintain compatibility
+            if (String.Compare(args[0], "in", false) == 0)
+                options.IsImport = true;
+
+            if (String.Compare(args[0], "out", false) == 0)
+                options.IsExport = true;
+
+            options.InstanceUrl = args[1];
+            options.File = args[2];
+
+            try
+            {
+                optionSet.Parse(args);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                PrintUsage(optionSet);
+                Environment.Exit(-1);
+            }
+
+            if (options.InstanceUrl == null | (!options.IsImport & !options.IsExport) | options.File == null)
+            {
+                PrintUsage(optionSet);
+                Environment.Exit(-1);
+            }
+
+            // Only support meta data filters
+            if (options.Filter != null && !options.Filter.Contains("@metadata"))
+            {
+                Console.WriteLine("Only metadata based filters are supported.");
+            }
+
+            if (options.InstanceUrl.EndsWith("/") == false)
+                options.InstanceUrl += "/";
 
 			try
 			{
-				var instanceUrl = args[1];
-				if (instanceUrl.EndsWith("/") == false)
-					instanceUrl += "/";
-				var file = args[2];
-				switch (args[0])
-				{
-					case "in":
-						ImportData(instanceUrl, file, skipIndexes: args.Any(arg=> string.Equals(arg, "/skipIndexes",StringComparison.InvariantCultureIgnoreCase)));
-						break;
-					case "out":
-						bool exportIndexesOnly = args.Any(arg => arg.Equals("--only-indexes"));
-						bool inlcudeAttachments = args.Any(arg => arg.Equals("--include-attachments"));
-						ExportData(new ExportSpec(instanceUrl, file, exportIndexesOnly, inlcudeAttachments));
-						break;
-				}
+                if (options.IsImport)
+                {
+                    ImportData(options);
+                }
+                else if (options.IsExport)
+                {
+                    ExportData(options);
+                }
 			}
 			catch (Exception e)
 			{
@@ -63,26 +84,24 @@ Usage:
 			}
 		}
 
-		public class ExportSpec
+		public class SmugglerOptions
 		{
-			public ExportSpec(string instanceUrl, string file, bool exportIndexesOnly, bool includeAttachments)
-			{
-				InstanceUrl = instanceUrl;
-				File = file;
-				ExportIndexesOnly = exportIndexesOnly;
-				IncludeAttachments = includeAttachments;
-			}
+            public bool IsImport { get; set; }
 
-			public string InstanceUrl { get; private set; }
+            public bool IsExport { get; set; }
 
-			public string File { get; private set; }
+			public string InstanceUrl { get; set; }
 
-			public bool ExportIndexesOnly { get; private set; }
+			public string File { get; set; }
 
-			public bool IncludeAttachments { get; private set; }
+            public string Filter { get; set; }
+
+			public bool ExportIndexesOnly { get; set; }
+
+			public bool IncludeAttachments { get; set; }
 		}
 
-		public static void ExportData(ExportSpec exportSpec)
+		public static void ExportData(SmugglerOptions exportSpec)
 		{
 			using (var streamWriter = new StreamWriter(new GZipStream(File.Create(exportSpec.File), CompressionMode.Compress)))
 			{
@@ -101,7 +120,7 @@ Usage:
 					int totalCount = 0;
 					while (true)
 					{
-						var documents = GetString(webClient.DownloadData(exportSpec.InstanceUrl + "indexes?pageSize=128&start=" + totalCount));
+                        var documents = GetString(webClient.DownloadData(String.Format("{0}indexes?pageSize=128&start={1}", exportSpec.InstanceUrl, totalCount)));
 						var array = RavenJArray.Parse(documents);
 						if (array.Length == 0)
 						{
@@ -143,7 +162,7 @@ Usage:
 
 		}
 
-		private static void ExportDocuments(ExportSpec exportSpec, JsonTextWriter jsonWriter)
+		private static void ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter)
 		{
 			using (var webClient = new WebClient())
 			{
@@ -155,26 +174,41 @@ Usage:
 				while (true)
 				{
 					var documents =
-						GetString(webClient.DownloadData(exportSpec.InstanceUrl + "docs?pageSize=128&etag=" + lastEtag));
+                        GetString(webClient.DownloadData(String.Format("{0}docs?pageSize=128&etag={1}", options.InstanceUrl, lastEtag)));
 					var array = RavenJArray.Parse(documents);
 					if (array.Length == 0)
 					{
 						Console.WriteLine("Done with reading documents, total: {0}", totalCount);
 						break;
 					}
-					totalCount += array.Length;
+
+                    if (options.Filter != null)
+                    {
+                        var filter = options.Filter.Replace("@metadata.", "").Split('=');
+                        var filteredArray = array.Where(x => x.Value<RavenJObject>("@metadata").Value<string>(filter[0]) == filter[1]).ToList();
+
+                        filteredArray.ForEach(item => item.WriteTo(jsonWriter));
+
+                        totalCount += filteredArray.Count;
+                    }
+                    else
+                    {
+                        array.ToList().ForEach(item => item.WriteTo(jsonWriter));
+
+                        totalCount += array.Length;
+                    }
+
+					
 					Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", array.Length,
 									  totalCount);
-					foreach (RavenJToken item in array)
-					{
-						item.WriteTo(jsonWriter);
-					}
+
+
 					lastEtag = new Guid(array.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
 				}
 			}
 		}
 
-		static void ExportAttachments(JsonTextWriter jsonWriter, ExportSpec exportSpec)
+		static void ExportAttachments(JsonTextWriter jsonWriter, SmugglerOptions exportSpec)
 		{
 			using (var webClient = new WebClient())
 			{
@@ -185,7 +219,7 @@ Usage:
 				int totalCount = 0;
 				while (true)
 				{
-					var attachmentInfo = GetString(webClient.DownloadData(exportSpec.InstanceUrl + "/static/?pageSize=128&etag=" + lastEtag));
+                    var attachmentInfo = GetString(webClient.DownloadData(String.Format("{0}/static/?pageSize=128&etag={1}", exportSpec.InstanceUrl, lastEtag)));
 					var array = RavenJArray.Parse(attachmentInfo);
 
 					if (array.Length == 0)
@@ -200,7 +234,7 @@ Usage:
 					foreach (var item in array)
 					{
 						Console.WriteLine("Downloading attachment: {0}", item.Value<string>("Key"));
-						var attachmentData = webClient.DownloadData(exportSpec.InstanceUrl + "/static/" + item.Value<string>("Key"));
+                        var attachmentData = webClient.DownloadData(String.Format("{0}/static/{1}", exportSpec.InstanceUrl, item.Value<string>("Key")));
 
 						new RavenJObject
 						{
@@ -229,15 +263,15 @@ Usage:
 			return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
 		}
 
-		public static void ImportData(string instanceUrl, string file, bool skipIndexes = false)
+        public static void ImportData(SmugglerOptions options)
 		{
-			using (FileStream fileStream = File.OpenRead(file))
+			using (FileStream fileStream = File.OpenRead(options.File))
 			{
-				ImportData(fileStream, instanceUrl, skipIndexes);
+                ImportData(fileStream, options);
 			}
 		}
 
-		public static void ImportData(Stream stream, string instanceUrl, bool skipIndexes = false)
+        public static void ImportData(Stream stream, SmugglerOptions options)
 		{
 			var sw = Stopwatch.StartNew();
 			// Try to read the stream compressed, otherwise continue uncompressed.
@@ -255,7 +289,7 @@ Usage:
 			{
 				stream.Seek(0, SeekOrigin.Begin);
 
-				StreamReader streamReader = new StreamReader(stream);
+                var streamReader = new StreamReader(stream);
 
 				jsonReader = new JsonTextReader(streamReader);
 
@@ -285,12 +319,12 @@ Usage:
 				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 				{
 					var index = RavenJToken.ReadFrom(jsonReader);
-					if(skipIndexes)
+					if(options.ExportIndexesOnly)
 						continue;
 					var indexName = index.Value<string>("name");
 					if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
 						continue;
-					using (var streamWriter = new StreamWriter(webClient.OpenWrite(instanceUrl + "indexes/" + indexName, "PUT")))
+                    using (var streamWriter = new StreamWriter(webClient.OpenWrite(String.Format("{0}indexes/{1}", options.InstanceUrl, indexName), "PUT")))
 					using (var jsonTextWriter = new JsonTextWriter(streamWriter))
 					{
 						index.Value<RavenJObject>("definition").WriteTo(jsonTextWriter);
@@ -312,15 +346,38 @@ Usage:
 				throw new InvalidDataException("StartArray was expected");
 			var batch = new List<RavenJObject>();
 			int totalCount = 0;
-			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-			{
-				totalCount += 1;
-				var document = RavenJToken.ReadFrom(jsonReader);
-				batch.Add((RavenJObject)document);
-				if (batch.Count >= 128)
-					FlushBatch(instanceUrl, batch);
-			}
-			FlushBatch(instanceUrl, batch);
+
+            if (options.Filter != null)
+            {
+                var filter = options.Filter.Replace("@metadata.", "").Split('=');
+
+                while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+                {                   
+                    var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+
+                    if (document.Value<RavenJObject>("@metadata").Value<string>(filter[0]) == filter[1])
+                    {
+                        batch.Add(document);
+                        totalCount += 1;
+                    }
+
+                    if (batch.Count >= 128)
+                        FlushBatch(options.InstanceUrl, batch);
+                }
+            }
+            else
+            {
+                while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+                {
+                    totalCount += 1;
+                    var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+
+                    batch.Add(document);
+                    if (batch.Count >= 128)
+                        FlushBatch(options.InstanceUrl, batch);
+                }
+            }
+			FlushBatch(options.InstanceUrl, batch);
 
 			var attachmentCount = 0;
 			if (jsonReader.Read() == false || jsonReader.TokenType == JsonToken.EndObject)
@@ -354,7 +411,7 @@ Usage:
 						}
 					}
 
-					using (var writer = client.OpenWrite(instanceUrl + "static/" + attachmentExportInfo.Key, "PUT"))
+                    using (var writer = client.OpenWrite(String.Format("{0}static/{1}", options.InstanceUrl, attachmentExportInfo.Key), "PUT"))
 					{
 						writer.Write(attachmentExportInfo.Data, 0, attachmentExportInfo.Data.Length);
 						writer.Flush();
@@ -436,5 +493,28 @@ Usage:
 							  batch.Count, Math.Round((double)size / 1024, 2), sw.ElapsedMilliseconds);
 			batch.Clear();
 		}
+
+        private static void PrintUsage(OptionSet optionSet)
+        {
+            Console.WriteLine(
+                @"
+Smuggler Import/Export utility for RavenDB
+----------------------------------------
+Copyright (C) 2008 - {0} - Hibernating Rhinos
+----------------------------------------
+Usage:
+	- Import the dump.raven file to a local instance:
+		Raven.Smuggler in http://localhost:8080/ dump.raven
+	- Export a local instance to dump.raven:
+		Raven.Smuggler out http://localhost:8080/ dump.raven
+    - Export a filtered local instance to dump.raven
+        Raven.Smuggler out http://localhost:8080/ dump.raven --filter=@metadata.Raven-Entity-Name=Birds
+
+Command line options:", DateTime.UtcNow.Year);
+
+            optionSet.WriteOptionDescriptions(Console.Out);
+
+            Console.WriteLine();
+        }
 	}
 }
