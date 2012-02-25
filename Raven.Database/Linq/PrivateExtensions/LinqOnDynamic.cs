@@ -26,11 +26,6 @@ namespace Raven.Database.Linq.PrivateExtensions
 				this.inner = inner;
 			}
 
-			public IEnumerator<dynamic> GetEnumerator()
-			{
-				return inner.GetEnumerator();
-			}
-
 			public dynamic Key
 			{
 				get { return inner.Key; }

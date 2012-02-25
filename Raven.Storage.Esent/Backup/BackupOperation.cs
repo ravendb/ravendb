@@ -26,7 +26,6 @@ namespace Raven.Storage.Esent.Backup
 		private string to;
 		private bool incrementalBackup;
 		private string src;
-		private int backupCount;
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		public BackupOperation(DocumentDatabase database, string src, string to, bool incrementalBackup)

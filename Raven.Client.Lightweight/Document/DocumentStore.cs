@@ -8,9 +8,8 @@ using System.IO;
 using System.Net;
 #if SILVERLIGHT
 using System.Net.Browser;
-#else
-using Raven.Abstractions.Connection;
 #endif
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
@@ -30,7 +29,6 @@ using Raven.Client.Listeners;
 using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
-
 #endif
 
 namespace Raven.Client.Document
@@ -533,15 +531,18 @@ namespace Raven.Client.Document
 				}
 				catch (WebException we)
 				{
+					string message;
 					try
 					{
-						var text = new StreamReader(we.Response.GetResponseStream()).ReadToEnd();
-						throw new InvalidOperationException("Failure when trying to get OAuth token:\r\n" + text, we);
+						var text = new StreamReader(we.Response.GetResponseStreamWithHttpDecompression()).ReadToEnd();
+						message = "Failure when trying to get OAuth token:\r\n" + text;
 					}
 					catch (Exception)
 					{
 						throw new InvalidOperationException("Failure when trying to get OAuth token", we);
 					}
+					throw new InvalidOperationException(message, we);
+
 				}
 			};
 #endif
@@ -578,15 +579,17 @@ namespace Raven.Client.Document
 							{
 								throw new InvalidOperationException("Failure when trying to get OAuth token", e);
 							}
+							string message;
 							try
 							{
-								var text = new StreamReader(we.Response.GetResponseStream()).ReadToEnd();
-								throw new InvalidOperationException("Failure when trying to get OAuth token:\r\n" + text, we);
+								var text = new StreamReader(we.Response.GetResponseStreamWithHttpDecompression()).ReadToEnd();
+								message = "Failure when trying to get OAuth token:\r\n" + text;
 							}
 							catch (Exception)
 							{
 								throw new InvalidOperationException("Failure when trying to get OAuth token", e);
 							}
+							throw new InvalidOperationException(message, we);
 						}
 						catch(Exception e)
 						{

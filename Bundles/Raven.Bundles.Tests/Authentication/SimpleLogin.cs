@@ -1,5 +1,5 @@
 extern alias database;
-
+using System;
 using System.Linq;
 using System.Net;
 using Raven.Bundles.Authentication;
@@ -100,7 +100,8 @@ namespace Raven.Bundles.Tests.Authentication
 			using (var session = store.OpenSession())
 			{
 				session.Store(new { Name = "Sprite", Age = 321 });
-				var webException = Assert.Throws<WebException>(() => session.SaveChanges());
+				var invalidOperationException = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+				var webException = invalidOperationException.InnerException as WebException;
 				Assert.Equal(HttpStatusCode.Unauthorized, ((HttpWebResponse) webException.Response).StatusCode);
 			}
 
