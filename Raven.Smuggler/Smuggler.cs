@@ -12,8 +12,10 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using NDesk.Options;
+using Raven.Abstractions.Json;
 
 namespace Raven.Smuggler
 {
@@ -25,7 +27,8 @@ namespace Raven.Smuggler
 
             var optionSet = new OptionSet
 			                	{
-			                		{"filter=", "Filter documents by", param => options.Filter = param },
+			                		{"metadata-filter:{=}", "Filter documents by a metadata property", (key,val) => options.Filters["@metadata." +key] = val},
+									{"filter:{=}", "Filter documents by a document property", (key,val) => options.Filters[key] = val},
 			                		{"only-indexes", _ => options.ExportIndexesOnly = true },
 									{"include-attachments", s => options.IncludeAttachments = true }
 			                	};
@@ -55,12 +58,6 @@ namespace Raven.Smuggler
             {
                 PrintUsage(optionSet);
                 Environment.Exit(-1);
-            }
-
-            // Only support meta data filters
-            if (options.Filter != null && !options.Filter.Contains("@metadata"))
-            {
-                Console.WriteLine("Only metadata based filters are supported.");
             }
 
             if (options.InstanceUrl.EndsWith("/") == false)
@@ -94,11 +91,35 @@ namespace Raven.Smuggler
 
 			public string File { get; set; }
 
-            public string Filter { get; set; }
+            public Dictionary<string,string> Filters { get; set; }
 
 			public bool ExportIndexesOnly { get; set; }
 
 			public bool IncludeAttachments { get; set; }
+
+			public SmugglerOptions()
+			{
+				Filters = new Dictionary<string, string>();
+			}
+
+			public bool MatchFilters(RavenJToken item)
+			{
+				foreach (var filter in Filters)
+				{
+					var copy = filter;
+					foreach (var tuple in item.SelectTokenWithRavenSyntaxReturningFlatStructure(copy.Key))
+					{
+						if (tuple == null || tuple.Item1 == null)
+							continue;
+						var val = tuple.Item1.Type == JTokenType.String
+						        	? tuple.Item1.Value<string>()
+						        	: tuple.Item1.ToString(Formatting.None);
+						if (string.Equals(val,filter.Value, StringComparison.InvariantCultureIgnoreCase) == false)
+							return false;
+					}
+				}
+				return true;
+			}
 		}
 
 		public static void ExportData(SmugglerOptions exportSpec)
@@ -182,23 +203,10 @@ namespace Raven.Smuggler
 						break;
 					}
 
-                    if (options.Filter != null)
-                    {
-                        var filter = options.Filter.Replace("@metadata.", "").Split('=');
-                        var filteredArray = array.Where(x => x.Value<RavenJObject>("@metadata").Value<string>(filter[0]) == filter[1]).ToList();
+					var final = array.Where(options.MatchFilters).ToList();
+					final.ForEach(item => item.WriteTo(jsonWriter));
+					totalCount += final.Count;
 
-                        filteredArray.ForEach(item => item.WriteTo(jsonWriter));
-
-                        totalCount += filteredArray.Count;
-                    }
-                    else
-                    {
-                        array.ToList().ForEach(item => item.WriteTo(jsonWriter));
-
-                        totalCount += array.Length;
-                    }
-
-					
 					Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", array.Length,
 									  totalCount);
 
@@ -272,154 +280,142 @@ namespace Raven.Smuggler
 		}
 
         public static void ImportData(Stream stream, SmugglerOptions options)
-		{
-			var sw = Stopwatch.StartNew();
-			// Try to read the stream compressed, otherwise continue uncompressed.
-			JsonTextReader jsonReader;
-			try
-			{
-				var streamReader = new StreamReader(new GZipStream(stream, CompressionMode.Decompress));
+        {
+        	var sw = Stopwatch.StartNew();
+        	// Try to read the stream compressed, otherwise continue uncompressed.
+        	JsonTextReader jsonReader;
+        	try
+        	{
+        		var streamReader = new StreamReader(new GZipStream(stream, CompressionMode.Decompress));
 
-				jsonReader = new JsonTextReader(streamReader);
+        		jsonReader = new JsonTextReader(streamReader);
 
-				if (jsonReader.Read() == false)
-					return;
-			}
-			catch (InvalidDataException)
-			{
-				stream.Seek(0, SeekOrigin.Begin);
+        		if (jsonReader.Read() == false)
+        			return;
+        	}
+        	catch (InvalidDataException)
+        	{
+        		stream.Seek(0, SeekOrigin.Begin);
 
-                var streamReader = new StreamReader(stream);
+        		var streamReader = new StreamReader(stream);
 
-				jsonReader = new JsonTextReader(streamReader);
+        		jsonReader = new JsonTextReader(streamReader);
 
-				if (jsonReader.Read() == false)
-					return;
-			}
+        		if (jsonReader.Read() == false)
+        			return;
+        	}
 
-			if (jsonReader.TokenType != JsonToken.StartObject)
-				throw new InvalidDataException("StartObject was expected");
+        	if (jsonReader.TokenType != JsonToken.StartObject)
+        		throw new InvalidDataException("StartObject was expected");
 
-			// should read indexes now
-			if (jsonReader.Read() == false)
-				return;
-			if (jsonReader.TokenType != JsonToken.PropertyName)
-				throw new InvalidDataException("PropertyName was expected");
-			if (Equals("Indexes", jsonReader.Value) == false)
-				throw new InvalidDataException("Indexes property was expected");
-			if (jsonReader.Read() == false)
-				return;
-			if (jsonReader.TokenType != JsonToken.StartArray)
-				throw new InvalidDataException("StartArray was expected");
-			using (var webClient = new WebClient())
-			{
-				webClient.UseDefaultCredentials = true;
-				webClient.Headers.Add("Content-Type", "application/json; charset=utf-8");
-				webClient.Credentials = CredentialCache.DefaultNetworkCredentials;
-				while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-				{
-					var index = RavenJToken.ReadFrom(jsonReader);
-					if(options.ExportIndexesOnly)
-						continue;
-					var indexName = index.Value<string>("name");
-					if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
-						continue;
-                    using (var streamWriter = new StreamWriter(webClient.OpenWrite(String.Format("{0}indexes/{1}", options.InstanceUrl, indexName), "PUT")))
-					using (var jsonTextWriter = new JsonTextWriter(streamWriter))
-					{
-						index.Value<RavenJObject>("definition").WriteTo(jsonTextWriter);
-						jsonTextWriter.Flush();
-						streamWriter.Flush();
-					}
-				}
-			}
-			// should read documents now
-			if (jsonReader.Read() == false)
-				return;
-			if (jsonReader.TokenType != JsonToken.PropertyName)
-				throw new InvalidDataException("PropertyName was expected");
-			if (Equals("Docs", jsonReader.Value) == false)
-				throw new InvalidDataException("Docs property was expected");
-			if (jsonReader.Read() == false)
-				return;
-			if (jsonReader.TokenType != JsonToken.StartArray)
-				throw new InvalidDataException("StartArray was expected");
-			var batch = new List<RavenJObject>();
-			int totalCount = 0;
+        	// should read indexes now
+        	if (jsonReader.Read() == false)
+        		return;
+        	if (jsonReader.TokenType != JsonToken.PropertyName)
+        		throw new InvalidDataException("PropertyName was expected");
+        	if (Equals("Indexes", jsonReader.Value) == false)
+        		throw new InvalidDataException("Indexes property was expected");
+        	if (jsonReader.Read() == false)
+        		return;
+        	if (jsonReader.TokenType != JsonToken.StartArray)
+        		throw new InvalidDataException("StartArray was expected");
+        	using (var webClient = new WebClient())
+        	{
+        		webClient.UseDefaultCredentials = true;
+        		webClient.Headers.Add("Content-Type", "application/json; charset=utf-8");
+        		webClient.Credentials = CredentialCache.DefaultNetworkCredentials;
+        		while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+        		{
+        			var index = RavenJToken.ReadFrom(jsonReader);
+        			if (options.ExportIndexesOnly)
+        				continue;
+        			var indexName = index.Value<string>("name");
+        			if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
+        				continue;
+        			using (
+        				var streamWriter =
+        					new StreamWriter(webClient.OpenWrite(String.Format("{0}indexes/{1}", options.InstanceUrl, indexName), "PUT"))
+        				)
+        			using (var jsonTextWriter = new JsonTextWriter(streamWriter))
+        			{
+        				index.Value<RavenJObject>("definition").WriteTo(jsonTextWriter);
+        				jsonTextWriter.Flush();
+        				streamWriter.Flush();
+        			}
+        		}
+        	}
+        	// should read documents now
+        	if (jsonReader.Read() == false)
+        		return;
+        	if (jsonReader.TokenType != JsonToken.PropertyName)
+        		throw new InvalidDataException("PropertyName was expected");
+        	if (Equals("Docs", jsonReader.Value) == false)
+        		throw new InvalidDataException("Docs property was expected");
+        	if (jsonReader.Read() == false)
+        		return;
+        	if (jsonReader.TokenType != JsonToken.StartArray)
+        		throw new InvalidDataException("StartArray was expected");
+        	var batch = new List<RavenJObject>();
+        	int totalCount = 0;
+        	while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+        	{
+        		var document = (RavenJObject) RavenJToken.ReadFrom(jsonReader);
 
-            if (options.Filter != null)
-            {
-                var filter = options.Filter.Replace("@metadata.", "").Split('=');
+				if(options.MatchFilters(document) == false)
+					continue;
 
-                while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-                {                   
-                    var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+				totalCount += 1;
 
-                    if (document.Value<RavenJObject>("@metadata").Value<string>(filter[0]) == filter[1])
-                    {
-                        batch.Add(document);
-                        totalCount += 1;
-                    }
+        		batch.Add(document);
+        		if (batch.Count >= 128)
+        			FlushBatch(options.InstanceUrl, batch);
+        	}
+        	FlushBatch(options.InstanceUrl, batch);
 
-                    if (batch.Count >= 128)
-                        FlushBatch(options.InstanceUrl, batch);
-                }
-            }
-            else
-            {
-                while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-                {
-                    totalCount += 1;
-                    var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+        	var attachmentCount = 0;
+        	if (jsonReader.Read() == false || jsonReader.TokenType == JsonToken.EndObject)
+        		return;
+        	if (jsonReader.TokenType != JsonToken.PropertyName)
+        		throw new InvalidDataException("PropertyName was expected");
+        	if (Equals("Attachments", jsonReader.Value) == false)
+        		throw new InvalidDataException("Attachment property was expected");
+        	if (jsonReader.Read() == false)
+        		return;
+        	if (jsonReader.TokenType != JsonToken.StartArray)
+        		throw new InvalidDataException("StartArray was expected");
+        	while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+        	{
+        		using (var client = new WebClient())
+        		{
+        			attachmentCount += 1;
+        			var item = RavenJToken.ReadFrom(jsonReader);
 
-                    batch.Add(document);
-                    if (batch.Count >= 128)
-                        FlushBatch(options.InstanceUrl, batch);
-                }
-            }
-			FlushBatch(options.InstanceUrl, batch);
+        			var attachmentExportInfo =
+        				new JsonSerializer
+        				{
+        					Converters = {new TrivialJsonToJsonJsonConverter()}
+        				}.Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
+        			Console.WriteLine("Importing attachment {0}", attachmentExportInfo.Key);
+        			if (attachmentExportInfo.Metadata != null)
+        			{
+        				foreach (var header in attachmentExportInfo.Metadata)
+        				{
+        					client.Headers.Add(header.Key, StripQuotesIfNeeded(header.Value));
+        				}
+        			}
 
-			var attachmentCount = 0;
-			if (jsonReader.Read() == false || jsonReader.TokenType == JsonToken.EndObject)
-				return;
-			if (jsonReader.TokenType != JsonToken.PropertyName)
-				throw new InvalidDataException("PropertyName was expected");
-			if (Equals("Attachments", jsonReader.Value) == false)
-				throw new InvalidDataException("Attachment property was expected");
-			if (jsonReader.Read() == false)
-				return;
-			if (jsonReader.TokenType != JsonToken.StartArray)
-				throw new InvalidDataException("StartArray was expected");
-			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
-			{
-				using (var client = new WebClient())
-				{
-					attachmentCount += 1;
-					var item = RavenJToken.ReadFrom(jsonReader);
-
-					var attachmentExportInfo =
-						new JsonSerializer
-						{
-							Converters = {new TrivialJsonToJsonJsonConverter()}
-						}.Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
-					Console.WriteLine("Importing attachment {0}", attachmentExportInfo.Key);
-					if (attachmentExportInfo.Metadata != null)
-					{
-						foreach (var header in attachmentExportInfo.Metadata)
-						{
-							client.Headers.Add(header.Key, StripQuotesIfNeeded(header.Value));
-						}
-					}
-
-                    using (var writer = client.OpenWrite(String.Format("{0}static/{1}", options.InstanceUrl, attachmentExportInfo.Key), "PUT"))
-					{
-						writer.Write(attachmentExportInfo.Data, 0, attachmentExportInfo.Data.Length);
-						writer.Flush();
-					}
-				}
-			}
-			Console.WriteLine("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments in {2:#,#;;0} ms", totalCount, attachmentCount, sw.ElapsedMilliseconds);
-		}
+        			using (
+        				var writer = client.OpenWrite(
+        					String.Format("{0}static/{1}", options.InstanceUrl, attachmentExportInfo.Key), "PUT"))
+        			{
+        				writer.Write(attachmentExportInfo.Data, 0, attachmentExportInfo.Data.Length);
+        				writer.Flush();
+        			}
+        		}
+        	}
+        	Console.WriteLine("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments in {2:#,#;;0} ms", totalCount,
+        	                  attachmentCount, sw.ElapsedMilliseconds);
+        }
 
 		public class TrivialJsonToJsonJsonConverter : JsonConverter
 		{
@@ -508,7 +504,7 @@ Usage:
 	- Export a local instance to dump.raven:
 		Raven.Smuggler out http://localhost:8080/ dump.raven
     - Export a filtered local instance to dump.raven
-        Raven.Smuggler out http://localhost:8080/ dump.raven --filter=@metadata.Raven-Entity-Name=Birds
+        Raven.Smuggler out http://localhost:8080/ dump.raven --metadata-filter:Raven-Entity-Name=Birds
 
 Command line options:", DateTime.UtcNow.Year);
 
