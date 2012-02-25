@@ -1,12 +1,8 @@
 ﻿namespace Raven.Bundles.UniqueConstraints
 {
-	using System.Collections.Generic;
-	using System.Linq;
-
-	using Raven.Abstractions.Commands;
-	using Raven.Abstractions.Data;
-	using Raven.Database.Plugins;
-	using Raven.Json.Linq;
+	using Abstractions.Data;
+	using Database.Plugins;
+	using Json.Linq;
 
 	public class UniqueConstraintsDeleteTrigger : AbstractDeleteTrigger
 	{
@@ -22,16 +18,16 @@
 
 			var metadata = doc.Metadata;
 
-			var entityName = metadata.Value<string>(Constants.RavenEntityName);
+			var entityName = metadata.Value<string>(Constants.RavenEntityName) + "/";
 
-			if (string.IsNullOrEmpty(entityName))
-			{
+			var uniqueConstraits = metadata.Value<RavenJArray>(Constants.EnsureUniqueConstraints);
+
+			if (uniqueConstraits == null)
 				return;
-			}
 
-			foreach (var property in metadata.Value<RavenJArray>(Constants.EnsureUniqueConstraints))
+			foreach (var property in uniqueConstraits)
 			{
-				var checkKey = "UniqueConstraints/" + entityName + "/" + property + "/" + doc.DataAsJson.Value<string>(property.Value<string>());
+				var checkKey = "UniqueConstraints/" + entityName  + property + "/" + doc.DataAsJson.Value<string>(property.Value<string>());
 
 				Database.Delete(checkKey, null, transactionInformation);
 			}

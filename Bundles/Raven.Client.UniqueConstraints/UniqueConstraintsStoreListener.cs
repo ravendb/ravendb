@@ -2,13 +2,9 @@
 {
 	using System;
 	using System.Collections.Concurrent;
-	using System.Collections.Generic;
 	using System.Linq;
-
-
-	using Raven.Client;
-	using Raven.Client.Listeners;
-	using Raven.Json.Linq;
+	using Listeners;
+	using Json.Linq;
 
 	using Constants = Bundles.UniqueConstraints.Constants;
 
