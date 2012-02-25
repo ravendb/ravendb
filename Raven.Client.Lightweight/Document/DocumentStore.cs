@@ -520,13 +520,28 @@ namespace Raven.Client.Document
 
 				var authRequest = PrepareOAuthRequest(oauthSource);
 
-				using (var authResponse = authRequest.GetResponse())
-				using (var stream = authResponse.GetResponseStreamWithHttpDecompression())
-				using (var reader = new StreamReader(stream))
+				try
 				{
-					currentOauthToken = "Bearer " + reader.ReadToEnd();
-					return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization",currentOauthToken));
+					using (var authResponse = authRequest.GetResponse())
+					using (var stream = authResponse.GetResponseStreamWithHttpDecompression())
+					using (var reader = new StreamReader(stream))
+					{
+						currentOauthToken = "Bearer " + reader.ReadToEnd();
+						return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization",currentOauthToken));
 
+					}
+				}
+				catch (WebException we)
+				{
+					try
+					{
+						var text = new StreamReader(we.Response.GetResponseStream()).ReadToEnd();
+						throw new InvalidOperationException("Failure when trying to get OAuth token:\r\n" + text, we);
+					}
+					catch (Exception)
+					{
+						throw new InvalidOperationException("Failure when trying to get OAuth token", we);
+					}
 				}
 			};
 #endif
@@ -543,15 +558,39 @@ namespace Raven.Client.Document
 					.ConvertSecurityExceptionToServerNotFound()
 					.ContinueWith(task =>
 					{
-#if !SILVERLIGHT
-						using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
-#else
-						using(var stream = task.Result.GetResponseStream())
-#endif
-						using (var reader = new StreamReader(stream))
+						try
 						{
-							currentOauthToken = "Bearer " + reader.ReadToEnd();
-							return (Action<HttpWebRequest>)(request => SetHeader(request.Headers,"Authorization", currentOauthToken));
+#if !SILVERLIGHT
+							using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
+#else
+							using(var stream = task.Result.GetResponseStream())
+#endif
+							using (var reader = new StreamReader(stream))
+							{
+								currentOauthToken = "Bearer " + reader.ReadToEnd();
+								return (Action<HttpWebRequest>) (request => SetHeader(request.Headers, "Authorization", currentOauthToken));
+							}
+						}
+						catch(AggregateException e)
+						{
+							var we = e.ExtractSingleInnerException() as WebException;
+							if(we == null)
+							{
+								throw new InvalidOperationException("Failure when trying to get OAuth token", e);
+							}
+							try
+							{
+								var text = new StreamReader(we.Response.GetResponseStream()).ReadToEnd();
+								throw new InvalidOperationException("Failure when trying to get OAuth token:\r\n" + text, we);
+							}
+							catch (Exception)
+							{
+								throw new InvalidOperationException("Failure when trying to get OAuth token", e);
+							}
+						}
+						catch(Exception e)
+						{
+							throw new InvalidOperationException("Failure when trying to get OAuth token", e);
 						}
 					});
 			};
