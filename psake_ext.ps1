@@ -59,8 +59,8 @@ using System.Runtime.InteropServices;
 
 #if !SILVERLIGHT
 [assembly: SuppressIldasmAttribute()]
+[assembly: CLSCompliantAttribute($clsCompliant)]
 #endif
-[assembly: CLSCompliantAttribute($clsCompliant )]
 [assembly: ComVisibleAttribute(false)]
 [assembly: AssemblyTitleAttribute(""$title"")]
 [assembly: AssemblyDescriptionAttribute(""$description"")]

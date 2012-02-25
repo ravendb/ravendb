@@ -5,7 +5,6 @@ using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
-using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using Raven.Server;
 
 namespace Raven.Tests.Shard.BlogModel
@@ -50,27 +49,28 @@ namespace Raven.Tests.Shard.BlogModel
 			}
 
 			servers = new Dictionary<string, RavenDbServer>
-                      {
-                        {"Users", users},
-                        {"Blogs", blogs},
-                        {"Posts01", posts1},
-                        {"Posts02", posts2},
-                        {"Posts03", posts3}
-                      };
+			{
+				{"Users", users},
+				{"Blogs", blogs},
+				{"Posts01", posts1},
+				{"Posts02", posts2},
+				{"Posts03", posts3}
+			};
 
 			var shards = new Shards
-                         {
-                            new DocumentStore {Identifier = "Users", Url = "http://localhost:8079"}, 
-                            new DocumentStore {Identifier = "Blogs", Url = "http://localhost:8078"}, 
-                            new DocumentStore {Identifier = "Posts01", Url = "http://localhost:8077"}, 
-                            new DocumentStore {Identifier = "Posts02", Url = "http://localhost:8076"}, 
-                            new DocumentStore {Identifier = "Posts03", Url = "http://localhost:8075"}
-                         };
+			{
+				new DocumentStore {Identifier = "Users", Url = "http://localhost:8079"},
+				new DocumentStore {Identifier = "Blogs", Url = "http://localhost:8078"},
+				new DocumentStore {Identifier = "Blogs", Url = "http://localhost:8078"},
+				new DocumentStore {Identifier = "Posts01", Url = "http://localhost:8077"},
+				new DocumentStore {Identifier = "Posts02", Url = "http://localhost:8076"},
+				new DocumentStore {Identifier = "Posts03", Url = "http://localhost:8075"}
+			};
 
 
 			foreach (var shard in shards)
 			{
-				shard.Conventions.FailoverBehavior=FailoverBehavior.FailImmediately;
+				shard.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 				shard.Initialize();
 			}
 
