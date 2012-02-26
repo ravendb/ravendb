@@ -42,32 +42,15 @@ namespace Raven.Smuggler
 				jsonWriter.WriteStartObject();
 				jsonWriter.WritePropertyName("Indexes");
 				jsonWriter.WriteStartArray();
-
-				int totalCount = 0;
-				while (true)
+				if (options.OperateOnTypes.HasFlag(ItemType.Indexes))
 				{
-					RavenJArray indexes = null;
-					var request = CreateRequest("indexes?pageSize=128&start=" + totalCount);
-					request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)));
-
-					if (indexes.Length == 0)
-					{
-						Console.WriteLine("Done with reading indexes, total: {0}", totalCount);
-						break;
-					}
-					totalCount += indexes.Length;
-					Console.WriteLine("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", indexes.Length, totalCount);
-					foreach (RavenJToken item in indexes)
-					{
-						item.WriteTo(jsonWriter);
-					}
+					ExportIndexes(jsonWriter);
 				}
-				
 				jsonWriter.WriteEndArray();
+
 				jsonWriter.WritePropertyName("Docs");
 				jsonWriter.WriteStartArray();
-
-				if (!options.ExportIndexesOnly)
+				if (options.OperateOnTypes.HasFlag(ItemType.Documents))
 				{
 					ExportDocuments(options, jsonWriter);
 				}
@@ -75,7 +58,7 @@ namespace Raven.Smuggler
 
 				jsonWriter.WritePropertyName("Attachments");
 				jsonWriter.WriteStartArray();
-				if (options.IncludeAttachments)
+				if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
 				{
 					ExportAttachments(jsonWriter);
 				}
@@ -83,6 +66,29 @@ namespace Raven.Smuggler
 
 				jsonWriter.WriteEndObject();
 				streamWriter.Flush();
+			}
+		}
+
+		private void ExportIndexes(JsonTextWriter jsonWriter)
+		{
+			int totalCount = 0;
+			while (true)
+			{
+				RavenJArray indexes = null;
+				var request = CreateRequest("indexes?pageSize=128&start=" + totalCount);
+				request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)));
+
+				if (indexes.Length == 0)
+				{
+					Console.WriteLine("Done with reading indexes, total: {0}", totalCount);
+					break;
+				}
+				totalCount += indexes.Length;
+				Console.WriteLine("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", indexes.Length, totalCount);
+				foreach (RavenJToken item in indexes)
+				{
+					item.WriteTo(jsonWriter);
+				}
 			}
 		}
 
@@ -203,7 +209,7 @@ namespace Raven.Smuggler
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
 				var index = RavenJToken.ReadFrom(jsonReader);
-				if (options.ExportIndexesOnly)
+				if (options.OperateOnTypes.HasFlag(ItemType.Indexes) == false)
 					continue;
 				var indexName = index.Value<string>("name");
 				if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
@@ -229,7 +235,8 @@ namespace Raven.Smuggler
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
 				var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
-
+				if (options.OperateOnTypes.HasFlag(ItemType.Documents) == false)
+					continue;
 				if (options.MatchFilters(document) == false)
 					continue;
 
@@ -255,7 +262,8 @@ namespace Raven.Smuggler
 			{
 				attachmentCount += 1;
 				var item = RavenJToken.ReadFrom(jsonReader);
-
+				if (options.OperateOnTypes.HasFlag(ItemType.Attachments) == false)
+					continue;
 				var attachmentExportInfo =
 					new JsonSerializer
 					{

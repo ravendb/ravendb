@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using NDesk.Options;
 using Raven.Abstractions.Data;
 
@@ -18,12 +19,32 @@ namespace Raven.Smuggler
 		{
 			options = new SmugglerOptions();
 			optionSet = new OptionSet
-								{
-									{"metadata-filter:{=}", "Filter documents by a metadata property", (key,val) => options.Filters["@metadata." +key] = val},
-									{"filter:{=}", "Filter documents by a document property", (key,val) => options.Filters[key] = val},
-									{"only-indexes", _ => options.ExportIndexesOnly = true},
-									{"include-attachments", s => options.IncludeAttachments = true}
-								};
+			            	{
+			            		{
+			            			"metadata-filter:{=}", "Filter documents by a metadata property." + Environment.NewLine +
+			            			                       "Usage example: @metadata.Raven-Entity-Name=Birds", (key, val) => options.Filters["@metadata." + key] = val
+			            			},
+			            		{
+			            			"filter:{=}", "Filter documents by a document property" + Environment.NewLine +
+			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters[key] = val
+			            			},
+			            		{
+			            			"operate-on-types:{=}", "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
+			            			                        "Default is all items." + Environment.NewLine +
+			            			                        "Usage example: Indexes,Documents,Attachments", (key, val) =>
+			            			                                                                        	{
+			            			                                                                        		try
+			            			                                                                        		{
+			            			                                                                        			options.OperateOnTypes = (ItemType) Enum.Parse(typeof (ItemType), key);
+			            			                                                                        		}
+			            			                                                                        		catch (Exception e)
+			            			                                                                        		{
+			            			                                                                        			PrintUsageAndExit(e);
+			            			                                                                        		}
+			            			                                                                        	}
+			            			},
+			            		{"h|?|help", v => PrintUsageAndExit(0)},
+			            	};
 		}
 
 		static void Main(string[] args)
@@ -59,11 +80,11 @@ namespace Raven.Smuggler
 			try
 			{
 				optionSet.Parse(args);
+				Console.WriteLine(options.OperateOnTypes);
 			}
 			catch (Exception e)
 			{
-				Console.WriteLine(e.Message);
-				PrintUsageAndExit(-1);
+				PrintUsageAndExit(e);
 			}
 
 			var smugglerApi = new SmugglerApi(connectionStringOptions);
@@ -85,6 +106,12 @@ namespace Raven.Smuggler
 				Console.WriteLine(e);
 				Environment.Exit(-1);
 			}
+		}
+
+		private void PrintUsageAndExit(Exception e)
+		{
+			Console.WriteLine(e.Message);
+			PrintUsageAndExit(-1);
 		}
 
 		private void PrintUsageAndExit(int exitCode)

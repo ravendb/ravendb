@@ -16,8 +16,8 @@ namespace Raven.Smuggler
 	{
 		public SmugglerOptions()
 		{
-			IncludeAttachments = true;
 			Filters = new Dictionary<string, string>();
+			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments;
 		}
 
 		public SmugglerAction Action { get; set; }
@@ -27,16 +27,11 @@ namespace Raven.Smuggler
 		public Dictionary<string, string> Filters { get; set; }
 
 		/// <summary>
-		/// Export indexes only. This is supported for export action only.
-		/// Default if false.
+		/// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.
+		/// Default is all items.
+		/// Usage example: OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments.
 		/// </summary>
-		public bool ExportIndexesOnly { get; set; }
-
-		/// <summary>
-		/// Include attachments in the export. This is supported for export action only.
-		/// Default is true.
-		/// </summary>
-		public bool IncludeAttachments { get; set; }
+		public ItemType OperateOnTypes { get; set; }
 
 		public bool MatchFilters(RavenJToken item)
 		{
@@ -56,6 +51,14 @@ namespace Raven.Smuggler
 			}
 			return true;
 		}
+	}
+
+	[Flags]
+	public enum ItemType
+	{
+		Documents,
+		Indexes,
+		Attachments,
 	}
 
 	public enum SmugglerAction
