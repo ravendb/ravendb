@@ -101,8 +101,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Raven.Smuggler\Smuggler.cs">
-      <Link>Smuggler.cs</Link>
+    <Compile Include="..\Raven.Smuggler\ExportSpec.cs">
+      <Link>Smuggler\ExportSpec.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Smuggler\SmugglerApi.cs">
+      <Link>Smuggler\SmugglerApi.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Smuggler\TrivialJsonToJsonJsonConverter.cs">
+      <Link>Smuggler\TrivialJsonToJsonJsonConverter.cs</Link>
     </Compile>
     <Compile Include="FromMono\Options.cs" />
     <Compile Include="RavenDbServer.cs" />
@@ -146,6 +152,10 @@
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
+      <Project>{3E6401AC-3E33-4B61-A460-49953654A207}</Project>
+      <Name>Raven.Smuggler</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
       <Project>{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}</Project>

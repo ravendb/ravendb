@@ -61,6 +61,7 @@
     <Compile Include="Authentication\Bugs\Mojo2_Failed.cs" />
     <Compile Include="Authentication\HttpWebRequestExtensions.cs" />
     <Compile Include="Authentication\SimpleLogin.cs" />
+    <Compile Include="Authentication\SmugglerOAuth.cs" />
     <Compile Include="Authentication\UsingDatabaseCommands.cs" />
     <Compile Include="Authorization\AuthorizationTest.cs" />
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
