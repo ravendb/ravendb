@@ -32,7 +32,7 @@ namespace Raven.Performance
 
 			serverLocation = serverLocation.Split('=')[1];
 			dataLocation = dataLocation.Split('=')[1];
-			var textWriter = new StreamWriter("Logs\\LogForExcel.txt");
+			var textWriter = File.CreateText(@"Logs\LogForExcel.txt");
 			textWriter.WriteLine("Test number, Time, Memory Min, Memory Max, Memory Average, Latency Time Min, Latency Time Max, Latency Time Average, Latency Docs Min, Latency Docs Max, Latency Docs Average");
 
 
