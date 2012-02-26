@@ -128,7 +128,7 @@ namespace Raven.Abstractions.Connection
 			{
 				stream.Write(data, 0, data.Length);
 				stream.Flush();
-				return stream.Length;
+				return stream.CanSeek ? stream.Length : 0;
 			}
 		}
 
@@ -156,7 +156,7 @@ namespace Raven.Abstractions.Connection
 					}
 				}
 				stream.Flush();
-				return stream.Length;
+				return stream.CanSeek ? stream.Length : 0;
 			}
 		}
 
