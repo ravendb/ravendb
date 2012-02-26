@@ -26,11 +26,6 @@ namespace Raven.Database.Linq.PrivateExtensions
 				this.inner = inner;
 			}
 
-			public IEnumerator<dynamic> GetEnumerator()
-			{
-				return inner.GetEnumerator();
-			}
-
 			public dynamic Key
 			{
 				get { return inner.Key; }
@@ -45,8 +40,8 @@ namespace Raven.Database.Linq.PrivateExtensions
 		public static IEnumerable<IGrouping<dynamic, dynamic>> GroupBy(this IEnumerable<dynamic> source, Func<dynamic, dynamic> keySelector)
 		{
 			return Enumerable.GroupBy(source, keySelector).Select(inner => new WrapperGrouping(inner));
-		} 
-		
+		}
+
 		private static IEnumerable<dynamic> Select(this object self)
 		{
 			if (self == null || self is DynamicNullObject)
@@ -54,7 +49,7 @@ namespace Raven.Database.Linq.PrivateExtensions
 			if (self is IEnumerable == false || self is string)
 				throw new InvalidOperationException("Attempted to enumerate over " + self.GetType().Name);
 
-			foreach (var item in ((IEnumerable) self))
+			foreach (var item in ((IEnumerable)self))
 			{
 				yield return item;
 			}
@@ -64,23 +59,23 @@ namespace Raven.Database.Linq.PrivateExtensions
 		{
 			return self.DefaultIfEmpty<dynamic>(new DynamicNullObject());
 		}
-		
+
 		public static IEnumerable<dynamic> SelectMany(this object source,
-		                                              Func<dynamic, int, IEnumerable<dynamic>> collectionSelector,
-		                                              Func<dynamic, dynamic, dynamic> resultSelector)
+													  Func<dynamic, int, IEnumerable<dynamic>> collectionSelector,
+													  Func<dynamic, dynamic, dynamic> resultSelector)
 		{
 			return Enumerable.SelectMany(Select(source), collectionSelector, resultSelector);
 		}
 
 		public static IEnumerable<dynamic> SelectMany(this object source,
-		                                              Func<dynamic, IEnumerable<dynamic>> collectionSelector,
-		                                              Func<dynamic, dynamic, dynamic> resultSelector)
+													  Func<dynamic, IEnumerable<dynamic>> collectionSelector,
+													  Func<dynamic, dynamic, dynamic> resultSelector)
 		{
 			return Enumerable.SelectMany(Select(source), collectionSelector, resultSelector);
 		}
 
 		public static IEnumerable<dynamic> SelectMany(this object source,
-		                                              Func<dynamic, IEnumerable<dynamic>> selector)
+													  Func<dynamic, IEnumerable<dynamic>> selector)
 		{
 			return Select(source).SelectMany<object, object>(selector);
 		}

@@ -62,7 +62,11 @@ namespace Raven.Tests.Bugs
 
 			if (File.Exists("hilo-export.dump"))
 				File.Delete("hilo-export.dump");
-			Smuggler.Smuggler.ExportData(new Smuggler.Smuggler.ExportSpec("http://localhost:8079/", "hilo-export.dump", false, false));
+			Smuggler.Smuggler.ExportData(new Smuggler.Smuggler.SmugglerOptions
+			{
+				InstanceUrl = "http://localhost:8079/",
+				File = "hilo-export.dump",
+			});
 			Assert.True(File.Exists("hilo-export.dump"));
 
 			using (var session = documentStore.OpenSession()) {
@@ -74,12 +78,55 @@ namespace Raven.Tests.Bugs
 			server.Dispose();
 			CreateServer();
 
-			Smuggler.Smuggler.ImportData("http://localhost:8079/", "hilo-export.dump");
+			Smuggler.Smuggler.ImportData(new Smuggler.Smuggler.SmugglerOptions
+			{
+				File = "hilo-export.dump",
+				InstanceUrl = "http://localhost:8079/",
+			});
 
 			using (var session = documentStore.OpenSession()) {
 				var hilo = session.Load<HiLoKey>("Raven/Hilo/foos");
 				Assert.NotNull(hilo);
 				Assert.Equal(32, hilo.Max);
+			}
+		}
+
+		[Fact]
+		public void Can_filter_documents()
+		{
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(new Foo { Something = "something1" });
+				session.Store(new Foo { Something = "something2" });
+				session.SaveChanges();
+			}
+
+			if (File.Exists("hilo-export.dump"))
+				File.Delete("hilo-export.dump");
+			Smuggler.Smuggler.ExportData(new Smuggler.Smuggler.SmugglerOptions
+			{
+				InstanceUrl = "http://localhost:8079/",
+				File = "hilo-export.dump",
+				Filters =
+			                             	{
+			                             		{"Something", "something1"}
+			                             	}
+			});
+			Assert.True(File.Exists("hilo-export.dump"));
+
+			server.Dispose();
+			CreateServer();
+
+			Smuggler.Smuggler.ImportData(new Smuggler.Smuggler.SmugglerOptions
+			{
+				File = "hilo-export.dump",
+				InstanceUrl = "http://localhost:8079/",
+			});
+
+			using (var session = documentStore.OpenSession())
+			{
+				Assert.NotNull(session.Load<Foo>("foos/1"));
+				Assert.Null(session.Load<Foo>("foos/2"));
 			}
 		}
 
@@ -90,13 +137,23 @@ namespace Raven.Tests.Bugs
 
 			if (File.Exists("hilo-export.dump"))
 				File.Delete("hilo-export.dump");
-			Smuggler.Smuggler.ExportData(new Smuggler.Smuggler.ExportSpec("http://localhost:8079/", "hilo-export.dump", false, true));
+			Smuggler.Smuggler.ExportData(new Smuggler.Smuggler.SmugglerOptions
+			{
+				InstanceUrl = "http://localhost:8079/", 
+				File = "hilo-export.dump", 
+				IncludeAttachments = true, 
+				ExportIndexesOnly = false
+			});
 			Assert.True(File.Exists("hilo-export.dump"));
 
 			server.Dispose();
 			CreateServer();
 
-			Smuggler.Smuggler.ImportData("http://localhost:8079/", "hilo-export.dump");
+			Smuggler.Smuggler.ImportData(new Smuggler.Smuggler.SmugglerOptions
+			{
+				InstanceUrl = "http://localhost:8079/",
+				File = "hilo-export.dump"
+			});
 
 			var attachment = documentStore.DatabaseCommands.GetAttachment("test");
 			Assert.Equal(new byte[]{1,2,3}, attachment.Data().ReadData());

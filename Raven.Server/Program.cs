@@ -267,7 +267,12 @@ Configuration options:
 				if (File.Exists(path))
 				{
 					Console.WriteLine("Loading data from: {0}", path);
-					Smuggler.Smuggler.ImportData(ravenConfiguration.ServerUrl, path);
+					Smuggler.Smuggler.ImportData(new Smuggler.Smuggler.SmugglerOptions
+					{
+						File = path,
+						InstanceUrl = ravenConfiguration.ServerUrl,
+						IsImport = true
+					});
 				}
 
 				Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);
