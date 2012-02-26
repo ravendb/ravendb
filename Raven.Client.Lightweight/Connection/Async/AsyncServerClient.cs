@@ -527,7 +527,23 @@ namespace Raven.Client.Connection.Async
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
 				{
-					var json = (RavenJObject) task.Result;
+					RavenJObject json;
+					try
+					{
+						json = (RavenJObject) task.Result;
+					}
+					catch (WebException e)
+					{
+						var httpWebResponse = e.Response as HttpWebResponse;
+						if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+						{
+							var text = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression()).ReadToEnd();
+							if (text.Contains("maxQueryString"))
+								throw new InvalidOperationException(text, e);
+							throw new InvalidOperationException("There is no index named: " + index);
+						}
+						throw;
+					}
 
 					return new QueryResult
 					{
