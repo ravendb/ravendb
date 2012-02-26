@@ -6,6 +6,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -59,23 +60,14 @@ namespace Raven.Studio.Features.Query
 					continue;
 				var termsDictionary = fieldsTermsDictionary[field] = new Dictionary<string, List<string>>();
 				var terms = termsDictionary[string.Empty] = new List<string>();
-				GetTermsForField(indexName, field, terms);
+				GetTermsForFieldAsync(indexName, field, terms);
 			}
 		}
 
-		public static void GetTermsForField(string indexName, string field, List<string> terms, string termPrefix = "")
+		public static Task GetTermsForFieldAsync(string indexName, string field, List<string> terms, string termPrefix = "")
 		{
-			ApplicationModel.DatabaseCommands.GetTermsAsync(indexName, field, termPrefix, 1024)
-				.ContinueOnSuccess(termsFromServer =>
-				                   	{
-				                   		foreach (var term in termsFromServer)
-				                   		{
-				                   			if (term.IndexOfAny(new[] {' ', '\t'}) == -1)
-				                   				terms.Add(term);
-				                   			else
-												terms.Add('"' + term + '"'); // quote the term
-				                   		}
-				                   	});
+			return ApplicationModel.DatabaseCommands.GetTermsAsync(indexName, field, termPrefix, 1024)
+				.ContinueOnSuccess(terms.AddRange);
 		}
 	}
 }

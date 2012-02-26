@@ -11,6 +11,7 @@ using ActiproSoftware.Text.Utility;
 using ActiproSoftware.Windows.Controls.SyntaxEditor;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Query
 {
@@ -41,12 +42,12 @@ namespace Raven.Studio.Features.Query
 			string termPrefix = null;
 			if (currentToken != null && currentToken.EndsWith(":"))
 			{
-				PopulateTerm(currentToken, session);
+				PopulateTerm(currentToken, session, view, string.Empty);
 			}
 			else if (prevToken != null && prevToken.EndsWith(":"))
 			{
 				termPrefix = currentToken;
-				PopulateTerm(prevToken, session, termPrefix);
+				PopulateTerm(prevToken, session, view, termPrefix);
 			}
 			else
 			{
@@ -68,8 +69,16 @@ namespace Raven.Studio.Features.Query
 			return true;
 		}
 
-		private void PopulateTerm(string token, CompletionSession session, string termPrefix = "")
+		private void PopulateTerm(string token, CompletionSession session, IEditorView view, string termPrefix)
 		{
+			if(termPrefix.StartsWith("\""))
+			{
+				termPrefix = termPrefix.Substring(1);
+			}
+			if( termPrefix.EndsWith("\""))
+			{
+				termPrefix = termPrefix.Substring(0,termPrefix.Length - 1);
+			}
 			var field = token.Substring(0, token.Length - 1);
 			if (fieldTermsDictionary.ContainsKey(field) == false)
 				return;
@@ -83,15 +92,22 @@ namespace Raven.Studio.Features.Query
 			{
 				terms = new List<string>();
 				termsDictionary[termPrefix] = terms;
-				QueryIndexAutoComplete.GetTermsForField(indexName, field, terms, termPrefix);
+				QueryIndexAutoComplete.GetTermsForFieldAsync(indexName, field, terms, termPrefix)
+					.ContinueOnSuccessInTheUIThread(() =>
+					{
+						PopulateTerm(token, session, view, termPrefix);	
+						session.Selection = new CompletionSelection(session.Items.First(), CompletionSelectionState.Partial);
+						session.Open(view);
+					});
 			}
 			foreach (var term in terms)
 			{
+				var maybeQuotedTerm = term.IndexOfAny(new[] {' ', '\t'}) == -1 ? term : "\"" + term + "\"";
 				session.Items.Add(new CompletionItem
 				{
 					Text = term,
 					ImageSourceProvider = new CommonImageSourceProvider(CommonImage.PropertyPublic),
-					AutoCompletePreText = term + " ",
+					AutoCompletePostText = maybeQuotedTerm,
 				});
 			}
 		}

@@ -116,29 +116,29 @@ namespace Raven.Tests.MailingList.Jabber
 					Name = "Adsadsdasds",
 					Blah = "apple",
 					ConnectedPlayers = new List<ConnectedPlayer>
-                                                             {
-                                                                 new ConnectedPlayer
-                                                                     {PlayerName = "Phillip", ConnectedOn = "Jan 1"},
-                                                                 new ConnectedPlayer
-                                                                     {PlayerName = "PK", ConnectedOn = "Jan 2"},
-                                                                 new ConnectedPlayer
-                                                                     {PlayerName = "John", ConnectedOn = "Jan 3"}
-                                                             }
+					{
+						new ConnectedPlayer
+						{PlayerName = "Phillip", ConnectedOn = "Jan 1"},
+						new ConnectedPlayer
+						{PlayerName = "PK", ConnectedOn = "Jan 2"},
+						new ConnectedPlayer
+						{PlayerName = "John", ConnectedOn = "Jan 3"}
+					}
 				});
 				session.Store(new GameServer
 				{
 					Name = "Weeeee",
 					Blah = "banana",
 					ConnectedPlayers = new List<ConnectedPlayer>
-                                                             {
-                                                                 new ConnectedPlayer
-                                                                     {
-                                                                         PlayerName = "PewPewIsHere",
-                                                                         ConnectedOn = "Jan 5"
-                                                                     },
-                                                                 new ConnectedPlayer
-                                                                     {PlayerName = "Killer", ConnectedOn = "Jan 2"}
-                                                             }
+					{
+						new ConnectedPlayer
+						{
+							PlayerName = "PewPewIsHere",
+							ConnectedOn = "Jan 5"
+						},
+						new ConnectedPlayer
+						{PlayerName = "Killer", ConnectedOn = "Jan 2"}
+					}
 				});
 
 				session.SaveChanges();

@@ -548,8 +548,12 @@
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
     <Compile Include="MailingList\Afif.cs" />
+    <Compile Include="MailingList\IndexWhereClause .cs" />
     <Compile Include="MailingList\Mark2.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />
+    <Compile Include="MailingList\Stacey\Image.cs" />
+    <Compile Include="MailingList\Stacey\ImageByName.cs" />
+    <Compile Include="MailingList\Stacey\InServerTesting.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />
     <Compile Include="MailingList\Thor\LinqTest.cs" />
@@ -612,7 +616,7 @@
     <Compile Include="MailingList\spokeypokey\spokeypokey2.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey3.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey4.cs" />
-    <Compile Include="MailingList\Stacey.cs" />
+    <Compile Include="MailingList\Stacey2.cs" />
     <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\TimeZoneQueries.cs" />
     <Compile Include="MailingList\transformedresults_customid_test.cs" />

@@ -106,6 +106,15 @@ namespace Raven.Storage.Managed
 			if (readResult == null)
 				throw new IndexDoesNotExistsException("Could not find index named: " + name);
 
+
+			if (readResult.Key.Value<object>("lastReducedTimestamp") != null)
+			{
+				return Tuple.Create(
+					readResult.Key.Value<DateTime>("lastReducedTimestamp"),
+					new Guid(readResult.Key.Value<byte[]>("lastReducedEtag"))
+					);
+			}
+
 			return Tuple.Create(
 				readResult.Key.Value<DateTime>("lastTimestamp"),
 				new Guid(readResult.Key.Value<byte[]>("lastEtag"))

@@ -15,6 +15,7 @@ namespace Raven.Tests.Bugs
 			using(var server = GetNewServer())
 			using(var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
+				store.Conventions.FailoverBehavior=FailoverBehavior.FailImmediately;
 				using(var session = store.OpenSession())
 				{
 					session.Store(new User());

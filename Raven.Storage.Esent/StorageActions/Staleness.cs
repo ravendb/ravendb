@@ -123,6 +123,22 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				throw new IndexDoesNotExistsException("Could not find index named: " + name);
 			}
+
+			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+			Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if(Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ)) 
+			{// for map-reduce indexes, we use the reduce stats
+
+				var lastReducedIndex = Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce,
+																	  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"])
+					.Value;
+				var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,
+																		  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]).TransfromToGuidWithProperSorting();
+				return Tuple.Create(lastReducedIndex, lastReducedEtag);
+	
+			}
+	    
+
 			var lastIndexedTimestamp = Api.RetrieveColumnAsDateTime(session, IndexesStats,
 																  tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"])
 				.Value;
