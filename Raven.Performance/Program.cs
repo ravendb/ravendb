@@ -17,7 +17,7 @@ namespace Raven.Performance
 		private static string serverLocation;
 		private static string dataLocation;
 
-		private static readonly Logger Logger = LogManager.GetLogger("RavenDBStressTester");
+		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
 		static void Main(string[] args)
 		{
@@ -32,7 +32,7 @@ namespace Raven.Performance
 
 			serverLocation = serverLocation.Split('=')[1];
 			dataLocation = dataLocation.Split('=')[1];
-			var textWriter = File.CreateText(@"Logs\LogForExcel.txt");
+			var textWriter = new StreamWriter(@"Logs.csv", false);
 			textWriter.WriteLine("Test number, Time, Memory Min, Memory Max, Memory Average, Latency Time Min, Latency Time Max, Latency Time Average, Latency Docs Min, Latency Docs Max, Latency Docs Average");
 
 
@@ -120,6 +120,7 @@ namespace Raven.Performance
 			}
 
 			textWriter.Close();
+			textWriter.Dispose();
 			p.Kill();
 		}
 
