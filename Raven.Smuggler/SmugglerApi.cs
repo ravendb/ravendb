@@ -18,7 +18,7 @@ namespace Raven.Smuggler
 {
 	public class SmugglerApi
 	{
-		public RavenConnectionStringOptions ConnectionStringOptions { get; set; }
+		public RavenConnectionStringOptions ConnectionStringOptions { get; private set; }
 		private readonly HttpRavenRequestFactory httpRavenRequestFactory = new HttpRavenRequestFactory();
 
 		public SmugglerApi(RavenConnectionStringOptions connectionStringOptions)
@@ -31,9 +31,9 @@ namespace Raven.Smuggler
 			return httpRavenRequestFactory.Create(ConnectionStringOptions.Url + url, method, ConnectionStringOptions);
 		}
 
-		public void ExportData(ExportSpec exportSpec)
+		public void ExportData(SmugglerOptions options)
 		{
-			using (var streamWriter = new StreamWriter(new GZipStream(File.Create(exportSpec.File), CompressionMode.Compress)))
+			using (var streamWriter = new StreamWriter(new GZipStream(File.Create(options.File), CompressionMode.Compress)))
 			{
 				var jsonWriter = new JsonTextWriter(streamWriter)
 				{
@@ -67,17 +67,17 @@ namespace Raven.Smuggler
 				jsonWriter.WritePropertyName("Docs");
 				jsonWriter.WriteStartArray();
 
-				if (!exportSpec.ExportIndexesOnly)
+				if (!options.ExportIndexesOnly)
 				{
-					ExportDocuments(jsonWriter);
+					ExportDocuments(options, jsonWriter);
 				}
 				jsonWriter.WriteEndArray();
 
 				jsonWriter.WritePropertyName("Attachments");
 				jsonWriter.WriteStartArray();
-				if (exportSpec.IncludeAttachments)
+				if (options.IncludeAttachments)
 				{
-					ExportAttachments(jsonWriter, exportSpec);
+					ExportAttachments(jsonWriter);
 				}
 				jsonWriter.WriteEndArray();
 
@@ -86,7 +86,7 @@ namespace Raven.Smuggler
 			}
 		}
 
-		private void ExportDocuments(JsonTextWriter jsonWriter)
+		private void ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter)
 		{
 			var lastEtag = Guid.Empty;
 			int totalCount = 0;
@@ -101,18 +101,17 @@ namespace Raven.Smuggler
 					Console.WriteLine("Done with reading documents, total: {0}", totalCount);
 					break;
 				}
-				totalCount += documents.Length;
-				Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", documents.Length,
-									totalCount);
-				foreach (RavenJToken item in documents)
-				{
-					item.WriteTo(jsonWriter);
-				}
+
+				var final = documents.Where(options.MatchFilters).ToList();
+				final.ForEach(item => item.WriteTo(jsonWriter));
+				totalCount += final.Count;
+
+				Console.WriteLine("Reading batch of {0,3} documents, read so far: {1,10:#,#;;0}", documents.Length, totalCount);
 				lastEtag = new Guid(documents.Last().Value<RavenJObject>("@metadata").Value<string>("@etag"));
 			}
 		}
 
-		private void ExportAttachments(JsonTextWriter jsonWriter, ExportSpec exportSpec)
+		private void ExportAttachments(JsonTextWriter jsonWriter)
 		{
 			var lastEtag = Guid.Empty;
 			int totalCount = 0;
@@ -152,15 +151,15 @@ namespace Raven.Smuggler
 			}
 		}
 
-		public void ImportData(string file, bool skipIndexes = false)
+		public void ImportData(SmugglerOptions options)
 		{
-			using (FileStream fileStream = File.OpenRead(file))
+			using (FileStream fileStream = File.OpenRead(options.File))
 			{
-				ImportData(fileStream, skipIndexes);
+				ImportData(fileStream, options);
 			}
 		}
 
-		public void ImportData(Stream stream, bool skipIndexes = false)
+		public void ImportData(Stream stream, SmugglerOptions options)
 		{
 			var sw = Stopwatch.StartNew();
 			// Try to read the stream compressed, otherwise continue uncompressed.
@@ -178,7 +177,7 @@ namespace Raven.Smuggler
 			{
 				stream.Seek(0, SeekOrigin.Begin);
 
-				StreamReader streamReader = new StreamReader(stream);
+				var streamReader = new StreamReader(stream);
 
 				jsonReader = new JsonTextReader(streamReader);
 
@@ -204,7 +203,7 @@ namespace Raven.Smuggler
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
 				var index = RavenJToken.ReadFrom(jsonReader);
-				if (skipIndexes)
+				if (options.ExportIndexesOnly)
 					continue;
 				var indexName = index.Value<string>("name");
 				if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
@@ -229,9 +228,13 @@ namespace Raven.Smuggler
 			int totalCount = 0;
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
+				var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+
+				if (options.MatchFilters(document) == false)
+					continue;
+
 				totalCount += 1;
-				var document = RavenJToken.ReadFrom(jsonReader);
-				batch.Add((RavenJObject)document);
+				batch.Add(document);
 				if (batch.Count >= 128)
 					FlushBatch(batch);
 			}

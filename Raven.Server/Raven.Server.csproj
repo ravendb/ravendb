@@ -101,11 +101,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Raven.Smuggler\ExportSpec.cs">
-      <Link>Smuggler\ExportSpec.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Smuggler\SmugglerApi.cs">
       <Link>Smuggler\SmugglerApi.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Smuggler\SmugglerOptions.cs">
+      <Link>Smuggler\SmugglerOptions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Smuggler\TrivialJsonToJsonJsonConverter.cs">
       <Link>Smuggler\TrivialJsonToJsonJsonConverter.cs</Link>

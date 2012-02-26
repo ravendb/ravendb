@@ -42,7 +42,7 @@ namespace Raven.Bundles.Tests.Authentication
 		{
 			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = store.Url, Credentials = new NetworkCredential("Ayende", "abc") });
 
-			smugglerApi.ExportData(new ExportSpec(File, false, true));
+			smugglerApi.ExportData(new SmugglerOptions { File = File });
 		}
 
 		[Fact]
@@ -50,7 +50,7 @@ namespace Raven.Bundles.Tests.Authentication
 		{
 			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = store.Url});
 
-			var webException = Assert.Throws<WebException>(() => smugglerApi.ExportData(new ExportSpec(File, false, true)));
+			var webException = Assert.Throws<WebException>(() => smugglerApi.ExportData(new SmugglerOptions { File = File }));
 			Assert.Equal("The remote server returned an error: (401) Unauthorized.", webException.Message);
 		}
 
