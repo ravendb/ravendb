@@ -16,7 +16,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using Microsoft.VisualBasic.Devices;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -40,7 +39,7 @@ namespace Raven.Database.Config
 			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128*1024 : 64*1024;
 			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
-			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, GetTotalPhysicalMemoryMegabytes()/2);
+			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory/2);
 			MaxNumberOfParallelIndexTasks = 8;
 
 			Catalog = new AggregateCatalog(
@@ -254,11 +253,9 @@ namespace Raven.Database.Config
 
 		private int GetDefaultMemoryCacheLimitMegabytes()
 		{
-			var totalPhysicalMemoryMegabytes = GetTotalPhysicalMemoryMegabytes();
-
 			// we need to leave ( a lot ) of room for other things as well, so we limit the cache size
 
-			var val = (totalPhysicalMemoryMegabytes / 2) -
+			var val = (MemoryStatistics.TotalPhysicalMemory / 2) -
 				// reduce the unmanaged cache size from the default limit
 						(GetConfigurationValue<int>("Raven/Esent/CacheSizeMax") ?? 1024);
 
@@ -266,34 +263,6 @@ namespace Raven.Database.Config
 				return 128; // if machine has less than 1024 MB, then only use 128 MB 
 
 			return val;
-		}
-
-		private static int GetTotalPhysicalMemoryMegabytes()
-		{
-			int totalPhysicalMemoryMegabytes;
-			if (Type.GetType("Mono.Runtime") != null)
-			{
-				totalPhysicalMemoryMegabytes = GetDefaultMemoryCacheLimitMegabytesOnMono();
-			}
-			else
-			{
-#if __MonoCS__
-				throw new PlatformNotSupportedException("This build can only run on Mono");
-#else
-				totalPhysicalMemoryMegabytes =
-					(int) (new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory/1024/1024);
-#endif
-			}
-			return totalPhysicalMemoryMegabytes;
-		}
-
-		private static int GetDefaultMemoryCacheLimitMegabytesOnMono()
-		{
-			var pc = new System.Diagnostics.PerformanceCounter("Mono Memory", "Total Physical Memory");
-			var totalPhysicalMemoryMegabytes = (int)(pc.RawValue / 1024 / 1024);
-			if (totalPhysicalMemoryMegabytes == 0)
-				totalPhysicalMemoryMegabytes = 128; // 128MB, the Mono runtime default
-			return totalPhysicalMemoryMegabytes;
 		}
 
 		public NameValueCollection Settings { get; set; }
@@ -632,37 +601,6 @@ namespace Raven.Database.Config
 			set
 			{
 				indexStoragePath = value.ToFullPath();
-			}
-		}
-
-		private bool failedToGetAvailablePhysicalMemory;
-		public int AvailablePhysicalMemoryInMegabytes
-		{
-			get
-			{
-				if (failedToGetAvailablePhysicalMemory)
-					return -1;
-
-				try
-				{
-					var availablePhysicalMemoryInMb = GetTotalPhysicalMemoryMegabytes();
-					if(Environment.Is64BitProcess)
-						return availablePhysicalMemoryInMb;
-
-					// we are in 32 bits mode, but the _system_ may have more than 4 GB available
-					// so we have to check the _address space_ as well as the available memory
-					var workingSetMb = (int) (Process.GetCurrentProcess().WorkingSet64/1024/1024);
-					return Math.Min(2048 - workingSetMb, availablePhysicalMemoryInMb);
-				}
-				catch (Exception)
-				{
-					if (Type.GetType("Mono.Runtime") == null)
-						throw;
-
-                    // I don't know how to figur eout free RAM on mono, so we disable this behavior
-					failedToGetAvailablePhysicalMemory = true;
-					return -1;
-				}
 			}
 		}
 
