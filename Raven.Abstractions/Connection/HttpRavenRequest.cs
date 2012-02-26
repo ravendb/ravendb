@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -109,9 +110,11 @@ namespace Raven.Abstractions.Connection
 			postedStream = streamToWrite;
 			WebRequest.ContentLength = streamToWrite.Length;
 			using (var stream = WebRequest.GetRequestStream())
+			using(var commpressedStream = new GZipStream(stream, CompressionMode.Compress))
 			{
-				streamToWrite.CopyTo(stream);
+				streamToWrite.CopyTo(commpressedStream);
 				stream.Flush();
+				commpressedStream.Flush();
 			}
 		}
 
@@ -132,20 +135,22 @@ namespace Raven.Abstractions.Connection
 		private void WriteToken(WebRequest httpWebRequest)
 		{
 			using (var stream = httpWebRequest.GetRequestStream())
+			using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
 			{
 				if (writeBson)
 				{
-					postedToken.WriteTo(new BsonWriter(stream));
+					postedToken.WriteTo(new BsonWriter(commpressedData));
 				}
 				else
 				{
-					using (var streamWriter = new StreamWriter(stream))
+					using (var streamWriter = new StreamWriter(commpressedData))
 					{
 						postedToken.WriteTo(new JsonTextWriter(streamWriter));
 						streamWriter.Flush();
 					}
 				}
 				stream.Flush();
+				commpressedData.Flush();
 			}
 		}
 
@@ -212,10 +217,12 @@ namespace Raven.Abstractions.Connection
 			if (postedStream != null)
 			{
 				postedStream.Position = 0;
-				using (var stream = newWebRequest.GetRequestStream())
+				using (var stream = newWebRequest.GetRequestStream())	
+				using (var compressedData = new GZipStream(stream, CompressionMode.Compress))
 				{
-					postedStream.CopyTo(stream);
+					postedStream.CopyTo(compressedData);
 					stream.Flush();
+					compressedData.Flush();
 				}
 			}
 			WebRequest = newWebRequest;

@@ -30,6 +30,7 @@ namespace Raven.Backup
 			req.PreAuthenticate = true;
 			req.Credentials = CredentialCache.DefaultCredentials;
 
+			//TODO compress
 			using (var streamWriter = new StreamWriter(req.GetRequestStream()))
 			{
 				streamWriter.WriteLine(json);

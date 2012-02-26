@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 
@@ -11,12 +12,15 @@ namespace Raven.Abstractions.Connection
 		{
 			req.ContentLength = Encoding.UTF8.GetByteCount(data) + Encoding.UTF8.GetPreamble().Length;
 
-			using (var dataStream = req.GetRequestStream())
+			using (var requestStream = req.GetRequestStream())
+			using (var dataStream = new GZipStream(requestStream, CompressionMode.Compress))
 			using (var writer = new StreamWriter(dataStream, Encoding.UTF8))
 			{
 				writer.Write(data);
+
 				writer.Flush();
 				dataStream.Flush();
+				requestStream.Flush();
 			}
 		}
 
