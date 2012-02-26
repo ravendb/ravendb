@@ -31,9 +31,10 @@ namespace Raven.Abstractions.Extensions
 #endif
 
 		/// <summary>
-		/// 	Reads the entire request buffer to memory and
-		/// 	return it as a byte array.
+		/// Reads the entire request buffer to memory and return it as a byte array.
 		/// </summary>
+		/// <param name="stream">The stream to read.</param>
+		/// <returns>The returned byte array.</returns>
 		public static byte[] ReadData(this Stream stream)
 		{
 			var list = new List<byte[]>();

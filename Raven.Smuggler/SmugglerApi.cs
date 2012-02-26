@@ -12,6 +12,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Smuggler
@@ -134,15 +135,14 @@ namespace Raven.Smuggler
 				}
 
 				totalCount += attachmentInfo.Length;
-				Console.WriteLine("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachmentInfo.Length,
-				                  totalCount);
+				Console.WriteLine("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachmentInfo.Length, totalCount);
 				foreach (var item in attachmentInfo)
 				{
 					Console.WriteLine("Downloading attachment: {0}", item.Value<string>("Key"));
 
-					RavenJArray attachmentData = null;
+					byte[] attachmentData = null;
 					var requestData = CreateRequest("static/" + item.Value<string>("Key"));
-					requestData.ExecuteRequest(reader => attachmentData = RavenJArray.Load(new JsonTextReader(reader)));
+					requestData.ExecuteRequest(reader => attachmentData = reader.ReadData());
 
 					new RavenJObject
 						{
@@ -217,6 +217,7 @@ namespace Raven.Smuggler
 
 				var request = CreateRequest("indexes/" + indexName, "PUT");
 				request.Write(index.Value<RavenJObject>("definition"));
+				request.ExecuteRequest();
 			}
 
 			// should read documents now
@@ -271,7 +272,7 @@ namespace Raven.Smuggler
 					}.Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
 				Console.WriteLine("Importing attachment {0}", attachmentExportInfo.Key);
 
-				var request = CreateRequest("bulk_docs", "POST");
+				var request = CreateRequest("static/" + attachmentExportInfo.Key, "PUT");
 				if (attachmentExportInfo.Metadata != null)
 				{
 					foreach (var header in attachmentExportInfo.Metadata)
@@ -281,6 +282,7 @@ namespace Raven.Smuggler
 				}
 
 				request.Write(attachmentExportInfo.Data);
+				request.ExecuteRequest();
 			}
 			Console.WriteLine("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments in {2:#,#;;0} ms", totalCount, attachmentCount, sw.ElapsedMilliseconds);
 		}
@@ -313,6 +315,7 @@ namespace Raven.Smuggler
 				
 			var request = CreateRequest("bulk_docs", "POST");
 			var size = request.Write(commands);
+			request.ExecuteRequest();
 
 			Console.Write("Wrote {0} documents", batch.Count, sw.ElapsedMilliseconds);
 			if (size > 0)

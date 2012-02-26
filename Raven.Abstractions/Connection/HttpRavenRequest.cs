@@ -72,6 +72,7 @@ namespace Raven.Abstractions.Connection
 		public long Write(byte[] data)
 		{
 			postedData = data;
+			webRequest.ContentLength = data.Length;
 			using (var stream = WebRequest.GetRequestStream())
 			{
 				stream.Write(data, 0, data.Length);
@@ -134,6 +135,17 @@ namespace Raven.Abstractions.Connection
 			});
 		}
 
+		public void ExecuteRequest(Action<Stream> action)
+		{
+			SendRequestToServer(response =>
+			{
+				using (var stream = response.GetResponseStreamWithHttpDecompression())
+				{
+					action(stream);
+				}
+			});
+		}
+
 		public void ExecuteRequest()
 		{
 			SendRequestToServer(response => { });
@@ -157,10 +169,17 @@ namespace Raven.Abstractions.Connection
 					if (++retries >= 3)
 						throw;
 
-					var httpWebResponse = e.Response as HttpWebResponse;
-					if (httpWebResponse == null ||
-					    httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
-						throw;
+					var response = e.Response as HttpWebResponse;
+					if (response == null ||
+						response.StatusCode != HttpStatusCode.Unauthorized)
+					{
+						using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
+						{
+							var error = streamReader.ReadToEnd();
+							var ravenJObject = RavenJObject.Parse(error);
+							throw new WebException("Error: " + ravenJObject.Value<string>("Error"), e);
+						}
+					}
 
 					if (handleUnauthorizedResponse != null && handleUnauthorizedResponse(connectionStringOptions, e.Response))
 					{
