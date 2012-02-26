@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.IO;
+using System.Net;
 using NDesk.Options;
 using Raven.Abstractions.Data;
 
@@ -12,11 +12,13 @@ namespace Raven.Smuggler
 {
 	public class Program
 	{
+		private readonly RavenConnectionStringOptions connectionStringOptions;
 		private readonly SmugglerOptions options;
 		private readonly OptionSet optionSet;
 
 		private Program()
 		{
+			connectionStringOptions = new RavenConnectionStringOptions {Credentials = new NetworkCredential()};
 			options = new SmugglerOptions();
 			optionSet = new OptionSet
 			            	{
@@ -43,6 +45,11 @@ namespace Raven.Smuggler
 			            			                                                                        		}
 			            			                                                                        	}
 			            			},
+			            		{"u|user|username:{=}", "The username to use when the database requires the client to authenticate.", (key, value) => connectionStringOptions.Credentials.UserName = key},
+			            		{"p|pass|password:{=}", "The password to use when the database requires the client to authenticate.", (key, value) => connectionStringOptions.Credentials.Password = key},
+			            		{"domain:{=}", "The domain to use when the database requires the client to authenticate.", (key, value) => connectionStringOptions.Credentials.Domain = key},
+			            		{"d|database:{=}", "The database to operate on. If no specified, the operations will be on the default database.", (key, value) => connectionStringOptions.DefaultDatabase = key},
+			            		{"key|api-key:{=}", "The API-key to use, when using OAuth.", (key, value) => connectionStringOptions.DefaultDatabase = key},
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};
 		}
@@ -71,7 +78,7 @@ namespace Raven.Smuggler
 				PrintUsageAndExit(-1);
 			if (url.EndsWith("/") == false)
 				url += "/";
-			var connectionStringOptions = new RavenConnectionStringOptions { Url = url };
+			connectionStringOptions.Url = url;
 
 			options.File = args[2];
 			if (options.File == null)
