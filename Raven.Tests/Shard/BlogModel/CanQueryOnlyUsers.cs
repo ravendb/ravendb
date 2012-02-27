@@ -1,3 +1,5 @@
+using System.Linq;
+using Raven.Abstractions.Extensions;
 using Xunit;
 
 namespace Raven.Tests.Shard.BlogModel
@@ -11,13 +13,10 @@ namespace Raven.Tests.Shard.BlogModel
 			{
 				var user = session.Load<User>("users/1");
 
+				Assert.NotNull(user);
 				Assert.Equal(1, servers["Users"].Server.NumberOfRequests);
-				foreach (var ravenDbServer in servers)
-				{
-					if (ravenDbServer.Key == "Users")
-						continue;
-					Assert.Equal(0, ravenDbServer.Value.Server.NumberOfRequests);
-				}
+				servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
+					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 			}
 		}
 
@@ -29,13 +28,10 @@ namespace Raven.Tests.Shard.BlogModel
 				var user = session.Query<User>()
 					.FirstOrDefault(x => x.Name == "Fitzchak");
 
-			Assert.Equal(1, servers["Users"].Server.NumberOfRequests);
-				foreach (var ravenDbServer in servers)
-				{
-					if (ravenDbServer.Key == "Users")
-						continue;
-					Assert.Equal(0, ravenDbServer.Value.Server.NumberOfRequests);
-				}
+				Assert.NotNull(user);
+				Assert.Equal(1, servers["Users"].Server.NumberOfRequests);
+				servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
+					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 			}
 		}
 	}

@@ -8,7 +8,7 @@ namespace Raven.Client.Linq
 	public interface IDocumentQueryGenerator
 	{
 		/// <summary>
-		/// Gets the conventions asosciated with this query
+		/// Gets the conventions associated with this query
 		/// </summary>
 		DocumentConvention Conventions { get; }
 
