@@ -6,7 +6,7 @@
 namespace Raven.Client.Shard.ShardStrategy.ShardSelection
 {
 	/// <summary>
-	/// Implementors of this interface provide a way to go from an exists/new
+	/// Implementers of this interface provide a way to go from an exists/new
 	/// entity to the appropriate shard for the entity
 	/// </summary>
 	public interface IShardSelectionStrategy

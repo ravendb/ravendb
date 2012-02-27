@@ -8,7 +8,7 @@ using System.Collections.Generic;
 namespace Raven.Client.Shard.ShardStrategy.ShardResolution
 {
 	/// <summary>
-	/// Implementors of this interface provide a way to decide which shards will be queried
+	/// Implementers of this interface provide a way to decide which shards will be queried
 	/// for a specified operation
 	/// </summary>
 	public interface IShardResolutionStrategy

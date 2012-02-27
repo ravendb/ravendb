@@ -8,7 +8,7 @@ using System.ComponentModel.Composition;
 namespace Raven.Database.Plugins
 {
 	/// <summary>
-	/// Implementors of this class are called whenever an index entry is 
+	/// Implementers of this class are called whenever an index entry is 
 	/// created / deleted.
 	/// Work shouldn't be done by the methods of this interface, rather, they
 	/// should be done in a background thread. Communication between threads can

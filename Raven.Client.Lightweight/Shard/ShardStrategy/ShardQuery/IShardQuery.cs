@@ -5,7 +5,7 @@ using Raven.Client.Connection;
 namespace Raven.Client.Shard.ShardStrategy.ShardQuery
 {
 	/// <summary>
-	/// Implementors of this interface provide a way to decide how to merge queries from multiple sources
+	/// Implementers of this interface provide a way to decide how to merge queries from multiple sources
 	/// </summary>
 	public interface IShardQueryStrategy
 	{

@@ -3,7 +3,7 @@ using System;
 namespace Raven.Client
 {
 	/// <summary>
-	/// Provide a way for interested party to tell whatever implementors have been disposed
+	/// Provide a way for interested party to tell whatever implementers have been disposed
 	/// </summary>
 	public interface IDisposalNotification : IDisposable
 	{
