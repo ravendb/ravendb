@@ -174,7 +174,13 @@ task Test -depends Compile {
 	Set-Location $old
 }
 
-task StressTest -depends Compile {
+task CompileTests -depends Compile {
+	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+	
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\RavenDB.Tests.sln" /p:OutDir="$buildartifacts_dir\" }
+}
+
+task StressTest -depends CompileTests {
 	$old = Get-Location
 	Set-Location $build_dir
 	@("Raven.StressTests.dll") | ForEach-Object { 
@@ -184,7 +190,7 @@ task StressTest -depends Compile {
 	Set-Location $old
 }
 
-task MeasurePerformance -depends Compile {
+task MeasurePerformance -depends CompileTests {
 	$RavenDbStableLocation = "F:\RavenDB"
 	$DataLocation = "F:\Data"
 	$stableBuildToTests = @(616, 573, 531, 499, 482, 457, 371)
