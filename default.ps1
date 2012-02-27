@@ -85,35 +85,38 @@ task Init -depends Verify40, Clean {
 		$env:buildlabel = "13"
 	}
 	
-	$projectFiles = Get-ChildItem -Path $base_dir -Filter "*.csproj" -Recurse | 
-						Where-Object { $_.Directory -notmatch [regex]::Escape($lib_dir) } | 
-						Where-Object { $_.Directory -notmatch [regex]::Escape($tools_dir) }
-	
-	$notclsCompliant = @("Raven.Silverlight.Client", "Raven.Studio", "Raven.Tests.Silverlight")
-	
-	foreach($projectFile in $projectFiles) {
+	if($env:buildlabel -ne 13) {
+		$projectFiles = Get-ChildItem -Path $base_dir -Filter "*.csproj" -Recurse | 
+							Where-Object { $_.Directory -notmatch [regex]::Escape($lib_dir) } | 
+							Where-Object { $_.Directory -notmatch [regex]::Escape($tools_dir) }
 		
-		$projectName = [System.IO.Path]::GetFileName($projectFile.Directory)
-		$asmInfo = [System.IO.Path]::Combine($projectFile.Directory, [System.IO.Path]::Combine("Properties", "AssemblyInfo.cs"))
+		$notclsCompliant = @("Raven.Silverlight.Client", "Raven.Studio", "Raven.Tests.Silverlight")
 		
-		$clsComliant = "true"
-		if([System.Array]::IndexOf($notclsCompliant, $projectFile.Name) -ne -1) {
-			$clsComliant = "false"
+		foreach($projectFile in $projectFiles) {
+			
+			$projectName = [System.IO.Path]::GetFileName($projectFile.Directory)
+			$asmInfo = [System.IO.Path]::Combine($projectFile.Directory, [System.IO.Path]::Combine("Properties", "AssemblyInfo.cs"))
+			
+			$clsComliant = "true"
+			if([System.Array]::IndexOf($notclsCompliant, $projectFile.Name) -ne -1) {
+				$clsComliant = "false"
+			}
+			
+			Generate-Assembly-Info `
+				-file $asmInfo `
+				-title "$projectName $version.0.0" `
+				-description "A linq enabled document database for .NET" `
+				-company "Hibernating Rhinos" `
+				-product "RavenDB $version.0.0" `
+				-version "$version.0" `
+				-fileversion "$version.$env:buildlabel.0" `
+				-copyright "Copyright © Hibernating Rhinos 2004 - $((Get-Date).Year)" `
+				-clsCompliant $clsComliant
+			
+			git update-index --assume-unchanged $asmInfo
 		}
-		
-		Generate-Assembly-Info `
-			-file $asmInfo `
-			-title "$projectName $version.0.0" `
-			-description "A linq enabled document database for .NET" `
-			-company "Hibernating Rhinos" `
-			-product "RavenDB $version.0.0" `
-			-version "$version.0" `
-			-fileversion "$version.$env:buildlabel.0" `
-			-copyright "Copyright © Hibernating Rhinos 2004 - $((Get-Date).Year)" `
-			-clsCompliant $clsComliant
-		
-		git update-index --assume-unchanged $asmInfo
 	}
+	
 	
 	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
@@ -164,14 +167,11 @@ task Compile -depends Init {
 }
 
 task Test -depends Compile {
-	$old = Get-Location
-	Set-Location $build_dir
 	Write-Host $test_prjs
 	$test_prjs | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
 		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
 	}
-	Set-Location $old
 }
 
 task CompileTests -depends Compile {
@@ -181,13 +181,10 @@ task CompileTests -depends Compile {
 }
 
 task StressTest -depends CompileTests {
-	$old = Get-Location
-	Set-Location $build_dir
 	@("Raven.StressTests.dll") | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
 		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
 	}
-	Set-Location $old
 }
 
 task MeasurePerformance -depends CompileTests {
@@ -356,11 +353,10 @@ task ZipOutput {
 	
 	if($env:buildlabel -eq 13)
 	{
-      return 
+		return 
 	}
 
 	$old = pwd
-	
 	cd $build_dir\Output
 	
 	$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
@@ -382,7 +378,6 @@ task ZipOutput {
 	}
 	
     cd $old
-
 }
 
 task ResetBuildArtifcats {
