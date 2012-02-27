@@ -13,7 +13,6 @@ namespace Raven.Tests.Shard.BlogModel
 			{
 				var user = session.Load<User>("users/1");
 
-				Assert.NotNull(user);
 				Assert.Equal(1, servers["Users"].Server.NumberOfRequests);
 				servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
 					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
@@ -28,7 +27,6 @@ namespace Raven.Tests.Shard.BlogModel
 				var user = session.Query<User>()
 					.FirstOrDefault(x => x.Name == "Fitzchak");
 
-				Assert.NotNull(user);
 				Assert.Equal(1, servers["Users"].Server.NumberOfRequests);
 				servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
 					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
