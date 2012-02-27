@@ -31,25 +31,25 @@ namespace Raven.Smuggler
 			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters[key] = val
 			            			},
 			            		{
-			            			"operate-on-types:{=}", "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
-			            			                        "Default is all items." + Environment.NewLine +
-			            			                        "Usage example: Indexes,Documents,Attachments", (key, val) =>
-			            			                                                                        	{
-			            			                                                                        		try
-			            			                                                                        		{
-			            			                                                                        			options.OperateOnTypes = (ItemType) Enum.Parse(typeof (ItemType), key);
-			            			                                                                        		}
-			            			                                                                        		catch (Exception e)
-			            			                                                                        		{
-			            			                                                                        			PrintUsageAndExit(e);
-			            			                                                                        		}
-			            			                                                                        	}
+			            			"operate-on-types:", "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
+			            			                     "Default is all items." + Environment.NewLine +
+			            			                     "Usage example: Indexes,Documents,Attachments", value =>
+			            			                                                                     	{
+			            			                                                                     		try
+			            			                                                                     		{
+			            			                                                                     			options.OperateOnTypes = (ItemType) Enum.Parse(typeof (ItemType), value);
+			            			                                                                     		}
+			            			                                                                     		catch (Exception e)
+			            			                                                                     		{
+			            			                                                                     			PrintUsageAndExit(e);
+			            			                                                                     		}
+			            			                                                                     	}
 			            			},
-			            		{"u|user|username:{=}", "The username to use when the database requires the client to authenticate.", (key, value) => connectionStringOptions.Credentials.UserName = key},
-			            		{"p|pass|password:{=}", "The password to use when the database requires the client to authenticate.", (key, value) => connectionStringOptions.Credentials.Password = key},
-			            		{"domain:{=}", "The domain to use when the database requires the client to authenticate.", (key, value) => connectionStringOptions.Credentials.Domain = key},
-			            		{"d|database:{=}", "The database to operate on. If no specified, the operations will be on the default database.", (key, value) => connectionStringOptions.DefaultDatabase = key},
-			            		{"key|api-key:{=}", "The API-key to use, when using OAuth.", (key, value) => connectionStringOptions.ApiKey = key},
+			            		{"u|user|username:", "The username to use when the database requires the client to authenticate.", value => connectionStringOptions.Credentials.UserName = value},
+			            		{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => connectionStringOptions.Credentials.Password = value},
+			            		{"domain:", "The domain to use when the database requires the client to authenticate.", value => connectionStringOptions.Credentials.Domain = value},
+			            		{"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
+			            		{"key|api-key:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};
 		}

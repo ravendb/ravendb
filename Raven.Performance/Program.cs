@@ -33,10 +33,10 @@ namespace Raven.Performance
 		{
 			optionSet = new OptionSet
 			                	{
-			                		{"database|database-location={=}", "The folder that contains folders in the following format: RavenDB-Build-{build-number}.", (key, value) => databaseLocation = key},
-			                		{"build|build-number={=}", "The build number to test.", (key, value) => buildNumber = key},
-			                		{"data|data-location={=}", "The FreeDB data location.", (key, value) => dataLocation = key},
-			                		{"logs|logs-location={=}", "The location where to put the logs.", (key, value) => logsLocation = key},
+			                		{"database|database-location=", "The folder that contains folders in the following format: RavenDB-Build-{build-number}.", value => databaseLocation = value},
+			                		{"build|build-number=", "The build number to test.", value => buildNumber = value},
+			                		{"data|data-location=", "The FreeDB data location.", value => dataLocation = value},
+			                		{"logs|logs-location=", "The location where to put the logs.", value => logsLocation = value},
 			                	};
 
 			try
