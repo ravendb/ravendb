@@ -78,24 +78,7 @@ namespace Raven.Client.Shard
 			return shardDbCommands.Values.ToList();
 		}
 
-		public void MarkReadOnly(object entity)
-		{
-			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
-			GetSingleShardSession(shardIds).Advanced.MarkReadOnly(entity);
-		}
-
-		/// <summary>
-		/// Gets or sets a value indicating whether non authoritative information is allowed.
-		/// Non authoritative information is document that has been modified by a transaction that hasn't been committed.
-		/// The server provides the latest committed version, but it is known that attempting to write to a non authoritative document
-		/// will fail, because it is already modified.
-		/// If set to <c>false</c>, the session will wait <see cref="NonAuthoritativeInformationTimeout"/> for the transaction to commit to get an
-		/// authoritative information. If the wait is longer than <see cref="NonAuthoritativeInformationTimeout"/>, <see cref="NonAuthoritativeInformationException"/> is thrown.
-		/// </summary>
-		/// <value>
-		/// 	<c>true</c> if non authoritative information is allowed; otherwise, <c>false</c>.
-		/// </value>
-		public bool AllowNonAuthoritativeInformation
+		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
 			var dbCommands = GetAppropriateShards(new ShardResolutionStrategyData
 			{
@@ -416,11 +399,15 @@ namespace Raven.Client.Shard
 			if (ids.Length == 0)
 				return new T[0];
 
-			var idsAndShards = ids.Select(id => new { id, urls = GetAppropriateShards(new ShardResolutionStrategyData
+			var idsAndShards = ids.Select(id => new
 			{
-				EntityType = typeof(T),
-				Key = id
-			})})
+				id,
+				urls = GetAppropriateShards(new ShardResolutionStrategyData
+				{
+					EntityType = typeof(T),
+					Key = id
+				})
+			})
 				.GroupBy(x => x.urls, new DbCmdsListComparer());
 
 			IncrementRequestCount();
@@ -428,7 +415,7 @@ namespace Raven.Client.Shard
 			foreach (var endpoint in idsAndShards)
 			{
 				var currentShardIds = endpoint.Select(x => x.id).ToArray();
-				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(endpoint.Key, (dbCmd,i) =>
+				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(endpoint.Key, (dbCmd, i) =>
 				{
 					var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
 					MultiLoadResult multiLoadResult;
