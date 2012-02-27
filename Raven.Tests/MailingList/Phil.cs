@@ -10,33 +10,35 @@ namespace Raven.Tests.MailingList
 		public class Item
 		{
 
-			public string Id;
+			public string Id { get; set; }
 
-			public string Stuff;
+			public string Stuff { get; set; }
 
-			public string Summary;
-			public string UserId;
+			public string Summary { get; set; }
+			public string UserId { get; set; }
 
 			public Item()
 			{
 
 			}
-			public Item(string id, string stuff)
+			public Item(string userId, string stuff)
 			{
-				Id = id;
+				UserId = userId;
 				Stuff = stuff;
 			}
 		}
 		public class UserItem
 		{
-			public string Name;
-			public ItemReference Item;
+			public string Name { get; set; }
+			public ItemReference Item { get; set; }
 		}
+
 		public class User
 		{
-			public string FirstName, LastName;
-			public List<UserItem> UserItems;
-			public string Id;
+			public string FirstName { get; set; }
+			public string LastName { get; set; }
+			public List<UserItem> UserItems { get; set; }
+			public string Id { get; set; }
 		}
 
 		[Fact]
@@ -54,23 +56,23 @@ namespace Raven.Tests.MailingList
 					s.Store(user);
 					var item = new Item(user.Id, "Stuff");
 					s.Store(item);
+
 					user.UserItems = new List<UserItem>
 					{
 						new UserItem
 						{
-							Item = new ItemReference {Id = item.Id, Summary = item.Summary, UserId = item.UserId},
+							Item = new ItemReference {Id = item.Id, Summary = item.Stuff, UserId = item.UserId},
 							Name = "Stuff 2"
 						}
 					};
 					s.SaveChanges();
 				}
-
-				using(var s = store.OpenSession())
+				using (var s = store.OpenSession())
 				{
 					var userLookup = s.Include<UserItem>(x => x.Item.Id).Load<User>(1);
 					foreach (var uit in userLookup.UserItems)
 					{
-						var item2 = s.Load<Item>(uit.Item.Id);
+						s.Load<Item>(uit.Item.Id);
 					}
 				}
 			}
@@ -78,7 +80,9 @@ namespace Raven.Tests.MailingList
 
 		public class ItemReference
 		{
-			public string Id, Summary, UserId;
+			public string Id { get; set; }
+			public string Summary { get; set; }
+			public string UserId { get; set; }
 		}
 	}
 }
