@@ -87,7 +87,6 @@ namespace Raven.Smuggler
 			try
 			{
 				optionSet.Parse(args);
-				Console.WriteLine(options.OperateOnTypes);
 			}
 			catch (Exception e)
 			{
