@@ -144,7 +144,18 @@ namespace Raven.Performance
 		private string fullDatabaseLocation;
 		private string FullDatabaseLocation
 		{
-			get { return fullDatabaseLocation ?? (fullDatabaseLocation = Path.Combine(databaseLocation, string.Format("RavenDB-Build-{0}", buildNumber), "Server", "Raven.Server.exe")); }
+			get
+			{
+				if (fullDatabaseLocation == null)
+				{
+					fullDatabaseLocation = Path.Combine(databaseLocation, string.Format("RavenDB-Build-{0}", buildNumber), "Server", "Raven.Server.exe");
+					if (File.Exists(fullDatabaseLocation) == false)
+					{
+						throw new FileNotFoundException("RavenDB server cannot be found. Path lookup: " + fullDatabaseLocation);
+					}
+				}
+				return fullDatabaseLocation;
+			}
 		}
 
 		private static string ToMB(long number)
