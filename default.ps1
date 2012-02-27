@@ -235,7 +235,7 @@ task OpenSource {
 	$global:uploadCategory = "RavenDB"
 }
 
-task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest
+task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest,MeasurePerformance
 task Release -depends RunAllTests,DoRelease
 
 task CopySamples {
