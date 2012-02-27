@@ -53,6 +53,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Munin", "..\Raven.Munin\Raven.Munin.csproj", "{486537C2-EDF7-404F-9CFB-EEE25996DF5F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Smuggler", "..\Raven.Smuggler\Raven.Smuggler.csproj", "{3E6401AC-3E33-4B61-A460-49953654A207}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.UniqueConstraints", "Raven.Bundles.UniqueConstraints\Raven.Bundles.UniqueConstraints.csproj", "{4C026F8A-FB36-4A30-82E9-324D207F6B48}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.UniqueConstraints", "Raven.Client.UniqueConstraints\Raven.Client.UniqueConstraints.csproj", "{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}"
@@ -297,6 +299,16 @@ Global
 		{486537C2-EDF7-404F-9CFB-EEE25996DF5F}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{486537C2-EDF7-404F-9CFB-EEE25996DF5F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{486537C2-EDF7-404F-9CFB-EEE25996DF5F}.Release|x86.ActiveCfg = Release|Any CPU
+		{3E6401AC-3E33-4B61-A460-49953654A207}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{3E6401AC-3E33-4B61-A460-49953654A207}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{3E6401AC-3E33-4B61-A460-49953654A207}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{3E6401AC-3E33-4B61-A460-49953654A207}.Debug|x86.ActiveCfg = Debug|x86
+		{3E6401AC-3E33-4B61-A460-49953654A207}.Debug|x86.Build.0 = Debug|x86
+		{3E6401AC-3E33-4B61-A460-49953654A207}.Release|Any CPU.ActiveCfg = Release|x86
+		{3E6401AC-3E33-4B61-A460-49953654A207}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{3E6401AC-3E33-4B61-A460-49953654A207}.Release|Mixed Platforms.Build.0 = Release|x86
+		{3E6401AC-3E33-4B61-A460-49953654A207}.Release|x86.ActiveCfg = Release|x86
+		{3E6401AC-3E33-4B61-A460-49953654A207}.Release|x86.Build.0 = Release|x86
 		{4C026F8A-FB36-4A30-82E9-324D207F6B48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4C026F8A-FB36-4A30-82E9-324D207F6B48}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C026F8A-FB36-4A30-82E9-324D207F6B48}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -330,5 +342,6 @@ Global
 		{DA99A419-E137-40DB-9495-0C363B479D4B} = {86C266B7-8898-452C-AA95-4CCB81C382B7}
 		{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B} = {86C266B7-8898-452C-AA95-4CCB81C382B7}
 		{486537C2-EDF7-404F-9CFB-EEE25996DF5F} = {86C266B7-8898-452C-AA95-4CCB81C382B7}
+		{3E6401AC-3E33-4B61-A460-49953654A207} = {86C266B7-8898-452C-AA95-4CCB81C382B7}
 	EndGlobalSection
 EndGlobal

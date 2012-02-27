@@ -57,6 +57,7 @@ namespace Raven.Bundles.Tests.Replication
 			                          	Port = port
 			                          };
 			ConfigureServer(serverConfiguration);
+			serverConfiguration.Initialize();
 			var ravenDbServer = new RavenDbServer(serverConfiguration);
 			ravenDbServer.Server.SetupTenantDatabaseConfiguration += configuration => configuration.Catalog.Catalogs.Add(assemblyCatalog);
 			servers.Add(ravenDbServer);

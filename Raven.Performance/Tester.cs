@@ -12,7 +12,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 
-namespace RavenDBStressTester
+namespace Raven.Performance
 {
 	public class Tester
 	{

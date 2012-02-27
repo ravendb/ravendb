@@ -60,6 +60,7 @@
     <Compile Include="Commands\PatchCommandData.cs" />
     <Compile Include="Commands\PutCommandData.cs" />
     <Compile Include="Connection\HttpRavenRequest.cs" />
+    <Compile Include="Connection\HttpRavenRequestFactory.cs" />
     <Compile Include="Connection\HttpRequestHelper.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Data\AggregationOperation.cs" />

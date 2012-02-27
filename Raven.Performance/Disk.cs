@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace RavenDBStressTester
+namespace Raven.Performance
 {
 	public class Disk
 	{

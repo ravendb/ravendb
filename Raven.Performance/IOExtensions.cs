@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 
-namespace RavenDBStressTester
+namespace Raven.Performance
 {
 	public static class IOExtensions
 	{

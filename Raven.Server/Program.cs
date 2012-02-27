@@ -16,9 +16,11 @@ using System.Xml;
 using NDesk.Options;
 using NLog.Config;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Smuggler;
 
 namespace Raven.Server
 {
@@ -267,12 +269,7 @@ Configuration options:
 				if (File.Exists(path))
 				{
 					Console.WriteLine("Loading data from: {0}", path);
-					Smuggler.Smuggler.ImportData(new Smuggler.Smuggler.SmugglerOptions
-					{
-						File = path,
-						InstanceUrl = ravenConfiguration.ServerUrl,
-						IsImport = true
-					});
+					new SmugglerApi(new RavenConnectionStringOptions {Url = ravenConfiguration.ServerUrl}).ImportData(new SmugglerOptions {File = path});
 				}
 
 				Console.WriteLine("Raven is ready to process requests. Build {0}, Version {1}", DocumentDatabase.BuildVersion, DocumentDatabase.ProductVersion);

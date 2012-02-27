@@ -5413,7 +5413,10 @@
             </summary><value>The text that will be typed.</value></member><member name="T:ActiproSoftware.Windows.Controls.SyntaxEditor.EditActions.DeleteAction"><summary>
             Represents an <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IEditAction" /> that deletes the currently selected text if text is selected; 
             otherwise, deletes the next character.
-            </summary></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.EditActions.DeleteAction.Execute(ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView)"><summary>
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.EditActions.DeleteAction.CanExecute(ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView)"><summary>
+            Returns whether the edit action can execute in the specified <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView" />.
+            </summary><param name="view">The <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView" /> to examine.</param><returns><c>true</c> if the edit action can execute in the specified <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView" />; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Controls.SyntaxEditor.EditActions.DeleteAction.Execute(ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView)"><summary>
             Executes the edit action in the specified <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView" />.
             </summary><param name="view">The <see cref="T:ActiproSoftware.Windows.Controls.SyntaxEditor.IEditorView" /> in which to execute the edit action.</param></member><member name="T:ActiproSoftware.Products.SyntaxEditor.AssemblyInfo"><summary>
             Provides a class for retrieving information about the <c>ActiproSoftware.SyntaxEditor</c> assembly.
