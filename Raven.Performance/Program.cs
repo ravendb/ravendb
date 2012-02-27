@@ -8,42 +8,60 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using NDesk.Options;
 using NLog;
 
 namespace Raven.Performance
 {
 	class Program
 	{
-		private static string serverLocation;
-		private static string dataLocation;
+		private string databaseLocation;
+		private string dataLocation;
+		private string buildNumber;
 
 		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+		private OptionSet optionSet;
 
 		static void Main(string[] args)
 		{
-			serverLocation = args.SingleOrDefault(s => s.StartsWith("-exe=", StringComparison.OrdinalIgnoreCase));
-			dataLocation = args.SingleOrDefault(s => s.StartsWith("-data=", StringComparison.OrdinalIgnoreCase));
+			var program = new Program();
+			program.Parse(args);
+		}
 
-			if (serverLocation == null || dataLocation == null || serverLocation.Length == 5 || dataLocation.Length == 6)
+		private void Parse(string[] args)
+		{
+			optionSet = new OptionSet
+			                	{
+			                		{"database|database-location={=}", "The folder that contains folders in the following format: RavenDB-Build-{build-number}.", (key, value) => databaseLocation = key},
+			                		{"build|build-number={=}", "The build number to test.", (key, value) => buildNumber = key},
+			                		{"data|data-location={=}", "The FreeDB data location.", (key, value) => dataLocation = key},
+			                	};
+
+			try
 			{
-				Console.WriteLine("Must receive -exe={server location} and -data={data location}");
-				return;
+				optionSet.Parse(args);
+			}
+			catch (Exception e)
+			{
+				PrintUsageAndExit(e);
 			}
 
-			serverLocation = serverLocation.Split('=')[1];
-			dataLocation = dataLocation.Split('=')[1];
-			var textWriter = new StreamWriter(@"Logs.csv", false);
-			textWriter.WriteLine("Test number, Time, Memory Min, Memory Max, Memory Average, Latency Time Min, Latency Time Max, Latency Time Average, Latency Docs Min, Latency Docs Max, Latency Docs Average");
+			MeasurePerformance();
+		}
 
+		private void MeasurePerformance()
+		{
+			var writer = new StreamWriter(string.Format(@"PerformanceForBuild-{0}.csv", buildNumber), false);
+			writer.WriteLine("Test number, Time, Memory Min, Memory Max, Memory Average, Latency Time Min, Latency Time Max, Latency Time Average, Latency Docs Min, Latency Docs Max, Latency Docs Average");
 
-			var p = Process.Start(Path.Combine(serverLocation, "Raven.Server.exe"));
+			var p = Process.Start(FullDatabaseLocation);
 			if (p == null)
 				return;
-			Thread.Sleep(1000);// wait for server to load
+			Thread.Sleep(1000); // wait for server to load
 
 			var tester = new Tester(dataLocation, p);
 
-			tester.ClearDatabase(serverLocation);
+			tester.ClearDatabase(FullDatabaseLocation);
 
 			Environment.SetEnvironmentVariable("TestId", "1");
 			Logger.Info("Starting Test 1 - loading data without indexing");
@@ -51,8 +69,8 @@ namespace Raven.Performance
 			tester.AddData();
 			Logger.Info("Test took {0}", (DateTime.UtcNow - testStartTime).ToString("hh\\:mm\\:ss\\.ff"));
 			Logger.Info("Memory: Max: {0:#,#} MB Min: {1:#,#} MB Avg: {2:#,#} MB", ToMB(tester.MemoryUsage.Max()), ToMB(tester.MemoryUsage.Min()), ToMB(tester.MemoryUsage.Average()));
-			textWriter.WriteLine("{0},{1},{2},{3},{4}"
-				, 1, (DateTime.UtcNow - testStartTime).ToString("hh\\:mm\\:ss\\.ff") ,ToMB(tester.MemoryUsage.Min()), ToMB(tester.MemoryUsage.Max()), ToMB(tester.MemoryUsage.Average()));
+			writer.WriteLine("{0},{1},{2},{3},{4}"
+				, 1, (DateTime.UtcNow - testStartTime).ToString("hh\\:mm\\:ss\\.ff"), ToMB(tester.MemoryUsage.Min()), ToMB(tester.MemoryUsage.Max()), ToMB(tester.MemoryUsage.Average()));
 
 			Environment.SetEnvironmentVariable("TestId", "2");
 			Logger.Info("Starting Test 2 - Simple Index");
@@ -61,7 +79,7 @@ namespace Raven.Performance
 			tester.WaitForIndexesToBecomeNonStale();
 			Logger.Info("Test took {0}", (DateTime.UtcNow - testStartTime).ToString("hh\\:mm\\:ss\\.ff"));
 			Logger.Info("Memory: Max: {0:#,#} MB Min: {1:#,#} MB Avg: {2:#,#} MB", ToMB(tester.MemoryUsage.Max()), ToMB(tester.MemoryUsage.Min()), ToMB(tester.MemoryUsage.Average()));
-			textWriter.WriteLine("{0},{1},{2},{3},{4}"
+			writer.WriteLine("{0},{1},{2},{3},{4}"
 				, 2, (DateTime.UtcNow - testStartTime).ToString("hh\\:mm\\:ss\\.ff"), ToMB(tester.MemoryUsage.Min()), ToMB(tester.MemoryUsage.Max()), ToMB(tester.MemoryUsage.Average()));
 
 			Environment.SetEnvironmentVariable("TestId", "3");
@@ -71,7 +89,7 @@ namespace Raven.Performance
 			tester.WaitForIndexesToBecomeNonStale();
 			Logger.Info("Test took {0}", (DateTime.UtcNow - testStartTime).ToString("hh\\:mm\\:ss\\.ff"));
 			Logger.Info("Memory: Max: {0:#,#} MB Min: {1:#,#} MB Avg: {2:#,#} MB", ToMB(tester.MemoryUsage.Max()), ToMB(tester.MemoryUsage.Min()), ToMB(tester.MemoryUsage.Average()));
-			textWriter.WriteLine("{0},{1},{2},{3},{4}"
+			writer.WriteLine("{0},{1},{2},{3},{4}"
 				, 3, (DateTime.UtcNow - testStartTime).ToString("hh\\:mm\\:ss\\.ff"), ToMB(tester.MemoryUsage.Min()), ToMB(tester.MemoryUsage.Max()), ToMB(tester.MemoryUsage.Average()));
 
 			Environment.SetEnvironmentVariable("TestId", "4");
@@ -81,13 +99,13 @@ namespace Raven.Performance
 			tester.WaitForIndexesToBecomeNonStale();
 			Logger.Info("Test took {0}", (DateTime.UtcNow - testStartTime).ToString("hh\\:mm\\:ss\\.ff"));
 			Logger.Info("Memory: Max: {0:#,#} MB Min: {1:#,#} MB Avg: {2:#,#} MB", ToMB(tester.MemoryUsage.Max()), ToMB(tester.MemoryUsage.Min()), ToMB(tester.MemoryUsage.Average()));
-			textWriter.WriteLine("{0},{1},{2},{3},{4}"
+			writer.WriteLine("{0},{1},{2},{3},{4}"
 				, 4, (DateTime.UtcNow - testStartTime).ToString("hh\\:mm\\:ss\\.ff"), ToMB(tester.MemoryUsage.Min()), ToMB(tester.MemoryUsage.Max()), ToMB(tester.MemoryUsage.Average()));
 
 			p.Kill();
-			tester.ClearDatabase(serverLocation);
+			tester.ClearDatabase(FullDatabaseLocation);
 
-			p = Process.Start(Path.Combine(serverLocation, "Raven.Server.exe"));
+			p = Process.Start(FullDatabaseLocation);
 			if (p == null)
 				return;
 			Thread.Sleep(1000);// wait for server to load
@@ -106,12 +124,11 @@ namespace Raven.Performance
 			int counter = 1;
 			foreach (var latency in tester.Latencies())
 			{
-
-				textWriter.WriteLine("{0}.{1},{2},{3},{4},{5},{6:#,#.##},{7:#,#.##},{8:#,#.##},{9:#,#.##},{10:#,#.##},{11:#,#.##}"
+				writer.WriteLine("{0}.{1},{2},{3},{4},{5},{6:#,#.##},{7:#,#.##},{8:#,#.##},{9:#,#.##},{10:#,#.##},{11:#,#.##}"
 				, 5, counter++, (DateTime.UtcNow - testStartTime).ToString("hh\\:mm\\:ss\\.ff"), ToMB(tester.MemoryUsage.Min()), ToMB(tester.MemoryUsage.Max()), ToMB(tester.MemoryUsage.Average())
-				, latency.Item2.Min(), latency.Item2.Max(), latency.Item2.Average(), latency.Item3.Min(),latency.Item3.Max(), latency.Item3.Average());
+				, latency.Item2.Min(), latency.Item2.Max(), latency.Item2.Average(), latency.Item3.Min(), latency.Item3.Max(), latency.Item3.Average());
 
-				Logger.Info("Latencies {0}: Avg: {1:#,#} ms {2:#,#} docs, Max: {3:#,#} ms {4:#,#} docs, Min: {5:#,#} ms {6:#,#} docs", 
+				Logger.Info("Latencies {0}: Avg: {1:#,#} ms {2:#,#} docs, Max: {3:#,#} ms {4:#,#} docs, Min: {5:#,#} ms {6:#,#} docs",
 					latency.Item1, latency.Item2.Average(), latency.Item3.Average(),
 					latency.Item2.Max(),
 					latency.Item3.Max(),
@@ -119,9 +136,15 @@ namespace Raven.Performance
 					latency.Item3.Min());
 			}
 
-			textWriter.Close();
-			textWriter.Dispose();
+			writer.Close();
+			writer.Dispose();
 			p.Kill();
+		}
+
+		private string fullDatabaseLocation;
+		private string FullDatabaseLocation
+		{
+			get { return fullDatabaseLocation ?? (fullDatabaseLocation = Path.Combine(databaseLocation, string.Format("RavenDB-Build-{0}", buildNumber), "Server", "Raven.Server.exe")); }
 		}
 
 		private static string ToMB(long number)
@@ -132,6 +155,27 @@ namespace Raven.Performance
 		private static string ToMB(double number)
 		{
 			return (number / (1024 * 1024)).ToString("#,#.##");
+		}
+
+		private void PrintUsageAndExit(Exception e)
+		{
+			Console.WriteLine(e.Message);
+			PrintUsageAndExit(-1);
+		}
+
+		private void PrintUsageAndExit(int exitCode)
+		{
+			Console.WriteLine(@"
+Performance tester for RavenDB
+----------------------------------------
+Copyright (C) 2008 - {0} - Hibernating Rhinos
+----------------------------------------
+Command line options:", DateTime.UtcNow.Year);
+
+			optionSet.WriteOptionDescriptions(Console.Out);
+			Console.WriteLine();
+
+			Environment.Exit(exitCode);
 		}
 	}
 }
