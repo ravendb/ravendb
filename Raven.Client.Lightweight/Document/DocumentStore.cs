@@ -4,12 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 #if SILVERLIGHT
 using System.Net.Browser;
 #endif
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
@@ -47,6 +49,8 @@ namespace Raven.Client.Document
 		/// Generate new instance of database commands
 		/// </summary>
 		protected Func<IDatabaseCommands> databaseCommandsGenerator;
+
+		private ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
 #endif
 
 		private HttpJsonRequestFactory jsonRequestFactory;
@@ -403,7 +407,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			if (string.IsNullOrEmpty(DefaultDatabase) == false)
 			{
-				DatabaseCommands.GetRootDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
+				DatabaseCommands.ForDefaultDatabase().EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 			}
 #endif
 
@@ -519,10 +523,9 @@ namespace Raven.Client.Document
 		protected virtual void InitializeInternal()
 		{
 #if !SILVERLIGHT
-			var replicationInformer = new ReplicationInformer(Conventions);
 			databaseCommandsGenerator = () =>
 			{
-				var serverClient = new ServerClient(Url, Conventions, credentials, replicationInformer, jsonRequestFactory, currentSessionId);
+				var serverClient = new ServerClient(Url, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId);
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return serverClient;
 				return serverClient.ForDatabase(DefaultDatabase);
@@ -538,6 +541,13 @@ namespace Raven.Client.Document
 			};
 #endif
 		}
+
+#if !SILVERLIGHT
+		public ReplicationInformer GetReplicationInformerForDatabase(string dbName)
+		{
+			return replicationInformers.GetOrAddAtomically(dbName ?? "default", s => new ReplicationInformer(Conventions));
+		}
+#endif
 
 		/// <summary>
 		/// Setup the context for no aggressive caching
