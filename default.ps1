@@ -58,7 +58,7 @@ properties {
 			return "$build_dir\$_"
 		}
       
-  $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  )
+  $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll" )
 }
 include .\psake_ext.ps1
 
@@ -159,19 +159,29 @@ task Compile -depends Init {
 		ExecuteTask("AfterCompile")
 	}
       
-  exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Bundles\Raven.Bundles.sln" /p:OutDir="$buildartifacts_dir\" }
-  exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Samples\Raven.Samples.sln" /p:OutDir="$buildartifacts_dir\" }  
+	exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Bundles\Raven.Bundles.sln" /p:OutDir="$buildartifacts_dir\" }
+	exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Samples\Raven.Samples.sln" /p:OutDir="$buildartifacts_dir\" }  
 }
 
-task Test -depends Compile{
-  $old = pwd
-  cd $build_dir
-  Write-Host $test_prjs
-  foreach($test_prj in $test_prjs) {
-    Write-Host "Testing $build_dir\$test_prj"
-    exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$test_prj" } 
-  }
-  cd $old
+task Test -depends Compile {
+	$old = Get-Location
+	Set-Location $build_dir
+	Write-Host $test_prjs
+	$test_prjs | ForEach-Object { 
+		Write-Host "Testing $build_dir\$_"
+		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+	}
+	Set-Location $old
+}
+
+task StressTest -depends Compile {
+	$old = Get-Location
+	Set-Location $build_dir
+	@("Raven.StressTests.dll") | ForEach-Object { 
+		Write-Host "Testing $build_dir\$_"
+		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+	}
+	Set-Location $old
 }
 
 task TestSilverlight {
@@ -213,7 +223,7 @@ task OpenSource {
 	$global:uploadCategory = "RavenDB"
 }
 
-task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds
+task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest
 task Release -depends RunAllTests,DoRelease
 
 task CopySamples {
