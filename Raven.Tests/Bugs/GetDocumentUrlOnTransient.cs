@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class GetDocumentUrlOnTrasient : RemoteClientTest
+	public class GetDocumentUrlOnTransient : RemoteClientTest
 	{
 		[Fact]
 		public void ShouldThrow()

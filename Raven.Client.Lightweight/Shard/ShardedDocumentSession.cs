@@ -298,7 +298,7 @@ namespace Raven.Client.Shard
 		{
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
-				throw new InvalidOperationException("Cannot refresh a trasient instance");
+				throw new InvalidOperationException("Cannot refresh a transient instance");
 			IncrementRequestCount();
 
 
