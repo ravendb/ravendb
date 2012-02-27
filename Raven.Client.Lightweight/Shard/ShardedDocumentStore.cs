@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 using System;
 #if !SILVERLIGHT
+using System.Collections.Generic;
 using System.Collections.Specialized;
 #endif
 using System.Linq;
@@ -27,6 +28,9 @@ namespace Raven.Client.Shard
 	/// </summary>
 	public class ShardedDocumentStore : DocumentStoreBase
 	{
+		private readonly IShardStrategy shardStrategy;
+		private readonly List<IDocumentStore> shards;
+
 #if !SILVERLIGHT
 		/// <summary>
 		/// Gets the shared operations headers.
@@ -55,7 +59,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		/// <param name="shardStrategy">The shard strategy.</param>
 		/// <param name="shards">The shards.</param>
-		public ShardedDocumentStore(IShardStrategy shardStrategy, Shards shards)
+		public ShardedDocumentStore(IShardStrategy shardStrategy, List<IDocumentStore> shards)
 		{
 			if (shards == null || shards.Count == 0) 
 				throw new ArgumentException("Must have one or more shards", "shards");
@@ -65,9 +69,6 @@ namespace Raven.Client.Shard
 			this.shardStrategy = shardStrategy;
 			this.shards = shards;
 		}
-
-		private readonly IShardStrategy shardStrategy;
-		private readonly Shards shards;
 
 		/// <summary>
 		/// Gets or sets the identifier for this store.

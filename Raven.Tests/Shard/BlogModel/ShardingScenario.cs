@@ -57,7 +57,7 @@ namespace Raven.Tests.Shard.BlogModel
 				{"Posts03", posts3}
 			};
 
-			var shards = new Shards
+			var shards = new List<IDocumentStore>
 			{
 				new DocumentStore {Identifier = "Users", Url = "http://localhost:8079"},
 				new DocumentStore {Identifier = "Blogs", Url = "http://localhost:8078"},

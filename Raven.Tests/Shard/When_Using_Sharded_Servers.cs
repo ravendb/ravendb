@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
@@ -26,10 +27,10 @@ namespace Raven.Tests.Shard
 	{
 		public When_Using_Sharded_Servers()
 		{
-			server = "localhost";
+			const string server = "localhost";
 
-			port1 = 8079;
-			port2 = 8081;
+			const int port1 = 8079;
+			const int port2 = 8081;
 
 			path1 = GetPath("TestShardedDb1");
 			path2 = GetPath("TestShardedDb2");
@@ -43,7 +44,7 @@ namespace Raven.Tests.Shard
 			server1 = GetNewServer(port1, path1);
 			server2 = GetNewServer(port2, path2);
 
-			shards = new Shards { 
+			shards = new List<IDocumentStore> { 
 				new DocumentStore { Identifier="Shard1", Url = "http://" + server +":"+port1}, 
 				new DocumentStore { Identifier="Shard2", Url = "http://" + server +":"+port2} 
 			};
@@ -59,19 +60,16 @@ namespace Raven.Tests.Shard
 			shardStrategy.Stub(x => x.ShardResolutionStrategy).Return(shardResolution);
 		}
 
-		string path1;
-		string path2;
-		int port1;
-		int port2;
-		string server;
-		RavenDbServer server1;
-		RavenDbServer server2;
-		Company company1;
-		Company company2;
-		Shards shards;
-		IShardSelectionStrategy shardSelection;
-		IShardResolutionStrategy shardResolution;
-		IShardStrategy shardStrategy;
+		readonly string path1;
+		readonly string path2;
+		readonly RavenDbServer server1;
+		readonly RavenDbServer server2;
+		readonly Company company1;
+		readonly Company company2;
+		readonly List<IDocumentStore> shards;
+		readonly IShardSelectionStrategy shardSelection;
+		readonly IShardResolutionStrategy shardResolution;
+		readonly IShardStrategy shardStrategy;
 
 		[Fact]
 		public void Can_override_the_shard_id_generation()

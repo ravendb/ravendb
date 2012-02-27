@@ -731,9 +731,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDocumentStore.cs">
       <Link>Imports\Shard\ShardedDocumentStore.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\Shards.cs">
-      <Link>Imports\Shard\Shards.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\IShardStrategy.cs">
       <Link>Imports\Shard\ShardStrategy\IShardStrategy.cs</Link>
     </Compile>
