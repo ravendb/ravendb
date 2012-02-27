@@ -1,3 +1,4 @@
+using Raven.Tests.Bugs;
 using Raven.Tests.Shard.BlogModel;
 using Raven.Tests.Views;
 using Xunit;
@@ -16,6 +17,12 @@ namespace Raven.StressTests
 		public void CanQueryOnlyUsers_WhenQueryingForUserById()
 		{
 			Run<CanQueryOnlyUsers>(storages => storages.WhenQueryingForUserById(), 1000);
+		}
+
+		[Fact]
+		public void CaseSensitiveDeletes_ShouldWork()
+		{
+			Run<CaseSensitiveDeletes>(storages => storages.ShouldWork(), 1000);
 		}
 	}
 }
