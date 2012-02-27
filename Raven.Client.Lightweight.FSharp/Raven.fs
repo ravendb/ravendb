@@ -22,27 +22,6 @@ open Newtonsoft.Json
         let luceneQuery<'a, 'b> (f : (IDocumentQuery<'a> -> IDocumentQuery<'b>)) (a : IDocumentSession) = 
             f(a.Advanced.LuceneQuery<'a>()).AsEnumerable()
 
-        let queryAllBy f (a : IDocumentSession) : seq<'a> =  
-            Seq.unfold (fun (page, results, stats : RavenQueryStatistics) -> 
-                            if stats = null 
-                            then
-                                let s = ref Unchecked.defaultof<RavenQueryStatistics>
-                                let r = query (fun q -> f(q.Statistics(s))) a |> Seq.toList
-                                let count = r.Length
-                                Some <| (r, (page + 1, (results + count), !s))
-                            else if stats.TotalResults > results
-                            then 
-                                let start = (page + stats.SkippedResults) * 128
-                                let r = query (fun q -> f(q).Skip(start).Take(128)) a |> Seq.toList
-                                let count = r.Length
-                                Some <| (r, (page + 1, (results + count), stats))
-                            else None
-                        ) (0, 0, null)
-            |> Seq.concat
-
-        let queryAll<'a> (a : IDocumentSession) : seq<'a> = 
-            queryAllBy id a
-
         let where (p : Expr<'a -> bool>) (a : IRavenQueryable<'a>) =
             let expr = Linq.toLinqExpression (fun b a -> Expression.Lambda<Func<'a,bool>>(a, b |> Array.ofSeq)) p
             a.Where(expr)
@@ -79,75 +58,70 @@ open Newtonsoft.Json
         let store input  = 
             (fun (s : IDocumentSession) -> s.Store(input); input)
         
-        let commit (s : IDocumentSession) = 
-            s.SaveChanges()
-
-        let storeImmediate input =
-            (fun (s : IDocumentSession) -> s.Store(input); s.SaveChanges(); input)
-
         let delete (input : string) = 
             (fun (session : IDocumentSession) ->  
                         session.Advanced.DatabaseCommands.Delete(input, Nullable()))
 
-        let deleteImmediate (input : string) = 
-            (fun (session : IDocumentSession) ->  
-                        session.Advanced.DatabaseCommands.Delete(input, Nullable())
-                        session.SaveChanges())
-
-        let deleteMany (input : seq<'a>) =
-            (fun (session : IDocumentSession) ->  
-                                let xs = input |> Seq.toList
-                                for i in 0 .. (xs.Length - 1) do
-                                    session.Store(xs.[i])
-                                    session.Delete(xs.[i])
-                                    if i = 29 then session.SaveChanges()
-                                session.SaveChanges())
-
-        let storeMany input = 
-            let storeMany' input (session : IDocumentSession) = 
-                let xs = input |> Seq.toList
-                for i in 0 .. (xs.Length - 1) do
-                    session.Store(xs.[i])
-                    if i = 29 then session.SaveChanges()
-                session.SaveChanges()
-            (fun (session : IDocumentSession) -> storeMany' input session; input)
-
+        let saveChanges (s : IDocumentSession) = 
+            s.SaveChanges()
 
 [<AutoOpen>]
 module Raven = 
 
-    let mutable private docStoreMap : Map<string,IDocumentStore> = Map.empty
-
-    let getDocumentStore key = 
-        match docStoreMap.TryFind key with
-        | Some s -> s
-        | None -> failwithf "No document store with key (%s) has been initailised" key
-
-    let initialize key documentStore = 
-        docStoreMap <- docStoreMap.Add(key,documentStore)
-
-    let run key f = 
-        use s = (getDocumentStore key).OpenSession()
-        f(s)
-
-    let runMultitenantSession key (db :string) f = 
-        use s = (getDocumentStore key).OpenSession(db)
-        f(s)
-
-    let shutDownStore key = 
-        (getDocumentStore key).Dispose()
-
-    let shutDownAll() =
-        Map.iter (fun _ (x : IDocumentStore) -> x.Dispose()) docStoreMap
-
+    let run (session : IDocumentSession) f = 
+        f(session)
     
+    type RavenFunc<'a> = (IDocumentSession -> 'a)
+
     type RavenBuilder() = 
                                                                 
-         let bind sessionOp rest =
+         let bind sessionOp rest : RavenFunc<_> =
              (fun (s : IDocumentSession) -> rest (sessionOp s) s)
+         
+         let ret a : RavenFunc<_> = (fun _ -> a)
+
+         let delay f : RavenFunc<_> = bind (ret ()) f
 
          member x.Bind(sessionOp, rest) = bind sessionOp rest
-         member x.Return(a) = (fun _ -> a)
-         member x.ReturnFrom(a : IDocumentSession -> 'a) = a    
+
+         member x.Return(a) =  ret a
+
+         member x.ReturnFrom(a : RavenFunc<_>) = a
+         
+         member x.Delay(f) = delay f
+
+         member x.Zero() = x.Return ()
+
+         member x.Combine(a, b) =
+            bind a (fun () -> b)
+
+         member x.TryWith(sessionOp : IDocumentSession -> 'a, handler) =
+            (fun s -> try 
+                        sessionOp s 
+                      with e -> 
+                        (handler e s))
+
+         member x.TryFinally(sessionOp: IDocumentSession -> 'a, compensation) =
+           (fun s -> try 
+                        sessionOp s 
+                     finally 
+                        compensation())
+
+         member x.While(guard, sessionOp) =
+            if guard() then
+              bind sessionOp (fun () -> x.While(guard,sessionOp))
+            else
+              x.Zero()
+
+         member x.Using(resource:#IDisposable, f) =
+            x.TryFinally(f resource, (fun () -> match resource with null -> () | disp -> disp.Dispose()))
+
+         member x.For(sequence : seq<_>, f) =
+            x.Using(sequence.GetEnumerator(),
+              (fun enum ->
+                 x.While(
+                   (fun () -> enum.MoveNext()),
+                   x.Delay(fun () -> f enum.Current))))
+
 
     let raven = RavenBuilder()
