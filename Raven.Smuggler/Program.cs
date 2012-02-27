@@ -49,7 +49,7 @@ namespace Raven.Smuggler
 			            		{"p|pass|password:{=}", "The password to use when the database requires the client to authenticate.", (key, value) => connectionStringOptions.Credentials.Password = key},
 			            		{"domain:{=}", "The domain to use when the database requires the client to authenticate.", (key, value) => connectionStringOptions.Credentials.Domain = key},
 			            		{"d|database:{=}", "The database to operate on. If no specified, the operations will be on the default database.", (key, value) => connectionStringOptions.DefaultDatabase = key},
-			            		{"key|api-key:{=}", "The API-key to use, when using OAuth.", (key, value) => connectionStringOptions.DefaultDatabase = key},
+			            		{"key|api-key:{=}", "The API-key to use, when using OAuth.", (key, value) => connectionStringOptions.ApiKey = key},
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};
 		}
