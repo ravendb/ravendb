@@ -588,7 +588,7 @@ namespace Similarity.Net
 				{
 					query.Add(tq, BooleanClause.Occur.SHOULD);
 				}
-				catch (BooleanQuery.TooManyClauses ignore)
+				catch (BooleanQuery.TooManyClauses)
 				{
 					break;
 				}
@@ -650,7 +650,7 @@ namespace Similarity.Net
 				float score = tf * idf;
 
 				// only really need 1st 3 entries, other ones are for troubleshooting
-				res.Insert(new System.Object[] { word, topField, (float)score, (float)idf, (System.Int32)docFreq, (System.Int32)tf });
+				res.InsertWithOverflow(new System.Object[] { word, topField, (float)score, (float)idf, (System.Int32)docFreq, (System.Int32)tf });
 			}
 			return res;
 		}
@@ -675,77 +675,6 @@ namespace Similarity.Net
 			sb.Append("\t" + "minTermFreq    : " + minTermFreq + "\n");
 			sb.Append("\t" + "minDocFreq     : " + minDocFreq + "\n");
 			return sb.ToString();
-		}
-
-		/// <summary> Test driver.
-		/// Pass in "-i INDEX" and then either "-fn FILE" or "-url URL".
-		/// </summary>
-		[STAThread]
-		public static void Main(System.String[] a)
-		{
-			System.String indexName = "localhost_index";
-			System.String fn = "c:/Program Files/Apache Group/Apache/htdocs/manual/vhosts/index.html.en";
-			System.Uri url = null;
-			for (int i = 0; i < a.Length; i++)
-			{
-				if (a[i].Equals("-i"))
-				{
-					indexName = a[++i];
-				}
-				else if (a[i].Equals("-f"))
-				{
-					fn = a[++i];
-				}
-				else if (a[i].Equals("-url"))
-				{
-					url = new System.Uri(a[++i]);
-				}
-			}
-
-			System.IO.StreamWriter temp_writer;
-			temp_writer = new System.IO.StreamWriter(System.Console.OpenStandardOutput(), System.Console.Out.Encoding);
-			temp_writer.AutoFlush = true;
-			System.IO.StreamWriter o = temp_writer;
-			IndexReader r = IndexReader.Open(indexName);
-			o.WriteLine("Open index " + indexName + " which has " + r.NumDocs() + " docs");
-
-			MoreLikeThis mlt = new MoreLikeThis(r);
-
-			o.WriteLine("Query generation parameters:");
-			o.WriteLine(mlt.DescribeParams());
-			o.WriteLine();
-
-			Query query = null;
-			if (url != null)
-			{
-				o.WriteLine("Parsing URL: " + url);
-				query = mlt.Like(url);
-			}
-			else if (fn != null)
-			{
-				o.WriteLine("Parsing file: " + fn);
-				query = mlt.Like(new System.IO.FileInfo(fn));
-			}
-
-			o.WriteLine("q: " + query);
-			o.WriteLine();
-			IndexSearcher searcher = new IndexSearcher(indexName);
-
-			Hits hits = searcher.Search(query);
-			int len = hits.Length();
-			o.WriteLine("found: " + len + " documents matching");
-			o.WriteLine();
-			for (int i = 0; i < System.Math.Min(25, len); i++)
-			{
-				Document d = hits.Doc(i);
-				System.String summary = d.Get("summary");
-				o.WriteLine("score  : " + hits.Score(i));
-				o.WriteLine("url    : " + d.Get("url"));
-				o.WriteLine("\ttitle  : " + d.Get("title"));
-				if (summary != null)
-					o.WriteLine("\tsummary: " + d.Get("summary"));
-				o.WriteLine();
-			}
 		}
 
 		/// <summary> Find words for a more-like-this query former.

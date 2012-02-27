@@ -91,7 +91,7 @@
 										VerticalAlignment="Center"
 										Height="20"
 										Margin="2,0,6,0" />
-					
+
 					<Button Grid.Column="1"
 							Command="{Binding Execute}"
 							HorizontalAlignment="Right"
@@ -137,7 +137,7 @@
 				<Editors:QueryEditor x:Name="QueryEditor"
 									 Grid.Row="1"
 									 Text="{Binding Path=Query.Value, Mode=TwoWay}"
-									 CompletionProvider="{Binding Path=CompletionProvider.Value}">
+									 CompletionProvider="{Binding Path=QueryIndexAutoComplete.CompletionProvider}">
 					<i:Interaction.Triggers>
 						<ei:KeyTrigger Key="Enter"
 									   Modifiers="Control">
@@ -236,40 +236,68 @@
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
 					Grid.Row="2"
 					Grid.RowSpan="1" />
-			<StackPanel Grid.Row="2">
-				<TextBlock Text="Error"
-						   Style="{StaticResource Style_TextBlock_PagePartHeader}"
-						   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
+			<Grid Grid.Row="2">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="*" />
+				</Grid.RowDefinitions>
 
-				<TextBlock Text="{Binding Error}"
-						   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
+				<StackPanel>
+					<TextBlock Text="Error"
+							   Style="{StaticResource Style_TextBlock_PagePartHeader}"
+							   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
-				<StackPanel DataContext="{Binding Path=DocumentsResult.Value}"
-							Visibility="{Binding Path=., Converter={StaticResource HiddenWhenNull}}">
+					<TextBlock Text="{Binding Error}"
+							   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
-					<Documents:DocumentsView Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}" />
-					<TextBlock Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
-							   Text="There are no results for this query." />
+					<StackPanel DataContext="{Binding Path=DocumentsResult.Value}"
+								Visibility="{Binding Path=., Converter={StaticResource HiddenWhenNull}}">
+
+						<Documents:DocumentsView Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}" />
+						<TextBlock Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
+								   Text="There are no results for this query." />
+					</StackPanel>
+
+					<toolkit:BusyIndicator IsBusy="{Binding DocumentsResult.Value.IsLoadingDocuments, Mode=TwoWay}"
+										   BusyContent="Querying..." />
+					<ItemsControl ItemsSource="{Binding Suggestions}">
+						<ItemsControl.ItemTemplate>
+							<DataTemplate>
+								<StackPanel Orientation="Horizontal">
+									<TextBlock Text="Did you mean " />
+									<HyperlinkButton Content="{Binding SuggestedTerm}"
+													 FontStyle="Italic"
+													 Command="{Binding Path=DataContext.RepairTermInQuery, ElementName=this}"
+													 CommandParameter="{Binding}" />
+									<TextBlock Text=" for the field " />
+									<TextBlock Text="{Binding Field}"
+											   FontStyle="Italic" />
+									<TextBlock Text=" ?" />
+								</StackPanel>
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
 				</StackPanel>
-				<toolkit:BusyIndicator IsBusy="{Binding DocumentsResult.Value.IsLoadingDocuments, Mode=TwoWay}" BusyContent="Quering..." />
-				<ItemsControl ItemsSource="{Binding Suggestions}">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<StackPanel Orientation="Horizontal">
-								<TextBlock Text="Did you mean " />
-								<HyperlinkButton Content="{Binding SuggestedTerm}"
-												 FontStyle="Italic"
-												 Command="{Binding Path=DataContext.RepairTermInQuery, ElementName=this}"
-												 CommandParameter="{Binding}" />
-								<TextBlock Text=" for the field " />
-								<TextBlock Text="{Binding Field}"
-										   FontStyle="Italic" />
-								<TextBlock Text=" ?" />
-							</StackPanel>
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
-			</StackPanel>
+
+				<StackPanel Grid.Row="1"
+							VerticalAlignment="Bottom"
+							Orientation="Horizontal">
+
+					<TextBlock Text="Total results: " />
+					<TextBlock Text="{Binding Results.TotalResults, StringFormat='#,#'}" />
+					<TextBlock Text="        Status: " />
+					<TextBlock Text="{Binding Results.IsStale, Converter={StaticResource BooleanToStaleStatConverter},StringFormat='\{0\}'}" />
+					<TextBlock Text="        Last update: " />
+					<TextBlock Text="{Binding Results.IndexTimestamp, Converter={StaticResource TimeToLongAgoConverter}}"
+							   ToolTipService.ToolTip="{Binding Results.IndexTimestamp, StringFormat='Indexed at {0}'}" />
+					<TextBlock Text="        Duration (query+network+parsing): " />
+					<TextBlock Text="{Binding QueryTime.TotalMilliseconds, StringFormat='\{0:#,#\} ms'}" />
+					<TextBlock Text="        Index: " />
+					<TextBlock Text="{Binding Results.IndexName}" />
+					<TextBlock Text="        Etag: " />
+					<TextBlock Text="{Binding Results.IndexEtag}" />
+				</StackPanel>
+			</Grid>
 		</Grid>
 	</toolkit:DockPanel>
 </Infrastructure:View>

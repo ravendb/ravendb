@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.IO;
 using System.Net;
 using Raven.Json.Linq;
 using Raven.Database.Config;
@@ -23,12 +24,19 @@ namespace Raven.Tests.Bugs
 				{
 					var downloadData = webClient.DownloadData("http://localhost:8079/" +
 						"indexes?pageSize=128&start=" + "0");
-					var documents = Smuggler.Smuggler.GetString(downloadData);
+					var documents = GetString(downloadData);
 					RavenJArray.Parse(documents);
 				}
 			}
+		}
 
+		private static string GetString(byte[] downloadData)
+		{
+			using (var ms = new MemoryStream(downloadData))
+			using (var reader = new StreamReader(ms))
+			{
+				return reader.ReadToEnd();
+			}
 		}
 	}
-
 }

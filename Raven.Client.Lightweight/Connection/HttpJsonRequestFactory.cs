@@ -188,7 +188,7 @@ namespace Raven.Client.Connection
 		internal string GetCachedResponse(HttpJsonRequest httpJsonRequest)
 		{
 			if (httpJsonRequest.CachedRequestDetails == null)
-				throw new InvalidOperationException("Cannot get cached response from a request that has no cached infomration");
+				throw new InvalidOperationException("Cannot get cached response from a request that has no cached information");
 			httpJsonRequest.ResponseStatusCode = HttpStatusCode.NotModified;
 			httpJsonRequest.ResponseHeaders = new NameValueCollection(httpJsonRequest.CachedRequestDetails.Headers);
 			IncrementCachedRequests();
@@ -232,7 +232,7 @@ namespace Raven.Client.Connection
 		internal void UpdateCacheTime(HttpJsonRequest httpJsonRequest)
 		{
 			if (httpJsonRequest.CachedRequestDetails == null)
-				throw new InvalidOperationException("Cannot update cached response from a request that has no cached infomration");
+				throw new InvalidOperationException("Cannot update cached response from a request that has no cached information");
 			httpJsonRequest.CachedRequestDetails.Time = DateTimeOffset.Now;
 		}
 

@@ -47,8 +47,12 @@ namespace Raven.Database.Config
 			{"Raven/StorageTypeName", "string", "esent,munin,Fully Qualified Type Name", "The storage engine to use for the database. Default: esent."},
 
 			// Indexing
-			{"Raven/MaxNumberOfItemsToIndexInSingleBatch", "int", null, "The number of items that will be indexed in a single batch. Larger batch size result in faster indexing, but higher memory usage. Default: 2,500 for 32 bits, 5,000 64 bits."},
-			{"Raven/AvailableMemoryForRaisingIndexBatchSizeLimit", "int", null, "The minimum amount of memory available for us to double the size of MaxNumberOfItemsToIndexInSingleBatch if we need to. Default: 512 in 64 bits, 128 in 32 bits."},
+			{"Raven/MaxNumberOfItemsToIndexInSingleBatch", "int", null, "The max number of items that will be indexed in a single batch. Larger batch size result in faster indexing, but higher memory usage."},
+			{"Raven/InitialNumberOfItemsToIndexInSingleBatch", "int", null, "The number of items that will be indexed in a single batch. Larger batch size result in faster indexing, but higher memory usage."},
+			{"Raven/AvailableMemoryForRaisingIndexBatchSizeLimit", "int", null, "The minimum amount of memory available for us to double the size of InitialNumberOfItemsToIndexInSingleBatch if we need to."},
+			{"Raven/ResetIndexOnUncleanShutdown","bool", "false", "When the database is shut down rudely, determine whatever to reset the index or to check it. Note that checking the index may take some time on large databases."},
+			
+			
 
 			{"Raven/TaskScheduler", "string", "assembly qualified type name", "The TaskScheduler type to use for executing indexing."},
 			{"Raven/BackgroundTasksPriority", "string","Lowest,BelowNormal,Normal,AboveNormal,Highest", "The thread priority for indexing and other background tasks, (ignored if Raven/TaskScheduler is specified) default: Normal."},

@@ -15,7 +15,7 @@ namespace Raven.Studio.Features.Tasks
 
 		public override ICommand Action
 		{
-			get { return new ImportDatabaseCommand(line => Execute.OnTheUI(() => Output.Add(line))); }
+			get { return new ImportDatabaseCommand(this, line => Execute.OnTheUI(() => Output.Add(line))); }
 		}
 	}
 }

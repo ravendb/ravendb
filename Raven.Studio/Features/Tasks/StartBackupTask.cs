@@ -28,7 +28,8 @@ namespace Raven.Studio.Features.Tasks
 		{
 			if (Status == null || Status.IsRunning == false)
 				return null;
-			return DatabaseCommands.GetAsync(@"Raven/Backup/Status")
+			TaskStatus = TaskStatus.Started;
+			return DatabaseCommands.GetAsync(BackupStatus.RavenBackupStatusDocumentKey)
 				.ContinueOnSuccessInTheUIThread(item =>
 				{
 					var documentConvention = ApplicationModel.Current.Server.Value.Conventions;
@@ -37,9 +38,10 @@ namespace Raven.Studio.Features.Tasks
 					Output.Clear();
 					foreach (var backupMessage in Status.Messages)
 					{
-						Output.Add(backupMessage.Message);
+						Output.Add("[" + backupMessage.Timestamp + "]   	" + backupMessage.Severity + " :    	"+ backupMessage.Message);	
 					}
-				});
+				})
+				.Finally(() => TaskStatus = TaskStatus.Ended);
 		}
 	}
 }

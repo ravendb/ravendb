@@ -7,6 +7,9 @@ using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
 {
+	/// <summary>
+	/// Represents a value in JSON (string, integer, date, etc).
+	/// </summary>
 	public class RavenJValue : RavenJToken, IEquatable<RavenJValue>, IFormattable, IComparable, IComparable<RavenJValue>
 	{
 		private JTokenType _valueType;
@@ -73,7 +76,9 @@ namespace Raven.Json.Linq
 		/// Initializes a new instance of the <see cref="RavenJValue"/> class with the given value.
 		/// </summary>
 		/// <param name="value">The value.</param>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public RavenJValue(ulong value)
 			: this(value, JTokenType.Integer)
 		{
@@ -364,8 +369,24 @@ namespace Raven.Json.Linq
 			if(v1 == v2 )
 				return true;
 
+			// HACK: This prevents ValuesEquals from being commutative, need to find a more elegant fix
+			// suggestion: if v1._valueType != v2._valueType and one of the value types is a string do a TryParse on the string v2._valueType
 			switch (v1._valueType)
 			{
+				case JTokenType.TimeSpan:
+					switch (v2._valueType)
+					{
+						case JTokenType.TimeSpan:
+							break;
+						case JTokenType.String:
+							TimeSpan val;
+							if (TimeSpan.TryParse(v2._value as string, out val))
+								return TimeSpan.Equals((TimeSpan)v1._value, val);
+							return false;
+						default:
+							return false;
+					}
+					break;
 				case JTokenType.Guid:
 					switch (v2._valueType)
 					{

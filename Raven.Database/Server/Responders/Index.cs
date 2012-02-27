@@ -5,12 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
-using System.Text;
+using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
 using System.Linq;
 using Raven.Database.Extensions;
 using Raven.Database.Queries;
@@ -85,9 +82,6 @@ namespace Raven.Database.Server.Responders
 			else if("map".Equals(debug,StringComparison.InvariantCultureIgnoreCase))
 			{
 				GetIndexMappedResult(context, index);
-			}
-			else if("reduce".Equals(debug,StringComparison.InvariantCultureIgnoreCase))
-			{
 			}
 			else 
 			{
@@ -170,14 +164,16 @@ namespace Raven.Database.Server.Responders
 
 		private QueryResult PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
 		{
-			indexEtag = Database.GetIndexEtag(index);
+			indexEtag = Database.GetIndexEtag(index, null);
 			if (context.MatchEtag(indexEtag))
 			{
 				context.SetStatusToNotModified();
 				return null;
 			}
 
-			return Database.Query(index, indexQuery);
+			var queryResult = Database.Query(index, indexQuery);
+			indexEtag = Database.GetIndexEtag(index, queryResult);
+			return queryResult;
 		}
 
 		private QueryResult PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
@@ -188,20 +184,15 @@ namespace Raven.Database.Server.Responders
 
 			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);
 
-
 			if (dynamicIndexName != null && 
 				Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
-				indexEtag = Database.GetIndexEtag(dynamicIndexName);
+				indexEtag = Database.GetIndexEtag(dynamicIndexName, null);
 				if (context.MatchEtag(indexEtag))
 				{
 					context.SetStatusToNotModified();
 					return null;
 				}
-			}
-			else
-			{
-				indexEtag = Guid.Empty;
 			}
 
 			var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
@@ -210,8 +201,9 @@ namespace Raven.Database.Server.Responders
 			// as we make a switch from temp to auto, and we need to refresh the etag
 			// if that is the case. This can also happen when the optmizer
 			// decided to switch indexes for a query.
-			if (queryResult.IndexName != dynamicIndexName)
-				indexEtag = Database.GetIndexEtag(queryResult.IndexName);
+			indexEtag = (dynamicIndexName  == null || queryResult.IndexName == dynamicIndexName) ?
+				Database.GetIndexEtag(queryResult.IndexName, queryResult) : 
+				Guid.NewGuid();
 
 			return queryResult;
 		}

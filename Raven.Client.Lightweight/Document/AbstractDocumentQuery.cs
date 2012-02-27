@@ -1445,7 +1445,7 @@ If you really want to do in memory filtering on the data returned from the query
 			
 			if(type == typeof(decimal))
 			{
-				return ((double) ((decimal) whereParams.Value)).ToString();
+				return ((double) ((decimal) whereParams.Value)).ToString(CultureInfo.InvariantCulture);
 			}
 
 			if (type == typeof(DateTimeOffset))

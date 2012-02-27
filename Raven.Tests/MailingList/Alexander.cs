@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Xunit;
 
@@ -18,13 +19,31 @@ namespace Raven.Tests.MailingList
 			{
 				documentStore.Initialize();
 
+				documentStore.DatabaseCommands.PutIndex("CasinosCommentsIndex", new IndexDefinition
+				{
+					Map = @"
+docs.Casinos
+	.SelectMany(casino => casino.Comments, (casino, comment) => new {CityId = casino.CityId, CasinoId = casino.__document_id, Id = comment.Id, DateTime = comment.DateTime, Author = comment.Author, Text = comment.Text})",
+					Stores =
+				            {
+				                {"CityId", FieldStorage.Yes},
+				                {"CasinoId", FieldStorage.Yes},
+				                {"Id", FieldStorage.Yes},
+				                {"DateTime", FieldStorage.Yes},
+				                {"Author", FieldStorage.Yes},
+				                {"Text", FieldStorage.Yes}
+				            }
+				});
+
 				var documentSession = documentStore.OpenSession();
 
 				var casino = new Casino("Cities/123456", "address", "name");
 				documentSession.Store(casino);
 				documentSession.SaveChanges();
 
-				var casinoFromDb = documentSession.Query<Casino>().Where(x => x.Id == casino.Id).Single();
+				var casinoFromDb = documentSession.Query<Casino>()
+					.Customize(x=>x.WaitForNonStaleResults())
+					.Where(x => x.Id == casino.Id).Single();
 				Assert.NotNull(casinoFromDb);
 			}
 		}

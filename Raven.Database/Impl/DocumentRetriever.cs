@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -25,6 +26,8 @@ namespace Raven.Database.Impl
 {
 	public class DocumentRetriever : ITranslatorDatabaseAccessor
 	{
+		private static Logger log = LogManager.GetCurrentClassLogger();
+
 		private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
@@ -189,6 +192,7 @@ namespace Raven.Database.Impl
 						       		           	}
 						       	};
 					case ReadVetoResult.ReadAllow.Ignore:
+						log.Debug("Triggered {0} asked us to ignore {1}", readTrigger.Value, document.Key);
 						return null;
 					default:
 						throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());

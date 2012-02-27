@@ -136,10 +136,11 @@ namespace Raven.Storage.Esent.StorageActions
 
 			using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
 			{
+				var size = stream.Length;
 				using(var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 				{
 					var data = aggregate.ToJObject();
-					cacher.SetCachedDocument(key, etag, data, metadata);
+					cacher.SetCachedDocument(key, etag, data, metadata, (int) size);
 					return data;
 				}
 			}
@@ -163,11 +164,12 @@ namespace Raven.Storage.Esent.StorageActions
 
 			using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
+				var size = stream.Length;
 				using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
 				{
 					var data = columnStream.ToJObject();
 
-					cacher.SetCachedDocument(key, existingEtag, data, metadata);
+					cacher.SetCachedDocument(key, existingEtag, data, metadata, (int)size);
 
 					return data;
 				}
@@ -183,7 +185,7 @@ namespace Raven.Storage.Esent.StorageActions
 				if (Api.TryMovePrevious(session, Documents) == false)
 					return Enumerable.Empty<JsonDocument>();
 			}
-			var optimizer = new OptimizedIndexReader(Session, Documents);
+			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
 			{
 				optimizer.Add();
@@ -194,6 +196,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private JsonDocument ReadCurrentDocument()
 		{
+			var metadataSize = Api.RetrieveColumnSize(session, Documents,tableColumnsCache.DocumentsColumns["metadata"]) ?? 0;
+			var docSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? 0;
+
 			var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
 			var key = Api.RetrieveColumnAsString(session, Documents, tableColumnsCache.DocumentsColumns["key"], Encoding.Unicode);
 
@@ -207,6 +212,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			return new JsonDocument
 			{
+				SerializedSizeOnDisk = metadataSize + docSize,
 				Key = key,
 				DataAsJson = dataAsJson,
 				NonAuthoritativeInformation = IsDocumentModifiedInsideTransaction(key),
@@ -225,7 +231,7 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
 				return Enumerable.Empty<JsonDocument>();
-			var optimizer = new OptimizedIndexReader(Session, Documents);
+			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			do
 			{
 				optimizer.Add();
@@ -242,7 +248,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
 				return Enumerable.Empty<JsonDocument>();
 
-			var optimizer = new OptimizedIndexReader(Session, Documents);
+			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			do
 			{
 				Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);

@@ -31,8 +31,8 @@ namespace Raven.Database.Linq
 		private readonly HashSet<string> mapFields = new HashSet<string>();
 		private readonly HashSet<string> reduceFields = new HashSet<string>();
 
-		private static readonly Regex selectManyOrFrom = new Regex(@"( (^|\s) from \s ) | ( \.SelectMany\( )", 
-			RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace);
+		private static readonly Regex selectManyOrFrom = new Regex(@"( (?<!^)\s from \s ) | ( \.SelectMany\( )", 
+			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
 		public int CountOfSelectMany
 		{

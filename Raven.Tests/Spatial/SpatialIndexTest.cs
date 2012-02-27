@@ -25,8 +25,7 @@ namespace Raven.Tests.Spatial
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = "raven.db.test.esent",
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
+				RunInMemory = true
 			});
 			db.SpinBackgroundWorkers();
 		}

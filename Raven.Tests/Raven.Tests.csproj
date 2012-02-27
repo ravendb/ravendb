@@ -65,6 +65,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
+    <Reference Include="FizzWare.NBuilder">
+      <HintPath>..\packages\NBuilder.3.0.1.1\lib\FizzWare.NBuilder.dll</HintPath>
+    </Reference>
     <Reference Include="ICSharpCode.NRefactory">
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>
@@ -83,8 +86,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE\ReferenceAssemblies\v2.0\Microsoft.VisualStudio.DebuggerVisualizers.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.4.0.5\lib\net40\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.8.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Newtonsoft.Json.4.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
@@ -177,6 +181,7 @@
     <Compile Include="Bugs\MetadataBugs.cs" />
     <Compile Include="Bugs\MetadataIssues.cs" />
     <Compile Include="Bugs\Metadata\Querying.cs" />
+    <Compile Include="Bugs\MultiMap\MultiMapWithoutReduce.cs" />
     <Compile Include="Bugs\MultiMap\Errors.cs" />
     <Compile Include="Bugs\MultiMap\MultiMapReduce.cs" />
     <Compile Include="Bugs\MultiMap\MultiMapWithCustomProperties.cs" />
@@ -542,6 +547,20 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\Afif.cs" />
+    <Compile Include="MailingList\IndexWhereClause .cs" />
+    <Compile Include="MailingList\Mark2.cs" />
+    <Compile Include="MailingList\PhilJones\Projections.cs" />
+    <Compile Include="MailingList\Stacey\Image.cs" />
+    <Compile Include="MailingList\Stacey\ImageByName.cs" />
+    <Compile Include="MailingList\Stacey\InServerTesting.cs" />
+    <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
+    <Compile Include="MailingList\Thor\Child.cs" />
+    <Compile Include="MailingList\Thor\LinqTest.cs" />
+    <Compile Include="MailingList\Thor\Transport.cs" />
+    <Compile Include="MailingList\Thor\TransportsIndex.cs" />
+    <Compile Include="MailingList\TypeNameHandlingWithCollectionsTest.cs" />
+    <Compile Include="MailingList\Adrian.cs" />
     <Compile Include="MailingList\Alexander.cs" />
     <Compile Include="MailingList\AllPropertiesIndex.cs" />
     <Compile Include="MailingList\Andrew.cs" />
@@ -552,12 +571,14 @@
     <Compile Include="MailingList\Build570.cs" />
     <Compile Include="MailingList\CanDeleteIndex.cs" />
     <Compile Include="MailingList\DecimalQueries.cs" />
+    <Compile Include="MailingList\Dmitry.cs" />
     <Compile Include="MailingList\EnumInIndexDef.cs" />
     <Compile Include="MailingList\HierarchicalInheritanceIndexing.cs" />
     <Compile Include="MailingList\IisQueryLengthIssues.cs" />
     <Compile Include="MailingList\IndexMetadata.cs" />
     <Compile Include="MailingList\IndexWithUnion.cs" />
     <Compile Include="MailingList\IndexWithWhere.cs" />
+    <Compile Include="MailingList\Jabber\Games.cs" />
     <Compile Include="MailingList\JBA.cs" />
     <Compile Include="MailingList\JohanNilsson.cs" />
     <Compile Include="MailingList\Justin.cs" />
@@ -570,10 +591,12 @@
     <Compile Include="MailingList\GuidProjection.cs" />
     <Compile Include="MailingList\LazyStats.cs" />
     <Compile Include="MailingList\Mark.cs" />
+    <Compile Include="MailingList\Micha.cs" />
     <Compile Include="MailingList\NullableEnums.cs" />
+    <Compile Include="MailingList\PhilJones\PhilJones88.cs" />
     <Compile Include="MailingList\RangeQueriesOverSum.cs" />
     <Compile Include="MailingList\MultiLoad.cs" />
-    <Compile Include="MailingList\PhilJones.cs" />
+    <Compile Include="MailingList\PhilJones\PhilJones.cs" />
     <Compile Include="MailingList\Random.cs" />
     <Compile Include="MailingList\RavenDbPutTest.cs" />
     <Compile Include="MailingList\NicolasGarfinkiel.cs" />
@@ -593,7 +616,7 @@
     <Compile Include="MailingList\spokeypokey\spokeypokey2.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey3.cs" />
     <Compile Include="MailingList\spokeypokey\spokeypokey4.cs" />
-    <Compile Include="MailingList\Stacey.cs" />
+    <Compile Include="MailingList\Stacey2.cs" />
     <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\TimeZoneQueries.cs" />
     <Compile Include="MailingList\transformedresults_customid_test.cs" />
@@ -617,7 +640,6 @@
     </Compile>
     <Compile Include="ManagedStorage\Indexes.cs" />
     <Compile Include="ManagedStorage\MappedResults.cs" />
-    <Compile Include="ManagedStorage\MyTask.cs" />
     <Compile Include="ManagedStorage\Queues.cs" />
     <Compile Include="ManagedStorage\Storage.cs" />
     <Compile Include="ManagedStorage\Tasks.cs" />
@@ -705,12 +727,17 @@
     <Compile Include="Storage\GeneralStorage.cs" />
     <Compile Include="Storage\IncrementalBackupRestore.cs" />
     <Compile Include="Storage\IndexStaleViaEtags.cs" />
+    <Compile Include="Storage\MultiThreaded\BatchOperation.cs" />
+    <Compile Include="Storage\MultiThreaded\PutOperation.cs" />
+    <Compile Include="Storage\MultiThreaded\MultiThreaded.cs" />
+    <Compile Include="Storage\MultiThreaded\PutAndBatchOperation.cs" />
     <Compile Include="Storage\ReduceStaleness.cs" />
     <Compile Include="Storage\SimilarIndexNames.cs" />
     <Compile Include="Stress\BigDoc.cs" />
     <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
+    <Compile Include="Track\RavenDB053.cs" />
     <Compile Include="Track\RavenDB17.cs" />
     <Compile Include="Transactions\Deletes.cs" />
     <Compile Include="Transactions\Etags.cs" />

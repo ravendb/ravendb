@@ -115,6 +115,7 @@ namespace Raven.Tests
 			}
 		}
 
+		[Fact]
 		public void can_work_with_default_db()
 		{
 			using (var store = new DocumentStore())
@@ -127,6 +128,17 @@ namespace Raven.Tests
 				Assert.NotNull(store.Credentials);
 				Assert.Equal("DevMachine", store.DefaultDatabase);
 				Assert.True(store.EnlistInDistributedTransactions);
+			}
+		}
+
+		[Fact]
+		public void Can_get_api_key()
+		{
+			using (var store = new DocumentStore())
+			{
+				store.ParseConnectionString("Url=http://localhost:8079/;ApiKey=d5723e19-92ad-4531-adad-8611e6e05c8a;");
+
+				Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", store.ApiKey);
 			}
 		}
 	}

@@ -70,6 +70,12 @@ namespace Raven.Abstractions.Data
 		public DateTime? LastModified { get; set; }
 
 		/// <summary>
+		/// How much space this document takes on disk
+		/// Only relevant during indexing phases, and not available on the client
+		/// </summary>
+		public int SerializedSizeOnDisk;
+
+		/// <summary>
 		/// 	Translate the json document to a <see cref = "RavenJObject" />
 		/// </summary>
 		/// <returns></returns>
@@ -88,6 +94,11 @@ namespace Raven.Abstractions.Data
 			doc["@metadata"] = metadata;
 
 			return doc;
+		}
+
+		public override string ToString()
+		{
+			return Key;
 		}
 	}
 }

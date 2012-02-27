@@ -19,6 +19,7 @@ namespace Raven.Studio
 		private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
 		{
 			HighlightCurrentPage(e.Uri);
+			GC.Collect();
 		}
 
 		private void HighlightCurrentPage(Uri currentUri)

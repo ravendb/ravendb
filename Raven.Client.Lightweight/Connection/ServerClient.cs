@@ -18,6 +18,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -40,6 +41,8 @@ namespace Raven.Client.Connection
 		private readonly string url;
 		private readonly DocumentConvention convention;
 		private readonly ICredentials credentials;
+		private readonly Func<string, ReplicationInformer> replicationInformerGetter;
+		private readonly string databaseName;
 		private readonly ReplicationInformer replicationInformer;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? currentSessionId;
@@ -57,13 +60,15 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ServerClient"/> class.
 		/// </summary>
-		public ServerClient(string url, DocumentConvention convention, ICredentials credentials, ReplicationInformer replicationInformer, HttpJsonRequestFactory jsonRequestFactory, Guid? currentSessionId)
+		public ServerClient(string url, DocumentConvention convention, ICredentials credentials, Func<string, ReplicationInformer> replicationInformerGetter, string databaseName, HttpJsonRequestFactory jsonRequestFactory, Guid? currentSessionId)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(currentSessionId);
 			this.credentials = credentials;
+			this.replicationInformerGetter = replicationInformerGetter;
+			this.databaseName = databaseName;
+			this.replicationInformer = replicationInformerGetter(databaseName);
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.currentSessionId = currentSessionId;
-			this.replicationInformer = replicationInformer;
 			this.url = url;
 
 			if (url.EndsWith("/"))
@@ -901,7 +906,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <returns></returns>
 		public IDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new ServerClient(url, convention, credentialsForSession, replicationInformer, jsonRequestFactory, currentSessionId);
+			return new ServerClient(url, convention, credentialsForSession, replicationInformerGetter, databaseName, jsonRequestFactory, currentSessionId);
 		}
 
 		/// <summary>
@@ -910,9 +915,11 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// </summary>
 		public IDatabaseCommands ForDatabase(string database)
 		{
-			var databaseUrl = RootDatabaseUrl;
+			var databaseUrl = DefaultDatabaseUrl;
+			if (databaseUrl == Url)
+				return this;
 			databaseUrl = databaseUrl + "databases/" + database;
-			return new ServerClient(databaseUrl, convention, credentials, replicationInformer, jsonRequestFactory, currentSessionId)
+			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId)
 			       {
 			       	OperationsHeaders = OperationsHeaders
 			       };
@@ -920,16 +927,16 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		public IDatabaseCommands ForDefaultDatabase()
 		{
-			var databaseUrl = RootDatabaseUrl;
-			if (databaseUrl == url)
+			var databaseUrl = DefaultDatabaseUrl;
+			if (databaseUrl == Url)
 				return this;
-			return new ServerClient(databaseUrl, convention, credentials, replicationInformer, jsonRequestFactory, currentSessionId)
+			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, null, jsonRequestFactory, currentSessionId)
 			{
 				OperationsHeaders = OperationsHeaders
 			};
 		}
 
-		private string RootDatabaseUrl
+		private string DefaultDatabaseUrl
 		{
 			get
 			{
@@ -941,19 +948,6 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 					databaseUrl += "/";
 				return databaseUrl;
 			}
-		}
-
-		/// <summary>
-		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interact
-		/// with the root database. Useful if the database has works against a tenant database.
-		/// </summary>
-		public IDatabaseCommands GetRootDatabase()
-		{
-			var indexOfDatabases = url.IndexOf("/databases/", StringComparison.Ordinal);
-			if (indexOfDatabases == -1)
-				return this;
-
-			return new ServerClient(url.Substring(0, indexOfDatabases), convention, credentials, replicationInformer, jsonRequestFactory, currentSessionId);
 		}
 
 		/// <summary>

@@ -5,6 +5,8 @@ using NLog;
 using Raven.Abstractions.Data;
 using Raven.Database.Storage;
 using System.Linq;
+using Raven.Database.Tasks;
+using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
@@ -16,60 +18,35 @@ namespace Raven.Database.Indexing
 		protected ITransactionalStorage transactionalStorage;
 		protected int workCounter;
 		protected int lastFlushedWorkCounter;
-		protected int maxNumberOfItemsToIndexInSingleBatch;
-		protected int lastAmountOfItemsToIndex;
+		protected IndexBatchSizeAutoTuner autoTuner;
 
 		protected AbstractIndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
 		{
 			this.transactionalStorage = transactionalStorage;
 			this.context = context;
 			this.scheduler = scheduler;
-			maxNumberOfItemsToIndexInSingleBatch = context.Configuration.MaxNumberOfItemsToIndexInSingleBatch;
-		}
 
-		protected void AutoThrottleBatchSize(int amountOfItemsToIndex)
-		{
-			var lastTime = lastAmountOfItemsToIndex;
-
-			lastAmountOfItemsToIndex = amountOfItemsToIndex;
-			if(amountOfItemsToIndex < maxNumberOfItemsToIndexInSingleBatch) // we didn't have a lot of work to do
-			{
-				// we are at the configured max, nothing to do
-				if (maxNumberOfItemsToIndexInSingleBatch == context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
-					return;
-				
-
-				// we were above the max the last time, we can't reduce the work load now
-				if (lastTime > maxNumberOfItemsToIndexInSingleBatch)
-					return;
-
-				// we have had a couple of times were we didn't get to the current max, so we can probably
-				// reduce the max again now.
-
-				maxNumberOfItemsToIndexInSingleBatch = Math.Max(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch,
-				                                                maxNumberOfItemsToIndexInSingleBatch/2);
-			}
-			// in the previous run, we also hit the current limit, we need to check if we can increase the max batch size
-			else if (lastTime >= maxNumberOfItemsToIndexInSingleBatch)
-			{
-				if(context.Configuration.AvailablePhysicalMemoryInMegabytes > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
-				{
-					// we can't let it grow TOO large, mind
-					if (maxNumberOfItemsToIndexInSingleBatch * 2 <= context.Configuration.MaxNumberOfItemsToIndexInSingleBatch * 8)
-						maxNumberOfItemsToIndexInSingleBatch = maxNumberOfItemsToIndexInSingleBatch*2;
-				}
-			}
-			
+			autoTuner = new IndexBatchSizeAutoTuner(context);
 		}
 
 		public void Execute()
 		{
+			var name = GetType().Name;
+			var workComment = "WORK BY " + name;
+
 			while (context.DoWork)
 			{
 				var foundWork = false;
 				try
 				{
 					foundWork = ExecuteIndexing();
+					while(context.DoWork) // we want to drain all of the pending tasks before the next run
+					{
+						if (ExecuteTasks() == false)
+							break;
+						foundWork = true;
+					}
+					
 				}
 				catch (Exception e)
 				{
@@ -77,14 +54,43 @@ namespace Raven.Database.Indexing
 				}
 				if (foundWork == false)
 				{
-					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes);
+					context.WaitForWork(TimeSpan.FromHours(1), ref workCounter, FlushIndexes, name);
 				}
 				else // notify the tasks executer that it has work to do
 				{
+					context.ShouldNotifyAboutWork(() => workComment);
 					context.NotifyAboutWork();
 				}
 			}
 		}
+
+		private bool ExecuteTasks()
+		{
+			bool foundWork = false;
+			transactionalStorage.Batch(actions =>
+			{
+				Task task = GetApplicableTask(actions);
+				if (task == null)
+					return;
+
+				log.Debug("Executing {0}", task);
+				foundWork = true;
+
+				try
+				{
+					task.Execute(context);
+				}
+				catch (Exception e)
+				{
+					log.WarnException(
+						string.Format("Task {0} has failed and was deleted without completing any work", task),
+						e);
+				}
+			});
+			return foundWork;
+		}
+
+		protected abstract Task GetApplicableTask(IStorageActionsAccessor actions);
 
 		private void FlushIndexes()
 		{
@@ -120,11 +126,8 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 
-			if (context.Configuration.MaxNumberOfParallelIndexTasks == 1)
-				ExecuteIndexingWorkOnSingleThread(indexesToWorkOn);
-			else
-				ExecuteIndexingWorkOnMultipleThreads(indexesToWorkOn);
-
+			ExecuteIndxingWork(indexesToWorkOn);
+			
 			return true;
 		}
 
@@ -132,10 +135,10 @@ namespace Raven.Database.Indexing
 
 		protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions);
 
-		protected abstract void ExecuteIndexingWorkOnMultipleThreads(IList<IndexToWorkOn> indexesToWorkOn);
 
-		protected abstract void ExecuteIndexingWorkOnSingleThread(IList<IndexToWorkOn> indexesToWorkOn);
+		protected abstract void ExecuteIndxingWork(IList<IndexToWorkOn> indexesToWorkOn);
 
+	
 
 		protected abstract bool IsValidIndex(IndexStats indexesStat);
 

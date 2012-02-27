@@ -21,9 +21,6 @@
 			<RowDefinition Height="35" />
 		</Grid.RowDefinitions>
 
-		<i:Interaction.Behaviors>
-			<Behaviors:KeyboardBehavior />
-		</i:Interaction.Behaviors>
 		<i:Interaction.Triggers>
 			<Behaviors:StudioKeyTrigger Key="O"
 										Modifiers="Control">
@@ -209,10 +206,6 @@
 							  Navigated="ContentFrame_Navigated"
 							  NavigationFailed="ContentFrame_NavigationFailed"
 							  Margin="15,0">
-
-				<i:Interaction.Behaviors>
-					<Behaviors:OpenPageOnANewTabIfCtrlIsHold />
-				</i:Interaction.Behaviors>
 
 				<navigation:Frame.UriMapper>
 					<uriMapper:UriMapper>

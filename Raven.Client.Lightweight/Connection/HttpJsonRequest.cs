@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 #endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
@@ -54,11 +55,11 @@ namespace Raven.Client.Connection
 		public NameValueCollection ResponseHeaders { get; set; }
 
 		internal HttpJsonRequest(
-			string url, 
-			string method, 
-			RavenJObject metadata, 
-			ICredentials credentials, 
-			HttpJsonRequestFactory factory, 
+			string url,
+			string method,
+			RavenJObject metadata,
+			ICredentials credentials,
+			HttpJsonRequestFactory factory,
 			IHoldProfilingInformation owner,
 			DocumentConvention conventions)
 		{
@@ -84,7 +85,7 @@ namespace Raven.Client.Connection
 					var result = x.Result;
 
 					return RavenJToken.Parse(result);
-					
+
 				});
 		}
 
@@ -106,7 +107,7 @@ namespace Raven.Client.Connection
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
-					HttpResult = (int) ResponseStatusCode,
+					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.AggresivelyCached,
 					Result = cachedResponse,
 					Url = webRequest.RequestUri.PathAndQuery,
@@ -131,7 +132,7 @@ namespace Raven.Client.Connection
 
 					var httpWebResponse = webException.Response as HttpWebResponse;
 					if (httpWebResponse == null ||
-					    httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
 						return task; // effectively throw
 
 					var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
@@ -156,8 +157,8 @@ namespace Raven.Client.Connection
 
 		public byte[] ReadResponseBytes()
 		{
-			using(var webResponse = webRequest.GetResponse())
-			using(var stream = webResponse.GetResponseStreamWithHttpDecompression())
+			using (var webResponse = webRequest.GetResponse())
+			using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
 			{
 				ResponseHeaders = new NameValueCollection(webResponse.Headers);
 				return stream.ReadData();
@@ -187,7 +188,7 @@ namespace Raven.Client.Connection
 			}
 
 			int retries = 0;
-			while(true)
+			while (true)
 			{
 				try
 				{
@@ -203,7 +204,7 @@ namespace Raven.Client.Connection
 						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
 						throw;
 
-					if(HandleUnauthorizedResponse(httpWebResponse) == false)
+					if (HandleUnauthorizedResponse(httpWebResponse) == false)
 						throw;
 				}
 			}
@@ -240,17 +241,17 @@ namespace Raven.Client.Connection
 		{
 			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
 
-			var newWebRequest = (HttpWebRequest) WebRequest.Create(Url);
+			var newWebRequest = (HttpWebRequest)WebRequest.Create(Url);
 			newWebRequest.Method = webRequest.Method;
-			HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
+			HttpRequestHelper.CopyHeaders(webRequest, newWebRequest);
 			newWebRequest.Credentials = webRequest.Credentials;
 			action(newWebRequest);
 
 			if (postedData != null)
 			{
-				HttpJsonRequestHelper.WriteDataToRequest(newWebRequest, postedData);
+				HttpRequestHelper.WriteDataToRequest(newWebRequest, postedData);
 			}
-			if(postedStream != null)
+			if (postedStream != null)
 			{
 				postedStream.Position = 0;
 				using (var stream = newWebRequest.GetRequestStream())
@@ -262,7 +263,7 @@ namespace Raven.Client.Connection
 			webRequest = newWebRequest;
 		}
 
-		
+
 
 		private string ReadStringInternal(Func<WebResponse> getResponse)
 		{
@@ -276,14 +277,14 @@ namespace Raven.Client.Connection
 			{
 				sp.Stop();
 				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null || 
+				if (httpWebResponse == null ||
 					httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
 					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
 						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
 					int httpResult = -1;
 					if (httpWebResponse != null)
-						httpResult = (int) httpWebResponse.StatusCode;
+						httpResult = (int)httpWebResponse.StatusCode;
 
 					factory.InvokeLogRequest(owner, new RequestResultArgs
 					{
@@ -308,7 +309,7 @@ namespace Raven.Client.Connection
 					{
 						DurationMilliseconds = CalculateDuration(),
 						Method = webRequest.Method,
-						HttpResult = (int) httpWebResponse.StatusCode,
+						HttpResult = (int)httpWebResponse.StatusCode,
 						Status = RequestStatus.Cached,
 						Result = result,
 						Url = webRequest.RequestUri.PathAndQuery,
@@ -338,17 +339,17 @@ namespace Raven.Client.Connection
 					{
 						ravenJObject = RavenJObject.Parse(readToEnd);
 					}
-					catch (Exception )
+					catch (Exception)
 					{
 						throw new InvalidOperationException(readToEnd, e);
 					}
 
-					if(ravenJObject.ContainsKey("Error"))
+					if (ravenJObject.ContainsKey("Error"))
 					{
 						var sb = new StringBuilder();
 						foreach (var prop in ravenJObject)
 						{
-							if(prop.Key == "Error")
+							if (prop.Key == "Error")
 								continue;
 
 							sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
@@ -362,16 +363,16 @@ namespace Raven.Client.Connection
 					throw new InvalidOperationException(readToEnd, e);
 				}
 			}
-			
+
 			ResponseHeaders = response.Headers;
-			ResponseStatusCode = ((HttpWebResponse) response).StatusCode;
+			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
 				var reader = new StreamReader(responseStream);
 				var text = reader.ReadToEnd();
 				reader.Close();
 
-				if(Method == "GET" && ShouldCacheRequest)
+				if (Method == "GET" && ShouldCacheRequest)
 				{
 					factory.CacheResponse(Url, text, ResponseHeaders);
 				}
@@ -473,8 +474,8 @@ namespace Raven.Client.Connection
 							webRequest.Connection = value;
 							break;
 					}
-				} 
-				else 
+				}
+				else
 				{
 					webRequest.Headers[headerName] = value;
 				}
@@ -489,7 +490,7 @@ namespace Raven.Client.Connection
 		{
 			postedData = data;
 
-			HttpJsonRequestHelper.WriteDataToRequest(webRequest, data);
+			HttpRequestHelper.WriteDataToRequest(webRequest, data);
 		}
 
 
@@ -598,7 +599,7 @@ namespace Raven.Client.Connection
 		{
 			postedStream = streamToWrite;
 			webRequest.ContentLength = streamToWrite.Length;
-			using(var stream = webRequest.GetRequestStream())
+			using (var stream = webRequest.GetRequestStream())
 			{
 				streamToWrite.CopyTo(stream);
 				stream.Flush();

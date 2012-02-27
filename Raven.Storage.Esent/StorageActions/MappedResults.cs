@@ -45,7 +45,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
 		{
-			var optimizedIndexReader = new OptimizedIndexReader<GetMappedResultsParams>(Session, MappedResults);
+			var optimizedIndexReader = new OptimizedIndexReader<GetMappedResultsParams>(Session, MappedResults, getMappedResultsParams.Length);
 			
 			Api.JetSetCurrentIndex(session, MappedResults, "by_reduce_key_and_view_hashed");
 			
@@ -141,7 +141,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekLE) == false)
 				return Enumerable.Empty<MappedResultInfo>();
 
-	    	var optimizer = new OptimizedIndexReader(Session, MappedResults);
+	    	var optimizer = new OptimizedIndexReader(Session, MappedResults, take);
 	        while (
 				optimizer.Count < take && 
 				Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex) == indexName)

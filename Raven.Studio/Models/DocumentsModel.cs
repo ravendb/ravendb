@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Studio.Features.Documents;
+using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 using System.Linq;
 
@@ -8,21 +10,12 @@ namespace Raven.Studio.Models
 {
 	public class DocumentsModel : Model
 	{
-		public const double DefaultDocumentHeight = 66;
-		public const double ExpandedDocumentHeight = 130;
-		public const double ExpandedMinimumHeight = 110;
-
 		public BindableCollection<ViewableDocument> Documents { get; private set; }
 
 		public bool SkipAutoRefresh { get; set; }
 		public bool ShowEditControls { get; set; }
 
 		public Func<DocumentsModel, Task> CustomFetchingOfDocuments { get; set; }
-
-		static DocumentsModel()
-		{
-			DocumentSize = new DocumentSize {Height = DefaultDocumentHeight};
-		}
 
 		public DocumentsModel()
 		{
@@ -44,7 +37,7 @@ namespace Raven.Studio.Models
 
 			if (document.CollectionType == "Projection")
 			{
-				DocumentSize.Height = Math.Max(DocumentSize.Height, ExpandedDocumentHeight);
+				DocumentSize.Current.Height = Math.Max(DocumentSize.Current.Height, DocumentSize.ExpandedDocumentHeight);
 			}
 		}
 
@@ -67,19 +60,31 @@ namespace Raven.Studio.Models
 		private Task DefaultFetchingOfDocuments()
 		{
 			return ApplicationModel.DatabaseCommands.GetDocumentsAsync(Pager.Skip, Pager.PageSize)
-				.ContinueOnSuccess(docs => Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray()));
+				.ContinueOnSuccess(docs =>
+				{
+					Documents.Match(docs.Select(x => new ViewableDocument(x)).ToArray());
+					var documetsIds = new List<string>();
+					foreach (var viewableDocument in Documents)
+					{
+						documetsIds.Add(viewableDocument.Id);
+
+						viewableDocument.NeighborsIds = documetsIds;
+					}
+				});
 		}
 
 		public PagerModel Pager { get; private set; }
 
-		private string viewTitle;
-		public string ViewTitle
+		private string header;
+		public string Header
 		{
-			get { return viewTitle ?? (viewTitle = "Documents"); }
-			set { viewTitle = value; OnPropertyChanged(); }
+			get { return header ?? (header = "Documents"); }
+			set
+			{
+				header = value;
+				OnPropertyChanged();
+			}
 		}
-
-		public static DocumentSize DocumentSize { get; private set; }
 
 		private bool isLoadingDocuments;
 		public bool IsLoadingDocuments
@@ -90,53 +95,6 @@ namespace Raven.Studio.Models
 				isLoadingDocuments = value;
 				OnPropertyChanged();
 			}
-		}
-
-	}
-
-	public class DocumentSize : NotifyPropertyChangedBase
-	{
-		public event EventHandler SizeChanged;
-		
-		private double height;
-		public double Height
-		{
-			get { return height; }
-			set
-			{
-				if (height == value)
-					return;
-				height = value;
-				OnPropertyChanged();
-				SetWidthBasedOnHeight();
-			}
-		}
-
-		private double width;
-		public double Width
-		{
-			get { return width; }
-			set
-			{
-				width = value;
-				OnPropertyChanged();
-			}
-		}
-
-		private void SetWidthBasedOnHeight()
-		{
-			const double wideAspectRatio = 1.7;
-			const double narrowAspectRatio = 0.707;
-			const double aspectRatioSwitchoverHeight = 120;
-			const double wideRatioMaxWidth = aspectRatioSwitchoverHeight*wideAspectRatio;
-			const double narrowAspectRatioSwitchoverHeight = wideRatioMaxWidth/narrowAspectRatio;
-
-			Width = Height < aspectRatioSwitchoverHeight ? Height*wideAspectRatio
-			        	: Height < narrowAspectRatioSwitchoverHeight ? wideRatioMaxWidth
-			        	  	: Height*narrowAspectRatio;
-
-			if (SizeChanged != null)
-				SizeChanged(this, EventArgs.Empty);
 		}
 	}
 }

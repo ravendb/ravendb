@@ -65,7 +65,7 @@ namespace Raven.Client.Connection
 
 		public bool CanFullyCache(HttpJsonRequestFactory jsonRequestFactory, HttpJsonRequest httpJsonRequest, string postedData)
 		{
-			if (allRequestsCanBeServedFromAggressiveCache) // can be fully served from aggresive cache
+			if (allRequestsCanBeServedFromAggressiveCache) // can be fully served from aggressive cache
 			{
 				jsonRequestFactory.InvokeLogRequest(holdProfilingInformation, new RequestResultArgs
 				{

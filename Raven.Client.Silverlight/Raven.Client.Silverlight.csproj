@@ -49,7 +49,7 @@
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
   </PropertyGroup>
   <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
@@ -63,8 +63,9 @@
       <HintPath>..\SharedLibs\MissingBitFromSilverlight.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
-    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.4.0.5\lib\sl4\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.8.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Newtonsoft.Json.4.0.8\lib\sl4\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\sl4\NLog.dll</HintPath>
@@ -78,6 +79,9 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
+      <Link>Imports\Connection\WebResponseExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\BackupStatus.cs">
       <Link>Imports\Data\BackupStatus.cs</Link>
     </Compile>
@@ -334,6 +338,35 @@
     <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Data\ServerRequestError.cs" />
     <Compile Include="MissingFromSilverlight\MD5.cs" />
+    <Compile Include="DotNetZip\Adler.cs" />
+    <Compile Include="DotNetZip\BlockState.cs" />
+    <Compile Include="DotNetZip\CompressionLevel.cs" />
+    <Compile Include="DotNetZip\CompressionMode.cs" />
+    <Compile Include="DotNetZip\CompressionStrategy.cs" />
+    <Compile Include="DotNetZip\Crc32.cs" />
+    <Compile Include="DotNetZip\CrcCalculatorStream.cs" />
+    <Compile Include="DotNetZip\DeflateFlavor.cs" />
+    <Compile Include="DotNetZip\DeflateManager.cs" />
+    <Compile Include="DotNetZip\DeflateStream.cs" />
+    <Compile Include="DotNetZip\FlushType.cs" />
+    <Compile Include="DotNetZip\GZipStream.cs" />
+    <Compile Include="DotNetZip\InflateBlocks.cs" />
+    <Compile Include="DotNetZip\InflateCodes.cs" />
+    <Compile Include="DotNetZip\InflateManager.cs" />
+    <Compile Include="DotNetZip\InfTree.cs" />
+    <Compile Include="DotNetZip\InternalConstants.cs" />
+    <Compile Include="DotNetZip\InternalInflateConstants.cs" />
+    <Compile Include="DotNetZip\ParallelDeflateOutputStream.cs" />
+    <Compile Include="DotNetZip\SharedUtils.cs" />
+    <Compile Include="DotNetZip\StaticTree.cs" />
+    <Compile Include="DotNetZip\Tree.cs" />
+    <Compile Include="DotNetZip\WorkItem.cs" />
+    <Compile Include="DotNetZip\ZlibBaseStream.cs" />
+    <Compile Include="DotNetZip\ZlibCodec.cs" />
+    <Compile Include="DotNetZip\ZlibConstants.cs" />
+    <Compile Include="DotNetZip\ZlibException.cs" />
+    <Compile Include="DotNetZip\ZlibStream.cs" />
+    <Compile Include="DotNetZip\ZlibStreamFlavor.cs" />
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -514,9 +547,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\WebRequestEventArgs.cs">
       <Link>Imports\Connection\WebRequestEventArgs.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\WebResponseExtensions.cs">
-      <Link>Imports\Connection\WebResponseExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Converters\GuidConverter.cs">
       <Link>Imports\Converters\GuidConverter.cs</Link>

@@ -17,21 +17,19 @@ namespace Raven.Bundles.Tests.Replication.Bugs
 		[Fact]
 		public void TestReplication()
 		{
-			string dbName = "MyNewDatabase";
-
 			var store = CreateStore();
 			CreateStore();
 			TellFirstInstanceToReplicateToSecondInstance();
 
 			using (var session = store.OpenSession())
 			{
-				session.Store(new SampleDoc {Number = 1, Name = "Test 1"}, "SampleDocs/1");
-				session.Store(new SampleDoc {Number = 2, Name = "Test 2"}, "SampleDocs/2");
-				session.Store(new SampleDoc {Number = 3, Name = "Test 3"}, "SampleDocs/3");
+				session.Store(new SampleDoc { Number = 1, Name = "Test 1" }, "SampleDocs/1");
+				session.Store(new SampleDoc { Number = 2, Name = "Test 2" }, "SampleDocs/2");
+				session.Store(new SampleDoc { Number = 3, Name = "Test 3" }, "SampleDocs/3");
 				session.SaveChanges();
 
 				// Force index creation (it must be done BEFORE deleting)
-				var selectWarmup = session.Query<SampleDoc>().Select(x => new {x.Name, x.Number}).ToList();
+				var selectWarmup = session.Query<SampleDoc>().Select(x => new { x.Name, x.Number }).ToList();
 			}
 
 			using (var session = store.OpenSession())
@@ -47,7 +45,7 @@ namespace Raven.Bundles.Tests.Replication.Bugs
 				Assert.Equal(2, selectGood.Count);
 
 				var selectBad = session.Query<SampleDoc>().Customize(x => x.WaitForNonStaleResults())
-					.Select(x => new {x.Name, x.Number}).ToList();
+					.Select(x => new { x.Name, x.Number }).ToList();
 				var count = session.Query<SampleDoc>().Customize(x => x.WaitForNonStaleResultsAsOfLastWrite()).Count();
 
 				Assert.Equal(2, selectBad.Count);

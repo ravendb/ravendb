@@ -68,8 +68,9 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.4.0.5\lib\net40\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.8.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Newtonsoft.Json.4.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
@@ -100,8 +101,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Raven.Smuggler\Smuggler.cs">
-      <Link>Smuggler.cs</Link>
+    <Compile Include="..\Raven.Smuggler\SmugglerApi.cs">
+      <Link>Smuggler\SmugglerApi.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Smuggler\SmugglerOptions.cs">
+      <Link>Smuggler\SmugglerOptions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Smuggler\TrivialJsonToJsonJsonConverter.cs">
+      <Link>Smuggler\TrivialJsonToJsonJsonConverter.cs</Link>
     </Compile>
     <Compile Include="FromMono\Options.cs" />
     <Compile Include="RavenDbServer.cs" />
@@ -146,6 +153,10 @@
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
+      <Project>{3E6401AC-3E33-4B61-A460-49953654A207}</Project>
+      <Name>Raven.Smuggler</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
       <Project>{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}</Project>
       <Name>Raven.Storage.Esent</Name>
@@ -169,7 +180,7 @@
       <SubType>Designer</SubType>
     </None>
     <EmbeddedResource Include="DefaultLogging.config" />
-    <None Include="NLog.netfx35.xsd">
+    <None Include="NLog.xsd">
       <SubType>Designer</SubType>
     </None>
     <None Include="packages.config" />

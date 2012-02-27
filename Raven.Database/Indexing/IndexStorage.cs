@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -43,6 +44,7 @@ namespace Raven.Database.Indexing
 		private readonly string path;
 		private readonly ConcurrentDictionary<string, Index> indexes = new ConcurrentDictionary<string, Index>(StringComparer.InvariantCultureIgnoreCase);
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly Logger startupLog = LogManager.GetLogger(typeof (IndexStorage).FullName + ".Startup");
 		private readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();
 
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
@@ -64,7 +66,7 @@ namespace Raven.Database.Indexing
 		{
 			if (indexName == null) throw new ArgumentNullException("indexName");
 
-			log.Debug("Loading saved index {0}", indexName);
+			startupLog.Debug("Loading saved index {0}", indexName);
 
 			var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexName);
 			if (indexDefinition == null)
@@ -76,7 +78,7 @@ namespace Raven.Database.Indexing
 			{
 				try
 				{
-					var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition);
+					var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
 					indexImplementation = CreateIndexImplementation(indexName, indexDefinition, luceneDirectory);
 					break;
 				}
@@ -85,7 +87,7 @@ namespace Raven.Database.Indexing
 					if (resetTried)
 						throw new InvalidOperationException("Could not open / create index" + indexName + ", reset already tried", e);
 					resetTried = true;
-					log.WarnException("Could not open index " + indexName + ", forcibly resetting index", e);
+					startupLog.WarnException("Could not open index " + indexName + ", forcibly resetting index", e);
 					try
 					{
 						documentDatabase.TransactionalStorage.Batch(accessor =>
@@ -94,7 +96,7 @@ namespace Raven.Database.Indexing
 							accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
 						});
 
-						var indexDirectory = indexName ?? IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
+						var indexDirectory = indexName;
 						var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
 						IOExtensions.DeleteDirectory(indexFullPath);
 					}
@@ -108,7 +110,10 @@ namespace Raven.Database.Indexing
 		}
 
 
-		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(IndexDefinition indexDefinition, string indexName = null)
+		protected Lucene.Net.Store.Directory OpenOrCreateLuceneDirectory(
+			IndexDefinition indexDefinition, 
+			string indexName = null,
+			bool createIfMissing = true)
 		{
 			Lucene.Net.Store.Directory directory;
 			if (indexDefinition.IsTemp || configuration.RunInMemory)
@@ -124,19 +129,58 @@ namespace Raven.Database.Indexing
 
 				if (!IndexReader.IndexExists(directory))
 				{
+					if(createIfMissing == false)
+						throw new InvalidOperationException("Index does not exists: " + indexDirectory);
+
 					//creating index structure if we need to
 					new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
 				}
 				else
 				{
-					// forcefully unlock locked indexes if any
-					if (IndexWriter.IsLocked(directory))
+					if (IndexWriter.IsLocked(directory)) // we had an unclean shutdown
+					{
+						if(configuration.ResetIndexOnUncleanShutdown)
+							throw new InvalidOperationException("Rude shutdown detected on: " + indexDirectory);
+
+						CheckIndexAndRecover(directory, indexDirectory);
 						IndexWriter.Unlock(directory);
+					}
 				}
 			}
 
 			return directory;
 
+		}
+
+		private static void CheckIndexAndRecover(Lucene.Net.Store.Directory directory, string indexDirectory)
+		{
+			startupLog.Warn("Unclean shutdown detected on {0}, checking the index for errors. This may take a while.", indexDirectory);
+
+			var memoryStream = new MemoryStream();
+			var stringWriter = new StreamWriter(memoryStream);
+			var checkIndex = new CheckIndex(directory);
+
+			if (startupLog.IsWarnEnabled)
+				checkIndex.SetInfoStream(stringWriter);
+
+			var sp = Stopwatch.StartNew();
+			var status = checkIndex.CheckIndex_Renamed_Method();
+			sp.Stop();
+			if (startupLog.IsWarnEnabled)
+			{
+				startupLog.Warn("Checking index {0} took: {1}, clean: {2}", indexDirectory, sp.Elapsed, status.clean);
+				memoryStream.Position = 0;
+
+				log.Warn(new StreamReader(memoryStream).ReadToEnd());
+			}
+
+			if (status.clean)
+				return;
+
+			startupLog.Warn("Attempting to fix index: {0}", indexDirectory);
+			sp.Restart();
+			checkIndex.FixIndex(status);
+			startupLog.Warn("Fixed index {0} in {1}", indexDirectory, sp.Elapsed);
 		}
 
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)

@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
 using System.IO;
 using System.Threading;
 using Raven.Abstractions.Data;
@@ -26,17 +25,17 @@ namespace Raven.Bundles.Tests.Replication
 
 			store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 
-
 			Attachment attachment = null;
 			for (int i = 0; i < RetriesCount; i++)
 			{
 				attachment = store2.DatabaseCommands.GetAttachment("ayende");
-				if(attachment == null)
-					Thread.Sleep(100);
+				if (attachment != null)
+					break;
+				Thread.Sleep(100);
 			}
+
 			Assert.NotNull(attachment);
 			Assert.Equal(new byte[]{1,2,3}, attachment.Data().ReadData());
-
 		}
 
 		[Fact]
@@ -110,11 +109,8 @@ namespace Raven.Bundles.Tests.Replication
 			var store2 = CreateStore();
 
 			store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
-
-
 			store2.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
 		  
-
 			TellFirstInstanceToReplicateToSecondInstance();
 
 			var conflictException = Assert.Throws<ConflictException>(() =>
@@ -122,13 +118,11 @@ namespace Raven.Bundles.Tests.Replication
 				for (int i = 0; i < RetriesCount; i++)
 				{
 					store2.DatabaseCommands.GetAttachment("ayende");
-		  
 				}
 			});
 
 			Assert.Equal("Conflict detected on ayende, conflict must be resolved before the attachment will be accessible", conflictException.Message);
 		}
-
 
 		[Fact]
 		public void When_replicating_and_an_attachment_is_already_there_will_result_in_conflict_and_can_get_all_conflicts()

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
@@ -27,7 +28,10 @@ namespace Raven.Database.Indexing
 							indexToWorkOn.IndexName,
 							indexToWorkOn.LastIndexedEtag,
 							loadData: false,
-							take: maxNumberOfItemsToIndexInSingleBatch
+							// for reduce operations, we use the smaller value, rather than tuning stuff on the fly
+							// the reason for that is that we may have large number of map values to reduce anyway, 
+							// so we don't want to try to load too much all at once.
+							take: context.Configuration.InitialNumberOfItemsToIndexInSingleBatch
 						)
 						.ToList();
 
@@ -68,7 +72,9 @@ namespace Raven.Database.Indexing
 		}
 
 
-		private MappedResultInfo GetLastByEtag(List<MappedResultInfo> reduceKeyAndEtags)
+// ReSharper disable ParameterTypeCanBeEnumerable.Local
+		private static MappedResultInfo GetLastByEtag(List<MappedResultInfo> reduceKeyAndEtags)
+// ReSharper restore ParameterTypeCanBeEnumerable.Local
 		{
 			// the last item is either the first or the last
 
@@ -85,6 +91,11 @@ namespace Raven.Database.Indexing
 			return actions.Staleness.IsReduceStale(indexesStat.Name);
 		}
 
+		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
+		{
+			return actions.Tasks.GetMergedTask<ReduceTask>();
+		}
+
 		protected override void FlushAllIndexes()
 		{
 			context.IndexStorage.FlushReduceIndexes();
@@ -99,22 +110,9 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-
-		protected override void ExecuteIndexingWorkOnMultipleThreads(IList<IndexToWorkOn> indexesToWorkOn)
+		protected override void ExecuteIndxingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
-			Parallel.ForEach(indexesToWorkOn, new ParallelOptions
-			{
-				MaxDegreeOfParallelism = context.Configuration.MaxNumberOfParallelIndexTasks,
-				TaskScheduler = scheduler
-			}, HandleReduceForIndex);
-		}
-
-		protected override void ExecuteIndexingWorkOnSingleThread(IList<IndexToWorkOn> indexesToWorkOn)
-		{
-			foreach (var indexToWorkOn in indexesToWorkOn)
-			{
-				HandleReduceForIndex(indexToWorkOn);
-			}
+			BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, indexesToWorkOn, (indexToWorkOn, l) => HandleReduceForIndex(indexToWorkOn));
 		}
 
 		protected override bool IsValidIndex(IndexStats indexesStat)

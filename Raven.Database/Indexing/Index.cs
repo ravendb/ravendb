@@ -8,9 +8,8 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Globalization;
 using System.Linq;
-using System.Threading;
+using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -19,7 +18,6 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using NLog;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
@@ -38,7 +36,7 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public abstract class Index : IDisposable
 	{
-		protected static readonly Logger logIndexing = LogManager.GetLogger(typeof (Index).FullName + ".Indexing");
+		protected static readonly Logger logIndexing = LogManager.GetLogger(typeof(Index).FullName + ".Indexing");
 		protected static readonly Logger logQuerying = LogManager.GetLogger(typeof(Index).FullName + ".Querying");
 		private readonly List<Document> currentlyIndexDocuments = new List<Document>();
 		private Directory directory;
@@ -91,7 +89,7 @@ namespace Raven.Database.Indexing
 				{
 					indexExtension.Value.Dispose();
 				}
-				if(currentIndexSearcherHolder != null)
+				if (currentIndexSearcherHolder != null)
 				{
 					currentIndexSearcherHolder.SetIndexSearcher(null);
 				}
@@ -148,7 +146,7 @@ namespace Raven.Database.Indexing
 		}
 
 		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
-		                                    WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
+											WorkContext context, IStorageActionsAccessor actions, DateTime minimumTimestamp);
 
 
 		protected virtual IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, float score)
@@ -169,7 +167,7 @@ namespace Raven.Database.Indexing
 				.Where(x => x != null)
 				.Where(
 					x =>
-					x.Name().EndsWith("_IsArray") == false && 
+					x.Name().EndsWith("_IsArray") == false &&
 					x.Name().EndsWith("_Range") == false &&
 					x.Name().EndsWith("_ConvertToJson") == false)
 				.Select(fld => CreateProperty(fld, document))
@@ -192,7 +190,7 @@ namespace Raven.Database.Indexing
 
 		private static KeyValuePair<string, RavenJToken> CreateProperty(Field fld, Document document)
 		{
-			if(fld.IsBinary())
+			if (fld.IsBinary())
 				return new KeyValuePair<string, RavenJToken>(fld.Name(), fld.GetBinaryValue());
 			var stringValue = fld.StringValue();
 			if (document.GetField(fld.Name() + "_ConvertToJson") != null)
@@ -203,11 +201,11 @@ namespace Raven.Database.Indexing
 			if (stringValue == Constants.NullValue)
 				stringValue = null;
 			if (stringValue == Constants.EmptyString)
-				stringValue = string.Empty; 
+				stringValue = string.Empty;
 			return new KeyValuePair<string, RavenJToken>(fld.Name(), stringValue);
 		}
 
-		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, bool> action)
+		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, IndexingWorkStats, bool> action)
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + name + " has been disposed");
@@ -233,9 +231,10 @@ namespace Raven.Database.Indexing
 						indexWriter = CreateIndexWriter(directory);
 					}
 
+					var stats = new IndexingWorkStats();
 					try
 					{
-						shouldRecreateSearcher = action(indexWriter, searchAnalyzer);
+						shouldRecreateSearcher = action(indexWriter, searchAnalyzer, stats);
 						foreach (IIndexExtension indexExtension in indexExtensions.Values)
 						{
 							indexExtension.OnDocumentsIndexed(currentlyIndexDocuments);
@@ -246,6 +245,8 @@ namespace Raven.Database.Indexing
 						context.AddError(name, null, e.ToString());
 						throw;
 					}
+
+					UpdateIndexingStats(context, stats);
 
 					WriteTempIndexToDiskIfNeeded(context);
 				}
@@ -264,11 +265,31 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+		protected void UpdateIndexingStats(WorkContext context, IndexingWorkStats stats)
+		{
+			context.TransactionaStorage.Batch(accessor =>
+			{
+				switch (stats.Operation)
+				{
+					case IndexingWorkStats.Status.Map:
+						accessor.Indexing.UpdateIndexingStats(name, stats);
+						break;
+					case IndexingWorkStats.Status.Reduce:
+						accessor.Indexing.UpdateReduceStats(name, stats);
+						break;
+					case IndexingWorkStats.Status.Ignore:
+						break;
+					default:
+						throw new ArgumentOutOfRangeException();
+				}
+			});
+		}
+
 		private static IndexWriter CreateIndexWriter(Directory directory)
 		{
 			var indexWriter = new IndexWriter(directory, new StopAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED);
 			var mergeScheduler = indexWriter.GetMergeScheduler();
-			if(mergeScheduler != null)
+			if (mergeScheduler != null)
 				mergeScheduler.Close();
 			indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
 			return indexWriter;
@@ -276,12 +297,12 @@ namespace Raven.Database.Indexing
 
 		private void WriteTempIndexToDiskIfNeeded(WorkContext context)
 		{
-			if (context.Configuration.RunInMemory || !indexDefinition.IsTemp) 
+			if (context.Configuration.RunInMemory || !indexDefinition.IsTemp)
 				return;
 
 			var dir = indexWriter.GetDirectory() as RAMDirectory;
 			if (dir == null ||
-				dir.SizeInBytes() < context.Configuration.TempIndexInMemoryMaxBytes) 
+				dir.SizeInBytes() < context.Configuration.TempIndexInMemoryMaxBytes)
 				return;
 
 			indexWriter.Commit();
@@ -307,7 +328,7 @@ namespace Raven.Database.Indexing
 
 				if (forQuerying)
 				{
-					var customAttributes = analyzerInstance.GetType().GetCustomAttributes(typeof (NotForQueryingAttribute), false);
+					var customAttributes = analyzerInstance.GetType().GetCustomAttributes(typeof(NotForQueryingAttribute), false);
 					if (customAttributes.Length > 0)
 						continue;
 				}
@@ -344,66 +365,49 @@ namespace Raven.Database.Indexing
 		}
 
 		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IEnumerable<IndexingFunc> funcs,
-		                                                     IStorageActionsAccessor actions, WorkContext context)
+															 IStorageActionsAccessor actions, WorkContext context, IndexingWorkStats stats)
 		{
 			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
-				BeforeMoveNext = actions.Indexing.IncrementIndexingAttempt,
-				CancelMoveNext = actions.Indexing.DecrementIndexingAttempt,
+				BeforeMoveNext = () => stats.IndexingAttempts++,
+				CancelMoveNext = () => stats.IndexingAttempts--,
 				OnError = (exception, o) =>
 				{
 					context.AddError(name,
-					                 TryGetDocKey(o),
-					                 exception.Message
+									 TryGetDocKey(o),
+									 exception.Message
 						);
 					logIndexing.WarnException(
 						String.Format("Failed to execute indexing function on {0} on {1}", name,
-					                       TryGetDocKey(o)),
+										   TryGetDocKey(o)),
 						exception);
-					try
-					{
-						actions.Indexing.IncrementIndexingFailure();
-					}
-					catch (Exception e)
-					{
-						// we don't care about error here, because it is an error on error problem
-						logIndexing.WarnException(
-							String.Format("Could not increment indexing failure rate for {0}", name),
-							e);
-					}
+
+					stats.IndexingErrors++;
 				}
 			}.RobustEnumeration(input, funcs);
 		}
 
 		protected IEnumerable<object> RobustEnumerationReduce(IEnumerable<object> input, IndexingFunc func,
-		                                                      IStorageActionsAccessor actions, WorkContext context)
+															  IStorageActionsAccessor actions, WorkContext context,
+			IndexingWorkStats stats)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
 			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
-				BeforeMoveNext = actions.Indexing.IncrementReduceIndexingAttempt,
-				CancelMoveNext = actions.Indexing.DecrementReduceIndexingAttempt,
+				BeforeMoveNext = () => stats.ReduceAttempts++,
+				CancelMoveNext = () => stats.ReduceAttempts--,
 				OnError = (exception, o) =>
 				{
 					context.AddError(name,
-					                 TryGetDocKey(o),
-					                 exception.Message
+									 TryGetDocKey(o),
+									 exception.Message
 						);
 					logIndexing.WarnException(
 						String.Format("Failed to execute indexing function on {0} on {1}", name,
-					                       TryGetDocKey(o)),
+										   TryGetDocKey(o)),
 						exception);
-					try
-					{
-						actions.Indexing.IncrementReduceIndexingFailure();
-					}
-					catch (Exception e)
-					{
-						// we don't care about error here, because it is an error on error problem
-						logIndexing.WarnException(
-							String.Format("Could not increment indexing failure rate for {0}", name),
-							e);
-					}
+
+					stats.ReduceErrors++;
 				}
 			}.RobustEnumeration(input, func);
 		}
@@ -452,30 +456,30 @@ namespace Raven.Database.Indexing
 
 		private void RecreateSearcher()
 		{
-		    if (indexWriter == null)
-		    {
+			if (indexWriter == null)
+			{
 				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
-		    }
-		    else
-		    {
-		        var indexReader = indexWriter.GetReader();
+			}
+			else
+			{
+				var indexReader = indexWriter.GetReader();
 				currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(indexReader));
-		    }
+			}
 		}
 
-	    protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)
+		protected void AddDocumentToIndex(IndexWriter currentIndexWriter, Document luceneDoc, Analyzer analyzer)
 		{
 			Analyzer newAnalyzer = AnalyzerGenerators.Aggregate(analyzer,
-			                                                    (currentAnalyzer, generator) =>
-			                                                    {
-			                                                    	Analyzer generateAnalyzer =
-			                                                    		generator.Value.GenerateAnalyzerForIndexing(name, luceneDoc,
-			                                                    		                                      currentAnalyzer);
-			                                                    	if (generateAnalyzer != currentAnalyzer &&
-			                                                    	    currentAnalyzer != analyzer)
-			                                                    		currentAnalyzer.Close();
-			                                                    	return generateAnalyzer;
-			                                                    });
+																(currentAnalyzer, generator) =>
+																{
+																	Analyzer generateAnalyzer =
+																		generator.Value.GenerateAnalyzerForIndexing(name, luceneDoc,
+																											  currentAnalyzer);
+																	if (generateAnalyzer != currentAnalyzer &&
+																		currentAnalyzer != analyzer)
+																		currentAnalyzer.Close();
+																	return generateAnalyzer;
+																});
 
 			try
 			{
@@ -539,18 +543,46 @@ namespace Raven.Database.Indexing
 					if (field.IsBinary())
 					{
 						clonedField = new Field(field.Name(), field.BinaryValue(),
-						                        field.IsStored() ? Field.Store.YES : Field.Store.NO);
+												field.IsStored() ? Field.Store.YES : Field.Store.NO);
 					}
 					else
 					{
 						clonedField = new Field(field.Name(), field.StringValue(),
 										field.IsStored() ? Field.Store.YES : Field.Store.NO,
-										field.IsIndexed()? Field.Index.ANALYZED_NO_NORMS : Field.Index.NOT_ANALYZED_NO_NORMS);
+										field.IsIndexed() ? Field.Index.ANALYZED_NO_NORMS : Field.Index.NOT_ANALYZED_NO_NORMS);
 					}
 					clonedDocument.Add(clonedField);
 				}
 			}
 			return clonedDocument;
+		}
+
+		protected void LogIndexedDocument(string key, Document luceneDoc)
+		{
+			if (logIndexing.IsDebugEnabled)
+			{
+				var fieldsForLogging = luceneDoc.GetFields().Cast<Fieldable>().Select(x => new
+				{
+					Name = x.Name(),
+					Value = x.IsBinary() ? "<binary>" : x.StringValue(),
+					Indexed = x.IsIndexed(),
+					Stored = x.IsStored(),
+				});
+				var sb = new StringBuilder();
+				foreach (var fieldForLogging in fieldsForLogging)
+				{
+					sb.Append("\t").Append(fieldForLogging.Name)
+						.Append(" ")
+						.Append(fieldForLogging.Indexed ? "I" : "-")
+						.Append(fieldForLogging.Stored ? "S" : "-")
+						.Append(": ")
+						.Append(fieldForLogging.Value)
+						.AppendLine();
+				}
+
+				logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, name,
+								  sb.ToString());
+			}
 		}
 
 
@@ -580,11 +612,11 @@ namespace Raven.Database.Indexing
 
 			public IEnumerable<IndexQueryResult> Query()
 			{
-				using(IndexStorage.EnsureInvariantCulture())
+				using (IndexStorage.EnsureInvariantCulture())
 				{
 					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
 					IndexSearcher indexSearcher;
-					using(parent.GetSearcher(out indexSearcher))
+					using (parent.GetSearcher(out indexSearcher))
 					{
 						var luceneQuery = GetLuceneQuery();
 
@@ -640,18 +672,18 @@ namespace Raven.Database.Indexing
 				if (documentsAlreadySeenInPreviousPage.Contains(indexQueryResult.Key))
 					return false;
 				if (fieldsToFetch.IsDistinctQuery && alreadyReturned.Add(indexQueryResult.Projection) == false)
-						return false;
+					return false;
 				return true;
 			}
 
 			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start, int pageSize)
 			{
 				var min = Math.Min(start, search.TotalHits);
-				
+
 
 				// we are paging, we need to check that we don't have duplicates in the previous page
 				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
-				if (parent.IsMapReduce == false && fieldsToFetch.IsProjection == false && start - pageSize >= 0 && start < search.TotalHits) 
+				if (parent.IsMapReduce == false && fieldsToFetch.IsProjection == false && start - pageSize >= 0 && start < search.TotalHits)
 				{
 					for (int i = start - pageSize; i < min; i++)
 					{
@@ -660,7 +692,7 @@ namespace Raven.Database.Indexing
 					}
 				}
 
-				if (fieldsToFetch.IsDistinctQuery == false) 
+				if (fieldsToFetch.IsDistinctQuery == false)
 					return;
 
 				// add results that were already there in previous pages
@@ -682,7 +714,7 @@ namespace Raven.Database.Indexing
 					{
 						f = f.Substring(0, f.Length - "_Range".Length);
 					}
-					if (parent.viewGenerator.ContainsField(f) == false && 
+					if (parent.viewGenerator.ContainsField(f) == false &&
 						parent.viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
 						throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
 				}
@@ -752,7 +784,7 @@ namespace Raven.Database.Indexing
 			}
 
 			private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize,
-			                             IndexQuery indexQuery)
+										 IndexQuery indexQuery)
 			{
 				Filter filter = indexQuery.GetFilter();
 				Sort sort = indexQuery.GetSort(filter, parent.indexDefinition);
@@ -775,5 +807,7 @@ namespace Raven.Database.Indexing
 		}
 
 		#endregion
+
+
 	}
 }

@@ -6,5 +6,6 @@
 
 Recreate-RavenDB Server @("Raven.Bundles.IndexReplication")
 
+cp App.config .\Server\Raven.Server.exe.config -force
 
 Start .\Server\Raven.Server.exe --set=Raven/AnonymousAccess==All

@@ -51,7 +51,7 @@ namespace Raven.Bundles.MoreLikeThis
 			return CreateQueue(termFreqMap);
 		}
 
-		protected new void AddTermFrequencies(System.IO.StreamReader r, System.Collections.IDictionary termFreqMap, System.String fieldName)
+		protected new void AddTermFrequencies(System.IO.TextReader r, System.Collections.IDictionary termFreqMap, System.String fieldName)
 		{
 			var analyzer = Analyzers[fieldName];
 			TokenStream ts = analyzer.TokenStream(fieldName, r);

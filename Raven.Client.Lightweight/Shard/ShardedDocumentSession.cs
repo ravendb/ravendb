@@ -78,7 +78,24 @@ namespace Raven.Client.Shard
 			return shardDbCommands.Values.ToList();
 		}
 
-		protected override JsonDocument GetJsonDocument(string documentKey)
+		public void MarkReadOnly(object entity)
+		{
+			var shardIds = shardStrategy.ShardSelectionStrategy.ShardIdForExistingObject(entity);
+			GetSingleShardSession(shardIds).Advanced.MarkReadOnly(entity);
+		}
+
+		/// <summary>
+		/// Gets or sets a value indicating whether non authoritative information is allowed.
+		/// Non authoritative information is document that has been modified by a transaction that hasn't been committed.
+		/// The server provides the latest committed version, but it is known that attempting to write to a non authoritative document
+		/// will fail, because it is already modified.
+		/// If set to <c>false</c>, the session will wait <see cref="NonAuthoritativeInformationTimeout"/> for the transaction to commit to get an
+		/// authoritative information. If the wait is longer than <see cref="NonAuthoritativeInformationTimeout"/>, <see cref="NonAuthoritativeInformationException"/> is thrown.
+		/// </summary>
+		/// <value>
+		/// 	<c>true</c> if non authoritative information is allowed; otherwise, <c>false</c>.
+		/// </value>
+		public bool AllowNonAuthoritativeInformation
 		{
 			var dbCommands = GetAppropriateShards(new ShardResolutionStrategyData
 			{

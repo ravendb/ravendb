@@ -30,11 +30,8 @@ namespace Raven.Studio.Controls.Editors
 
 		public ICompletionProvider CompletionProvider
 		{
-			get { return (ICompletionProvider)GetValue(CompletionProviderProperty); }
-			set
-			{
-				SetValue(CompletionProviderProperty, value);
-			}
+			get { return (ICompletionProvider) GetValue(CompletionProviderProperty); }
+			set { SetValue(CompletionProviderProperty, value); }
 		}
 
 		public static readonly DependencyProperty CompletionProviderProperty =
@@ -43,7 +40,7 @@ namespace Raven.Studio.Controls.Editors
 		private static void PropertyChangedCallback(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs args)
 		{
 			var editor = (QueryEditor)dependencyObject;
-			editor.Document.Language.RegisterService<ICompletionProvider>((ICompletionProvider)args.NewValue);
+			editor.Document.Language.RegisterService((ICompletionProvider) args.NewValue);
 		}
 
 		public static IEnumerable<FieldAndTerm> GetCurrentFieldsAndTerms(string text)

@@ -12,6 +12,8 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
+using TaskStatus = Raven.Studio.Models.TaskStatus;
 
 namespace Raven.Studio.Commands
 {
@@ -22,10 +24,12 @@ namespace Raven.Studio.Commands
 		private readonly Action<string> output;
 		private int totalCount;
 		private int totalIndexes;
+		private TaskModel taskModel;
 
-		public ImportDatabaseCommand(Action<string> output)
+		public ImportDatabaseCommand(TaskModel taskModel, Action<string> output)
 		{
 			this.output = output;
+			this.taskModel = taskModel;
 		}
 
 		public override void Execute(object parameter)
@@ -40,7 +44,8 @@ namespace Raven.Studio.Commands
 
 			totalCount = 0;
 			totalIndexes = 0;
-				
+
+			taskModel.TaskStatus = TaskStatus.Started;
 			output(String.Format("Importing from {0}", openFile.File.Name));
 
 			var sw = Stopwatch.StartNew();
@@ -52,69 +57,78 @@ namespace Raven.Studio.Commands
 				stream.Dispose();
 				return;
 			}
-
-			if (jsonReader.TokenType != JsonToken.StartObject)
-				throw new InvalidOperationException("StartObject was expected");
-
-			// should read indexes now
-			if (jsonReader.Read() == false)
+			try
 			{
-				output("Invalid Json file specified!");
-				stream.Dispose();
-				return;
+				if (jsonReader.TokenType != JsonToken.StartObject)
+					throw new InvalidOperationException("StartObject was expected");
+
+				// should read indexes now
+				if (jsonReader.Read() == false)
+				{
+					output("Invalid Json file specified!");
+					stream.Dispose();
+					return;
+				}
+
+				output(String.Format("Begin reading indexes"));
+
+				if (jsonReader.TokenType != JsonToken.PropertyName)
+					throw new InvalidOperationException("PropertyName was expected");
+
+				if (Equals("Indexes", jsonReader.Value) == false)
+					throw new InvalidOperationException("Indexes property was expected");
+
+				if (jsonReader.Read() == false)
+					return;
+
+				if (jsonReader.TokenType != JsonToken.StartArray)
+					throw new InvalidOperationException("StartArray was expected");
+
+				// import Indexes
+				WriteIndexes(jsonReader)
+					.ContinueOnSuccess(() =>
+					{
+						output(String.Format("Imported {0:#,#;;0} indexes", totalIndexes));
+
+						output(String.Format("Begin reading documents"));
+
+						// should read documents now
+						if (jsonReader.Read() == false)
+						{
+							output("There were no documents to load");
+							stream.Dispose();
+							return;
+						}
+
+						if (jsonReader.TokenType != JsonToken.PropertyName)
+							throw new InvalidOperationException("PropertyName was expected");
+
+						if (Equals("Docs", jsonReader.Value) == false)
+							throw new InvalidOperationException("Docs property was expected");
+
+						if (jsonReader.Read() == false)
+						{
+							output("There were no documents to load");
+							stream.Dispose();
+							return;
+						}
+
+						if (jsonReader.TokenType != JsonToken.StartArray)
+							throw new InvalidOperationException("StartArray was expected");
+
+						WriteDocuments(jsonReader)
+							.ContinueOnSuccess(
+								() =>
+								output(String.Format("Imported {0:#,#;;0} documents in {1:#,#;;0} ms", totalCount, sw.ElapsedMilliseconds)))
+							.Finally(() => taskModel.TaskStatus = TaskStatus.Ended);
+					});
 			}
 
-			output(String.Format("Begin reading indexes"));
-
-			if (jsonReader.TokenType != JsonToken.PropertyName)
-				throw new InvalidOperationException("PropertyName was expected");
-
-			if (Equals("Indexes", jsonReader.Value) == false)
-				throw new InvalidOperationException("Indexes property was expected");
-
-			if (jsonReader.Read() == false)
-				return;
-
-			if (jsonReader.TokenType != JsonToken.StartArray)
-				throw new InvalidOperationException("StartArray was expected");
-
-			// import Indexes
-			WriteIndexes(jsonReader)
-				.ContinueOnSuccess(() =>
-				                   	{
-				                   		output(String.Format("Imported {0:#,#;;0} indexes", totalIndexes));
-
-				                   		output(String.Format("Begin reading documents"));
-
-				                   		// should read documents now
-				                   		if (jsonReader.Read() == false)
-				                   		{
-				                   			output("There were no documents to load");
-				                   			stream.Dispose();
-				                   			return;
-				                   		}
-
-				                   		if (jsonReader.TokenType != JsonToken.PropertyName)
-				                   			throw new InvalidOperationException("PropertyName was expected");
-
-				                   		if (Equals("Docs", jsonReader.Value) == false)
-				                   			throw new InvalidOperationException("Docs property was expected");
-
-				                   		if (jsonReader.Read() == false)
-				                   		{
-				                   			output("There were no documents to load");
-				                   			stream.Dispose();
-				                   			return;
-				                   		}
-
-				                   		if (jsonReader.TokenType != JsonToken.StartArray)
-				                   			throw new InvalidOperationException("StartArray was expected");
-
-				                   		WriteDocuments(jsonReader)
-				                   			.ContinueOnSuccess(
-												() => output(String.Format("Imported {0:#,#;;0} documents in {1:#,#;;0} ms", totalCount,
-				                   				                           sw.ElapsedMilliseconds)));
-				                   	});
+			catch (Exception e)
+			{
+				taskModel.TaskStatus = TaskStatus.Ended;
+				throw e;
+			}
 		}
 
 		private Task WriteIndexes(JsonTextReader jsonReader)

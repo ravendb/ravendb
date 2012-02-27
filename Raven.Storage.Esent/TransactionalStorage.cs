@@ -323,7 +323,6 @@ namespace Raven.Storage.Esent
 		}
 
 		[CLSCompliant(false)]
-		//[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
 			if (disposerLock.IsReadLockHeld) // we are currently in a nested Batch call
@@ -352,7 +351,7 @@ namespace Raven.Storage.Esent
 					case JET_err.WriteConflict:
 					case JET_err.SessionWriteConflict:
 					case JET_err.WriteConflictPrimaryIndex:
-						throw new ConcurrencyException("Concurrent modification to the same document are not allowed");
+						throw new ConcurrencyException("Concurrent modification to the same document are not allowed", e);
 					default:
 						throw;
 				}
@@ -363,7 +362,7 @@ namespace Raven.Storage.Esent
 				if(disposed == false)
 					current.Value = null;
 			}
-			onCommit();// call user code after we exit the lock
+			onCommit(); // call user code after we exit the lock
 		}
 
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]

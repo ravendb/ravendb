@@ -33,7 +33,7 @@ namespace Raven.Storage.Managed
 				{"index", task.Index},
 				{"id", generator.CreateSequentialUuid().ToByteArray()},
 				{"time", addedAt},
-				{"type", task.Type},
+				{"type", task.GetType().FullName},
 				{"mergable", task.SupportsMerging}
 			}, task.AsBytes());
 		}
@@ -48,14 +48,18 @@ namespace Raven.Storage.Managed
 			get { return storage.Tasks.Count; }
 		}
 
-		public Task GetMergedTask(out int countOfMergedTasks)
+		public T GetMergedTask<T>() where T : Task
 		{
 			foreach (var readResult in storage.Tasks)
 			{
+				var taskType = readResult.Key.Value<string>("type");
+				if(taskType != typeof(T).FullName)
+					continue;
+
 				Task task;
 				try
 				{
-					task = Task.ToTask(readResult.Key.Value<string>("type"), readResult.Data());
+					task = Task.ToTask(taskType, readResult.Data());
 				}
 				catch (Exception e)
 				{
@@ -64,29 +68,28 @@ namespace Raven.Storage.Managed
 						e);
 					continue;
 				}
-				MergeSimilarTasks(task, readResult.Key.Value<byte[]>("id"), out countOfMergedTasks);
+				MergeSimilarTasks(task, readResult.Key.Value<byte[]>("id"));
 				storage.Tasks.Remove(readResult.Key);
-				return task;
+				return (T)task;
 			}
-			countOfMergedTasks = 0;
 			return null;
 		}
 
-		private void MergeSimilarTasks(Task task, byte [] taskId, out int taskCount)
+		private void MergeSimilarTasks(Task task, byte [] taskId)
 		{
-			taskCount = 1;
 			if (task.SupportsMerging == false)
 				return;
 
+			var taskType = task.GetType().FullName;
 			var keyForTaskToTryMergings = storage.Tasks["ByIndexAndType"].SkipTo(new RavenJObject
 			{
 				{"index", task.Index},
-				{"type", task.Type},
+				{"type", taskType},
 			})
 			.Where(x => new Guid(x.Value<byte[]>("id")) != new Guid(taskId))
 				.TakeWhile(x =>
 						   StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("index"), task.Index) &&
-						   StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("type"), task.Type)
+						   StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("type"), taskType)
 				);
 
 			foreach (var keyForTaskToTryMerging in keyForTaskToTryMergings)
@@ -112,8 +115,6 @@ namespace Raven.Storage.Managed
 					continue;
 
 				storage.Tasks.Remove(keyForTaskToTryMerging);
-
-				taskCount += 1;
 
 				if (task.SupportsMerging == false)
 					return;

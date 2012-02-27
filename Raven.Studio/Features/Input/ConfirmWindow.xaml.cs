@@ -35,4 +35,3 @@ namespace Raven.Studio.Features.Input
 		}
 	}
 }
-

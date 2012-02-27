@@ -9,6 +9,9 @@ using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
 {
+	/// <summary>
+	/// Represents an abstract JSON token.
+	/// </summary>
 	public abstract class RavenJToken
 	{
 		/// <summary>
@@ -513,7 +516,9 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
 		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public static implicit operator RavenJToken(short value)
 		{
 			return new RavenJValue(value);
@@ -524,7 +529,9 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
 		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public static implicit operator RavenJToken(ushort value)
 		{
 			return new RavenJValue(value);
@@ -595,7 +602,9 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
 		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public static implicit operator RavenJToken(short? value)
 		{
 			return new RavenJValue(value);
@@ -606,7 +615,9 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
 		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public static implicit operator RavenJToken(ushort? value)
 		{
 			return new RavenJValue(value);
@@ -617,7 +628,9 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
 		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public static implicit operator RavenJToken(uint? value)
 		{
 			return new RavenJValue(value);
@@ -628,7 +641,9 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
 		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public static implicit operator RavenJToken(ulong? value)
 		{
 			return new RavenJValue(value);
@@ -669,7 +684,9 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
 		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public static implicit operator RavenJToken(uint value)
 		{
 			return new RavenJValue(value);
@@ -680,7 +697,9 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value to create a <see cref="RavenJValue"/> from.</param>
 		/// <returns>The <see cref="RavenJValue"/> initialized with the specified value.</returns>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public static implicit operator RavenJToken(ulong value)
 		{
 			return new RavenJValue(value);

@@ -88,14 +88,15 @@ namespace Raven.Storage.Managed
 
 		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
 		{
-			return DocumentByKeyInternal(key, transactionInformation, (stream, metadata) => new JsonDocument
+			return DocumentByKeyInternal(key, transactionInformation, (tuple, metadata) => new JsonDocument
 			{
+				SerializedSizeOnDisk = tuple.Item3,
 				Metadata = metadata.Metadata,
 				Etag = metadata.Etag,
 				Key = metadata.Key,
 				LastModified = metadata.LastModified,
 				NonAuthoritativeInformation = metadata.NonAuthoritativeInformation,
-				DataAsJson = ReadDocument(stream, metadata)
+				DataAsJson = ReadDocument(tuple, metadata)
 			});
 		}
 
@@ -105,13 +106,12 @@ namespace Raven.Storage.Managed
 		}
 
 
-		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<Tuple<MemoryStream, RavenJObject>, JsonDocumentMetadata, T> createResult)
+		private T DocumentByKeyInternal<T>(string key, TransactionInformation transactionInformation, Func<Tuple<MemoryStream, RavenJObject, int>, JsonDocumentMetadata, T> createResult)
 			where T : class
 		{
-			RavenJObject metadata = null;
+			RavenJObject metadata;
 
-			var resultInTx =
-				storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
+			var resultInTx = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
 			if (transactionInformation != null && resultInTx != null)
 			{
 				if(new Guid(resultInTx.Key.Value<byte[]>("txId")) == transactionInformation.Id)
@@ -120,8 +120,7 @@ namespace Raven.Storage.Managed
 						return null;
 
 					var txEtag = new Guid(resultInTx.Key.Value<byte[]>("etag"));
-					Tuple<MemoryStream, RavenJObject> resultTx = null;
-					resultTx = ReadMetadata(key, txEtag, resultInTx.Data, out metadata);
+					var resultTx = ReadMetadata(key, txEtag, resultInTx.Data, out metadata);
 					return createResult(resultTx, new JsonDocumentMetadata
 					{
 						Key = key,
@@ -137,7 +136,7 @@ namespace Raven.Storage.Managed
 			{
 				if(resultInTx != null)
 				{
-					return createResult(Tuple.Create<MemoryStream,RavenJObject>(null, new RavenJObject()), new JsonDocumentMetadata
+					return createResult(Tuple.Create<MemoryStream,RavenJObject, int>(null, new RavenJObject(), 0), new JsonDocumentMetadata
 					{
 						Key = key,
 						Etag = Guid.Empty,
@@ -161,13 +160,13 @@ namespace Raven.Storage.Managed
 			});
 		}
 
-		private Tuple<MemoryStream, RavenJObject> ReadMetadata(string key, Guid etag, Func<byte[]> getData, out RavenJObject metadata)
+		private Tuple<MemoryStream, RavenJObject, int> ReadMetadata(string key, Guid etag, Func<byte[]> getData, out RavenJObject metadata)
 		{
 			var cachedDocument = documentCacher.GetCachedDocument(key, etag);
 			if (cachedDocument != null)
 			{
 				metadata = cachedDocument.Metadata;
-				return Tuple.Create<MemoryStream, RavenJObject>(null, cachedDocument.Document);
+				return Tuple.Create<MemoryStream, RavenJObject,int>(null, cachedDocument.Document, cachedDocument.Size);
 			}
 
 			var buffer = getData();
@@ -175,10 +174,10 @@ namespace Raven.Storage.Managed
 
 			metadata = memoryStream.ToJObject();
 
-			return Tuple.Create<MemoryStream, RavenJObject>(memoryStream, null);
+			return Tuple.Create<MemoryStream, RavenJObject, int>(memoryStream, null, (int)memoryStream.Length);
 		}
 
-		private RavenJObject ReadDocument(Tuple<MemoryStream, RavenJObject> stream, JsonDocumentMetadata metadata)
+		private RavenJObject ReadDocument(Tuple<MemoryStream, RavenJObject, int> stream, JsonDocumentMetadata metadata)
 		{
 			if (stream.Item2 != null)
 				return stream.Item2;
@@ -197,7 +196,7 @@ namespace Raven.Storage.Managed
 			}
 
 			Debug.Assert(metadata.Etag != null);
-			documentCacher.SetCachedDocument(metadata.Key, metadata.Etag.Value, result, metadata.Metadata);
+			documentCacher.SetCachedDocument(metadata.Key, metadata.Etag.Value, result, metadata.Metadata, stream.Item3);
 
 			return result;
 		}

@@ -82,8 +82,9 @@
       <HintPath>..\SharedLibs\Silverlight\Microsoft.Expression.Interactions.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
-    <Reference Include="Newtonsoft.Json, Version=4.0.5.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.4.0.5\lib\sl4\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=4.0.8.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Newtonsoft.Json.4.0.8\lib\sl4\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System.Reactive, Version=1.0.10621.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Rx-Main.1.0.11226\lib\SL4\System.Reactive.dll</HintPath>
@@ -117,13 +118,17 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Behaviors\KeyboardBehavior.cs" />
-    <Compile Include="Behaviors\OpenPageOnANewTabIfCtrlIsHold.cs" />
+    <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
+    <Compile Include="Extensions\StringExtensions.cs" />
+    <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
+    <Compile Include="Features\Query\ProjectionData.cs" />
+    <Compile Include="Features\Query\QueryIndexAutoComplete.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
     <Compile Include="Features\Tasks\TaskView.xaml.cs">
       <DependentUpon>TaskView.xaml</DependentUpon>
@@ -131,6 +136,15 @@
     <Compile Include="Features\Terms\TermsView.xaml.cs">
       <DependentUpon>TermsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\TaskStatusConverter.cs" />
+    <Compile Include="Infrastructure\Converters\RedIfError.cs" />
+    <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
+    <Compile Include="Infrastructure\WeakEventListener.cs" />
+    <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
+    <Compile Include="Infrastructure\WeakReference.cs" />
+    <Compile Include="Models\DocumentSize.cs" />
+    <Compile Include="Models\IHasPageTitle.cs" />
     <Compile Include="Models\TermsModel.cs" />
     <Compile Include="Views\Terms.xaml.cs">
       <DependentUpon>Terms.xaml</DependentUpon>
@@ -226,7 +240,7 @@
     <Compile Include="Features\Indexes\IndexesErrorsView.xaml.cs">
       <DependentUpon>IndexesErrorsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Features\Query\RavenQueryCompletionProvider.cs" />
+    <Compile Include="Features\Query\QueryIntelliPromptProvider.cs" />
     <Compile Include="Features\Query\ExecuteQueryCommand.cs" />
     <Compile Include="Features\Query\QueryView.xaml.cs">
       <DependentUpon>QueryView.xaml</DependentUpon>
@@ -239,35 +253,6 @@
     <Compile Include="Features\Tasks\TasksView.xaml.cs">
       <DependentUpon>TasksView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Impl\DotNetZip\Adler.cs" />
-    <Compile Include="Impl\DotNetZip\BlockState.cs" />
-    <Compile Include="Impl\DotNetZip\CompressionLevel.cs" />
-    <Compile Include="Impl\DotNetZip\CompressionMode.cs" />
-    <Compile Include="Impl\DotNetZip\CompressionStrategy.cs" />
-    <Compile Include="Impl\DotNetZip\Crc32.cs" />
-    <Compile Include="Impl\DotNetZip\CrcCalculatorStream.cs" />
-    <Compile Include="Impl\DotNetZip\DeflateFlavor.cs" />
-    <Compile Include="Impl\DotNetZip\DeflateManager.cs" />
-    <Compile Include="Impl\DotNetZip\DeflateStream.cs" />
-    <Compile Include="Impl\DotNetZip\FlushType.cs" />
-    <Compile Include="Impl\DotNetZip\GZipStream.cs" />
-    <Compile Include="Impl\DotNetZip\InflateBlocks.cs" />
-    <Compile Include="Impl\DotNetZip\InflateCodes.cs" />
-    <Compile Include="Impl\DotNetZip\InflateManager.cs" />
-    <Compile Include="Impl\DotNetZip\InfTree.cs" />
-    <Compile Include="Impl\DotNetZip\InternalConstants.cs" />
-    <Compile Include="Impl\DotNetZip\InternalInflateConstants.cs" />
-    <Compile Include="Impl\DotNetZip\ParallelDeflateOutputStream.cs" />
-    <Compile Include="Impl\DotNetZip\SharedUtils.cs" />
-    <Compile Include="Impl\DotNetZip\StaticTree.cs" />
-    <Compile Include="Impl\DotNetZip\Tree.cs" />
-    <Compile Include="Impl\DotNetZip\WorkItem.cs" />
-    <Compile Include="Impl\DotNetZip\ZlibBaseStream.cs" />
-    <Compile Include="Impl\DotNetZip\ZlibCodec.cs" />
-    <Compile Include="Impl\DotNetZip\ZlibConstants.cs" />
-    <Compile Include="Impl\DotNetZip\ZlibException.cs" />
-    <Compile Include="Impl\DotNetZip\ZlibStream.cs" />
-    <Compile Include="Impl\DotNetZip\ZlibStreamFlavor.cs" />
     <Compile Include="Features\Logs\LogsView.xaml.cs">
       <DependentUpon>LogsView.xaml</DependentUpon>
     </Compile>
@@ -291,7 +276,6 @@
     <Compile Include="Infrastructure\KeysComparer.cs" />
     <Compile Include="Infrastructure\Execute.cs" />
     <Compile Include="Infrastructure\RxExtensions.cs" />
-    <Compile Include="Infrastructure\StringExtensions.cs" />
     <Compile Include="Infrastructure\UrlParser.cs" />
     <Compile Include="Infrastructure\UrlUtil.cs" />
     <Compile Include="Infrastructure\ViewModel.cs" />

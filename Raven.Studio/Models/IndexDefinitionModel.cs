@@ -12,7 +12,7 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class IndexDefinitionModel : ViewModel
+	public class IndexDefinitionModel : ViewModel, IHasPageTitle
 	{
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
@@ -30,7 +30,6 @@ namespace Raven.Studio.Models
 
 			statistics = Database.Value.Statistics;
 			statistics.PropertyChanged += (sender, args) => OnPropertyChanged("ErrorsCount");
-			ViewTitle = "Edit Index";
 		}
 
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
@@ -54,7 +53,7 @@ namespace Raven.Studio.Models
 			var urlParser = new UrlParser(parameters);
 			if (urlParser.GetQueryParam("mode") == "new")
 			{
-				ViewTitle = "Create an Index";
+				Header = "Create an Index";
 				return;
 			}
 
@@ -62,7 +61,7 @@ namespace Raven.Studio.Models
 			if (string.IsNullOrWhiteSpace(name))
 				HandleIndexNotFound(null);
 
-			ViewTitle = "Edit Index: " + Name;
+			Header = "Edit Index: " + Name;
 			DatabaseCommands.GetIndexAsync(name)
 				.ContinueOnSuccessInTheUIThread(index1 =>
 				                   {
@@ -152,13 +151,13 @@ namespace Raven.Studio.Models
 		//    get{return }
 		//}
 
-		private string viewTitle;
-		public string ViewTitle
+		private string header;
+		public string Header
 		{
-			get { return viewTitle; }
+			get { return header; }
 			set
 			{
-				viewTitle = value;
+				header = value;
 				OnPropertyChanged();
 			}
 		}
@@ -414,6 +413,11 @@ namespace Raven.Studio.Models
 					};
 				}
 			}
+		}
+
+		public string PageTitle
+		{
+			get { return "Edit Index"; }
 		}
 	}
 }

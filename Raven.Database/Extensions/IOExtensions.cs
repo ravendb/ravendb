@@ -4,10 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.IO;
 using System.Threading;
 
@@ -32,6 +28,9 @@ namespace Raven.Database.Extensions
 					catch (IOException)
 					{
 					}
+					catch (UnauthorizedAccessException)
+					{
+					}
 					Directory.Delete(directory, true);
 					return;
 				}
@@ -44,6 +43,9 @@ namespace Raven.Database.Extensions
 							File.SetAttributes(childDir, FileAttributes.Normal);
 						}
 						catch (IOException)
+						{
+						}
+						catch (UnauthorizedAccessException)
 						{
 						}
 					}

@@ -5,6 +5,9 @@ using Newtonsoft.Json.Linq;
 
 namespace Raven.Json.Linq
 {
+	/// <summary>
+	/// Represents a writer that provides a fast, non-cached, forward-only way of generating Json data.
+	/// </summary>
 	public class RavenJTokenWriter : JsonWriter
 	{
 		private RavenJToken _token;
@@ -187,7 +190,9 @@ namespace Raven.Json.Linq
 		/// Writes a <see cref="UInt32"/> value.
 		/// </summary>
 		/// <param name="value">The <see cref="UInt32"/> value to write.</param>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public override void WriteValue(uint value)
 		{
 			base.WriteValue(value);
@@ -208,7 +213,9 @@ namespace Raven.Json.Linq
 		/// Writes a <see cref="UInt64"/> value.
 		/// </summary>
 		/// <param name="value">The <see cref="UInt64"/> value to write.</param>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public override void WriteValue(ulong value)
 		{
 			base.WriteValue(value);
@@ -259,7 +266,9 @@ namespace Raven.Json.Linq
 		/// Writes a <see cref="UInt16"/> value.
 		/// </summary>
 		/// <param name="value">The <see cref="UInt16"/> value to write.</param>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public override void WriteValue(ushort value)
 		{
 			base.WriteValue(value);
@@ -290,7 +299,9 @@ namespace Raven.Json.Linq
 		/// Writes a <see cref="SByte"/> value.
 		/// </summary>
 		/// <param name="value">The <see cref="SByte"/> value to write.</param>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public override void WriteValue(sbyte value)
 		{
 			base.WriteValue(value);

@@ -52,7 +52,7 @@ namespace Raven.Abstractions.Json
 		/// </returns>
 		public override bool CanConvert(Type objectType)
 		{
-			return objectType.IsEnum;
+			return (Nullable.GetUnderlyingType(objectType) ?? objectType).IsEnum;
 		}
 	}
 }

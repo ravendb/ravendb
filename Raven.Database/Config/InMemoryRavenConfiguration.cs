@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
@@ -30,15 +31,16 @@ namespace Raven.Database.Config
 		private bool containerExternallySet;
 		private string dataDirectory;
 		private string pluginsDirectory;
-		private bool runInUnreliableYetFastModeThatIsNotSuitableForProduction;
 
 		public InMemoryRavenConfiguration()
 		{
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
 			BackgroundTasksPriority = ThreadPriority.Normal;
-			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 5000 : 2500;
-			AvailableMemoryForRaisingIndexBatchSizeLimit = 512;
+			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128*1024 : 64*1024;
+			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
+
+			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, GetTotalPhysicalMemoryMegabytes()/2);
 			MaxNumberOfParallelIndexTasks = 8;
 
 			Catalog = new AggregateCatalog(
@@ -91,16 +93,20 @@ namespace Raven.Database.Config
 			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
 			if (maxNumberOfItemsToIndexInSingleBatch != null)
 			{
-				MaxNumberOfItemsToIndexInSingleBatch = int.Parse(maxNumberOfItemsToIndexInSingleBatch);
-				MaxNumberOfItemsToIndexInSingleBatch = Math.Max(MaxNumberOfItemsToIndexInSingleBatch, 128);
-				
-				// if we explicitly specify this, we disable the auto raising, unless this is also specified
-				AvailableMemoryForRaisingIndexBatchSizeLimit = int.MaxValue;
+				MaxNumberOfItemsToIndexInSingleBatch = Math.Max(int.Parse(maxNumberOfItemsToIndexInSingleBatch), 128);
+				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(MaxNumberOfItemsToIndexInSingleBatch,
+				                                                    InitialNumberOfItemsToIndexInSingleBatch);
 			}
 			var availableMemoryForRaisingIndexBatchSizeLimit = Settings["Raven/AvailableMemoryForRaisingIndexBatchSizeLimit"];
 			if (availableMemoryForRaisingIndexBatchSizeLimit != null)
 			{
-				MaxNumberOfItemsToIndexInSingleBatch = int.Parse(availableMemoryForRaisingIndexBatchSizeLimit);
+				AvailableMemoryForRaisingIndexBatchSizeLimit = int.Parse(availableMemoryForRaisingIndexBatchSizeLimit);
+			}
+			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
+			if (initialNumberOfItemsToIndexInSingleBatch != null)
+			{
+				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
+				                                                    MaxNumberOfItemsToIndexInSingleBatch);
 			}
 
 			var maxNumberOfParallelIndexTasks = Settings["Raven/MaxNumberOfParallelIndexTasks"];
@@ -127,6 +133,9 @@ namespace Raven.Database.Config
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
 			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 
+
+			ResetIndexOnUncleanShutdown = GetConfigurationValue<bool>("Raven/ResetIndexOnUncleanShutdown") ?? false;
+			
 			SetupTransactionMode();
 
 			DataDirectory = Settings["Raven/DataDir"] ?? @"~\Data";
@@ -220,9 +229,23 @@ namespace Raven.Database.Config
 				var pwd = Settings["Raven/OAuthTokenCertificatePassword"];
 				if (string.IsNullOrEmpty(pwd) == false)
 				{
-					return new X509Certificate2(path, pwd, X509KeyStorageFlags.MachineKeySet);
+					try
+					{
+						return new X509Certificate2(path, pwd);
+					}
+					catch (Exception)
+					{
+						return new X509Certificate2(path, pwd, X509KeyStorageFlags.MachineKeySet);
+					}
 				}
-				return new X509Certificate2(path, string.Empty, X509KeyStorageFlags.MachineKeySet);
+				try
+				{
+					return new X509Certificate2(path);
+				}
+				catch (Exception)
+				{
+					return new X509Certificate2(path, string.Empty, X509KeyStorageFlags.MachineKeySet);
+				}
 			}
 
 			return CertGenerator.GenerateNewCertificate("RavenDB");
@@ -230,6 +253,22 @@ namespace Raven.Database.Config
 
 
 		private int GetDefaultMemoryCacheLimitMegabytes()
+		{
+			var totalPhysicalMemoryMegabytes = GetTotalPhysicalMemoryMegabytes();
+
+			// we need to leave ( a lot ) of room for other things as well, so we limit the cache size
+
+			var val = (totalPhysicalMemoryMegabytes / 2) -
+				// reduce the unmanaged cache size from the default limit
+						(GetConfigurationValue<int>("Raven/Esent/CacheSizeMax") ?? 1024);
+
+			if (val < 0)
+				return 128; // if machine has less than 1024 MB, then only use 128 MB 
+
+			return val;
+		}
+
+		private static int GetTotalPhysicalMemoryMegabytes()
 		{
 			int totalPhysicalMemoryMegabytes;
 			if (Type.GetType("Mono.Runtime") != null)
@@ -242,20 +281,10 @@ namespace Raven.Database.Config
 				throw new PlatformNotSupportedException("This build can only run on Mono");
 #else
 				totalPhysicalMemoryMegabytes =
-					(int)(new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory / 1024 / 1024);
+					(int) (new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory/1024/1024);
 #endif
 			}
-
-			// we need to leave ( a lot ) of room for other things as well, so we limit the cache size
-
-			var val = (totalPhysicalMemoryMegabytes / 2) -
-				// reduce the unmanaged cache size from the default limit
-						(GetConfigurationValue<int>("Raven/Esent/CacheSizeMax") ?? 1024);
-
-			if (val < 0)
-				return 128; // if machine has less than 1024 MB, then only use 128 MB 
-
-			return val;
+			return totalPhysicalMemoryMegabytes;
 		}
 
 		private static int GetDefaultMemoryCacheLimitMegabytesOnMono()
@@ -287,6 +316,12 @@ namespace Raven.Database.Config
 		}
 
 		#region Core settings
+
+		/// <summary>
+		/// When the database is shut down rudely, determine whatever to reset the index or to check it.
+		/// Checking the index may take some time on large databases
+		/// </summary>
+		public bool ResetIndexOnUncleanShutdown { get; set; }
 
 		/// <summary>
 		/// What thread priority to give the various background tasks RavenDB uses (mostly for indexing)
@@ -326,10 +361,15 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// Max number of items to take for indexing in a batch
-		/// Default: 2500
 		/// Minimum: 128
 		/// </summary>
 		public int MaxNumberOfItemsToIndexInSingleBatch { get; set; }
+
+		/// <summary>
+		/// The intial number of items to take when indexing a batch
+		/// Default: 5,000
+		/// </summary>
+		public int InitialNumberOfItemsToIndexInSingleBatch { get; set; }
 
 		/// <summary>
 		/// The maximum number of indexing tasks allowed to run in parallel
@@ -572,15 +612,7 @@ namespace Raven.Database.Config
 
 		public AggregateCatalog Catalog { get; set; }
 
-		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction
-		{
-			get { return runInUnreliableYetFastModeThatIsNotSuitableForProduction; }
-			set
-			{
-				RunInMemory = value;
-				runInUnreliableYetFastModeThatIsNotSuitableForProduction = value;
-			}
-		}
+		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
 		private string indexStoragePath;
 		/// <summary>
@@ -614,14 +646,19 @@ namespace Raven.Database.Config
 
 					try
 					{
-						var availablePhysicalMemoryInMb = new ComputerInfo().AvailablePhysicalMemory / 1024 / 1024;
-						return (int)availablePhysicalMemoryInMb;
+						var availablePhysicalMemoryInMb = (int) (new ComputerInfo().AvailablePhysicalMemory/1024/1024);
+						if(Environment.Is64BitProcess)
+							return availablePhysicalMemoryInMb;
+
+						// we are in 32 bits mode, but the _system_ may have more than 4 GB available
+						// so we have to check the _address space_ as well as the available memory
+						var workingSetMb = (int) (Process.GetCurrentProcess().WorkingSet64/1024/1024);
+						return Math.Min(2048 - workingSetMb, availablePhysicalMemoryInMb);
 					}
 					catch (Exception)
 					{
 						if (Type.GetType("Mono.Runtime") == null)
 							throw;
-
 
 						// I don't know how to figur eout free RAM on mono, so we disable this behavior
 						failedToGetAvailablePhysicalMemory = true;

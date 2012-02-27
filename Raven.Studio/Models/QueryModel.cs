@@ -1,18 +1,30 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
+using Raven.Client.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class QueryModel : ViewModel
+	public class QueryModel : ViewModel, IHasPageTitle
 	{
-		
+		private QueryIndexAutoComplete queryIndexAutoComplete;
+		public QueryIndexAutoComplete QueryIndexAutoComplete
+		{
+			get { return queryIndexAutoComplete; }
+			set
+			{
+				queryIndexAutoComplete = value;
+				OnPropertyChanged();
+			}
+		}
+
 		#region SpatialQuery
 
 		private bool isSpatialQuerySupported;
@@ -87,7 +99,6 @@ namespace Raven.Studio.Models
 				}
 
 				indexName = value;
-				ViewTitle = "Query: " + IndexName;
 				OnPropertyChanged();
 				RestoreHistory();
 			}
@@ -190,12 +201,6 @@ namespace Raven.Studio.Models
 			}
 		}
 
-
-		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-
-		private readonly BindableCollection<string> fields = new BindableCollection<string>(x => x);
-		private readonly Dictionary<string, List<string>> fieldsTermsDictionary = new Dictionary<string, List<string>>();
-
 		private static string lastQuery;
 		private static string lastIndex;
 
@@ -211,12 +216,6 @@ namespace Raven.Studio.Models
 			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
 			DynamicSelectedOption = DynamicOptions[0];
-
-			Query.PropertyChanged += GetTermsForUsedFields;
-			CompletionProvider = new Observable<ICompletionProvider>();
-			CompletionProvider.Value = new RavenQueryCompletionProvider(fields, fieldsTermsDictionary);
-
-			ViewTitle = "Query Index";
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -241,7 +240,8 @@ namespace Raven.Studio.Models
 						IndexDefinitionModel.HandleIndexNotFound(IndexName);
 						return;
 					}
-					fields.Match(definition.Fields);
+					var fields = definition.Fields;
+					QueryIndexAutoComplete = new QueryIndexAutoComplete(IndexName, Query, fields);
 					IsSpatialQuerySupported = definition.Map.Contains("SpatialIndex.Generate");
 					SetSortByOptions(fields);
 					Execute.Execute(string.Empty);
@@ -263,43 +263,30 @@ namespace Raven.Studio.Models
 			Execute.Execute(null);
 		}
 
-		private void GetTermsForUsedFields(object sender, PropertyChangedEventArgs e)
-		{
-			var text = ((Observable<string>)sender).Value;
-			if (string.IsNullOrEmpty(text))
-				return;
-
-			var matches = FieldsFinderRegex.Matches(text);
-			foreach (Match match in matches)
-			{
-				var field = match.Groups[2].Value;
-				if (fieldsTermsDictionary.ContainsKey(field))
-					continue;
-				var terms = fieldsTermsDictionary[field] = new List<string>();
-				GetTermsForField(field, terms);
-			}
-		}
-
-		private void GetTermsForField(string field, List<string> terms)
-		{
-			DatabaseCommands.GetTermsAsync(IndexName, field, string.Empty, 1024)
-				.ContinueOnSuccess(termsFromServer =>
-				{
-					foreach (var term in termsFromServer)
-					{
-						if(term.IndexOfAny(new[]{' ','\t'})  == -1)
-							terms.Add(term);
-						else
-							terms.Add('"' + term + '"'); // quote the term
-					}
-				});
-		}
-
-		public Observable<ICompletionProvider> CompletionProvider { get; private set; }
-
 		public ICommand Execute { get { return new ExecuteQueryCommand(this); } }
 
 		public Observable<string> Query { get; set; }
+
+		private TimeSpan queryTime;
+		public TimeSpan QueryTime
+		{
+			get { return queryTime; }
+			set
+			{
+				queryTime = value;
+				OnPropertyChanged();
+			}
+		}
+		private RavenQueryStatistics results;
+		public RavenQueryStatistics Results
+		{
+			get { return results; }
+			set
+			{
+				results = value;
+				OnPropertyChanged();
+			}
+		}
 
 		private string error;
 		public string Error
@@ -309,17 +296,6 @@ namespace Raven.Studio.Models
 		}
 
 		public Observable<DocumentsModel> DocumentsResult { get; private set; }
-
-		private string viewTitle;
-		public string ViewTitle
-		{
-			get { return viewTitle; }
-			set
-			{
-				viewTitle = value;
-				OnPropertyChanged();
-			}
-		}
 
 		public BindableCollection<FieldAndTerm> Suggestions { get; private set; }
 		public ICommand RepairTermInQuery
@@ -348,6 +324,11 @@ namespace Raven.Studio.Models
 				model.Query.Value = model.Query.Value.Replace(fieldAndTerm.Term, fieldAndTerm.SuggestedTerm);
 				model.Execute.Execute(null);
 			}
+		}
+
+		public string PageTitle
+		{
+			get { return "Query Index"; }
 		}
 	}
 }

@@ -13,7 +13,7 @@ namespace Raven.Database.Server.Security.OAuth
 		public bool IsExpired()
 		{
 			var issued = DateTime.MinValue.AddMilliseconds(Issued);
-			return !(issued < SystemTime.UtcNow && SystemTime.UtcNow.Subtract(issued) < TimeSpan.FromMinutes(30));
+			return SystemTime.UtcNow.Subtract(issued).TotalMinutes > 30;
 		}
 
 		public bool IsAuthorized(string tenantId, bool writeAccess)

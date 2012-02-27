@@ -19,11 +19,6 @@ namespace Raven.Database.Tasks
 
 		public string[] ReduceKeys { get; set; }
 
-		public ReduceTask()
-		{
-			
-		}
-
 		public override bool SupportsMerging
 		{
 			get
@@ -50,6 +45,8 @@ namespace Raven.Database.Tasks
 			
 			context.TransactionaStorage.Batch(actions =>
 			{
+				log.Debug("Starting to read {0} reduce keys for index {1}", ReduceKeys.Length, Index);
+
 				var itemsToFind = ReduceKeys
 					.Select(reduceKey => new GetMappedResultsParams(Index, reduceKey, MapReduceIndex.ComputeHash(Index, reduceKey)))
 					.ToArray();
@@ -57,7 +54,6 @@ namespace Raven.Database.Tasks
 					.Select(JsonToExpando.Convert);
 				
 				var sp = Stopwatch.StartNew();
-				log.Debug("Starting to read {0} reduce keys for index {1}", ReduceKeys.Length, Index);
 
 				var results = mappedResults.ToArray();
 

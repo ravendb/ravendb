@@ -8,7 +8,7 @@ using System;
 using System.IO;
 using Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using Raven.Studio.Infrastructure;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Documents
 {

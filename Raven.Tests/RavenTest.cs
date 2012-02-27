@@ -6,8 +6,10 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
+using NLog;
 using Raven.Abstractions;
 using Raven.Client;
 using Raven.Client.Document;
@@ -16,6 +18,7 @@ using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Server;
@@ -31,17 +34,7 @@ namespace Raven.Tests
 
 		private string path;
 
-		public EmbeddableDocumentStore NewDocumentStore()
-		{
-			return NewDocumentStore("munin", true, null);
-		}
-
-		public EmbeddableDocumentStore NewDocumentStore(string storageType, bool inMemory)
-		{
-			return NewDocumentStore(storageType, inMemory, null);
-		}
-
-		public EmbeddableDocumentStore NewDocumentStore(string storageType, bool inMemory, int? allocatedMemory)
+		public EmbeddableDocumentStore NewDocumentStore(string storageType = "munin", bool inMemory = true, int? allocatedMemory = null)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
@@ -53,7 +46,7 @@ namespace Raven.Tests
 						DataDirectory = path,
 						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 						DefaultStorageTypeName = storageType,
-						RunInMemory = inMemory,
+						RunInMemory = storageType == "munin" && inMemory,
 					}
 			};
 
@@ -126,46 +119,6 @@ namespace Raven.Tests
 				Thread.Sleep(25);
 		}
 
-		protected RavenDbServer GetNewServer(bool initializeDocumentsByEntitiyName = true)
-		{
-			var ravenConfiguration = new RavenConfiguration
-			{
-				Port = 8079,
-				RunInMemory = true,
-				DataDirectory = "Data",
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All
-			};
-
-			ConfigureServer(ravenConfiguration);
-
-			if(ravenConfiguration.RunInMemory == false)
-				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
-
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
-			var ravenDbServer = new RavenDbServer(ravenConfiguration);
-
-			if (initializeDocumentsByEntitiyName)
-			{
-				try
-				{
-					using (var documentStore = new DocumentStore
-					{
-						Url = "http://localhost:8079"
-					}.Initialize())
-					{
-						new RavenDocumentsByEntityName().Execute(documentStore);
-					}
-				}
-				catch
-				{
-					ravenDbServer.Dispose();
-					throw;
-				}
-			}
-
-			return ravenDbServer;
-		}
-
 		protected virtual void ConfigureServer(RavenConfiguration ravenConfiguration)
 		{
 		}
@@ -194,45 +147,37 @@ namespace Raven.Tests
 
 		}
 
-		protected RavenDbServer GetNewServer(int port, string path)
+		protected RavenDbServer GetNewServer(int port = 8079, string dataDirectory = "Data")
 		{
-			var ravenDbServer = new RavenDbServer(new RavenConfiguration
-			{
-				Port = port,
-				DataDirectory = path,
-				RunInMemory = true,
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All
-			});
+			var ravenConfiguration = new RavenConfiguration
+			                         {
+			                         	Port = port,
+			                         	DataDirectory = dataDirectory,
+			                         	RunInMemory = true,
+			                         	AnonymousUserAccessMode = AnonymousUserAccessMode.All
+			                         };
+
+			ConfigureServer(ravenConfiguration);
+
+			if (ravenConfiguration.RunInMemory == false)
+				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);
+
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
+			var ravenDbServer = new RavenDbServer(ravenConfiguration);
 
 			try
 			{
-				using (var documentStore = new DocumentStore
-				{
-					Url = "http://localhost:" + port
-				}.Initialize())
+				using (var documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize())
 				{
 					CreateDefaultIndexes(documentStore);
 				}
 			}
-			catch 
+			catch
 			{
 				ravenDbServer.Dispose();
 				throw;
 			}
 			return ravenDbServer;
-		}
-
-		protected RavenDbServer GetNewServerWithoutAnonymousAccess(int port, string path)
-		{
-			var newServerWithoutAnonymousAccess = new RavenDbServer(new RavenConfiguration { Port = port, DataDirectory = path, AnonymousUserAccessMode = AnonymousUserAccessMode.None });
-			using (var documentStore = new DocumentStore
-			{
-				Url = "http://localhost:" + port
-			}.Initialize())
-			{
-				new RavenDocumentsByEntityName().Execute(documentStore);
-			}
-			return newServerWithoutAnonymousAccess;
 		}
 
 		protected string GetPath(string subFolderName)
@@ -243,6 +188,18 @@ namespace Raven.Tests
 
 		public RavenTest()
 		{
+			
+			BoundedMemoryTarget boundedMemoryTarget = null;
+			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
+			{
+				boundedMemoryTarget = LogManager.Configuration.AllTargets.OfType<BoundedMemoryTarget>().FirstOrDefault();
+			}
+			if (boundedMemoryTarget != null)
+			{
+				boundedMemoryTarget.Clear();
+			}
+
+
 			try
 			{
 				new Uri("http://fail/first/time?only=%2bplus");

@@ -9,7 +9,7 @@ properties {
   $release_dir = "$base_dir\Release"
   $uploader = "..\Uploader\S3Uploader.exe"
   
-  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles NLog), (Get-DependencyPackageFiles Newtonsoft.Json), 
+  $web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles NLog), (Get-DependencyPackageFiles Newtonsoft.Json), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???",
 				"ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", 
 				"Raven.Storage.Managed.???", "Raven.Munin.???" ) |
@@ -58,7 +58,7 @@ properties {
 			return "$build_dir\$_"
 		}
       
-  $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  )
+  $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll" )
 }
 include .\psake_ext.ps1
 
@@ -85,35 +85,38 @@ task Init -depends Verify40, Clean {
 		$env:buildlabel = "13"
 	}
 	
-	$projectFiles = Get-ChildItem -Path $base_dir -Filter "*.csproj" -Recurse | 
-						Where-Object { $_.Directory -notmatch [regex]::Escape($lib_dir) } | 
-						Where-Object { $_.Directory -notmatch [regex]::Escape($tools_dir) }
-	
-	$notclsCompliant = @("Raven.Silverlight.Client", "Raven.Studio", "Raven.Tests.Silverlight")
-	
-	foreach($projectFile in $projectFiles) {
+	if($env:buildlabel -ne 13) {
+		$projectFiles = Get-ChildItem -Path $base_dir -Filter "*.csproj" -Recurse | 
+							Where-Object { $_.Directory -notmatch [regex]::Escape($lib_dir) } | 
+							Where-Object { $_.Directory -notmatch [regex]::Escape($tools_dir) }
 		
-		$projectName = [System.IO.Path]::GetFileName($projectFile.Directory)
-		$asmInfo = [System.IO.Path]::Combine($projectFile.Directory, [System.IO.Path]::Combine("Properties", "AssemblyInfo.cs"))
+		$notclsCompliant = @("Raven.Silverlight.Client", "Raven.Studio", "Raven.Tests.Silverlight")
 		
-		$clsComliant = "true"
-		if([System.Array]::IndexOf($notclsCompliant, $projectFile.Name) -ne -1) {
-			$clsComliant = "false"
+		foreach($projectFile in $projectFiles) {
+			
+			$projectName = [System.IO.Path]::GetFileName($projectFile.Directory)
+			$asmInfo = [System.IO.Path]::Combine($projectFile.Directory, [System.IO.Path]::Combine("Properties", "AssemblyInfo.cs"))
+			
+			$clsComliant = "true"
+			if([System.Array]::IndexOf($notclsCompliant, $projectFile.Name) -ne -1) {
+				$clsComliant = "false"
+			}
+			
+			Generate-Assembly-Info `
+				-file $asmInfo `
+				-title "$projectName $version.0.0" `
+				-description "A linq enabled document database for .NET" `
+				-company "Hibernating Rhinos" `
+				-product "RavenDB $version.0.0" `
+				-version "$version.0" `
+				-fileversion "$version.$env:buildlabel.0" `
+				-copyright "Copyright © Hibernating Rhinos 2004 - $((Get-Date).Year)" `
+				-clsCompliant $clsComliant
+			
+			git update-index --assume-unchanged $asmInfo
 		}
-		
-		Generate-Assembly-Info `
-			-file $asmInfo `
-			-title "$projectName $version.0.0" `
-			-description "A linq enabled document database for .NET" `
-			-company "Hibernating Rhinos" `
-			-product "RavenDB $version.0.0" `
-			-version "$version.0" `
-			-fileversion "$version.$env:buildlabel.0" `
-			-copyright "Copyright © Hibernating Rhinos 2004 - $((Get-Date).Year)" `
-			-clsCompliant $clsComliant
-		
-		git update-index --assume-unchanged $asmInfo
 	}
+	
 	
 	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
@@ -159,19 +162,41 @@ task Compile -depends Init {
 		ExecuteTask("AfterCompile")
 	}
       
-  exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Bundles\Raven.Bundles.sln" /p:OutDir="$buildartifacts_dir\" }
-  exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Samples\Raven.Samples.sln" /p:OutDir="$buildartifacts_dir\" }  
+	exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Bundles\Raven.Bundles.sln" /p:OutDir="$buildartifacts_dir\" }
+	exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Samples\Raven.Samples.sln" /p:OutDir="$buildartifacts_dir\" }  
 }
 
-task Test -depends Compile{
-  $old = pwd
-  cd $build_dir
-  Write-Host $test_prjs
-  foreach($test_prj in $test_prjs) {
-    Write-Host "Testing $build_dir\$test_prj"
-    exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$test_prj" } 
-  }
-  cd $old
+task Test -depends Compile {
+	Write-Host $test_prjs
+	$test_prjs | ForEach-Object { 
+		Write-Host "Testing $build_dir\$_"
+		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+	}
+}
+
+task CompileTests -depends Compile {
+	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+	
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\RavenDB.Tests.sln" /p:OutDir="$buildartifacts_dir\" }
+}
+
+task StressTest -depends CompileTests {
+	@("Raven.StressTests.dll") | ForEach-Object { 
+		Write-Host "Testing $build_dir\$_"
+		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+	}
+}
+
+task MeasurePerformance -depends CompileTests {
+	$RavenDbStableLocation = "F:\RavenDB"
+	$DataLocation = "F:\Data"
+	$LogsLocation = "F:\PerformanceLogs"
+	$stableBuildToTests = @(616, 573, 531, 499, 482, 457, 371)
+	$stableBuildToTests | ForEach-Object { 
+		$RavenServer = $RavenDbStableLocation + "\RavenDB-Build-$_\Server"
+		Write-Host "Measure performance against RavenDB Build #$_, Path: $RavenServer"
+		exec { &"$build_dir\Raven.Performance.exe" "--database-location=$RavenDbStableLocation --build-number=$_ --data-location=$DataLocation --logs-location=$LogsLocation" }
+	}
 }
 
 task TestSilverlight {
@@ -213,8 +238,8 @@ task OpenSource {
 	$global:uploadCategory = "RavenDB"
 }
 
-task Release -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,DoRelease { 
-}
+task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest,MeasurePerformance
+task Release -depends RunAllTests,DoRelease
 
 task CopySamples {
 	$samples = @("Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `
@@ -328,11 +353,10 @@ task ZipOutput {
 	
 	if($env:buildlabel -eq 13)
 	{
-      return 
+		return 
 	}
 
 	$old = pwd
-	
 	cd $build_dir\Output
 	
 	$file = "$release_dir\$global:uploadCategory-Build-$env:buildlabel.zip"
@@ -354,7 +378,6 @@ task ZipOutput {
 	}
 	
     cd $old
-
 }
 
 task ResetBuildArtifcats {

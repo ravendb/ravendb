@@ -258,7 +258,7 @@ namespace Raven.Client.Document
 			get
 			{
 				return deletedEntities.Count > 0 ||
-						entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).Any();
+						entitiesAndMetadata.Any(pair => EntityChanged(pair.Key, pair.Value));
 			}
 		}
 
@@ -882,6 +882,18 @@ more responsive application.
 			hasEnlisted = true;
 		}
 #endif
+
+
+		/// <summary>
+		/// Mark the entity as read only, change tracking won't apply 
+		/// to such an entity. This can be done as an optimization step, so 
+		/// we don't need to check the entity for changes.
+		/// </summary>
+		public void MarkReadOnly(object entity)
+		{
+			GetMetadataFor(entity)[Constants.RavenReadOnly] = true;
+		}
+
 
 		/// <summary>
 		/// Determines if the entity have changed.

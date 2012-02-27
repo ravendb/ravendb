@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
@@ -122,7 +124,7 @@ namespace Raven.Tests.Bugs.MultiMap
 				using (var session = store.OpenSession())
 				{
 					var ups = session.Query<UserPostingStats, PostCountsByUser_WithName>()
-						.Customize(x => x.WaitForNonStaleResults())
+						.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(100)))
 						.Where(x => x.UserName.StartsWith("rah"))
 						.ToList();
 
@@ -135,6 +137,46 @@ namespace Raven.Tests.Bugs.MultiMap
 
 		}
 
+
+		[Fact]
+		public void JustQuerying()
+		{
+			using (var store = NewDocumentStore("esent", true))
+			{
+				using (var session = store.OpenSession())
+				{
+					var user = new User
+					{
+						Name = "Ayende Rahien"
+					};
+					session.Store(user);
+
+					for (int i = 0; i < 5; i++)
+					{
+						session.Store(new Post
+						{
+							AuthorId = user.Id,
+							Title = "blah"
+						});
+					}
+
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var users = session.Query<User>().Customize(x=>x.WaitForNonStaleResults(TimeSpan.FromMinutes(10)))
+						.Count();
+
+					var posts = session.Query<Post>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(10)))
+						.Count();
+
+					Assert.Equal(1, users);
+					Assert.Equal(5, posts);
+				}
+			}
+
+		}
 
 		public class User
 		{

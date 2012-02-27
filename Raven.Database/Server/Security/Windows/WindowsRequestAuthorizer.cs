@@ -10,44 +10,53 @@ namespace Raven.Database.Server.Security.Windows
 	public class WindowsRequestAuthorizer : AbstractRequestAuthorizer
 	{
 		private readonly List<string> requiredGroups = new List<string>();
+		private readonly List<string> requiredUsers = new List<string>();
 
 		protected override void Initialize()
 		{
 			var requiredGroupsString = server.Configuration.Settings["Raven/Authorization/Windows/RequiredGroups"];
-			if (requiredGroupsString == null)
-				return;
+			if (requiredGroupsString != null)
+			{
+				var groups = requiredGroupsString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+				requiredGroups.AddRange(groups);
+			}
 
-			var groups = requiredGroupsString.Split(new[]{';'}, StringSplitOptions.RemoveEmptyEntries);
-			requiredGroups.AddRange(groups);
+			var requiredUsersString = server.Configuration.Settings["Raven/Authorization/Windows/RequiredUsers"];
+			if (requiredUsersString != null)
+			{
+				var users = requiredUsersString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+				requiredUsers.AddRange(users);
+			}
 		}
 
 		public override bool Authorize(IHttpContext ctx)
 		{
-			if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx))
+			Action onRejectingRequest;
+			if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx, out onRejectingRequest))
 			{
 				var requestUrl = ctx.GetRequestUrl();
 				if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
 					return true;
 
-				ctx.SetStatusToUnauthorized();
+				onRejectingRequest();
 				return false;
 			}
 
 			var httpRequest = ctx.Request;
 
 			if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
-				IsInvalidUser(ctx) &&
+				IsInvalidUser(ctx, out onRejectingRequest) &&
 				IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) == false)
 			{
 				var requestUrl = ctx.GetRequestUrl();
 				if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
 					return true;
 
-				ctx.SetStatusToUnauthorized();
+				onRejectingRequest();
 				return false;
 			}
 
-			if (IsInvalidUser(ctx) == false)
+			if (IsInvalidUser(ctx, out onRejectingRequest) == false)
 			{
 				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = ctx.User.Identity.Name;
 				CurrentOperationContext.User.Value = ctx.User;
@@ -55,15 +64,30 @@ namespace Raven.Database.Server.Security.Windows
 			return true;
 		}
 
-		private bool IsInvalidUser(IHttpContext ctx)
+		private bool IsInvalidUser(IHttpContext ctx, out Action onRejectingRequest)
 		{
 			var invalidUser = (ctx.User == null ||
-			                   ctx.User.Identity.IsAuthenticated == false);
-			if (invalidUser == false && requiredGroups.Count > 0)
+							   ctx.User.Identity.IsAuthenticated == false);
+			if (invalidUser)
 			{
-				return requiredGroups.All(requiredGroup => !ctx.User.IsInRole(requiredGroup));
+				onRejectingRequest = () => ctx.SetStatusToForbidden();
+				return true;
 			}
-			return invalidUser;
+
+
+			onRejectingRequest = () => ctx.SetStatusToUnauthorized();
+
+			if (requiredGroups.Count > 0 || requiredUsers.Count > 0)
+			{
+			
+				if (requiredGroups.Any(requiredGroup => ctx.User.IsInRole(requiredGroup)) ||
+					requiredUsers.Any(requiredUser => string.Equals(ctx.User.Identity.Name, requiredUser, StringComparison.InvariantCultureIgnoreCase)))
+					return false;
+
+				return true;
+			}
+			
+			return false;
 		}
 	}
 }

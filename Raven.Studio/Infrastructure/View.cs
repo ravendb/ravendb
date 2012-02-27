@@ -83,10 +83,10 @@ namespace Raven.Studio.Infrastructure
 		// When its value (i.e. the control's DataContext) changes,
 		// call DataContextWatcher_Changed.
 		public static DependencyProperty DataContextWatcherProperty = DependencyProperty.Register(
-		  "DataContextWatcher",
-		  typeof(object),
-		  typeof(View),
-			  new PropertyMetadata(DataContextWatcherChanged));
+			"DataContextWatcher",
+			typeof (object),
+			typeof (View),
+			new PropertyMetadata(DataContextWatcherChanged));
 
 		private static void DataContextWatcherChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
