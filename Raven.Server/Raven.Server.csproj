@@ -180,7 +180,7 @@
       <SubType>Designer</SubType>
     </None>
     <EmbeddedResource Include="DefaultLogging.config" />
-    <None Include="NLog.netfx35.xsd">
+    <None Include="NLog.xsd">
       <SubType>Designer</SubType>
     </None>
     <None Include="packages.config" />
