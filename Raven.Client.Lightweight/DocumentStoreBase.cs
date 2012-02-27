@@ -24,6 +24,11 @@ namespace Raven.Client
 	/// </summary>
 	public abstract class DocumentStoreBase : IDocumentStore
 	{
+		protected DocumentStoreBase()
+		{
+			Conventions = new DocumentConvention();
+		}
+
 		public abstract void Dispose();
 		
 		/// <summary>
