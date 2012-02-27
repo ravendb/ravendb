@@ -18,6 +18,7 @@ namespace Raven.Performance
 		private string databaseLocation;
 		private string dataLocation;
 		private string buildNumber;
+		private string logsLocation;
 
 		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 		private OptionSet optionSet;
@@ -35,6 +36,7 @@ namespace Raven.Performance
 			                		{"database|database-location={=}", "The folder that contains folders in the following format: RavenDB-Build-{build-number}.", (key, value) => databaseLocation = key},
 			                		{"build|build-number={=}", "The build number to test.", (key, value) => buildNumber = key},
 			                		{"data|data-location={=}", "The FreeDB data location.", (key, value) => dataLocation = key},
+			                		{"logs|logs-location={=}", "The location where to put the logs.", (key, value) => logsLocation = key},
 			                	};
 
 			try
@@ -51,7 +53,7 @@ namespace Raven.Performance
 
 		private void MeasurePerformance()
 		{
-			var writer = new StreamWriter(string.Format(@"PerformanceForBuild-{0}.csv", buildNumber), false);
+			var writer = new StreamWriter(GetLogFile(), false);
 			writer.WriteLine("Test number, Time, Memory Min, Memory Max, Memory Average, Latency Time Min, Latency Time Max, Latency Time Average, Latency Docs Min, Latency Docs Max, Latency Docs Average");
 
 			var p = Process.Start(FullDatabaseLocation);
@@ -139,6 +141,21 @@ namespace Raven.Performance
 			writer.Close();
 			writer.Dispose();
 			p.Kill();
+		}
+
+		private string GetLogFile()
+		{
+			var fileName = string.Format(@"PerformanceLog-{0}-{1}.csv", buildNumber, DateTime.Now.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss"));
+			if (Directory.Exists(logsLocation) == false)
+			{
+				Directory.CreateDirectory(logsLocation);
+			}
+			var buildFolder = Path.Combine(logsLocation, buildNumber);
+			if (Directory.Exists(buildFolder) == false)
+			{
+				Directory.CreateDirectory(buildFolder);
+			}
+			return Path.Combine(buildFolder, fileName);
 		}
 
 		private string fullDatabaseLocation;

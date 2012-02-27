@@ -193,11 +193,12 @@ task StressTest -depends CompileTests {
 task MeasurePerformance -depends CompileTests {
 	$RavenDbStableLocation = "F:\RavenDB"
 	$DataLocation = "F:\Data"
+	$LogsLocation = "F:\PerformanceLogs"
 	$stableBuildToTests = @(616, 573, 531, 499, 482, 457, 371)
 	$stableBuildToTests | ForEach-Object { 
 		$RavenServer = $RavenDbStableLocation + "\RavenDB-Build-$_\Server"
 		Write-Host "Measure performance against RavenDB Build #$_, Path: $RavenServer"
-		exec { &"$build_dir\Raven.Performance.exe" "--database-location=$RavenDbStableLocation --build-number=$_ --data-location=$DataLocation" }
+		exec { &"$build_dir\Raven.Performance.exe" "--database-location=$RavenDbStableLocation --build-number=$_ --data-location=$DataLocation --logs-location=$LogsLocation" }
 	}
 }
 
