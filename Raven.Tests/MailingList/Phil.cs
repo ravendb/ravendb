@@ -9,21 +9,11 @@ namespace Raven.Tests.MailingList
 	{
 		public class Item
 		{
-			private string id;
 
-			public string Id
-			{
-				get { return id; }
-				set { id = value; }
-			}
+			public string Id;
 
-			public string Stuff
-			{
-				get { return stuff; }
-				set { stuff = value; }
-			}
+			public string Stuff;
 
-			private string stuff;
 			public string Summary;
 			public string UserId;
 
@@ -33,8 +23,8 @@ namespace Raven.Tests.MailingList
 			}
 			public Item(string id, string stuff)
 			{
-				this.id = id;
-				this.stuff = stuff;
+				Id = id;
+				Stuff = stuff;
 			}
 		}
 		public class UserItem
