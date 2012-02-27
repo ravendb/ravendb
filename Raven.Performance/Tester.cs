@@ -11,6 +11,7 @@ using NLog;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Database.Extensions;
 
 namespace Raven.Performance
 {
