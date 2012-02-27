@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
 using System.IO;
 using System.Threading;
 using Raven.Abstractions.Data;

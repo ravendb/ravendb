@@ -16,7 +16,6 @@ namespace Raven.Bundles.Tests.Replication
 		{
 			serverConfiguration.AuthenticationMode = "oauth";
 			serverConfiguration.AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.None;
-			serverConfiguration.PostInit();
 
 			serverConfiguration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(AuthenticationUser).Assembly));
 		}

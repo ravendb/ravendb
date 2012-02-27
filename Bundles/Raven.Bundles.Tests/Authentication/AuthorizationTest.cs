@@ -34,7 +34,7 @@ namespace Raven.Bundles.Tests.Authentication
 		protected AuthenticationTest()
 		{
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
-			embeddedStore = new EmbeddableDocumentStore()
+			embeddedStore = new EmbeddableDocumentStore
 			{
 				Configuration = 
 					{
@@ -48,8 +48,7 @@ namespace Raven.Bundles.Tests.Authentication
 					},
 				UseEmbeddedHttpServer = true,
 			};
-
-			embeddedStore.Configuration.Initialize();
+			embeddedStore.Configuration.PostInit();
 			embeddedStore.Initialize();
 			store = new DocumentStore
 			{

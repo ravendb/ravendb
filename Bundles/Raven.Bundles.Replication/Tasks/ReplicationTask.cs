@@ -8,11 +8,8 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
 using NLog;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -47,8 +44,8 @@ namespace Raven.Bundles.Replication.Tasks
 			docDb = database;
 			var replicationRequestTimeoutInMs =
 				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 7500;
-			
-			httpRavenRequestFactory = new HttpRavenRequestFactory(replicationRequestTimeoutInMs);
+
+			httpRavenRequestFactory = new HttpRavenRequestFactory {RequestTimeoutInMs = replicationRequestTimeoutInMs};
 
 			new Thread(Execute)
 			{

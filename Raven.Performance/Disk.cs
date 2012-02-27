@@ -1,9 +1,17 @@
 ﻿using System.Collections.Generic;
 
-namespace RavenDBStressTester
+namespace Raven.Performance
 {
 	public class Disk
 	{
+		public Disk()
+		{
+			TrackFramesOffsets = new List<int>();
+			Tracks = new List<string>();
+			DiskIds = new List<string>();
+			Attributes = new Dictionary<string, string>();
+		}
+
 		public string Title { get; set; }
 		public string Artist { get; set; }
 		public int DiskLength { get; set; }
@@ -14,12 +22,5 @@ namespace RavenDBStressTester
 		public List<int> TrackFramesOffsets { get; set; }
 		public List<string> Tracks { get; set; }
 		public Dictionary<string, string> Attributes { get; set; }
-		public Disk()
-		{
-			TrackFramesOffsets = new List<int>();
-			Tracks = new List<string>();
-			DiskIds = new List<string>();
-			Attributes = new Dictionary<string, string>();
-		}
 	}
 }

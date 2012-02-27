@@ -10,6 +10,7 @@ namespace Raven.Tests.Bugs
 		{
 			public string Id { get; set; }
 		}
+
 		[Fact]
 		public void ShouldWork()
 		{

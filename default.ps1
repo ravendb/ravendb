@@ -58,7 +58,7 @@ properties {
 			return "$build_dir\$_"
 		}
       
-  $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll"  )
+  $test_prjs = @("Raven.Tests.dll", "Raven.Client.VisualBasic.Tests.dll", "Raven.Bundles.Tests.dll" )
 }
 include .\psake_ext.ps1
 
@@ -159,19 +159,47 @@ task Compile -depends Init {
 		ExecuteTask("AfterCompile")
 	}
       
-  exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Bundles\Raven.Bundles.sln" /p:OutDir="$buildartifacts_dir\" }
-  exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Samples\Raven.Samples.sln" /p:OutDir="$buildartifacts_dir\" }  
+	exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Bundles\Raven.Bundles.sln" /p:OutDir="$buildartifacts_dir\" }
+	exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Samples\Raven.Samples.sln" /p:OutDir="$buildartifacts_dir\" }  
 }
 
-task Test -depends Compile{
-  $old = pwd
-  cd $build_dir
-  Write-Host $test_prjs
-  foreach($test_prj in $test_prjs) {
-    Write-Host "Testing $build_dir\$test_prj"
-    exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$test_prj" } 
-  }
-  cd $old
+task Test -depends Compile {
+	$old = Get-Location
+	Set-Location $build_dir
+	Write-Host $test_prjs
+	$test_prjs | ForEach-Object { 
+		Write-Host "Testing $build_dir\$_"
+		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+	}
+	Set-Location $old
+}
+
+task CompileTests -depends Compile {
+	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+	
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\RavenDB.Tests.sln" /p:OutDir="$buildartifacts_dir\" }
+}
+
+task StressTest -depends CompileTests {
+	$old = Get-Location
+	Set-Location $build_dir
+	@("Raven.StressTests.dll") | ForEach-Object { 
+		Write-Host "Testing $build_dir\$_"
+		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+	}
+	Set-Location $old
+}
+
+task MeasurePerformance -depends CompileTests {
+	$RavenDbStableLocation = "F:\RavenDB"
+	$DataLocation = "F:\Data"
+	$LogsLocation = "F:\PerformanceLogs"
+	$stableBuildToTests = @(616, 573, 531, 499, 482, 457, 371)
+	$stableBuildToTests | ForEach-Object { 
+		$RavenServer = $RavenDbStableLocation + "\RavenDB-Build-$_\Server"
+		Write-Host "Measure performance against RavenDB Build #$_, Path: $RavenServer"
+		exec { &"$build_dir\Raven.Performance.exe" "--database-location=$RavenDbStableLocation --build-number=$_ --data-location=$DataLocation --logs-location=$LogsLocation" }
+	}
 }
 
 task TestSilverlight {
@@ -213,7 +241,7 @@ task OpenSource {
 	$global:uploadCategory = "RavenDB"
 }
 
-task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds
+task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest,MeasurePerformance
 task Release -depends RunAllTests,DoRelease
 
 task CopySamples {

@@ -818,6 +818,15 @@
             </returns></member><member name="M:ActiproSoftware.Windows.Data.ValidationHelper.ValidateInt32IsPositive(System.Object)"><summary>
             Validates that the object is an <see cref="T:System.Int32" /> greater than or equal to <c>0</c>.
             </summary><param name="value">The object to validate.</param><returns><c>true</c> if the validation is successful; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Data.ValidationHelper.ValidateInt64IsBetweenInclusive(System.Object,System.Int64,System.Int64)"><summary>
+            Validates that the object is an <see cref="T:System.Int64" /> whose value is inclusively between two numbers.
+            </summary><param name="value">The object to validate.</param><param name="min">The number that the value must be greater than or equal to.</param><param name="max">The number that the value must be less than or equal to.</param><returns><c>true</c> if the validation is successful; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Data.ValidationHelper.ValidateInt64IsGreaterThanOrEqual(System.Object,System.Int64)"><summary>
+            Validates that the object is an <see cref="T:System.Int64" /> greater than or equal to the specified number.
+            </summary><param name="value">The object to validate.</param><param name="min">The number that the value must be greater than or equal to.</param><returns><c>true</c> if the validation is successful; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Data.ValidationHelper.ValidateInt64IsPositive(System.Object)"><summary>
+            Validates that the object is an <see cref="T:System.Int64" /> greater than or equal to <c>0</c>.
+            </summary><param name="value">The object to validate.</param><returns><c>true</c> if the validation is successful; otherwise, <c>false</c>.
             </returns></member><member name="T:ActiproSoftware.Compatibility.ToolBar"><summary>
             Provides a container for a group of commands or controls.
             </summary></member><member name="M:ActiproSoftware.Compatibility.ToolBar.GetItemOrientation(System.Object)"><summary>
@@ -1044,10 +1053,19 @@
             in conjunction with <see cref="T:ActiproSoftware.Windows.Media.Animation.DelegateTransitionSelector" />.
             </summary><param name="presenter">The <see cref="T:ActiproSoftware.Windows.Media.Animation.TransitionPresenter" /> that is managing the transition.</param><param name="fromContent">The element from which a transition is occurring.</param><param name="toContent">The element to which a transition is occurring.</param><returns>Returns an application-specific <see cref="T:ActiproSoftware.Windows.Media.Animation.Transition" /> to apply; otherwise, null.</returns></member><member name="T:ActiproSoftware.Windows.Data.CornerRadiusConverter"><summary>
             Represents a value converter that converts between a number and a <see cref="T:System.Windows.CornerRadius" />.
-            </summary><example><code>
+            </summary><remarks>
+            By default, the <see cref="T:System.Windows.CornerRadius" /> returned will have all four corners (<see cref="P:System.Windows.CornerRadius.BottomLeft" />,
+            <see cref="P:System.Windows.CornerRadius.BottomRight" />, <see cref="P:System.Windows.CornerRadius.TopLeft" />, and <see cref="P:System.Windows.CornerRadius.TopRight" />) set to the specified
+            number. An optional parameter of type <see cref="T:ActiproSoftware.Windows.Controls.Corners" /> can be specified, which can be used to customize the corners
+            that are set.
+            </remarks><example><code>
             &lt;shared:CornerRadiusConverter x:Key="CornerRadiusConverter" /&gt;
             ...
+            &lt;!-- Set all four corners --&gt;
             ... Value="{Binding Path=Number, Converter={StaticResource CornerRadiusConverter}}" ...
+            
+            &lt;!-- Only set the BottomLeft and BottomRight cornerss --&gt;
+            ... Value="{Binding Path=Number, Converter={StaticResource CornerRadiusConverter}, ConverterParameter='Bottom'}" ...
             </code></example></member><member name="M:ActiproSoftware.Windows.Data.CornerRadiusConverter.Convert(System.Object,System.Type,System.Object,System.Globalization.CultureInfo)"><summary>
             Converts a value. The data binding engine calls this method when it propagates a value from the binding source to the binding target.
             </summary><param name="value">The value produced by the binding source.</param><param name="targetType">The type of the binding target property.</param><param name="parameter">The converter parameter to use.</param><param name="culture">The culture to use in the converter.</param><returns>A converted value.</returns></member><member name="M:ActiproSoftware.Windows.Data.CornerRadiusConverter.ConvertBack(System.Object,System.Type,System.Object,System.Globalization.CultureInfo)"><summary>
@@ -1548,7 +1566,24 @@
             Identifies the <see cref="P:ActiproSoftware.Windows.Media.Animation.FadeTransition.Duration" /> dependency property.  This field is read-only.
             </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Media.Animation.FadeTransition.Duration" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Media.Animation.FadeTransition.ModeProperty"><summary>
             Identifies the <see cref="P:ActiproSoftware.Windows.Media.Animation.FadeTransition.Mode" /> dependency property.  This field is read-only.
-            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Media.Animation.FadeTransition.Mode" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Data.DurationToMillisecondConverter"><summary>
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Media.Animation.FadeTransition.Mode" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Extensions.ThicknessExtensions"><summary>
+            Provides extension methods for the type <see cref="T:System.Windows.Thickness" />.
+            </summary></member><member name="M:ActiproSoftware.Windows.Extensions.ThicknessExtensions.IsEffectivelyEqual(System.Windows.Thickness,System.Windows.Thickness)"><summary>
+            Determines whether the two values are close enough to be considered equal.
+            </summary><param name="left">The value on the left side of the comparison.</param><param name="right">The value on the left side of the comparison.</param><returns><c>true</c> if the two values are close enough to be considered equal; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Extensions.ThicknessExtensions.IsEffectivelyUniform(System.Windows.Thickness)"><summary>
+            Determines whether the values of the specified thickness are close enough to be considered uniform.
+            </summary><param name="value">The value to compare.</param><returns><c>true</c> if the values of the specified thickness are close enough to be considered uniform; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Extensions.ThicknessExtensions.IsEffectivelyZero(System.Windows.Thickness)"><summary>
+            Determines whether the specified value is close enough to zero to be considered equal.
+            </summary><param name="value">The value to compare with zero.</param><returns><c>true</c> if the specified value is close enough to zero to be considered equal; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Extensions.ThicknessExtensions.Round(System.Windows.Thickness,ActiproSoftware.Windows.Controls.RoundMode)"><summary>
+            Returns a thickness with its values rounded using the specified <see cref="T:ActiproSoftware.Windows.Controls.RoundMode" />.
+            </summary><param name="value">The value to round.</param><param name="mode">The <see cref="T:ActiproSoftware.Windows.Controls.RoundMode" /> to use.</param><returns>A thickness with its values using the specified <see cref="T:ActiproSoftware.Windows.Controls.RoundMode" />.</returns></member><member name="M:ActiproSoftware.Windows.Extensions.ThicknessExtensions.SetSides(System.Windows.Thickness,ActiproSoftware.Windows.Controls.Sides,System.Windows.Thickness)"><summary>
+            Returns a thickness with the specified sides set to the given value.
+            </summary><param name="value">The value to update.</param><param name="sides">The <see cref="T:ActiproSoftware.Windows.Controls.Sides" /> to set.</param><param name="thickness">The thickness values.</param><returns>A thickness with the specified sides set to the given value.</returns></member><member name="M:ActiproSoftware.Windows.Extensions.ThicknessExtensions.SetSides(System.Windows.Thickness,ActiproSoftware.Windows.Controls.Sides,System.Double)"><summary>
+            Returns a thickness with the specified sides set to the given value.
+            </summary><param name="value">The value to update.</param><param name="sides">The <see cref="T:ActiproSoftware.Windows.Controls.Sides" /> to set.</param><param name="thickness">The thickness value.</param><returns>A thickness with the specified sides set to the given value.</returns></member><member name="T:ActiproSoftware.Windows.Data.DurationToMillisecondConverter"><summary>
             Represents a value converter that converts between a <see cref="T:System.Windows.Duration" /> and a number of milliseconds.
             </summary></member><member name="M:ActiproSoftware.Windows.Data.DurationToMillisecondConverter.Convert(System.Object,System.Type,System.Object,System.Globalization.CultureInfo)"><summary>
             Converts a value. The data binding engine calls this method when it propagates a value from the binding source to the binding target.
@@ -2902,422 +2937,7 @@
             Sets a custom string value for the specified string resource.
             </summary><param name="name">The name of the resource to set.</param><param name="value">The value of the resource to set.</param></member><member name="P:ActiproSoftware.Products.Shared.SR.ResourceManager"><summary>
             Gets the <see cref="P:ActiproSoftware.Products.Shared.SR.ResourceManager" /> that provides the default resources. 
-            </summary><value>The <see cref="P:ActiproSoftware.Products.Shared.SR.ResourceManager" /> that provides the default resources.</value></member><member name="T:ActiproSoftware.Products.Shared.Resources"><summary>
-              A strongly-typed resource class, for looking up localized strings, etc.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ResourceManager"><summary>
-              Returns the cached ResourceManager instance used by this class.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.Culture"><summary>
-              Overrides the current thread's CurrentUICulture property for all
-              resource lookups using this strongly typed resource class.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExAdornmentManagerConstructorNotFound"><summary>
-              Looks up a localized string similar to A public constructor that accepts a single ITextView (or derived class) instance parameter on the adornment manager type '{0}' was not found..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExAdornmentManagerConstructorUnableToLoad"><summary>
-              Looks up a localized string similar to A public constructor that accepts a single ITextView (or derived class) instance parameter on the adornment manager type '{0}' was not found..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExEditActionCannotRecord"><summary>
-              Looks up a localized string similar to The specified IEditAction may not be added to the macro since it is not permitted to be recorded..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExExtensionMustBeSRExtension"><summary>
-              Looks up a localized string similar to The extension must be of type 'SRExtension'..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExInvalidCaretWidth"><summary>
-              Looks up a localized string similar to The value must be within 1 and 8..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExInvalidLanguageDefinitionStream"><summary>
-              Looks up a localized string similar to The supplied stream doesn't contain a valid language definition..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExInvalidSelectionMode"><summary>
-              Looks up a localized string similar to The selection mode must be set to either ContinuousStream or Block..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExInvalidStringResourceName"><summary>
-              Looks up a localized string similar to The string resource name '{0}' is not valid.  Please see the 'SRName' enumeration for the valid names..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExNoAllTabFilter"><summary>
-              Looks up a localized string similar to If Tab filters are specified, there must be a single AllTab filter specified as well..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExNoStringResource"><summary>
-              Looks up a localized string similar to No string resource name was specified..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExOneAllTabFilter"><summary>
-              Looks up a localized string similar to Only one AllTab filter is permitted at a time in a completion list..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExSessionAlreadyOpen"><summary>
-              Looks up a localized string similar to The session is already open..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExTabSizeMinimum"><summary>
-              Looks up a localized string similar to The tab size must be at least 1..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExTaggerConstructorNotFound"><summary>
-              Looks up a localized string similar to A public constructor that accepts a single ITextView (or derived class) instance parameter on the tagger type '{0}' was not found..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExTaggerConstructorUnableToLoad"><summary>
-              Looks up a localized string similar to A public constructor that accepts a single ITextView (or derived class) instance parameter on the tagger type '{0}' was not found..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExTypeNotFound"><summary>
-              Looks up a localized string similar to The type '{0}' was unable to be loaded.  Please ensure that the '{1}' assembly is referenced by your project..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExUnableToRetrieveTextBoundsForOffset"><summary>
-              Looks up a localized string similar to Unable to retrieve TextBounds for offset '{0}'..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExValueGreaterThanZero"><summary>
-              Looks up a localized string similar to The value must be greater than zero..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIClassificationTypeIndicatorMargin"><summary>
-              Looks up a localized string similar to Indicator Margin.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIClassificationTypeLineNumbers"><summary>
-              Looks up a localized string similar to Line Numbers.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIClassificationTypePlainText"><summary>
-              Looks up a localized string similar to Plain Text.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIClassificationTypeVisibleWhitespace"><summary>
-              Looks up a localized string similar to Visible White Space.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandBackspaceText"><summary>
-              Looks up a localized string similar to Backspace.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandBackspaceToPreviousWordText"><summary>
-              Looks up a localized string similar to Backspace to Previous Word.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandCancelMacroRecordingText"><summary>
-              Looks up a localized string similar to Cancel Macro Recording.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandCapitalizeText"><summary>
-              Looks up a localized string similar to Capitalize.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandCodeBlockSelectionContractText"><summary>
-              Looks up a localized string similar to Contract Code Block Selection.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandCodeBlockSelectionExpandText"><summary>
-              Looks up a localized string similar to Expand Code Block Selection.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandCollapseSelectionText"><summary>
-              Looks up a localized string similar to Collapse Selection.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandCommentLinesText"><summary>
-              Looks up a localized string similar to Comment Lines.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandConvertSpacesToTabsText"><summary>
-              Looks up a localized string similar to Convert Spaces to Tabs.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandConvertTabsToSpacesText"><summary>
-              Looks up a localized string similar to Convert Tabs to Spaces.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandCopyAndAppendToClipboardText"><summary>
-              Looks up a localized string similar to Copy/Append.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandCopyToClipboardText"><summary>
-              Looks up a localized string similar to Copy.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandCutAndAppendToClipboardText"><summary>
-              Looks up a localized string similar to Cut/Append.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandCutLineToClipboardText"><summary>
-              Looks up a localized string similar to Cut Line.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandCutToClipboardText"><summary>
-              Looks up a localized string similar to Cut.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandDeleteBlankLinesText"><summary>
-              Looks up a localized string similar to Delete Blank Lines.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandDeleteHorizontalWhitespaceText"><summary>
-              Looks up a localized string similar to Delete Horizontal Whitespace.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandDeleteLineText"><summary>
-              Looks up a localized string similar to Delete Line.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandDeleteToLineEndText"><summary>
-              Looks up a localized string similar to Delete to Line End.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandDeleteToLineStartText"><summary>
-              Looks up a localized string similar to Delete to Line Start.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandDeleteToNextWordText"><summary>
-              Looks up a localized string similar to Delete to Next Word.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandDuplicateLineText"><summary>
-              Looks up a localized string similar to Duplicate Line.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandIncrementalSearchText"><summary>
-              Looks up a localized string similar to Incremental Search.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandIndentText"><summary>
-              Looks up a localized string similar to Increase Line Indent.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandInsertLineBreakText"><summary>
-              Looks up a localized string similar to Insert Line Break.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandInsertTabStopOrIndentText"><summary>
-              Looks up a localized string similar to Indent.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMakeLowercaseText"><summary>
-              Looks up a localized string similar to Make Lowercase.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMakeUppercaseText"><summary>
-              Looks up a localized string similar to Make Uppercase.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveDownText"><summary>
-              Looks up a localized string similar to Move Down.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveLeftText"><summary>
-              Looks up a localized string similar to Move Left.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMovePageDownText"><summary>
-              Looks up a localized string similar to Move Page Down.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMovePageUpText"><summary>
-              Looks up a localized string similar to Move Page Up.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveRightText"><summary>
-              Looks up a localized string similar to Move Right.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveToDocumentEndText"><summary>
-              Looks up a localized string similar to Move to Document End.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveToDocumentStartText"><summary>
-              Looks up a localized string similar to Move to Document Start.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveToLineEndText"><summary>
-              Looks up a localized string similar to Move to Line End.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveToLineStartAfterIndentationText"><summary>
-              Looks up a localized string similar to Move to Line Start After Indentation.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveToLineStartText"><summary>
-              Looks up a localized string similar to Move to Line Start.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveToMatchingBracketText"><summary>
-              Looks up a localized string similar to Move to Matching Bracket.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveToNextLineStartAfterIndentationText"><summary>
-              Looks up a localized string similar to Move to Next Line Start After Indentation.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveToNextWordText"><summary>
-              Looks up a localized string similar to Move to Next Word.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveToPreviousLineStartAfterIndentationText"><summary>
-              Looks up a localized string similar to Move to Previous Line Start After Indentation.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveToPreviousWordText"><summary>
-              Looks up a localized string similar to Move to Previous Word.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveToVisibleBottomText"><summary>
-              Looks up a localized string similar to Move to Visible Bottom.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveToVisibleTopText"><summary>
-              Looks up a localized string similar to Move to Visible Top.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandMoveUpText"><summary>
-              Looks up a localized string similar to Move Up.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandOpenLineAboveText"><summary>
-              Looks up a localized string similar to Open Line Above.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandOpenLineBelowText"><summary>
-              Looks up a localized string similar to Open Line Below.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandOutdentText"><summary>
-              Looks up a localized string similar to Decrease Line Indent.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandPasteFromClipboardText"><summary>
-              Looks up a localized string similar to Paste.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandPauseResumeMacroRecordingText"><summary>
-              Looks up a localized string similar to Pause/Resume Macro Recording.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandRemoveTabStopOrOutdentText"><summary>
-              Looks up a localized string similar to Outdent.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandRequestIntelliPromptAutoCompleteText"><summary>
-              Looks up a localized string similar to Complete Word.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandRequestIntelliPromptCompletionSessionText"><summary>
-              Looks up a localized string similar to Completion List.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandRequestIntelliPromptParameterInfoSessionText"><summary>
-              Looks up a localized string similar to Parameter Info.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandRequestIntelliPromptQuickInfoSessionText"><summary>
-              Looks up a localized string similar to Quick Info.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandReverseIncrementalSearchText"><summary>
-              Looks up a localized string similar to Reverse Incremental Search.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandRunMacroText"><summary>
-              Looks up a localized string similar to Run Macro.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandScrollDownText"><summary>
-              Looks up a localized string similar to Scroll Down.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandScrollLeftText"><summary>
-              Looks up a localized string similar to Scroll Left.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandScrollLineToVisibleBottomText"><summary>
-              Looks up a localized string similar to Scroll Line to Visible Bottom.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandScrollLineToVisibleMiddleText"><summary>
-              Looks up a localized string similar to Scroll Line to Visible Middle.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandScrollLineToVisibleTopText"><summary>
-              Looks up a localized string similar to Scroll Line to Visible Top.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandScrollPageDownText"><summary>
-              Looks up a localized string similar to Scroll Page Down.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandScrollPageUpText"><summary>
-              Looks up a localized string similar to Scroll Page Up.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandScrollRightText"><summary>
-              Looks up a localized string similar to Scroll Right.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandScrollToDocumentEndText"><summary>
-              Looks up a localized string similar to Scroll to Document End.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandScrollToDocumentStartText"><summary>
-              Looks up a localized string similar to Scroll to Document Start.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandScrollUpText"><summary>
-              Looks up a localized string similar to Scroll Up.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectAllText"><summary>
-              Looks up a localized string similar to Select All.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectBlockDownText"><summary>
-              Looks up a localized string similar to Select Block Down.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectBlockLeftText"><summary>
-              Looks up a localized string similar to Select Block Left.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectBlockRightText"><summary>
-              Looks up a localized string similar to Select Block Right.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectBlockToNextWordText"><summary>
-              Looks up a localized string similar to Select Block to Next Word.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectBlockToPreviousWordText"><summary>
-              Looks up a localized string similar to Select Block to Previous Word.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectBlockUpText"><summary>
-              Looks up a localized string similar to Select Block Up.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectDownText"><summary>
-              Looks up a localized string similar to Select Down.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectLeftText"><summary>
-              Looks up a localized string similar to Select Left.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectPageDownText"><summary>
-              Looks up a localized string similar to Select Page Down.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectPageUpText"><summary>
-              Looks up a localized string similar to Select Page Up.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectRightText"><summary>
-              Looks up a localized string similar to Select Right.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectToDocumentEndText"><summary>
-              Looks up a localized string similar to Select to Document End.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectToDocumentStartText"><summary>
-              Looks up a localized string similar to Select to Document Start.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectToLineEndText"><summary>
-              Looks up a localized string similar to Select to Line End.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectToLineStartAfterIndentationText"><summary>
-              Looks up a localized string similar to Select to Line Start After Indentation.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectToLineStartText"><summary>
-              Looks up a localized string similar to Select to Line Start.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectToMatchingBracketText"><summary>
-              Looks up a localized string similar to Select to Matching Bracket.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectToNextWordText"><summary>
-              Looks up a localized string similar to Select to Next Word.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectToPreviousWordText"><summary>
-              Looks up a localized string similar to Select to Previous Word.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectToVisibleBottomText"><summary>
-              Looks up a localized string similar to Select to Visible Bottom.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectToVisibleTopText"><summary>
-              Looks up a localized string similar to Select to Visible Top.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectUpText"><summary>
-              Looks up a localized string similar to Select Up.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandSelectWordText"><summary>
-              Looks up a localized string similar to Select Word.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandTabifySelectedLinesText"><summary>
-              Looks up a localized string similar to Tabify Selected Lines.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandToggleCharacterCasingText"><summary>
-              Looks up a localized string similar to Toggle Character Casing.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandToggleMacroRecordingText"><summary>
-              Looks up a localized string similar to Toggle Macro Recording.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandToggleOverwriteModeText"><summary>
-              Looks up a localized string similar to Toggle Overwrite Mode.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandTransposeCharactersText"><summary>
-              Looks up a localized string similar to Transpose Characters.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandTransposeLinesText"><summary>
-              Looks up a localized string similar to Transpose Lines.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandTransposeWordsText"><summary>
-              Looks up a localized string similar to Transpose Words.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandTrimTrailingWhitespaceText"><summary>
-              Looks up a localized string similar to Trim Trailing Whitespace.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandUncommentLinesText"><summary>
-              Looks up a localized string similar to Uncomment Lines.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UICommandUntabifySelectedLinesText"><summary>
-              Looks up a localized string similar to Untabify Selected Lines.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchScopeDocumentText"><summary>
-              Looks up a localized string similar to Document.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchScopeSelectionText"><summary>
-              Looks up a localized string similar to Selection.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewFindModeText"><summary>
-              Looks up a localized string similar to Quick Find.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewFindNextButtonText"><summary>
-              Looks up a localized string similar to _Find Next.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewFindOptionsExpanderHeaderText"><summary>
-              Looks up a localized string similar to Find _options.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewFindWhatLabelText"><summary>
-              Looks up a localized string similar to Fi_nd what:.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewMatchCaseCheckBoxText"><summary>
-              Looks up a localized string similar to Match _case.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewMatchWholeWordCheckBoxText"><summary>
-              Looks up a localized string similar to Match _whole word.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewReplaceAllButtonText"><summary>
-              Looks up a localized string similar to Replace _All.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewReplaceModeText"><summary>
-              Looks up a localized string similar to Quick Replace.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewReplaceNextButtonText"><summary>
-              Looks up a localized string similar to _Replace.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewReplaceWithLabelText"><summary>
-              Looks up a localized string similar to Re_place with:.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewSearchHiddenTextCheckBoxText"><summary>
-              Looks up a localized string similar to Search _hidden text.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewSearchScopeLabelText"><summary>
-              Looks up a localized string similar to _Look in:.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewSearchTypeLabelText"><summary>
-              Looks up a localized string similar to Search typ_e:.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIEditorSearchViewSearchUpCheckBoxText"><summary>
-              Looks up a localized string similar to Search _up.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyAddText"><summary>
-              Looks up a localized string similar to Num +.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyBackText"><summary>
-              Looks up a localized string similar to Bkspce.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyD0Text"><summary>
-              Looks up a localized string similar to 0.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyD1Text"><summary>
-              Looks up a localized string similar to 1.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyD2Text"><summary>
-              Looks up a localized string similar to 2.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyD3Text"><summary>
-              Looks up a localized string similar to 3.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyD4Text"><summary>
-              Looks up a localized string similar to 4.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyD5Text"><summary>
-              Looks up a localized string similar to 5.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyD6Text"><summary>
-              Looks up a localized string similar to 6.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyD7Text"><summary>
-              Looks up a localized string similar to 7.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyD8Text"><summary>
-              Looks up a localized string similar to 8.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyD9Text"><summary>
-              Looks up a localized string similar to 9.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyDecimalText"><summary>
-              Looks up a localized string similar to Num ..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyDeleteText"><summary>
-              Looks up a localized string similar to Del.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyDivideText"><summary>
-              Looks up a localized string similar to Num /.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyDownText"><summary>
-              Looks up a localized string similar to Down Arrow.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyEscapeText"><summary>
-              Looks up a localized string similar to Esc.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyInsertText"><summary>
-              Looks up a localized string similar to Ins.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyLeftText"><summary>
-              Looks up a localized string similar to Left Arrow.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyLWinText"><summary>
-              Looks up a localized string similar to Left Windows.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyMultiplyText"><summary>
-              Looks up a localized string similar to Num *.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyNumPad0Text"><summary>
-              Looks up a localized string similar to Num 0.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyNumPad1Text"><summary>
-              Looks up a localized string similar to Num 1.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyNumPad2Text"><summary>
-              Looks up a localized string similar to Num 2.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyNumPad3Text"><summary>
-              Looks up a localized string similar to Num 3.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyNumPad4Text"><summary>
-              Looks up a localized string similar to Num 4.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyNumPad5Text"><summary>
-              Looks up a localized string similar to Num 5.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyNumPad6Text"><summary>
-              Looks up a localized string similar to Num 6.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyNumPad7Text"><summary>
-              Looks up a localized string similar to Num 7.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyNumPad8Text"><summary>
-              Looks up a localized string similar to Num 8.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyNumPad9Text"><summary>
-              Looks up a localized string similar to Num 9.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyOemCloseBracketsText"><summary>
-              Looks up a localized string similar to ].
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyOemCommaText"><summary>
-              Looks up a localized string similar to ,.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyOemMinusText"><summary>
-              Looks up a localized string similar to -.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyOemOpenBracketsText"><summary>
-              Looks up a localized string similar to [.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyOemPeriodText"><summary>
-              Looks up a localized string similar to ..
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyOemPipeText"><summary>
-              Looks up a localized string similar to \.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyOemPlusText"><summary>
-              Looks up a localized string similar to =.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyOemQuestionText"><summary>
-              Looks up a localized string similar to /.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyOemQuotesText"><summary>
-              Looks up a localized string similar to '.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyOemSemicolonText"><summary>
-              Looks up a localized string similar to ;.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyOemTildeText"><summary>
-              Looks up a localized string similar to `.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyPageDownText"><summary>
-              Looks up a localized string similar to PgDn.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyPageUpText"><summary>
-              Looks up a localized string similar to PgUp.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyPauseText"><summary>
-              Looks up a localized string similar to Break.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyReturnText"><summary>
-              Looks up a localized string similar to Enter.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyRightText"><summary>
-              Looks up a localized string similar to Right Arrow.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyRWinText"><summary>
-              Looks up a localized string similar to Right Windows.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeySubtractText"><summary>
-              Looks up a localized string similar to Num -.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIKeyUpText"><summary>
-              Looks up a localized string similar to Up Arrow.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIMenuItemCopyText"><summary>
-              Looks up a localized string similar to _Copy.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIMenuItemCutText"><summary>
-              Looks up a localized string similar to Cu_t.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIMenuItemDeleteText"><summary>
-              Looks up a localized string similar to _Delete.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIMenuItemPasteText"><summary>
-              Looks up a localized string similar to _Paste.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIMenuItemRedoText"><summary>
-              Looks up a localized string similar to _Redo.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIMenuItemSelectAllText"><summary>
-              Looks up a localized string similar to Select _All.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIMenuItemUndoText"><summary>
-              Looks up a localized string similar to _Undo.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIModifierKeysAltText"><summary>
-              Looks up a localized string similar to Alt.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIModifierKeysControlText"><summary>
-              Looks up a localized string similar to Ctrl.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIModifierKeysDelimiterText"><summary>
-              Looks up a localized string similar to +.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIModifierKeysShiftText"><summary>
-              Looks up a localized string similar to Shift.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIPrinterPageNumberText"><summary>
-              Looks up a localized string similar to Page {0} of {1}.
-            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIPrintPreviewWindowTitle"><summary>
-              Looks up a localized string similar to Print Preview.
-            </summary></member><member name="T:ActiproSoftware.Compatibility.CommandManager"><summary>
+            </summary><value>The <see cref="P:ActiproSoftware.Products.Shared.SR.ResourceManager" /> that provides the default resources.</value></member><member name="T:ActiproSoftware.Compatibility.CommandManager"><summary>
             Provides command related utility methods that register <see cref="T:ActiproSoftware.Compatibility.CommandBinding" /> and <see cref="T:ActiproSoftware.Compatibility.InputBinding" /> objects 
             for class owners and commands, add and remove command event handlers, and provides services for querying the status of a command.
             </summary></member><member name="M:ActiproSoftware.Compatibility.CommandManager.InvalidateRequerySuggested"><summary>
@@ -3347,6 +2967,9 @@
             </returns></member><member name="M:ActiproSoftware.Windows.Extensions.DoubleExtensions.IsEffectivelyLessThanOrEqual(System.Double,System.Double)"><summary>
             Determines whether the left value is effectively less than or equal to the right value.
             </summary><param name="left">The value on the left side of the comparison.</param><param name="right">The value on the left side of the comparison.</param><returns><c>true</c> if the left value is effectively less than or equal to the right value; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Extensions.DoubleExtensions.IsEffectivelyZero(System.Double)"><summary>
+            Determines whether the specified value is close enough to zero to be considered equal.
+            </summary><param name="value">The value to compare with zero.</param><returns><c>true</c> if the specified value is close enough to zero to be considered equal; otherwise, <c>false</c>.
             </returns></member><member name="M:ActiproSoftware.Windows.Extensions.DoubleExtensions.IsWithin(System.Double,System.Double,System.Double)"><summary>
             Determines whether the two values are within a specified range.
             </summary><param name="left">The value on the left side of the comparison.</param><param name="right">The value on the left side of the comparison.</param><param name="difference">The difference threshold.</param><returns><c>true</c> if the two values within a specified range; otherwise, <c>false</c>.
@@ -3354,7 +2977,73 @@
             Returns the specified value constrained to the specified minimum and maximum values.
             </summary><param name="value">The value to constrain.</param><param name="minValue">The minimum value.</param><param name="maxValue">The maximum value.</param><returns>The specified value constrained to the specified minimum and maximum values.</returns></member><member name="M:ActiproSoftware.Windows.Extensions.DoubleExtensions.Round(System.Double,ActiproSoftware.Windows.Controls.RoundMode)"><summary>
             Returns a rounded number using the specified <see cref="T:ActiproSoftware.Windows.Controls.RoundMode" />.
-            </summary><param name="value">The value to round.</param><param name="mode">The <see cref="T:ActiproSoftware.Windows.Controls.RoundMode" /> to use.</param><returns>A rounded number using the specified <see cref="T:ActiproSoftware.Windows.Controls.RoundMode" />.</returns></member><member name="T:ActiproSoftware.Compatibility.CompatibilityExtensions"><summary>
+            </summary><param name="value">The value to round.</param><param name="mode">The <see cref="T:ActiproSoftware.Windows.Controls.RoundMode" /> to use.</param><returns>A rounded number using the specified <see cref="T:ActiproSoftware.Windows.Controls.RoundMode" />.</returns></member><member name="T:ActiproSoftware.Windows.Extensions.CornerRadiusExtensions"><summary>
+            Provides extension methods for the type <see cref="T:System.Windows.CornerRadius" />.
+            </summary></member><member name="M:ActiproSoftware.Windows.Extensions.CornerRadiusExtensions.IsEffectivelyEqual(System.Windows.CornerRadius,System.Windows.CornerRadius)"><summary>
+            Determines whether the two values are close enough to be considered equal.
+            </summary><param name="left">The value on the left side of the comparison.</param><param name="right">The value on the left side of the comparison.</param><returns><c>true</c> if the two values are close enough to be considered equal; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Extensions.CornerRadiusExtensions.IsEffectivelyUniform(System.Windows.CornerRadius)"><summary>
+            Determines whether the values of the specified corner radius are close enough to be considered uniform.
+            </summary><param name="value">The value to compare.</param><returns><c>true</c> if the values of the specified corner radius are close enough to be considered uniform; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Extensions.CornerRadiusExtensions.IsEffectivelyZero(System.Windows.CornerRadius)"><summary>
+            Determines whether the specified value is close enough to zero to be considered equal.
+            </summary><param name="value">The value to compare with zero.</param><returns><c>true</c> if the specified value is close enough to zero to be considered equal; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Extensions.CornerRadiusExtensions.Round(System.Windows.CornerRadius,ActiproSoftware.Windows.Controls.RoundMode)"><summary>
+            Returns a corner radius with its values rounded using the specified <see cref="T:ActiproSoftware.Windows.Controls.RoundMode" />.
+            </summary><param name="value">The value to round.</param><param name="mode">The <see cref="T:ActiproSoftware.Windows.Controls.RoundMode" /> to use.</param><returns>A corner radius with its values using the specified <see cref="T:ActiproSoftware.Windows.Controls.RoundMode" />.</returns></member><member name="M:ActiproSoftware.Windows.Extensions.CornerRadiusExtensions.SetCorners(System.Windows.CornerRadius,ActiproSoftware.Windows.Controls.Corners,System.Windows.CornerRadius)"><summary>
+            Returns a corner radius with the specified corners set to the given value.
+            </summary><param name="value">The value to update.</param><param name="corners">The <see cref="T:ActiproSoftware.Windows.Controls.Corners" /> to set.</param><param name="radius">The radius values.</param><returns>A corner radius with the specified corners set to the given value.</returns></member><member name="M:ActiproSoftware.Windows.Extensions.CornerRadiusExtensions.SetCorners(System.Windows.CornerRadius,ActiproSoftware.Windows.Controls.Corners,System.Double)"><summary>
+            Returns a corner radius with the specified corners set to the given value.
+            </summary><param name="value">The value to update.</param><param name="corners">The <see cref="T:ActiproSoftware.Windows.Controls.Corners" /> to set.</param><param name="radius">The radius value.</param><returns>A corner radius with the specified corners set to the given value.</returns></member><member name="T:ActiproSoftware.Products.Shared.Resources"><summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ResourceManager"><summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.Culture"><summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExArgumentRoutedEventNotSet"><summary>
+              Looks up a localized string similar to No routed event specified..
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExArgumentSourceNotSet"><summary>
+              Looks up a localized string similar to No event source specified..
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExInvalidOperationCircularTree"><summary>
+              Looks up a localized string similar to Cannot build event route because visual tree appears to have circular references..
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExInvalidOperationContextMenuNull"><summary>
+              Looks up a localized string similar to ContextMenu property cannot be null.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExInvalidOperationExceededRoutedEventLimit"><summary>
+              Looks up a localized string similar to Cannot register routed event because the maximum number of routed events have already been registered..
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.ExInvalidPropertyValue"><summary>
+              Looks up a localized string similar to '{0}' is not a valid value for property on '{1}'..
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIApplicationCommandCopyText"><summary>
+              Looks up a localized string similar to Copy.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIApplicationCommandCutText"><summary>
+              Looks up a localized string similar to Cut.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIApplicationCommandDeleteText"><summary>
+              Looks up a localized string similar to Delete.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIApplicationCommandPasteText"><summary>
+              Looks up a localized string similar to Paste.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIApplicationCommandRedoText"><summary>
+              Looks up a localized string similar to Redo.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UIApplicationCommandUndoText"><summary>
+              Looks up a localized string similar to Undo.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UINavigationCommandBrowseBackText"><summary>
+              Looks up a localized string similar to Back.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UINavigationCommandBrowseForwardText"><summary>
+              Looks up a localized string similar to Forward.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UINavigationCommandBrowseHomeText"><summary>
+              Looks up a localized string similar to Home.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UINavigationCommandBrowseStopText"><summary>
+              Looks up a localized string similar to Stop.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UINavigationCommandFirstPageText"><summary>
+              Looks up a localized string similar to First Page.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UINavigationCommandGoToPageText"><summary>
+              Looks up a localized string similar to Go To Page.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UINavigationCommandLastPageText"><summary>
+              Looks up a localized string similar to Last Page.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UINavigationCommandNextPageText"><summary>
+              Looks up a localized string similar to Next Page.
+            </summary></member><member name="P:ActiproSoftware.Products.Shared.Resources.UINavigationCommandPreviousPageText"><summary>
+              Looks up a localized string similar to Previous Page.
+            </summary></member><member name="T:ActiproSoftware.Compatibility.CompatibilityExtensions"><summary>
             Provides several extensions methods to aid in code compatibility between WPF and Silverlight.
             </summary></member><member name="M:ActiproSoftware.Compatibility.CompatibilityExtensions.GetClipToBounds(System.Windows.FrameworkElement)"><summary>
             Gets the value of the <c>ClipToBounds</c> property for the specified object.
