@@ -281,6 +281,7 @@ namespace Raven.Client.Connection
 					throw;
 				return result;
 			}
+#if !NET_3_5
 			catch (AggregateException e)
 			{
 				sp.Stop();
@@ -292,6 +293,7 @@ namespace Raven.Client.Connection
 					throw;
 				return result;
 			}
+#endif
 
 			ResponseHeaders = response.Headers;
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
