@@ -454,9 +454,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			ExecuteWithReplication("DELETE", operationUrl => DirectDeleteAttachment(key, etag, operationUrl));
 		}
 
-		public string[] GetDatabaseNames()
+		public string[] GetDatabaseNames(int pageSize)
 		{
-			var result = ExecuteGetRequest("".Databases().NoCache());
+			var result = ExecuteGetRequest("".Databases(pageSize).NoCache());
 
 			var json = (RavenJArray) result;
 		

@@ -93,7 +93,7 @@ namespace Raven.Studio.Models
 			if (singleTenant)
 				return null;
 
-			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync()
+			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(1024)
 				.ContinueOnSuccess(names =>
 				{
 					var databaseModels = names.Select(db => new DatabaseModel(db, documentStore));
@@ -119,7 +119,7 @@ namespace Raven.Studio.Models
 		{
 			if (HtmlPage.Document.DocumentUri.Scheme == "file")
 			{
-				return "http://localhost:8080";
+				return "http://ravenhq.com:8080";
 			}
 			var localPath = HtmlPage.Document.DocumentUri.LocalPath;
 			var lastIndexOfRaven = localPath.LastIndexOf("/raven/", StringComparison.Ordinal);

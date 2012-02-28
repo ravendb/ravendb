@@ -678,9 +678,9 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Gets the list of databases from the server asynchronously
 		/// </summary>
-		public Task<string[]> GetDatabaseNamesAsync()
+		public Task<string[]> GetDatabaseNamesAsync(int pageSize)
 		{
-			return url.Databases()
+			return url.Databases(pageSize)
 				.NoCache()
 				.ToJsonRequest(this, credentials, convention)
 				.ReadResponseJsonAsync()
