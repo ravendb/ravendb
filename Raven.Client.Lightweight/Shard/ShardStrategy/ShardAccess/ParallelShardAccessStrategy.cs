@@ -4,16 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 #if !NET_3_5 && !SILVERLIGHT
-
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Connection;
-using Raven.Client.Document;
 
 namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 {
@@ -30,13 +25,12 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 			var returnedLists = new T[commands.Count];
 
 			commands
-				.Select((cmd,i) =>
-					Task.Factory
-						.StartNew(() => operation(cmd, i))
-						.ContinueWith(task =>
-						{
-							returnedLists[i] = task.Result;
-						})
+				.Select((cmd, i) =>
+				        Task.Factory.StartNew(() => operation(cmd, i))
+				        	.ContinueWith(task =>
+				        	              	{
+				        	              		returnedLists[i] = task.Result;
+				        	              	})
 				)
 				.WaitAll();
 

@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 #if !SILVERLIGHT
-using System.Runtime.CompilerServices;
 using System.Transactions;
 #endif
 using System.Text;
@@ -21,9 +20,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Profiling;
 using Raven.Client.Exceptions;
-using Raven.Client.Listeners;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 
@@ -244,6 +241,8 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public string GetDocumentId(object instance)
 		{
+			if (instance == null)
+				return null;
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
 				return null;

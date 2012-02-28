@@ -397,23 +397,23 @@ namespace Raven.Client.Shard
 			if (ids.Length == 0)
 				return new T[0];
 
-			var idsAndShards = ids.Select(id => new
-			{
-				id,
-				urls = GetShardsToOperateOn(new ShardResolutionStrategyData
-				{
-					EntityType = typeof(T),
-					Key = id
-				})
-			})
-				.GroupBy(x => x.urls, new DbCmdsListComparer());
-
 			IncrementRequestCount();
-			var allResults = new List<T>();
-			foreach (var endpoint in idsAndShards)
+			var idsAndShards = ids.Select(id => new
+			                                    	{
+			                                    		id,
+			                                    		shards = GetShardsToOperateOn(new ShardResolutionStrategyData
+			                                    		                              	{
+			                                    		                              		EntityType = typeof (T),
+			                                    		                              		Key = id
+			                                    		                              	})
+			                                    	})
+				.GroupBy(x => x.shards, new DbCmdsListComparer());
+
+			var results = new T[ids.Length];
+			foreach (var shard in idsAndShards)
 			{
-				var currentShardIds = endpoint.Select(x => x.id).ToArray();
-				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(endpoint.Key, (dbCmd, i) =>
+				var currentShardIds = shard.Select(x => x.id).ToArray();
+				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, (dbCmd, i) =>
 				{
 					var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
 					MultiLoadResult multiLoadResult;
@@ -429,10 +429,16 @@ namespace Raven.Client.Shard
 				});
 				foreach (var multiLoadOperation in multiLoadOperations)
 				{
-					allResults.AddRange(multiLoadOperation.Complete<T>());
+					var loadResults = multiLoadOperation.Complete<T>();
+					for (int i = 0; i < loadResults.Length; i++)
+					{
+						if(ReferenceEquals(loadResults[i], null))
+							continue;
+						results[Array.IndexOf(ids, currentShardIds[i])] = loadResults[i];
+					}
 				}
 			}
-			return allResults.OrderBy(item => Array.IndexOf(ids, GetDocumentId(item))).ToArray();
+			return results;
 		}
 
 		public T[] LoadInternal<T>(string[] ids)
