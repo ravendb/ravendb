@@ -172,20 +172,20 @@ task Test -depends Compile {
 	}
 }
 
-task CompileTests -depends Compile {
+task StressTest {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.StressTests\Raven.StressTests.csproj" /p:OutDir="$buildartifacts_dir\StressTest\" /t:rebuild }
 	
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\RavenDB.Tests.sln" /p:OutDir="$buildartifacts_dir\" }
-}
-
-task StressTest -depends CompileTests {
 	@("Raven.StressTests.dll") | ForEach-Object { 
-		Write-Host "Testing $build_dir\$_"
-		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+		Write-Host "Testing $build_dir\StressTest\$_"
+		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\StressTest\$_" }
 	}
 }
 
-task MeasurePerformance -depends CompileTests {
+task MeasurePerformance {
+	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Performance\Raven.Performance.csproj" /p:OutDir="$buildartifacts_dir\MeasurePerformance\" /t:rebuild }
+	
 	$RavenDbStableLocation = "F:\RavenDB"
 	$DataLocation = "F:\Data"
 	$LogsLocation = "F:\PerformanceLogs"
@@ -193,7 +193,7 @@ task MeasurePerformance -depends CompileTests {
 	$stableBuildToTests | ForEach-Object { 
 		$RavenServer = $RavenDbStableLocation + "\RavenDB-Build-$_\Server"
 		Write-Host "Measure performance against RavenDB Build #$_, Path: $RavenServer"
-		exec { &"$build_dir\Raven.Performance.exe" "--database-location=$RavenDbStableLocation --build-number=$_ --data-location=$DataLocation --logs-location=$LogsLocation" }
+		exec { &"$build_dir\MeasurePerformance\Raven.Performance.exe" "--database-location=$RavenDbStableLocation --build-number=$_ --data-location=$DataLocation --logs-location=$LogsLocation" }
 	}
 }
 
