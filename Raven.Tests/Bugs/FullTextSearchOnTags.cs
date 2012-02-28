@@ -420,7 +420,7 @@ namespace Raven.Tests.Bugs
                     var images = session.Query<Image>("test")
                         .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.Name)
-                        .Search(x => x.Name, "Photo")
+                        .Search(x => x.Name, "Photo", options: SearchOptions.And)
                         .Where(x => x.Id == "1")
                         .ToList();
                     Assert.NotEmpty(images);
