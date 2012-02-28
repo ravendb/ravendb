@@ -54,7 +54,7 @@ namespace Raven.Studio.Models
 				                   			.Select(x => new ViewableDocument(x))
 				                   			.ToArray();
 				                   		documentsModel.Documents.Match(documents);
-										//if (DocumentsForSelectedCollection.Value.Pager.TotalResults.Value.HasValue == false || DocumentsForSelectedCollection.Value.Pager.TotalResults.Value.Value != queryResult.TotalResults)
+										if (DocumentsForSelectedCollection.Value.Pager.TotalResults.Value.HasValue == false || DocumentsForSelectedCollection.Value.Pager.TotalResults.Value.Value != queryResult.TotalResults)
 										{
 											DocumentsForSelectedCollection.Value.Pager.TotalResults.Value = queryResult.TotalResults;
 										}
