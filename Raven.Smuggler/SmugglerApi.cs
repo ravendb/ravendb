@@ -33,6 +33,9 @@ namespace Raven.Smuggler
 			var builder = new StringBuilder(ConnectionStringOptions.Url, 2);
 			if (string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase) == false)
 			{
+				if (ConnectionStringOptions.Url.EndsWith("/") == false)
+					builder.Append("/");
+				builder.Append("databases/");
 				builder.Append(ConnectionStringOptions.DefaultDatabase);
 				builder.Append('/');
 			}

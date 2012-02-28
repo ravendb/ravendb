@@ -40,7 +40,7 @@ namespace Raven.Tests.Bugs
 			IOExtensions.DeleteDirectory(path);
 		}
 
-		protected override void ConfigureServer(Database.Config.RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(Database.Config.RavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 		}

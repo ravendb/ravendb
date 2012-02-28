@@ -28,7 +28,7 @@ namespace Raven.Tests.Security.OAuth
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
-		protected override void ConfigureServer(RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 			ravenConfiguration.AuthenticationMode = "OAuth";
