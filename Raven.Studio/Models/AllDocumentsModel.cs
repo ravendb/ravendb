@@ -6,15 +6,9 @@ namespace Raven.Studio.Models
 {
 	public class AllDocumentsModel : ViewModel
 	{
-		static AllDocumentsModel()
-		{
-			SetTotalResults();
-			ApplicationModel.Database.PropertyChanged += (sender, args) => SetTotalResults();
-		}
-
 		private static void SetTotalResults()
 		{
-			Documents.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics) v).CountOfDocuments));
+			Documents.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 		}
 
 		public AllDocumentsModel()
@@ -28,8 +22,13 @@ namespace Raven.Studio.Models
 			get
 			{
 				if (documents == null || documents.IsAlive == false)
+				{
 					documents = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel> { Value = new DocumentsModel() });
-				return documents.Target;
+					SetTotalResults();
+					ApplicationModel.Database.PropertyChanged += (sender, args) => SetTotalResults();
+				}
+				var target = documents.Target ?? Documents;
+				return target;
 			}
 		}
 
