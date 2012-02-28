@@ -5,10 +5,6 @@ using NLog;
 using NLog.Config;
 using Raven.Database.Server;
 using Raven.Tests.Bugs;
-using Raven.Tests.MultiGet;
-using Raven.Tests.Shard.BlogModel;
-using Raven.Tests.Storage.MultiThreaded;
-using Raven.Tests.Views;
 
 namespace Raven.Tryouts
 {

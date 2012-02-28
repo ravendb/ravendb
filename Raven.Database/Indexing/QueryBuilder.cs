@@ -55,6 +55,8 @@ namespace Raven.Database.Indexing
 				}
 
 				queryStringBuilder.Remove(searchMatch.Index, searchMatch.Length);
+				queryStringBuilder.Insert(searchMatch.Index, '(');
+				var len = searchMatch.Index;
 				foreach (var term in terms.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
 				{
 					switch (term) // ignore invalid options
@@ -66,8 +68,11 @@ namespace Raven.Database.Indexing
 							continue;
 					}
 
-					queryStringBuilder.Insert(searchMatch.Index, new StringBuilder().Append(field).Append(':').Append(term).Append(boost).Append(' '));
+					var termQuery = new StringBuilder().Append(field).Append(':').Append(term).Append(boost).Append(' ');
+					len+=termQuery.Length;
+					queryStringBuilder.Insert(searchMatch.Index+1, termQuery);
 				}
+				queryStringBuilder.Insert(len, ')');
 			}
 			return queryStringBuilder.ToString();
 		}

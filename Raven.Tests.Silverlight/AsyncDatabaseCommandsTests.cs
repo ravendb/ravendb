@@ -66,7 +66,7 @@
 			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
-			var task = documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync();
+			var task = documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(25);
 			yield return task;
 
 			Assert.IsTrue(task.Result.Contains(dbname));
@@ -83,7 +83,7 @@
 				.EnsureDatabaseExistsAsync(first);
 
 			var task = documentStore.AsyncDatabaseCommands
-				.GetDatabaseNamesAsync();
+				.GetDatabaseNamesAsync(25);
 			yield return task;
 
 			Assert.IsTrue(task.Result.Contains(first));
@@ -93,7 +93,7 @@
 				.EnsureDatabaseExistsAsync(second);
 
 			var verify = documentStore.AsyncDatabaseCommands
-				.GetDatabaseNamesAsync();
+				.GetDatabaseNamesAsync(25);
 			yield return verify;
 
 			Assert.IsTrue(verify.Result.Contains(second));

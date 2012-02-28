@@ -13,13 +13,13 @@ namespace Raven.Tests.MailingList
 			using (var server = GetNewServer())
 			using (var docStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
-				var dbNames = docStore.DatabaseCommands.GetDatabaseNames();
+				var dbNames = docStore.DatabaseCommands.GetDatabaseNames(25);
 
 				Assert.Empty(dbNames);
 
 				docStore.DatabaseCommands.EnsureDatabaseExists("test");
 
-				dbNames = docStore.DatabaseCommands.GetDatabaseNames();
+				dbNames = docStore.DatabaseCommands.GetDatabaseNames(25);
 
 				Assert.NotEmpty(dbNames);
 
