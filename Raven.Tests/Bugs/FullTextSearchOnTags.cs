@@ -186,7 +186,7 @@ namespace Raven.Tests.Bugs
 				{
 					session.Store(new Image
 					{
-						Tags = new string[]{"cats"},
+						Tags = new string[] { "cats" },
 						Name = "User"
 					});
 
@@ -240,7 +240,7 @@ namespace Raven.Tests.Bugs
 				{
 					var ravenQueryable = session.Query<Image>("test")
 						.Customize(x => x.WaitForNonStaleResults())
-						.Search(x => x.Tags, "i love cats", options: SearchOptions.Not |SearchOptions.And)
+						.Search(x => x.Tags, "i love cats", options: SearchOptions.Not | SearchOptions.And)
 						.Where(x => x.Name == "User");
 
 
@@ -394,39 +394,39 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-        [Fact]
-        public void Can_search_inner_words_with_extra_condition()
-        {
-            using (var store = NewDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Image { Id = "1", Name = "Great Photo buddy" });
-                    session.Store(new Image { Id = "2", Name = "Nice Photo of the sky" });
-                    session.SaveChanges();
-                }
+		[Fact]
+		public void Can_search_inner_words_with_extra_condition()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Image { Id = "1", Name = "Great Photo buddy" });
+					session.Store(new Image { Id = "2", Name = "Nice Photo of the sky" });
+					session.SaveChanges();
+				}
 
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
-                {
-                    Map = "from doc in docs.Images select new { doc.Name }",
-                    Indexes = {
+				store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				{
+					Map = "from doc in docs.Images select new { doc.Name }",
+					Indexes = {
 					    { "Name", FieldIndexing.Analyzed }
 				    }
 
-                });
+				});
 
-                using (var session = store.OpenSession())
-                {
-                    var images = session.Query<Image>("test")
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .OrderBy(x => x.Name)
-                        .Search(x => x.Name, "Photo", options: SearchOptions.And)
-                        .Where(x => x.Id == "1")
-                        .ToList();
-                    Assert.NotEmpty(images);
-                    Assert.True(images.Count == 1);
-                }
-            }
-        }
+				using (var session = store.OpenSession())
+				{
+					var images = session.Query<Image>("test")
+						.Customize(x => x.WaitForNonStaleResults())
+						.OrderBy(x => x.Name)
+						.Search(x => x.Name, "Photo", options: SearchOptions.And)
+						.Where(x => x.Id == "1")
+						.ToList();
+					Assert.NotEmpty(images);
+					Assert.True(images.Count == 1);
+				}
+			}
+		}
 	}
 }
