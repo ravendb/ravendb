@@ -300,7 +300,7 @@ namespace Raven.Client.Connection
 		IDisposable DisableAllCaching();
 
 		/// <summary>
-		/// Perform a single POST requst containing multiple nested GET requests
+		/// Perform a single POST request containing multiple nested GET requests
 		/// </summary>
 		GetResponse[] MultiGet(GetRequest[] requests);
 
@@ -313,7 +313,7 @@ namespace Raven.Client.Connection
 		/// Retrieves the document metadata for the specified document key.
 		/// </summary>
 		/// <param name="key">The key.</param>
-		/// <returns>The document metadata for the specifed document, or null if the document does not exist</returns>
+		/// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
 		JsonDocumentMetadata Head(string key);
 	}
 }
