@@ -30,8 +30,7 @@ namespace Raven.Tests.Shard.BlogModel
 				return new[] { "Posts #" + parts[1] };
 			}
 
-			throw new ArgumentException("Cannot get shard id for '" + srsd.EntityType +
-			                            "' because it is not a User, Blog or Post");
+			throw new ArgumentException("Cannot get shard id for '" + srsd.EntityType + "' because it is not a User, Blog or Post");
 		}
 	}
 }
