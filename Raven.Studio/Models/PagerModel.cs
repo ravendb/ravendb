@@ -16,11 +16,15 @@ namespace Raven.Studio.Models
 			SetTotalResults();
 		}
 
+		private bool totalResultsPreviouslySet;
 		public void SetTotalResults(Observable<long?> observable = null)
 		{
 			TotalResults = observable ?? new Observable<long?>();
 			TotalResults.PropertyChanged += (sender, args) =>
 			                                {
+												if (totalResultsPreviouslySet && ((Observable<long?>)sender).Value == TotalResults.Value) 
+													return;
+			                                	totalResultsPreviouslySet = true;
 			                                	OnPropertyChanged("TotalPages");
 			                                	OnPropertyChanged("HasNextPage");
 			                                };
@@ -52,7 +56,7 @@ namespace Raven.Studio.Models
 				int add = (TotalResults.Value ?? 0) % PageSize == 0 ? 0 : 1;
 				var totalPages = (TotalResults.Value ?? 0)/ PageSize + add;
 
-				// if all documents from this page where deleted we want to go the the previouse page so we won't show an empty page
+				// if all documents from this page where deleted we want to go the the previous page so we won't show an empty page
 				if(totalPages < CurrentPage && totalPages != 0) 
 					NavigateToPrevPage();
 

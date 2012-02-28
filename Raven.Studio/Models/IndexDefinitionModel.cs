@@ -190,7 +190,6 @@ namespace Raven.Studio.Models
 			}
 		}
 
-
 		public string TransformResults
 		{
 			get { return index.TransformResults; }
