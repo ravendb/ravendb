@@ -176,6 +176,79 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
+
+		[Fact]
+		public void ActuallySearchWithAndAndNot()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Image
+					{
+						Tags = new string[]{"cats"},
+						Name = "User"
+					});
+
+					session.Store(new Image
+					{
+						Tags = new string[] { "dogs" },
+						Name = "User"
+					});
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var ravenQueryable = session.Query<Image>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Search(x => x.Tags, "i love cats", options: SearchOptions.And | SearchOptions.Not)
+						.Where(x => x.Name == "User");
+
+
+					Assert.Equal("-Tags:<<i love cats>> AND (Name:User)", ravenQueryable.ToString());
+
+					Assert.Equal(1, ravenQueryable.Count());
+				}
+			}
+		}
+
+		[Fact]
+		public void SearchCanUseNot()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					var ravenQueryable = session.Query<Image>("test")
+						.Customize(x => x.WaitForNonStaleResults())
+						.Search(x => x.Tags, "i love cats", options: SearchOptions.Not)
+						.Where(x => x.Name == "User");
+
+
+					Assert.Equal("-Tags:<<i love cats>> Name:User", ravenQueryable.ToString());
+				}
+			}
+		}
+
+		[Fact]
+		public void SearchCanUseNotAndAnd()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					var ravenQueryable = session.Query<Image>("test")
+						.Customize(x => x.WaitForNonStaleResults())
+						.Search(x => x.Tags, "i love cats", options: SearchOptions.Not |SearchOptions.And)
+						.Where(x => x.Name == "User");
+
+
+					Assert.Equal("-Tags:<<i love cats>> AND (Name:User)", ravenQueryable.ToString());
+				}
+			}
+		}
+
 		[Fact]
 		public void BoostingSearches()
 		{

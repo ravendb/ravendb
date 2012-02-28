@@ -639,15 +639,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						throw new InvalidOperationException("Could not extract value from " + expression);
 					}
 					var options = (SearchOptions) value;
-					if (chainedWhere && options == SearchOptions.And)
+					if (chainedWhere && options.HasFlag(SearchOptions.And))
 					{
 						luceneQuery.AndAlso();
 					}
-
+					if(options.HasFlag(SearchOptions.Not))
+					{
+						luceneQuery.NegateNext();
+					}
 					luceneQuery.Search(expressionInfo.Path, searchTerms);
 					luceneQuery.Boost(boost);
 
-					if (options == SearchOptions.And)
+					if (options.HasFlag(SearchOptions.And))
 					{
 						chainedWhere = true;
 					}
