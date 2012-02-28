@@ -6,6 +6,7 @@ using Raven.Client.Shard;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Server;
+using System.Linq;
 
 namespace Raven.Tests.Shard.BlogModel
 {
@@ -67,11 +68,16 @@ namespace Raven.Tests.Shard.BlogModel
 				new DocumentStore {Identifier = "Posts03", Url = "http://localhost:8075"}
 			};
 
-
 			foreach (var shard in shards)
 			{
 				shard.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 				shard.Initialize();
+			}
+
+			using (var session = shards.First(x => x.Identifier == "Users").OpenSession())
+			{
+				session.Store(new User { Name = "Fitzchak Yitzchaki" });
+				session.SaveChanges();
 			}
 
 			shardedDocumentStore = new ShardedDocumentStore(new ShardStrategy
