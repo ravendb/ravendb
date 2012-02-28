@@ -68,7 +68,7 @@ namespace Raven.Client.Shard
 //#endif
 		}
 
-		private IList<IDatabaseCommands> GetAppropriateShards(ShardResolutionStrategyData resultionData)
+		private IList<IDatabaseCommands> GetShardsToOperateOn(ShardResolutionStrategyData resultionData)
 		{
 			var shardIds = shardStrategy.ShardResolutionStrategy.SelectShardIds(resultionData);
 			
@@ -80,7 +80,7 @@ namespace Raven.Client.Shard
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
-			var dbCommands = GetAppropriateShards(new ShardResolutionStrategyData
+			var dbCommands = GetShardsToOperateOn(new ShardResolutionStrategyData
 			{
 				EntityType = typeof(object),
 				Key = documentKey
@@ -173,13 +173,11 @@ namespace Raven.Client.Shard
 			}
 
 			IncrementRequestCount();
-
-			var dbCommands = GetAppropriateShards(new ShardResolutionStrategyData
-			{
-				EntityType = typeof(T),
-				Key = id
-			});
-
+			var dbCommands = GetShardsToOperateOn(new ShardResolutionStrategyData
+			                                      	{
+			                                      		EntityType = typeof (T),
+			                                      		Key = id
+			                                      	});
 			foreach (var dbCmd in dbCommands)
 			{
 				var loadOperation = new LoadOperation(this, dbCmd.DisableAllCaching, id);
@@ -302,7 +300,7 @@ namespace Raven.Client.Shard
 			IncrementRequestCount();
 
 
-			var dbCommands = GetAppropriateShards(new ShardResolutionStrategyData
+			var dbCommands = GetShardsToOperateOn(new ShardResolutionStrategyData
 			{
 				EntityType = typeof(T),
 				Key = value.Key
@@ -377,7 +375,7 @@ namespace Raven.Client.Shard
 
 		protected IList<IDatabaseCommands> SelectShardsByQuery(Type type, IndexQuery query)
 		{
-			return GetAppropriateShards(new ShardResolutionStrategyData
+			return GetShardsToOperateOn(new ShardResolutionStrategyData
 			{
 				EntityType = type,
 				Query = query
@@ -402,7 +400,7 @@ namespace Raven.Client.Shard
 			var idsAndShards = ids.Select(id => new
 			{
 				id,
-				urls = GetAppropriateShards(new ShardResolutionStrategyData
+				urls = GetShardsToOperateOn(new ShardResolutionStrategyData
 				{
 					EntityType = typeof(T),
 					Key = id
