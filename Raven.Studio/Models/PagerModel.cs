@@ -60,7 +60,7 @@ namespace Raven.Studio.Models
 				if(totalPages < CurrentPage && totalPages != 0) 
 					NavigateToPrevPage();
 
-				return totalPages;
+				return totalPages == 0 ? 1 : totalPages;
 			}
 		}
 
