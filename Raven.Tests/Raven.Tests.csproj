@@ -548,6 +548,7 @@
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
     <Compile Include="MailingList\Afif.cs" />
+    <Compile Include="MailingList\BuildStarted.cs" />
     <Compile Include="MailingList\IndexWhereClause .cs" />
     <Compile Include="MailingList\Mark2.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
@@ -625,6 +626,7 @@
     <Compile Include="MailingList\transformedresults_customid_test.cs" />
     <Compile Include="MailingList\Vitaly.cs" />
     <Compile Include="MailingList\Vlad.cs" />
+    <Compile Include="MailingList\Weave.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
