@@ -4,7 +4,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Client.Shard.ShardStrategy.ShardQuery;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
@@ -36,7 +35,7 @@ namespace Raven.Client.Shard.ShardStrategy
 		public IShardAccessStrategy ShardAccessStrategy { get; set; }
 
 		/// <summary>
-		/// Get the shard query startegy
+		/// Gets or sets the shard query strategy.
 		/// </summary>
 		public IShardQueryStrategy ShardQueryStrategy { get; set; }
 	}

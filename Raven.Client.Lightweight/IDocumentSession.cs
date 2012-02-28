@@ -151,8 +151,8 @@ namespace Raven.Client
 	internal interface IDocumentSessionImpl : IDocumentSession
 	{
 		DocumentConvention Conventions { get; }
-		T[] LoadInternal<T>(string[] ids, string[] includes);
 		T[] LoadInternal<T>(string[] ids);
+		T[] LoadInternal<T>(string[] ids, string[] includes);
 	}
 #endif
 }

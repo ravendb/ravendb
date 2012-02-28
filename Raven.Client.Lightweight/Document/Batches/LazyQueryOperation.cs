@@ -24,10 +24,10 @@ namespace Raven.Client.Document.Batches
 		{
 			var stringBuilder = new StringBuilder();
 			queryOperation.IndexQuery.AppendQueryString(stringBuilder);
-		
+
 			return new GetRequest
 			{
-				Url = "/indexes/"+ queryOperation.IndexName,
+				Url = "/indexes/" + queryOperation.IndexName,
 				Query = stringBuilder.ToString()
 			};
 		}

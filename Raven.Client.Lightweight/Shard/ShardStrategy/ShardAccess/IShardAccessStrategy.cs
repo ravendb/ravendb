@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Connection;
-using Raven.Client.Document;
 
 namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 {
@@ -19,10 +18,7 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 		/// <summary>
 		/// Applies the specified action to all shard sessions.
 		/// </summary>
-		IList<T> Apply<T>(
-			IList<IDatabaseCommands> commands,
-			Func<IDatabaseCommands, int, T> operation
-			) ;
+		IList<T> Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands, int, T> operation);
 	}
 }
 #endif
