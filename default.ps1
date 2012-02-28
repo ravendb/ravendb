@@ -112,8 +112,6 @@ task Init -depends Verify40, Clean {
 				-fileversion "$version.$env:buildlabel.0" `
 				-copyright "Copyright © Hibernating Rhinos 2004 - $((Get-Date).Year)" `
 				-clsCompliant $clsComliant
-			
-			git update-index --assume-unchanged $asmInfo
 		}
 	}
 	
