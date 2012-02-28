@@ -96,10 +96,6 @@ namespace Raven.Studio.Models
 			index.Map = Maps.Select(x => x.Text).FirstOrDefault();
 			index.Maps = new HashSet<string>(Maps.Select(x => x.Text));
 			UpdateFields();
-			if (string.IsNullOrWhiteSpace(index.Reduce))
-				index.Reduce = null;
-			if (string.IsNullOrWhiteSpace(index.TransformResults))
-				index.TransformResults = null;
 		}
 
 		private void UpdateFields()
@@ -180,7 +176,6 @@ namespace Raven.Studio.Models
 			{
 				index.Reduce = value;
 				OnPropertyChanged();
-				OnPropertyChanged("ShowReduce");
 			}
 		}
 
