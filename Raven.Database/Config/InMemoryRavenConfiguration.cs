@@ -788,8 +788,8 @@ namespace Raven.Database.Config
 			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
 				Settings["Raven/IndexStoragePath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Tenants", tenantId);
 
-			if (string.IsNullOrEmpty(Settings["Esent/LogsPath"]) == false)
-				Settings["Esent/LogsPath"] = Path.Combine(Settings["Raven/IndexStoragePath"], "Tenants", tenantId);
+			if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
+				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Tenants", tenantId);
 		}
 	}
 }
