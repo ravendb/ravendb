@@ -189,7 +189,7 @@ task MeasurePerformance {
 	$RavenDbStableLocation = "F:\RavenDB"
 	$DataLocation = "F:\Data"
 	$LogsLocation = "F:\PerformanceLogs"
-	$stableBuildToTests = @(616, 573, 531, 499, 482, 457, 371)
+	$stableBuildToTests = @(664, 616, 573, 531, 499, 482, 457, 371)
 	$stableBuildToTests | ForEach-Object { 
 		$RavenServer = $RavenDbStableLocation + "\RavenDB-Build-$_\Server"
 		Write-Host "Measure performance against RavenDB Build #$_, Path: $RavenServer"
@@ -236,7 +236,7 @@ task OpenSource {
 	$global:uploadCategory = "RavenDB"
 }
 
-task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest,MeasurePerformance
+task RunAllTests -depends MeasurePerformance
 task Release -depends RunAllTests,DoRelease
 
 task CopySamples {
