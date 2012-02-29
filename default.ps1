@@ -242,8 +242,11 @@ task OpenSource {
 	$global:uploadCategory = "RavenDB"
 }
 
+task RunTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds
+
 task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest,MeasurePerformance
-task Release -depends RunAllTests,DoRelease
+
+task Release -depends RunTests,DoRelease
 
 task CopySamples {
 	$samples = @("Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `
