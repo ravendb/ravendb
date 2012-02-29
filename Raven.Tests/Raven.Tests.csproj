@@ -624,6 +624,7 @@
     <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\TimeZoneQueries.cs" />
     <Compile Include="MailingList\transformedresults_customid_test.cs" />
+    <Compile Include="MailingList\Victor.cs" />
     <Compile Include="MailingList\Vitaly.cs" />
     <Compile Include="MailingList\Vlad.cs" />
     <Compile Include="MailingList\Weave.cs" />
