@@ -549,6 +549,7 @@
     <Compile Include="LocalClientTest.cs" />
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\BuildStarted.cs" />
+    <Compile Include="MailingList\Everett616.cs" />
     <Compile Include="MailingList\IndexWhereClause .cs" />
     <Compile Include="MailingList\Mark2.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
