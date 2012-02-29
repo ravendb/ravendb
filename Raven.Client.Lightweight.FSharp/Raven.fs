@@ -32,7 +32,7 @@ open Newtonsoft.Json
             then a.OrderByDescending(expr)
             else a.OrderBy(expr)
 
-        let ``include`` (p : Expr<'a -> 'b>) (loader : ILoaderWithInclude<'a> -> 'c) (a : IDocumentSession) = 
+        let including (p : Expr<'a -> 'b>) (loader : ILoaderWithInclude<'a> -> 'c) (a : IDocumentSession) = 
             let expr = Linq.toLinqExpression (fun b a -> Expression.Lambda<Func<'a,obj>>(a, b |> Array.ofSeq)) p
             loader(a.Include<'a>(expr))
         
@@ -68,9 +68,11 @@ open Newtonsoft.Json
 [<AutoOpen>]
 module Raven = 
 
-    let run (session : IDocumentSession) f = 
-        f(session)
-    
+    let run (session : IDocumentSession) f =
+       let a = f(session)
+       session.SaveChanges()
+       a
+
     type RavenFunc<'a> = (IDocumentSession -> 'a)
 
     type RavenBuilder() = 
@@ -87,6 +89,10 @@ module Raven =
          member x.Return(a) =  ret a
 
          member x.ReturnFrom(a : RavenFunc<_>) = a
+
+         member x.Yield(a) =  ret a
+
+         member x.YieldFrom(a : RavenFunc<_>) = a
          
          member x.Delay(f) = delay f
 

@@ -1,6 +1,7 @@
 ﻿namespace Raven.Tests
 
 open System
+open System.Linq
 open Xunit
 open FsUnit.Xunit
 open Raven.Client.Linq
@@ -126,11 +127,23 @@ type ``Given a Initailised Document store execute using computation expression``
 
     let storeMany (data : seq<'a>) =
         raven {
-            for d in data do 
-                do! store d >> ignore
-            do! saveChanges
+            let results = ref []
+            for d in data do
+                let! a = store d 
+                results :=  a :: !results
+            return (!results |> List.rev)
         }  
     
+    [<Fact>]
+    let ``Should implicitly call save changes if runs to completion``() = 
+           use ds = test.NewDocumentStore()
+           use session = ds.OpenSession()
+           let expected = storeMany (createCustomers 15) |> run session
+           let actual = session.Query<Customer>().AsEnumerable() |> Seq.toList
+           
+
+           Assert.Equal(expected, actual)
+
     [<Fact>]
     let ``Should be able to save and retrieve an entity``() =
            use ds = test.NewDocumentStore()
@@ -174,7 +187,7 @@ type ``Given a Initailised Document store execute using computation expression``
                 do! store order >> ignore
                 do! saveChanges
                 return! (fun s -> 
-                              let order = ``include`` <@ fun s -> s.Customer @> (fun s -> s.Load("orders/1")) s
+                              let order = including <@ fun s -> s.Customer @> (fun s -> s.Load("orders/1")) s
                               let customer : Customer = s.Load(order.Customer)
                               order, customer
                         )
@@ -218,7 +231,7 @@ type ``Given a Initailised Document store execute using computation expression``
         let findOrderIncludeCustomer (id : string) = 
             raven { 
                  return! (fun s -> 
-                              let order = ``include`` <@ fun s -> s.Customer @> (fun s -> s.Load(id)) s
+                              let order = including <@ fun s -> s.Customer @> (fun s -> s.Load(id)) s
                               let customer : Customer = s.Load(order.Customer)
                               order, customer
                         ) 
