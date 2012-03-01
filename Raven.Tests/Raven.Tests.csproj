@@ -692,6 +692,7 @@
     <Compile Include="Shard\BlogModel\CanQueryOnlyUsers.cs" />
     <Compile Include="Shard\BlogModel\Post.cs" />
     <Compile Include="Shard\BlogModel\ShardedDocumentSessionIsWorking.cs" />
+    <Compile Include="Shard\BlogModel\ShardedDocumentStoreTest.cs" />
     <Compile Include="Shard\BlogModel\ShardingScenario.cs" />
     <Compile Include="Shard\BlogModel\User.cs" />
     <Compile Include="Shard\When_Using_Parallel_Access_Strategy.cs" />

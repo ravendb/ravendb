@@ -316,15 +316,6 @@ namespace Raven.Client.Shard
 #endif
 
 		/// <summary>
-		/// Gets the conventions.
-		/// </summary>
-		/// <value>The conventions.</value>
-		public new DocumentConvention Conventions
-		{
-			get { throw new NotSupportedException("Sharded document store doesn't have a database conventions. you need to explicitly use the shard instances to get access to the database commands"); }
-		}
-
-		/// <summary>
 		/// Gets or sets the URL.
 		/// </summary>
 		public override string Url
@@ -349,18 +340,8 @@ namespace Raven.Client.Shard
 		{
 			try
 			{
-				foreach (var shard in shards)
-				{
-					var currentShard = shard;
-					var defaultKeyGeneration = currentShard.Conventions.DocumentKeyGenerator == null;
-					currentShard.Initialize();
-					if(defaultKeyGeneration == false)
-						continue;
-
-					var documentKeyGenerator = currentShard.Conventions.DocumentKeyGenerator;
-					currentShard.Conventions.DocumentKeyGenerator = entity =>
-																	currentShard.Identifier + "/" + documentKeyGenerator(entity); 
-				}
+				shards.ForEach(shard => shard.Initialize());
+				Conventions = shards.First().Conventions;
 			}
 			catch (Exception)
 			{

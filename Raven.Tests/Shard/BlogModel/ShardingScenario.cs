@@ -79,6 +79,7 @@ namespace Raven.Tests.Shard.BlogModel
 																ShardSelectionStrategy = new BlogShardSelectionStrategy(3),
 																ShardResolutionStrategy = new BlogShardResolutionStrategy(3)
 															}, shards);
+			ShardedDocumentStore = (ShardedDocumentStore) ShardedDocumentStore.Initialize();
 		}
 
 		public void Dispose()
