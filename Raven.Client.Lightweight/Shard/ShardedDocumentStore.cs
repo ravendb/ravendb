@@ -320,7 +320,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public override string Url
 		{
-			get { throw new NotImplementedException("There isn't a singular url when using sharding"); }
+			get { throw new NotSupportedException("There isn't a singular url when using sharding"); }
 		}
 
 		///<summary>
@@ -329,7 +329,7 @@ namespace Raven.Client.Shard
 		///</summary>
 		public override Guid? GetLastWrittenEtag()
 		{
-			throw new NotImplementedException("This isn't a single last written etag when sharding");
+			throw new NotSupportedException("This isn't a single last written etag when sharding");
 		}
 
 		/// <summary>
