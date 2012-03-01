@@ -21,8 +21,7 @@ namespace Raven.Database.Server.Responders
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var index = match.Groups[1].Value;
 
-			//var facets = context.GetFacetsFromHttpContext();
-			var facetSetupDoc = context.GetFacetSetupDocFromHttpContext();
+				var facetSetupDoc = context.GetFacetSetupDocFromHttpContext();
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
 
 			context.WriteJson(Database.ExecuteGetTermsQuery(index, indexQuery, facetSetupDoc));
