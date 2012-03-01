@@ -7,7 +7,6 @@
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Client.Shard.ShardStrategy.ShardQuery;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
-using Raven.Client.Shard.ShardStrategy.ShardSelection;
 
 namespace Raven.Client.Shard.ShardStrategy
 {
@@ -21,10 +20,6 @@ namespace Raven.Client.Shard.ShardStrategy
 			ShardAccessStrategy = new SequentialShardAccessStrategy();
 		}
 
-		/// <summary>
-		/// Gets or sets the shard selection strategy.
-		/// </summary>
-		public IShardSelectionStrategy ShardSelectionStrategy { get; set; }
 		/// <summary>
 		/// Gets or sets the shard resolution strategy.
 		/// </summary>

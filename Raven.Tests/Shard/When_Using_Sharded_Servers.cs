@@ -10,7 +10,6 @@ using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
-using Raven.Client.Shard.ShardStrategy.ShardSelection;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
@@ -25,6 +24,16 @@ namespace Raven.Tests.Shard
 {
 	public class When_Using_Sharded_Servers : RemoteClientTest, IDisposable
 	{
+		readonly string path1;
+		readonly string path2;
+		readonly RavenDbServer server1;
+		readonly RavenDbServer server2;
+		readonly Company company1;
+		readonly Company company2;
+		readonly List<IDocumentStore> shards;
+		readonly IShardResolutionStrategy shardResolution;
+		readonly IShardStrategy shardStrategy;
+
 		public When_Using_Sharded_Servers()
 		{
 			const string server = "localhost";
@@ -49,27 +58,13 @@ namespace Raven.Tests.Shard
 				new DocumentStore { Identifier="Shard2", Url = "http://" + server +":"+port2} 
 			};
 
-			shardSelection = MockRepository.GenerateStub<IShardSelectionStrategy>();
-			shardSelection.Stub(x => x.ShardIdForNewObject(company1)).Return("Shard1");
-			shardSelection.Stub(x => x.ShardIdForNewObject(company2)).Return("Shard2");
-
 			shardResolution = MockRepository.GenerateStub<IShardResolutionStrategy>();
+			shardResolution.Stub(x => x.GenerateShardIdFor(company1)).Return("Shard1");
+			shardResolution.Stub(x => x.GenerateShardIdFor(company2)).Return("Shard2");
 
 			shardStrategy = MockRepository.GenerateStub<IShardStrategy>();
-			shardStrategy.Stub(x => x.ShardSelectionStrategy).Return(shardSelection);
 			shardStrategy.Stub(x => x.ShardResolutionStrategy).Return(shardResolution);
 		}
-
-		readonly string path1;
-		readonly string path2;
-		readonly RavenDbServer server1;
-		readonly RavenDbServer server2;
-		readonly Company company1;
-		readonly Company company2;
-		readonly List<IDocumentStore> shards;
-		readonly IShardSelectionStrategy shardSelection;
-		readonly IShardResolutionStrategy shardResolution;
-		readonly IShardStrategy shardStrategy;
 
 		[Fact]
 		public void Can_override_the_shard_id_generation()
@@ -137,7 +132,7 @@ namespace Raven.Tests.Shard
 				session.SaveChanges();
 
 				//get it, should automagically retrieve from 2nd shard
-				shardResolution.Stub(x => x.SelectShardIds(null)).IgnoreArguments().Return(new[] { "Shard2" });
+				shardResolution.Stub(x => x.PotentialShardsFor(null)).IgnoreArguments().Return(new[] { "Shard2" });
 				var loadedCompany = session.Load<Company>(company2.Id);
 
 				Assert.NotNull(loadedCompany);
@@ -159,7 +154,7 @@ namespace Raven.Tests.Shard
 				session.SaveChanges();
 
 				//get it, should try all shards and find it
-				shardResolution.Stub(x => x.SelectShardIds(null)).IgnoreArguments().Return(null);
+				shardResolution.Stub(x => x.PotentialShardsFor(null)).IgnoreArguments().Return(null);
 				var loadedCompany = session.Load<Company>(company2.Id);
 
 				Assert.NotNull(loadedCompany);

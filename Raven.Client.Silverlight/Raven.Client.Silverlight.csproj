@@ -328,6 +328,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardQuery\SimpleMergingShardQueryStrategy.cs">
       <Link>Imports\Shard\ShardStrategy\ShardQuery\SimpleMergingShardQueryStrategy.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardResolution\ShardRequestData.cs">
+      <Link>Imports\Shard\ShardStrategy\ShardResolution\ShardRequestData.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Types.cs">
       <Link>Imports\Util\Types.cs</Link>
     </Compile>
@@ -746,17 +749,8 @@
     <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardAccess\SequentialShardAccessStrategy.cs">
       <Link>Imports\Shard\ShardStrategy\ShardAccess\SequentialShardAccessStrategy.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardResolution\AllShardsResolutionStrategy.cs">
-      <Link>Imports\Shard\ShardStrategy\ShardResolution\AllShardsResolutionStrategy.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardResolution\IShardResolutionStrategy.cs">
       <Link>Imports\Shard\ShardStrategy\ShardResolution\IShardResolutionStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardResolution\ShardResolutionStrategyData.cs">
-      <Link>Imports\Shard\ShardStrategy\ShardResolution\ShardResolutionStrategyData.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardSelection\IShardSelectionStrategy.cs">
-      <Link>Imports\Shard\ShardStrategy\ShardSelection\IShardSelectionStrategy.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardStrategy.cs">
       <Link>Imports\Shard\ShardStrategy\ShardStrategy.cs</Link>

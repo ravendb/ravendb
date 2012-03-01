@@ -75,7 +75,6 @@ namespace Raven.Tests.Shard.BlogModel
 			ShardedDocumentStore = new ShardedDocumentStore(new ShardStrategy
 															{
 																ShardAccessStrategy = new SequentialShardAccessStrategy(),
-																ShardSelectionStrategy = new BlogShardSelectionStrategy(3),
 																ShardResolutionStrategy = new BlogShardResolutionStrategy(3)
 															}, shards);
 			ShardedDocumentStore = (ShardedDocumentStore) ShardedDocumentStore.Initialize();

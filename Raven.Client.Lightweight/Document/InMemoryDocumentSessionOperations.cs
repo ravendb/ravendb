@@ -1102,7 +1102,7 @@ more responsive application.
 		/// Defer commands to be executed on SaveChanges()
 		/// </summary>
 		/// <param name="commands">The commands to be executed</param>
-		public void Defer(params ICommandData[] commands)
+		public virtual void Defer(params ICommandData[] commands)
 		{
 			deferedCommands.AddRange(commands);
 		}
@@ -1178,6 +1178,12 @@ more responsive application.
 		/// </summary>
 		public class SaveChangesData
 		{
+			public SaveChangesData()
+			{
+				Commands = new List<ICommandData>();
+				Entities = new List<object>();
+			}
+
 			/// <summary>
 			/// Gets or sets the commands.
 			/// </summary>
@@ -1207,7 +1213,5 @@ more responsive application.
 				return sb.ToString();
 			});
 		}
-
-
 	}
 }

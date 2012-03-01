@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="ShardResolutionStrategyData.cs" company="Hibernating Rhinos LTD">
+// <copyright file="ShardRequestData.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -11,7 +11,7 @@ namespace Raven.Client.Shard.ShardStrategy.ShardResolution
 	/// <summary>
 	/// Information required to resolve the appropriate shard for an entity / entity and key
 	/// </summary>
-	public class ShardResolutionStrategyData
+	public class ShardRequestData
 	{
 		/// <summary>
 		/// Gets or sets the key.

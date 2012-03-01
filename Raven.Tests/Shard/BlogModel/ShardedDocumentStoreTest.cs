@@ -44,6 +44,11 @@ namespace Raven.Tests.Shard.BlogModel
 			Assert.Throws<NotSupportedException>(() => shardedDocumentStore.DatabaseCommands);
 			Assert.Throws<NotSupportedException>(() => shardedDocumentStore.Url);
 			Assert.Throws<NotSupportedException>(() => shardedDocumentStore.GetLastWrittenEtag());
+
+			using (var session = (ShardedDocumentSession)shardedDocumentStore.OpenSession())
+			{
+				Assert.Throws<NotSupportedException>(() => session.Defer());
+			}
 		}
 	}
 }

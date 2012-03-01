@@ -14,8 +14,16 @@ namespace Raven.Client.Shard.ShardStrategy.ShardResolution
 	public interface IShardResolutionStrategy
 	{
 		/// <summary>
+		/// Generate a shard id for the specified entity
+		/// </summary>
+		string GenerateShardIdFor(object entity);
+
+		/// <summary>
 		/// Selects the shard ids appropriate for the specified data
 		/// </summary>
-		IList<string> SelectShardIds(ShardResolutionStrategyData srsd);
+		/// <remarks>
+		/// Returning null means search all shards
+		/// </remarks>
+		IList<string> PotentialShardsFor(ShardRequestData requestData);
 	}
 }

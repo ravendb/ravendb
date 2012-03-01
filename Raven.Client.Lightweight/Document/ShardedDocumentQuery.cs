@@ -109,7 +109,7 @@ namespace Raven.Client.Document
 				Thread.Sleep(100);
 			}
 
-			var shardIds = shardStrategy.ShardResolutionStrategy.SelectShardIds(new ShardResolutionStrategyData
+			var shardIds = shardStrategy.ShardResolutionStrategy.PotentialShardsFor(new ShardRequestData
 			{
 				EntityType = typeof(T),
 				Query = indexQuery

@@ -9,6 +9,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
 #if !NET_3_5
+using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Batches;
 #endif
@@ -68,9 +69,9 @@ namespace Raven.Client.Shard
 //#endif
 		}
 
-		private IList<IDatabaseCommands> GetShardsToOperateOn(ShardResolutionStrategyData resultionData)
+		private IList<IDatabaseCommands> GetShardsToOperateOn(ShardRequestData resultionData)
 		{
-			var shardIds = shardStrategy.ShardResolutionStrategy.SelectShardIds(resultionData);
+			var shardIds = shardStrategy.ShardResolutionStrategy.PotentialShardsFor(resultionData);
 			
 			if (shardIds != null)
 				return shardDbCommands.Where(cmd => shardIds.Contains(cmd.Key)).Select(x => x.Value).ToList();
@@ -80,7 +81,7 @@ namespace Raven.Client.Shard
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
-			var dbCommands = GetShardsToOperateOn(new ShardResolutionStrategyData
+			var dbCommands = GetShardsToOperateOn(new ShardRequestData
 			{
 				EntityType = typeof(object),
 				Key = documentKey
@@ -173,7 +174,7 @@ namespace Raven.Client.Shard
 			}
 
 			IncrementRequestCount();
-			var dbCommands = GetShardsToOperateOn(new ShardResolutionStrategyData
+			var dbCommands = GetShardsToOperateOn(new ShardRequestData
 			                                      	{
 			                                      		EntityType = typeof (T),
 			                                      		Key = id
@@ -256,6 +257,14 @@ namespace Raven.Client.Shard
 			return new MultiLoaderWithInclude<T>(this).Include(path);
 		}
 
+		public override void Defer(params Abstractions.Commands.ICommandData[] commands)
+		{
+			throw new NotSupportedException("You cannot defer commands using the sharded document session, because we don't know which shard to use");
+		}
+
+		/// <summary>
+		/// Saves all the changes to the Raven server.
+		/// </summary>
 		public void SaveChanges()
 		{
 			using (EntitiesToJsonCachingScope())
@@ -263,23 +272,44 @@ namespace Raven.Client.Shard
 				var data = PrepareForSaveChanges();
 				if (data.Commands.Count == 0)
 					return; // nothing to do here
+
 				IncrementRequestCount();
 				LogBatch(data);
 				
 				// split by shards
+				var saveChangesPerShard = new Dictionary<string, SaveChangesData>();
+				for (int index = 0; index < data.Entities.Count; index++)
+				{
+					var entity = data.Entities[index];
+					var metadata = GetMetadataFor(entity);
+					var shardId = metadata.Value<string>(Constants.RavenShardId);
 
-				
+					if (shardId == null)
+					{
+						shardId = shardStrategy.ShardResolutionStrategy.GenerateShardIdFor(entity);
+						metadata[Constants.RavenShardId] = shardId;
+					}
+
+					var shardSaveChangesData = saveChangesPerShard.GetOrAdd(shardId);
+					shardSaveChangesData.Entities.Add(entity);
+					shardSaveChangesData.Commands.Add(data.Commands[index]);
+				}
 
 				// execute on all shards
-				// merge results
+				foreach (var shardAndObjects in saveChangesPerShard)
+				{
+					var shardId = shardAndObjects.Key;
 
+					IDatabaseCommands databaseCommands;
+					if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
+						throw new InvalidOperationException(string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
 
-				throw new NotImplementedException();
-				//BatchResult[] batchResults = DatabaseCommands.Batch(data.Commands);
-				
-				//UpdateBatchResults(batchResults, data.Entities);
+					var results = databaseCommands.Batch(shardAndObjects.Value.Commands);
+					UpdateBatchResults(results, shardAndObjects.Value);
+				}
 			}
 		}
+
 #if !NET_3_5
 		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
 		{
@@ -300,7 +330,7 @@ namespace Raven.Client.Shard
 			IncrementRequestCount();
 
 
-			var dbCommands = GetShardsToOperateOn(new ShardResolutionStrategyData
+			var dbCommands = GetShardsToOperateOn(new ShardRequestData
 			{
 				EntityType = typeof(T),
 				Key = value.Key
@@ -375,7 +405,7 @@ namespace Raven.Client.Shard
 
 		protected IList<IDatabaseCommands> SelectShardsByQuery(Type type, IndexQuery query)
 		{
-			return GetShardsToOperateOn(new ShardResolutionStrategyData
+			return GetShardsToOperateOn(new ShardRequestData
 			{
 				EntityType = type,
 				Query = query
@@ -401,7 +431,7 @@ namespace Raven.Client.Shard
 			var idsAndShards = ids.Select(id => new
 			                                    	{
 			                                    		id,
-			                                    		shards = GetShardsToOperateOn(new ShardResolutionStrategyData
+			                                    		shards = GetShardsToOperateOn(new ShardRequestData
 			                                    		                              	{
 			                                    		                              		EntityType = typeof (T),
 			                                    		                              		Key = id
