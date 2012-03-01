@@ -23,11 +23,11 @@ namespace Raven.Bundles.Tests.Authentication
 			using (var s = embeddedStore.OpenSession())
 			{
 				s.Store(new AuthenticationUser
-				        	{
-				        		Name = "Ayende",
-				        		Id = "Raven/Users/Ayende",
-				        		AllowedDatabases = new[] {"*"}
-				        	}.SetPassword("abc"));
+							{
+								Name = "Ayende",
+								Id = "Raven/Users/Ayende",
+								AllowedDatabases = new[] {"*"}
+							}.SetPassword("abc"));
 
 				for (int i = 0; i < 10; i++)
 				{
@@ -51,7 +51,8 @@ namespace Raven.Bundles.Tests.Authentication
 			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = store.Url});
 
 			var webException = Assert.Throws<WebException>(() => smugglerApi.ExportData(new SmugglerOptions { File = File }));
-			Assert.Equal("The remote server returned an error: (401) Unauthorized.", webException.Message);
+			Assert.Equal(WebExceptionStatus.ProtocolError, webException.Status);
+			Assert.Equal(HttpStatusCode.Unauthorized, ((HttpWebResponse)webException.Response).StatusCode);
 		}
 
 		public class Item
