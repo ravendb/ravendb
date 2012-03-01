@@ -13,7 +13,7 @@ namespace Raven.Tests.Shard.BlogModel
 	public abstract class ShardingScenario : RavenTest, IDisposable
 	{
 		protected readonly ShardedDocumentStore shardedDocumentStore;
-		protected readonly Dictionary<string, RavenDbServer> servers;
+		protected readonly Dictionary<string, RavenDbServer> Servers;
 
 		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
 		{
@@ -49,7 +49,7 @@ namespace Raven.Tests.Shard.BlogModel
 				throw;
 			}
 
-			servers = new Dictionary<string, RavenDbServer>
+			Servers = new Dictionary<string, RavenDbServer>
 			{
 				{"Users", users},
 				{"Blogs", blogs},
@@ -74,12 +74,6 @@ namespace Raven.Tests.Shard.BlogModel
 				shard.Initialize();
 			}
 
-			using (var session = shards.First(x => x.Identifier == "Users").OpenSession())
-			{
-				session.Store(new User { Name = "Fitzchak Yitzchaki" });
-				session.SaveChanges();
-			}
-
 			shardedDocumentStore = new ShardedDocumentStore(new ShardStrategy
 															{
 																ShardAccessStrategy = new SequentialShardAccessStrategy(),
@@ -91,7 +85,7 @@ namespace Raven.Tests.Shard.BlogModel
 		public void Dispose()
 		{
 			shardedDocumentStore.Dispose();
-			foreach (var ravenDbServer in servers)
+			foreach (var ravenDbServer in Servers)
 			{
 				ravenDbServer.Value.Dispose();
 			}

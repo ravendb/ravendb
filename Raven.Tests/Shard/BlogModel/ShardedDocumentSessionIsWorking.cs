@@ -10,27 +10,6 @@ namespace Raven.Tests.Shard.BlogModel
 	public class ShardedDocumentSessionIsWorking : ShardingScenario
 	{
 		[Fact]
-		public void LoadShouldReturnTheCorrectUserWhenExists()
-		{
-			using (var session = shardedDocumentStore.OpenSession())
-			{
-				var user = session.Load<User>("users/1");
-				Assert.NotNull(user);
-				Assert.Equal("Fitzchak Yitzchaki", user.Name);
-			}
-		}
-
-		[Fact]
-		public void LoadShouldReturnNullForNotExistsUser()
-		{
-			using (var session = shardedDocumentStore.OpenSession())
-			{
-				var user = session.Load<User>("users/2");
-				Assert.Null(user);
-			}
-		}
-
-		[Fact]
 		public void MultiLoadShouldWork()
 		{
 			using (var session = shardedDocumentStore.OpenSession())
