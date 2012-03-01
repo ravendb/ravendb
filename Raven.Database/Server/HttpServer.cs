@@ -272,7 +272,7 @@ namespace Raven.Database.Server
 			catch (Exception)
 			{
 				// can't get current request / end new one, probably
-				// listner shutdown
+				// listener shutdown
 				return;
 			}
 
