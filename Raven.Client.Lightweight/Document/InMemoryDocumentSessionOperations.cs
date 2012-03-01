@@ -287,7 +287,7 @@ namespace Raven.Client.Document
 Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
 Raven provides facilities like Load(string[] keys) to load multiple documents at once and batch saves (call SaveChanges() only once).
 You can increase the limit by setting DocumentConvention.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
-advisable that you'll look into reducing the number of remote calls first, since that will speed up your application signficantly and result in a 
+advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a 
 more responsive application.
 ",
 						MaxNumberOfRequestsPerSession));
@@ -343,7 +343,7 @@ more responsive application.
 			}
 			else
 			{
-				// the local instnace may have been changed, we adhere to the current Unit of Work
+				// the local instance may have been changed, we adhere to the current Unit of Work
 				// instance, and return that, ignoring anything new.
 				return (T)entity;
 			}
@@ -639,7 +639,7 @@ more responsive application.
 			{
 				var value = identityProperty.GetValue(entity, new object[0]);
 				id = value as string;
-				if (id == null && value != null) // need convertion
+				if (id == null && value != null) // need conversion
 				{
 					id = Conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType(), true);
 					return true;
