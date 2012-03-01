@@ -12,7 +12,7 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void MultiLoadShouldWork()
 		{
-			using (var session = shardedDocumentStore.OpenSession())
+			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				var users = session.Load<User>("users/1", "users/2");
 				Assert.NotNull(users);

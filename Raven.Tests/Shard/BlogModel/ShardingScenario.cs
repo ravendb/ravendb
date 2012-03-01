@@ -6,13 +6,12 @@ using Raven.Client.Shard;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Server;
-using System.Linq;
 
 namespace Raven.Tests.Shard.BlogModel
 {
 	public abstract class ShardingScenario : RavenTest, IDisposable
 	{
-		protected readonly ShardedDocumentStore shardedDocumentStore;
+		protected readonly ShardedDocumentStore ShardedDocumentStore;
 		protected readonly Dictionary<string, RavenDbServer> Servers;
 
 		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
@@ -74,7 +73,7 @@ namespace Raven.Tests.Shard.BlogModel
 				shard.Initialize();
 			}
 
-			shardedDocumentStore = new ShardedDocumentStore(new ShardStrategy
+			ShardedDocumentStore = new ShardedDocumentStore(new ShardStrategy
 															{
 																ShardAccessStrategy = new SequentialShardAccessStrategy(),
 																ShardSelectionStrategy = new BlogShardSelectionStrategy(3),
@@ -84,7 +83,7 @@ namespace Raven.Tests.Shard.BlogModel
 
 		public void Dispose()
 		{
-			shardedDocumentStore.Dispose();
+			ShardedDocumentStore.Dispose();
 			foreach (var ravenDbServer in Servers)
 			{
 				ravenDbServer.Value.Dispose();

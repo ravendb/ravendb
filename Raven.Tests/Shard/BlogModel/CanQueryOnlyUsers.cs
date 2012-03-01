@@ -9,7 +9,7 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void WhenQueryingForUserById()
 		{
-			using (var session = shardedDocumentStore.OpenSession())
+			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				var user = session.Load<User>("users/1");
 
@@ -23,7 +23,7 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void WhenStoringUser()
 		{
-			using (var session = shardedDocumentStore.OpenSession())
+			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				session.Store(new User { Name = "Fitzchak Yitzchaki" });
 
@@ -32,7 +32,7 @@ namespace Raven.Tests.Shard.BlogModel
 					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 			}
 
-			using (var session = shardedDocumentStore.OpenSession())
+			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				var user = session.Load<User>("users/1");
 
@@ -47,7 +47,7 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void WhenQueryingForUserByName()
 		{
-			using (var session = shardedDocumentStore.OpenSession())
+			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				var user = session.Query<User>()
 					.FirstOrDefault(x => x.Name == "Fitzchak");
