@@ -42,10 +42,9 @@ open Newtonsoft.Json
         let createAttachment documentId data metaData (a : IDocumentSession) =
             putAttachment documentId (Nullable()) data metaData a
 
-        let getAttachmentAsStream<'a> documentId (stream : IO.Stream) (a : IDocumentSession) =
+        let getAttachmentAsStream<'a> documentId (a : IDocumentSession) =
             let attachment = a.Advanced.DatabaseCommands.GetAttachment(documentId)
-            let attachmentBody = attachment.Data.Invoke().CopyTo(stream)
-            (attachment.Metadata.JsonDeserialization<'a>(), attachment.Etag)
+            (attachment.Metadata.JsonDeserialization<'a>(), attachment.Etag, attachment.Data.Invoke())
 
         let getAttachmentAsBytes<'a> documentId (a : IDocumentSession) =
             let attachment = a.Advanced.DatabaseCommands.GetAttachment(documentId)
