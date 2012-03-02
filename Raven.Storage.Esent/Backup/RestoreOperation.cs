@@ -41,7 +41,7 @@ namespace Raven.Storage.Esent.Backup
 			Directory.CreateDirectory(Path.Combine(databaseLocation, "temp"));
 			Directory.CreateDirectory(Path.Combine(databaseLocation, "system"));
 
-			var lastIndexBackup = CombineIncrementalBackups();
+			CombineIncrementalBackups();
 
 			CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "IndexDefinitions")),
 				new DirectoryInfo(Path.Combine(databaseLocation, "IndexDefinitions")));

@@ -582,7 +582,6 @@ namespace Raven.Client.Connection.Async
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 			request.AddOperationHeaders(OperationsHeaders);
-			var serializer = convention.CreateSerializer();
 
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
