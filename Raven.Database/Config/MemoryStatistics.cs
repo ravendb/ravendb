@@ -41,7 +41,7 @@ namespace Raven.Database.Config
 			}
 		}
 
-		public static int AvailablePhysicalMemory
+		public static int AvailableMemory
 		{
 			get
 			{
@@ -76,8 +76,9 @@ namespace Raven.Database.Config
 
 					// we are in 32 bits mode, but the _system_ may have more than 4 GB available
 					// so we have to check the _address space_ as well as the available memory
+					// 32bit processes are limited to 1.5GB of heap memory
 					var workingSetMb = (int)(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024);
-					return Math.Min(2048 - workingSetMb, availablePhysicalMemoryInMb);
+					return Math.Min(1536 - workingSetMb, availablePhysicalMemoryInMb);
 				}
 				catch
 				{
