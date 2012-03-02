@@ -139,8 +139,7 @@ type ``Given a Initailised Document store execute using computation expression``
            use ds = test.NewDocumentStore()
            use session = ds.OpenSession()
            let expected = storeMany (createCustomers 15) |> run session
-           let actual = session.Query<Customer>().AsEnumerable() |> Seq.toList
-           
+           let actual = session.Query<Customer>().Customize(fun x->x.WaitForNonStaleResults() |> ignore).AsEnumerable() |> Seq.toList
 
            Assert.Equal(expected, actual)
 
@@ -254,8 +253,8 @@ type ``Given a Initailised Document store execute using computation expression``
         
         let actual = 
             raven { 
-                let! a = storeMany testData
-                return! luceneQuery (fun docQuery -> docQuery.WhereLessThan("Dob", new DateTime(2012,2,1)))
+                    let! a = storeMany testData
+                    return! luceneQuery (fun docQuery -> docQuery.WhereLessThan("Dob", new DateTime(2012,2,1)))
             } |> run session |> Seq.toList
 
         let expected = Seq.init 31 (fun i -> Customer.Create("test_"+i.ToString(), (new DateTime(2012, 1, 1)).AddDays(i |> float))) |> Seq.toList
