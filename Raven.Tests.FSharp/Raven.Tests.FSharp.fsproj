@@ -49,30 +49,14 @@
       <Project>{267ac60c-751e-42e9-aa18-66035deff63a}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <Reference Include="FsUnit.CustomMatchers">
-      <HintPath>..\packages\FsUnit.xUnit.1.0.0.4\Lib\Net40\FsUnit.CustomMatchers.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="FsUnit.Xunit">
-      <HintPath>..\packages\FsUnit.xUnit.1.0.0.4\Lib\Net40\FsUnit.Xunit.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="FSharp.Core" />
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\packages\Newtonsoft.Json.4.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="NHamcrest">
-      <HintPath>..\packages\FsUnit.xUnit.1.0.0.4\Lib\Net40\NHamcrest.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <Reference Include="xunit">
-      <HintPath>..\packages\xunit.1.8.0.1549\lib\xunit.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Name>Raven.Abstractions</Name>
       <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
@@ -113,6 +97,9 @@
       <Project>{da99a419-e137-40db-9495-0c363b479d4b}</Project>
       <Private>True</Private>
     </ProjectReference>
+    <Reference Include="xunit">
+      <HintPath>..\packages\xunit.1.9.0.1566\lib\xunit.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
 	     Other similar extension points exist, see Microsoft.Common.targets.

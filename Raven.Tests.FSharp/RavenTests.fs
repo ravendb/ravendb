@@ -3,17 +3,16 @@
 open System
 open System.Linq
 open Xunit
-open FsUnit.Xunit
 open Raven.Client.Linq
 open Raven.Client
 open Raven.Tests
 open Raven.Abstractions.Extensions
 
-type ``With Raven Computation Expression Builder``() as test =
+type ``With Raven Computation Expression Builder``() =
     inherit RavenTest()
 
     [<Fact>]
-    let ``Zero should allow empty else branch``() =
+    member test.``Zero should allow empty else branch``() =
        use ds = test.NewDocumentStore()
        use session = ds.OpenSession()
        let called = ref false
@@ -24,7 +23,7 @@ type ``With Raven Computation Expression Builder``() as test =
 
 
     [<Fact>]
-    let ``TryCatch should catch exception``() = 
+    member test.``TryCatch should catch exception``() = 
         use ds = test.NewDocumentStore()
         use session = ds.OpenSession()
         let called = ref false
@@ -38,7 +37,7 @@ type ``With Raven Computation Expression Builder``() as test =
         Assert.True(!called)
 
     [<Fact>]
-    let ``TryFinally with exception should execute finally``() =
+    member test.``TryFinally with exception should execute finally``() =
         use ds = test.NewDocumentStore()
         use session = ds.OpenSession()
         let called = ref false
@@ -53,7 +52,7 @@ type ``With Raven Computation Expression Builder``() as test =
         Assert.True(!called)
 
     [<Fact>]
-    let ``use should call Dispose``() =
+    member test.``use should call Dispose``() =
         use ds = test.NewDocumentStore()
         use session = ds.OpenSession()
         let disposed = ref false
@@ -68,7 +67,7 @@ type ``With Raven Computation Expression Builder``() as test =
         Assert.True(!disposed)
 
     [<Fact>]
-    let ``use! should call Dispose``() =
+    member test.``use! should call Dispose``() =
         use ds = test.NewDocumentStore()
         use session = ds.OpenSession()
         let disposed = ref false
@@ -83,7 +82,7 @@ type ``With Raven Computation Expression Builder``() as test =
         Assert.True(!disposed)
 
     [<Fact>]
-    let ``While should loop and increment count``() =
+    member test.``While should loop and increment count``() =
       use ds = test.NewDocumentStore()
       use session = ds.OpenSession()
       let count = ref 0
@@ -95,7 +94,7 @@ type ``With Raven Computation Expression Builder``() as test =
       Assert.Equal(1, !count)
 
     [<Fact>]
-    let ``For should loop and increment count``() =
+    member test.``For should loop and increment count``() =
       use ds = test.NewDocumentStore()
       use session = ds.OpenSession()
       let count = ref 0
@@ -105,7 +104,7 @@ type ``With Raven Computation Expression Builder``() as test =
       Assert.Equal(2, !count)
 
     [<Fact>]
-    let ``Combine should combine if statement and return true branch``() =
+    member test.``Combine should combine if statement and return true branch``() =
         use ds = test.NewDocumentStore()
         use session = ds.OpenSession()
         let expected = "Foo"
@@ -114,7 +113,7 @@ type ``With Raven Computation Expression Builder``() as test =
                 if true then () 
                 return expected } |> run session
        
-        Assert.Equal(expected, actual)
+        Assert.True((expected = actual))
       
        
 
@@ -138,10 +137,11 @@ type ``Given a Initailised Document store execute using computation expression``
     let ``Should implicitly call save changes if runs to completion``() = 
            use ds = test.NewDocumentStore()
            use session = ds.OpenSession()
-           let expected = storeMany (createCustomers 15) |> run session
-           let actual = session.Query<Customer>().Customize(fun x->x.WaitForNonStaleResults() |> ignore).AsEnumerable() |> Seq.toList
+           let expected : Customer list= storeMany (createCustomers 15) |> run session
+           let actual : Customer list = session.Query<Customer>().Customize(fun x->x.WaitForNonStaleResults() |> ignore).AsEnumerable() |> Seq.toList
 
-           Assert.Equal(expected, actual)
+           //Humm... Is this the only way I could get it too compile, Assert.Equals cant resolve the correct overload
+           Assert.True((expected = actual))
 
     [<Fact>]
     let ``Should be able to save and retrieve an entity``() =
@@ -154,7 +154,7 @@ type ``Given a Initailised Document store execute using computation expression``
                          let! actual = (load<Customer> ["customers/test"] >> Seq.head) 
                          return expected, actual
                       } |> run session
-           act |> should equal exp
+           Assert.Equal(exp,act)
 
 
     [<Fact>]
@@ -170,7 +170,7 @@ type ``Given a Initailised Document store execute using computation expression``
 
         let expected = createCustomers ((new DateTime(2012,1,7)).Subtract(new DateTime(2012,1,1)).Days)
 
-        actual |> should equal expected
+        Assert.True((expected = actual))
     
     [<Fact>]
     let ``Should be able to query an entity including a reference``() =
@@ -192,8 +192,8 @@ type ``Given a Initailised Document store execute using computation expression``
                         )
             } |> run session
 
-        fst(retrieved) |> should equal order
-        snd(retrieved) |> should equal customer
+        Assert.Equal(order,fst(retrieved))
+        Assert.Equal(customer,snd(retrieved))
 
     [<Fact>]
     let ``Should be able to query for filtered batches of entites``() = 
@@ -209,7 +209,7 @@ type ``Given a Initailised Document store execute using computation expression``
 
         let expected = Seq.init 31 (fun i -> Customer.Create("test_"+i.ToString(), (new DateTime(2012, 1, 1)).AddDays(i |> float))) |> Seq.toList
 
-        actual |> should equal expected
+        Assert.True((expected = actual))
 
 
     [<Fact>]
@@ -242,8 +242,8 @@ type ``Given a Initailised Document store execute using computation expression``
                 return! findOrderIncludeCustomer "orders/1"
             } |> run session
 
-        fst(retrieved) |> should equal order
-        snd(retrieved) |> should equal customer
+        Assert.Equal(order,fst(retrieved))
+        Assert.Equal(customer,snd(retrieved))
 
     [<Fact>]
     let ``Should be able to query via a lucene query``() = 
@@ -259,4 +259,4 @@ type ``Given a Initailised Document store execute using computation expression``
 
         let expected = Seq.init 31 (fun i -> Customer.Create("test_"+i.ToString(), (new DateTime(2012, 1, 1)).AddDays(i |> float))) |> Seq.toList
 
-        Assert.Equal(expected, actual)
+        Assert.True((expected = actual))
