@@ -57,9 +57,8 @@ open Newtonsoft.Json
         let store input  = 
             (fun (s : IDocumentSession) -> s.Store(input); input)
         
-        let delete (input : string) = 
-            (fun (session : IDocumentSession) ->  
-                        session.Advanced.DatabaseCommands.Delete(input, Nullable()))
+        let delete (input ) = 
+            (fun (session : IDocumentSession) ->  session.Delete(input); input)
 
         let saveChanges (s : IDocumentSession) = 
             s.SaveChanges()
