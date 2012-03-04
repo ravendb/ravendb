@@ -76,12 +76,12 @@ namespace Raven.Client.Document
 			while (true)
 			{
 				IList<bool> currentCopy = results;
-				results = shardStrategy.ShardAccessStrategy.Apply(databaseCommands, (dbCmd, index) =>
+				results = shardStrategy.ShardAccessStrategy.Apply(databaseCommands, (dbCmd, i) =>
 				{
-					if (currentCopy[index])
+					if (currentCopy.Count > i && currentCopy[i])
 						return true;
-
-					var queryOp = shardQueryOperations[index];
+					
+					var queryOp = shardQueryOperations[i];
 
 					using (queryOp.EnterQueryContext())
 					{
@@ -100,9 +100,7 @@ namespace Raven.Client.Document
 				EntityType = typeof(T),
 				Query = indexQuery
 			});
-			var mergedQueryResult = shardStrategy.ShardQueryStrategy.MergeQueryResults(indexQuery,
-																						shardQueryOperations.Select(x => x.CurrentQueryResults).ToList(), 
-			                                                                            shardIds);
+			var mergedQueryResult = shardStrategy.ShardQueryStrategy.MergeQueryResults(indexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList(), shardIds);
 
 			shardQueryOperations[0].ForceResult(mergedQueryResult);
 			queryOperation = shardQueryOperations[0];

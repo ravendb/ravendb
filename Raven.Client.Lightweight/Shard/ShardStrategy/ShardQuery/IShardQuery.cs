@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 
 namespace Raven.Client.Shard.ShardStrategy.ShardQuery
 {

@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard.ShardStrategy;
 using Raven.Client.Shard.ShardStrategy.ShardAccess;
+using Raven.Client.Shard.ShardStrategy.ShardQuery;
 using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
@@ -170,6 +171,7 @@ namespace Raven.Tests.Shard
 		{
 			//get them in simple single threaded sequence for this test
 			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
+			shardStrategy.Stub(x => x.ShardQueryStrategy).Return(new SimpleMergingShardQueryStrategy());
 
 			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
 			using (var session = documentStore.OpenSession())
