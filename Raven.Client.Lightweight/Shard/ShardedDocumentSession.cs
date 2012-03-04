@@ -232,9 +232,32 @@ namespace Raven.Client.Shard
 			throw new NotImplementedException();
 		}
 
+		/// <summary>
+		/// Query RavenDB dynamically using LINQ
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
 		public IRavenQueryable<T> Query<T>()
 		{
-			throw new NotImplementedException();
+			var indexName = "dynamic";
+			if (typeof(T).IsEntityType())
+			{
+				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
+			}
+			var ravenQueryStatistics = new RavenQueryStatistics();
+			return new RavenQueryInspector<T>(
+				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
+#if !NET_3_5
+, Advanced.AsyncDatabaseCommands
+#endif
+),
+				ravenQueryStatistics,
+				indexName,
+				null,
+				Advanced.DatabaseCommands
+#if !NET_3_5
+, Advanced.AsyncDatabaseCommands
+#endif
+);
 		}
 
 		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()

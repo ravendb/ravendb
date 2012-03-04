@@ -69,6 +69,7 @@ namespace Raven.Tests.Shard.BlogModel
 			{
 				var user = session.Query<User>()
 					.FirstOrDefault(x => x.Name == "Fitzchak");
+				Assert.Null(user);
 
 				Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
 				Servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
