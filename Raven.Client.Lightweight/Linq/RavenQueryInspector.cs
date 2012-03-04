@@ -198,7 +198,7 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
-		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
+		///   This function exists solely to forbid calling ToArray() on a queryable in Silverlight.
 		/// </summary>
 		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
 		public static TOther[] ToArray<TOther>()
