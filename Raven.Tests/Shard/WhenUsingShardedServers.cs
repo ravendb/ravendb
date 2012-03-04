@@ -87,8 +87,8 @@ namespace Raven.Tests.Shard
 					session.Store(company1);
 					session.Store(company2);
 
-					Assert.Equal("Company1", company1.Id);
-					Assert.Equal("Company2", company2.Id);
+					Assert.Equal("companies/1", company1.Id);
+					Assert.Equal("companies/2", company2.Id);
 				}
 			}
 		}
