@@ -112,8 +112,6 @@ task Init -depends Verify40, Clean {
 				-fileversion "$version.$env:buildlabel.0" `
 				-copyright "Copyright © Hibernating Rhinos 2004 - $((Get-Date).Year)" `
 				-clsCompliant $clsComliant
-			
-			git update-index --assume-unchanged $asmInfo
 		}
 	}
 	
@@ -181,6 +179,12 @@ task CompileTests -depends Compile {
 }
 
 task StressTest -depends CompileTests {
+
+	$old = Get-Location
+	Set-Location $build_dir
+	
+	cp (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
+	
 	@("Raven.StressTests.dll") | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
 		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
@@ -238,8 +242,11 @@ task OpenSource {
 	$global:uploadCategory = "RavenDB"
 }
 
+task RunTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds
+
 task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest,MeasurePerformance
-task Release -depends RunAllTests,DoRelease
+
+task Release -depends RunTests,DoRelease
 
 task CopySamples {
 	$samples = @("Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `

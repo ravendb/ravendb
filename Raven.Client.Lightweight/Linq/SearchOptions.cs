@@ -7,5 +7,6 @@ namespace Raven.Client.Linq
 	{
 		Or = 0,
 		And = 1,
+		Not = 4
 	}
 }

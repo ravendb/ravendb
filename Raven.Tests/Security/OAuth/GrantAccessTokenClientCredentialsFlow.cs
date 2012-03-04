@@ -32,7 +32,7 @@ namespace Raven.Tests.Security.OAuth
 
 		}
 
-		protected override void ConfigureServer(RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(RavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
 			ravenConfiguration.AuthenticationMode = "OAuth";

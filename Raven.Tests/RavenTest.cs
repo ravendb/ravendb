@@ -157,7 +157,7 @@ namespace Raven.Tests
 			                         	AnonymousUserAccessMode = AnonymousUserAccessMode.All
 			                         };
 
-			ConfigureServer(ravenConfiguration);
+			ModifyConfiguration(ravenConfiguration);
 
 			if (ravenConfiguration.RunInMemory == false)
 				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);

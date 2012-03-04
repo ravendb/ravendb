@@ -59,7 +59,7 @@ namespace Raven.Studio.Infrastructure
 		private TimeSpan GetRefreshRate()
 		{
 			if (IsForced)
-				return TimeSpan.FromSeconds(1);
+				return TimeSpan.FromSeconds(0.9);
 			/*if (Debugger.IsAttached)
 				return RefreshRate.Add(TimeSpan.FromSeconds(60));*/
 			return RefreshRate;

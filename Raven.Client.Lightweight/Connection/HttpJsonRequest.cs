@@ -276,93 +276,24 @@ namespace Raven.Client.Connection
 			catch (WebException e)
 			{
 				sp.Stop();
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null ||
-					httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
-					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
-						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-				{
-					int httpResult = -1;
-					if (httpWebResponse != null)
-						httpResult = (int)httpWebResponse.StatusCode;
-
-					factory.InvokeLogRequest(owner, new RequestResultArgs
-					{
-						DurationMilliseconds = CalculateDuration(),
-						Method = webRequest.Method,
-						HttpResult = httpResult,
-						Status = RequestStatus.ErrorOnServer,
-						Result = e.Message,
-						Url = webRequest.RequestUri.PathAndQuery,
-						PostedData = postedData
-					});
+				var result = HanldeErrors(e);
+				if (result == null)
 					throw;
-				}
-
-				if (httpWebResponse.StatusCode == HttpStatusCode.NotModified
-					&& CachedRequestDetails != null)
-				{
-					factory.UpdateCacheTime(this);
-					var result = factory.GetCachedResponse(this);
-
-					factory.InvokeLogRequest(owner, new RequestResultArgs
-					{
-						DurationMilliseconds = CalculateDuration(),
-						Method = webRequest.Method,
-						HttpResult = (int)httpWebResponse.StatusCode,
-						Status = RequestStatus.Cached,
-						Result = result,
-						Url = webRequest.RequestUri.PathAndQuery,
-						PostedData = postedData
-					});
-
-					return result;
-				}
-
-				using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
-				{
-					var readToEnd = sr.ReadToEnd();
-
-					factory.InvokeLogRequest(owner, new RequestResultArgs
-					{
-						DurationMilliseconds = CalculateDuration(),
-						Method = webRequest.Method,
-						HttpResult = (int)httpWebResponse.StatusCode,
-						Status = RequestStatus.Cached,
-						Result = readToEnd,
-						Url = webRequest.RequestUri.PathAndQuery,
-						PostedData = postedData
-					});
-
-					RavenJObject ravenJObject;
-					try
-					{
-						ravenJObject = RavenJObject.Parse(readToEnd);
-					}
-					catch (Exception)
-					{
-						throw new InvalidOperationException(readToEnd, e);
-					}
-
-					if (ravenJObject.ContainsKey("Error"))
-					{
-						var sb = new StringBuilder();
-						foreach (var prop in ravenJObject)
-						{
-							if (prop.Key == "Error")
-								continue;
-
-							sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
-						}
-
-						sb.AppendLine()
-							.AppendLine(ravenJObject.Value<string>("Error"));
-
-						throw new InvalidOperationException(sb.ToString());
-					}
-					throw new InvalidOperationException(readToEnd, e);
-				}
+				return result;
 			}
+#if !NET_3_5
+			catch (AggregateException e)
+			{
+				sp.Stop();
+				var we = e.ExtractSingleInnerException() as WebException;
+				if (we == null)
+					throw;
+				var result = HanldeErrors(we);
+				if (result == null)
+					throw;
+				return result;
+			}
+#endif
 
 			ResponseHeaders = response.Headers;
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
@@ -389,6 +320,96 @@ namespace Raven.Client.Connection
 				});
 
 				return text;
+			}
+		}
+
+		private string HanldeErrors(WebException e)
+		{
+			var httpWebResponse = e.Response as HttpWebResponse;
+			if (httpWebResponse == null ||
+			    httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
+			    httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
+			    httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+			{
+				int httpResult = -1;
+				if (httpWebResponse != null)
+					httpResult = (int)httpWebResponse.StatusCode;
+
+				factory.InvokeLogRequest(owner, new RequestResultArgs
+				{
+					DurationMilliseconds = CalculateDuration(),
+					Method = webRequest.Method,
+					HttpResult = httpResult,
+					Status = RequestStatus.ErrorOnServer,
+					Result = e.Message,
+					Url = webRequest.RequestUri.PathAndQuery,
+					PostedData = postedData
+				});
+				return null;//throws
+			}
+
+			if (httpWebResponse.StatusCode == HttpStatusCode.NotModified
+			    && CachedRequestDetails != null)
+			{
+				factory.UpdateCacheTime(this);
+				var result = factory.GetCachedResponse(this);
+
+				factory.InvokeLogRequest(owner, new RequestResultArgs
+				{
+					DurationMilliseconds = CalculateDuration(),
+					Method = webRequest.Method,
+					HttpResult = (int)httpWebResponse.StatusCode,
+					Status = RequestStatus.Cached,
+					Result = result,
+					Url = webRequest.RequestUri.PathAndQuery,
+					PostedData = postedData
+				});
+
+				return result;
+			}
+
+			using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
+			{
+				var readToEnd = sr.ReadToEnd();
+
+				factory.InvokeLogRequest(owner, new RequestResultArgs
+				{
+					DurationMilliseconds = CalculateDuration(),
+					Method = webRequest.Method,
+					HttpResult = (int)httpWebResponse.StatusCode,
+					Status = RequestStatus.Cached,
+					Result = readToEnd,
+					Url = webRequest.RequestUri.PathAndQuery,
+					PostedData = postedData
+				});
+
+				RavenJObject ravenJObject;
+				try
+				{
+					ravenJObject = RavenJObject.Parse(readToEnd);
+				}
+				catch (Exception)
+				{
+					throw new InvalidOperationException(readToEnd, e);
+				}
+
+				if (ravenJObject.ContainsKey("Error"))
+				{
+					var sb = new StringBuilder();
+					foreach (var prop in ravenJObject)
+					{
+						if (prop.Key == "Error")
+							continue;
+
+						sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
+					}
+
+					sb.AppendLine()
+						.AppendLine(ravenJObject.Value<string>("Error"));
+
+					throw new InvalidOperationException(sb.ToString());
+				}
+				throw new InvalidOperationException(readToEnd, e);
 			}
 		}
 

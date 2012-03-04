@@ -22,22 +22,31 @@ namespace Raven.Studio.Models
 			get
 			{
 				if (recentDocuments == null || recentDocuments.IsAlive == false)
+				{
 					recentDocuments = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel>
-					                                                                {
-					                                                                	Value = new DocumentsModel
-					                                                                	        {
-					                                                                	        	Header = "Recent Documents",
-					                                                                	        	Pager = {PageSize = 15},
-					                                                                	        }
-					                                                                });
-				return recentDocuments.Target;
+					                                                                	{
+					                                                                		Value = new DocumentsModel
+					                                                                		        	{
+					                                                                		        		Header = "Recent Documents",
+					                                                                		        		Pager = {PageSize = 15},
+					                                                                		        	}
+					                                                                	});
+					SetTotalResults();
+					ApplicationModel.Database.PropertyChanged += (sender, args) => SetTotalResults();
+				}
+				var target = recentDocuments.Target ?? RecentDocuments;
+				return target;
 			}
+		}
+
+		private static void SetTotalResults()
+		{
+			recentDocuments.Target.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 		}
 
 		public HomeModel()
 		{
 			ModelUrl = "/home";
-			RecentDocuments.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 			ShowCreateSampleData = new Observable<bool>(RecentDocuments.Value.Pager.TotalResults, ShouldShowCreateSampleData);
 		}
 

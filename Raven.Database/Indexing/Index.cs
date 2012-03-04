@@ -731,7 +731,8 @@ namespace Raven.Database.Indexing
 					}
 					if (f.StartsWith(Constants.RandomFieldName))
 						continue;
-					if (parent.viewGenerator.ContainsField(f) == false && f != Constants.DistanceFieldName)
+					if (parent.viewGenerator.ContainsField(f) == false && f != Constants.DistanceFieldName
+						&& parent.viewGenerator.ContainsField("_") == false)// the catch all field name means that we have dynamic fields names
 						throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
 				}
 			}
