@@ -10,8 +10,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
 #if !NET_3_5
-using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
+#endif
+#if !Silverlight
+using Raven.Client.Connection;
 #endif
 
 namespace Raven.Client.Linq

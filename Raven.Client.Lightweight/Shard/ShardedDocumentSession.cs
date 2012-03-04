@@ -9,10 +9,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
 #if !NET_3_5
-using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Batches;
 #endif
+using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.SessionOperations;

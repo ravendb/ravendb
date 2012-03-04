@@ -4,13 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Specialized;
 using System.IO;
 using System.Net;
-#if SILVERLIGHT
-using System.Net.Browser;
-#endif
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -18,17 +13,19 @@ using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Connection.Profiling;
 #if !NET_3_5
+using System.Collections.Concurrent;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Async;
-#endif
-using System.Linq;
-#if !SILVERLIGHT
-using Raven.Client.Listeners;
 #else
+using Raven.Client.Util;
+#endif
+#if SILVERLIGHT
+using System.Net.Browser;
 using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
-
+#else
+using Raven.Client.Listeners;
 #endif
 
 namespace Raven.Client.Document
@@ -50,7 +47,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected Func<IDatabaseCommands> databaseCommandsGenerator;
 
-		private ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
 #endif
 
 		private HttpJsonRequestFactory jsonRequestFactory;
