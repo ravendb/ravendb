@@ -148,7 +148,7 @@ namespace Raven.Client.Linq
 			{
 				return
 					(IQueryable)
-					Activator.CreateInstance(typeof(DynamicRavenQueryInspector<>).MakeGenericType(elementType),
+					Activator.CreateInstance(typeof(RavenQueryInspector<>).MakeGenericType(elementType),
 											 new object[] { this, ravenQueryStatistics, indexName, expression
 #if !SILVERLIGHT
 												 ,databaseCommands

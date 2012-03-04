@@ -680,9 +680,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Linq\DynamicQueryProviderProcessor.cs">
       <Link>Imports\Linq\DynamicQueryProviderProcessor.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\DynamicRavenQueryInspector.cs">
-      <Link>Imports\Linq\DynamicRavenQueryInspector.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\DynamicRavenQueryProvider.cs">
       <Link>Imports\Linq\DynamicRavenQueryProvider.cs</Link>
     </Compile>

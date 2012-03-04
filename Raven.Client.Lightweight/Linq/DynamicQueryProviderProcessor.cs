@@ -61,7 +61,5 @@ namespace Raven.Client.Linq
 				memberType,
 				isNestedPath);
 		}
-
-		 
 	}
 }
