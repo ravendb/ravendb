@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="When_Using_Sharded_Servers.cs" company="Hibernating Rhinos LTD">
+// <copyright file="WhenUsingShardedServers.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -22,7 +22,7 @@ using System.Linq;
 
 namespace Raven.Tests.Shard
 {
-	public class When_Using_Sharded_Servers : RemoteClientTest, IDisposable
+	public class WhenUsingShardedServers : RemoteClientTest, IDisposable
 	{
 		readonly string path1;
 		readonly string path2;
@@ -34,7 +34,7 @@ namespace Raven.Tests.Shard
 		readonly IShardResolutionStrategy shardResolution;
 		readonly IShardStrategy shardStrategy;
 
-		public When_Using_Sharded_Servers()
+		public WhenUsingShardedServers()
 		{
 			const string server = "localhost";
 
@@ -67,7 +67,7 @@ namespace Raven.Tests.Shard
 		}
 
 		[Fact]
-		public void Can_override_the_shard_id_generation()
+		public void CanOverrideTheShardIdGeneration()
 		{
 			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
 			{
@@ -91,7 +91,7 @@ namespace Raven.Tests.Shard
 		}
 
 		[Fact]
-		public void Can_query_using_int()
+		public void CanQueryUsingInt()
 		{
 			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
 			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
@@ -122,7 +122,7 @@ namespace Raven.Tests.Shard
 		}
 
 		[Fact]
-		public void Can_get_single_entity_from_correct_sharded_server()
+		public void CanGetSingleEntityFromCorrectShardedServer()
 		{
 			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
 			using (var session = documentStore.OpenSession())
@@ -141,7 +141,7 @@ namespace Raven.Tests.Shard
 		}
 
 		[Fact]
-		public void Can_get_single_entity_from_correct_sharded_server_when_location_is_unknown()
+		public void CanGetSingleEntityFromCorrectShardedServerWhenLocationIsUnknown()
 		{
 			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
 			
@@ -163,7 +163,7 @@ namespace Raven.Tests.Shard
 		}
 
 		[Fact]
-		public void Can_get_all_sharded_entities()
+		public void CanGetAllShardedEntities()
 		{
 			//get them in simple single threaded sequence for this test
 			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
@@ -189,9 +189,6 @@ namespace Raven.Tests.Shard
 			}
 		}
 
-
-		#region IDisposable Members
-
 		public void Dispose()
 		{
 			server1.Dispose();
@@ -208,8 +205,5 @@ namespace Raven.Tests.Shard
 				catch (Exception) { }
 			}
 		}
-
-		#endregion
-
 	}
 }

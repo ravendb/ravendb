@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using Raven.Client.Document;
 
@@ -24,6 +25,9 @@ namespace Raven.Client.Shard
 		public string GenerateDocumentKey(DocumentConvention conventions, object entity)
 		{
 			var shardId = shardedDocumentStore.ShardStrategy.ShardResolutionStrategy.MetadataShardIdFor(entity);
+			if (shardId == null)
+				throw new InvalidOperationException(string.Format(
+					"ShardResolutionStrategy.MetadataShardIdFor cannot return null. You must specify where to store the metadata documents for the entity type '{0}'.", entity.GetType().FullName));
 
 			MultiTypeHiLoKeyGenerator value;
 			if (generatorsByShard.TryGetValue(shardId, out value))
