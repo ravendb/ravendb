@@ -28,7 +28,6 @@ namespace Raven.Client.Shard
 	/// </summary>
 	public class ShardedDocumentStore : DocumentStoreBase
 	{
-		private readonly IShardStrategy shardStrategy;
 		private readonly List<IDocumentStore> shards;
 
 #if !SILVERLIGHT
@@ -66,7 +65,7 @@ namespace Raven.Client.Shard
 			if (shardStrategy == null)
 				throw new ArgumentException("Must have shard strategy", "shardStrategy");
 
-			this.shardStrategy = shardStrategy;
+			this.ShardStrategy = shardStrategy;
 			this.shards = shards;
 		}
 
@@ -118,7 +117,7 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public override IAsyncDocumentSession OpenAsyncSession()
 		{
-			throw new NotSupportedException("Shared document store doesn't support async operations");
+			throw new NotSupportedException("Sharded document store doesn't support async operations");
 		}
 
 		/// <summary>
@@ -127,7 +126,7 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public override IAsyncDocumentSession OpenAsyncSession(string databaseName)
 		{
-			throw new NotSupportedException("Shared document store doesn't support async operations");
+			throw new NotSupportedException("Sharded document store doesn't support async operations");
 		}
 
 #endif
@@ -176,7 +175,7 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
-		/// The current session id - only used during contsruction
+		/// The current session id - only used during construction
 		/// </summary>
 		[ThreadStatic]
 		protected static Guid? currentSessionId;
@@ -212,7 +211,7 @@ namespace Raven.Client.Shard
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy, shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands)
+				var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy, shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands)
 //#if !NET_3_5
 //, AsyncDatabaseCommands
 //#endif
@@ -237,7 +236,7 @@ namespace Raven.Client.Shard
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy,
+				var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy,
 					shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database))
 //#if !NET_3_5
 //                    , AsyncDatabaseCommands.ForDatabase(database)
@@ -263,7 +262,7 @@ namespace Raven.Client.Shard
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy,
+				var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy,
 					shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database).With(credentialsForSession))
 //#if !NET_3_5
 //                    , AsyncDatabaseCommands.ForDatabase(database).With(credentialsForSession)
@@ -290,7 +289,7 @@ namespace Raven.Client.Shard
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new ShardedDocumentSession(this, listeners, sessionId, shardStrategy,
+				var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy,
 					shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.With(credentialsForSession))
 //#if !NET_3_5
 //                    , AsyncDatabaseCommands.With(credentialsForSession)
@@ -322,6 +321,7 @@ namespace Raven.Client.Shard
 		{
 			get { throw new NotSupportedException("There isn't a singular url when using sharding"); }
 		}
+		public IShardStrategy ShardStrategy { get; private set; }
 
 		///<summary>
 		/// Gets the etag of the last document written by any session belonging to this 
@@ -341,7 +341,11 @@ namespace Raven.Client.Shard
 			try
 			{
 				shards.ForEach(shard => shard.Initialize());
-				Conventions = shards.First().Conventions;
+				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
+				{
+					var generator = new ShardedHiloKeyGenerator(this, 32);
+					Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
+				}
 			}
 			catch (Exception)
 			{
@@ -350,6 +354,16 @@ namespace Raven.Client.Shard
 			}
 
 			return this;
+		}
+
+		public IDatabaseCommands DatabaseCommandsFor(string shardId)
+		{
+			var store = shards.FirstOrDefault(x => x.Identifier == shardId);
+			if(store == null)
+				throw new InvalidOperationException("Could not find a shard named: " + shardId);
+
+			return store.DatabaseCommands;
+
 		}
 	}
 }

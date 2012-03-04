@@ -119,7 +119,7 @@ namespace Raven.Tests
 				Thread.Sleep(25);
 		}
 
-		protected virtual void ConfigureServer(RavenConfiguration ravenConfiguration)
+		protected virtual void ConfigureServer(RavenConfiguration configuration)
 		{
 		}
 

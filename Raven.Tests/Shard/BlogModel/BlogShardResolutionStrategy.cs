@@ -57,5 +57,13 @@ namespace Raven.Tests.Shard.BlogModel
 
 			throw new ArgumentException("Cannot get shard id for '" + requestData.EntityType + "' because it is not a User, Blog or Post");
 		}
+
+		public string MetadataShardIdFor(object entity)
+		{
+			var shardIdFromObjectType = GetShardIdFromObjectType(entity);
+			if (entity is Post)
+				return shardIdFromObjectType + "1";
+			return shardIdFromObjectType;
+		}
 	}
 }

@@ -584,9 +584,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\DocumentStore.cs">
       <Link>Imports\Document\DocumentStore.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\HiLoKeyGenerator.cs">
-      <Link>Imports\Document\HiLoKeyGenerator.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\ILoaderWithInclude.cs">
       <Link>Imports\Document\ILoaderWithInclude.cs</Link>
     </Compile>
@@ -595,9 +592,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\MultiLoaderWithInclude.cs">
       <Link>Imports\Document\MultiLoaderWithInclude.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\MultiTypeHiLoKeyGenerator.cs">
-      <Link>Imports\Document\MultiTypeHiLoKeyGenerator.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\PromotableRavenClientEnlistment.cs">
       <Link>Imports\Document\PromotableRavenClientEnlistment.cs</Link>

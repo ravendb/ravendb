@@ -42,9 +42,10 @@ namespace Raven.Tests.Shard.BlogModel
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				session.Store(new User { Name = "Fitzchak Yitzchaki" });
+				Assert.Equal(2, Servers["Users"].Server.NumberOfRequests); // HiLo
+				
 				session.SaveChanges();
-
-				Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
+				Assert.Equal(3, Servers["Users"].Server.NumberOfRequests);
 				Servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
 					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 			}
@@ -53,7 +54,7 @@ namespace Raven.Tests.Shard.BlogModel
 			{
 				var user = session.Load<User>("users/1");
 
-				Assert.Equal(2, Servers["Users"].Server.NumberOfRequests);
+				Assert.Equal(4, Servers["Users"].Server.NumberOfRequests);
 				Assert.NotNull(user);
 				Assert.Equal("Fitzchak Yitzchaki", user.Name);			
 				Servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
