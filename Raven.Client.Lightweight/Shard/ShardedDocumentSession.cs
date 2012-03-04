@@ -227,9 +227,24 @@ namespace Raven.Client.Shard
 			return Load<T>(documentKey);
 		}
 
+		/// <summary>
+		/// Queries the specified index using Linq.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <param name="indexName">Name of the index.</param>
+		/// <returns></returns>
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
-			throw new NotImplementedException();
+			var ravenQueryStatistics = new RavenQueryStatistics();
+			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
+#if !NET_3_5
+, AsyncDatabaseCommands
+#endif
+), ravenQueryStatistics, indexName, null, Advanced.DatabaseCommands
+#if !NET_3_5
+, AsyncDatabaseCommands
+#endif
+);
 		}
 
 		/// <summary>
