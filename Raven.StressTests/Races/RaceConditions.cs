@@ -1,7 +1,6 @@
 using Raven.Tests.Bugs;
 using Raven.Tests.MailingList.MapReduceIssue;
 using Raven.Tests.MultiGet;
-using Raven.Tests.Shard.BlogModel;
 using Raven.Tests.Views;
 using Xunit;
 
@@ -19,12 +18,6 @@ namespace Raven.StressTests.Races
 		public void MapReduce()
 		{
 			Run<MapReduce>(x => x.CanUpdateReduceValue_WhenChangingReduceKey());
-		}
-
-		[Fact]
-		public void CanQueryOnlyUsers()
-		{
-			Run<CanQueryOnlyUsers>(x => x.WhenQueryingForUserById());
 		}
 
 		[Fact]
