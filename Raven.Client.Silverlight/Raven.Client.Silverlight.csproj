@@ -677,12 +677,6 @@
     <Compile Include="..\Raven.Client.Lightweight\ITransactionalDocumentSession.cs">
       <Link>Imports\ITransactionalDocumentSession.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\DynamicQueryProviderProcessor.cs">
-      <Link>Imports\Linq\DynamicQueryProviderProcessor.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\DynamicRavenQueryProvider.cs">
-      <Link>Imports\Linq\DynamicRavenQueryProvider.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\ExpressionInfo.cs">
       <Link>Imports\Linq\ExpressionInfo.cs</Link>
     </Compile>

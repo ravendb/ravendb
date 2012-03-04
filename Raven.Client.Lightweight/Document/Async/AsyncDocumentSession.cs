@@ -274,7 +274,7 @@ namespace Raven.Client.Document.Async
 			var ravenQueryStatistics = new RavenQueryStatistics();
 
 			return new RavenQueryInspector<T>(
-				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics,
+				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics,
 #if !SILVERLIGHT
 				null,
 #endif

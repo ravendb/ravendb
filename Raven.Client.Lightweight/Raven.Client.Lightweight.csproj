@@ -171,8 +171,6 @@
     <Compile Include="Indexes\SpatialIndex.cs" />
     <Compile Include="ISyncAdvancedSessionOperation.cs" />
     <Compile Include="ITransactionalDocumentSession.cs" />
-    <Compile Include="Linq\DynamicQueryProviderProcessor.cs" />
-    <Compile Include="Linq\DynamicRavenQueryProvider.cs" />
     <Compile Include="Linq\ExpressionInfo.cs" />
     <Compile Include="Linq\IDocumentQueryGenerator.cs" />
     <Compile Include="Linq\IRavenQueryable.cs" />

@@ -139,9 +139,7 @@ namespace Raven.Client.Linq
 
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
-			return indexName.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) ? 
-				new DynamicQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>()) : 
-				new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>( ));
+			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>());
 		}
 
 		/// <summary>

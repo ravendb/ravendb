@@ -534,21 +534,7 @@ namespace Raven.Client.Document
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
-			var ravenQueryStatistics = new RavenQueryStatistics();
-			return new RavenQueryInspector<T>(
-				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
-#if !NET_3_5
-, Advanced.AsyncDatabaseCommands
-#endif
-),
-				ravenQueryStatistics,
-				indexName,
-				null,
-				Advanced.DatabaseCommands
-#if !NET_3_5
-, Advanced.AsyncDatabaseCommands
-#endif
-);
+			return Query<T>(indexName);
 		}
 
 		/// <summary>

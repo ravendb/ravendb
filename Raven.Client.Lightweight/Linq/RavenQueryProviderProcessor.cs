@@ -331,16 +331,14 @@ namespace Raven.Client.Linq
 		/// </summary>
 		/// <param name="expression"></param>
 		/// <returns></returns>
-		protected virtual ExpressionInfo GetMember(System.Linq.Expressions.Expression expression)
+		protected virtual ExpressionInfo GetMember(Expression expression)
 		{
 			var parameterExpression = expression as ParameterExpression;
 			if (parameterExpression != null)
 			{
-
 				if (currentPath.EndsWith(","))
 					currentPath = currentPath.Substring(0, currentPath.Length - 1);
 				return new ExpressionInfo(currentPath, parameterExpression.Type, false);
-
 			}
 
 			string path;
@@ -351,10 +349,13 @@ namespace Raven.Client.Linq
 			//for standard queries, we take just the last part. But for dynamic queries, we take the whole part
 			path = path.Substring(path.IndexOf('.') + 1);
 
-			return new ExpressionInfo(
-				queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, CurrentPath, path),
-				memberType,
-				isNestedPath);
+			if (expression.NodeType == ExpressionType.ArrayLength)
+				path += ".Length";
+
+			var propertyName = indexName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase) 
+				? queryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, CurrentPath, path) 
+				: queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, CurrentPath, path);
+			return new ExpressionInfo(propertyName, memberType, isNestedPath);
 		}
 
 		/// <summary>

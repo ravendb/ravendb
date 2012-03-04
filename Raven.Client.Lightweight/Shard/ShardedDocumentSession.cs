@@ -243,21 +243,7 @@ namespace Raven.Client.Shard
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
-			var ravenQueryStatistics = new RavenQueryStatistics();
-			return new RavenQueryInspector<T>(
-				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
-#if !NET_3_5
-, Advanced.AsyncDatabaseCommands
-#endif
-),
-				ravenQueryStatistics,
-				indexName,
-				null,
-				Advanced.DatabaseCommands
-#if !NET_3_5
-, Advanced.AsyncDatabaseCommands
-#endif
-);
+			return Query<T>(indexName);
 		}
 
 		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
@@ -521,5 +507,6 @@ namespace Raven.Client.Shard
 			throw new NotImplementedException();
 		}
 	}
+
 #endif
 }
