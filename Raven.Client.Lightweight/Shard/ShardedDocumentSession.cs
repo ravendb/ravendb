@@ -420,25 +420,17 @@ namespace Raven.Client.Shard
 
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
-#if !NET_3_5
-			return new ShardedDocumentQuery<T>(this, SelectShardsByQuery, shardStrategy, indexName, null, listeners.QueryListeners);
-#else
-			return new ShardedDocumentQuery<T>(this, SelectShardsByQuery, null, indexName, null, listeners.QueryListeners);
-#endif
-		}
-
-		protected IList<IDatabaseCommands> SelectShardsByQuery(Type type, IndexQuery query)
-		{
-			return GetShardsToOperateOn(new ShardRequestData
-			{
-				EntityType = type,
-				Query = query
-			});
+			return new ShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, listeners.QueryListeners);
 		}
 
 		public IDocumentQuery<T> LuceneQuery<T>()
 		{
-			throw new NotImplementedException();
+			string indexName = "dynamic";
+			if (typeof(T).IsEntityType())
+			{
+				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
+			}
+			return Advanced.LuceneQuery<T>(indexName);
 		}
 
 		public string GetDocumentUrl(object entity)

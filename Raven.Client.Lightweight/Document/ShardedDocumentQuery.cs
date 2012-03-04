@@ -5,15 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using Raven.Abstractions.Data;
-using System.Text;
 using System.Threading;
 #if !NET_3_5
-using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
-using Raven.Client.Document.Batches;
 #endif
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;
@@ -27,19 +23,18 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// A query that is executed against sharded instances
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
 	public class ShardedDocumentQuery<T> : DocumentQuery<T>
 	{
-		public delegate IList<IDatabaseCommands> SelectShardsDelegate(Type type, IndexQuery query);
-		private readonly SelectShardsDelegate selectShards;
+		private readonly Func<ShardRequestData, IList<IDatabaseCommands>> getShardsToOperateOn;
 		private readonly IShardStrategy shardStrategy;
+		private List<QueryOperation> shardQueryOperations;
+		private IList<IDatabaseCommands> databaseCommands;
+		private IndexQuery indexQuery;
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="ShardedDocumentQuery&lt;T&gt;"/> class.
+		/// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
 		/// </summary>
-		public ShardedDocumentQuery(InMemoryDocumentSessionOperations session, SelectShardsDelegate selectShards,
-			IShardStrategy shardStrategy, 
-			string indexName, string[] projectionFields, IDocumentQueryListener[] queryListeners)
+		public ShardedDocumentQuery(InMemoryDocumentSessionOperations session, Func<ShardRequestData, IList<IDatabaseCommands>> getShardsToOperateOn, IShardStrategy shardStrategy, string indexName, string[] projectionFields, IDocumentQueryListener[] queryListeners)
 			: base(session
 #if !SILVERLIGHT
 			, null
@@ -49,16 +44,9 @@ namespace Raven.Client.Document
 #endif
 			, indexName, projectionFields, queryListeners)
 		{
-			if (selectShards == null)
-				throw new ArgumentNullException("selectShards");
-
-			this.selectShards = selectShards;
+			this.getShardsToOperateOn = getShardsToOperateOn;
 			this.shardStrategy = shardStrategy;
 		}
-
-		List<QueryOperation> shardQueryOperations;
-		IList<IDatabaseCommands> databaseCommands;
-		IndexQuery indexQuery;
 
 		protected override void InitSync()
 		{
@@ -72,8 +60,7 @@ namespace Raven.Client.Document
 
 			indexQuery = GenerateIndexQuery(theQueryText.ToString());
 
-			databaseCommands = selectShards(typeof (T), indexQuery);
-
+			databaseCommands = getShardsToOperateOn(new ShardRequestData{EntityType = typeof(T), Query = indexQuery});
 			foreach (var dbCmd in databaseCommands)
 			{
 				ClearSortHints(dbCmd);
@@ -82,7 +69,6 @@ namespace Raven.Client.Document
 
 			ExecuteActualQuery();
 		}
-
 
 		protected override void ExecuteActualQuery()
 		{
