@@ -547,7 +547,7 @@ namespace Raven.Client.Document
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
-			return LuceneQuery<T>(indexName);
+			return Advanced.LuceneQuery<T>(indexName);
 		}
 
 		/// <summary>
