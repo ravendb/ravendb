@@ -62,6 +62,9 @@ namespace Raven.Tests.Shard
 			shardResolution.Stub(x => x.GenerateShardIdFor(company1)).Return("Shard1");
 			shardResolution.Stub(x => x.GenerateShardIdFor(company2)).Return("Shard2");
 
+			shardResolution.Stub(x => x.MetadataShardIdFor(company1)).Return("Shard1");
+			shardResolution.Stub(x => x.MetadataShardIdFor(company2)).Return("Shard1");
+
 			shardStrategy = MockRepository.GenerateStub<IShardStrategy>();
 			shardStrategy.Stub(x => x.ShardResolutionStrategy).Return(shardResolution);
 		}
@@ -106,7 +109,7 @@ namespace Raven.Tests.Shard
 		}
 
 		[Fact]
-		public void Can_insert_into_two_sharded_servers()
+		public void CanInsertIntoTwoShardedServers()
 		{
 			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
 			{
