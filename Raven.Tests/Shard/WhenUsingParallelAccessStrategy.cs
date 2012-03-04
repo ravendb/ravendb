@@ -40,7 +40,8 @@ namespace Raven.Tests.Shard
 			{
 				var results = new ParallelShardAccessStrategy().Apply(new[] { session.Advanced.DatabaseCommands }, (x, i) => (IList<Company>)null);
 
-				Assert.Equal(0, results.Count);
+				Assert.Equal(1, results.Count);
+				Assert.Null(results[0]);
 			}
 		}
 
