@@ -697,6 +697,7 @@
     <Compile Include="Shard\BlogModel\Blog.cs" />
     <Compile Include="Shard\BlogModel\BlogShardResolutionStrategy.cs" />
     <Compile Include="Shard\BlogModel\CanQueryOnlyUsers.cs" />
+    <Compile Include="Shard\BlogModel\CanQueryOnlyPosts.cs" />
     <Compile Include="Shard\BlogModel\Post.cs" />
     <Compile Include="Shard\BlogModel\ShardedDocumentSessionIsWorking.cs" />
     <Compile Include="Shard\BlogModel\ShardedDocumentStoreTest.cs" />
