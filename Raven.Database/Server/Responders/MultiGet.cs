@@ -39,7 +39,7 @@ namespace Raven.Database.Server.Responders
 				var requests = context.ReadJsonObject<GetRequest[]>();
 				var results = new GetResponse[requests.Length];
 
-				Executerequests(context, Settings, results, requests);
+				ExecuteRequests(context, Settings, results, requests);
 				
 				context.WriteJson(results);
 			}
@@ -49,7 +49,7 @@ namespace Raven.Database.Server.Responders
 			}
 		}
 
-		private void Executerequests(
+		private void ExecuteRequests(
 			IHttpContext context,
 			InMemoryRavenConfiguration ravenHttpConfiguration, 
 			GetResponse[] results,
