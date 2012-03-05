@@ -229,8 +229,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public bool IsLoaded(string id)
 		{
-			object existingEntity;
-			return entitiesByKey.TryGetValue(id, out existingEntity);
+			return entitiesByKey.ContainsKey(id);
 		}
 
 		/// <summary>
