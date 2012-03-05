@@ -19,17 +19,17 @@ namespace Raven.Client.Shard.ShardResolution
 		string GenerateShardIdFor(object entity);
 
 		/// <summary>
+		/// The shard id for the server that contains the metadata (such as the hilo documents)
+		/// for the given entity
+		/// </summary>
+		string MetadataShardIdFor(object entity);
+
+		/// <summary>
 		/// Selects the shard ids appropriate for the specified data
 		/// </summary>
 		/// <remarks>
 		/// Returning null means search all shards
 		/// </remarks>
 		IList<string> PotentialShardsFor(ShardRequestData requestData);
-
-		/// <summary>
-		/// The shard id for the server that contains the metadata (such as the hilo documents)
-		/// for the given entity
-		/// </summary>
-		string MetadataShardIdFor(object entity);
 	}
 }

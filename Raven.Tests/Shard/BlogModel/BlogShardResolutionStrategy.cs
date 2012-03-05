@@ -18,24 +18,28 @@ namespace Raven.Tests.Shard.BlogModel
 
 		public string GenerateShardIdFor(object entity)
 		{
-			var shardId = GetShardIdFromObjectType(entity);
-			var post = entity as Post;
-			if (post != null)
-			{
-				var nextPostShardId = Interlocked.Increment(ref currentNewShardId) % numberOfShardsForPosts + 1;
-				shardId += nextPostShardId;
-			}
-			return shardId;
+			return GetShardIdFromObjectType(entity);
 		}
 
-		private static string GetShardIdFromObjectType(object instance)
+		public string MetadataShardIdFor(object entity)
+		{
+			return GetShardIdFromObjectType(entity, true);
+		}
+
+		private string GetShardIdFromObjectType(object instance, bool requiredMaster = false)
 		{
 			if (instance is User)
 				return "Users";
 			if (instance is Blog)
 				return "Blogs";
 			if (instance is Post)
-				return "Posts #";
+			{
+				if (requiredMaster)
+					return "Posts01";
+
+				var nextPostShardId = Interlocked.Increment(ref currentNewShardId) % numberOfShardsForPosts + 1;
+				return "Posts" + nextPostShardId.ToString("D2");
+			}
 			throw new ArgumentException("Cannot get shard id for '" + instance + "' because it is not a User, Blog or Post");
 		}
 
@@ -56,14 +60,6 @@ namespace Raven.Tests.Shard.BlogModel
 			}
 
 			throw new ArgumentException("Cannot get shard id for '" + requestData.EntityType + "' because it is not a User, Blog or Post");
-		}
-
-		public string MetadataShardIdFor(object entity)
-		{
-			var shardIdFromObjectType = GetShardIdFromObjectType(entity);
-			if (entity is Post)
-				return shardIdFromObjectType + "1";
-			return shardIdFromObjectType;
 		}
 	}
 }
