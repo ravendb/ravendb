@@ -52,7 +52,7 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Provide a way to dynamically index values with runtime known values
 		/// </summary>
-		protected object CreateField(string name, object value, bool stored, bool indexed)
+		protected object CreateField(string name, object value, bool stored, bool analyzed)
 		{
 			throw new NotSupportedException("This can only be run on the server side");
 		}
