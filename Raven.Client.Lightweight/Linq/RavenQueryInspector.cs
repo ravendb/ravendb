@@ -19,7 +19,7 @@ namespace Raven.Client.Linq
 	/// <summary>
 	/// Implements <see cref="IRavenQueryable{T}"/>
 	/// </summary>
-	public class RavenQueryInspector<T> : IRavenQueryable<T>, IRavenQueryInspector
+	public class RavenQueryInspector<T> : IRavenQueryable<T>, IRavenQueryInspector, IRavenCommandsAccessor
 	{
 		private readonly Expression expression;
 		private readonly IRavenQueryProvider provider;
@@ -161,7 +161,12 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public IDatabaseCommands DatabaseCommands
 		{
-			get { return databaseCommands; }
+			get
+			{
+				if(databaseCommands == null)
+					throw new NotSupportedException("You cannot get database commands for this query");
+				return databaseCommands;
+			}
 		}
 #endif
 
@@ -171,7 +176,12 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
-			get { return asyncDatabaseCommands; }
+			get
+			{
+				if (asyncDatabaseCommands == null)
+					throw new NotSupportedException("You cannot get database commands for this query");
+				return asyncDatabaseCommands;
+			}
 		}
 #endif
 

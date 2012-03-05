@@ -16,8 +16,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
-using Raven.Client.Document;
-using Raven.Client.Shard.ShardStrategy;
 
 namespace Raven.Client.Shard
 {
@@ -58,7 +56,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		/// <param name="shardStrategy">The shard strategy.</param>
 		/// <param name="shards">The shards.</param>
-		public ShardedDocumentStore(IShardStrategy shardStrategy, List<IDocumentStore> shards)
+		public ShardedDocumentStore(ShardStrategy shardStrategy, List<IDocumentStore> shards)
 		{
 			if (shards == null || shards.Count == 0) 
 				throw new ArgumentException("Must have one or more shards", "shards");
@@ -174,29 +172,6 @@ namespace Raven.Client.Shard
 			});
 		}
 
-		/// <summary>
-		/// The current session id - only used during construction
-		/// </summary>
-		[ThreadStatic]
-		protected static Guid? currentSessionId;
-
-//#if !NET_3_5
-//        private Func<IAsyncDatabaseCommands> asyncShardedDbCommandsGenerator;
-//        /// <summary>
-//        /// Gets the async database commands.
-//        /// </summary>
-//        /// <value>The async database commands.</value>
-//        public override IAsyncDatabaseCommands AsyncDatabaseCommands
-//        {
-//            get
-//            {
-//                if (asyncShardedDbCommandsGenerator == null)
-//                    return null;
-//                return asyncShardedDbCommandsGenerator();
-//            }
-//        }
-//#endif
-
 #if !SILVERLIGHT
 		
 		/// <summary>
@@ -208,21 +183,10 @@ namespace Raven.Client.Shard
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
-			currentSessionId = sessionId;
-			try
-			{
-				var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy, shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands)
-//#if !NET_3_5
-//, AsyncDatabaseCommands
-//#endif
-);
-				AfterSessionCreated(session);
-				return session;
-			}
-			finally
-			{
-				currentSessionId = null;
-			}
+			var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy, shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands)
+				);
+			AfterSessionCreated(session);
+			return session;
 		}
 
 		/// <summary>
@@ -233,22 +197,10 @@ namespace Raven.Client.Shard
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
-			currentSessionId = sessionId;
-			try
-			{
-				var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy,
-					shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database))
-//#if !NET_3_5
-//                    , AsyncDatabaseCommands.ForDatabase(database)
-//#endif
-);
-				AfterSessionCreated(session);
-				return session;
-			}
-			finally
-			{
-				currentSessionId = null;
-			}
+			var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy,
+			                                         shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database)));
+			AfterSessionCreated(session);
+			return session;
 		}
 
 		/// <summary>
@@ -259,22 +211,11 @@ namespace Raven.Client.Shard
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
-			currentSessionId = sessionId;
-			try
-			{
-				var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy,
-					shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database).With(credentialsForSession))
-//#if !NET_3_5
-//                    , AsyncDatabaseCommands.ForDatabase(database).With(credentialsForSession)
-//#endif
-);
-				AfterSessionCreated(session);
-				return session;
-			}
-			finally
-			{
-				currentSessionId = null;
-			}
+			var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy,
+			                                         shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database).With(credentialsForSession))
+				);
+			AfterSessionCreated(session);
+			return session;
 		}
 
 		/// <summary>
@@ -286,22 +227,11 @@ namespace Raven.Client.Shard
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
-			currentSessionId = sessionId;
-			try
-			{
-				var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy,
-					shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.With(credentialsForSession))
-//#if !NET_3_5
-//                    , AsyncDatabaseCommands.With(credentialsForSession)
-//#endif
-);
-				AfterSessionCreated(session);
-				return session;
-			}
-			finally
-			{
-				currentSessionId = null;
-			}
+			var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy,
+			                                         shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.With(credentialsForSession))
+				);
+			AfterSessionCreated(session);
+			return session;
 		}
 
 		/// <summary>
@@ -321,7 +251,8 @@ namespace Raven.Client.Shard
 		{
 			get { throw new NotSupportedException("There isn't a singular url when using sharding"); }
 		}
-		public IShardStrategy ShardStrategy { get; private set; }
+
+		public ShardStrategy ShardStrategy { get; private set; }
 
 		///<summary>
 		/// Gets the etag of the last document written by any session belonging to this 

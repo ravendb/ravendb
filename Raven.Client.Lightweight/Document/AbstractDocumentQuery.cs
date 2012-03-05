@@ -35,7 +35,7 @@ namespace Raven.Client.Document
 	/// <summary>
 	///   A query against a Raven index
 	/// </summary>
-	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
+	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenCommandsAccessor, IRavenQueryInspector, IAbstractDocumentQuery<T>
 	{
 		/// <summary>
 		/// Whatever to negate the next operation

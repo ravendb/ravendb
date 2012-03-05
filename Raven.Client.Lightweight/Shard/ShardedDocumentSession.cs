@@ -18,9 +18,8 @@ using Raven.Client.Document;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Client.Shard.ShardStrategy;
-using Raven.Client.Shard.ShardStrategy.ShardResolution;
 using System;
+using Raven.Client.Shard.ShardResolution;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 
@@ -41,7 +40,7 @@ namespace Raven.Client.Shard
 		private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
 		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 #endif
-		private readonly IShardStrategy shardStrategy;
+		private readonly ShardStrategy shardStrategy;
 		private readonly IDictionary<string, IDatabaseCommands> shardDbCommands;
 		private readonly ShardedDocumentStore documentStore;
 
@@ -54,7 +53,7 @@ namespace Raven.Client.Shard
 		/// <param name="documentStore"></param>
 		/// <param name="listeners"></param>
 		public ShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
-			IShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands
+			ShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands
 //#if !NET_3_5
 //, IDictionary<string, IAsyncDatabaseCommands> asyncDatabaseCommands
 //#endif
@@ -69,30 +68,37 @@ namespace Raven.Client.Shard
 //#endif
 		}
 
-		private IList<IDatabaseCommands> GetShardsToOperateOn(ShardRequestData resultionData)
+		private IList<Tuple<string,IDatabaseCommands>> GetShardsToOperateOn(ShardRequestData resultionData)
 		{
 			var shardIds = shardStrategy.ShardResolutionStrategy.PotentialShardsFor(resultionData);
-			
+
+			IEnumerable<KeyValuePair<string, IDatabaseCommands>> cmds = shardDbCommands;
+
 			if (shardIds != null)
-				return shardDbCommands.Where(cmd => shardIds.Contains(cmd.Key)).Select(x => x.Value).ToList();
-			
-			return shardDbCommands.Values.ToList();
+				cmds = shardDbCommands.Where(cmd => shardIds.Contains(cmd.Key));
+
+			return cmds.Select(x => Tuple.Create(x.Key, x.Value)).ToList();
+		}
+
+		private IList<IDatabaseCommands> GetCommandsToOperateOn(ShardRequestData resultionData)
+		{
+			return GetShardsToOperateOn(resultionData).Select(x => x.Item2).ToList();
 		}
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
-			var dbCommands = GetShardsToOperateOn(new ShardRequestData
+			var dbCommands = GetCommandsToOperateOn(new ShardRequestData
 			{
 				EntityType = typeof(object),
 				Key = documentKey
 			});
 
-			foreach (var dbCmd in dbCommands)
-			{
-				var jsonDocument = dbCmd.Get(documentKey);
-				if (jsonDocument != null)
-					return jsonDocument;
-			}
+			var documents = shardStrategy.ShardAccessStrategy.Apply(dbCommands, 
+				(commands, i) => commands.Get(documentKey));
+
+			var document = documents.FirstOrDefault(x => x != null);
+			if (document != null)
+				return document;
 
 			throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
 		}
@@ -100,6 +106,7 @@ namespace Raven.Client.Shard
 		public override void Commit(Guid txId)
 		{
 			IncrementRequestCount();
+			//TODO: shard access
 			foreach (var databaseCommands in shardDbCommands.Values)
 			{
 				databaseCommands.Commit(txId);
@@ -110,6 +117,7 @@ namespace Raven.Client.Shard
 		public override void Rollback(Guid txId)
 		{
 			IncrementRequestCount();
+			//TODO: shard access
 			foreach (var databaseCommands in shardDbCommands.Values)
 			{
 				databaseCommands.Rollback(txId);
@@ -119,12 +127,14 @@ namespace Raven.Client.Shard
 
 		public override byte[] PromoteTransaction(Guid fromTxId)
 		{
+			//TODO: shard access and implement
 			throw new NotImplementedException();
 		}
 
 		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
 		{
 			IncrementRequestCount();
+			//TODO: shard access
 			foreach (var databaseCommands in shardDbCommands.Values)
 			{
 				databaseCommands.StoreRecoveryInformation(resourceManagerId, txId, recoveryInformation);
@@ -174,11 +184,12 @@ namespace Raven.Client.Shard
 			}
 
 			IncrementRequestCount();
-			var dbCommands = GetShardsToOperateOn(new ShardRequestData
+			var dbCommands = GetCommandsToOperateOn(new ShardRequestData
 			                                      	{
 			                                      		EntityType = typeof (T),
 			                                      		Key = id
 			                                      	});
+			//TODO: shard access
 			foreach (var dbCmd in dbCommands)
 			{
 				var loadOperation = new LoadOperation(this, dbCmd.DisableAllCaching, id);
@@ -236,15 +247,16 @@ namespace Raven.Client.Shard
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
+			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, null
 #if !NET_3_5
-, AsyncDatabaseCommands
+			                                         , null
 #endif
-), ravenQueryStatistics, indexName, null, Advanced.DatabaseCommands
+				);
+			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, indexName, null, null
 #if !NET_3_5
-, AsyncDatabaseCommands
+			                                  , null
 #endif
-);
+				);
 		}
 
 		/// <summary>
@@ -343,7 +355,7 @@ namespace Raven.Client.Shard
 
 		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
 		{
-			throw new NotImplementedException();
+			return Advanced.LuceneQuery<T>(indexName);
 		}
 
 		public void Refresh<T>(T entity)
@@ -354,11 +366,12 @@ namespace Raven.Client.Shard
 			IncrementRequestCount();
 
 
-			var dbCommands = GetShardsToOperateOn(new ShardRequestData
+			var dbCommands = GetCommandsToOperateOn(new ShardRequestData
 			{
 				EntityType = typeof(T),
 				Key = value.Key
 			});
+			//TODO: shard access
 			foreach (var dbCmd in dbCommands)
 			{
 				var jsonDocument = dbCmd.Get(value.Key);
@@ -415,7 +428,8 @@ namespace Raven.Client.Shard
 
 		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
-			throw new NotImplementedException();
+			var indexName = new TIndexCreator().IndexName;
+			return LuceneQuery<T>(indexName);
 		}
 
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
@@ -435,7 +449,15 @@ namespace Raven.Client.Shard
 
 		public string GetDocumentUrl(object entity)
 		{
-			throw new NotImplementedException();
+			DocumentMetadata value;
+			if(entitiesAndMetadata.TryGetValue(entity, out value) == false)
+				throw new ArgumentException("The entity is not part of the session");
+
+			var shardId = value.Metadata.Value<string>(Constants.RavenShardId);
+			IDatabaseCommands commands;
+			if(shardDbCommands.TryGetValue(shardId, out commands) == false)
+				throw new InvalidOperationException("Could not find matching shard for shard id: " + shardId);
+			return commands.UrlFor(value.Key);
 		}
 
 		public T[] LoadInternal<T>(string[] ids, string[] includes)
@@ -447,7 +469,7 @@ namespace Raven.Client.Shard
 			var idsAndShards = ids.Select(id => new
 			                                    	{
 			                                    		id,
-			                                    		shards = GetShardsToOperateOn(new ShardRequestData
+														shards = GetCommandsToOperateOn(new ShardRequestData
 			                                    		                              	{
 			                                    		                              		EntityType = typeof (T),
 			                                    		                              		Key = id
