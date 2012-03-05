@@ -315,6 +315,11 @@ namespace Raven.Client.Connection
 		/// <param name="key">The key.</param>
 		/// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
 		JsonDocumentMetadata Head(string key);
+
+		/// <summary>
+		/// Get the full URL for the given document key
+		/// </summary>
+		string UrlFor(string documentKey);
 	}
 }
 #endif

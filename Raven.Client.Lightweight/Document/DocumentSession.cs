@@ -414,21 +414,11 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public string GetDocumentUrl(object entity)
 		{
-			if (string.IsNullOrEmpty(DocumentStore.Url))
-				throw new InvalidOperationException("Could not provide document url for embedded instance");
-
 			DocumentMetadata value;
-			string baseUrl = DocumentStore.Url.EndsWith("/") ? DocumentStore.Url + "docs/" : DocumentStore.Url + "/docs/";
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
-			{
-				string id;
-				TryGetIdFromInstance(entity, out id);
-				if (string.IsNullOrEmpty(id))
-					throw new InvalidOperationException("Could not figure out identifier for transient instance");
-				return baseUrl + id;
-			}
+				throw new ArgumentException("The entity is not part of the session");
 
-			return baseUrl + value.Key;
+			return DatabaseCommands.UrlFor(value.Key);
 		}
 
 		/// <summary>

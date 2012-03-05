@@ -611,6 +611,11 @@ namespace Raven.Client.Embedded
 			return database.Statistics;
 		}
 
+		public string UrlFor(string documentKey)
+		{
+			throw new NotSupportedException("Could not get url for embedded database");
+		}
+
 		/// <summary>
 		/// Retrieves the document metadata for the specified document key.
 		/// </summary>
@@ -630,7 +635,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
-			throw new NotImplementedException("Multi GET is only support for Server/Client, not embedded");
+			throw new NotSupportedException("Multi GET is only support for Server/Client, not embedded");
 		}
 
 		#endregion
