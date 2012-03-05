@@ -115,6 +115,7 @@
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
+    <Compile Include="Config\MemoryStatistics.cs" />
     <Compile Include="Impl\ExceptionAggregator.cs" />
     <Compile Include="Indexing\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IBackgroundTaskExecuter.cs" />

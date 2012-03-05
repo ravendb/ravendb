@@ -8,39 +8,39 @@ namespace Raven.Tests.MailingList
 	{
 		public class Item
 		{
-            public string Id { get; set; }
-            public Attribute[] Attributes { get; set; }
-        }
+			public string Id { get; set; }
+			public Attribute[] Attributes { get; set; }
+		}
 
-        public class Attribute
-        {
-            public Attribute(string name, decimal value)
-            {
-                Name = name;
-                Value = value;
-            }
+		public class Attribute
+		{
+			public Attribute(string name, decimal value)
+			{
+				Name = name;
+				Value = value;
+			}
 
-            public string Name { get; set; }
-            public decimal Value { get; set; }
-        }
+			public string Name { get; set; }
+			public decimal Value { get; set; }
+		}
 
-        public class WithDynamicIndex : AbstractIndexCreationTask<Item>
-        {
-            public WithDynamicIndex()
-            {
-                Map = items =>
-                      from item in items
-                      select new
-                      {
-                          _ = item.Attributes.Select(x => CreateField(x.Name, x.Value))
-                      };
-            }
-        }
+		public class WithDynamicIndex : AbstractIndexCreationTask<Item>
+		{
+			public WithDynamicIndex()
+			{
+				Map = items =>
+				      from item in items
+				      select new
+				      {
+				      	_ = item.Attributes.Select(x => CreateField(x.Name, x.Value))
+				      };
+			}
+		}
 
 		[Fact]
 		public void CanSortDynamicaly()
 		{
-			using(var store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
 				new WithDynamicIndex().Execute(store);
 				using (var s = store.OpenSession())

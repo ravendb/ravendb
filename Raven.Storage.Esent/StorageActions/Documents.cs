@@ -274,19 +274,17 @@ namespace Raven.Storage.Esent.StorageActions
 			if (key != null && Encoding.Unicode.GetByteCount(key) >= 255)
 				throw new ArgumentException(string.Format("The key must be a maximum of 255 bytes in Unicode, 127 characters, key is: '{0}'", key), "key");
 
-			Guid existingEtag;
 			Api.JetSetCurrentIndex(session, Documents, "by_key");
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
 			if (isUpdate)
 			{
 				EnsureNotLockedByTransaction(key, null);
-				existingEtag = EnsureDocumentEtagMatch(key, etag, "PUT");
+				EnsureDocumentEtagMatch(key, etag, "PUT");
 
 			}
 			else
 			{
-				existingEtag = Guid.Empty;
 				EnsureDocumentIsNotCreatedInAnotherTransaction(key, Guid.NewGuid());
 				if (Api.TryMoveFirst(session, Details))
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);
