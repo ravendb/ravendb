@@ -130,12 +130,12 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Loads the specified id.
 		/// </summary>
-		/// <typeparam name="T"></typeparam>
+		/// <typeparam name="TResult"></typeparam>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
-		Lazy<T> ILazySessionOperations.Load<T>(string id)
+		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id)
 		{
-			return Lazily.Load(id, (Action<T>)null);
+			return Lazily.Load(id, (Action<TResult>)null);
 		}
 
 		public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)

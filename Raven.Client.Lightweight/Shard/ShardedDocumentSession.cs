@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
+using System.Threading;
 using Raven.Abstractions.Data;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -37,7 +39,7 @@ namespace Raven.Client.Shard
 	{
 #if !NET_3_5
 		//private readonly IDictionary<string, IAsyncDatabaseCommands> asyncShardDbCommands;
-		private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
+		private readonly List<Tuple<ILazyOperation, IList<IDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<IDatabaseCommands>>>();
 		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 #endif
 		private readonly ShardStrategy shardStrategy;
@@ -155,13 +157,34 @@ namespace Raven.Client.Shard
 
 		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id)
 		{
-			throw new NotImplementedException();
+			return Lazily.Load(id, (Action<TResult>)null);
 		}
 
 		public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
 		{
-			//var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
-			//return AddLazyOperation(lazyLoadOperation, onEval);
+			var cmds = GetCommandsToOperateOn(new ShardRequestData
+			                                                 	{
+			                                                 		Key = id, EntityType = typeof (TResult)
+			                                                 	});
+
+			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, () =>
+			                                                                                   	{
+			                                                                                   		var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
+			                                                                                   		return new DisposableAction(() => list.ForEach(x => x.Dispose()));
+			                                                                                   	}, id));
+			return AddLazyOperation(lazyLoadOperation, onEval, cmds);
+		}
+
+		private Lazy<T> AddLazyOperation<T>(ILazyOperation lazyOp, Action<T> onEval, IList<IDatabaseCommands> cmds)
+		{
+			pendingLazyOperations.Add(Tuple.Create(lazyOp, cmds));
+			onEvaluateLazy[lazyOp] = o => onEval((T) o);
+
+			throw new NotImplementedException();
+		}
+
+		private Lazy<object> AddLazyOperation(LazyLoadOperation<object> lazyLoadOperation, Action<object> onEval)
+		{
 			throw new NotImplementedException();
 		}
 
@@ -189,26 +212,21 @@ namespace Raven.Client.Shard
 			                                      		EntityType = typeof (T),
 			                                      		Key = id
 			                                      	});
-			//TODO: shard access
-			foreach (var dbCmd in dbCommands)
-			{
-				var loadOperation = new LoadOperation(this, dbCmd.DisableAllCaching, id);
-				bool retry;
-				do
-				{
-					loadOperation.LogOperation();
-					using (loadOperation.EnterLoadContext())
-					{
-						retry = loadOperation.SetResult(dbCmd.Get(id));
-					}
-				} while (retry);
-				var result = loadOperation.Complete<T>();
-				
-				if (!Equals(result, default(T)))
-					return result;
-			}
-
-			return default(T);
+			var results = shardStrategy.ShardAccessStrategy.Apply(dbCommands, (commands, i) =>
+			                                                                  	{
+			                                                                  		var loadOperation = new LoadOperation(this, commands.DisableAllCaching, id);
+			                                                                  		bool retry;
+			                                                                  		do
+			                                                                  		{
+			                                                                  			loadOperation.LogOperation();
+			                                                                  			using (loadOperation.EnterLoadContext())
+			                                                                  			{
+			                                                                  				retry = loadOperation.SetResult(commands.Get(id));
+			                                                                  			}
+			                                                                  		} while (retry);
+			                                                                  		return loadOperation.Complete<T>();
+			                                                                  	});
+			return results.FirstOrDefault(x => !Equals(x, default(T)));
 		}
 
 #if !NET_3_5
@@ -533,7 +551,65 @@ namespace Raven.Client.Shard
 
 		public void ExecuteAllPendingLazyOperations()
 		{
-			throw new NotImplementedException();
+			if (pendingLazyOperations.Count == 0)
+				return;
+
+			try
+			{
+				IncrementRequestCount();
+				while (ExecuteLazyOperationsSingleStep())
+				{
+					Thread.Sleep(100);
+				}
+
+				foreach (var pendingLazyOperation in pendingLazyOperations)
+				{
+					Action<object> value;
+					if (onEvaluateLazy.TryGetValue(pendingLazyOperation.Item1, out value))
+						value(pendingLazyOperation.Item1.Result);
+				}
+			}
+			finally
+			{
+				pendingLazyOperations.Clear();
+			}
+		}
+
+		private bool ExecuteLazyOperationsSingleStep()
+		{
+			var disposables = pendingLazyOperations.Select(x => x.Item1.EnterContext()).Where(x => x != null).ToList();
+			try
+			{
+				var operationsPerShardGroup = pendingLazyOperations.GroupBy(x => x.Item2, new DbCmdsListComparer());
+
+				foreach (var operationPerShard in operationsPerShardGroup)
+				{
+					var lazyOperations = operationPerShard.Select(x => x.Item1).ToArray();
+					var requests = lazyOperations.Select(x => x.CraeteRequest()).ToArray();
+					var multiResponses = shardStrategy.ShardAccessStrategy.Apply(operationPerShard.Key, (commands, i) => commands.MultiGet(requests));
+
+					var sb = new StringBuilder();
+					foreach (var response in from shardReponses in multiResponses from getResponse in shardReponses where getResponse.RequestHasErrors() select getResponse)
+						sb.AppendFormat("Got an error from server, status code: {0}{1}{2}", response.Status, Environment.NewLine, response.Result)
+							.AppendLine();
+
+					if (sb.Length > 0)
+						throw new InvalidOperationException(sb.ToString());
+
+					for (int i = 0; i < lazyOperations.Length; i++)
+					{
+						var copy = i;
+						lazyOperations[i].HandleResponses(multiResponses.Select(x=>x[copy]).ToArray(),shardStrategy);
+						if (lazyOperations[i].RequiresRetry)
+							return true;
+					}
+				}
+				return false;
+			}
+			finally
+			{
+				disposables.ForEach(disposable => disposable.Dispose());
+			}
 		}
 	}
 

@@ -5,7 +5,9 @@ using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
+using Raven.Client.Shard;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Client.Document.Batches
 {
@@ -31,6 +33,12 @@ namespace Raven.Client.Document.Batches
 		public object Result { get; set; }
 
 		public bool RequiresRetry { get; set; }
+
+		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
+		{
+			var response = responses.OrderBy(x => x.Status).First(); // this way, 200 response is higher than 404
+			HandleResponse(response);
+		}
 
 		public void HandleResponse(GetResponse response)
 		{

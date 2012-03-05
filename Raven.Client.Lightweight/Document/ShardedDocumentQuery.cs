@@ -31,7 +31,6 @@ namespace Raven.Client.Document
 		private List<QueryOperation> shardQueryOperations;
 		private IList<IDatabaseCommands> databaseCommands;
 		private IndexQuery indexQuery;
-		private List<string> shardIds;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
@@ -64,7 +63,6 @@ namespace Raven.Client.Document
 
 			var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData {EntityType = typeof (T), Query = indexQuery});
 			databaseCommands = shardsToOperateOn.Select(x=>x.Item2).ToList();
-			shardIds = shardsToOperateOn.Select(x => x.Item1).ToList();
 			foreach (var dbCmd in databaseCommands)
 			{
 				ClearSortHints(dbCmd);
@@ -125,7 +123,7 @@ namespace Raven.Client.Document
 				Thread.Sleep(100);
 			}
 
-			var mergedQueryResult = shardStrategy.MergeQueryResults(indexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList(), shardIds);
+			var mergedQueryResult = shardStrategy.MergeQueryResults(indexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
 
 			shardQueryOperations[0].ForceResult(mergedQueryResult);
 			queryOperation = shardQueryOperations[0];

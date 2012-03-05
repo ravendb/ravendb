@@ -1,9 +1,9 @@
-#if !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="ShardStrategy.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +19,8 @@ namespace Raven.Client.Shard
 	/// </summary>
 	public class ShardStrategy
 	{
+		public delegate QueryResult MergeQueryResultsFunc(IndexQuery query, IList<QueryResult> queryResults);
+
 		public ShardStrategy()
 		{
 			ShardAccessStrategy = new SequentialShardAccessStrategy();
@@ -28,13 +30,13 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Merge the query results from all the shards into a single query results object
 		/// </summary>
-		public Func<IndexQuery, IList<QueryResult>, IList<string>, QueryResult> MergeQueryResults { get; set; }
+		public MergeQueryResultsFunc MergeQueryResults { get; set; }
 
 		/// <summary>
 		/// Merge the query results from all the shards into a single query results object by simply
 		/// concatenating all of the values
 		/// </summary>
-		public QueryResult DefaultMergeQueryResults(IndexQuery query, IList<QueryResult> queryResults, IList<string> shardIds)
+		public QueryResult DefaultMergeQueryResults(IndexQuery query, IList<QueryResult> queryResults)
 		{
 			var buffer = queryResults.SelectMany(x => x.IndexEtag.ToByteArray()).ToArray();
 			Guid indexEtag;

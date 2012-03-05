@@ -1,9 +1,10 @@
 ﻿#if !NET_3_5
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
+using Raven.Client.Shard;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
@@ -41,6 +42,44 @@ namespace Raven.Client.Document.Batches
 
 		public object Result { get; set; }
 		public bool RequiresRetry { get; set; }
+
+#if !SILVERLIGHT
+		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
+		{
+			var list = new List<MultiLoadResult>(
+				from response in responses
+				let result = RavenJObject.Parse(response.Result)
+				select new MultiLoadResult
+				{
+					Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
+					Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
+				});
+
+			var capacity = list.Max(x => x.Results.Count);
+
+			var finalResult = new MultiLoadResult
+			                  	{
+									Includes = new List<RavenJObject>(),
+			                  		Results = new List<RavenJObject>(Enumerable.Range(0,capacity).Select(x=> (RavenJObject)null))
+			                  	};
+
+
+			foreach (var multiLoadResult in list)
+			{
+				finalResult.Includes.AddRange(multiLoadResult.Includes);
+
+				for (int i = 0; i < multiLoadResult.Results.Count; i++)
+				{
+					if (finalResult.Results[i] == null)
+						finalResult.Results[i] = multiLoadResult.Results[i];
+				}
+			}
+			RequiresRetry = loadOperation.SetResult(finalResult);
+			if (RequiresRetry == false)
+				Result = loadOperation.Complete<T>();
+
+		}
+#endif
 
 		public void HandleResponse(GetResponse response)
 		{
