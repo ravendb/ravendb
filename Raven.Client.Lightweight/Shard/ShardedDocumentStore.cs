@@ -100,6 +100,7 @@ namespace Raven.Client.Shard
 
 
 #if !NET_3_5
+
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>

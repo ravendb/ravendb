@@ -553,13 +553,11 @@ namespace Raven.Client.Document
 		}
 
 #if !NET_3_5
-		/// <summary>
-		/// Opens the async session.
-		/// </summary>
-		/// <returns></returns>
-		public override IAsyncDocumentSession OpenAsyncSession()
+
+		private IAsyncDocumentSession OpenAsyncSessionInternal(IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
 			EnsureNotClosed();
+
 			var sessionId = Guid.NewGuid();
 			currentSessionId = sessionId;
 			try
@@ -567,7 +565,7 @@ namespace Raven.Client.Document
 				if (AsyncDatabaseCommands == null)
 					throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
 
-				var session = new AsyncDocumentSession(this, AsyncDatabaseCommands, listeners, sessionId);
+				var session = new AsyncDocumentSession(this, asyncDatabaseCommands, listeners, sessionId);
 				AfterSessionCreated(session);
 				return session;
 			}
@@ -575,6 +573,15 @@ namespace Raven.Client.Document
 			{
 				currentSessionId = null;
 			}
+		}
+
+		/// <summary>
+		/// Opens the async session.
+		/// </summary>
+		/// <returns></returns>
+		public override IAsyncDocumentSession OpenAsyncSession()
+		{
+			return OpenAsyncSessionInternal(AsyncDatabaseCommands);
 		}
 
 		/// <summary>
@@ -583,24 +590,9 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public override IAsyncDocumentSession OpenAsyncSession(string databaseName)
 		{
-			EnsureNotClosed();
-
-			var sessionId = Guid.NewGuid();
-			currentSessionId = sessionId;
-			try
-			{
-				if (AsyncDatabaseCommands == null)
-					throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
-
-				var session = new AsyncDocumentSession(this, AsyncDatabaseCommands.ForDatabase(databaseName), listeners, sessionId);
-				AfterSessionCreated(session);
-				return session;
-			}
-			finally
-			{
-				currentSessionId = null;
-			}
+			return OpenAsyncSessionInternal(AsyncDatabaseCommands.ForDatabase(databaseName));
 		}
+
 #endif
 
 		/// <summary>
