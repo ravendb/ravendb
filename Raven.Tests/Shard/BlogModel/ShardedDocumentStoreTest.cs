@@ -13,7 +13,7 @@ namespace Raven.Tests.Shard.BlogModel
 		public void WillThrowIsThereIsNoShards()
 		{
 			Assert.Throws<ArgumentException>(() => new ShardedDocumentStore(new ShardStrategy(), null));
-			Assert.Throws<ArgumentException>(() => new ShardedDocumentStore(new ShardStrategy(), new List<IDocumentStore>()));
+			Assert.Throws<ArgumentException>(() => new ShardedDocumentStore(new ShardStrategy(), new Dictionary<string, IDocumentStore>()));
 		}
 
 		[Fact]
@@ -29,11 +29,10 @@ namespace Raven.Tests.Shard.BlogModel
 
 		private static ShardedDocumentStore GetDocumentStore()
 		{
-			var shards = new List<IDocumentStore>
-			             	{
-			             		new DocumentStore {Url = "http://localhost:8079/"}
-			             	};
-			return new ShardedDocumentStore(new ShardStrategy(), shards);
+			return new ShardedDocumentStore(new ShardStrategy(), new Dictionary<string, IDocumentStore>
+			                                                     	{
+			                                                     		{"default", new DocumentStore {Url = "http://localhost:8079/"}}
+			                                                     	});
 		}
 
 		[Fact]

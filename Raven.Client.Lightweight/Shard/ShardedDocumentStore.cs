@@ -26,7 +26,7 @@ namespace Raven.Client.Shard
 	/// </summary>
 	public class ShardedDocumentStore : DocumentStoreBase
 	{
-		private readonly List<IDocumentStore> shards;
+		private readonly IDictionary<string, IDocumentStore> shards;
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -56,7 +56,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		/// <param name="shardStrategy">The shard strategy.</param>
 		/// <param name="shards">The shards.</param>
-		public ShardedDocumentStore(ShardStrategy shardStrategy, List<IDocumentStore> shards)
+		public ShardedDocumentStore(ShardStrategy shardStrategy, IDictionary<string, IDocumentStore> shards)
 		{
 			if (shards == null || shards.Count == 0) 
 				throw new ArgumentException("Must have one or more shards", "shards");
@@ -64,7 +64,7 @@ namespace Raven.Client.Shard
 				throw new ArgumentException("Must have shard strategy", "shardStrategy");
 
 			this.ShardStrategy = shardStrategy;
-			this.shards = shards;
+			this.shards = new Dictionary<string, IDocumentStore>(shards, StringComparer.InvariantCultureIgnoreCase);
 		}
 
 		/// <summary>
@@ -85,15 +85,13 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public override void Dispose()
 		{
-			foreach (var shard in shards)
-				shard.Dispose();
+			shards.ForEach(shard => shard.Value.Dispose());
 
 			WasDisposed = true;
 
 			var afterDispose = AfterDispose;
 			if (afterDispose != null)
 				afterDispose(this, EventArgs.Empty);
-
 		}
 
 		#endregion
@@ -141,7 +139,7 @@ namespace Raven.Client.Shard
 		/// </remarks>
 		public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
 		{
-			var disposables = shards.Select(shard => shard.AggressivelyCacheFor(cacheDuration)).ToList();
+			var disposables = shards.Select(shard => shard.Value.AggressivelyCacheFor(cacheDuration)).ToList();
 
 			return new DisposableAction(() =>
 			{
@@ -162,7 +160,7 @@ namespace Raven.Client.Shard
 		/// </remarks>
 		public override IDisposable DisableAggressiveCaching()
 		{
-			var disposables = shards.Select(shard => shard.DisableAggressiveCaching()).ToList();
+			var disposables = shards.Select(shard => shard.Value.DisableAggressiveCaching()).ToList();
 
 			return new DisposableAction(() =>
 			{
@@ -181,7 +179,7 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public override IDocumentSession OpenSession()
 		{
-			return OpenSessionInternal(shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands));
+			return OpenSessionInternal(shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands));
 		}
 
 		/// <summary>
@@ -189,7 +187,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public override IDocumentSession OpenSession(string database)
 		{
-			return OpenSessionInternal(shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database)));
+			return OpenSessionInternal(shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands.ForDatabase(database)));
 		}
 
 		/// <summary>
@@ -197,7 +195,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public override IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
-			return OpenSessionInternal(shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database).With(credentialsForSession)));
+			return OpenSessionInternal(shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands.ForDatabase(database).With(credentialsForSession)));
 		}
 
 		/// <summary>
@@ -206,7 +204,7 @@ namespace Raven.Client.Shard
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public override IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
-			return OpenSessionInternal(shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.With(credentialsForSession)));
+			return OpenSessionInternal(shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands.With(credentialsForSession)));
 		}
 
 		private IDocumentSession OpenSessionInternal(Dictionary<string, IDatabaseCommands> shardDbCommands)
@@ -256,7 +254,7 @@ namespace Raven.Client.Shard
 		{
 			try
 			{
-				shards.ForEach(shard => shard.Initialize());
+				shards.ForEach(shard => shard.Value.Initialize());
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 					var generator = new ShardedHiloKeyGenerator(this, 32);
@@ -274,8 +272,8 @@ namespace Raven.Client.Shard
 
 		public IDatabaseCommands DatabaseCommandsFor(string shardId)
 		{
-			var store = shards.FirstOrDefault(x => x.Identifier == shardId);
-			if(store == null)
+			IDocumentStore store;
+			if (shards.TryGetValue(shardId, out store) == false)
 				throw new InvalidOperationException("Could not find a shard named: " + shardId);
 
 			return store.DatabaseCommands;

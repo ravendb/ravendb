@@ -29,7 +29,7 @@ namespace Raven.Tests.Shard
 		readonly RavenDbServer server2;
 		readonly Company company1;
 		readonly Company company2;
-		readonly List<IDocumentStore> shards;
+		readonly IDictionary<string, IDocumentStore> shards;
 		readonly IShardResolutionStrategy shardResolution;
 		readonly ShardStrategy shardStrategy;
 
@@ -55,7 +55,7 @@ namespace Raven.Tests.Shard
 			shards = new List<IDocumentStore> { 
 				new DocumentStore { Identifier="Shard1", Url = "http://" + server +":"+port1}, 
 				new DocumentStore { Identifier="Shard2", Url = "http://" + server +":"+port2} 
-			};
+			}.ToDictionary(x => x.Identifier, x => x);
 
 			shardResolution = MockRepository.GenerateStub<IShardResolutionStrategy>();
 			shardResolution.Stub(x => x.GenerateShardIdFor(company1)).Return("Shard1");
@@ -64,7 +64,7 @@ namespace Raven.Tests.Shard
 			shardResolution.Stub(x => x.MetadataShardIdFor(company1)).Return("Shard1");
 			shardResolution.Stub(x => x.MetadataShardIdFor(company2)).Return("Shard1");
 
-			shardStrategy = new ShardStrategy {ShardResolutionStrategy = shardResolution};
+			shardStrategy = new ShardStrategy { ShardResolutionStrategy = shardResolution };
 		}
 
 		[Fact]
@@ -76,8 +76,7 @@ namespace Raven.Tests.Shard
 
 				foreach (var shard in shards)
 				{
-					var s = shard;
-					shard.Conventions.DocumentKeyGenerator = c => ((Company) c).Name;
+					shard.Value.Conventions.DocumentKeyGenerator = c => ((Company)c).Name;
 				}
 
 				using (var session = documentStore.OpenSession())
@@ -145,7 +144,7 @@ namespace Raven.Tests.Shard
 		public void CanGetSingleEntityFromCorrectShardedServerWhenLocationIsUnknown()
 		{
 			shardStrategy.ShardAccessStrategy = new SequentialShardAccessStrategy();
-			
+
 			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
 			using (var session = documentStore.OpenSession())
 			{
@@ -178,7 +177,7 @@ namespace Raven.Tests.Shard
 
 				session.SaveChanges();
 
-			 
+
 				//get all, should automagically retrieve from each shard
 				var allCompanies = session.Advanced.LuceneQuery<Company>()
 					.WaitForNonStaleResults()

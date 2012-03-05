@@ -122,7 +122,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Gets the store identifier for this session.
 		/// The store identifier is the identifier for the particular RavenDB instance.
-		/// This is mostly useful when using sharding.
 		/// </summary>
 		/// <value>The store identifier.</value>
 		public string StoreIdentifier
