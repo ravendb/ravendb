@@ -352,7 +352,7 @@ namespace Raven.Client.Linq
 			if (expression.NodeType == ExpressionType.ArrayLength)
 				path += ".Length";
 
-			var propertyName = indexName == null || indexName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase) 
+			var propertyName = indexName == null || indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) 
 				? queryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, CurrentPath, path) 
 				: queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, CurrentPath, path);
 			return new ExpressionInfo(propertyName, memberType, isNestedPath);
