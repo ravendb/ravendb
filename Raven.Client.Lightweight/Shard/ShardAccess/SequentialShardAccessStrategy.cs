@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Connection;
 
-namespace Raven.Client.Shard.ShardStrategy.ShardAccess
+namespace Raven.Client.Shard.ShardAccess
 {
 	/// <summary>
 	/// Apply an operation to all the shard session in sequence
@@ -23,9 +23,9 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 		/// <param name="commands">The shard sessions.</param>
 		/// <param name="operation">The operation.</param>
 		/// <returns></returns>
-		public IList<T> Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands, int, T> operation) 
+		public T[] Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands, int, T> operation) 
 		{
-			return commands.Select(operation).ToList();
+			return commands.Select(operation).ToArray();
 		}
 	}
 }

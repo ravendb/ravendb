@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 
-namespace Raven.Client.Shard.ShardStrategy.ShardResolution
+namespace Raven.Client.Shard.ShardResolution
 {
 	/// <summary>
 	/// Implementers of this interface provide a way to decide which shards will be queried

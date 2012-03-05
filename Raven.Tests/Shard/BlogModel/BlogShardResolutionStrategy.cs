@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Raven.Client.Shard.ShardStrategy.ShardResolution;
+using Raven.Client.Shard.ShardResolution;
 
 namespace Raven.Tests.Shard.BlogModel
 {

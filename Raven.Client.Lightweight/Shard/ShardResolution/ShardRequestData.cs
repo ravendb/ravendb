@@ -6,7 +6,7 @@
 using System;
 using Raven.Abstractions.Data;
 
-namespace Raven.Client.Shard.ShardStrategy.ShardResolution
+namespace Raven.Client.Shard.ShardResolution
 {
 	/// <summary>
 	/// Information required to resolve the appropriate shard for an entity / entity and key

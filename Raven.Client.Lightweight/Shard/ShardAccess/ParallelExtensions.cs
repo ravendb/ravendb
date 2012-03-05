@@ -10,7 +10,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace Raven.Client.Shard.ShardStrategy.ShardAccess
+namespace Raven.Client.Shard.ShardAccess
 {
 	internal static class ParallelExtensions
 	{

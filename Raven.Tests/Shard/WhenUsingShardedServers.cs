@@ -7,18 +7,16 @@ using System;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Shard.ShardStrategy;
-using Raven.Client.Shard.ShardStrategy.ShardAccess;
-using Raven.Client.Shard.ShardStrategy.ShardQuery;
-using Raven.Client.Shard.ShardStrategy.ShardResolution;
+using Raven.Client.Shard.ShardAccess;
+using Raven.Client.Shard.ShardResolution;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
 using Raven.Tests.Document;
+using Rhino.Mocks;
 using Xunit;
 using System.Collections.Generic;
 using Raven.Client.Shard;
-using Rhino.Mocks;
 using System.Linq;
 
 namespace Raven.Tests.Shard
@@ -33,7 +31,7 @@ namespace Raven.Tests.Shard
 		readonly Company company2;
 		readonly List<IDocumentStore> shards;
 		readonly IShardResolutionStrategy shardResolution;
-		readonly IShardStrategy shardStrategy;
+		readonly ShardStrategy shardStrategy;
 
 		public WhenUsingShardedServers()
 		{
@@ -66,8 +64,7 @@ namespace Raven.Tests.Shard
 			shardResolution.Stub(x => x.MetadataShardIdFor(company1)).Return("Shard1");
 			shardResolution.Stub(x => x.MetadataShardIdFor(company2)).Return("Shard1");
 
-			shardStrategy = MockRepository.GenerateStub<IShardStrategy>();
-			shardStrategy.Stub(x => x.ShardResolutionStrategy).Return(shardResolution);
+			shardStrategy = new ShardStrategy {ShardResolutionStrategy = shardResolution};
 		}
 
 		[Fact]
@@ -97,7 +94,7 @@ namespace Raven.Tests.Shard
 		[Fact]
 		public void CanQueryUsingInt()
 		{
-			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
+			shardStrategy.ShardAccessStrategy = new SequentialShardAccessStrategy();
 			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
 			{
 				documentStore.Initialize();
@@ -147,7 +144,7 @@ namespace Raven.Tests.Shard
 		[Fact]
 		public void CanGetSingleEntityFromCorrectShardedServerWhenLocationIsUnknown()
 		{
-			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
+			shardStrategy.ShardAccessStrategy = new SequentialShardAccessStrategy();
 			
 			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
 			using (var session = documentStore.OpenSession())
@@ -170,8 +167,7 @@ namespace Raven.Tests.Shard
 		public void CanGetAllShardedEntities()
 		{
 			//get them in simple single threaded sequence for this test
-			shardStrategy.Stub(x => x.ShardAccessStrategy).Return(new SequentialShardAccessStrategy());
-			shardStrategy.Stub(x => x.ShardQueryStrategy).Return(new SimpleMergingShardQueryStrategy());
+			shardStrategy.ShardAccessStrategy = new SequentialShardAccessStrategy();
 
 			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
 			using (var session = documentStore.OpenSession())

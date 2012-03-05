@@ -5,12 +5,12 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Client.Document;
+using Raven.Client.Shard.ShardAccess;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Tests.Document;
 using Xunit;
 using System.Collections.Generic;
-using Raven.Client.Shard.ShardStrategy.ShardAccess;
 
 namespace Raven.Tests.Shard
 {
@@ -40,7 +40,7 @@ namespace Raven.Tests.Shard
 			{
 				var results = new ParallelShardAccessStrategy().Apply(new[] { session.Advanced.DatabaseCommands }, (x, i) => (IList<Company>)null);
 
-				Assert.Equal(1, results.Count);
+				Assert.Equal(1, results.Length);
 				Assert.Null(results[0]);
 			}
 		}

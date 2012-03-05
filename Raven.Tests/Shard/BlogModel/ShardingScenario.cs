@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
-using Raven.Client.Shard.ShardStrategy;
-using Raven.Client.Shard.ShardStrategy.ShardAccess;
+using Raven.Client.Shard.ShardAccess;
 using Raven.Server;
 
 namespace Raven.Tests.Shard.BlogModel
@@ -75,7 +74,7 @@ namespace Raven.Tests.Shard.BlogModel
 			ShardedDocumentStore = new ShardedDocumentStore(new ShardStrategy
 															{
 																ShardAccessStrategy = new SequentialShardAccessStrategy(),
-																ShardResolutionStrategy = new BlogShardResolutionStrategy(3)
+																ShardResolutionStrategy = new BlogShardResolutionStrategy(3),
 															}, shards);
 			ShardedDocumentStore = (ShardedDocumentStore) ShardedDocumentStore.Initialize();
 		}

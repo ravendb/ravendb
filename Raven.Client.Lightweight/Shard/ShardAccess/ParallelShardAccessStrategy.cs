@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Connection;
 
-namespace Raven.Client.Shard.ShardStrategy.ShardAccess
+namespace Raven.Client.Shard.ShardAccess
 {
 	/// <summary>
 	/// Apply an operation to all the shard session in parallel
@@ -20,7 +20,7 @@ namespace Raven.Client.Shard.ShardStrategy.ShardAccess
 		/// <summary>
 		/// Applies the specified action to all shard sessions in parallel
 		/// </summary>
-		public IList<T> Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands,int, T> operation)
+		public T[] Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands,int, T> operation)
 		{
 			var returnedLists = new T[commands.Count];
 
