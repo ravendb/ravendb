@@ -589,7 +589,10 @@ namespace Raven.Client.Shard
 					var multiResponses = shardStrategy.ShardAccessStrategy.Apply(operationPerShard.Key, (commands, i) => commands.MultiGet(requests));
 
 					var sb = new StringBuilder();
-					foreach (var response in from shardReponses in multiResponses from getResponse in shardReponses where getResponse.RequestHasErrors() select getResponse)
+					foreach (var response in from shardReponses in multiResponses
+											 from getResponse in shardReponses
+											 where getResponse.RequestHasErrors()
+											 select getResponse)
 						sb.AppendFormat("Got an error from server, status code: {0}{1}{2}", response.Status, Environment.NewLine, response.Result)
 							.AppendLine();
 
