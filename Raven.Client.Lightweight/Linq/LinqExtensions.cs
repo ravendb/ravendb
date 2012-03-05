@@ -30,7 +30,6 @@ namespace Raven.Client.Linq
 		{
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
 			var query = ravenQueryInspector.ToString();
-			var provider = queryable.Provider as IRavenQueryProvider;
 
 			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
 		}
@@ -43,7 +42,6 @@ namespace Raven.Client.Linq
 		{
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
 			var query = ravenQueryInspector.ToString();
-			var provider = queryable.Provider as IRavenQueryProvider;
 
 			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
 		}

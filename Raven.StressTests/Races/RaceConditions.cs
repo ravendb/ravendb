@@ -29,7 +29,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void CaseSensitiveDeletes_ShouldWork()
 		{
-			Run<CaseSensitiveDeletes>(storages => storages.ShouldWork(), 1000);
+			Run<CaseSensitiveDeletes>(x => x.ShouldWork(), 1000);
 		}
 	}
 }

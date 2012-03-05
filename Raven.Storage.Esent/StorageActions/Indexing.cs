@@ -44,7 +44,7 @@ namespace Raven.Storage.Esent.StorageActions
 			    var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
 
 				Api.MakeKey(session, IndexesEtags, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				var a = Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ);
+				Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ);
 
 			    yield return new IndexStats
 				{

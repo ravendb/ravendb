@@ -26,20 +26,12 @@ namespace Raven.Bundles.Tests.Replication
 		private readonly List<IDocumentStore> stores = new List<IDocumentStore>();
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 
-		public ReplicationBase()
-		{
-			for (int i = 0; i < 15; i++)
-			{
-				database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data #" + i);
-			}
-		}
-
-		private const int PortRangeStart = 8500;
+		private const int PortRangeStart = 8079;
 		protected const int RetriesCount = 300;
 
 		public IDocumentStore CreateStore()
 		{
-			var port = PortRangeStart + servers.Count;
+			var port = PortRangeStart - servers.Count;
 			return CreateStoreAtPort(port);
 		}
 
