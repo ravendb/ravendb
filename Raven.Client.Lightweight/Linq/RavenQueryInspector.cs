@@ -139,7 +139,7 @@ namespace Raven.Client.Linq
 
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
-			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>());
+			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
 		}
 
 		/// <summary>
@@ -180,7 +180,7 @@ namespace Raven.Client.Linq
 		///</summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm()
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>());
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
 			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
 			return ((IRavenQueryInspector)luceneQuery).GetLastEqualityTerm();
 		}
