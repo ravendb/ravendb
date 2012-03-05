@@ -63,7 +63,7 @@ namespace Raven.Abstractions.Indexing
 		/// </value>
 		public bool IsMapReduce
 		{
-			get { return string.IsNullOrEmpty(Reduce); }
+			get { return string.IsNullOrEmpty(Reduce) == false; }
 		}
 
 		public bool IsCompiled { get; set; }
