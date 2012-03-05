@@ -54,7 +54,9 @@ namespace Rhino.Licensing.Discovery
 			Task.Factory.FromAsync<byte[], int, IPEndPoint, int>(udpClient.BeginSend, udpClient.EndSend, buffer, buffer.Length, allHostsGroup, null)
 				.ContinueWith(task =>
 				{
+#pragma warning disable 0219
 					var _ = task.Exception;
+#pragma warning restore 0219
 					// basically just ignoring this error
 				});
 		}
