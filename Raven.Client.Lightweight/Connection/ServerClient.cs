@@ -1109,6 +1109,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			return jo.Deserialize<DatabaseStatistics>(convention);
 		}
 
+		/// <summary>
+		/// Get the full URL for the given document key
+		/// </summary>
 		public string UrlFor(string documentKey)
 		{
 			return url + "/docs/" + documentKey;

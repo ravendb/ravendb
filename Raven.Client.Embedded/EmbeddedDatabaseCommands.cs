@@ -611,6 +611,9 @@ namespace Raven.Client.Embedded
 			return database.Statistics;
 		}
 
+		/// <summary>
+		/// Get the full URL for the given document key. This is not supported for embedded database.
+		/// </summary>
 		public string UrlFor(string documentKey)
 		{
 			throw new NotSupportedException("Could not get url for embedded database");
