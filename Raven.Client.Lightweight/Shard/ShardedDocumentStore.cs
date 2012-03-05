@@ -180,13 +180,7 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public override IDocumentSession OpenSession()
 		{
-			EnsureNotClosed();
-
-			var sessionId = Guid.NewGuid();
-			var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy, shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands)
-				);
-			AfterSessionCreated(session);
-			return session;
+			return OpenSessionInternal(shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands));
 		}
 
 		/// <summary>
@@ -194,13 +188,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public override IDocumentSession OpenSession(string database)
 		{
-			EnsureNotClosed();
-
-			var sessionId = Guid.NewGuid();
-			var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy,
-			                                         shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database)));
-			AfterSessionCreated(session);
-			return session;
+			return OpenSessionInternal(shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database)));
 		}
 
 		/// <summary>
@@ -208,14 +196,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public override IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
-			EnsureNotClosed();
-
-			var sessionId = Guid.NewGuid();
-			var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy,
-			                                         shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database).With(credentialsForSession))
-				);
-			AfterSessionCreated(session);
-			return session;
+			return OpenSessionInternal(shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.ForDatabase(database).With(credentialsForSession)));
 		}
 
 		/// <summary>
@@ -224,12 +205,15 @@ namespace Raven.Client.Shard
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public override IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
+			return OpenSessionInternal(shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.With(credentialsForSession)));
+		}
+
+		private IDocumentSession OpenSessionInternal(Dictionary<string, IDatabaseCommands> shardDbCommands)
+		{
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
-			var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy,
-			                                         shards.ToDictionary(x => x.Identifier, x => x.DatabaseCommands.With(credentialsForSession))
-				);
+			var session = new ShardedDocumentSession(this, listeners, sessionId, ShardStrategy, shardDbCommands);
 			AfterSessionCreated(session);
 			return session;
 		}

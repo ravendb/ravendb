@@ -243,31 +243,6 @@ namespace Raven.Client.Document
 		#endregion
 
 #if !SILVERLIGHT
-		/// <summary>
-		/// Opens the session with the specified credentials.
-		/// </summary>
-		/// <param name="credentialsForSession">The credentials for session.</param>
-		public override IDocumentSession OpenSession(ICredentials credentialsForSession)
-		{
-			EnsureNotClosed();
-
-			var sessionId = Guid.NewGuid();
-			currentSessionId = sessionId;
-			try
-			{
-				var session = new DocumentSession(this, listeners, sessionId, DatabaseCommands.With(credentialsForSession)
-#if !NET_3_5
-, AsyncDatabaseCommands.With(credentialsForSession)
-#endif
-);
-				AfterSessionCreated(session);
-				return session;
-			}
-			finally
-			{
-				currentSessionId = null;
-			}
-		}
 
 		/// <summary>
 		/// Opens the session.
@@ -275,24 +250,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public override IDocumentSession OpenSession()
 		{
-			EnsureNotClosed();
-
-			var sessionId = Guid.NewGuid();
-			currentSessionId = sessionId;
-			try
-			{
-				var session = new DocumentSession(this, listeners, sessionId, DatabaseCommands
-#if !NET_3_5
-, AsyncDatabaseCommands
-#endif
-);
-				AfterSessionCreated(session);
-				return session;
-			}
-			finally
-			{
-				currentSessionId = null;
-			}
+			return OpenSessionInternal(DatabaseCommands, AsyncDatabaseCommands);
 		}
 
 		/// <summary>
@@ -300,24 +258,9 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override IDocumentSession OpenSession(string database)
 		{
-			EnsureNotClosed();
-
-			var sessionId = Guid.NewGuid();
-			currentSessionId = sessionId;
-			try
-			{
-				var session = new DocumentSession(this, listeners, sessionId, DatabaseCommands.ForDatabase(database)
-#if !NET_3_5
-, AsyncDatabaseCommands.ForDatabase(database)
-#endif
-);
-				AfterSessionCreated(session);
-				return session;
-			}
-			finally
-			{
-				currentSessionId = null;
-			}
+			var asyncDatabaseCommands = AsyncDatabaseCommands.ForDatabase(database);
+			var databaseCommands = DatabaseCommands.ForDatabase(database);
+			return OpenSessionInternal(databaseCommands, asyncDatabaseCommands);
 		}
 
 		/// <summary>
@@ -325,19 +268,33 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
+			var asyncDatabaseCommands = AsyncDatabaseCommands.ForDatabase(database).With(credentialsForSession);
+			var databaseCommands = DatabaseCommands.ForDatabase(database).With(credentialsForSession);
+			return OpenSessionInternal(databaseCommands, asyncDatabaseCommands);
+		}
+
+		/// <summary>
+		/// Opens the session with the specified credentials.
+		/// </summary>
+		/// <param name="credentialsForSession">The credentials for session.</param>
+		public override IDocumentSession OpenSession(ICredentials credentialsForSession)
+		{
+			var asyncDatabaseCommands = AsyncDatabaseCommands.With(credentialsForSession);
+			var databaseCommands = DatabaseCommands.With(credentialsForSession);
+			return OpenSessionInternal(databaseCommands, asyncDatabaseCommands);
+		}
+
+		private IDocumentSession OpenSessionInternal(IDatabaseCommands databaseCommands, IAsyncDatabaseCommands asyncDatabaseCommands)
+		{
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new DocumentSession(this, listeners, sessionId, DatabaseCommands
-					.ForDatabase(database)
-					.With(credentialsForSession)
+				var session = new DocumentSession(this, listeners, sessionId, databaseCommands
 #if !NET_3_5
-, AsyncDatabaseCommands
-					.ForDatabase(database)
-					.With(credentialsForSession)
+, asyncDatabaseCommands
 #endif
 );
 				AfterSessionCreated(session);
