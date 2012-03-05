@@ -11,7 +11,9 @@ namespace Raven.Tests.Shard.BlogModel
 		{
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
-				session.Store(new Post {Title = "RavenDB is plain awesome"});
+				session.Store(new Post {Title = "Item 1"});
+				session.Store(new Post {Title = "Item 2"});
+				session.Store(new Post {Title = "Item 3"});
 				Assert.Equal(2, Servers["Posts01"].Server.NumberOfRequests); // HiLo
 				Servers.Where(server => server.Key != "Posts01")
 					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
