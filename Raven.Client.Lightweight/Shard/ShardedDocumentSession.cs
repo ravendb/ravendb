@@ -604,9 +604,15 @@ namespace Raven.Client.Shard
 					var loadResults = multiLoadOperation.Complete<T>();
 					for (int i = 0; i < loadResults.Length; i++)
 					{
-						if(ReferenceEquals(loadResults[i], null))
+						if (ReferenceEquals(loadResults[i], null))
 							continue;
-						results[Array.IndexOf(ids, currentShardIds[i])] = loadResults[i];
+						var id = currentShardIds[i];
+						var itemPosition = Array.IndexOf(ids, id);
+						if (ReferenceEquals(results[itemPosition], default(T)) == false)
+						{
+							throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+						}
+						results[itemPosition] = loadResults[i];
 					}
 				}
 			}
