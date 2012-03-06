@@ -186,27 +186,53 @@ namespace Raven.Client.Shard
 			return AddLazyOperation(lazyLoadOperation, onEval, cmds);
 		}
 
-		private Lazy<T> AddLazyOperation<T>(ILazyOperation lazyOp, Action<T> onEval, IList<IDatabaseCommands> cmds)
+		internal Lazy<T> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval, IList<IDatabaseCommands> cmds)
 		{
-			pendingLazyOperations.Add(Tuple.Create(lazyOp, cmds));
-			onEvaluateLazy[lazyOp] = o => onEval((T) o);
+			pendingLazyOperations.Add(Tuple.Create(operation, cmds));
+			var lazyValue = new Lazy<T>(() =>
+			                            	{
+			                            		ExecuteAllPendingLazyOperations();
+			                            		return (T) operation.Result;
+			                            	});
+			if (onEval != null)
+				onEvaluateLazy[operation] = result => onEval((T) result);
 
-			throw new NotImplementedException();
+			return lazyValue;
 		}
 
-		private Lazy<object> AddLazyOperation(LazyLoadOperation<object> lazyLoadOperation, Action<object> onEval)
-		{
-			throw new NotImplementedException();
-		}
-
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
 		Lazy<TResult> ILazySessionOperations.Load<TResult>(ValueType id)
 		{
-			throw new NotImplementedException();
+			return Lazily.Load<TResult>(id, null);
 		}
 
+		/// <summary>
+		/// Loads the specified entities with the specified id after applying
+		/// conventions on the provided id to get the real document id.
+		/// </summary>
+		/// <remarks>
+		/// This method allows you to call:
+		/// Load{Post}(1)
+		/// And that call will internally be translated to 
+		/// Load{Post}("posts/1");
+		/// 
+		/// Or whatever your conventions specify.
+		/// </remarks>
 		public Lazy<TResult> Load<TResult>(ValueType id, Action<TResult> onEval)
 		{
-			throw new NotImplementedException();
+			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(TResult), false);
+			return Lazily.Load<TResult>(documentKey);
 		}
 #endif
 		public T Load<T>(string id)
