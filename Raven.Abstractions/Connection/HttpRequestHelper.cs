@@ -64,7 +64,8 @@ namespace Raven.Abstractions.Connection
 							dest.Referer = src.Referer;
 							break;
 						case "Transfer-Encoding":
-							dest.TransferEncoding = src.TransferEncoding;
+							dest.SendChunked = src.SendChunked;
+
 							break;
 						case "User-Agent":
 							dest.UserAgent = src.UserAgent;
