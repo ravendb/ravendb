@@ -95,6 +95,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Management" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
@@ -116,6 +117,11 @@
     <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Config\MemoryStatistics.cs" />
+    <Compile Include="Impl\Clustering\ClusterInspecter.cs" />
+    <Compile Include="Impl\Clustering\ClusterResourceState.cs" />
+    <Compile Include="Impl\Clustering\ErrorCodes.cs" />
+    <Compile Include="Impl\Clustering\NodeClusterState.cs" />
+    <Compile Include="Impl\Clustering\RegSam.cs" />
     <Compile Include="Impl\ExceptionAggregator.cs" />
     <Compile Include="Indexing\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IBackgroundTaskExecuter.cs" />
