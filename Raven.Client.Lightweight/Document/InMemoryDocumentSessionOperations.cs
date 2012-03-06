@@ -834,7 +834,7 @@ more responsive application.
 		}
 
 #if !SILVERLIGHT
-		private void TryEnlistInAmbientTransaction()
+		protected virtual void TryEnlistInAmbientTransaction()
 		{
 
 			if (hasEnlisted || Transaction.Current == null)

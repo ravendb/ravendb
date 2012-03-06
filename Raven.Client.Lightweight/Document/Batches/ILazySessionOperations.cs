@@ -25,6 +25,7 @@ namespace Raven.Client.Document.Batches
 		/// <summary>
 		/// Loads the specified ids.
 		/// </summary>
+		/// <param name="ids">The ids.</param>
 		Lazy<TResult[]> Load<TResult>(params string[] ids);
 
 		/// <summary>

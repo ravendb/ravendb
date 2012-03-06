@@ -33,9 +33,6 @@ namespace Raven.Client.Shard
 	/// </summary>
 	public class ShardedDocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
 		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
-#if !NET_3_5
-		, ILazySessionOperations, IEagerSessionOperations
-#endif
 	{
 #if !NET_3_5
 		//private readonly IDictionary<string, IAsyncDatabaseCommands> asyncShardDbCommands;
@@ -107,24 +104,12 @@ namespace Raven.Client.Shard
 
 		public override void Commit(Guid txId)
 		{
-			IncrementRequestCount();
-			//TODO: shard access
-			foreach (var databaseCommands in shardDbCommands.Values)
-			{
-				databaseCommands.Commit(txId);
-			}
-			ClearEnlistment();
+			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
 		public override void Rollback(Guid txId)
 		{
-			IncrementRequestCount();
-			//TODO: shard access
-			foreach (var databaseCommands in shardDbCommands.Values)
-			{
-				databaseCommands.Rollback(txId);
-			}
-			ClearEnlistment();
+			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
 		/// <summary>
@@ -134,8 +119,7 @@ namespace Raven.Client.Shard
 		/// <returns>The token representing the distributed transaction</returns>
 		public override byte[] PromoteTransaction(Guid fromTxId)
 		{
-			IncrementRequestCount();
-			return shardDbCommands.Values.SelectMany(cmd => cmd.PromoteTransaction(fromTxId)).ToArray();
+			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
 		/// <summary>
@@ -146,12 +130,13 @@ namespace Raven.Client.Shard
 		/// <param name="recoveryInformation">The recovery information.</param>
 		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
 		{
-			IncrementRequestCount();
-			shardStrategy.ShardAccessStrategy.Apply<object>(shardDbCommands.Values, (commands, i) =>
-			{
-			    commands.StoreRecoveryInformation(resourceManagerId, txId, recoveryInformation);
-			    return null;
-			});
+			throw new NotSupportedException("DTC support is handled via the internal document stores");
+		}
+
+		protected override void TryEnlistInAmbientTransaction()
+		{
+			// we DON'T support enlisting at the sharded document store level, only at the managed document stores, which 
+			// turns out to be pretty much the same thing
 		}
 
 		public ISyncAdvancedSessionOperation Advanced
@@ -160,17 +145,26 @@ namespace Raven.Client.Shard
 		}
 
 #if !NET_3_5
+
+		/// <summary>
+		/// Loads the specified ids and a function to call when it is evaluated
+		/// </summary>
 		public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
 		{
-			throw new NotImplementedException();
-			//return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
+			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
 		}
 
+		/// <summary>
+		/// Loads the specified id.
+		/// </summary>
 		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id)
 		{
 			return Lazily.Load(id, (Action<TResult>)null);
 		}
 
+		/// <summary>
+		/// Loads the specified id and a function to call when it is evaluated
+		/// </summary>
 		public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
 		{
 			var cmds = GetCommandsToOperateOn(new ShardRequestData
@@ -198,6 +192,32 @@ namespace Raven.Client.Shard
 				onEvaluateLazy[operation] = result => onEval((T) result);
 
 			return lazyValue;
+		}
+
+		/// <summary>
+		/// Register to lazily load documents and include
+		/// </summary>
+		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval)
+		{
+			var idsAndShards = ids.Select(id => new
+			                                    	{
+			                                    		id,
+			                                    		shards = GetCommandsToOperateOn(new ShardRequestData
+			                                    		                                	{
+			                                    		                                		Key = id,
+			                                    		                                		EntityType = typeof (T),
+			                                    		                                	})
+			                                    	})
+				.GroupBy(x => x.shards, new DbCmdsListComparer());
+			var cmds = idsAndShards.SelectMany(idAndShard => idAndShard.Key).Distinct().ToList();
+
+			var multiLoadOperation = new MultiLoadOperation(this, () =>
+			                                                      	{
+			                                                      		var list = cmds.Select(cmd => cmd.DisableAllCaching()).ToList();
+			                                                      		return new DisposableAction(() => list.ForEach(disposable => disposable.Dispose()));
+			                                                      	}, ids);
+			var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
+			return AddLazyOperation(lazyOp, onEval, cmds);
 		}
 
 		/// <summary>
@@ -267,14 +287,25 @@ namespace Raven.Client.Shard
 		}
 
 #if !NET_3_5
+
+		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
 		ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, object>> path)
 		{
-			throw new NotImplementedException();
+			return new LazyMultiLoaderWithInclude<T>(this).Include(path);
 		}
+
+		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		/// <param name="ids">The ids.</param>
 		Lazy<TResult[]> ILazySessionOperations.Load<TResult>(params string[] ids)
 		{
-			throw new NotImplementedException();
+			return Lazily.Load<TResult>(ids, null);
 		}
+
 #endif
 
 		public T[] Load<T>(params string[] ids)

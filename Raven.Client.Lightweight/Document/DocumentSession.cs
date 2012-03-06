@@ -33,9 +33,6 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
 		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
-#if !NET_3_5
-, ILazySessionOperations, IEagerSessionOperations
-#endif
 	{
 #if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
@@ -138,11 +135,17 @@ namespace Raven.Client.Document
 			return Lazily.Load(id, (Action<TResult>)null);
 		}
 
+		/// <summary>
+		/// Loads the specified ids and a function to call when it is evaluated
+		/// </summary>
 		public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
 		{
 			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
 		}
 
+		/// <summary>
+		/// Loads the specified id and a function to call when it is evaluated
+		/// </summary>
 		public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
 		{
 			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
