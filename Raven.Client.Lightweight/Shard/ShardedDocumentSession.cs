@@ -316,12 +316,12 @@ namespace Raven.Client.Shard
 
 		public T[] Load<T>(params string[] ids)
 		{
-			return LoadInternal<T>(ids, null);
+			return LoadInternal<T>(ids);
 		}
 
 		public T[] Load<T>(IEnumerable<string> ids)
 		{
-			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray(), null);
+			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray());
 		}
 
 		public T Load<T>(ValueType id)
@@ -381,10 +381,7 @@ namespace Raven.Client.Shard
 		{
 			return new MultiLoaderWithInclude<object>(this).Include(path);
 		}
-#if !NET_3_5
 
-		
-#endif
 		public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
 		{
 			return new MultiLoaderWithInclude<T>(this).Include(path);
@@ -608,7 +605,59 @@ namespace Raven.Client.Shard
 
 		public T[] LoadInternal<T>(string[] ids)
 		{
-			throw new NotImplementedException();
+			if (ids.Length == 0)
+				return new T[0];
+
+			// only load documents that aren't already cached
+			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false)
+				.Distinct(StringComparer.InvariantCultureIgnoreCase)
+				.ToArray();
+
+			var results = new T[ids.Length];
+			if (idsOfNotExistingObjects.Length > 0)
+			{
+				IncrementRequestCount();
+				var idsAndShards = ids.Select(id => new
+				{
+					id,
+					shards = GetCommandsToOperateOn(new ShardRequestData
+					{
+						EntityType = typeof(T),
+						Key = id
+					})
+				})
+					.GroupBy(x => x.shards, new DbCmdsListComparer());
+
+				foreach (var shard in idsAndShards)
+				{
+					var currentShardIds = shard.Select(x => x.id).ToArray();
+					var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, (dbCmd, i) =>
+					{
+						var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
+						MultiLoadResult multiLoadResult;
+						do
+						{
+							multiLoadOperation.LogOperation();
+							using (multiLoadOperation.EnterMultiLoadContext())
+							{
+								multiLoadResult = dbCmd.Get(currentShardIds, null);
+							}
+						} while (multiLoadOperation.SetResult(multiLoadResult));
+						return multiLoadOperation;
+					});
+					foreach (var multiLoadOperation in multiLoadOperations)
+					{
+						var loadResults = multiLoadOperation.Complete<T>();
+						for (int i = 0; i < loadResults.Length; i++)
+						{
+							if (ReferenceEquals(loadResults[i], null))
+								continue;
+							results[Array.IndexOf(ids, currentShardIds[i])] = loadResults[i];
+						}
+					}
+				}
+			}
+			return results;
 		}
 
 		internal class DbCmdsListComparer : IEqualityComparer<IList<IDatabaseCommands>>
