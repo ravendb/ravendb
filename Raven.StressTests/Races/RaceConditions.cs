@@ -1,5 +1,6 @@
 using Raven.Tests.Bugs;
 using Raven.Tests.MailingList.MapReduceIssue;
+using Raven.Tests.ManagedStorage;
 using Raven.Tests.MultiGet;
 using Raven.Tests.Transactions;
 using Raven.Tests.Views;
@@ -37,6 +38,12 @@ namespace Raven.StressTests.Races
 		public void AfterCommitWillNotRetainSameEtag()
 		{
 			Run<Etags>(x => x.AfterCommitWillNotRetainSameEtag(), 1000);
+		}
+		
+		[Fact]
+		public void CanAddAndReadFileAfterReopen()
+		{
+			Run<Documents>(x => x.CanAddAndReadFileAfterReopen(), 100000);
 		}
 	}
 }
