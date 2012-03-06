@@ -254,6 +254,34 @@ namespace Raven.Client.Shard
 			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(TResult), false);
 			return Lazily.Load<TResult>(documentKey);
 		}
+
+		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		ILazyLoaderWithInclude<object> ILazySessionOperations.Include(string path)
+		{
+			return new LazyMultiLoaderWithInclude<object>(this).Include(path);
+		}
+
+		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, object>> path)
+		{
+			return new LazyMultiLoaderWithInclude<T>(this).Include(path);
+		}
+
+		/// <summary>
+		/// Loads the specified ids.
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		Lazy<TResult[]> ILazySessionOperations.Load<TResult>(params string[] ids)
+		{
+			return Lazily.Load<TResult>(ids, null);
+		}
+
 #endif
 		public T Load<T>(string id)
 		{
@@ -285,28 +313,6 @@ namespace Raven.Client.Shard
 			                                                                  	});
 			return results.FirstOrDefault(x => !Equals(x, default(T)));
 		}
-
-#if !NET_3_5
-
-		/// <summary>
-		/// Begin a load while including the specified path 
-		/// </summary>
-		/// <param name="path">The path.</param>
-		ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, object>> path)
-		{
-			return new LazyMultiLoaderWithInclude<T>(this).Include(path);
-		}
-
-		/// <summary>
-		/// Loads the specified ids.
-		/// </summary>
-		/// <param name="ids">The ids.</param>
-		Lazy<TResult[]> ILazySessionOperations.Load<TResult>(params string[] ids)
-		{
-			return Lazily.Load<TResult>(ids, null);
-		}
-
-#endif
 
 		public T[] Load<T>(params string[] ids)
 		{
@@ -359,9 +365,16 @@ namespace Raven.Client.Shard
 			return Query<T>(indexName);
 		}
 
+		/// <summary>
+		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+		/// <returns></returns>
 		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
-			throw new NotImplementedException();
+			var indexCreator = new TIndexCreator();
+			return Query<T>(indexCreator.IndexName);
 		}
 
 		public ILoaderWithInclude<object> Include(string path)
@@ -369,10 +382,8 @@ namespace Raven.Client.Shard
 			return new MultiLoaderWithInclude<object>(this).Include(path);
 		}
 #if !NET_3_5
-		ILazyLoaderWithInclude<object> ILazySessionOperations.Include(string path)
-		{
-			throw new NotImplementedException();
-		}
+
+		
 #endif
 		public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
 		{
