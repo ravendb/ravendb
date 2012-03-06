@@ -419,7 +419,7 @@ namespace Raven.Client.Document
 		{
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
-				throw new ArgumentException("The entity is not part of the session");
+				throw new InvalidOperationException("Could not figure out identifier for transient instance");
 
 			return DatabaseCommands.UrlFor(value.Key);
 		}
