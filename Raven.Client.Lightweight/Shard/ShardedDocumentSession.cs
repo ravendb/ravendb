@@ -127,10 +127,15 @@ namespace Raven.Client.Shard
 			ClearEnlistment();
 		}
 
+		/// <summary>
+		/// Promotes a transaction specified to a distributed transaction
+		/// </summary>
+		/// <param name="fromTxId">From tx id.</param>
+		/// <returns>The token representing the distributed transaction</returns>
 		public override byte[] PromoteTransaction(Guid fromTxId)
 		{
-			//TODO: shard access and implement
-			throw new NotImplementedException();
+			IncrementRequestCount();
+			return shardDbCommands.SelectMany(cmd => cmd.Value.PromoteTransaction(fromTxId)).ToArray();
 		}
 
 		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)

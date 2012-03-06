@@ -491,10 +491,10 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Promotes the transaction.
+		/// Promotes a transaction specified to a distributed transaction
 		/// </summary>
 		/// <param name="fromTxId">From tx id.</param>
-		/// <returns></returns>
+		/// <returns>The token representing the distributed transaction</returns>
 		public override byte[] PromoteTransaction(Guid fromTxId)
 		{
 			IncrementRequestCount();
