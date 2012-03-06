@@ -48,7 +48,7 @@ namespace Raven.Bundles.Tests.Authentication
 					},
 				UseEmbeddedHttpServer = true,
 			};
-			embeddedStore.Configuration.Initialize();
+			embeddedStore.Configuration.PostInit();
 			embeddedStore.Initialize();
 			store = new DocumentStore
 			{

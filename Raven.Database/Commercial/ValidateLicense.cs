@@ -53,6 +53,7 @@ namespace Raven.Database.Commercial
 			licenseValidator = new StringLicenseValidator(publicKey, licenseText)
 			{
 				DisableFloatingLicenses = true,
+				SubscriptionEndpoint = "http://uberprof.com/Subscriptions.svc"
 			};
 			licenseValidator.LicenseInvalidated+=LicenseValidatorOnLicenseInvalidated;
 			licenseValidator.MultipleLicensesWereDiscovered += LicenseValidatorOnMultipleLicensesWereDiscovered;

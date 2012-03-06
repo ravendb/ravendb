@@ -20,8 +20,8 @@ namespace Raven.Client.Util
 				V value;
 				if(items.TryGetValue(key, out value))
 					return value;
-				var val = valueFactory(key);
-				items[key] = val;
+				value = valueFactory(key);
+				items[key] = value;
 				return value;
 			}
 		}

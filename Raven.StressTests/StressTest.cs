@@ -10,37 +10,60 @@ using NLog;
 using NLog.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
-using Xunit;
 
 namespace Raven.StressTests
 {
 	public class StressTest
 	{
+		public bool PrintLog { get; set; }
+
 		public StressTest()
 		{
-			Assert.DoesNotThrow(() => IOExtensions.DeleteDirectory("Logs"));
+			PrintLog = false;
 			SetupLogging();
 		}
 
 		protected void Run<T>(Action<T> action, int iterations = 1000) where T : new()
 		{
+			for (int i = 0; i < iterations; i++)
+			{
+				Environment.SetEnvironmentVariable("RunId", i.ToString(CultureInfo.InvariantCulture));
+				RunTest(action, i);
+			}
+		}
+
+		protected void RunWithLog<T>(Action<T> action, int iterations = 1000) where T : new()
+		{
+			IOExtensions.DeleteDirectory("Logs");
 			try
 			{
 				for (int i = 0; i < iterations; i++)
 				{
 					Environment.SetEnvironmentVariable("RunId", i.ToString(CultureInfo.InvariantCulture));
-
-					var test = new T();
-					action(test);
-
-					var disposable = test as IDisposable;
-					if (disposable != null)
-						disposable.Dispose();
+					RunTest(action, i);
 				}
 			}
 			finally
 			{
 				LogManager.Flush();
+			}
+		}
+
+		private static void RunTest<T>(Action<T> action, int i) where T : new()
+		{
+			try
+			{
+				var test = new T();
+				action(test);
+
+				var disposable = test as IDisposable;
+				if (disposable != null)
+					disposable.Dispose();
+			}
+			catch
+			{
+				Console.WriteLine("Test failed on run #" + i);
+				throw;
 			}
 		}
 

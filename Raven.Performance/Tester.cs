@@ -11,6 +11,7 @@ using NLog;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Database.Extensions;
 
 namespace Raven.Performance
 {
@@ -22,7 +23,7 @@ namespace Raven.Performance
 		public List<KeyValuePair<string, double>> LatencyTimes { get; set; }
 		public List<KeyValuePair<string, long>> LatencyInDocuments { get; set; }
 
-		private const int BatchSize = 24;
+		private const int BatchSize = 512;
 		private readonly Logger logger = LogManager.GetLogger("log");
 
 		private volatile bool doneImporting;

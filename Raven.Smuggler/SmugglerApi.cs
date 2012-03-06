@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -29,7 +30,17 @@ namespace Raven.Smuggler
 
 		private HttpRavenRequest CreateRequest(string url, string method = "GET")
 		{
-			return httpRavenRequestFactory.Create(ConnectionStringOptions.Url + url, method, ConnectionStringOptions);
+			var builder = new StringBuilder(ConnectionStringOptions.Url, 2);
+			if (string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase) == false)
+			{
+				if (ConnectionStringOptions.Url.EndsWith("/") == false)
+					builder.Append("/");
+				builder.Append("databases/");
+				builder.Append(ConnectionStringOptions.DefaultDatabase);
+				builder.Append('/');
+			}
+			builder.Append(url);
+			return httpRavenRequestFactory.Create(builder.ToString(), method, ConnectionStringOptions);
 		}
 
 		public void ExportData(SmugglerOptions options)

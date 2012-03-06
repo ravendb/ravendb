@@ -18,6 +18,11 @@ namespace Raven.Client.Embedded
 	/// </summary>
 	public class EmbeddableDocumentStore : DocumentStore
 	{
+		static EmbeddableDocumentStore()
+		{
+			HttpEndpointRegistration.RegisterHttpEndpointTarget();
+		}
+
 		private RavenConfiguration configuration;
 		private HttpServer httpServer;
 		private bool wasDisposed;

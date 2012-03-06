@@ -59,7 +59,13 @@ namespace Raven.Tests.Util
 			{
 				while (_process.HasExited == false)
 				{
-					_process.StandardInput.WriteLine(input.Take());
+					try
+					{
+						_process.StandardInput.WriteLine(input.Take());
+					}
+					catch (ObjectDisposedException)
+					{
+					}
 				}
 			});
 		}
@@ -68,6 +74,8 @@ namespace Raven.Tests.Util
 
 		public void Dispose()
 		{
+			input.Dispose();
+
 			if (_process != null)
 			{
 				Shutdown();
