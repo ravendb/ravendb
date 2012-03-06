@@ -40,12 +40,27 @@ namespace Raven.Tests.Shard.BlogModel
 		{
 			var shardedDocumentStore = GetDocumentStore().Initialize();
 			Assert.Throws<NotSupportedException>(() => shardedDocumentStore.DatabaseCommands);
+			Assert.Throws<NotSupportedException>(() => shardedDocumentStore.AsyncDatabaseCommands);
 			Assert.Throws<NotSupportedException>(() => shardedDocumentStore.Url);
 			Assert.Throws<NotSupportedException>(() => shardedDocumentStore.GetLastWrittenEtag());
 
 			using (var session = (ShardedDocumentSession)shardedDocumentStore.OpenSession())
 			{
 				Assert.Throws<NotSupportedException>(() => session.Defer());
+			}
+		}
+
+		[Fact]
+		public void DtcIsNotSupported()
+		{
+			var shardedDocumentStore = GetDocumentStore().Initialize();
+			using (var session = (ShardedDocumentSession)shardedDocumentStore.OpenSession())
+			{
+				var txId = Guid.NewGuid();
+				Assert.Throws<NotSupportedException>(() => session.Commit(txId));
+				Assert.Throws<NotSupportedException>(() => session.Rollback(txId));
+				Assert.Throws<NotSupportedException>(() => session.PromoteTransaction(txId));
+				Assert.Throws<NotSupportedException>(() => session.StoreRecoveryInformation(Guid.NewGuid(), txId, new byte[0]));
 			}
 		}
 	}
