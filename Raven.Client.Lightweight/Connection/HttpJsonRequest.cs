@@ -48,6 +48,7 @@ namespace Raven.Client.Connection
 		internal bool ShouldCacheRequest;
 		public object Headers;
 		private Stream postedStream;
+		private bool writeCalled;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -73,7 +74,7 @@ namespace Raven.Client.Connection
 			webRequest.Credentials = credentials;
 			WriteMetadata(metadata);
 			webRequest.Method = method;
-			if (method == "POST" || method == "PUT")
+			if (method == "POST" || method == "PUT" || method == "PATCH")
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
 		}
@@ -159,6 +160,8 @@ namespace Raven.Client.Connection
 
 		public byte[] ReadResponseBytes()
 		{
+			if (writeCalled == false)
+				webRequest.ContentLength = 0;
 			using (var webResponse = webRequest.GetResponse())
 			using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
 			{
@@ -194,6 +197,8 @@ namespace Raven.Client.Connection
 			{
 				try
 				{
+					if(writeCalled == false)
+						webRequest.ContentLength = 0;
 					return ReadStringInternal(webRequest.GetResponse);
 				}
 				catch (WebException e)
@@ -513,6 +518,7 @@ namespace Raven.Client.Connection
 		/// <param name="data">The data.</param>
 		public void Write(string data)
 		{
+			writeCalled = true;
 			postedData = data;
 
 			HttpRequestHelper.WriteDataToRequest(webRequest, data);
@@ -528,6 +534,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public IAsyncResult BeginWrite(string dataToWrite, AsyncCallback callback, object state)
 		{
+			writeCalled = true;
 			postedData = dataToWrite;
 			
 			return webRequest.BeginGetRequestStream(callback, state);
@@ -625,6 +632,7 @@ namespace Raven.Client.Connection
 
 		public void Write(Stream streamToWrite)
 		{
+			writeCalled = true;
 			postedStream = streamToWrite;
 			webRequest.SendChunked = true;
 			using (var stream = webRequest.GetRequestStream())

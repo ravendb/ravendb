@@ -102,11 +102,9 @@ namespace Raven.Abstractions.Connection
 				}
 				else
 				{
-					using (var streamWriter = new StreamWriter(commpressedData))
-					{
-						postedToken.WriteTo(new JsonTextWriter(streamWriter));
-						streamWriter.Flush();
-					}
+					var streamWriter = new StreamWriter(commpressedData);
+					postedToken.WriteTo(new JsonTextWriter(streamWriter));
+					streamWriter.Flush();
 				}
 				stream.Flush();
 				commpressedData.Flush();
