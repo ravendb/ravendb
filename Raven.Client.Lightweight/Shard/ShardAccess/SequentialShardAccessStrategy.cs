@@ -23,7 +23,7 @@ namespace Raven.Client.Shard.ShardAccess
 		/// <param name="commands">The shard sessions.</param>
 		/// <param name="operation">The operation.</param>
 		/// <returns></returns>
-		public T[] Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands, int, T> operation) 
+		public T[] Apply<T>(ICollection<IDatabaseCommands> commands, Func<IDatabaseCommands, int, T> operation) 
 		{
 			return commands.Select(operation).ToArray();
 		}

@@ -20,7 +20,7 @@ namespace Raven.Client.Shard.ShardAccess
 		/// <summary>
 		/// Applies the specified action to all shard sessions in parallel
 		/// </summary>
-		public T[] Apply<T>(IList<IDatabaseCommands> commands, Func<IDatabaseCommands,int, T> operation)
+		public T[] Apply<T>(ICollection<IDatabaseCommands> commands, Func<IDatabaseCommands,int, T> operation)
 		{
 			var returnedLists = new T[commands.Count];
 

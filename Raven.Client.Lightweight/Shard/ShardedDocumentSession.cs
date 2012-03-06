@@ -135,17 +135,23 @@ namespace Raven.Client.Shard
 		public override byte[] PromoteTransaction(Guid fromTxId)
 		{
 			IncrementRequestCount();
-			return shardDbCommands.SelectMany(cmd => cmd.Value.PromoteTransaction(fromTxId)).ToArray();
+			return shardDbCommands.Values.SelectMany(cmd => cmd.PromoteTransaction(fromTxId)).ToArray();
 		}
 
+		/// <summary>
+		/// Stores the recovery information for the specified transaction
+		/// </summary>
+		/// <param name="resourceManagerId">The resource manager Id for this transaction</param>
+		/// <param name="txId">The tx id.</param>
+		/// <param name="recoveryInformation">The recovery information.</param>
 		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
 		{
 			IncrementRequestCount();
-			//TODO: shard access
-			foreach (var databaseCommands in shardDbCommands.Values)
+			shardStrategy.ShardAccessStrategy.Apply<object>(shardDbCommands.Values, (commands, i) =>
 			{
-				databaseCommands.StoreRecoveryInformation(resourceManagerId, txId, recoveryInformation);
-			}
+			    commands.StoreRecoveryInformation(resourceManagerId, txId, recoveryInformation);
+			    return null;
+			});
 		}
 
 		public ISyncAdvancedSessionOperation Advanced

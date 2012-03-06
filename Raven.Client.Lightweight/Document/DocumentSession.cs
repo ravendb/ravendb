@@ -504,7 +504,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Stores the recovery information for the specified transaction
 		/// </summary>
-		/// <param name="resourceManagerId"></param>
+		/// <param name="resourceManagerId">The resource manager Id for this transaction</param>
 		/// <param name="txId">The tx id.</param>
 		/// <param name="recoveryInformation">The recovery information.</param>
 		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
