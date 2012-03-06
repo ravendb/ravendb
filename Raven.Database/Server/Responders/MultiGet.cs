@@ -164,6 +164,11 @@ namespace Raven.Database.Server.Responders
 			{
 				realContext.Log(loggingAction);
 			}
+
+			public void SetRequestFilter(Func<Stream, Stream> requestFilter)
+			{
+				//nothing here
+			}
 		}
 
 		public class MultiGetHttpRequest : IHttpRequest

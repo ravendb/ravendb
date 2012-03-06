@@ -290,6 +290,7 @@ namespace Raven.Client.Silverlight.Connection
 			                                			{
 			                                				streamWriter.Dispose();
 			                                				dataStream.Dispose();
+															task.Result.Dispose();
 			                                				return writeTask;
 			                                			}).Unwrap();
 			                                	}).Unwrap())

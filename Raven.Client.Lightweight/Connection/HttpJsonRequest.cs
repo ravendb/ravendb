@@ -450,7 +450,6 @@ namespace Raven.Client.Connection
 		{
 			if (metadata == null || metadata.Count == 0)
 			{
-				webRequest.ContentLength = 0;
 				return;
 			}
 
@@ -530,7 +529,7 @@ namespace Raven.Client.Connection
 		public IAsyncResult BeginWrite(string dataToWrite, AsyncCallback callback, object state)
 		{
 			postedData = dataToWrite;
-			webRequest.ContentLength = Encoding.UTF8.GetByteCount(dataToWrite) + Encoding.UTF8.GetPreamble().Length;
+			
 			return webRequest.BeginGetRequestStream(callback, state);
 		}
 
@@ -627,7 +626,7 @@ namespace Raven.Client.Connection
 		public void Write(Stream streamToWrite)
 		{
 			postedStream = streamToWrite;
-			webRequest.ContentLength = streamToWrite.Length;
+			webRequest.SendChunked = true;
 			using (var stream = webRequest.GetRequestStream())
 			using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
 			{
