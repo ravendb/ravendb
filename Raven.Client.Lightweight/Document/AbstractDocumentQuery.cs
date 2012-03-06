@@ -582,7 +582,7 @@ namespace Raven.Client.Document
 				{
 					if (queryOperation.ShouldQueryAgain(e) == false)
 						throw;
-					ExecuteActualQuery(); // retry the query, not that we explicitly not incrementing the session request count here
+					ExecuteActualQuery(); // retry the query, note that we explicitly not incrementing the session request count here
 				}
 			}
 		}
