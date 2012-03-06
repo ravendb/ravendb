@@ -39,14 +39,14 @@ namespace Raven.Abstractions.Connection
 			this.configureRequest = configureRequest;
 			this.handleUnauthorizedResponse = handleUnauthorizedResponse;
 			this.connectionStringOptions = connectionStringOptions;
-			if (method == "POST" || method == "PUT")
-				webRequest.Headers["Content-Encoding"] = "gzip";
 		}
 
 		private HttpWebRequest CreateRequest()
 		{
 			var request = (HttpWebRequest) System.Net.WebRequest.Create(url);
 			request.Method = method;
+			if (method == "POST" || method == "PUT")
+				request.Headers["Content-Encoding"] = "gzip";
 			request.Headers["Accept-Encoding"] = "deflate,gzip";
 			request.ContentType = "application/json; charset=utf-8";
 			request.UseDefaultCredentials = true;
