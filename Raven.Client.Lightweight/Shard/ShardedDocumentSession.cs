@@ -66,10 +66,20 @@ namespace Raven.Client.Shard
 
 			IEnumerable<KeyValuePair<string, IDatabaseCommands>> cmds = shardDbCommands;
 
-			if (shardIds != null)
-				cmds = shardDbCommands.Where(cmd => shardIds.Contains(cmd.Key));
+			if (shardIds == null)
+				return cmds.Select(x => Tuple.Create(x.Key, x.Value)).ToList();
 
-			return cmds.Select(x => Tuple.Create(x.Key, x.Value)).ToList();
+			var list = new List<Tuple<string, IDatabaseCommands>>();
+			foreach (var shardId in shardIds)
+			{
+				IDatabaseCommands value;
+				if (shardDbCommands.TryGetValue(shardId, out value) == false)
+					throw new InvalidOperationException("Could not find shard id: " + shardId);
+
+				list.Add(Tuple.Create(shardId, value));
+
+			}
+			return list;
 		}
 
 		private IList<IDatabaseCommands> GetCommandsToOperateOn(ShardRequestData resultionData)
@@ -304,7 +314,16 @@ namespace Raven.Client.Shard
 			                                                                  		} while (retry);
 			                                                                  		return loadOperation.Complete<T>();
 			                                                                  	});
-			return results.FirstOrDefault(x => !Equals(x, default(T)));
+
+			var shardsContainThisDocument = results.Where(x => !Equals(x, default(T))).ToArray();
+			if(shardsContainThisDocument.Count() > 1)
+			{
+				
+				throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide." + Environment.NewLine +
+				"Shards IDs:" + string.Join(", ", shardsContainThisDocument));
+			}
+
+			return shardsContainThisDocument.FirstOrDefault();
 		}
 
 		public T[] Load<T>(params string[] ids)
