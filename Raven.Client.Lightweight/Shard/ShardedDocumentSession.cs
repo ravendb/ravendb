@@ -6,7 +6,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
@@ -35,7 +34,6 @@ namespace Raven.Client.Shard
 		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 	{
 #if !NET_3_5
-		//private readonly IDictionary<string, IAsyncDatabaseCommands> asyncShardDbCommands;
 		private readonly List<Tuple<ILazyOperation, IList<IDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<IDatabaseCommands>>>();
 		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 #endif
@@ -53,18 +51,13 @@ namespace Raven.Client.Shard
 		/// <param name="listeners"></param>
 		public ShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
 			ShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands
-//#if !NET_3_5
-//, IDictionary<string, IAsyncDatabaseCommands> asyncDatabaseCommands
-//#endif
+
 			)
 			: base(documentStore, listeners, id)
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardDbCommands = shardDbCommands;
 			this.documentStore = documentStore;
-//#if !NET_3_5
-//            this.asyncShardDbCommands = asyncDatabaseCommands;
-//#endif
 		}
 
 		private IList<Tuple<string,IDatabaseCommands>> GetShardsToOperateOn(ShardRequestData resultionData)
@@ -440,13 +433,6 @@ namespace Raven.Client.Shard
 			}
 		}
 
-#if !NET_3_5
-		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
-		{
-			throw new NotSupportedException("Shared document store doesn't support async operations");
-		}
-#endif
-
 		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
 		{
 			return Advanced.LuceneQuery<T>(indexName);
@@ -517,6 +503,11 @@ namespace Raven.Client.Shard
 		public IEagerSessionOperations Eagerly
 		{
 			get { return this; }
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
+		{
+			throw new NotSupportedException("Shared document store doesn't support async operations");
 		}
 #endif
 
