@@ -17,6 +17,8 @@ using Raven.Client.Listeners;
 using Raven.Client.Connection;
 using Raven.Client.Shard;
 using Raven.Client.Shard.ShardResolution;
+using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 #if !SILVERLIGHT
 namespace Raven.Client.Document
@@ -123,12 +125,35 @@ namespace Raven.Client.Document
 				Thread.Sleep(100);
 			}
 
+			AssertNoDuplicateIdsInResults();
+
 			var mergedQueryResult = shardStrategy.MergeQueryResults(indexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
 
 			shardQueryOperations[0].ForceResult(mergedQueryResult);
 			queryOperation = shardQueryOperations[0];
 		}
-		
+
+		private void AssertNoDuplicateIdsInResults()
+		{
+			var shardsPerId = new Dictionary<string, HashSet<QueryOperation>>(StringComparer.InvariantCultureIgnoreCase);
+
+			foreach (var shardQueryOperation in shardQueryOperations)
+			{
+				var currentQueryResults = shardQueryOperation.CurrentQueryResults;
+				foreach (var include in currentQueryResults.Includes.Concat(currentQueryResults.Results))
+				{
+					var id = include.Value<RavenJObject>(Constants.Metadata).Value<string>("@id");
+					shardsPerId.GetOrAdd(id).Add(shardQueryOperation);
+				}
+			}
+
+			foreach (var shardPerId in shardsPerId)
+			{
+				if (shardPerId.Value.Count > 1)
+					throw new InvalidOperationException("Found id: " + shardPerId.Key + " on more than one shard, documents ids must be unique cluster-wide.");
+			}
+		}
+
 #if !NET_3_5
 		protected override Task<QueryOperation> ExecuteActualQueryAsync()
 		{

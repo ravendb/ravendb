@@ -42,7 +42,7 @@ namespace Raven.Tests.Shard.BlogModel
 			Assert.Equal(2, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 1));
 			Assert.Equal(1, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 0));
 			Servers.Where(server => server.Key.StartsWith("Posts") == false)
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
@@ -53,7 +53,7 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void ThrwoWhenThereIsAPostInMoreThanOneShard_Load()
 		{
-			var post = new Post { Id = "posts/1", Title = "Item 1" };
+			var post = new Post {Id = "posts/1", Title = "Item 1"};
 			for (int i = 0; i < 2; i++)
 				using (var session = ShardedDocumentStore.OpenSession())
 				{
@@ -64,7 +64,7 @@ namespace Raven.Tests.Shard.BlogModel
 			Assert.Equal(2, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 1));
 			Assert.Equal(1, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 0));
 			Servers.Where(server => server.Key.StartsWith("Posts") == false)
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
@@ -75,7 +75,7 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void ThrwoWhenThereIsAPostInMoreThanOneShard_LoadMany()
 		{
-			var post = new Post { Id = "posts/1", Title = "Item 1" };
+			var post = new Post {Id = "posts/1", Title = "Item 1"};
 			for (int i = 0; i < 2; i++)
 				using (var session = ShardedDocumentStore.OpenSession())
 				{
@@ -86,7 +86,7 @@ namespace Raven.Tests.Shard.BlogModel
 			Assert.Equal(2, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 1));
 			Assert.Equal(1, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 0));
 			Servers.Where(server => server.Key.StartsWith("Posts") == false)
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
@@ -97,7 +97,7 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void ThrwoWhenThereIsAPostInMoreThanOneShard_LoadManyWithInclude()
 		{
-			var post = new Post { Id = "posts/1", Title = "Item 1", UserId = "users/fitzchak"};
+			var post = new Post {Id = "posts/1", Title = "Item 1", UserId = "users/fitzchak"};
 			for (int i = 0; i < 2; i++)
 				using (var session = ShardedDocumentStore.OpenSession())
 				{
@@ -108,12 +108,90 @@ namespace Raven.Tests.Shard.BlogModel
 			Assert.Equal(2, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 1));
 			Assert.Equal(1, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 0));
 			Servers.Where(server => server.Key.StartsWith("Posts") == false)
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				Assert.Throws<InvalidOperationException>(() => session.Include("UserId").Load<Post>("posts/1", "posts/2"));
 			}
+		}
+
+		[Fact]
+		public void WhenStoring6PostsInOneSession_Stores2InEachShard()
+		{
+			using (var session = ShardedDocumentStore.OpenSession())
+			{
+				for (int i = 0; i < 6; i++)
+					session.Store(new Post
+					              	{
+					              		Id = "posts/" + i, // avoid generating an HiLo request.
+					              		Title = "Item " + i
+					              	});
+				session.SaveChanges();
+			}
+
+			Servers.Where(server => server.Key.StartsWith("Posts"))
+				.ForEach(server =>
+				         	{
+				         		Assert.Equal(1, server.Value.Server.NumberOfRequests);
+				         		Assert.Equal(2, server.Value.Database.Statistics.CountOfDocuments);
+				         	});
+			Servers.Where(server => server.Key.StartsWith("Posts") == false)
+				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+		}
+
+		[Fact]
+		public void WhenStoring6PostsEachInADifferentSession_Stores2InEachShard()
+		{
+			for (int i = 0; i < 6; i++)
+				using (var session = ShardedDocumentStore.OpenSession())
+				{
+					session.Store(new Post
+					              	{
+					              		Id = "posts/" + i, // avoid generating an HiLo request.
+					              		Title = "Item " + i
+					              	});
+					session.SaveChanges();
+				}
+
+			Servers.Where(server => server.Key.StartsWith("Posts"))
+				.ForEach(server => Assert.Equal(2, server.Value.Server.NumberOfRequests));
+			Servers.Where(server => server.Key.StartsWith("Posts") == false)
+				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+		}
+
+		[Fact]
+		public void CanMergeResultFromAllPostsShards()
+		{
+			using (var session = ShardedDocumentStore.OpenSession())
+			{
+				for (int i = 0; i < 6; i++)
+					session.Store(new Post
+					{
+						Id = "posts/" + i, // avoid generating an HiLo request.
+						Title = "Item " + i
+					});
+				session.SaveChanges();
+			}
+
+			Servers.Where(server => server.Key.StartsWith("Posts"))
+				.ForEach(server =>
+				{
+					Assert.Equal(1, server.Value.Server.NumberOfRequests);
+					Assert.Equal(2, server.Value.Database.Statistics.CountOfDocuments);
+				});
+			Servers.Where(server => server.Key.StartsWith("Posts") == false)
+				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+			using (var session = ShardedDocumentStore.OpenSession())
+			{
+				var posts = session.Query<Post>().ToList();
+				Assert.Equal(6, posts.Count);
+			}
+
+			Servers.Where(server => server.Key.StartsWith("Posts"))
+				.ForEach(server => Assert.Equal(2, server.Value.Server.NumberOfRequests));
+			Servers.Where(server => server.Key.StartsWith("Posts") == false)
+				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 		}
 	}
 }
