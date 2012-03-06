@@ -92,6 +92,11 @@ namespace Raven.Database.Server.Abstractions
 			context.Response.Filter = responseFilter(context.Response.Filter);
 		}
 
+		public void SetRequestFilter(Func<Stream, Stream> requestFilter)
+		{
+			context.Request.Filter = requestFilter(context.Request.Filter);
+		}
+
 		private readonly List<Action<Logger>> loggedMessages = new List<Action<Logger>>();
 		public void OutputSavedLogItems(Logger logger)
 		{

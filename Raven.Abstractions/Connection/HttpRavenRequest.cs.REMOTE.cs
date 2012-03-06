@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -39,8 +38,6 @@ namespace Raven.Abstractions.Connection
 			this.configureRequest = configureRequest;
 			this.handleUnauthorizedResponse = handleUnauthorizedResponse;
 			this.connectionStringOptions = connectionStringOptions;
-			if (method == "POST" || method == "PUT")
-				webRequest.Headers["Content-Encoding"] = "gzip";
 		}
 
 		private HttpWebRequest CreateRequest()
@@ -50,6 +47,7 @@ namespace Raven.Abstractions.Connection
 			request.Headers["Accept-Encoding"] = "deflate,gzip";
 			request.ContentType = "application/json; charset=utf-8";
 			request.UseDefaultCredentials = true;
+			request.PreAuthenticate = true;
 			configureRequest(connectionStringOptions, request);
 			return request;
 		}
@@ -57,30 +55,29 @@ namespace Raven.Abstractions.Connection
 		public void Write(Stream streamToWrite)
 		{
 			postedStream = streamToWrite;
+			WebRequest.ContentLength = streamToWrite.Length;
 			using (var stream = WebRequest.GetRequestStream())
-			using(var commpressedStream = new GZipStream(stream, CompressionMode.Compress))
 			{
-				streamToWrite.CopyTo(commpressedStream);
+				streamToWrite.CopyTo(stream);
 				stream.Flush();
-				commpressedStream.Flush();
 			}
 		}
 
-		public void Write(RavenJToken ravenJToken)
+		public long Write(RavenJToken ravenJToken)
 		{
 			postedToken = ravenJToken;
-			WriteToken(WebRequest);
+			return WriteToken(WebRequest);
 		}
 
-		public void Write(byte[] data)
+		public long Write(byte[] data)
 		{
 			postedData = data;
+			webRequest.ContentLength = data.Length;
 			using (var stream = WebRequest.GetRequestStream())
-			using(var cmp = new GZipStream(stream, CompressionMode.Compress))
 			{
-				cmp.Write(data, 0, data.Length);
-				cmp.Flush();
+				stream.Write(data, 0, data.Length);
 				stream.Flush();
+				return stream.CanSeek ? stream.Length : 0;
 			}
 		}
 
@@ -91,25 +88,24 @@ namespace Raven.Abstractions.Connection
 			WriteToken(WebRequest);
 		}
 
-		private void WriteToken(WebRequest httpWebRequest)
+		private long WriteToken(WebRequest httpWebRequest)
 		{
 			using (var stream = httpWebRequest.GetRequestStream())
-			using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
 			{
 				if (writeBson)
 				{
-					postedToken.WriteTo(new BsonWriter(commpressedData));
+					postedToken.WriteTo(new BsonWriter(stream));
 				}
 				else
 				{
-					using (var streamWriter = new StreamWriter(commpressedData))
+					using (var streamWriter = new StreamWriter(stream))
 					{
 						postedToken.WriteTo(new JsonTextWriter(streamWriter));
 						streamWriter.Flush();
 					}
 				}
 				stream.Flush();
-				commpressedData.Flush();
+				return stream.CanSeek ? stream.Length : 0;
 			}
 		}
 
@@ -210,12 +206,10 @@ namespace Raven.Abstractions.Connection
 			if (postedStream != null)
 			{
 				postedStream.Position = 0;
-				using (var stream = newWebRequest.GetRequestStream())	
-				using (var compressedData = new GZipStream(stream, CompressionMode.Compress))
+				using (var stream = newWebRequest.GetRequestStream())
 				{
-					postedStream.CopyTo(compressedData);
+					postedStream.CopyTo(stream);
 					stream.Flush();
-					compressedData.Flush();
 				}
 			}
 			WebRequest = newWebRequest;
