@@ -16,5 +16,11 @@ namespace Raven.StressTests.Races
 		{
 			Run<CanQueryOnlyUsers>(x => x.WhenQueryingForUserById());
 		}
+
+		[Fact]
+		public void CanQueryOnlyUsers_WhenQueryingForUserByName()
+		{
+			Run<CanQueryOnlyUsers>(x => x.WhenQueryingForUserByName());
+		}
 	}
 }
