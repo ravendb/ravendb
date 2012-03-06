@@ -10,8 +10,7 @@ namespace Raven.Abstractions.Connection
 	{
 		public static void WriteDataToRequest(HttpWebRequest req, string data)
 		{
-			req.ContentLength = Encoding.UTF8.GetByteCount(data) + Encoding.UTF8.GetPreamble().Length;
-
+			req.SendChunked = true;
 			using (var requestStream = req.GetRequestStream())
 			using (var dataStream = new GZipStream(requestStream, CompressionMode.Compress))
 			using (var writer = new StreamWriter(dataStream, Encoding.UTF8))
@@ -42,7 +41,6 @@ namespace Raven.Abstractions.Connection
 							// explicitly ignoring this
 							break;
 						case "Content-Length":
-							dest.ContentLength = src.ContentLength;
 							break;
 						case "Content-Type":
 							dest.ContentType = src.ContentType;

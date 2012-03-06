@@ -16,6 +16,10 @@ namespace Raven.Tests.Bugs
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.Get;
 		}
 
+		protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
+		{
+		}
+
 		[Fact]
 		public void CanDoSo_DirectUrl()
 		{
