@@ -127,7 +127,7 @@ namespace Raven.Tests.Shard.BlogModel
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				for (int i = 1; i <= 4; i++)
-					session.Store(new User { Id = "users/" + i, Name = "User " + i });
+					session.Store(new User { Id = "users/" + i, Name = "users/" + (i + 1) });
 				session.SaveChanges();
 			}
 			using (var session = ShardedDocumentStore.OpenSession())
