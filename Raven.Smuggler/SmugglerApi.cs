@@ -325,12 +325,11 @@ namespace Raven.Smuggler
 			}
 				
 			var request = CreateRequest("bulk_docs", "POST");
-			var size = request.Write(commands);
+			request.Write(commands);
 			request.ExecuteRequest();
 
-			Console.Write("Wrote {0} documents", batch.Count, sw.ElapsedMilliseconds);
-			if (size > 0)
-				Console.Write(" [{0:#,#;;0} kb]", Math.Round((double) size/1024, 2));
+			Console.Write("Wrote {0} documents in {1}", batch.Count, sw.ElapsedMilliseconds);
+
 			Console.WriteLine(" in {0:#,#;;0} ms", sw.ElapsedMilliseconds);
 			batch.Clear();
 		}

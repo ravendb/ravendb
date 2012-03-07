@@ -384,7 +384,12 @@ namespace Raven.Abstractions.Linq
 
 		public dynamic FirstOrDefault(Func<dynamic, bool> predicate)
 		{
-			return Enumerate().FirstOrDefault(predicate);
+			return Enumerate().FirstOrDefault(predicate) ?? new DynamicNullObject();
+		}
+
+		public dynamic FirstOrDefault()
+		{
+			return Enumerate().FirstOrDefault() ?? new DynamicNullObject();
 		}
 
 		public dynamic Single(Func<dynamic, bool> predicate)
@@ -399,7 +404,12 @@ namespace Raven.Abstractions.Linq
 
 		public dynamic SingleOrDefault(Func<dynamic, bool> predicate)
 		{
-			return Enumerate().SingleOrDefault(predicate);
+			return Enumerate().SingleOrDefault(predicate) ?? new DynamicNullObject();
+		}
+
+		public dynamic SingleOrDefault()
+		{
+			return Enumerate().SingleOrDefault() ?? new DynamicNullObject();
 		}
 
 		public IEnumerator<object> GetEnumerator()
@@ -465,7 +475,17 @@ namespace Raven.Abstractions.Linq
 
 		public dynamic LastOrDefault()
 		{
-			return Enumerate().LastOrDefault();
+			return Enumerate().LastOrDefault() ?? new DynamicNullObject();
+		}
+
+		public dynamic Last(Func<dynamic, bool> predicate)
+		{
+			return Enumerate().Last(predicate);
+		}
+
+		public dynamic LastOrDefault(Func<dynamic, bool> predicate)
+		{
+			return Enumerate().LastOrDefault(predicate) ?? new DynamicNullObject();
 		}
 
 		/// <summary>
