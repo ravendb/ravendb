@@ -87,9 +87,8 @@ namespace Raven.Client.Linq
 		public static SuggestionQueryResult Suggest(this IQueryable queryable, SuggestionQuery query)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			var ravenCommandsAccessor = ((IRavenCommandsAccessor)queryable);
 			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
-			return ravenCommandsAccessor.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);
+			return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);
 		}
 #endif
 
@@ -109,10 +108,9 @@ namespace Raven.Client.Linq
 		public static Task<SuggestionQueryResult> SuggestAsync(this IQueryable queryable, SuggestionQuery query)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			var ravenCommandsAccessor = ((IRavenCommandsAccessor) queryable);
 			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
 
-			return ravenCommandsAccessor.AsyncDatabaseCommands.SuggestAsync(ravenQueryInspector.IndexQueried, query);
+			return ravenQueryInspector.AsyncDatabaseCommands.SuggestAsync(ravenQueryInspector.IndexQueried, query);
 		}
 
 		/// <summary>

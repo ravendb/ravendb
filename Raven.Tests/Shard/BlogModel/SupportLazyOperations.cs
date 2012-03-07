@@ -38,19 +38,20 @@ namespace Raven.Tests.Shard.BlogModel
 			Servers.Where(server => server.Key != "Users")
 				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 
-			Lazy<IEnumerable<Post>> lazily;
+			Lazy<IEnumerable<User>> users;
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
-				lazily = session.Query<Post>().Lazily();
-			}
-			Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
-			Servers.Where(server => server.Key != "Users")
-				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+				users = session.Query<User>().Lazily();
 
-			Assert.Equal(2, lazily.Value.Count());
-			Assert.Equal(2, Servers["Users"].Server.NumberOfRequests);
-			Servers.Where(server => server.Key != "Users")
-				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+				Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
+				Servers.Where(server => server.Key != "Users")
+					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+
+				Assert.Equal(2, users.Value.Count());
+				Assert.Equal(2, Servers["Users"].Server.NumberOfRequests);
+				Servers.Where(server => server.Key != "Users")
+					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+			}
 		}
 
 		[Fact]

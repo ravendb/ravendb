@@ -19,7 +19,7 @@ namespace Raven.Client.Linq
 	/// <summary>
 	/// Implements <see cref="IRavenQueryable{T}"/>
 	/// </summary>
-	public class RavenQueryInspector<T> : IRavenQueryable<T>, IRavenQueryInspector, IRavenCommandsAccessor
+	public class RavenQueryInspector<T> : IRavenQueryable<T>, IRavenQueryInspector
 	{
 		private readonly Expression expression;
 		private readonly IRavenQueryProvider provider;

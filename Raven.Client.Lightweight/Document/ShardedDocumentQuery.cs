@@ -12,6 +12,8 @@ using System.Threading;
 #if !NET_3_5
 using System.Threading.Tasks;
 #endif
+using Raven.Client.Connection.Async;
+using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;
 using Raven.Client.Connection;
@@ -31,8 +33,26 @@ namespace Raven.Client.Document
 		private readonly Func<ShardRequestData, IList<Tuple<string, IDatabaseCommands>>> getShardsToOperateOn;
 		private readonly ShardStrategy shardStrategy;
 		private List<QueryOperation> shardQueryOperations;
+		
 		private IList<IDatabaseCommands> databaseCommands;
+		private IList<IDatabaseCommands> ShardDatabaseCommands
+		{
+			get
+			{
+				if (databaseCommands == null)
+				{
+					var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData {EntityType = typeof (T), Query = IndexQuery});
+					databaseCommands = shardsToOperateOn.Select(x => x.Item2).ToList();
+				}
+				return databaseCommands;
+			}
+		}
+
 		private IndexQuery indexQuery;
+		private IndexQuery IndexQuery
+		{
+			get { return indexQuery ?? (indexQuery = GenerateIndexQuery(theQueryText.ToString())); }
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
@@ -61,10 +81,6 @@ namespace Raven.Client.Document
 
 			ExecuteBeforeQueryListeners();
 
-			indexQuery = GenerateIndexQuery(theQueryText.ToString());
-
-			var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData {EntityType = typeof (T), Query = indexQuery});
-			databaseCommands = shardsToOperateOn.Select(x=>x.Item2).ToList();
 			foreach (var dbCmd in databaseCommands)
 			{
 				ClearSortHints(dbCmd);
@@ -127,7 +143,7 @@ namespace Raven.Client.Document
 
 			AssertNoDuplicateIdsInResults();
 
-			var mergedQueryResult = shardStrategy.MergeQueryResults(indexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
+			var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
 
 			shardQueryOperations[0].ForceResult(mergedQueryResult);
 			queryOperation = shardQueryOperations[0];
@@ -153,6 +169,49 @@ namespace Raven.Client.Document
 					throw new InvalidOperationException("Found id: " + shardPerId.Key + " on more than one shard, documents ids must be unique cluster-wide.");
 			}
 		}
+
+#if !SILVERLIGHT
+		/// <summary>
+		///   Grant access to the database commands
+		/// </summary>
+		public override IDatabaseCommands DatabaseCommands
+		{
+			get { throw new NotSupportedException("Sharded has more than one DatabaseCommands to operate on."); }
+		}
+#endif
+
+#if !NET_3_5
+		/// <summary>
+		///   Grant access to the async database commands
+		/// </summary>
+		public override IAsyncDatabaseCommands AsyncDatabaseCommands
+		{
+			get { throw new NotSupportedException("Sharded doesn't support async operations."); }
+		}
+#endif
+
+#if !SILVERLIGHT
+		public override Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+		{
+			if (queryOperation == null)
+			{
+				foreach (var databaseCommands11 in ShardDatabaseCommands)
+				{
+					foreach (var key in databaseCommands11.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
+					{
+						databaseCommands11.OperationsHeaders.Remove(key);
+					}
+				}
+			
+				ExecuteBeforeQueryListeners();
+				queryOperation = InitializeQueryOperation((s, s1) => ShardDatabaseCommands.ForEach(cmd => cmd.OperationsHeaders.Set(s, s1)));
+			}
+
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback);
+
+			return ((ShardedDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval, ShardDatabaseCommands);
+		}
+#endif
 
 #if !NET_3_5
 		protected override Task<QueryOperation> ExecuteActualQueryAsync()

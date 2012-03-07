@@ -35,7 +35,7 @@ namespace Raven.Client.Document
 	/// <summary>
 	///   A query against a Raven index
 	/// </summary>
-	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenCommandsAccessor, IRavenQueryInspector, IAbstractDocumentQuery<T>
+	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
 	{
 		/// <summary>
 		/// Whatever to negate the next operation
@@ -146,7 +146,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   Grant access to the database commands
 		/// </summary>
-		public IDatabaseCommands DatabaseCommands
+		public virtual IDatabaseCommands DatabaseCommands
 		{
 			get { return theDatabaseCommands; }
 		}
@@ -156,7 +156,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   Grant access to the async database commands
 		/// </summary>
-		public IAsyncDatabaseCommands AsyncDatabaseCommands
+		public virtual IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
 			get { return theAsyncDatabaseCommands; }
 		}
@@ -452,7 +452,7 @@ namespace Raven.Client.Document
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+		public virtual Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
 		{
 			if (queryOperation == null)
 			{
@@ -468,7 +468,6 @@ namespace Raven.Client.Document
 
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
-
 
 #endif
 

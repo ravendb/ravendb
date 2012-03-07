@@ -10,7 +10,6 @@ using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Connection
 {
-
 	/// <summary>
 	/// Provide access to the underlying <see cref="IDocumentQuery{T}"/>
 	/// </summary>
@@ -21,19 +20,6 @@ namespace Raven.Client.Connection
 		/// </summary>
 		string IndexQueried { get; }
 
-
-
-		/// <summary>
-		/// The last term that we asked the query to use equals on
-		/// </summary>
-		KeyValuePair<string, string> GetLastEqualityTerm();
-	}
-
-	/// <summary>
-	/// Provide access to the database commands
-	/// </summary>
-	public interface IRavenCommandsAccessor
-	{
 #if !SILVERLIGHT
 		/// <summary>
 		/// Grant access to the database commands
@@ -47,5 +33,10 @@ namespace Raven.Client.Connection
 		/// </summary>
 		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
 #endif
+
+		/// <summary>
+		/// The last term that we asked the query to use equals on
+		/// </summary>
+		KeyValuePair<string, string> GetLastEqualityTerm();
 	}
 }
