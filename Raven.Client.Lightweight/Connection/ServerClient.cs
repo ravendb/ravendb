@@ -187,7 +187,7 @@ namespace Raven.Client.Connection
 				replicationInformer.IncrementFailureCount(url);
 			}
 			// this should not be thrown, but since I know the value of should...
-			throw new InvalidOperationException(@"Attempted to conect to master and all replicas have failed, giving up.
+			throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
 There is a high probability of a network problem preventing access to all the replicas.
 Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven instances.");
 		}
