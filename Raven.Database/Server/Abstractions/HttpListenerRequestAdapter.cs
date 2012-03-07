@@ -29,9 +29,11 @@ namespace Raven.Database.Server.Abstractions
 			get { return request.Headers; }
 		}
 
+		private Stream inputStream;
 		public Stream InputStream
 		{
-			get { return request.InputStream; }
+			get { return inputStream ?? (inputStream = request.InputStream); }
+			set { inputStream = value; }
 		}
 
 		public NameValueCollection QueryString
