@@ -28,5 +28,11 @@ namespace Raven.StressTests.Races
 		{
 			Run<SupportLazyOperations>(x => x.UnlessAccessedLazyOpertionsAreNoOp());
 		}
+		
+		[Fact]
+		public void WithLazyQuery()
+		{
+			Run<SupportLazyOperations>(x => x.WithLazyQuery());
+		}
 	}
 }
