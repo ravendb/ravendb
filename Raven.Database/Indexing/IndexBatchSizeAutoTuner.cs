@@ -1,4 +1,5 @@
 using System;
+using Raven.Database.Config;
 
 namespace Raven.Database.Indexing
 {
@@ -69,8 +70,7 @@ namespace Raven.Database.Indexing
 			// not all 10
 			var sizedPlusIndexingCost = sizeInMegabytes * (1 + (0.25 * Math.Min(context.IndexDefinitionStorage.IndexesCount, context.Configuration.MaxNumberOfParallelIndexTasks)));
 
-			var availablePhysicalMemoryInMegabytes = context.Configuration.AvailablePhysicalMemoryInMegabytes;
-			var remainingMemoryAfterBatchSizeIncrease = availablePhysicalMemoryInMegabytes - sizedPlusIndexingCost;
+			var remainingMemoryAfterBatchSizeIncrease = MemoryStatistics.AvailableMemory - sizedPlusIndexingCost;
 
 			if (remainingMemoryAfterBatchSizeIncrease >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 			{
@@ -84,8 +84,7 @@ namespace Raven.Database.Indexing
 
 		private bool ReduceBatchSizeIfCloseToMemoryCeiling()
 		{
-			if (context.Configuration.AvailablePhysicalMemoryInMegabytes >= 
-				context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+			if (MemoryStatistics.AvailableMemory >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 			{
 				// there is enough memory available for the next indexing run
 				return false;
@@ -103,8 +102,7 @@ namespace Raven.Database.Indexing
 
 			// let us check again after the GC call, do we still need to reduce the batch size?
 
-			if (context.Configuration.AvailablePhysicalMemoryInMegabytes > 
-				context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
+			if (MemoryStatistics.AvailableMemory > context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 			{
 				// we don't want to try increasing things, we just hit the ceiling, maybe on the next try
 				return true;
@@ -113,7 +111,7 @@ namespace Raven.Database.Indexing
 			// we are still too high, let us reduce the size and see what is going on.
 
 			NumberOfItemsToIndexInSingleBatch = Math.Max(context.Configuration.InitialNumberOfItemsToIndexInSingleBatch,
-			                                             NumberOfItemsToIndexInSingleBatch / 2);
+														 NumberOfItemsToIndexInSingleBatch / 2);
 
 			return true;
 		}

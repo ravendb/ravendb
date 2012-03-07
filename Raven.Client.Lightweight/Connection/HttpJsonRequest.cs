@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -47,6 +48,7 @@ namespace Raven.Client.Connection
 		internal bool ShouldCacheRequest;
 		public object Headers;
 		private Stream postedStream;
+		private bool writeCalled;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -72,7 +74,8 @@ namespace Raven.Client.Connection
 			webRequest.Credentials = credentials;
 			WriteMetadata(metadata);
 			webRequest.Method = method;
-			webRequest.Headers["Accept-Encoding"] = "deflate,gzip";
+			if (method == "POST" || method == "PUT" || method == "PATCH")
+				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
 		}
 
@@ -157,6 +160,8 @@ namespace Raven.Client.Connection
 
 		public byte[] ReadResponseBytes()
 		{
+			if (writeCalled == false)
+				webRequest.ContentLength = 0;
 			using (var webResponse = webRequest.GetResponse())
 			using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
 			{
@@ -192,6 +197,8 @@ namespace Raven.Client.Connection
 			{
 				try
 				{
+					if(writeCalled == false)
+						webRequest.ContentLength = 0;
 					return ReadStringInternal(webRequest.GetResponse);
 				}
 				catch (WebException e)
@@ -255,8 +262,11 @@ namespace Raven.Client.Connection
 			{
 				postedStream.Position = 0;
 				using (var stream = newWebRequest.GetRequestStream())
+				using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
 				{
-					postedStream.CopyTo(stream);
+					postedStream.CopyTo(commpressedData);
+
+					commpressedData.Flush();
 					stream.Flush();
 				}
 			}
@@ -276,93 +286,24 @@ namespace Raven.Client.Connection
 			catch (WebException e)
 			{
 				sp.Stop();
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null ||
-					httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
-					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
-						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-				{
-					int httpResult = -1;
-					if (httpWebResponse != null)
-						httpResult = (int)httpWebResponse.StatusCode;
-
-					factory.InvokeLogRequest(owner, new RequestResultArgs
-					{
-						DurationMilliseconds = CalculateDuration(),
-						Method = webRequest.Method,
-						HttpResult = httpResult,
-						Status = RequestStatus.ErrorOnServer,
-						Result = e.Message,
-						Url = webRequest.RequestUri.PathAndQuery,
-						PostedData = postedData
-					});
+				var result = HanldeErrors(e);
+				if (result == null)
 					throw;
-				}
-
-				if (httpWebResponse.StatusCode == HttpStatusCode.NotModified
-					&& CachedRequestDetails != null)
-				{
-					factory.UpdateCacheTime(this);
-					var result = factory.GetCachedResponse(this);
-
-					factory.InvokeLogRequest(owner, new RequestResultArgs
-					{
-						DurationMilliseconds = CalculateDuration(),
-						Method = webRequest.Method,
-						HttpResult = (int)httpWebResponse.StatusCode,
-						Status = RequestStatus.Cached,
-						Result = result,
-						Url = webRequest.RequestUri.PathAndQuery,
-						PostedData = postedData
-					});
-
-					return result;
-				}
-
-				using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
-				{
-					var readToEnd = sr.ReadToEnd();
-
-					factory.InvokeLogRequest(owner, new RequestResultArgs
-					{
-						DurationMilliseconds = CalculateDuration(),
-						Method = webRequest.Method,
-						HttpResult = (int)httpWebResponse.StatusCode,
-						Status = RequestStatus.Cached,
-						Result = readToEnd,
-						Url = webRequest.RequestUri.PathAndQuery,
-						PostedData = postedData
-					});
-
-					RavenJObject ravenJObject;
-					try
-					{
-						ravenJObject = RavenJObject.Parse(readToEnd);
-					}
-					catch (Exception)
-					{
-						throw new InvalidOperationException(readToEnd, e);
-					}
-
-					if (ravenJObject.ContainsKey("Error"))
-					{
-						var sb = new StringBuilder();
-						foreach (var prop in ravenJObject)
-						{
-							if (prop.Key == "Error")
-								continue;
-
-							sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
-						}
-
-						sb.AppendLine()
-							.AppendLine(ravenJObject.Value<string>("Error"));
-
-						throw new InvalidOperationException(sb.ToString());
-					}
-					throw new InvalidOperationException(readToEnd, e);
-				}
+				return result;
 			}
+#if !NET_3_5
+			catch (AggregateException e)
+			{
+				sp.Stop();
+				var we = e.ExtractSingleInnerException() as WebException;
+				if (we == null)
+					throw;
+				var result = HanldeErrors(we);
+				if (result == null)
+					throw;
+				return result;
+			}
+#endif
 
 			ResponseHeaders = response.Headers;
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
@@ -389,6 +330,96 @@ namespace Raven.Client.Connection
 				});
 
 				return text;
+			}
+		}
+
+		private string HanldeErrors(WebException e)
+		{
+			var httpWebResponse = e.Response as HttpWebResponse;
+			if (httpWebResponse == null ||
+			    httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
+			    httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
+			    httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+			{
+				int httpResult = -1;
+				if (httpWebResponse != null)
+					httpResult = (int)httpWebResponse.StatusCode;
+
+				factory.InvokeLogRequest(owner, new RequestResultArgs
+				{
+					DurationMilliseconds = CalculateDuration(),
+					Method = webRequest.Method,
+					HttpResult = httpResult,
+					Status = RequestStatus.ErrorOnServer,
+					Result = e.Message,
+					Url = webRequest.RequestUri.PathAndQuery,
+					PostedData = postedData
+				});
+				return null;//throws
+			}
+
+			if (httpWebResponse.StatusCode == HttpStatusCode.NotModified
+			    && CachedRequestDetails != null)
+			{
+				factory.UpdateCacheTime(this);
+				var result = factory.GetCachedResponse(this);
+
+				factory.InvokeLogRequest(owner, new RequestResultArgs
+				{
+					DurationMilliseconds = CalculateDuration(),
+					Method = webRequest.Method,
+					HttpResult = (int)httpWebResponse.StatusCode,
+					Status = RequestStatus.Cached,
+					Result = result,
+					Url = webRequest.RequestUri.PathAndQuery,
+					PostedData = postedData
+				});
+
+				return result;
+			}
+
+			using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
+			{
+				var readToEnd = sr.ReadToEnd();
+
+				factory.InvokeLogRequest(owner, new RequestResultArgs
+				{
+					DurationMilliseconds = CalculateDuration(),
+					Method = webRequest.Method,
+					HttpResult = (int)httpWebResponse.StatusCode,
+					Status = RequestStatus.Cached,
+					Result = readToEnd,
+					Url = webRequest.RequestUri.PathAndQuery,
+					PostedData = postedData
+				});
+
+				RavenJObject ravenJObject;
+				try
+				{
+					ravenJObject = RavenJObject.Parse(readToEnd);
+				}
+				catch (Exception)
+				{
+					throw new InvalidOperationException(readToEnd, e);
+				}
+
+				if (ravenJObject.ContainsKey("Error"))
+				{
+					var sb = new StringBuilder();
+					foreach (var prop in ravenJObject)
+					{
+						if (prop.Key == "Error")
+							continue;
+
+						sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
+					}
+
+					sb.AppendLine()
+						.AppendLine(ravenJObject.Value<string>("Error"));
+
+					throw new InvalidOperationException(sb.ToString());
+				}
+				throw new InvalidOperationException(readToEnd, e);
 			}
 		}
 
@@ -424,7 +455,6 @@ namespace Raven.Client.Connection
 		{
 			if (metadata == null || metadata.Count == 0)
 			{
-				webRequest.ContentLength = 0;
 				return;
 			}
 
@@ -488,6 +518,7 @@ namespace Raven.Client.Connection
 		/// <param name="data">The data.</param>
 		public void Write(string data)
 		{
+			writeCalled = true;
 			postedData = data;
 
 			HttpRequestHelper.WriteDataToRequest(webRequest, data);
@@ -503,8 +534,9 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public IAsyncResult BeginWrite(string dataToWrite, AsyncCallback callback, object state)
 		{
+			writeCalled = true;
 			postedData = dataToWrite;
-			webRequest.ContentLength = Encoding.UTF8.GetByteCount(dataToWrite) + Encoding.UTF8.GetPreamble().Length;
+			
 			return webRequest.BeginGetRequestStream(callback, state);
 		}
 
@@ -515,10 +547,13 @@ namespace Raven.Client.Connection
 		public void EndWrite(IAsyncResult result)
 		{
 			using (var dataStream = webRequest.EndGetRequestStream(result))
-			using (var writer = new StreamWriter(dataStream, Encoding.UTF8))
+			using (var compressed = new GZipStream(dataStream, CompressionMode.Compress))
+			using (var writer = new StreamWriter(compressed, Encoding.UTF8))
 			{
 				writer.Write(postedData);
 				writer.Flush();
+
+				compressed.Flush();
 				dataStream.Flush();
 			}
 		}
@@ -597,11 +632,15 @@ namespace Raven.Client.Connection
 
 		public void Write(Stream streamToWrite)
 		{
+			writeCalled = true;
 			postedStream = streamToWrite;
-			webRequest.ContentLength = streamToWrite.Length;
+			webRequest.SendChunked = true;
 			using (var stream = webRequest.GetRequestStream())
+			using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
 			{
-				streamToWrite.CopyTo(stream);
+				streamToWrite.CopyTo(commpressedData);
+
+				commpressedData.Flush();
 				stream.Flush();
 			}
 		}

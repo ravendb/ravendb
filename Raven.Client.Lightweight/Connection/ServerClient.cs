@@ -390,7 +390,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.InternalServerError)
 					throw;
 
-				using (var stream = httpWebResponse.GetResponseStream())
+				using (var stream = httpWebResponse.GetResponseStreamWithHttpDecompression())
 				using (var reader = new StreamReader(stream))
 				{
 					throw new InvalidOperationException("Internal Server Error: " + Environment.NewLine + reader.ReadToEnd());
@@ -454,9 +454,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			ExecuteWithReplication("DELETE", operationUrl => DirectDeleteAttachment(key, etag, operationUrl));
 		}
 
-		public string[] GetDatabaseNames()
+		public string[] GetDatabaseNames(int pageSize)
 		{
-			var result = ExecuteGetRequest("".Databases().NoCache());
+			var result = ExecuteGetRequest("".Databases(pageSize).NoCache());
 
 			var json = (RavenJArray) result;
 		

@@ -44,6 +44,8 @@ namespace Raven.Database.Server.Responders
 		{
 			foreach (var include in Includes)
 			{
+				if(string.IsNullOrEmpty(include))
+					continue;
 				foreach (var token in document.SelectTokenWithRavenSyntaxReturningFlatStructure(include))
 				{
 					ExecuteInternal(token.Item1);

@@ -61,7 +61,7 @@ namespace Raven.Storage.Managed
 			var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(new RavenJObject{{"index", name}});
 			if (cutOff != null)
 				tasksAfterCutoffPoint = tasksAfterCutoffPoint
-					.Where(x => x.Value<DateTime>("time") < cutOff.Value);
+					.Where(x => x.Value<DateTime>("time") <= cutOff.Value);
 			return tasksAfterCutoffPoint.Any();
 		}
 

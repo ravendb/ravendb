@@ -58,8 +58,6 @@ namespace Raven.Abstractions.Linq
 		private static readonly System.String SECOND_FORMAT = "yyyyMMddHHmmss";
 		private static readonly System.String MILLISECOND_FORMAT = "yyyyMMddHHmmssfff";
 		
-		private static readonly System.Globalization.Calendar calInstance = new System.Globalization.GregorianCalendar();
-		
 		// cannot create, the class has static methods only
 		private DateTools()
 		{

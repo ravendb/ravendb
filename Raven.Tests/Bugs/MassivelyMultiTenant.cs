@@ -6,7 +6,7 @@ namespace Raven.Tests.Bugs
 {
 	public class MassivelyMultiTenant : RemoteClientTest
 	{
-		protected override void ConfigureServer(Database.Config.RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(Database.Config.RavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.DefaultStorageTypeName = "esent";
 		}

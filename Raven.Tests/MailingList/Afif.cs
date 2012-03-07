@@ -67,7 +67,6 @@ namespace Raven.Tests.MailingList
 			[Fact]
 			public void ShouldMatchMakeFacetsOnLocation()
 			{
-				IDocumentQuery<Vehicle> query;
 				IDictionary<string, IEnumerable<FacetValue>> facetvalues;
 
 				using (var s = Store.OpenSession())

@@ -62,14 +62,10 @@ namespace Raven.Json.Linq
 			switch (CurrentToken.Type)
 			{
 				case JTokenType.Object:
-					if (string.IsNullOrEmpty(_tempPropName))
-						throw new JsonWriterException("Unexpected object token");
 					((RavenJObject)CurrentToken)[_tempPropName] = token;
 					_tempPropName = null;
 					break;
 				case JTokenType.Array:
-					if (!string.IsNullOrEmpty(_tempPropName))
-						throw new JsonWriterException("Unexpected property token");
 					((RavenJArray)CurrentToken).Add(token);
 					break;
 				default:
@@ -124,14 +120,10 @@ namespace Raven.Json.Linq
 				switch (CurrentToken.Type)
 				{
 					case JTokenType.Object:
-						if (string.IsNullOrEmpty(_tempPropName))
-							throw new JsonWriterException("Unexpected value token");
 						((RavenJObject)CurrentToken)[_tempPropName] = value;
 						_tempPropName = null;
 						break;
 					case JTokenType.Array:
-						if (!string.IsNullOrEmpty(_tempPropName))
-							throw new JsonWriterException("Unexpected property token");
 						((RavenJArray)CurrentToken).Add(value);
 						break;
 					default:
@@ -190,7 +182,9 @@ namespace Raven.Json.Linq
 		/// Writes a <see cref="UInt32"/> value.
 		/// </summary>
 		/// <param name="value">The <see cref="UInt32"/> value to write.</param>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public override void WriteValue(uint value)
 		{
 			base.WriteValue(value);
@@ -211,7 +205,9 @@ namespace Raven.Json.Linq
 		/// Writes a <see cref="UInt64"/> value.
 		/// </summary>
 		/// <param name="value">The <see cref="UInt64"/> value to write.</param>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public override void WriteValue(ulong value)
 		{
 			base.WriteValue(value);
@@ -262,7 +258,9 @@ namespace Raven.Json.Linq
 		/// Writes a <see cref="UInt16"/> value.
 		/// </summary>
 		/// <param name="value">The <see cref="UInt16"/> value to write.</param>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public override void WriteValue(ushort value)
 		{
 			base.WriteValue(value);
@@ -293,7 +291,9 @@ namespace Raven.Json.Linq
 		/// Writes a <see cref="SByte"/> value.
 		/// </summary>
 		/// <param name="value">The <see cref="SByte"/> value to write.</param>
+#if !SILVERLIGHT
 		[CLSCompliant(false)]
+#endif
 		public override void WriteValue(sbyte value)
 		{
 			base.WriteValue(value);

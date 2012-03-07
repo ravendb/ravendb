@@ -11,7 +11,7 @@ namespace Raven.Tests.MultiGet
 {
 	public class MultiGetSecurity : RemoteClientTest
 	{
-		protected override void ConfigureServer(Database.Config.RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(Database.Config.RavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode =AnonymousUserAccessMode.Get;
 		}

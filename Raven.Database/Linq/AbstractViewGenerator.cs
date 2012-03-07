@@ -7,12 +7,15 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Text;
 using System.Text.RegularExpressions;
 using Lucene.Net.Documents;
+using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using System.Linq;
 using Raven.Database.Indexing;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Linq
 {

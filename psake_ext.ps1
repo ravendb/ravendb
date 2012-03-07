@@ -59,8 +59,8 @@ using System.Runtime.InteropServices;
 
 #if !SILVERLIGHT
 [assembly: SuppressIldasmAttribute()]
+[assembly: CLSCompliantAttribute($clsCompliant)]
 #endif
-[assembly: CLSCompliantAttribute($clsCompliant )]
 [assembly: ComVisibleAttribute(false)]
 [assembly: AssemblyTitleAttribute(""$title"")]
 [assembly: AssemblyDescriptionAttribute(""$description"")]
@@ -87,6 +87,6 @@ function Get-DependencyPackageFiles
 {
 	param([string]$packageName, [string]$frameworkVersion = "net40")
 	
-	$fullPackageName = Get-ChildItem "$base_dir\packages\$packageName.*" | Sort-Object Name -Descending | Select-Object -First 1
+	$fullPackageName = Get-ChildItem "$base_dir\packages\$packageName.*" | Sort-Object Name | Select-Object -First 1
 	Return "$fullPackageName\lib\$frameworkVersion\*"
 }

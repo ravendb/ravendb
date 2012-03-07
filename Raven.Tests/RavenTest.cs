@@ -119,10 +119,6 @@ namespace Raven.Tests
 				Thread.Sleep(25);
 		}
 
-		protected virtual void ConfigureServer(RavenConfiguration ravenConfiguration)
-		{
-		}
-
 		protected void WaitForUserToContinueTheTest()
 		{
 			if (Debugger.IsAttached == false)
@@ -157,7 +153,7 @@ namespace Raven.Tests
 			                         	AnonymousUserAccessMode = AnonymousUserAccessMode.All
 			                         };
 
-			ConfigureServer(ravenConfiguration);
+			ModifyConfiguration(ravenConfiguration);
 
 			if (ravenConfiguration.RunInMemory == false)
 				IOExtensions.DeleteDirectory(ravenConfiguration.DataDirectory);

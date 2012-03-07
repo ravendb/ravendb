@@ -190,7 +190,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 
 		private void HandleTransformResults(ConstructorDeclaration ctor)
 		{
-			if (indexDefinition.TransformResults == null) 
+			if (string.IsNullOrEmpty(indexDefinition.TransformResults)) 
 				return;
 
 			VariableDeclaration translatorDeclaration;
