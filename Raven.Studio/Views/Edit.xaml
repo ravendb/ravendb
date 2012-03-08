@@ -134,6 +134,7 @@
 							VerticalAlignment="Center">
 
 					<Studio:SearchControl x:Name="SearchTool"
+										  Width="Auto"
 										  Visibility="Collapsed"
 										  VerticalAlignment="Bottom"
 										  HorizontalAlignment="Left"
