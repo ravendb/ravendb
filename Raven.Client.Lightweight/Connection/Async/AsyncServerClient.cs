@@ -138,9 +138,12 @@ namespace Raven.Client.Connection.Async
 							throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 
 					}
-					catch (WebException e)
+					catch (AggregateException e)
 					{
-						var response = e.Response as HttpWebResponse;
+						var we = e.ExtractSingleInnerException() as WebException;
+						if (we == null)
+							throw;
+						var response = we.Response as HttpWebResponse;
 						if (response == null || response.StatusCode != HttpStatusCode.NotFound)
 							throw;
 					}
@@ -227,13 +230,16 @@ namespace Raven.Client.Connection.Async
 							{
 								return convention.CreateSerializer().Deserialize<PutResult>(new RavenJTokenReader(task1.Result));
 							}
-							catch (WebException e)
+							catch (AggregateException e)
 							{
-								var httpWebResponse = e.Response as HttpWebResponse;
+								var we = e.ExtractSingleInnerException() as WebException;
+								if (we == null)
+									throw;
+								var httpWebResponse = we.Response as HttpWebResponse;
 								if (httpWebResponse == null ||
 									httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 									throw;
-								throw ThrowConcurrencyException(e);
+								throw ThrowConcurrencyException(we);
 							}
 						});
 				})
@@ -324,9 +330,12 @@ namespace Raven.Client.Connection.Async
 						var requestJson = task.Result;
 						return SerializationHelper.DeserializeJsonDocument(key, requestJson, request.ResponseHeaders, request.ResponseStatusCode);
 					}
-					catch (WebException e)
+					catch (AggregateException e)
 					{
-						var httpWebResponse = e.Response as HttpWebResponse;
+						var we = e.ExtractSingleInnerException() as WebException;
+						if(we == null)
+							throw;
+						var httpWebResponse = we.Response as HttpWebResponse;
 						if (httpWebResponse == null)
 							throw;
 						if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
@@ -387,13 +396,16 @@ namespace Raven.Client.Connection.Async
 					Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
 				};
 			}
-			catch (WebException e)
+			catch (AggregateException e)
 			{
-				var httpWebResponse = e.Response as HttpWebResponse;
+				var we = e.ExtractSingleInnerException() as WebException;
+				if (we == null)
+					throw;
+				var httpWebResponse = we.Response as HttpWebResponse;
 				if (httpWebResponse == null ||
 				    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 					throw;
-				throw ThrowConcurrencyException(e);
+				throw ThrowConcurrencyException(we);
 			}
 		}
 
@@ -617,13 +629,16 @@ namespace Raven.Client.Connection.Async
 					{
 						response = (RavenJArray)task.Result;
 					}
-					catch (WebException e)
+					catch (AggregateException e)
 					{
-						var httpWebResponse = e.Response as HttpWebResponse;
+						var we = e.ExtractSingleInnerException() as WebException;
+						if (we == null)
+							throw;
+						var httpWebResponse = we.Response as HttpWebResponse;
 						if (httpWebResponse == null ||
 							httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 							throw;
-						throw ThrowConcurrencyException(e);
+						throw ThrowConcurrencyException(we);
 					}
 					return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 				});
