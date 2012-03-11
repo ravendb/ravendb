@@ -114,9 +114,10 @@ namespace Raven.Tests.MultiGet
 					var result2 = session.Advanced.Lazily
 						.Include("Name")
 						.Load<User>("users/3");
-					var a = result2.Value;
+
+					Assert.NotNull(result1.Value);
+					Assert.NotNull(result2.Value);
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
-					var b = result1.Value;
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
 
 					Assert.True(session.Advanced.IsLoaded("users/2"));
