@@ -1,7 +1,8 @@
 using Raven.Tests.Bugs;
 using Raven.Tests.MailingList.MapReduceIssue;
+using Raven.Tests.ManagedStorage;
 using Raven.Tests.MultiGet;
-using Raven.Tests.Shard.BlogModel;
+using Raven.Tests.Transactions;
 using Raven.Tests.Views;
 using Xunit;
 
@@ -22,12 +23,6 @@ namespace Raven.StressTests.Races
 		}
 
 		[Fact]
-		public void CanQueryOnlyUsers()
-		{
-			Run<CanQueryOnlyUsers>(x => x.WhenQueryingForUserById());
-		}
-
-		[Fact]
 		public void MultiGetNonStaleRequslts()
 		{
 			Run<MultiGetNonStaleRequslts>(x => x.ShouldBeAbleToGetNonStaleResults());
@@ -37,6 +32,18 @@ namespace Raven.StressTests.Races
 		public void CaseSensitiveDeletes_ShouldWork()
 		{
 			Run<CaseSensitiveDeletes>(x => x.ShouldWork(), 1000);
+		}
+		
+		[Fact]
+		public void AfterCommitWillNotRetainSameEtag()
+		{
+			Run<Etags>(x => x.AfterCommitWillNotRetainSameEtag(), 1000);
+		}
+		
+		[Fact]
+		public void CanAddAndReadFileAfterReopen()
+		{
+			Run<Documents>(x => x.CanAddAndReadFileAfterReopen(), 100000);
 		}
 	}
 }

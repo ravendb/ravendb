@@ -12,7 +12,7 @@ namespace Raven.Client.Document.SessionOperations
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
-		private readonly Func<IDisposable> disableAllCaching;
+		internal Func<IDisposable> disableAllCaching { get; set; }
 		private readonly string[] ids;
 		bool firstRequest = true;
 		JsonDocument[] results;
@@ -34,8 +34,6 @@ namespace Raven.Client.Document.SessionOperations
 			this.sessionOperations = sessionOperations;
 			this.disableAllCaching = disableAllCaching;
 			this.ids = ids;
-
-
 		}
 
 		public void LogOperation()
@@ -74,7 +72,9 @@ namespace Raven.Client.Document.SessionOperations
 				sessionOperations.TrackEntity<object>(include);
 			}
 
-			return results
+			var finalResult = ids.Select(id => results.Where(r => r != null).FirstOrDefault(r => string.Equals(r.Metadata.Value<string>("@id"), id,StringComparison.InvariantCultureIgnoreCase)));
+
+			return finalResult
 				.Select(document => document == null ? default(T) : sessionOperations.TrackEntity<T>(document))
 				.ToArray();
 		}

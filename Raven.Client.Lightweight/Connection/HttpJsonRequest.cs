@@ -18,13 +18,13 @@ using System.Threading.Tasks;
 #endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Connection
 {

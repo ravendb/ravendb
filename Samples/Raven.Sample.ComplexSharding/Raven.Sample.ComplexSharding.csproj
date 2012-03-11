@@ -47,7 +47,6 @@
   <ItemGroup>
     <Compile Include="Blog.cs" />
     <Compile Include="BlogShardResolutionStrategy.cs" />
-    <Compile Include="BlogShardSelectionStrategy.cs" />
     <Compile Include="Post.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

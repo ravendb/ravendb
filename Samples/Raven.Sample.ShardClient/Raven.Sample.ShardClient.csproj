@@ -48,8 +48,7 @@
     <Compile Include="Company.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ShardSelectionByRegion.cs" />
-    <Compile Include="ShardStrategy.cs" />
+    <Compile Include="ShardResolutionByRegion.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

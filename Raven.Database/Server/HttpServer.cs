@@ -90,8 +90,8 @@ namespace Raven.Database.Server
 		private Timer databasesCleanupTimer;
 		private int physicalRequestsCount;
 
-		private TimeSpan maxTimeDatabaseCanBeIdle;
-		private TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
+		private readonly TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 		private bool disposed;
 
 		public bool HasPendingRequests
@@ -272,7 +272,7 @@ namespace Raven.Database.Server
 			catch (Exception)
 			{
 				// can't get current request / end new one, probably
-				// listner shutdown
+				// listener shutdown
 				return;
 			}
 

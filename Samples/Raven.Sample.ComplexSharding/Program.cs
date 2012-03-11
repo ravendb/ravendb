@@ -6,10 +6,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
-using Raven.Client.Shard.ShardStrategy;
-using Raven.Client.Shard.ShardStrategy.ShardAccess;
+using Raven.Client.Shard;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Server;
@@ -27,27 +27,26 @@ namespace Raven.Sample.ComplexSharding
 			var ravenDbServers = StartServers();
 			Console.WriteLine("All servers started...");
 
-			var shards = new Shards
-			{
-				new DocumentStore
-				{
-					Identifier = "Users",
-					Url = "http://localhost:8081",
-					Conventions =
-						{
-							DocumentKeyGenerator = user => "users/" + ((User) user).Name
-						}
-				},
-				new DocumentStore {Identifier = "Blogs", Url = "http://localhost:8082"},
-				new DocumentStore {Identifier = "Posts #1", Url = "http://localhost:8083"},
-				new DocumentStore {Identifier = "Posts #2", Url = "http://localhost:8084"},
-				new DocumentStore {Identifier = "Posts #3", Url = "http://localhost:8085"}
-			};
+			var shards = new Dictionary<string, IDocumentStore>
+			             	{
+			             		{
+			             			"Users",
+			             			new DocumentStore
+			             				{
+			             					Url = "http://localhost:8081",
+			             					Conventions =
+			             						{DocumentKeyGenerator = user => "users/" + ((User) user).Name}
+			             				}
+			             			},
+			             		{"Blogs", new DocumentStore {Url = "http://localhost:8082"}},
+			             		{"Posts01", new DocumentStore {Url = "http://localhost:8083"}},
+			             		{"Posts02", new DocumentStore {Url = "http://localhost:8084"}},
+			             		{"Posts03", new DocumentStore {Url = "http://localhost:8085"}},
+			             	};
 
 			var shardStrategy = new ShardStrategy
 			{
 				ShardAccessStrategy =new ParallelShardAccessStrategy(),
-				ShardSelectionStrategy = new BlogShardSelectionStrategy(3),
 				ShardResolutionStrategy = new BlogShardResolutionStrategy(3),
 			};
 			var documentStore = new ShardedDocumentStore(shardStrategy, shards);

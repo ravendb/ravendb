@@ -3,7 +3,9 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
+using Raven.Client.Shard;
 using Raven.Json.Linq;
+using System.Linq;
 
 #if !NET_3_5
 
@@ -24,10 +26,10 @@ namespace Raven.Client.Document.Batches
 		{
 			var stringBuilder = new StringBuilder();
 			queryOperation.IndexQuery.AppendQueryString(stringBuilder);
-		
+
 			return new GetRequest
 			{
-				Url = "/indexes/"+ queryOperation.IndexName,
+				Url = "/indexes/" + queryOperation.IndexName,
 				Query = stringBuilder.ToString()
 			};
 		}
@@ -35,6 +37,30 @@ namespace Raven.Client.Document.Batches
 		public object Result { get; set; }
 
 		public bool RequiresRetry { get; set; }
+
+		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
+		{
+			var count = responses.Count(x => x.Status == 404);
+			if (count != 0)
+			{
+				throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + " in " + count + " shards");
+			}
+
+			var list = (from response in responses 
+						let json = RavenJObject.Parse(response.Result) 
+						select SerializationHelper.ToQueryResult(json, response.Headers["ETag"]))
+						.ToList();
+
+			var queryResult = shardStrategy.MergeQueryResults(queryOperation.IndexQuery, list);
+
+			RequiresRetry = queryOperation.IsAcceptable(queryResult) == false;
+			if (RequiresRetry)
+				return;
+
+			if (afterQueryExecuted != null)
+				afterQueryExecuted(queryResult);
+			Result = queryOperation.Complete<T>();
+		}
 
 		public void HandleResponse(GetResponse response)
 		{

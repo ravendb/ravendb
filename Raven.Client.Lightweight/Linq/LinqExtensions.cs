@@ -4,9 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Linq;
 #if !NET_3_5
@@ -17,9 +16,6 @@ using Raven.Client.Connection;
 
 namespace Raven.Client.Linq
 {
-	using System.Linq.Expressions;
-	using Newtonsoft.Json;
-	using Newtonsoft.Json.Linq;
 
 	///<summary>
 	/// Extensions to the linq syntax
@@ -35,8 +31,7 @@ namespace Raven.Client.Linq
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
 			var query = ravenQueryInspector.ToString();
 
-			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried,
-																  new IndexQuery { Query = query }, facetDoc);
+			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
 		}
 #endif
 #if !NET_3_5
@@ -48,8 +43,7 @@ namespace Raven.Client.Linq
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
 			var query = ravenQueryInspector.ToString();
 
-			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried,
-																  new IndexQuery { Query = query }, facetDoc);
+			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
 		}
 #endif
 
@@ -93,7 +87,7 @@ namespace Raven.Client.Linq
 		public static SuggestionQueryResult Suggest(this IQueryable queryable, SuggestionQuery query)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			SetSuggestionQueryFieldAndTerm(ravenQueryInspector,query);
+			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
 			return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);
 		}
 #endif
