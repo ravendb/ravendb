@@ -198,6 +198,24 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		public Attachment HeadAttachment(string key)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			Attachment attachment = database.GetStatic(key);
+			if (attachment == null)
+				return null;
+			attachment.Data = () =>
+			{
+				throw new InvalidOperationException("");
+			};
+			return attachment;
+		}
+
+		/// <summary>
 		/// Deletes the attachment with the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>

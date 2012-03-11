@@ -405,19 +405,41 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <returns></returns>
 		public Attachment GetAttachment(string key)
 		{
-			return ExecuteWithReplication("GET", operationUrl => DirectGetAttachment(key, operationUrl));
+			return ExecuteWithReplication("GET", operationUrl => DirectGetAttachment("GET", key, operationUrl));
 		}
 
-		private Attachment DirectGetAttachment(string key, string operationUrl)
+		/// <summary>
+		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		public Attachment HeadAttachment(string key)
 		{
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,operationUrl + "/static/" + key,"GET", credentials, convention);
+			return ExecuteWithReplication("HEAD", operationUrl => DirectGetAttachment("HEAD",key, operationUrl));
+		}
+
+		private Attachment DirectGetAttachment(string method, string key, string operationUrl)
+		{
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,operationUrl + "/static/" + key,method, credentials, convention);
+			Func<Stream> data;
 			try
 			{
-				var memoryStream = new MemoryStream(webRequest.ReadResponseBytes());
+				if (method == "GET")
+				{
+					var memoryStream = new MemoryStream(webRequest.ReadResponseBytes());
+					data = () => memoryStream;
+				}
+				else
+				{
+					data = () =>
+					{
+						throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
+					};
+				}
 				return new Attachment
 				{
-					Data = () => memoryStream,
-					Size = (int) memoryStream.Length,
+					Data = data,
+					Size = int.Parse(webRequest.ResponseHeaders["Content-Length"]),
 					Etag = new Guid(webRequest.ResponseHeaders["ETag"]),
 					Metadata = webRequest.ResponseHeaders.FilterHeaders(isServerDocument: false)
 				};

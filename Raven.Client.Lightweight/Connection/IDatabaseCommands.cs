@@ -82,6 +82,15 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		Attachment GetAttachment(string key);
 
+
+		/// <summary>
+		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		Attachment HeadAttachment(string key);
+
+
 		/// <summary>
 		/// Deletes the attachment with the specified key
 		/// </summary>
