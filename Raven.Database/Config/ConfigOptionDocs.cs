@@ -26,7 +26,7 @@ namespace Raven.Database.Config
 			{"Raven/OAuthTokenCertificatePath", "string", null, "The path to the OAuth certificate. Default: none. If no certificate is specified, one will be automatically created."},
 			{"Raven/OAuthTokenCertificatePassword", "string", null, "The password for the OAuth certificate. Default: none."},
 			{"Raven/Authorization/Windows/RequiredGroups", "string", null, "Limit the users that can authenticate to RavenDB to only users in the specified groups. Multiple groups can be specified, separated by a semi column (;)."},
-
+			{"Raven/Authorization/Windows/RequiredUsers", "string", null,  "Limit the users that can authenticate to RavenDB to only the specified users. Multiple users can be specified, separated by a semi column (;)."},
 			// Network
 			{"Raven/HostName", "string", null, "The hostname to bind the embedded http server to, if we want to bind to a specific hostname, rather than all. Default: none."},
 			{"Raven/Port", "int", "1 - 65,536, *", "The port to bind the embedded http server. Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward."},
