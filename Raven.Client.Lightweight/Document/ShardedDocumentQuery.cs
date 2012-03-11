@@ -11,9 +11,9 @@ using Raven.Abstractions.Data;
 using System.Threading;
 #if !NET_3_5
 using System.Threading.Tasks;
-#endif
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Batches;
+#endif
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;
 using Raven.Client.Connection;
@@ -190,7 +190,12 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !SILVERLIGHT
+#if !NET_3_5 && !SILVERLIGHT
+
+		/// <summary>
+		/// Register the query as a lazy query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
 		public override Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
 		{
 			if (queryOperation == null)

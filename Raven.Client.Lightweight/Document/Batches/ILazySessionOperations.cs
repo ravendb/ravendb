@@ -81,7 +81,6 @@ namespace Raven.Client.Document.Batches
 		/// Execute all the lazy requests pending within this session
 		/// </summary>
 		void ExecuteAllPendingLazyOperations();
-	
 	}
 }
 #endif

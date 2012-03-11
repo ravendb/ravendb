@@ -198,32 +198,6 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
-		/// Register to lazily load documents and include
-		/// </summary>
-		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval)
-		{
-			var idsAndShards = ids.Select(id => new
-			                                    	{
-			                                    		id,
-			                                    		shards = GetCommandsToOperateOn(new ShardRequestData
-			                                    		                                	{
-			                                    		                                		Key = id,
-			                                    		                                		EntityType = typeof (T),
-			                                    		                                	})
-			                                    	})
-				.GroupBy(x => x.shards, new DbCmdsListComparer());
-			var cmds = idsAndShards.SelectMany(idAndShard => idAndShard.Key).Distinct().ToList();
-
-			var multiLoadOperation = new MultiLoadOperation(this, () =>
-			                                                      	{
-			                                                      		var list = cmds.Select(cmd => cmd.DisableAllCaching()).ToList();
-			                                                      		return new DisposableAction(() => list.ForEach(disposable => disposable.Dispose()));
-			                                                      	}, ids);
-			var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
-			return AddLazyOperation(lazyOp, onEval, cmds);
-		}
-
-		/// <summary>
 		/// Loads the specified entities with the specified id after applying
 		/// conventions on the provided id to get the real document id.
 		/// </summary>
@@ -285,6 +259,98 @@ namespace Raven.Client.Shard
 			return Lazily.Load<TResult>(ids, null);
 		}
 
+		/// <summary>
+		/// Register to lazily load documents and include
+		/// </summary>
+		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval)
+		{
+			var idsAndShards = ids.Select(id => new
+			{
+				id,
+				shards = GetCommandsToOperateOn(new ShardRequestData
+				{
+					Key = id,
+					EntityType = typeof(T),
+				})
+			})
+				.GroupBy(x => x.shards, new DbCmdsListComparer());
+			var cmds = idsAndShards.SelectMany(idAndShard => idAndShard.Key).Distinct().ToList();
+
+			var multiLoadOperation = new MultiLoadOperation(this, () =>
+			{
+				var list = cmds.Select(cmd => cmd.DisableAllCaching()).ToList();
+				return new DisposableAction(() => list.ForEach(disposable => disposable.Dispose()));
+			}, ids);
+			var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
+			return AddLazyOperation(lazyOp, onEval, cmds);
+		}
+
+		public void ExecuteAllPendingLazyOperations()
+		{
+			if (pendingLazyOperations.Count == 0)
+				return;
+
+			try
+			{
+				IncrementRequestCount();
+				while (ExecuteLazyOperationsSingleStep())
+				{
+					Thread.Sleep(100);
+				}
+
+				foreach (var pendingLazyOperation in pendingLazyOperations)
+				{
+					Action<object> value;
+					if (onEvaluateLazy.TryGetValue(pendingLazyOperation.Item1, out value))
+						value(pendingLazyOperation.Item1.Result);
+				}
+			}
+			finally
+			{
+				pendingLazyOperations.Clear();
+			}
+		}
+
+		private bool ExecuteLazyOperationsSingleStep()
+		{
+			var disposables = pendingLazyOperations.Select(x => x.Item1.EnterContext()).Where(x => x != null).ToList();
+			try
+			{
+				var operationsPerShardGroup = pendingLazyOperations.GroupBy(x => x.Item2, new DbCmdsListComparer());
+
+				foreach (var operationPerShard in operationsPerShardGroup)
+				{
+					var lazyOperations = operationPerShard.Select(x => x.Item1).ToArray();
+					var requests = lazyOperations.Select(x => x.CraeteRequest()).ToArray();
+					var multiResponses = shardStrategy.ShardAccessStrategy.Apply(operationPerShard.Key, (commands, i) => commands.MultiGet(requests));
+
+					var sb = new StringBuilder();
+					foreach (var response in from shardReponses in multiResponses
+											 from getResponse in shardReponses
+											 where getResponse.RequestHasErrors()
+											 select getResponse)
+						sb.AppendFormat("Got an error from server, status code: {0}{1}{2}", response.Status, Environment.NewLine, response.Result)
+							.AppendLine();
+
+					if (sb.Length > 0)
+						throw new InvalidOperationException(sb.ToString());
+
+					for (int i = 0; i < lazyOperations.Length; i++)
+					{
+						var copy = i;
+						lazyOperations[i].HandleResponses(multiResponses.Select(x => x[copy]).ToArray(), shardStrategy);
+						if (lazyOperations[i].RequiresRetry)
+							return true;
+					}
+				}
+				return false;
+			}
+			finally
+			{
+				disposables.ForEach(disposable => disposable.Dispose());
+			}
+		}
+
 #endif
 		public T Load<T>(string id)
 		{
@@ -312,15 +378,13 @@ namespace Raven.Client.Shard
 			                                                                  				retry = loadOperation.SetResult(commands.Get(id));
 			                                                                  			}
 			                                                                  		} while (retry);
-			                                                                  		return loadOperation.Complete<T>();
+																					return loadOperation.Complete<T>();
 			                                                                  	});
 
 			var shardsContainThisDocument = results.Where(x => !Equals(x, default(T))).ToArray();
 			if(shardsContainThisDocument.Count() > 1)
 			{
-				
-				throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide." + Environment.NewLine +
-				"Shards IDs:" + string.Join(", ", shardsContainThisDocument));
+				throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
 			}
 
 			return shardsContainThisDocument.FirstOrDefault();
@@ -699,71 +763,6 @@ namespace Raven.Client.Shard
 
 		}
 
-		public void ExecuteAllPendingLazyOperations()
-		{
-			if (pendingLazyOperations.Count == 0)
-				return;
-
-			try
-			{
-				IncrementRequestCount();
-				while (ExecuteLazyOperationsSingleStep())
-				{
-					Thread.Sleep(100);
-				}
-
-				foreach (var pendingLazyOperation in pendingLazyOperations)
-				{
-					Action<object> value;
-					if (onEvaluateLazy.TryGetValue(pendingLazyOperation.Item1, out value))
-						value(pendingLazyOperation.Item1.Result);
-				}
-			}
-			finally
-			{
-				pendingLazyOperations.Clear();
-			}
-		}
-
-		private bool ExecuteLazyOperationsSingleStep()
-		{
-			var disposables = pendingLazyOperations.Select(x => x.Item1.EnterContext()).Where(x => x != null).ToList();
-			try
-			{
-				var operationsPerShardGroup = pendingLazyOperations.GroupBy(x => x.Item2, new DbCmdsListComparer());
-
-				foreach (var operationPerShard in operationsPerShardGroup)
-				{
-					var lazyOperations = operationPerShard.Select(x => x.Item1).ToArray();
-					var requests = lazyOperations.Select(x => x.CraeteRequest()).ToArray();
-					var multiResponses = shardStrategy.ShardAccessStrategy.Apply(operationPerShard.Key, (commands, i) => commands.MultiGet(requests));
-
-					var sb = new StringBuilder();
-					foreach (var response in from shardReponses in multiResponses
-											 from getResponse in shardReponses
-											 where getResponse.RequestHasErrors()
-											 select getResponse)
-						sb.AppendFormat("Got an error from server, status code: {0}{1}{2}", response.Status, Environment.NewLine, response.Result)
-							.AppendLine();
-
-					if (sb.Length > 0)
-						throw new InvalidOperationException(sb.ToString());
-
-					for (int i = 0; i < lazyOperations.Length; i++)
-					{
-						var copy = i;
-						lazyOperations[i].HandleResponses(multiResponses.Select(x=>x[copy]).ToArray(),shardStrategy);
-						if (lazyOperations[i].RequiresRetry)
-							return true;
-					}
-				}
-				return false;
-			}
-			finally
-			{
-				disposables.ForEach(disposable => disposable.Dispose());
-			}
-		}
 	}
 
 #endif

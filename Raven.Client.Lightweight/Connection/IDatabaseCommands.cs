@@ -169,7 +169,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Executed the specified commands as a single batch
 		/// </summary>
-		/// <param name="commandDatas">The command data.</param>
+		/// <param name="commandDatas">The command data.</param> 
 		BatchResult[] Batch(IEnumerable<ICommandData> commandDatas);
 
 		/// <summary>

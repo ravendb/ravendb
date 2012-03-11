@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Client.Document;
+#if !NET_3_5
 using Raven.Client.Document.Batches;
+#endif
 
 namespace Raven.Client
 {

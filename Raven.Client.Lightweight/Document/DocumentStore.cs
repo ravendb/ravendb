@@ -250,7 +250,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public override IDocumentSession OpenSession()
 		{
-			return OpenSessionInternal(DatabaseCommands, AsyncDatabaseCommands);
+			return OpenSessionInternal();
 		}
 
 		/// <summary>
@@ -258,9 +258,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override IDocumentSession OpenSession(string database)
 		{
-			var asyncDatabaseCommands = AsyncDatabaseCommands.ForDatabase(database);
-			var databaseCommands = DatabaseCommands.ForDatabase(database);
-			return OpenSessionInternal(databaseCommands, asyncDatabaseCommands);
+			return OpenSessionInternal(database);
 		}
 
 		/// <summary>
@@ -268,9 +266,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
 		{
-			var asyncDatabaseCommands = AsyncDatabaseCommands.ForDatabase(database).With(credentialsForSession);
-			var databaseCommands = DatabaseCommands.ForDatabase(database).With(credentialsForSession);
-			return OpenSessionInternal(databaseCommands, asyncDatabaseCommands);
+			return OpenSessionInternal(database, credentialsForSession);
 		}
 
 		/// <summary>
@@ -279,12 +275,10 @@ namespace Raven.Client.Document
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public override IDocumentSession OpenSession(ICredentials credentialsForSession)
 		{
-			var asyncDatabaseCommands = AsyncDatabaseCommands.With(credentialsForSession);
-			var databaseCommands = DatabaseCommands.With(credentialsForSession);
-			return OpenSessionInternal(databaseCommands, asyncDatabaseCommands);
+			return OpenSessionInternal(credentialsForSession: credentialsForSession);
 		}
 
-		private IDocumentSession OpenSessionInternal(IDatabaseCommands databaseCommands, IAsyncDatabaseCommands asyncDatabaseCommands)
+		private IDocumentSession OpenSessionInternal(string database = null, ICredentials credentialsForSession = null)
 		{
 			EnsureNotClosed();
 
@@ -292,9 +286,9 @@ namespace Raven.Client.Document
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new DocumentSession(this, listeners, sessionId, databaseCommands
+				var session = new DocumentSession(this, listeners, sessionId, SetupCommands(DatabaseCommands, database, credentialsForSession)
 #if !NET_3_5
-, asyncDatabaseCommands
+, SetupCommandsAsync(AsyncDatabaseCommands, database, credentialsForSession)
 #endif
 );
 				AfterSessionCreated(session);
@@ -305,6 +299,26 @@ namespace Raven.Client.Document
 				currentSessionId = null;
 			}
 		}
+
+		private static IDatabaseCommands SetupCommands(IDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession)
+		{
+			if (database != null)
+				databaseCommands = databaseCommands.ForDatabase(database);
+			if (credentialsForSession != null)
+				databaseCommands = databaseCommands.With(credentialsForSession);
+			return databaseCommands;
+		}
+
+#if !NET_3_5
+		private static IAsyncDatabaseCommands SetupCommandsAsync(IAsyncDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession)
+		{
+			if (database != null)
+				databaseCommands = databaseCommands.ForDatabase(database);
+			if (credentialsForSession != null)
+				databaseCommands = databaseCommands.With(credentialsForSession);
+			return databaseCommands;
+		}
+#endif
 
 #endif
 
