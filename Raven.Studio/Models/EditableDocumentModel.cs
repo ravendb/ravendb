@@ -359,21 +359,24 @@ namespace Raven.Studio.Models
 
 		private void UpdateReferences()
 		{
-			var referencesIds = Regex.Matches(jsonData, @"""(\w+/\w+)""");
-			References.Clear();
-			foreach (var source in referencesIds.Cast<Match>().Select(x => x.Groups[1].Value).Distinct())
+			if (Seperator != null)
 			{
-				References.Add(new LinkModel
-							   {
-								   Title = source,
-								   HRef = "/Edit?id=" + source
-							   });
+				var referencesIds = Regex.Matches(jsonData, @"""(\w+" + Seperator + @"\w+)");
+				References.Clear();
+				foreach (var source in referencesIds.Cast<Match>().Select(x => x.Groups[1].Value).Distinct())
+				{
+					References.Add(new LinkModel
+					{
+						Title = source,
+						HRef = "/Edit?id=" + source
+					});
+				}
 			}
 		}
 
 		private void UpdateRelated()
 		{
-			DatabaseCommands.GetDocumentsStartingWithAsync(Key + "/", 0, 15)
+			DatabaseCommands.GetDocumentsStartingWithAsync(Key + Seperator, 0, 15)
 				.ContinueOnSuccess(items =>
 								   {
 									   if (items == null)
@@ -395,6 +398,20 @@ namespace Raven.Studio.Models
 			{
 				document.Value.Key = value;
 				OnPropertyChanged();
+			}
+		}
+
+		public string Seperator
+		{
+			get
+			{
+				if (document.Value.Key == null)
+					return null;
+				if (document.Value.Key.Contains("/"))
+					return "/";
+				if (document.Value.Key.Contains("-"))
+					return "-";
+				return null;
 			}
 		}
 
@@ -504,6 +521,18 @@ namespace Raven.Studio.Models
 		{
 			private readonly EditableDocumentModel document;
 
+			public string Seperator
+			{
+				get
+				{
+					if (document.Key.Contains("/"))
+						return "/";
+					if (document.Key.Contains("-"))
+						return "-";
+					return null;
+				}
+			}
+
 			public SaveDocumentCommand(EditableDocumentModel document)
 			{
 				this.document = document;
@@ -530,11 +559,13 @@ namespace Raven.Studio.Models
 				{
 					doc = RavenJObject.Parse(document.JsonData);
 					metadata = RavenJObject.Parse(document.JsonMetadata);
-					if (document.Key != null && document.Key.Contains("/") &&
-						metadata.Value<string>(Constants.RavenEntityName) == null)
+					//if (document.Key != null && document.Key.Contains("/") &&
+					//	metadata.Value<string>(Constants.RavenEntityName) == null)
+					if(document.Key != null && Seperator != null)
 					{
-						var entityName = document.Key.Split(new[] { "/" }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-						if (entityName != null && entityName.Length > 1)
+						var entityName = document.Key.Split(new[] { Seperator }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+					
+					if (entityName != null && entityName.Length > 1)
 						{
 							metadata[Constants.RavenEntityName] = char.ToUpper(entityName[0]) + entityName.Substring(1);
 						}
@@ -542,7 +573,6 @@ namespace Raven.Studio.Models
 						{
 							metadata[Constants.RavenEntityName] = entityName;
 						}
-
 					}
 				}
 				catch (JsonReaderException ex)

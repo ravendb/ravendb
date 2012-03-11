@@ -97,6 +97,23 @@ namespace Raven.Storage.Managed
 			};
 		}
 
+		public Attachment HeadAttachment(string key)
+		{
+			var readResult = storage.Attachments.Read(new RavenJObject { { "key", key } });
+			if (readResult == null)
+				return null;
+			var attachmentDAta = readResult.Data();
+			var memoryStream = new MemoryStream(attachmentDAta);
+			var metadata = memoryStream.ToJObject();
+			return new Attachment
+			{
+				Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+				Metadata = metadata,
+				Data = delegate { throw new Exception("Cannot get data from HEAD call"); },
+				Size = (int)(memoryStream.Length - memoryStream.Position)
+			};
+		}
+
 		public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
 		{
 			return from key in storage.Attachments["ByEtag"].SkipFromEnd(start)
