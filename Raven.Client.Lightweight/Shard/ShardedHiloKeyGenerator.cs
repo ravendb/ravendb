@@ -14,7 +14,7 @@ namespace Raven.Client.Shard
 		private readonly ShardedDocumentStore shardedDocumentStore;
 		private readonly int capacity;
 
-		private Dictionary<string, MultiTypeHiLoKeyGenerator> generatorsByShard = new Dictionary<string,MultiTypeHiLoKeyGenerator>();
+		private Dictionary<string, MultiTypeHiLoKeyGenerator> generatorsByShard = new Dictionary<string, MultiTypeHiLoKeyGenerator>();
 
 		public ShardedHiloKeyGenerator(ShardedDocumentStore shardedDocumentStore, int capacity)
 		{

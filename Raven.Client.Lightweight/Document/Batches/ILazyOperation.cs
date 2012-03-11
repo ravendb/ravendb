@@ -1,7 +1,9 @@
 #if !NET_3_5
 using System;
 using Raven.Abstractions.Data;
+#if !SILVERLIGHT
 using Raven.Client.Shard;
+#endif
 
 namespace Raven.Client.Document.Batches
 {

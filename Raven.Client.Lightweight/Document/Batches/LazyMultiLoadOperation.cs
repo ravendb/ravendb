@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Document.SessionOperations;
+#if !SILVERLIGHT
 using Raven.Client.Shard;
+#endif
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches

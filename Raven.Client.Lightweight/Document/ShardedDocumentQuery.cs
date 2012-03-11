@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +22,6 @@ using Raven.Client.Shard;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 
-#if !SILVERLIGHT
 namespace Raven.Client.Document
 {
 	/// <summary>
