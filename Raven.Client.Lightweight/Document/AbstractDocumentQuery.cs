@@ -489,7 +489,7 @@ namespace Raven.Client.Document
 		private Task<QueryOperation> InitAsync()
 		{
 			if (queryOperation != null)
-				return TaskEx.Run(() => queryOperation);
+				return Task.Factory.StartNew(() => queryOperation);
 			foreach (var key in AsyncDatabaseCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
 			{
 				AsyncDatabaseCommands.OperationsHeaders.Remove(key);
@@ -584,7 +584,7 @@ namespace Raven.Client.Document
 			try
 			{
 				var list = currentQueryOperation.Complete<T>();
-				return TaskEx.Run(() => Tuple.Create(currentQueryOperation, list));
+				return Task.Factory.StartNew(() => Tuple.Create(currentQueryOperation, list));
 			}
 			catch (Exception e)
 			{
@@ -1366,14 +1366,28 @@ If you really want to do in memory filtering on the data returned from the query
 					{
 						if (queryOperation.IsAcceptable(task.Result) == false)
 						{
-							return TaskEx.Delay(100)
+							return TaskDelay(100)
 								.ContinueWith(_ => ExecuteActualQueryAsync())
 								.Unwrap();
 						}
 						InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
-						return TaskEx.Run(() => queryOperation);
+						return Task.Factory.StartNew(() => queryOperation);
 					}).Unwrap();
 			}
+		}
+
+		private Task TaskDelay(int dueTimeMilliseconds)
+		{
+			var taskComplectionSource = new TaskCompletionSource<object>();
+			var cancellationTokenRegistration = new CancellationTokenRegistration();
+			var timer = new Timer(o =>
+			{
+				cancellationTokenRegistration.Dispose();
+				((Timer)o).Dispose();
+				taskComplectionSource.TrySetResult(null);
+			});
+			timer.Change(dueTimeMilliseconds, -1);
+			return taskComplectionSource.Task;
 		}
 #endif
 	 
