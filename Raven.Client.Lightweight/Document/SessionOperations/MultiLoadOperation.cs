@@ -72,7 +72,7 @@ namespace Raven.Client.Document.SessionOperations
 				sessionOperations.TrackEntity<object>(include);
 			}
 
-			var finalResult = ids.Select(id => results.FirstOrDefault(r => string.Equals(r.Metadata.Value<string>("@id"), id,StringComparison.InvariantCultureIgnoreCase)));
+			var finalResult = ids.Select(id => results.Where(r => r != null).FirstOrDefault(r => string.Equals(r.Metadata.Value<string>("@id"), id,StringComparison.InvariantCultureIgnoreCase)));
 
 			return finalResult
 				.Select(document => document == null ? default(T) : sessionOperations.TrackEntity<T>(document))

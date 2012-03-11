@@ -73,12 +73,12 @@ namespace Raven.Tests.Shard.BlogModel
 				var result1 = session.Advanced.Lazily.Load<User>("users/1", "users/2");
 				var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
 
-				Assert.Equal(new User[0], result2.Value);
+				Assert.Equal(new User[2], result2.Value);
 				Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
 				Servers.Where(server => server.Key != "Users")
 					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 
-				Assert.Equal(new User[0], result1.Value);
+				Assert.Equal(new User[2], result1.Value);
 				Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
 				Servers.Where(server => server.Key != "Users")
 					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
