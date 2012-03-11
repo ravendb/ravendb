@@ -128,7 +128,7 @@ namespace Raven.Client.Connection.Async
 			webRequest.Method = "HEAD";
 			webRequest.Credentials = credentials;
 
-			return webRequest.GetResponseAsync()
+			return Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, webRequest.EndGetResponse, null)
 				.ContinueWith(task =>
 				{
 					try
