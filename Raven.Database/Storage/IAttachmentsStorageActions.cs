@@ -17,7 +17,6 @@ namespace Raven.Database.Storage
 		Guid AddAttachment(string key, Guid? etag, Stream data, RavenJObject headers);
 		void DeleteAttachment(string key, Guid? etag);
 		Attachment GetAttachment(string key);
-		Attachment HeadAttachment(string key);
 		IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start);
 		IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid value);
 	}
