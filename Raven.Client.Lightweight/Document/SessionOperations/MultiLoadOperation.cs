@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using NLog;
@@ -72,11 +73,20 @@ namespace Raven.Client.Document.SessionOperations
 				sessionOperations.TrackEntity<object>(include);
 			}
 
-			var finalResult = ids.Select(id => results.Where(r => r != null).FirstOrDefault(r => string.Equals(r.Metadata.Value<string>("@id"), id,StringComparison.InvariantCultureIgnoreCase)));
 
-			return finalResult
+			return SelectResults()
 				.Select(document => document == null ? default(T) : sessionOperations.TrackEntity<T>(document))
 				.ToArray();
+		}
+
+		private IEnumerable<JsonDocument> SelectResults()
+		{
+			if (ids == null)
+				return results;
+
+			var finalResult = ids.Select(id => results.Where(r => r != null)
+			                                   	.FirstOrDefault(r => string.Equals(r.Metadata.Value<string>("@id"), id, StringComparison.InvariantCultureIgnoreCase)));
+			return finalResult;
 		}
 	}
 }
