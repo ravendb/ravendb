@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
 
-namespace Raven.Client.Shard.ShardResolution
+namespace Raven.Client.Shard
 {
 	/// <summary>
 	/// Implementers of this interface provide a way to decide which shards will be queried
@@ -19,17 +19,15 @@ namespace Raven.Client.Shard.ShardResolution
 		string GenerateShardIdFor(object entity);
 
 		/// <summary>
-		/// The shard id for the server that contains the metadata (such as the hilo documents)
+		/// The shard id for the server that contains the metadata (such as the HiLo documents)
 		/// for the given entity
 		/// </summary>
 		string MetadataShardIdFor(object entity);
 
 		/// <summary>
-		/// Selects the shard ids appropriate for the specified data
+		/// Selects the shard ids appropriate for the specified data.
 		/// </summary>
-		/// <remarks>
-		/// Returning null means search all shards
-		/// </remarks>
+		/// <returns>Return a list of shards ids that will be search. Returning null means search all shards.</returns>
 		IList<string> PotentialShardsFor(ShardRequestData requestData);
 	}
 }

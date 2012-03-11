@@ -7,8 +7,6 @@ using System;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Shard.ShardAccess;
-using Raven.Client.Shard.ShardResolution;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;

@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Connection;
 
-namespace Raven.Client.Shard.ShardAccess
+namespace Raven.Client.Shard
 {
 	/// <summary>
 	/// Apply an operation to all the shard session

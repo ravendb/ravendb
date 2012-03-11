@@ -9,8 +9,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using Raven.Abstractions.Data;
-using Raven.Client.Shard.ShardAccess;
-using Raven.Client.Shard.ShardResolution;
 
 namespace Raven.Client.Shard
 {

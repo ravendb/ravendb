@@ -20,7 +20,6 @@ using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using System;
-using Raven.Client.Shard.ShardResolution;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 

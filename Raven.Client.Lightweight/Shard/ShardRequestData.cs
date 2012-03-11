@@ -3,10 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using Raven.Abstractions.Data;
 
-namespace Raven.Client.Shard.ShardResolution
+namespace Raven.Client.Shard
 {
 	/// <summary>
 	/// Information required to resolve the appropriate shard for an entity / entity and key

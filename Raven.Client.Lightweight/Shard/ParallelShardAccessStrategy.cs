@@ -9,8 +9,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Connection;
+using Raven.Client.Extensions;
 
-namespace Raven.Client.Shard.ShardAccess
+namespace Raven.Client.Shard
 {
 	/// <summary>
 	/// Apply an operation to all the shard session in parallel

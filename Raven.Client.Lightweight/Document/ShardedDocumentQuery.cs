@@ -18,7 +18,6 @@ using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;
 using Raven.Client.Connection;
 using Raven.Client.Shard;
-using Raven.Client.Shard.ShardResolution;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
 

@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using Raven.Client.Document;
-using Raven.Client.Shard.ShardAccess;
+using Raven.Client.Shard;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Tests.Document;
