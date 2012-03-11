@@ -405,13 +405,9 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
-				if (document.Value.Key == null)
-					return null;
-				if (document.Value.Key.Contains("/"))
-					return "/";
-				if (document.Value.Key.Contains("-"))
+				if (document.Value.Key != null && document.Value.Key.Contains("-"))
 					return "-";
-				return null;
+				return "/";
 			}
 		}
 
