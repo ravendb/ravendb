@@ -44,7 +44,6 @@ namespace Raven.Abstractions.Extensions
 			"Content-Location",
 			"Content-MD5",
 			"Content-Range",
-			"Content-Type",
 			"Expires",
 			// ignoring this header, we handle this internally
 			"Last-Modified",

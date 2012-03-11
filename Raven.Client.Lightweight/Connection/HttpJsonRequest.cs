@@ -72,11 +72,11 @@ namespace Raven.Client.Connection
 			this.Method = method;
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
-			WriteMetadata(metadata);
 			webRequest.Method = method;
 			if (method == "POST" || method == "PUT" || method == "PATCH")
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
+			WriteMetadata(metadata);
 		}
 
 #if !NET_3_5

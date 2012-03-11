@@ -288,7 +288,15 @@ namespace Raven.Smuggler
 				{
 					foreach (var header in attachmentExportInfo.Metadata)
 					{
-						request.WebRequest.Headers.Add(header.Key, StripQuotesIfNeeded(header.Value));
+						switch (header.Key)
+						{
+							case "Content-Type":
+								request.WebRequest.ContentType = header.Value.Value<string>();
+								break;
+							default:
+								request.WebRequest.Headers.Add(header.Key, StripQuotesIfNeeded(header.Value));
+								break;
+						}
 					}
 				}
 
