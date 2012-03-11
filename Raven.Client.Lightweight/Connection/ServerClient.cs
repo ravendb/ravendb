@@ -424,13 +424,16 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			Func<Stream> data;
 			try
 			{
+				int len;
 				if (method == "GET")
 				{
 					var memoryStream = new MemoryStream(webRequest.ReadResponseBytes());
 					data = () => memoryStream;
+					len = (int)memoryStream.Length;
 				}
 				else
 				{
+					len = int.Parse(webRequest.ResponseHeaders["Content-Length"]);
 					data = () =>
 					{
 						throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
@@ -439,7 +442,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				return new Attachment
 				{
 					Data = data,
-					Size = int.Parse(webRequest.ResponseHeaders["Content-Length"]),
+					Size = len,
 					Etag = new Guid(webRequest.ResponseHeaders["ETag"]),
 					Metadata = webRequest.ResponseHeaders.FilterHeaders(isServerDocument: false)
 				};

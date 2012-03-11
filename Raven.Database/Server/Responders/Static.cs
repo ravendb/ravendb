@@ -44,7 +44,6 @@ namespace Raven.Database.Server.Responders
 							return;
 						}
 						context.WriteHeaders(attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag);
-						context.Response.ContentLength64 = attachmentAndHeaders.Size;
 						using (var stream = attachmentAndHeaders.Data())
 						{
 							stream.CopyTo(context.Response.OutputStream);
