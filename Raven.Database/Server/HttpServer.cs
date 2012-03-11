@@ -521,6 +521,10 @@ namespace Raven.Database.Server
 				if (DefaultConfiguration.HttpCompression)
 					AddHttpCompressionIfClientCanAcceptIt(ctx);
 
+				HandleHttpCompressionFromClient(ctx);
+
+				
+
 				// Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
 				AddAccessControlHeaders(ctx);
 				if (ctx.Request.HttpMethod == "OPTIONS")
@@ -563,6 +567,22 @@ namespace Raven.Database.Server
 				}
 			}
 			return false;
+		}
+
+		private void HandleHttpCompressionFromClient(IHttpContext ctx)
+		{
+			var encoding = ctx.Request.Headers["Content-Encoding"];
+			if (encoding == null)
+				return;
+
+			if (encoding.Contains("gzip"))
+			{
+				ctx.SetRequestFilter(stream => new GZipStream(stream, CompressionMode.Decompress));
+			}
+			else if (encoding.Contains("deflate"))
+			{
+				ctx.SetRequestFilter(stream => new DeflateStream(stream, CompressionMode.Decompress));
+			}
 		}
 
 		protected void OnDispatchingRequest(IHttpContext ctx)

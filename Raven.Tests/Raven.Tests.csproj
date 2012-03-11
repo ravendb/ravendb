@@ -547,10 +547,12 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\Everett\CanReadBytes.cs" />
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\BuildStarted.cs" />
     <Compile Include="MailingList\Everett616.cs" />
     <Compile Include="MailingList\IndexWhereClause .cs" />
+    <Compile Include="MailingList\Johnson.cs" />
     <Compile Include="MailingList\Mark2.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
     <Compile Include="MailingList\Phil.cs" />
@@ -847,7 +849,9 @@
     <EmbeddedResource Include="MailingList\MapReduceIssue\MvcMusicStore_Dump.json" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
