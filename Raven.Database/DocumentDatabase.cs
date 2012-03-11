@@ -698,9 +698,7 @@ namespace Raven.Database
 		[MethodImpl(MethodImplOptions.Synchronized)]
 		public string PutIndex(string name, IndexDefinition definition)
 		{
-			definition.Name = name = IndexDefinitionStorage.FixupIndexName(name);
-			definition.RemoveDefaultValues();
-			switch (IndexDefinitionStorage.FindIndexCreationOptions(definition))
+			switch (FindIndexCreationOptions(definition, ref name))
 			{
 				case IndexCreationOptions.Noop:
 					return name;
@@ -721,7 +719,16 @@ namespace Raven.Database
 			return name;
 		}
 
-	    public QueryResult Query(string index, IndexQuery query)
+		private IndexCreationOptions FindIndexCreationOptions(IndexDefinition definition, ref string name)
+		{
+			definition.Name = name = IndexDefinitionStorage.FixupIndexName(name);
+			definition.RemoveDefaultValues();
+			IndexDefinitionStorage.ResolveAnalyzers(definition);
+			var findIndexCreationOptions = IndexDefinitionStorage.FindIndexCreationOptions(definition);
+			return findIndexCreationOptions;
+		}
+
+		public QueryResult Query(string index, IndexQuery query)
 		{
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
