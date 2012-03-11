@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Document;
 using Raven.Client.Shard;
@@ -15,18 +16,25 @@ namespace Raven.Sample.ShardClient
 	{
 		static void Main()
 		{
-			var shards = new Shards
-			{
-				CreateShard("Asia", "http://localhost:8080"),
-				CreateShard("Middle-East", "http://localhost:8081"),
-			};
-
-			using (var documentStore = new ShardedDocumentStore(new ShardStrategy(), shards).Initialize())
+			var shards = new Dictionary<string, IDocumentStore>
+			             	{
+			             		{"Asia", new DocumentStore {Url = "http://localhost:8080"}},
+			             		{"Middle East", new DocumentStore {Url = "http://localhost:8081"}},
+			             		{"America", new DocumentStore {Url = "http://localhost:8082"}},
+			             	};
+			
+			var shardStrategy = new ShardStrategy
+			                    	{
+			                    		ShardAccessStrategy = new ParallelShardAccessStrategy(),
+										ShardResolutionStrategy = new ShardResolutionByRegion(),
+			                    	};
+			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
 			using (var session = documentStore.OpenSession())
 			{
 				//store 2 items in the 2 shards
 				session.Store(new Company { Name = "Company 1", Region = "Asia" });
 				session.Store(new Company { Name = "Company 2", Region = "Middle East" });
+				session.Store(new Company { Name = "Company 3", Region = "America" });
 				session.SaveChanges();
 
 				//get all, should automagically retrieve from each shard
@@ -36,17 +44,6 @@ namespace Raven.Sample.ShardClient
 				foreach (var company in allCompanies)
 					Console.WriteLine(company.Name);
 			}
-		}
-
-		private static DocumentStore CreateShard(string identifier, string url)
-		{
-			var documentStore = new DocumentStore
-			{
-				Identifier = identifier,
-				Url = url,
-			};
-
-			return documentStore;
 		}
 	}
 }
