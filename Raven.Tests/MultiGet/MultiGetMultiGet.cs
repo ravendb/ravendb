@@ -50,10 +50,10 @@ namespace Raven.Tests.MultiGet
 					var result1 = session.Advanced.Lazily.Load<User>("users/1", "users/2");
 					var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
 
-					Assert.Equal(new User[0], result2.Value);
+					Assert.Equal(new User[2], result2.Value);
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
 
-					Assert.Equal(new User[0], result1.Value);
+					Assert.Equal(new User[2], result1.Value);
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
 				}
 
