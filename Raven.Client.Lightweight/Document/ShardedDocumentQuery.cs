@@ -80,7 +80,7 @@ namespace Raven.Client.Document
 
 			ExecuteBeforeQueryListeners();
 
-			foreach (var dbCmd in databaseCommands)
+			foreach (var dbCmd in ShardDatabaseCommands)
 			{
 				ClearSortHints(dbCmd);
 				shardQueryOperations.Add(InitializeQueryOperation(dbCmd.OperationsHeaders.Add));
@@ -117,11 +117,11 @@ namespace Raven.Client.Document
 
 		protected override void ExecuteActualQuery()
 		{
-			var results = new bool[databaseCommands.Count];
+			var results = new bool[ShardDatabaseCommands.Count];
 			while (true)
 			{
 				var currentCopy = results;
-				results = shardStrategy.ShardAccessStrategy.Apply(databaseCommands, (dbCmd, i) =>
+				results = shardStrategy.ShardAccessStrategy.Apply(ShardDatabaseCommands, (dbCmd, i) =>
 				{
 					if (currentCopy[i]) // if we already got a good result here, do nothing
 						return true;
