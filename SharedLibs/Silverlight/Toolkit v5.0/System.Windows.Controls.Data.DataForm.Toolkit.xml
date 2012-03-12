@@ -1,0 +1,2831 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>System.Windows.Controls.Data.DataForm.Toolkit</name>
+    </assembly>
+    <members>
+        <member name="T:System.Windows.Controls.Common.CommonResources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Common.CommonResources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Common.CommonResources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Common.CommonResources.InvalidPropertyName">
+            <summary>
+              Looks up a localized string similar to The property name &apos;{0}&apos; is invalid..
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.Common.ExtensionProperties">
+            <summary>
+            Reservoir of attached properties for use by extension methods that require non-static information about objects.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Common.ExtensionProperties.AreHandlersSuspended">
+            <summary>
+            Tracks whether or not the event handlers of a particular object are currently suspended.
+            Used by the SetValueNoCallback and AreHandlersSuspended extension methods.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.Common.Extensions">
+            <summary>
+            Utility class for operations.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.Common.TypeHelper">
+            <summary>
+            Utility class for Type related operations
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Common.TypeHelper.InvokePath(System.Object,System.String)">
+            <summary>
+            Helper for SortList to handle nested properties (e.g. Address.Street)
+            </summary>
+            <param name="item">parent object</param>
+            <param name="propertyPath">property names path</param>
+            <returns>child object</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Common.TypeHelper.GetPropertyInfo(System.Type,System.String)">
+            <summary>
+            Returns the PropertyInfo corresponding to the provided propertyPath. The propertyPath can be a dotted
+            path where each section is a public property name. Only public instance properties are searched for.
+            </summary>
+            <param name="type">The root type.</param>
+            <param name="propertyPath">The property path.</param>
+            <returns>The found PropertyInfo or null otherwise</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Common.TypeHelper.GetTypeName(System.Type)">
+            <summary>
+            Returns the friendly name for a type
+            </summary>
+            <param name="type">The type for which to return the name.</param>
+            <returns>Textual representation of the input type</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Common.TypeHelper.IsEditable(System.Type)">
+            <summary>
+            Gets whether or not a type is editable by default.
+            </summary>
+            <param name="type">The type in question.</param>
+            <returns>Whether or not the type is editable by default.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Common.TypeHelper.TypeIsPrimitive(System.Type)">
+            <summary>
+            Returns whether or not the type is a primitive type.
+            </summary>
+            <param name="type">The type to check.</param>
+            <returns>Whether or not the type is a primitive type.</returns>
+        </member>
+        <member name="T:System.Windows.Controls.DataField">
+            <summary>
+            Contains a control and generates labels and descriptions for it.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.ContentProperty">
+            <summary>
+            Identifies the Content property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnContentPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            Content property changed handler.
+            </summary>
+            <param name="d">Field that changed its Content value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.DescriptionProperty">
+            <summary>
+            Identifies the DescriptionViewerPosition dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnDescriptionPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            Description property changed handler.
+            </summary>
+            <param name="d">Field that changed its Description value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.DescriptionViewerPositionProperty">
+            <summary>
+            Identifies the DescriptionViewerPosition dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnDescriptionViewerPositionPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            DescriptionViewerPosition property changed handler.
+            </summary>
+            <param name="d">Field that changed its DescriptionViewerPosition value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.DescriptionViewerStyleProperty">
+            <summary>
+            Identifies the DescriptionViewerStyle dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnDescriptionViewerStylePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            DescriptionViewerStyle property changed handler.
+            </summary>
+            <param name="d">Field that changed its DescriptionViewerStyle value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.DescriptionViewerVisibilityProperty">
+            <summary>
+            Identifies the DescriptionViewerVisibility dependency property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.LabelProperty">
+            <summary>
+            Identifies the Label dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnLabelPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            Label property changed handler.
+            </summary>
+            <param name="d">Field that changed its Label value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.LabelPositionProperty">
+            <summary>
+            Identifies the LabelPosition dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnLabelPositionPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            LabelPosition property changed handler.
+            </summary>
+            <param name="d">Field that changed its LabelPosition value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.LabelStyleProperty">
+            <summary>
+            Identifies the LabelStyle dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnLabelStylePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            LabelStyle property changed handler.
+            </summary>
+            <param name="d">Field that changed its LabelStyle value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.LabelVisibilityProperty">
+            <summary>
+            Identifies the LabelVisibility dependency property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.IsFieldGroupProperty">
+            <summary>
+            Identifies the IsFieldGroup attached property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.GetIsFieldGroup(System.Windows.Controls.Panel)">
+            <summary>
+            Gets the IsFieldGroup attached property.
+            </summary>
+            <param name="target">The target panel.</param>
+            <returns>Whether the panel is a field group.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.SetIsFieldGroup(System.Windows.Controls.Panel,System.Boolean)">
+            <summary>
+            Sets the IsFieldGroup attached property.
+            </summary>
+            <param name="target">The target panel.</param>
+            <param name="isFieldGroup">Whether or not this panel should be a field group.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.IsReadOnlyProperty">
+            <summary>
+            Identifies the IsReadOnly dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnIsReadOnlyPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            IsReadOnly property changed handler.
+            </summary>
+            <param name="d">Field that changed its IsReadOnly value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.IsRequiredProperty">
+            <summary>
+            Identifies the IsReadOnly dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnIsRequiredPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            IsRequired property changed handler.
+            </summary>
+            <param name="d">Field that changed its IsRequired value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.ModeProperty">
+            <summary>
+            Identifies the Mode dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnModePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            IsReadOnly property changed handler.
+            </summary>
+            <param name="d">Field that changed its IsReadOnly value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.PropertyPathProperty">
+            <summary>
+            Identifies the PropertyPath dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnPropertyPathPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            PropertyPath property changed handler.
+            </summary>
+            <param name="d">Field that changed its PropertyPath value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.GroupedFieldListProperty">
+            <summary>
+            Identifies the FieldList attached property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.DataFormDescriptionViewerPositionProperty">
+            <summary>
+            Identifies the DataFormDescriptionViewerPosition dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnDataFormDescriptionViewerPositionPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            DataFormDescriptionViewerPosition property changed handler.
+            </summary>
+            <param name="d">Field that changed its DataFormDescriptionViewerPosition value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.DataFormLabelPositionProperty">
+            <summary>
+            Identifies the DataFormLabelPosition dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnDataFormLabelPositionPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            DataFormLabelPosition property changed handler.
+            </summary>
+            <param name="d">Field that changed its DataFormLabelPosition value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField.DataFormModeProperty">
+            <summary>
+            Identifies the DataFormMode dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnDataFormModePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            DataFormLabelPosition property changed handler.
+            </summary>
+            <param name="d">Field that changed its DataFormLabelPosition value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataField._boundProperty">
+            <summary>
+            Holds the bound property on either the root control in the field or
+            via the PropertyPath property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataField._contentControl">
+            <summary>
+            Private accessor to the main content control.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataField._ignoreApplyTemplate">
+            <summary>
+            Holds a value indicating whether or not to ignore a call to ApplyTemplate.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataField._isReadOnlyOverridden">
+            <summary>
+            Holds a value indicating whether or not IsReadOnly has been set.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataField._isRequiredOverridden">
+            <summary>
+            Holds a value indicating whether or not IsRequired has been set.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataField._layoutPanel">
+            <summary>
+            Holds the layout panel.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataField._parentDataForm">
+            <summary>
+            Holds the parent DataForm that was found.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataField._templateApplied">
+            <summary>
+            Holds a value indicating whether or not the template has been applied.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataField._lostFocusFired">
+            <summary>
+            Holds whether or not lost focus has been fired since
+            TextBox validation on text changed began.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.#ctor">
+            <summary>
+            Constructs a new instance of Field.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnApplyTemplate">
+            <summary>
+            Applies the template for this field.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.Validate">
+            <summary>
+            Validates this field.
+            </summary>
+            <returns>Whether or not the field is valid.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.DetachFieldFromLayoutPanel">
+            <summary>
+            Detaches the field from its parent layout panel.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.RemoveBindingsFromParentDataForm">
+            <summary>
+            Removes all references of this DataField from its parent DataForm, if one exists.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.AlignDescriptionColumns">
+            <summary>
+            Aligns the grouped description columns.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.AlignLabelColumns">
+            <summary>
+            Aligns the grouped label columns.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.AttachFieldToLayoutPanel">
+            <summary>
+            Attaches the field to its parent layout panel.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.GenerateUI">
+            <summary>
+            Generates the UI for this field.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.GetAlignmentGroup">
+            <summary>
+            Retrieves the list of fields associated with this field's alignment group.
+            </summary>
+            <returns>The list of fields associated with this field's alignment group.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.GetPropertyInfo">
+            <summary>
+            Gets the property info for the binding.
+            </summary>
+            <returns>The property info.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.GetLayoutPanel">
+            <summary>
+            Gets the panel to be used for layout.
+            </summary>
+            <returns>The panel to be used for layout.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.GetParentDataForm">
+            <summary>
+            Gets the parent DataForm for this DataField.
+            </summary>
+            <returns>The parent DataForm.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnContentLoaded(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the case where an element has loaded.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnDataFieldLoaded(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the case where the DataField has loaded.
+            </summary>
+            <param name="sender">The DataField.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnDescriptionSizeChanged(System.Object,System.Windows.SizeChangedEventArgs)">
+            <summary>
+            Handles the case where the size of a description has changed.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnLabelMouseLeftButtonDown(System.Object,System.Windows.Input.MouseButtonEventArgs)">
+            <summary>
+            Handles the case where the left mouse button went down with the cursor over a label.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnLabelSizeChanged(System.Object,System.Windows.SizeChangedEventArgs)">
+            <summary>
+            Handles the case where the size of a label has changed.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnTextBoxLostFocus(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the case where a text box has lost focus.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.OnTextBoxTextChanged(System.Object,System.Windows.Controls.TextChangedEventArgs)">
+            <summary>
+            Handles the case where a text box's text changed.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.RemoveDescriptionColumnAlignment">
+            <summary>
+            Removes the alignment of the grouped description columns.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.RemoveLabelColumnAlignment">
+            <summary>
+            Removes the alignment of the grouped label columns.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.SetContentReadOnlyState(System.Boolean)">
+            <summary>
+            Sets the read-only state of the content.
+            </summary>
+            <param name="isReadOnly">Whether the content should be read-only.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.SetDescriptionContent">
+            <summary>
+            Sets the description content.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.SetIsReadOnlyIfNotOverridden">
+            <summary>
+            Sets the value of IsReadOnlyProperty if it has not been overridden by the developer.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.SetIsRequiredIfNotOverridden">
+            <summary>
+            Sets the value of IsRequiredProperty if it has not been overridden by the developer.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.SetLabelContent">
+            <summary>
+            Sets the label content.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.SetBindingsFromParentDataForm(System.Windows.Controls.DataForm)">
+            <summary>
+            Sets references on this DataField to its parent DataForm.
+            </summary>
+            <param name="parentDataForm">The parent DataForm.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.UpdateBindingsOnElement(System.Windows.FrameworkElement)">
+            <summary>
+            Finds any bindings on an element and updates the ones in which Mode is TwoWay
+            to set the two Boolean properties to true.
+            </summary>
+            <param name="element">The element.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataField.UpdateStates">
+            <summary>
+            Updates the states on the DataField.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.Content">
+            <summary>
+            Gets or sets the content of the field.
+            </summary> 
+        </member>
+        <member name="P:System.Windows.Controls.DataField.Description">
+            <summary>
+            Gets or sets the text displayed in the description viewer.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.DescriptionViewerPosition">
+            <summary>
+            Gets or sets a value that indicates the position of descriptions in relation to the field.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.DescriptionViewerStyle">
+            <summary>
+            Gets or sets the developer-specified style for descriptions.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.DescriptionViewerVisibility">
+            <summary>
+            Gets or sets a value that indicates whether the description viewer is visible.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.Label">
+            <summary>
+            Gets or sets the content of the label displayed for this control.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.LabelPosition">
+            <summary>
+            Gets or sets a value that indicates the position of the label in relation to the field.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.LabelStyle">
+            <summary>
+            Gets or sets the developer-specified style for labels.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.LabelVisibility">
+            <summary>
+            Gets or sets a value that indicates whether the label is visible.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.IsReadOnly">
+            <summary>
+            Gets or sets a value that indicates whether the user can edit the values in the control.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.IsRequired">
+            <summary>
+            Gets or sets a value indicating whether this field is required.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.IsValid">
+            <summary>
+            Gets a value that indicates whether the input control contains valid data.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.Mode">
+            <summary>
+            Gets a value that indicates whether the control is in read only, edit, or add new mode.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.PropertyPath">
+            <summary>
+            Gets or sets the path to the property that the control is bound to.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.DescriptionColumnBesideContent">
+            <summary>
+            Gets or sets the column definition for the description when
+            DescriptionViewerPosition = BesideContent.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.DescriptionColumnBesideLabel">
+            <summary>
+            Gets or sets the column definition for the description when
+            DescriptionViewerPosition = BesideLabel.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.DescriptionColumnBesideLabelSeparator">
+            <summary>
+            Gets or sets the column definition for the separator column
+            by the DescriptionViewer when DescriptionViewerPosition = BesideLabel.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.DescriptionViewer">
+            <summary>
+            Description generated from GenerateDescription().
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.InternalLabel">
+            <summary>
+            Label generated from GenerateLabel().
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.LabelColumn">
+            <summary>
+            Gets or sets the column definition for the label.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.BoundProperty">
+            <summary>
+            Gets the property info for the bound property.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.DataFormDescriptionViewerPosition">
+            <summary>
+            Gets or sets the desired position of the description viewer on the DataForm.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.DataFormLabelPosition">
+            <summary>
+            Gets or sets the desired position of the label on the DataForm.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.DataFormMode">
+            <summary>
+            Gets or sets the mode on the DataForm.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.EffectiveDescriptionViewerPosition">
+            <summary>
+            Gets or sets the effective position of the description viewer.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.EffectiveLabelPosition">
+            <summary>
+            Gets or sets the effective position of the label.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataField.EffectiveMode">
+            <summary>
+            Gets or sets the effective mode of the DataField.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFieldMode">
+            <summary>
+            Enumeration denoting a DataField mode.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.DataFieldMode.Auto">
+            <summary>
+            Represents the case where the field should inherit its mode
+            from the parent DataForm.  Behavior is the same as Edit if
+            there is no parent DataForm.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFieldMode.ReadOnly">
+            <summary>
+            Represents the case where the field is read-only.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFieldMode.Edit">
+            <summary>
+            Represents the case where the field is in edit mode.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFieldMode.AddNew">
+            <summary>
+            Represents the case where the field is in add-new mode.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Automation.Peers.DataFormAutomationPeer">
+            <summary>
+            Represents an automation peer for the <see cref="T:System.Windows.Controls.DataForm"/>.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.DataFormAutomationPeer.#ctor(System.Windows.Controls.DataForm)">
+            <summary>
+            Constructs a new <see cref="T:System.Windows.Automation.Peers.DataFormAutomationPeer"/>.
+            </summary>
+            <param name="owner">The <see cref="T:System.Windows.Controls.DataForm"/>.</param>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.DataFormAutomationPeer.GetAutomationControlTypeCore">
+            <summary>
+            Returns the automation control type.
+            </summary>
+            <returns>The group automation control type.</returns>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.DataFormAutomationPeer.GetClassNameCore">
+            <summary>
+            Returns the class name.
+            </summary>
+            <returns>The string "DataForm".</returns>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.DataFormAutomationPeer.GetNameCore">
+            <summary>
+            Returns the name.
+            </summary>
+            <returns>The <see cref="T:System.Windows.Controls.DataForm"/> header content, if it is a string.</returns>
+        </member>
+        <member name="P:System.Windows.Automation.Peers.DataFormAutomationPeer.OwningDataForm">
+            <summary>
+            Gets the owning <see cref="T:System.Windows.Controls.DataForm"/>.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataForm">
+            <summary>
+            Displays data in a customizable form.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.UnspecifiedOrder">
+            <summary>
+            The default order to use when there is no <see cref="P:System.ComponentModel.DataAnnotations.DisplayAttribute.Order"/>
+            value available for the property.
+            </summary>
+            <remarks>
+            The value of 10000 is a standard default value, allowing
+            some properties to be ordered at the beginning and some at the end.
+            </remarks>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.AutoCommitProperty">
+            <summary>
+            Identifies the AutoCommit dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnAutoCommitPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            AutoCommit property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its AutoCommit value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.AutoEditProperty">
+            <summary>
+            Identifies the AutoEdit dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnAutoEditPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            AutoEdit property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its AutoEdit value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.AutoGenerateFieldsProperty">
+            <summary>
+            Identifies the AutoGenerateFields dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnAutoGenerateFieldsPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            AutoGenerateFields property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its AutoGenerateFields value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.CancelButtonContentProperty">
+            <summary>
+            Identifies the CancelButtonContent dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCancelButtonContentPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            CancelButtonContent property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its CancelButtonContent value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.CancelButtonStyleProperty">
+            <summary>
+            Identifies the CancelButtonContent dependency property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.CommandButtonsVisibilityProperty">
+            <summary>
+            Identifies the CommandButtonsVisibility dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCommandButtonsVisibilityPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            CommandButtonsVisibility property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its CommandButtonsVisibility value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.CommitButtonContentProperty">
+            <summary>
+            Identifies the CommitButtonContent dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCommitButtonContentPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            CommitButtonContent property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its CommitButtonContent value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.CommitButtonStyleProperty">
+            <summary>
+            Identifies the CommitButtonStyle dependency property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.ContentProperty">
+            <summary>
+            Identifies the Content dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnContentPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            Content property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its Content value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.CurrentIndexProperty">
+            <summary>
+            Identifies the CurrentIndex dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCurrentIndexPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            CurrentIndex property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its CurrentItem value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.CurrentItemProperty">
+            <summary>
+            Identifies the CurrentItem dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCurrentItemPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            CurrentItem property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its CurrentItem value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.DataFieldStyleProperty">
+            <summary>
+            Identifies the DataFieldStyle dependency property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.DescriptionViewerPositionProperty">
+            <summary>
+            Identifies the DescriptionViewerPosition dependency property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.EditTemplateProperty">
+            <summary>
+            Identifies the EditTemplate dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnEditTemplatePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            EditTemplate property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its EditTemplate value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.ValidationSummaryStyleProperty">
+            <summary>
+            Identifies the ValidationSummaryStyle dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnValidationSummaryStylePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            ValidationSummaryStyle property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its ValidationSummaryStyle value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.HeaderProperty">
+            <summary>
+            Identifies the Header dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnHeaderPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            Header property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its Header value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.HeaderTemplateProperty">
+            <summary>
+            Identifies the HeaderTemplate dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnHeaderTemplatePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            HeaderTemplate property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its HeaderTemplate value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.HeaderVisibilityProperty">
+            <summary>
+            Identifies the HeaderTemplate dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnHeaderVisibilityPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            HeaderVisibility property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its HeaderVisibility value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.IsEmptyProperty">
+            <summary>
+            Identifies the IsEmpty dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnIsEmptyPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            IsEmpty property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its IsEmpty value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.IsItemChangedProperty">
+            <summary>
+            Identifies the IsItemChanged dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnIsItemChangedPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            IsItemChanged property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its IsItemChanged value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.IsItemValidProperty">
+            <summary>
+            Identifies the IsItemValid dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnIsItemValidPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            IsItemValid property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its IsItemValid value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.IsReadOnlyProperty">
+            <summary>
+            Identifies the IsReadOnly dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnIsReadOnlyPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            IsReadOnly property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its IsReadOnly value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.ItemsSourceProperty">
+            <summary>
+            Identifies the ItemsSource dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnItemsSourcePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            ItemsSource property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its ItemsSource value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.LabelPositionProperty">
+            <summary>
+            Identifies the LabelPosition dependency property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.ModeProperty">
+            <summary>
+            Identifies the Mode dependency property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.NewItemTemplateProperty">
+            <summary>
+            Identifies the NewItemTemplate dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnNewItemTemplatePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            NewItemTemplate property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its NewItemTemplate value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm.ReadOnlyTemplateProperty">
+            <summary>
+            Identifies the ReadOnlyTemplate dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnReadOnlyTemplatePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            ReadOnlyTemplate property changed handler.
+            </summary>
+            <param name="d">DataForm that changed its ReadOnlyTemplate value.</param>
+            <param name="e">The DependencyPropertyChangedEventArgs for this event.</param>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._addNewContentsNew">
+            <summary>
+            Holds the add-new contents mapped to mode that have been seen before.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._addNewContentsOld">
+            <summary>
+            Holds the old add-new contents mapped to mode that have been seen before.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._buttonSeparator">
+            <summary>
+            Private accessor to ButtonSeparator.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._canAddItems">
+            <summary>
+            Private accessor to CanAddItems.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._cancelButton">
+            <summary>
+            Private accessor to CancelButton.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._canBeginEdit">
+            <summary>
+            Private accessor to CanBeginEdit.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._canCancelEdit">
+            <summary>
+            Private accessor to CanCancelEdit.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._canCommitEdit">
+            <summary>
+            Private accessor to CanCommitEdit.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._canDeleteItems">
+            <summary>
+            Private accessor to CanDeleteItems.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._canMoveToFirstItem">
+            <summary>
+            Private accessor to CanMoveToFirstItem.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._canMoveToLastItem">
+            <summary>
+            Private accessor to CanMoveToLastItem.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._canMoveToNextItem">
+            <summary>
+            Private accessor to CanMoveToNextItem.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._canMoveToPreviousItem">
+            <summary>
+            Private accessor to CanMoveToPreviousItem.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._collectionView">
+            <summary>
+            Represents the items source as an ICollectionView.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._commitButton">
+            <summary>
+            Private accessor to CommitButton.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._contentPresenter">
+            <summary>
+            Private accessor to the content presenter.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._currentlyUsedTemplate">
+            <summary>
+            Holds which template is currently being used for which type.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._deleteItemButton">
+            <summary>
+            Private accessor to DeleteItemButton.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._editablePropertiesOriginalValues">
+            <summary>
+            Holds which properties on the current item can be edited,
+            and what their original values were.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._editButton">
+            <summary>
+            Private accessor to EditButton.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._editContentsNew">
+            <summary>
+            Holds the edit contents mapped to mode that have been seen before.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._editContentsOld">
+            <summary>
+            Holds the old edit contents mapped to mode that have been seen before.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._editedProperties">
+            <summary>
+            Holds which properties on the current item have been edited
+            and not saved locally.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._endingEdit">
+            <summary>
+            Holds a value indicating whether or not an edit is ending.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._editingElements">
+            <summary>
+            Holds a collection of editing elements that have event subscriptions.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._entityLevelErrors">
+            <summary>
+            Holds the entity-level validation errors.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._validationSummary">
+            <summary>
+            Private accessor to ValidationSummary.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._fieldLevelErrors">
+            <summary>
+            Holds the field-level validation errors.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._fields">
+            <summary>
+            Holds the current list of fields.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._fieldsDictionary">
+            <summary>
+            Holds the list of fields tied to the contents from which they came.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._firstItemButton">
+            <summary>
+            Private accessor to FirstItemButton.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._forcedEndEdit">
+            <summary>
+            Holds whether an end of an edit has been forced and should override AutoEdit.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._generatedBindingModesByType">
+            <summary>
+            Private accessor to GeneratedBindingModesByType.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._generatedPropertiesByType">
+            <summary>
+            Private accessor to GeneratedPropertiesByType.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._headerVisibilityOverridden">
+            <summary>
+            Holds whether HeaderVisibility has been set.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._isAddingNew">
+            <summary>
+            Private accessor to IsAddingNew.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._isCommitting">
+            <summary>
+            Holds a value indicating whether or not we're currently committing an edit.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._isEditing">
+            <summary>
+            Private accessor to IsEditing.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._canAddItemsAfterEdit">
+            <summary>
+            The value of CanAddItems prior to entering edit mode.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._canDeleteItemsAfterEdit">
+            <summary>
+            The value of CanDeleteItems prior to entering edit mode.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._lastCurrentPosition">
+            <summary>
+            Holds the index of the last value of CurrentPosition on the collection view.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._lastItem">
+            <summary>
+            The last value of CurrentItem, for use when auto-committing an edit.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._lastItemButton">
+            <summary>
+            Private accessor to LastItemButton.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._lostFocusFired">
+            <summary>
+            Holds whether or not lost focus has been fired since
+            TextBox validation on text changed began.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._newItemButton">
+            <summary>
+            Private accessor to NewItemButton.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._nextItemButton">
+            <summary>
+            Private accessor to NextItemButton.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._nextTabIndex">
+            <summary>
+            Holds the next tab index for generated fields.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._originalItemsSource">
+            <summary>
+            Represents the original items source prior to wrapping.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._previousItemButton">
+            <summary>
+            Private accessor to PreviousItemButton.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._readOnlyContentsNew">
+            <summary>
+            Holds the read-only contents mapped to mode that have been seen before.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._readOnlyContentsOld">
+            <summary>
+            Holds the old read-only contents mapped to mode that have been seen before.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._shouldMoveFocus">
+            <summary>
+            Holds a value indicating whether or not focus should be moved when content is loaded.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._templateBindingInfos">
+            <summary>
+            Holds the template binding information.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._weakEventListenerCollectionChanged">
+            <summary>
+            Holds the weak event listener for the INotifyCollectionChanged.CollectionChanged event.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._weakEventListenerCurrentChanged">
+            <summary>
+            Holds the weak event listener for the ICollectionView.CurrentChanged event.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._weakEventListenerCurrentChanging">
+            <summary>
+            Holds the weak event listener for the ICollectionView.CurrentChanging event.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataForm._weakEventListenerPropertyChanged">
+            <summary>
+            Holds the weak event listener for the INotifyPropertyChanged.PropertyChanged event.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.#ctor">
+            <summary>
+            Constructs a new instance of DataForm.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.AddNewItem">
+            <summary>
+            Adds a new item.
+            </summary>
+            <returns>Whether or not a new item was added.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.BeginEdit">
+            <summary>
+            Begins the editing of the current item.
+            </summary>
+            <returns>Whether or not editing was begun.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.CancelEdit">
+            <summary>
+            Cancels the editing of the current item.
+            </summary>
+            <returns>Whether or not the cancellation was successful.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.CommitEdit">
+            <summary>
+            Commits the edit of the current item and exits editing mode.
+            </summary>
+            <returns>True if the commit succeeds; false otherwise.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.CommitEdit(System.Boolean)">
+            <summary>
+            Commits the edit of the current item.
+            </summary>
+            <param name="exitEditingMode">Whether or not editing mode should be exited after committing the edit.</param>
+            <returns>True if the commit succeeds; false otherwise.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.DeleteItem">
+            <summary>
+            Deletes the current item.
+            </summary>
+            <returns>Whether or not the item was deleted.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.FindNameInContent(System.String)">
+            <summary>
+            Finds an object with a given name in the DataForm's content.
+            </summary>
+            <param name="name">The name to search by.</param>
+            <returns>The object, if found.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnApplyTemplate">
+            <summary>
+            Applies the template for this control.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.ValidateItem">
+            <summary>
+            Validates the current item.
+            </summary>
+            <returns>Whether or not the current item is valid.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.CancelAppend">
+            <summary>
+            Cancels the appending of a new item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.CommitAppend">
+            <summary>
+            Commits the appending of a new item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.ForceEndEdit">
+            <summary>
+            Forces the ending of the editing of the current item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GenerateUI">
+            <summary>
+            Generates the UI for this control and clears all errors.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GenerateUI(System.Boolean)">
+            <summary>
+            Generates the UI for this control, clears field errors, and optionally clears entity errors.
+            </summary>
+            <param name="clearEntityErrors">Whether or not to clear entity errors.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GenerateUI(System.Boolean,System.Boolean)">
+            <summary>
+            Generates the UI for this control, clears field errors, and optionally clears entity errors.
+            Also swaps the old and new content if the same mode/type pair has been detected.
+            </summary>
+            <param name="clearEntityErrors">Whether or not to clear entity errors.</param>
+            <param name="swapOldAndNew">Whether to swap the old and new content.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GetNextTabIndex">
+            <summary>
+            Gets the next tab index for generated controls.
+            </summary>
+            <returns>The next tab index.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.MoveToFirstItem">
+            <summary>
+            Goes to the first item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.MoveToLastItem">
+            <summary>
+            Goes to the last item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.MoveToNextItem">
+            <summary>
+            Goes to the next item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.MoveToPreviousItem">
+            <summary>
+            Goes to the previous item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.UpdateButtons">
+            <summary>
+            Updates the enabled state of the buttons within the DataForm.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.UpdateAllSources">
+            <summary>
+            Updates all sources.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.UpdateBindingsOnElement(System.Windows.FrameworkElement)">
+            <summary>
+            Finds any bindings on an element and updates the ones in which Mode is TwoWay
+            to set the two Boolean properties to true.
+            </summary>
+            <param name="element">The element.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.UpdateBindingsOnElement(System.Windows.FrameworkElement,System.Boolean)">
+            <summary>
+            Finds any bindings on an element and updates the ones in which Mode is TwoWay
+            to set the two Boolean properties to true.
+            </summary>
+            <param name="element">The element.</param>
+            <param name="isBeneathDataField">Whether or not a DataField is a parent element.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.UpdateButtonsAndStates">
+            <summary>
+            Updates the enabled state of the buttons and the visual states within the DataForm.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.UpdateStates">
+            <summary>
+            Updates the visual states within the DataForm.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnAddingNewItem(System.Windows.Controls.DataFormAddingNewItemEventArgs)">
+            <summary>
+            Raises the AddingItem event.
+            </summary>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnAutoGeneratingField(System.Windows.Controls.DataFormAutoGeneratingFieldEventArgs)">
+            <summary>
+            Raises the AutoGeneratingField event.
+            </summary>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnBeginningEdit(System.ComponentModel.CancelEventArgs)">
+            <summary>
+            Raises the BeginningEdit event.
+            </summary>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnContentLoaded(System.Windows.Controls.DataFormContentLoadEventArgs)">
+            <summary>
+            Raises the ContentLoaded event.
+            </summary>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnContentLoading(System.Windows.Controls.DataFormContentLoadEventArgs)">
+            <summary>
+            Raises the ContentLoading event.
+            </summary>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCreateAutomationPeer">
+            <summary>
+            Returns an automation peer for this DataForm.
+            </summary>
+            <returns>The automation peer.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCurrentItemChanged(System.EventArgs)">
+            <summary>
+            Raises the CurrentItemChanged event.
+            </summary>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnDeletingItem(System.ComponentModel.CancelEventArgs)">
+            <summary>
+            Raises the DeletingItem event.
+            </summary>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnItemEditEnded(System.Windows.Controls.DataFormEditEndedEventArgs)">
+            <summary>
+            Raises the ItemEditEnded event.
+            </summary>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnItemEditEnding(System.Windows.Controls.DataFormEditEndingEventArgs)">
+            <summary>
+            Raises the ItemEditEnding event.
+            </summary>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnValidatingItem(System.ComponentModel.CancelEventArgs)">
+            <summary>
+            Raises the ValidatingItem event.
+            </summary>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.CreateView(System.Collections.IEnumerable)">
+            <summary>
+            Creates a collection view around the DataForm's source. ICollectionViewFactory is
+            used if the source implements it. Otherwise a PagedCollectionView is returned.
+            </summary>
+            <param name="source">Enumerable source for which to create a view</param>
+            <returns>ICollectionView view over the provided source</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GetBindingPropertyFromType(System.Type)">
+            <summary>
+            Returns a DependencyProperty for a type corresponding to the property to which
+            a binding should be applied.
+            </summary>
+            <param name="type">The type for which to generate the DependencyProperty.</param>
+            <returns>The DependencyProperty.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GetControlFromType(System.Type)">
+            <summary>
+            Returns a control for a type.
+            </summary>
+            <param name="type">The type for which to generate the control.</param>
+            <returns>The control.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GetFirstFocusableControl(System.Windows.DependencyObject)">
+            <summary>
+            Gets the first focusable control (with respect to TabIndex).
+            </summary>
+            <param name="dependencyObject">The dependency object.</param>
+            <returns>The first focusable control.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.IsKeyboardFocusable(System.Windows.FrameworkElement)">
+            <summary>
+            Returns whether or not a framework element is keyboard focusable.
+            </summary>
+            <param name="element">The element.</param>
+            <returns>Whether or not the element is keyboard focusable.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetFocusToFirstFocusableControl(System.Windows.DependencyObject)">
+            <summary>
+            Sets focus to the first focusable control (with respect to TabIndex) within the hierarchy of a given dependency object.
+            </summary>
+            <param name="dependencyObject">The dependency object.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SortGeneratedFieldPaths(System.Collections.Generic.IList{System.String},System.Collections.Generic.IDictionary{System.String,System.Int32})">
+            <summary>
+            Sorts the generated field paths in GenerateFields() according to the order specified
+            in the DisplayAttributes.
+            </summary>
+            <param name="generatedFieldPaths">The generated field paths.</param>
+            <param name="orders">The orders.</param>
+            <returns>The sorted list of generated field paths.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetAllCanPropertiesAndUpdate(System.Windows.Controls.DataForm,System.Boolean)">
+            <summary>
+            Calls SetAllCanProperties() and either UpdateStates() or UpdateButtonsAndStates()
+            on the given DataForm.
+            </summary>
+            <param name="dataForm">The DataForm.</param>
+            <param name="onlyUpdateStates">Whether to call UpdateStates() or UpdateButtonsAndStates()</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.BeginEdit(System.Boolean)">
+            <summary>
+            Begins the editing of the current item.
+            </summary>
+            <param name="startingNewEdit">Whether or not this is starting a new edit or continuing an existing edit.</param>
+            <returns>Whether or not editing was begun.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.CheckIfPropertyEditedAndUpdate(System.String,System.Object,System.Boolean,System.Type,System.Windows.Data.IValueConverter,System.Object,System.Globalization.CultureInfo)">
+            <summary>
+            Checks to see if a given value matches a property's original value,
+            and updates the ability to commit the edit if not.
+            </summary>
+            <param name="propertyName">The name of the property to check against.</param>
+            <param name="value">The value to check against.</param>
+            <param name="doConversion">Whether or not to convert the value to the original type.</param>
+            <param name="originalType">The original type.</param>
+            <param name="valueConverter">The IValueConverter to use for conversion.</param>
+            <param name="converterParameter">The converter parameter.</param>
+            <param name="converterCulture">The converter culture.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.ClearEntityErrors">
+            <summary>
+            Clears all EntityErrors from this DataForm before ValidateForm is performed.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.DetachEditingEvents">
+            <summary>
+            Detaches element events that were used during editing.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.EndEdit">
+            <summary>
+            Moves out of edit mode.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.EntityErrorShouldBeAdded(System.Windows.Controls.ValidationSummaryItem)">
+            <summary>
+            Returns whether or not a new error should be added to the list of errors.
+            </summary>
+            <param name="newError">The new error.</param>
+            <returns>Whether or not the new error should be added to the list of errors.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GenerateFields">
+            <summary>
+            Generates the DataFormFields from the properties that should participate in auto-generation.
+            </summary>
+            <returns>The DataFormFields in a containing element.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GenerateField(System.Type,System.String,System.Windows.Data.BindingMode,System.Windows.Controls.Panel)">
+            <summary>
+            Generates a field based on a property type and a property name.
+            </summary>
+            <param name="propertyType">The type of the property.</param>
+            <param name="propertyName">The name of the property.</param>
+            <param name="bindingMode">The binding mode.</param>
+            <param name="panel">The panel to insert the field into.</param>
+            <returns>A value indicating whether or not the field was generated.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GetAllOriginalPropertyValues">
+            <summary>
+            Gets all of the original property values for the properties on the current item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GetContentFromMode">
+            <summary>
+            Gets new content from the current mode.
+            </summary>
+            <returns>The new content.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GetEditTemplateContent">
+            <summary>
+            Gets the generated content from the edit template.
+            </summary>
+            <returns>The edit template content.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GetNewItemTemplateContent">
+            <summary>
+            Gets the generated content from the new item template.
+            </summary>
+            <returns>The new item template content.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GetOrRecycleContent(System.Boolean,System.Boolean@)">
+            <summary>
+            Either gets new content or recycles old content based on the current mode.
+            </summary>
+            <param name="swapOldAndNew">Whether or not we should swap old and new content when the mode/type pair is unchanged.</param>
+            <param name="uiChanged">Whether or not the UI changed from its current content.</param>
+            <returns>The content.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.GetReadOnlyTemplateContent">
+            <summary>
+            Gets the generated content from the read-only template.
+            </summary>
+            <returns>The read-only template content.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.IsCommandButtonVisible(System.Windows.Controls.DataFormCommandButtonsVisibility)">
+            <summary>
+            Returns whether or not the specified type of command button is visible.
+            </summary>
+            <param name="commandButtonVisibility">The type of command button.</param>
+            <returns>Whether or not the type of command button is visible.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCollectionViewCollectionChanged(System.Object,System.Collections.Specialized.NotifyCollectionChangedEventArgs)">
+            <summary>
+            Handles the situation where the collection changed on the ICollectionView.
+            </summary>
+            <param name="sender">The ICollectionView.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCollectionViewCurrentChanged(System.Object,System.EventArgs)">
+            <summary>
+            Handles the situation where the current item changed on the ICollectionView.
+            </summary>
+            <param name="sender">The ICollectionView.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCollectionViewCurrentChanging(System.Object,System.ComponentModel.CurrentChangingEventArgs)">
+            <summary>
+            Handles the situation where the current item is changing on the ICollectionView.
+            </summary>
+            <param name="sender">The ICollectionView.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCurrentItemPropertyChanged(System.Object,System.ComponentModel.PropertyChangedEventArgs)">
+            <summary>
+            Handles the situation where a property on the current item changes.
+            </summary>
+            <param name="sender">The current item.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.PrepareContent(System.Windows.FrameworkElement)">
+            <summary>
+            Prepares the given content.
+            </summary>
+            <param name="rootElement">The root element.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.RegenerateUI(System.Nullable{System.Windows.Controls.DataFormMode},System.Object)">
+            <summary>
+            Re-generates the UI if a template or direct content change requires it.
+            </summary>
+            <param name="changedTemplateMode">The mode for which template was changed, or null if the content was changed.</param>
+            <param name="oldContent">The old Content value, or null in the case of a template change.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.RemoveContentForType(System.Type,System.Collections.Generic.IDictionary{System.Type,System.Windows.FrameworkElement})">
+            <summary>
+            Removes the content attached to a given type from the fields dictionary
+            and from the given dictionary of contents.
+            </summary>
+            <param name="type">The type to use as a key.</param>
+            <param name="contents">The contents dictionary.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.RemoveContent(System.Windows.FrameworkElement)">
+            <summary>
+            Removes the specified content from the fields dictionary.
+            </summary>
+            <param name="content">The content to remove.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.ResetNextTabIndex">
+            <summary>
+            Resets the next tab index.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetAllCanProperties">
+            <summary>
+            Sets all of the properties of the form "CanXXXX".
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetButtonSeparatorVisibility">
+            <summary>
+            Sets the visibility of the button separator.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetCanAddItems">
+            <summary>
+            Sets whether or not the user can add a new item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetCanBeginEdit">
+            <summary>
+            Sets whether or not the user can begin an edit.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetCanCancelEdit">
+            <summary>
+            Sets whether or not the user can cancel an edit.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetCancelButtonVisibility">
+            <summary>
+            Sets the visibility of the cancel button.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetCanDeleteItems">
+            <summary>
+            Sets whether or not the user can delete an item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetCanCommitEdit">
+            <summary>
+            Sets whether or not the user can commit an edit.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetCanMoveToFirstItem">
+            <summary>
+            Sets whether or not the user can move to the first item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetCanMoveToLastItem">
+            <summary>
+            Sets whether or not the user can move to the last item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetCanMoveToNextItem">
+            <summary>
+            Sets whether or not the user can move to the next item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetCanMoveToPreviousItem">
+            <summary>
+            Sets whether or not the user can move to the previous item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetCommitButtonVisibility">
+            <summary>
+            Sets the visibility of the commit button.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetDeleteItemButtonVisibility">
+            <summary>
+            Sets the visibility of the delete item button.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetEditButtonVisibility">
+            <summary>
+            Sets the visibility of the edit button.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetFirstItemButtonVisibility">
+            <summary>
+            Sets the visibility of the first item button.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetIsItemValid">
+            <summary>
+            Sets whether or not the item is valid and updates buttons and states accordingly.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetHeaderVisibility">
+            <summary>
+            Sets the visibility of the header.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetLastItemButtonVisibility">
+            <summary>
+            Sets the visibility of the last item button.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetMode">
+            <summary>
+            Sets the mode of the DataForm.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetNewItemButtonVisibility">
+            <summary>
+            Sets the visibility of the new item button.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetNextItemButtonVisibility">
+            <summary>
+            Sets the visibility of the next item button.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetPreviousItemButtonVisibility">
+            <summary>
+            Sets the visibility of the previous item button.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetUpCollectionView(System.Boolean)">
+            <summary>
+            Sets up the collection view.
+            </summary>
+            <param name="collectionViewCreated">
+            True if the collection view was created by the DataForm or its source's 
+            implementation of ICollectionViewFactory.CreateView().
+            </param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.SetUpNewCurrentItem">
+            <summary>
+            Sets up the new current item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.ShouldRegenerateUI(System.Nullable{System.Windows.Controls.DataFormMode})">
+            <summary>
+            Returns a value indicating whether or not the UI should be re-generated based on
+            a changed template.
+            </summary>
+            <param name="changedTemplateMode">The mode for which template was changed, or null if the content was changed.</param>
+            <returns>A value indicating whether or not the UI should be re-generated.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.UpdateCurrentItem">
+            <summary>
+            Updates the current item.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.ValidateItem(System.Boolean)">
+            <summary>
+            Validates the current item.
+            </summary>
+            <param name="validateAllProperties">Whether or not to validate all properties.</param>
+            <returns>Whether or not the current item is valid.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnNewItemButtonClick(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the click of the "new item" button.
+            </summary>
+            <param name="sender">The button.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnBeginEditButtonClick(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the click of the "begin edit" button.
+            </summary>
+            <param name="sender">The button.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCancelEditButtonClick(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the click of the "cancel edit" button.
+            </summary>
+            <param name="sender">The button.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnDeleteItemButtonClick(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the click of the "delete item" button.
+            </summary>
+            <param name="sender">The button.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnCommitEditButtonClick(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the click of the "commit edit" button.
+            </summary>
+            <param name="sender">The button.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnMoveToFirstItemButtonClick(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the click of the "move to first item" button.
+            </summary>
+            <param name="sender">The button.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnMoveToLastItemButtonClick(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the click of the "move to last item" button.
+            </summary>
+            <param name="sender">The button.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnMoveToPreviousItemButtonClick(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the click of the "move to previous item" button.
+            </summary>
+            <param name="sender">The button.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnMoveToNextItemButtonClick(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the click of the "move to next item" button.
+            </summary>
+            <param name="sender">The button.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnContentRootElementGotFocus(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the case where the root element in the fields presenter has got focus.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnContentRootElementLoaded(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the case where the root element in the fields presenter has loaded.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnContentRootElementLostFocus(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the case where the root element in the fields presenter has lost focus.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnContentRootElementBindingValidationError(System.Object,System.Windows.Controls.ValidationErrorEventArgs)">
+            <summary>
+            Handles the case where a field has had a binding validation error occur on it.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnDatePickerCalendarOpened(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the case where a date picker's calendar was opened.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnExternalTextBoxLostFocus(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handles the case where a text box outside a DataField has lost focus.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnExternalTextBoxTextChanged(System.Object,System.Windows.Controls.TextChangedEventArgs)">
+            <summary>
+            Handles the case where a text box outside a DataField has is text changed.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnTextBoxTextChanged(System.Object,System.Windows.Controls.TextChangedEventArgs)">
+            <summary>
+            Handles the case where a text box's text changed.
+            </summary>
+            <param name="sender">The element.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.DataForm.OnValidationSummaryErrorsCollectionChanged(System.Object,System.Collections.Specialized.NotifyCollectionChangedEventArgs)">
+            <summary>
+            Handles the case where the validation summary's error collection changed.
+            </summary>
+            <param name="sender">The validation summary.</param>
+            <param name="e">The event args.</param>
+        </member>
+        <member name="E:System.Windows.Controls.DataForm.AddingNewItem">
+            <summary>
+            Event handler for when an item is being added.
+            </summary>
+        </member>
+        <member name="E:System.Windows.Controls.DataForm.AutoGeneratingField">
+            <summary>
+            Event handler for when a field is being auto-generated.
+            </summary>
+        </member>
+        <member name="E:System.Windows.Controls.DataForm.BeginningEdit">
+            <summary>
+            Event handler for when an edit is beginning.  Cannot be canceled when AutoEdit is true.
+            </summary>
+        </member>
+        <member name="E:System.Windows.Controls.DataForm.ContentLoaded">
+            <summary>
+            Event handler for when content is loaded.
+            </summary>
+        </member>
+        <member name="E:System.Windows.Controls.DataForm.ContentLoading">
+            <summary>
+            Event handler for when content is about to be loaded.
+            </summary>
+        </member>
+        <member name="E:System.Windows.Controls.DataForm.CurrentItemChanged">
+            <summary>
+            Event handler for when the current item has changed.
+            </summary>
+        </member>
+        <member name="E:System.Windows.Controls.DataForm.DeletingItem">
+            <summary>
+            Event handler for when an item is being deleted.
+            </summary>
+        </member>
+        <member name="E:System.Windows.Controls.DataForm.EditEnded">
+            <summary>
+            Event handler for when an edit has ended.
+            </summary>
+        </member>
+        <member name="E:System.Windows.Controls.DataForm.EditEnding">
+            <summary>
+            Event handler for when an edit is ending.
+            </summary>
+        </member>
+        <member name="E:System.Windows.Controls.DataForm.ValidatingItem">
+            <summary>
+            Event handler for when the item is being validated.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.AutoCommit">
+            <summary>
+            Gets or sets a value that indicates whether edited items are committed when the current item is changed.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.AutoEdit">
+            <summary>
+            Gets or sets a value that indicates whether or not the 
+            <see cref="T:System.Windows.Controls.DataForm"/> should be permanently in edit mode. 
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.AutoGenerateFields">
+            <summary>
+            Gets or sets a value that indicates whether or not to automatically 
+            generate the <see cref="T:System.Windows.Controls.DataField"/>s collection. 
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CancelButtonContent">
+            <summary>
+            Gets or sets the content of the Cancel button.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CancelButtonStyle">
+            <summary>
+            Gets or sets the style of the Cancel button.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CommandButtonsVisibility">
+            <summary>
+            Gets or sets a value that indicates which command 
+            buttons are visible on the <see cref="T:System.Windows.Controls.DataForm"/> . 
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CommitButtonContent">
+            <summary>
+            Gets or sets the content of the Commit button.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CommitButtonStyle">
+            <summary>
+            Gets or sets the style of the Commit button.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.Content">
+            <summary>
+            Gets or sets the direct content of the DataForm, to be used when a template is not specified.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CurrentIndex">
+            <summary>
+            Gets or sets the index of the current item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CurrentItem">
+            <summary>
+            Gets or sets the current item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.DescriptionViewerPosition">
+            <summary>
+            Gets or sets a value that indicates the position of descriptions in relation to the field.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.DataFieldStyle">
+            <summary>
+            Gets or sets the developer-specified style for <see cref="T:System.Windows.Controls.DataField"/>s.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.EditTemplate">
+            <summary>
+            Gets or sets the <see cref="T:System.Windows.DataTemplate" /> used when editing. 
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.ValidationSummary">
+            <summary>
+            Gets the ValidationSummary.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.ValidationSummaryStyle">
+            <summary>
+            Gets or sets the developer-specified style for the ValidationSummary.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.Header">
+            <summary>
+              Gets or sets the header for the <see cref="T:System.Windows.Controls.DataForm"/> . 
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.HeaderTemplate">
+            <summary>
+            Gets or sets the <see cref="T:System.Windows.DataTemplate"/> used
+            for the header of the <see cref="T:System.Windows.Controls.DataForm"/> . 
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.HeaderVisibility">
+            <summary>
+            Gets or sets a value that indicates whether the header is visible.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.IsEmpty">
+            <summary>
+            Gets a value that indicates whether or not the control is displaying an item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.IsItemChanged">
+            <summary>
+            Gets a value that indicates whether or not the current item has been changed.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.IsItemValid">
+            <summary>
+            Gets a value that indicates whether or not the current item is valid.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.IsReadOnly">
+            <summary>
+            Gets or sets a value that indicates whether the user can edit the values in the control.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.ItemsSource">
+            <summary>
+            Gets or sets a collection that is used to populate the form content of the control.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.LabelPosition">
+            <summary>
+            Gets or sets a value that indicates the position of labels in relation to the field.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.Mode">
+            <summary>
+            Gets a value that indicates whether the control is in read only, edit, or add new mode.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.NewItemTemplate">
+            <summary>
+            Gets or sets the item template used when adding a new item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.ReadOnlyTemplate">
+            <summary>
+            Gets or sets the item template used when not editing.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CanAddItems">
+            <summary>
+            Gets a value indicating whether or not the collection allows the
+            addition of items.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CanBeginEdit">
+            <summary>
+            Gets a value that indicates whether or not an edit can be started.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CanCancelEdit">
+            <summary>
+            Gets a value that indicates whether or not an edit can be canceled.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CanCommitEdit">
+            <summary>
+            Gets a value indicating whether or not an edit can be committed.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CanDeleteItems">
+            <summary>
+            Gets a value indicating whether or not the collection allows the
+            deletion of items.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CanMoveToFirstItem">
+            <summary>
+            Gets a value indicating whether or not you can to the first item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CanMoveToLastItem">
+            <summary>
+            Gets a value indicating whether or not you can to the last item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CanMoveToNextItem">
+            <summary>
+            Gets a value indicating whether or not you can to the next item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CanMoveToPreviousItem">
+            <summary>
+            Gets a value indicating whether or not you can to the previous item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CurrentItemType">
+            <summary>
+            Gets the type of the current item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.EffectiveIsReadOnly">
+            <summary>
+            Gets a value indicating whether or not the DataForm is effectively read-only,
+            taking into account both IsReadOnly and the presence of templates.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.Fields">
+            <summary>
+            Gets the list of fields.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.IsAddingNew">
+            <summary>
+            Gets a value indicating whether or not the user is appending a new item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.IsEditing">
+            <summary>
+            Gets a value indicating whether or not the user is editing the current item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.ItemsCount">
+            <summary>
+            Gets the number of items in the items source.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.AutoCommitPreventsCurrentItemChange">
+            <summary>
+            Gets a value indicating whether or not the value of AutoCommit should
+            prevent the changing of the current item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CurrentItemChangeTracking">
+            <summary>
+            Gets the current item as an IChangeTracking.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.CurrentItemNotifyPropertyChanged">
+            <summary>
+            Gets the current item as an INotifyPropertyChanged.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.EditableCollectionView">
+            <summary>
+            Gets the entity collection view as an IEditableCollectionView.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.GeneratedBindingModesByType">
+            <summary>
+            Gets the generated binding modes associated to properties for a given type.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.GeneratedPropertiesByType">
+            <summary>
+            Gets the generated properties for a given type.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataForm.ShouldValidateOnCurrencyChange">
+            <summary>
+            Gets a value indicating whether or not validation should be run if
+            currency is about to change or if currency has changed.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFormBindingInfo">
+            <summary>
+            Stores information about a Binding, including the BindingExpression, BindingTarget and associated Element.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormBindingInfo.#ctor">
+            <summary>
+            Creates a new BindingInfo.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormBindingInfo.#ctor(System.Windows.Data.BindingExpression,System.Windows.DependencyProperty,System.Windows.FrameworkElement)">
+            <summary>
+            Creates a new BindingInfo with the specified BindingExpression, BindingTarget and Element.
+            </summary>
+            <param name="bindingExpression">The BindingExpression.</param>
+            <param name="bindingTarget">The BindingTarget.</param>
+            <param name="element">The Element.</param>
+        </member>
+        <member name="P:System.Windows.Controls.DataFormBindingInfo.BindingExpression">
+            <summary>
+            Gets or sets the BindingExpression.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataFormBindingInfo.BindingTarget">
+            <summary>
+            Gets or sets the BindingTarget.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataFormBindingInfo.Element">
+            <summary>
+            Gets or sets the Element.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFormCommandButtonsVisibilityTypeConverter">
+            <summary>
+            Type converter for DataForm.CommandButtonsVisibility.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormCommandButtonsVisibilityTypeConverter.CanConvertFrom(System.ComponentModel.ITypeDescriptorContext,System.Type)">
+            <summary>
+            Returns whether we can convert from a given type.
+            </summary>
+            <param name="context">The type descriptor context.</param>
+            <param name="sourceType">The source type.</param>
+            <returns>Whether we can convert from the given type.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormCommandButtonsVisibilityTypeConverter.ConvertFrom(System.ComponentModel.ITypeDescriptorContext,System.Globalization.CultureInfo,System.Object)">
+            <summary>
+            Converts a value from a type.
+            </summary>
+            <param name="context">The type descriptor context.</param>
+            <param name="culture">The culture to use.</param>
+            <param name="value">The value to convert from.</param>
+            <returns>The converted value.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormCommandButtonsVisibilityTypeConverter.ConvertTo(System.ComponentModel.ITypeDescriptorContext,System.Globalization.CultureInfo,System.Object,System.Type)">
+            <summary>
+            Converts a value to a type.
+            </summary>
+            <param name="context">The type descriptor context.</param>
+            <param name="culture">The culture to use.</param>
+            <param name="value">The value to convert from.</param>
+            <param name="destinationType">The destination type.</param>
+            <returns>The converted value.</returns>
+        </member>
+        <member name="T:System.Windows.Controls.DataFormCommandButtonsVisibility">
+            <summary>
+            Enumeration denoting which of the command buttons should be visible.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormCommandButtonsVisibility.None">
+            <summary>
+            Represents the case where no buttons are visible.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormCommandButtonsVisibility.Add">
+            <summary>
+            Represents the case where the add button is visible.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormCommandButtonsVisibility.Delete">
+            <summary>
+            Represents the case where the delete button is visible.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormCommandButtonsVisibility.Edit">
+            <summary>
+            Represents the case where the edit button is visible.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormCommandButtonsVisibility.Navigation">
+            <summary>
+            Represents the case where the navigation buttons are visible.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormCommandButtonsVisibility.Commit">
+            <summary>
+            Represents the case where the commit button is visible.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormCommandButtonsVisibility.Cancel">
+            <summary>
+            Represents the case where the cancel button is visible.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormCommandButtonsVisibility.All">
+            <summary>
+            Represents the case where all buttons is visible.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFieldDescriptionViewerPosition">
+            <summary>
+            Enumeration denoting a description viewer position.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.DataFieldDescriptionViewerPosition.Auto">
+            <summary>
+            Represents the case where a description position should be
+            dependent on its parent (same behavior as BesideContent when there
+            is no parent).
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFieldDescriptionViewerPosition.BesideContent">
+            <summary>
+            Represents the case where the description should be placed to the
+            right of the input control.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFieldDescriptionViewerPosition.BesideLabel">
+            <summary>
+            Represents the case where the description should be placed to the
+            right of the label.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFormEditAction">
+            <summary>
+            Enumeration denoting an action taken to end an edit.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormEditAction.Cancel">
+            <summary>
+            Represents the case where an edit has been canceled.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormEditAction.Commit">
+            <summary>
+            Represents the case where an edit has been committed.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFieldLabelPosition">
+            <summary>
+            Enumeration denoting a label position.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.DataFieldLabelPosition.Auto">
+            <summary>
+            Represents the case where a field label position should be
+            dependent on its parent (same behavior as Left when there
+            is no parent).
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFieldLabelPosition.Left">
+            <summary>
+            Represents the case where the label should be placed to the
+            left of the input control.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFieldLabelPosition.Top">
+            <summary>
+            Represents the case where the label should be placed above
+            the input control.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFormMode">
+            <summary>
+            Enumeration denoting a DataForm mode.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormMode.ReadOnly">
+            <summary>
+            Represents the case where an object is not being edited.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormMode.Edit">
+            <summary>
+            Represents the case where an object is being edited.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.DataFormMode.AddNew">
+            <summary>
+            Represents the case where a new object is being added.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFormAddingNewItemEventArgs">
+            <summary>
+            Event args for the AddingNewItem event.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormAddingNewItemEventArgs.#ctor">
+            <summary>
+            Constructs a new instance of DataFormAddingNewItemEventArgs.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFormEditEndedEventArgs">
+            <summary>
+            Event args for the EditEnded event.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormEditEndedEventArgs.#ctor(System.Windows.Controls.DataFormEditAction)">
+            <summary>
+            Constructs a new instance of DataFormEditEndedEventArgs.
+            </summary>
+            <param name="editAction">The edit action.</param>
+        </member>
+        <member name="P:System.Windows.Controls.DataFormEditEndedEventArgs.EditAction">
+            <summary>
+            Gets the edit action.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFormEditEndingEventArgs">
+            <summary>
+            Event args for the EditEnding event.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormEditEndingEventArgs.#ctor(System.Windows.Controls.DataFormEditAction)">
+            <summary>
+            Constructs a new instance of DataFormEditEndingEventArgs.
+            </summary>
+            <param name="editAction">The edit action.</param>
+        </member>
+        <member name="P:System.Windows.Controls.DataFormEditEndingEventArgs.EditAction">
+            <summary>
+            Gets the edit action.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFormContentLoadEventArgs">
+            <summary>
+            Event args for the ContentLoaded and ContentLoading events.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormContentLoadEventArgs.#ctor(System.Windows.FrameworkElement,System.Windows.Controls.DataFormMode)">
+            <summary>
+            Constructs a new instance of DataFormContentLoadEventArgs.
+            </summary>
+            <param name="content">The content that was loaded or will be loaded.</param>
+            <param name="mode">The mode of the DataForm.</param>
+        </member>
+        <member name="P:System.Windows.Controls.DataFormContentLoadEventArgs.Content">
+            <summary>
+            Gets the content that was loaded or will be loaded.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataFormContentLoadEventArgs.Mode">
+            <summary>
+            Gets the mode of the DataForm.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFormAutoGeneratingFieldEventArgs">
+            <summary>
+            Event args for the AutoGeneratingField event.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormAutoGeneratingFieldEventArgs.#ctor(System.String,System.Type,System.Windows.Controls.DataField)">
+            <summary>
+            Constructs a new instance of DataFormAutoGeneratingFieldEventArgs.
+            </summary>
+            <param name="propertyName">The name of the property for the field being generated.</param>
+            <param name="propertyType">The type of the property for the field being generated.</param>
+            <param name="field">The field being generated.</param>
+        </member>
+        <member name="P:System.Windows.Controls.DataFormAutoGeneratingFieldEventArgs.Field">
+            <summary>
+            Gets or sets the field to be used.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataFormAutoGeneratingFieldEventArgs.PropertyName">
+            <summary>
+            Gets the name of the property for which this field is being generated.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.DataFormAutoGeneratingFieldEventArgs.PropertyType">
+            <summary>
+            Gets the type of the property for which this field is being generated.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DataFormToStringConverter">
+            <summary>
+            Value converter for the DataForm.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormToStringConverter.Convert(System.Object,System.Type,System.Object,System.Globalization.CultureInfo)">
+            <summary>
+            Converts forwards.
+            </summary>
+            <param name="value">The value.</param>
+            <param name="targetType">The target type.</param>
+            <param name="parameter">The parameter.</param>
+            <param name="culture">The culture.</param>
+            <returns>The converted value.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormToStringConverter.ConvertBack(System.Object,System.Type,System.Object,System.Globalization.CultureInfo)">
+            <summary>
+            Converts backwards.
+            </summary>
+            <param name="value">The value.</param>
+            <param name="targetType">The target type.</param>
+            <param name="parameter">The parameter.</param>
+            <param name="culture">The culture.</param>
+            <returns>The converted value.</returns>
+        </member>
+        <member name="T:System.Windows.Controls.DataFormValueConverter">
+            <summary>
+            Value converter for the DataForm.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormValueConverter.Convert(System.Object,System.Type,System.Object,System.Globalization.CultureInfo)">
+            <summary>
+            Converts forwards.
+            </summary>
+            <param name="value">The value.</param>
+            <param name="targetType">The target type.</param>
+            <param name="parameter">The parameter.</param>
+            <param name="culture">The culture.</param>
+            <returns>The converted value.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.DataFormValueConverter.ConvertBack(System.Object,System.Type,System.Object,System.Globalization.CultureInfo)">
+            <summary>
+            Converts backwards.
+            </summary>
+            <param name="value">The value.</param>
+            <param name="targetType">The target type.</param>
+            <param name="parameter">The parameter.</param>
+            <param name="culture">The culture.</param>
+            <returns>The converted value.</returns>
+        </member>
+        <member name="T:System.Windows.Controls.PathOrderPair">
+            <summary>
+            Wrapper class used to sort paths based on the order derived from a DisplayAttribute.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.PathOrderPair.GetOrder(System.Windows.Controls.PathOrderPair)">
+            <summary>
+            Gets the order from a PathOrderPair.
+            </summary>
+            <param name="pathOrderPair">The PathOrderPair.</param>
+            <returns>The order from the PathOrderPair.</returns>
+        </member>
+        <member name="P:System.Windows.Controls.PathOrderPair.Path">
+            <summary>
+            Gets or sets the path.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.PathOrderPair.Order">
+            <summary>
+            Gets or sets the order.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.ValidationUtil">
+            <summary>
+            Utility class that contains static methods for DataForm validation purposes.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.ValidationUtil.CopyBinding(System.Windows.Data.Binding)">
+            <summary>
+            Creates a new Binding that is a shallow copy of the source Binding.
+            </summary>
+            <param name="source">The Binding to copy.</param>
+            <returns>The copied Binding.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.ValidationUtil.ElementHasErrors(System.Windows.DependencyObject)">
+            <summary>
+            Returns whether or not a DependencyObject has errors.
+            </summary>
+            <param name="element">The element to test.</param>
+            <returns>Whether or not it has errors.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.ValidationUtil.GetBindingExpressionsForElement(System.Windows.FrameworkElement)">
+            <summary>
+            Gets the list of binding expressions for the given element.
+            </summary>
+            <param name="element">The element.</param>
+            <returns>The list of binding expressions.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.ValidationUtil.GetDataFormBindingInfo(System.Windows.FrameworkElement,System.Object,System.Boolean,System.Boolean,System.Type[])">
+            <summary>
+            Searches through all Bindings on the specified element and returns a list of BindingInfo objects
+            for each Binding that matches the specified criteria.
+            </summary>
+            <param name="element">FrameworkElement to search</param>
+            <param name="dataItem">Only return Bindings with a context element equal to this object</param>
+            <param name="twoWayOnly">If true, only returns TwoWay Bindings</param>
+            <param name="searchChildren">If true, searches child elements for Bindings</param>
+            <param name="excludedTypes">The Binding search will skip all of these Types</param>
+            <returns>List of BindingInfo for every Binding found</returns>
+        </member>
+        <member name="M:System.Windows.Controls.ValidationUtil.GetDependencyPropertiesForElement(System.Windows.FrameworkElement)">
+            <summary>
+            Gets the list of dependency properties for the given element.
+            </summary>
+            <param name="element">The element.</param>
+            <returns>The list of dependency properties.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.ValidationUtil.UpdateSourceOnElementBindings(System.Windows.FrameworkElement)">
+            <summary>
+            Updates the source on the bindings for a given element.
+            </summary>
+            <param name="element">The element.</param>
+        </member>
+        <member name="M:System.Windows.Controls.ValidationUtil.GetDataFormBindingInfoOfSingleElement(System.Windows.FrameworkElement,System.Object,System.Object,System.Boolean)">
+            <summary>
+            Gets a list of active bindings on the specified FrameworkElement.  Bindings are gathered
+            according to the same conditions BindingGroup uses to find bindings of descendent elements
+            within the visual tree.
+            </summary>
+            <param name="element">Root FrameworkElement to search under</param>
+            <param name="inheritedDataContext">DomainContext of the element's parent</param>
+            <param name="dataItem">Target DomainContext</param>
+            <param name="twoWayOnly">If true, only returns TwoWay Bindings</param>
+            <returns>The list of active bindings.</returns>
+        </member>
+        <member name="T:System.Windows.Controls.WeakEventListener`3">
+            <summary>
+            Implements a weak event listener that allows the owner to be garbage
+            collected if its only remaining link is an event handler.
+            </summary>
+            <typeparam name="TInstance">Type of instance listening for the event.</typeparam>
+            <typeparam name="TSource">Type of source for the event.</typeparam>
+            <typeparam name="TEventArgs">Type of event arguments for the event.</typeparam>
+        </member>
+        <member name="F:System.Windows.Controls.WeakEventListener`3._weakInstance">
+            <summary>
+            WeakReference to the instance listening for the event.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.WeakEventListener`3.#ctor(`0)">
+            <summary>
+            Initializes a new instances of the WeakEventListener class.
+            </summary>
+            <param name="instance">Instance subscribing to the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.WeakEventListener`3.OnEvent(`1,`2)">
+            <summary>
+            Handler for the subscribed event calls OnEventAction to handle it.
+            </summary>
+            <param name="source">Event source.</param>
+            <param name="eventArgs">Event arguments.</param>
+        </member>
+        <member name="M:System.Windows.Controls.WeakEventListener`3.Detach">
+            <summary>
+            Detaches from the subscribed event.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.WeakEventListener`3.OnEventAction">
+            <summary>
+            Gets or sets the method to call when the event fires.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.WeakEventListener`3.OnDetachAction">
+            <summary>
+            Gets or sets the method to call when detaching from the event.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.Data.DataForm.Toolkit.Resources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Data.DataForm.Toolkit.Resources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Data.DataForm.Toolkit.Resources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Data.DataForm.Toolkit.Resources.DataForm_CannotCancelBeginEditWhenInAutoEdit">
+            <summary>
+              Looks up a localized string similar to {0} cannot be canceled when {1} is set to true..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Data.DataForm.Toolkit.Resources.DataForm_CannotChangeCurrency">
+            <summary>
+              Looks up a localized string similar to Cannot change currency when an item has validation errors or it is being edited and {0} is false.  Set {1} to a {2} to manage currency instead..
+            </summary>
+        </member>
+    </members>
+</doc>

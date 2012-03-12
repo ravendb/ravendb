@@ -1,0 +1,2637 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>System.Windows.Controls.Layout.Toolkit</name>
+    </assembly>
+    <members>
+        <member name="T:System.Windows.Controls.Accordion">
+            <summary>
+            Represents a collection of collapsed and expanded AccordionItem controls.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="T:System.Windows.Controls.IUpdateVisualState">
+            <summary>
+            The IUpdateVisualState interface is used to provide the
+            InteractionHelper with access to the type's UpdateVisualState method.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.IUpdateVisualState.UpdateVisualState(System.Boolean)">
+            <summary>
+            Update the visual state of the control.
+            </summary>
+            <param name="useTransitions">
+            A value indicating whether to automatically generate transitions to
+            the new state, or instantly transition to the new state.
+            </param>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion.AccordionButtonStyleName">
+            <summary>
+            The name used to indicate AccordionButtonStyle property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion._scheduledActions">
+            <summary>
+            The items that are currently waiting to perform an action.
+            </summary>
+            <remarks>An action can be expanding, resizing or collapsing.</remarks>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion._isAllowedToWriteSelectedItems">
+            <summary>
+            Determines whether the SelectedItemsProperty may be written.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion._isAllowedToWriteSelectedIndices">
+            <summary>
+            Determines whether the SelectedIndicesProperty may be written.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion._isIgnoringSelectedIndicesChanges">
+            <summary>
+            Indicates that changes to the SelectedIndices collection should
+            be ignored.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion._isIgnoringSelectedItemsChanges">
+            <summary>
+            Indicates that changes to the SelectedItems collection should
+            be ignored.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion._isInSelectedItemsCollectionChanged">
+            <summary>
+            Determines whether we are currently in the SelectedItems Collection
+            Changed handling.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion._isInSelectedIndicesCollectionChanged">
+            <summary>
+            Determines whether we are currently in the SelectedIndices Collection
+            Changed handling.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion._currentActioningItem">
+            <summary>
+            The item that is currently visually performing an action.
+            </summary>
+            <remarks>An action can be expanding, resizing or collapsing.</remarks>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion.ExpandDirectionProperty">
+            <summary>
+            Identifies the ExpandDirection dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnExpandDirectionPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            ExpandDirectionProperty property changed handler.
+            </summary>
+            <param name="d">Accordion that changed its ExpandDirection.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion.SelectionModeProperty">
+            <summary>
+            Identifies the SelectionMode dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnSelectionModePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            SelectionModeProperty property changed handler.
+            </summary>
+            <param name="d">Accordion that changed its SelectionMode.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion.SelectedItemProperty">
+            <summary>
+            Identifies the SelectedItem dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnSelectedItemPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            SelectedItemProperty property changed handler.
+            </summary>
+            <param name="d">Accordion that changed its SelectedItem.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.IsValidItemForSelection(System.Object)">
+            <summary>
+            Determines whether the new value can be selected.
+            </summary>
+            <param name="newValue">The new value.</param>
+            <returns>
+            	<c>True</c> if this item can be selected; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion._selectedItemNestedLevel">
+            <summary>
+            Nested level for SelectedItemCoercion.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion.SelectedIndexProperty">
+            <summary>
+            Identifies the SelectedIndex dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnSelectedIndexPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            SelectedIndexProperty property changed handler.
+            </summary>
+            <param name="d">Accordion that changed its SelectedIndex.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.IsValidIndexForSelection(System.Int32)">
+            <summary>
+            Determines whether the new value can be selected.
+            </summary>
+            <param name="newValue">The new value.</param>
+            <returns>
+            	<c>True</c> if this item can be selected; otherwise, <c>false</c>.
+            </returns>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion._selectedIndexNestedLevel">
+            <summary>
+            Coercion level.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion.SelectionSequenceProperty">
+            <summary>
+            Identifies the SelectionSequence dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnSelectionSequencePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            Called when SelectionSequenceProperty changed.
+            </summary>
+            <param name="d">Accordion that changed its SelectionSequence property.</param>
+            <param name="e">The <see cref="T:System.Windows.DependencyPropertyChangedEventArgs"/> 
+            instance containing the event data.</param>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion.SelectedItemsProperty">
+            <summary>
+            Identifies the SelectedItems dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnSelectedItemsChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            Property changed handler of SelectedItems.
+            </summary>
+            <param name="d">Accordion that changed the collection.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion.SelectedIndicesProperty">
+            <summary>
+            Identifies the SelectedIndices dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnSelectedIndicesChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            Property changed handler of SelectedIndices.
+            </summary>
+            <param name="d">Accordion that changed the collection.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion.ItemContainerStyleProperty">
+            <summary>
+            Identifies the ItemContainerStyle dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnItemContainerStylePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            ItemContainerStyleProperty property changed handler.
+            </summary>
+            <param name="d">
+            TreeView that changed its ItemContainerStyle.
+            </param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion.AccordionButtonStyleProperty">
+            <summary>
+            Identifies the AccordionButtonStyle dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnAccordionButtonStylePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            AccordionButtonStyleProperty property changed handler.
+            </summary>
+            <param name="d">Accordion that changed its AccordionButtonStyle.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="F:System.Windows.Controls.Accordion.ContentTemplateProperty">
+            <summary>
+            Identifies the ContentTemplate dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Windows.Controls.Accordion"/> class.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnApplyTemplate">
+            <summary>
+            Builds the visual tree for the Accordion control when a 
+            new template is applied.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnCreateAutomationPeer">
+            <summary>
+            Returns a AccordionAutomationPeer for use by the Silverlight
+            automation infrastructure.
+            </summary>
+            <returns>A AccordionAutomationPeer object for the Accordion.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.GetContainerForItemOverride">
+            <summary>
+            Creates or identifies the element that is used to display the given 
+            item.
+            </summary>
+            <returns>
+            The element that is used to display the given item.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.IsItemItsOwnContainerOverride(System.Object)">
+            <summary>
+            Determines if the specified item is (or is eligible to be) its own 
+            container.
+            </summary>
+            <param name="item">The item to check.</param>
+            <returns>
+            True if the item is (or is eligible to be) its own container; 
+            otherwise, false.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.PrepareContainerForItemOverride(System.Windows.DependencyObject,System.Object)">
+            <summary>
+            Prepares the specified element to display the specified item.
+            </summary>
+            <param name="element">The element used to display the specified item.</param>
+            <param name="item">The item to display.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.ClearContainerForItemOverride(System.Windows.DependencyObject,System.Object)">
+            <summary>
+            Undoes the effects of the <see cref="M:System.Windows.Controls.ItemsControl.PrepareContainerForItemOverride(System.Windows.DependencyObject,System.Object)"/> 
+            method.
+            </summary>
+            <param name="element">The container element.</param>
+            <param name="item">The item that should be cleared.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnItemsChanged(System.Collections.Specialized.NotifyCollectionChangedEventArgs)">
+            <summary>
+            Invoked when the <see cref="P:System.Windows.Controls.ItemsControl.Items"/> 
+            property changes.
+            </summary>
+            <param name="e">Information about the change.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.InitializeNewItemsSource">
+            <summary>
+            Initializes the SelectedItem property when a new ItemsSource is set.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnAccordionItemUnselected(System.Windows.Controls.AccordionItem)">
+            <summary>
+            Called when an AccordionItem is unselected.
+            </summary>
+            <param name="accordionItem">The accordion item that was unselected.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.UnselectItem(System.Int32,System.Object)">
+            <summary>
+            Unselects the item.
+            </summary>
+            <param name="index">The index of the item that will be unselected.</param>
+            <param name="item">The item that will be unselected. Can be null.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnAccordionItemSelected(System.Windows.Controls.AccordionItem)">
+            <summary>
+            Called when an AccordionItem selected.
+            </summary>
+            <param name="accordionItem">The accordion item that was selected.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.SelectItem(System.Int32)">
+            <summary>
+            Selects the item.
+            </summary>
+            <param name="index">The index of the item to select.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.ChangeSelectedIndex(System.Int32,System.Int32)">
+            <summary>
+            Changes the selected item, by unselecting and selecting where 
+            necessary.
+            </summary>
+            <param name="oldIndex">The old index.</param>
+            <param name="newIndex">The new index.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnSelectedItemsCollectionChanged(System.Object,System.Collections.Specialized.NotifyCollectionChangedEventArgs)">
+            <summary>
+            Called when selected items collection changed.
+            </summary>
+            <param name="sender">The sender.</param>
+            <param name="e">The <see cref="T:System.Collections.Specialized.NotifyCollectionChangedEventArgs"/> 
+            instance containing the event data.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnSelectedIndicesCollectionChanged(System.Object,System.Collections.Specialized.NotifyCollectionChangedEventArgs)">
+            <summary>
+            Called when selected indices collection changed.
+            </summary>
+            <param name="sender">The sender.</param>
+            <param name="e">The <see cref="T:System.Collections.Specialized.NotifyCollectionChangedEventArgs"/> 
+            instance containing the event data.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.ProposeSelectedIndexCandidate(System.Int32)">
+            <summary>
+            Gets an item that is suitable for selection.
+            </summary>
+            <param name="nonCandidateIndex">Index that should not be considered if 
+            possible.</param>
+            <returns>An item that should be selected. This could be nonCandidateIndex, 
+            if no other possibility was found.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.SelectAll">
+            <summary>
+            Selects all the AccordionItems in the Accordion control.
+            </summary>
+            <remarks>If the Accordion SelectionMode is OneOrMore or ZeroOrMore all 
+            AccordionItems would be selected. If the Accordion SelectionMode is 
+            One or ZeroOrOne all items would be selected and unselected. Only 
+            the last AccordionItem would remain selected. </remarks>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.UnselectAll">
+            <summary>
+            Unselects all the AccordionItems in the Accordion control.
+            </summary>
+            <remarks>If the Accordion SelectionMode is Zero or ZeroOrMore all 
+            AccordionItems would be Unselected. If SelectionMode is One or  
+            OneOrMode  than all items would be Unselected and selected. Only the 
+            first AccordionItem would still be selected.</remarks>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.UpdateAccordionItemsSelection(System.Boolean)">
+            <summary>
+            Updates all accordionItems to be selected or unselected.
+            </summary>
+            <param name="selectedValue">True to select all items, false to unselect.</param>
+            <remarks>Will not attempt to change a locked accordionItem.</remarks>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.SetLockedProperties">
+            <summary>
+            Sets the locked properties on all the items.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnSelectedItemChanged(System.Windows.Controls.SelectionChangedEventArgs)">
+            <summary>
+            Raises the SelectedItemChanged event when the SelectedItem 
+            property value changes.
+            </summary>
+            <param name="e">The <see cref="T:System.Windows.Controls.SelectionChangedEventArgs"/> 
+            instance containing the event data.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.RaiseOnSelectedItemsCollectionChanged(System.Collections.Specialized.NotifyCollectionChangedEventArgs)">
+            <summary>
+            Raise the SelectedItemsCollectionChanged event.
+            </summary>
+            <param name="e">The <see cref="T:System.Windows.Controls.SelectionChangedEventArgs"/> 
+            instance containing the event data.</param>
+            <remarks>This event is raised after the changes to the collection 
+            have been processed.</remarks>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnAccordionSizeChanged(System.Object,System.Windows.SizeChangedEventArgs)">
+            <summary>
+            Called when the size of the Accordion changes.
+            </summary>
+            <param name="sender">The sender.</param>
+            <param name="e">The <see cref="T:System.Windows.SizeChangedEventArgs"/> 
+            instance containing the event data.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnHeaderSizeChange(System.Windows.Controls.AccordionItem)">
+            <summary>
+            Called when size of a Header on the item changes.
+            </summary>
+            <param name="item">The item whose Header changed.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.ScheduleAction(System.Windows.Controls.AccordionItem,System.Windows.Controls.AccordionAction)">
+            <summary>
+            Allows an AccordionItem to signal the need for a visual action 
+            (resize, collapse, expand).
+            </summary>
+            <param name="item">The AccordionItem that signals for a schedule.</param>
+            <param name="action">The action it is scheduling for.</param>
+            <returns>True if the item is allowed to proceed without scheduling, 
+            false if the item needs to wait for a signal to execute the action.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnActionFinish(System.Windows.Controls.AccordionItem)">
+            <summary>
+            Signals the finish of an action by an item.
+            </summary>
+            <param name="item">The AccordionItem that finishes an action.</param>
+            <remarks>An AccordionItem should always signal a finish, for this call
+            will start the next scheduled action.</remarks>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.StartNextAction">
+            <summary>
+            Starts the next action in the list, in a particular order.
+            </summary>
+            <remarks>An AccordionItem is should always signal that it is 
+            finished with an action.</remarks>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.LayoutChildren">
+            <summary>
+            Determines and sets the height of the accordion items.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.SetPanelOrientation">
+            <summary>
+            Sets the orientation of the panel.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnGotFocus(System.Windows.RoutedEventArgs)">
+            <summary>
+            Provides handling for the GotFocus event.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnLostFocus(System.Windows.RoutedEventArgs)">
+            <summary>
+            Provides handling for the LostFocus event.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnMouseEnter(System.Windows.Input.MouseEventArgs)">
+            <summary>
+            Provides handling for the MouseEnter event.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnMouseLeave(System.Windows.Input.MouseEventArgs)">
+            <summary>
+            Provides handling for the MouseLeave event.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs)">
+            <summary>
+            Provides handling for the MouseLeftButtonDown event.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.OnMouseLeftButtonUp(System.Windows.Input.MouseButtonEventArgs)">
+            <summary>
+            Called before the MouseLeftButtonUp event occurs.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.System#Windows#Controls#IUpdateVisualState#UpdateVisualState(System.Boolean)">
+            <summary>
+            Update the visual state of the control.
+            </summary>
+            <param name="useTransitions">
+            A value indicating whether to automatically generate transitions to
+            the new state, or instantly transition to the new state.
+            </param>
+        </member>
+        <member name="M:System.Windows.Controls.Accordion.UpdateVisualState(System.Boolean)">
+            <summary>
+            Update the current visual state of the button.
+            </summary>
+            <param name="useTransitions">
+            True to use transitions when updating the visual state, false to
+            snap directly to the new visual state.
+            </param>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.ItemsControlHelper">
+            <summary>
+            Gets the ItemsControlHelper that is associated with this control.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.IsResizing">
+            <summary>
+            Gets a value indicating whether this instance is currently resizing.
+            </summary>
+            <value>True if this instance is resizing; otherwise, false.</value>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.Interaction">
+            <summary>
+            Gets or sets the helper that provides all of the standard
+            interaction functionality.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.ExpandDirection">
+            <summary>
+            Gets or sets the ExpandDirection property of each 
+            AccordionItem in the Accordion control and the direction in which
+            the Accordion does layout.
+            </summary>
+            <remarks>Setting the ExpandDirection will set the expand direction 
+            on the accordionItems.</remarks>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.SelectionMode">
+            <summary>
+            Gets or sets the AccordionSelectionMode used to determine the minimum 
+            and maximum selected AccordionItems allowed in the Accordion.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.IsMinimumOneSelected">
+            <summary>
+            Gets a value indicating whether at least one item is selected at 
+            all times.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.IsMaximumOneSelected">
+            <summary>
+            Gets a value indicating whether at most one item is selected at all times.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.SelectedItem">
+            <summary>
+            Gets or sets the selected item.
+            </summary>
+            <remarks>
+            The default value is null.
+            When multiple items are allowed (IsMaximumOneSelected false), 
+            return the first of the selectedItems.
+            </remarks>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.SelectedIndex">
+            <summary>
+            Gets or sets the index of the currently selected AccordionItem.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.SelectionSequence">
+            <summary>
+            Gets or sets the SelectionSequence used to determine 
+            the order of AccordionItem selection.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.SelectedItems">
+            <summary>
+            Gets the selected items.
+            </summary>
+            <remarks>Does not allow setting.</remarks>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.SelectedIndices">
+            <summary>
+            Gets the indices of the currently selected AccordionItems.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.ItemContainerStyle">
+            <summary>
+            Gets or sets the Style that is applied to the container element
+            generated for each item.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.AccordionButtonStyle">
+            <summary>
+            Gets or sets the Style that is applied to AccordionButton elements
+            in the AccordionItems.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.ContentTemplate">
+            <summary>
+            Gets or sets the DataTemplate used to display the content 
+            of each generated AccordionItem. 
+            </summary>
+            <remarks>Either ContentTemplate or ItemTemplate is used. 
+            Setting both will result in an exception.</remarks>
+        </member>
+        <member name="E:System.Windows.Controls.Accordion.SelectionChanged">
+            <summary>
+            Occurs when the SelectedItem or SelectedItems property value changes.
+            </summary>
+        </member>
+        <member name="E:System.Windows.Controls.Accordion.SelectedItemsChanged">
+            <summary>
+            Occurs when the SelectedItems collection changes.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.IsShouldFillWidth">
+            <summary>
+            Gets a value indicating whether the accordion fills width.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Accordion.IsShouldFillHeight">
+            <summary>
+            Gets a value indicating whether the accordion fills height.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.AccordionAction">
+            <summary>
+            Determines the action the AccordionItem will perform.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionAction.None">
+            <summary>
+            No action will be performed.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionAction.Collapse">
+            <summary>
+            A collapse will be performed.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionAction.Expand">
+            <summary>
+            An expand will be performed.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionAction.Resize">
+            <summary>
+            A resize will be performed.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Automation.Peers.AccordionAutomationPeer">
+            <summary>
+            Exposes Accordion types to UI Automation.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionAutomationPeer.#ctor(System.Windows.Controls.Accordion)">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Windows.Automation.Peers.AccordionAutomationPeer"/> class.
+            </summary>
+            <param name="owner">The Accordion that is associated with this
+            AccordionAutomationPeer.</param>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionAutomationPeer.GetClassNameCore">
+            <summary>
+            Gets the name of the Accordion that is associated with this
+            AccordionAutomationPeer.  This method is called by GetClassName.
+            </summary>
+            <returns>The name Accordion.</returns>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionAutomationPeer.GetAutomationControlTypeCore">
+            <summary>
+            Gets the control type for the Accordion that is associated
+            with this AccordionAutomationPeer.  This method is called by
+            GetAutomationControlType.
+            </summary>
+            <returns>List AutomationControlType.</returns>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionAutomationPeer.GetPattern(System.Windows.Automation.Peers.PatternInterface)">
+            <summary>
+            Gets the control pattern for the Accordion that is associated
+            with this AccordionAutomationPeer.
+            </summary>
+            <param name="patternInterface">The desired PatternInterface.</param>
+            <returns>The desired AutomationPeer or null.</returns>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionAutomationPeer.GetChildrenCore">
+            <summary>
+            Gets the collection of child elements of 
+            the <see cref="T:System.Windows.Controls.ItemsControl"/> that is 
+            associated with this <see cref="T:System.Windows.Automation.Peers.ItemsControlAutomationPeer"/>.
+            </summary>
+            <returns>
+            A collection of AccordionItemAutomationPeer elements, or null if the
+            Accordion that is associated with this AccordionAutomationPeer is
+            empty.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionAutomationPeer.GetSelection">
+            <summary>
+            Retrieves a UI Automation provider for each child element that is 
+            selected.
+            </summary>
+            <returns>An array of UI Automation providers.</returns>
+            <remarks>
+            This API supports the .NET Framework infrastructure and is not 
+            intended to be used directly from your code.
+            </remarks>
+        </member>
+        <member name="P:System.Windows.Automation.Peers.AccordionAutomationPeer.OwnerAccordion">
+            <summary>
+            Gets the Accordion that owns this AccordionAutomationPeer.
+            </summary>
+            <value>The accordion.</value>
+        </member>
+        <member name="P:System.Windows.Automation.Peers.AccordionAutomationPeer.CanSelectMultiple">
+            <summary>
+            Gets a value indicating whether the UI Automation provider 
+            allows more than one child element to be selected concurrently.
+            </summary>
+            <returns>true if multiple selection is allowed; otherwise, false.
+            </returns>
+            <remarks>
+            This API supports the .NET Framework infrastructure and is not 
+            intended to be used directly from your code.
+            </remarks>
+        </member>
+        <member name="P:System.Windows.Automation.Peers.AccordionAutomationPeer.IsSelectionRequired">
+            <summary>
+            Gets a value indicating whether the UI Automation provider 
+            requires at least one child element to be selected.
+            </summary>
+            <returns>true if selection is required; otherwise, false.
+            </returns>
+            <remarks>
+            This API supports the .NET Framework infrastructure and is not 
+            intended to be used directly from your code.
+            </remarks>
+        </member>
+        <member name="T:System.Windows.Controls.AccordionItem">
+            <summary>
+            Represents a control that displays a header and has a collapsible 
+            content window.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem.ElementExpanderButtonName">
+            <summary>
+            The name of the ExpanderButton template part.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem.ElementExpandSiteName">
+            <summary>
+            The name of the ExpandSite template part.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem._expanderButton">
+            <summary>
+            The ExpanderButton template part is a templated ToggleButton that's 
+            used to select and unselect this AccordionItem.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem._expandSite">
+            <summary>
+            BackingField for the ExpandSite property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem._collapseStoryboard">
+            <summary>
+            BackingField for CollapseStoryboard.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem._expandStoryboard">
+            <summary>
+            BackingField for ExpandStoryboard.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem._isBusyWithAction">
+            <summary>
+            Indicates that the control is currently executing an action.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem._allowedToWriteExpandDirection">
+            <summary>
+            Determines whether the ExpandDirection property may be written.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem.ExpandDirectionProperty">
+            <summary>
+            Identifies the ExpandDirection dependency property. 
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnExpandDirectionPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            ExpandDirectionProperty PropertyChangedCallback call back static 
+            function.
+            This function validates the new value before calling virtual function 
+            OnExpandDirectionChanged.
+            </summary>
+            <param name="d">Expander object whose ExpandDirection property is 
+            changed.</param>
+            <param name="e">DependencyPropertyChangedEventArgs which contains 
+            the old and new values.</param>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem.IsSelectedProperty">
+            <summary>
+            Identifies the IsSelected dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnIsSelectedPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            SelectedProperty PropertyChangedCallback static function.
+            </summary>
+            <param name="d">Expander object whose Expanded property is changed.</param>
+            <param name="e">DependencyPropertyChangedEventArgs which contains the 
+            old and new values.</param>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem._isSelectedNestedLevel">
+            <summary>
+            Nested level for IsSelectedCoercion.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem._isLocked">
+            <summary>
+            BackingField for IsLocked.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem.AccordionButtonStyleProperty">
+            <summary>
+            Identifies the AccordionButtonStyle dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnAccordionButtonStylePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            AccordionButtonStyleProperty property changed handler.
+            </summary>
+            <param name="d">AccordionItem that changed its AccordionButtonStyle.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnAccordionButtonStyleChanged(System.Windows.Style,System.Windows.Style)">
+            <summary>
+            Called when AccordionButtonStyle is changed.
+            </summary>
+            <param name="oldStyle">The old style.</param>
+            <param name="newStyle">The new style.</param>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem.ExpandableContentControlStyleProperty">
+            <summary>
+            Identifies the ExpandableContentControlStyle dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnExpandableContentControlStylePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            ExpandableContentControlStyleProperty property changed handler.
+            </summary>
+            <param name="d">AccordionItem that changed its ExpandableContentControlStyle.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnExpandableContentControlStyleChanged(System.Windows.Style,System.Windows.Style)">
+            <summary>
+            Called when ExpandableContentControlStyle is changed.
+            </summary>
+            <param name="oldStyle">The old style.</param>
+            <param name="newStyle">The new style.</param>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem._allowedToWriteContentTargetSize">
+            <summary>
+            Determines whether it is allowed to set the ContentTargetSize
+            property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem.ContentTargetSizeProperty">
+            <summary>
+            Identifies the ContentTargetSize dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnContentTargetSizePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            ContentTargetSizeProperty property changed handler.
+            </summary>
+            <param name="d">AccordionItem that changed its ContentTargetSize.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.#ctor">
+            <summary>
+            Initializes a new instance of the AccordionItem class.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnHeaderSizeChanged(System.Object,System.Windows.SizeChangedEventArgs)">
+            <summary>
+            Called when the size of the control changes.
+            </summary>
+            <param name="sender">The sender.</param>
+            <param name="e">The <see cref="T:System.Windows.SizeChangedEventArgs"/> 
+            instance containing the event data.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.Schedule(System.Windows.Controls.AccordionAction)">
+            <summary>
+            Schedules the specified action.
+            </summary>
+            <param name="action">The action to be performed.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.StartAction">
+            <summary>
+            Starts an action, such as resize, collapse or expand.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnStoryboardFinished(System.Object,System.EventArgs)">
+            <summary>
+            Called when a storyboard finishes.
+            </summary>
+            <param name="sender">The AccordionItem that finished a storyboard.</param>
+            <param name="e">The <see cref="T:System.EventArgs"/> instance containing 
+            the event data.</param>
+            <remarks>AccordionItem is required to make this call.</remarks>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnExpandSiteContentSizeChanged(System.Object,System.Windows.SizeChangedEventArgs)">
+            <summary>
+            Called when the content changes size.
+            </summary>
+            <param name="sender">The sender.</param>
+            <param name="e">The <see cref="T:System.Windows.SizeChangedEventArgs"/> 
+            instance containing the event data.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnApplyTemplate">
+            <summary>
+            Builds the visual tree for the AccordionItem control when a new 
+            template is applied.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnCreateAutomationPeer">
+            <summary>
+            Returns a AccordionItemAutomationPeer for use by the Silverlight
+            automation infrastructure.
+            </summary>
+            <returns>A AccordionItemAutomationPeer object for the AccordionItem.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.PreparePrepareHeaderedContentControlContainerForItemOverride(System.Windows.Controls.HeaderedContentControl,System.Object,System.Windows.Controls.ItemsControl,System.Windows.Style)">
+            <summary>
+            Prepares the specified container to display the specified item.
+            </summary>
+            <param name="element">
+            Container element used to display the specified item.
+            </param>
+            <param name="item">Specified item to display.</param>
+            <param name="parent">The parent ItemsControl.</param>
+            <param name="parentItemContainerStyle">
+            The ItemContainerStyle for the parent ItemsControl.
+            </param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.HasDefaultValue(System.Windows.Controls.Control,System.Windows.DependencyProperty)">
+            <summary>
+            Check whether a control has the default value for a property.
+            </summary>
+            <param name="control">The control to check.</param>
+            <param name="property">The property to check.</param>
+            <returns>
+            True if the property has the default value; false otherwise.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnKeyDown(System.Windows.Input.KeyEventArgs)">
+            <summary>
+            Provides handling for the KeyDown event.
+            </summary>
+            <param name="e">Key event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnSelected">
+            <summary>
+            Raises the Selected event when the IsSelected property changes 
+            from false to true.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnUnselected">
+            <summary>
+            Raises the Unselected event when the IsSelected property changes 
+            from true to false.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.ToggleSelected(System.Windows.RoutedEventHandler,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handle changes to the IsSelected property.
+            </summary>
+            <param name="handler">Event handler.</param>
+            <param name="args">Event arguments.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.RaiseEvent(System.Windows.RoutedEventHandler,System.Windows.RoutedEventArgs)">
+            <summary>
+            Raise a RoutedEvent.
+            </summary>
+            <param name="handler">Event handler.</param>
+            <param name="args">Event arguments.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnExpanderButtonClicked(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handle ExpanderButton's click event.
+            </summary>
+            <param name="sender">The ExpanderButton in template.</param>
+            <param name="e">Routed event arg.</param>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionItem._interaction">
+            <summary>
+            Gets or sets the helper that provides all of the standard
+            interaction functionality.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnGotFocus(System.Windows.RoutedEventArgs)">
+            <summary>
+            Provides handling for the GotFocus event.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnLostFocus(System.Windows.RoutedEventArgs)">
+            <summary>
+            Provides handling for the LostFocus event.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnMouseEnter(System.Windows.Input.MouseEventArgs)">
+            <summary>
+            Provides handling for the MouseEnter event.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnMouseLeave(System.Windows.Input.MouseEventArgs)">
+            <summary>
+            Provides handling for the MouseLeave event.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs)">
+            <summary>
+            Provides handling for the MouseLeftButtonDown event.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.OnMouseLeftButtonUp(System.Windows.Input.MouseButtonEventArgs)">
+            <summary>
+            Called before the MouseLeftButtonUp event occurs.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.System#Windows#Controls#IUpdateVisualState#UpdateVisualState(System.Boolean)">
+            <summary>
+            Update the visual state of the control.
+            </summary>
+            <param name="useTransitions">
+            A value indicating whether to automatically generate transitions to
+            the new state, or instantly transition to the new state.
+            </param>
+        </member>
+        <member name="M:System.Windows.Controls.AccordionItem.UpdateVisualState(System.Boolean)">
+            <summary>
+            Update the current visual state of the button.
+            </summary>
+            <param name="useTransitions">
+            True to use transitions when updating the visual state, false to
+            snap directly to the new visual state.
+            </param>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.ExpanderButton">
+            <summary>
+            Gets or sets the ExpanderButton template part.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.ExpandSite">
+            <summary>
+            Gets or sets the expand site template part.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.CollapseStoryboard">
+            <summary>
+            Gets or sets the collapse storyboard.
+            </summary>
+            <value>The collapse storyboard.</value>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.ExpandStoryboard">
+            <summary>
+            Gets or sets the expand storyboard.
+            </summary>
+            <value>The expand storyboard.</value>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.ExpandDirection">
+            <summary>
+            Gets the direction in which the AccordionItem content window opens.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.IsSelected">
+            <summary>
+            Gets or sets a value indicating whether the AccordionItem is 
+            selected and its content window is visible.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.IsLocked">
+            <summary>
+            Gets a value indicating whether the AccordionItem cannot be 
+            selected by the user.
+            </summary>
+            <value><c>True</c> if this instance is locked; otherwise, <c>false</c>.</value>
+            <remarks>The IsSelected property may not be changed when the 
+            AccordionItem is locked. Locking occurs when the item is the first 
+            in the list, the SelectionMode of Accordion requires atleast one selected
+            AccordionItem and the AccordionItem is currently selected.</remarks>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.AccordionButtonStyle">
+            <summary>
+            Gets or sets the Style used by AccordionButton.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.ExpandableContentControlStyle">
+            <summary>
+            Gets or sets the Style used by ExpandableContentControl.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.ContentTargetSize">
+            <summary>
+            Gets the Size that the content will animate to.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.ParentAccordion">
+            <summary>
+            Gets or sets a reference to the parent Accordion of an
+            AccordionItem.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.ScheduledAction">
+            <summary>
+            Gets the scheduled action.
+            </summary>
+            <value>The scheduled action.</value>
+        </member>
+        <member name="E:System.Windows.Controls.AccordionItem.Selected">
+            <summary>
+            Occurs when the accordionItem is selected.
+            </summary>
+        </member>
+        <member name="E:System.Windows.Controls.AccordionItem.Unselected">
+            <summary>
+            Occurs when the accordionItem is unselected.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.RelevantContentSize">
+            <summary>
+            Gets the relevant size of the current content.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.ShouldFillWidth">
+            <summary>
+            Gets a value indicating whether the AccordionItem fills width.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.AccordionItem.ShouldFillHeight">
+            <summary>
+            Gets a value indicating whether the AccordionItem fills height.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Automation.Peers.AccordionItemAutomationPeer">
+            <summary>
+            Exposes AccordionItem types to UI Automation.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionItemAutomationPeer.#ctor(System.Windows.Controls.AccordionItem)">
+            <summary>
+            Initializes a new instance of the AccordionAutomationPeer class.
+            </summary>
+            <param name="owner">
+            The Accordion that is associated with this
+            AccordionAutomationPeer.
+            </param>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionItemAutomationPeer.GetAutomationControlTypeCore">
+            <summary>
+            Gets the control type for the AccordionItem that is associated
+            with this AccordionItemAutomationPeer.  This method is called by
+            GetAutomationControlType.
+            </summary>
+            <returns>Custom AutomationControlType.</returns>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionItemAutomationPeer.GetClassNameCore">
+            <summary>
+            Gets the name of the AccordionItem that is associated with this
+            AccordionItemAutomationPeer.  This method is called by GetClassName.
+            </summary>
+            <returns>The name AccordionItem.</returns>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionItemAutomationPeer.GetPattern(System.Windows.Automation.Peers.PatternInterface)">
+            <summary>
+            Gets the control pattern for the AccordionItem that is associated
+            with this AccordionItemAutomationPeer.
+            </summary>
+            <param name="patternInterface">The desired PatternInterface.</param>
+            <returns>The desired AutomationPeer or null.</returns>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionItemAutomationPeer.System#Windows#Automation#Provider#IExpandCollapseProvider#Collapse">
+            <summary>
+            Collapses the AccordionItem.
+            </summary>
+            <remarks>
+            This API supports the .NET Framework infrastructure and is not 
+            intended to be used directly from your code.
+            </remarks>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionItemAutomationPeer.System#Windows#Automation#Provider#IExpandCollapseProvider#Expand">
+            <summary>
+            Expands the AccordionItem.
+            </summary>
+            <remarks>
+            This API supports the .NET Framework infrastructure and is not 
+            intended to be used directly from your code.
+            </remarks>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionItemAutomationPeer.System#Windows#Automation#Provider#ISelectionItemProvider#AddToSelection">
+            <summary>
+            Adds the AccordionItem to the collection of selected items.
+            </summary>
+            <remarks>
+            This API supports the .NET Framework infrastructure and is not 
+            intended to be used directly from your code.
+            </remarks>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionItemAutomationPeer.System#Windows#Automation#Provider#ISelectionItemProvider#RemoveFromSelection">
+            <summary>
+            Removes the current Accordion from the collection of selected
+            items.
+            </summary>
+            <remarks>
+            This API supports the .NET Framework infrastructure and is not 
+            intended to be used directly from your code.
+            </remarks>
+        </member>
+        <member name="M:System.Windows.Automation.Peers.AccordionItemAutomationPeer.System#Windows#Automation#Provider#ISelectionItemProvider#Select">
+            <summary>
+            Clears selection from currently selected items and then proceeds to
+            select the current Accordion.
+            </summary>
+            <remarks>
+            This API supports the .NET Framework infrastructure and is not 
+            intended to be used directly from your code.
+            </remarks>
+        </member>
+        <member name="P:System.Windows.Automation.Peers.AccordionItemAutomationPeer.OwnerAccordionItem">
+            <summary>
+            Gets the AccordionItem that owns this AccordionItemAutomationPeer.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Automation.Peers.AccordionItemAutomationPeer.System#Windows#Automation#Provider#IExpandCollapseProvider#ExpandCollapseState">
+            <summary>
+            Gets the state (expanded or collapsed) of the Accordion.
+            </summary>
+            <remarks>
+            This API supports the .NET Framework infrastructure and is not 
+            intended to be used directly from your code.
+            </remarks>
+        </member>
+        <member name="P:System.Windows.Automation.Peers.AccordionItemAutomationPeer.System#Windows#Automation#Provider#ISelectionItemProvider#IsSelected">
+            <summary>
+            Gets a value indicating whether the Accordion is selected.
+            </summary>
+            <remarks>
+            This API supports the .NET Framework infrastructure and is not 
+            intended to be used directly from your code.
+            </remarks>
+        </member>
+        <member name="P:System.Windows.Automation.Peers.AccordionItemAutomationPeer.System#Windows#Automation#Provider#ISelectionItemProvider#SelectionContainer">
+            <summary>
+            Gets the UI Automation provider that implements ISelectionProvider
+            and acts as the container for the calling object.
+            </summary>
+            <remarks>
+            This API supports the .NET Framework infrastructure and is not 
+            intended to be used directly from your code.
+            </remarks>
+        </member>
+        <member name="T:System.Windows.Controls.Primitives.AccordionButton">
+            <summary>
+            Represents the header for an accordion item.
+            </summary>
+            <remarks>By creating a seperate control, there is more flexibility in 
+            the templating possibilities.</remarks>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.AccordionButton.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Windows.Controls.Primitives.AccordionButton"/> 
+            class.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.AccordionButton.UpdateVisualState(System.Boolean)">
+            <summary>
+            Updates the state of the visual.
+            </summary>
+            <param name="useTransitions">If set to <c>true</c> use transitions.</param>
+            <remarks>The header will follow the parent accordionitem states.</remarks>
+        </member>
+        <member name="P:System.Windows.Controls.Primitives.AccordionButton.ParentAccordionItem">
+            <summary>
+            Gets or sets a reference to the parent AccordionItem 
+            of an AccordionButton.
+            </summary>
+            <value>The parent accordion item.</value>
+        </member>
+        <member name="T:System.Windows.Controls.Primitives.ExpandableContentControl">
+            <summary>
+            Represents a control with a single piece of content that expands or 
+            collapses in a sliding motion to a specified desired size.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.Primitives.ExpandableContentControl.ElementContentSiteName">
+            <summary>
+            The name of the ContentSite template part.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Primitives.ExpandableContentControl._clippingRectangle">
+            <summary>
+            The Geometry used to clip this control. The control will potentially
+            have less available space than the content it is arranging. That
+            part will be clipped.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Primitives.ExpandableContentControl._contentSite">
+            <summary>
+            BackingField for the ContentSite property.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Primitives.ExpandableContentControl.RevealModeProperty">
+            <summary>
+            Identifies the RevealMode dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.OnRevealModePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            RevealModeProperty property changed handler.
+            </summary>
+            <param name="d">ExpandableContentControl that changed its RevealMode.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="F:System.Windows.Controls.Primitives.ExpandableContentControl.PercentageProperty">
+            <summary>
+            Identifies the Percentage dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.OnPercentagePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            PercentageProperty property changed handler.
+            </summary>
+            <param name="d">Page that changed its Percentage.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="F:System.Windows.Controls.Primitives.ExpandableContentControl.TargetSizeProperty">
+            <summary>
+            Identifies the TargetSize dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.OnTargetSizePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            TargetSizeProperty property changed handler.
+            </summary>
+            <param name="d">ExpandableContentControl that changed its TargetSize.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.MeasureOverride(System.Windows.Size)">
+            <summary>
+            Does a measure pass of the control and its content. The content will
+            get measured according to the TargetSize and is clipped.
+            </summary>
+            <param name="availableSize">The available size that this object can 
+            give to child objects. Infinity can be specified as a value to 
+            indicate that the object will size to whatever content is available.</param>
+            <returns>
+            The size that this object determines it needs during layout, based 
+            on its calculations of child object allotted sizes.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.MeasureContent(System.Windows.Size)">
+            <summary>
+            Measures the content with a specific size.
+            </summary>
+            <param name="desiredSize">The size passed to the content.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.CalculateDesiredContentSize">
+            <summary>
+            Interprets TargetSize.
+            </summary>
+            <returns>A size that can be safely used to measure content.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.ArrangeOverride(System.Windows.Size)">
+            <summary>
+            Arranges the control and its content. Content is arranged according
+            to the TargetSize and clipped.
+            </summary>
+            <param name="finalSize">The final area within the parent that this 
+            object should use to arrange itself and its children.</param>
+            <returns>The actual size used.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.UpdateClip(System.Windows.Size)">
+            <summary>
+            Updates the clip geometry.
+            </summary>
+            <param name="arrangeSize">Size of the visible part of the control.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.RecalculatePercentage(System.Windows.Size)">
+            <summary>
+            Recalculates the percentage based on a new size.
+            </summary>
+            <param name="value">The new size used to base percentages on.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.SetRevealDimension">
+            <summary>
+            Sets the dimensions according to the current percentage.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.SetNonRevealDimension">
+            <summary>
+            Sets the opposite dimension.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Windows.Controls.Primitives.ExpandableContentControl"/> class.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.OnApplyTemplate">
+            <summary>
+            Builds the visual tree for the ExpandableContentControl control when a 
+            new template is applied.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Primitives.ExpandableContentControl.OnContentSiteSizeChanged(System.Object,System.Windows.SizeChangedEventArgs)">
+            <summary>
+            Raises the ContentSizeChanged event.
+            </summary>
+            <param name="sender">The sender.</param>
+            <param name="e">The <see cref="T:System.Windows.SizeChangedEventArgs"/> 
+            instance containing the event data.</param>
+        </member>
+        <member name="P:System.Windows.Controls.Primitives.ExpandableContentControl.ContentSite">
+            <summary>
+            Gets or sets the ContentSite template part.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Primitives.ExpandableContentControl.RevealMode">
+            <summary>
+            Gets or sets the direction in which the ExpandableContentControl 
+            content window opens.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Primitives.ExpandableContentControl.IsVerticalRevealMode">
+            <summary>
+            Gets a value indicating whether the content should be revealed vertically.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Primitives.ExpandableContentControl.IsHorizontalRevealMode">
+            <summary>
+            Gets a value indicating whether the content should be revealed horizontally.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Primitives.ExpandableContentControl.Percentage">
+            <summary>
+            Gets or sets the relative percentage of the content that is 
+            currently visible. A percentage of 1 corresponds to the complete
+            TargetSize.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Primitives.ExpandableContentControl.TargetSize">
+            <summary>
+            Gets or sets the desired size of the ExpandableContentControl content.
+            </summary>
+            <remarks>Use the percentage property to animate to this size.</remarks>
+        </member>
+        <member name="E:System.Windows.Controls.Primitives.ExpandableContentControl.ContentSizeChanged">
+            <summary>
+            Occurs when the content changed its size.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Primitives.ExpandableContentControl.RelevantContentSize">
+            <summary>
+            Gets the content current visible size.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.AccordionSelectionMode">
+            <summary>
+            Defines the minimum and maximum number of selected items allowed in an Accordion control.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionSelectionMode.One">
+            <summary>
+            Exactly one item must be selected in the Accordion.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionSelectionMode.OneOrMore">
+            <summary>
+            At least one item must be selected in the Accordion. 
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionSelectionMode.ZeroOrOne">
+            <summary>
+            No more than one item can be selected in the accordion.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.AccordionSelectionMode.ZeroOrMore">
+            <summary>
+            Any number of  items can be selected in the Accordion. 
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.SelectionSequence">
+            <summary>
+            Determines the order in which visual states are set.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.SelectionSequence.CollapseBeforeExpand">
+            <summary>
+            Collapses are set before expansions.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.SelectionSequence.Simultaneous">
+            <summary>
+            No delays, all states are set immediately.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.DesignerProperties">
+            <summary>
+            Provides a custom implementation of DesignerProperties.GetIsInDesignMode
+            to work around an issue.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.DesignerProperties.GetIsInDesignMode(System.Windows.DependencyObject)">
+            <summary>
+            Returns whether the control is in design mode (running under Blend
+            or Visual Studio).
+            </summary>
+            <param name="element">The element from which the property value is
+            read.</param>
+            <returns>True if in design mode.</returns>
+        </member>
+        <member name="F:System.Windows.Controls.DesignerProperties._isInDesignMode">
+            <summary>
+            Stores the computed InDesignMode value.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.InteractionHelper">
+            <summary>
+            The InteractionHelper provides controls with support for all of the
+            common interactions like mouse movement, mouse clicks, key presses,
+            etc., and also incorporates proper event semantics when the control is
+            disabled.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.InteractionHelper.SequentialClickThresholdInMilliseconds">
+            <summary>
+            The threshold used to determine whether two clicks are temporally
+            local and considered a double click (or triple, quadruple, etc.).
+            500 milliseconds is the default double click value on Windows.
+            This value would ideally be pulled form the system settings.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.InteractionHelper.SequentialClickThresholdInPixelsSquared">
+            <summary>
+            The threshold used to determine whether two clicks are spatially
+            local and considered a double click (or triple, quadruple, etc.)
+            in pixels squared.  We use pixels squared so that we can compare to
+            the distance delta without taking a square root.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.InteractionHelper._updateVisualState">
+            <summary>
+            Reference used to call UpdateVisualState on the base class.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.#ctor(System.Windows.Controls.Control)">
+            <summary>
+            Initializes a new instance of the InteractionHelper class.
+            </summary>
+            <param name="control">Control receiving interaction.</param>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.UpdateVisualState(System.Boolean)">
+            <summary>
+            Update the visual state of the control.
+            </summary>
+            <param name="useTransitions">
+            A value indicating whether to automatically generate transitions to
+            the new state, or instantly transition to the new state.
+            </param>
+            <remarks>
+            UpdateVisualState works differently than the rest of the injected
+            functionality.  Most of the other events are overridden by the
+            calling class which calls Allow, does what it wants, and then calls
+            Base.  UpdateVisualState is the opposite because a number of the
+            methods in InteractionHelper need to trigger it in the calling
+            class.  We do this using the IUpdateVisualState internal interface.
+            </remarks>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.UpdateVisualStateBase(System.Boolean)">
+            <summary>
+            Update the visual state of the control.
+            </summary>
+            <param name="useTransitions">
+            A value indicating whether to automatically generate transitions to
+            the new state, or instantly transition to the new state.
+            </param>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.OnLoaded(System.Object,System.Windows.RoutedEventArgs)">
+            <summary>
+            Handle the control's Loaded event.
+            </summary>
+            <param name="sender">The control.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.OnIsEnabledChanged(System.Object,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            Handle changes to the control's IsEnabled property.
+            </summary>
+            <param name="sender">The control.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.OnIsReadOnlyChanged(System.Boolean)">
+            <summary>
+            Handles changes to the control's IsReadOnly property.
+            </summary>
+            <param name="value">The value of the property.</param>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.OnApplyTemplateBase">
+            <summary>
+            Update the visual state of the control when its template is changed.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.AllowGotFocus(System.Windows.RoutedEventArgs)">
+            <summary>
+            Check if the control's GotFocus event should be handled.
+            </summary>
+            <param name="e">Event arguments.</param>
+            <returns>
+            A value indicating whether the event should be handled.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.OnGotFocusBase">
+            <summary>
+            Base implementation of the virtual GotFocus event handler.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.AllowLostFocus(System.Windows.RoutedEventArgs)">
+            <summary>
+            Check if the control's LostFocus event should be handled.
+            </summary>
+            <param name="e">Event arguments.</param>
+            <returns>
+            A value indicating whether the event should be handled.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.OnLostFocusBase">
+            <summary>
+            Base implementation of the virtual LostFocus event handler.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.AllowMouseEnter(System.Windows.Input.MouseEventArgs)">
+            <summary>
+            Check if the control's MouseEnter event should be handled.
+            </summary>
+            <param name="e">Event arguments.</param>
+            <returns>
+            A value indicating whether the event should be handled.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.OnMouseEnterBase">
+            <summary>
+            Base implementation of the virtual MouseEnter event handler.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.AllowMouseLeave(System.Windows.Input.MouseEventArgs)">
+            <summary>
+            Check if the control's MouseLeave event should be handled.
+            </summary>
+            <param name="e">Event arguments.</param>
+            <returns>
+            A value indicating whether the event should be handled.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.OnMouseLeaveBase">
+            <summary>
+            Base implementation of the virtual MouseLeave event handler.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.AllowMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs)">
+            <summary>
+            Check if the control's MouseLeftButtonDown event should be handled.
+            </summary>
+            <param name="e">Event arguments.</param>
+            <returns>
+            A value indicating whether the event should be handled.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.OnMouseLeftButtonDownBase">
+            <summary>
+            Base implementation of the virtual MouseLeftButtonDown event
+            handler.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.AllowMouseLeftButtonUp(System.Windows.Input.MouseButtonEventArgs)">
+            <summary>
+            Check if the control's MouseLeftButtonUp event should be handled.
+            </summary>
+            <param name="e">Event arguments.</param>
+            <returns>
+            A value indicating whether the event should be handled.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.OnMouseLeftButtonUpBase">
+            <summary>
+            Base implementation of the virtual MouseLeftButtonUp event handler.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.AllowKeyDown(System.Windows.Input.KeyEventArgs)">
+            <summary>
+            Check if the control's KeyDown event should be handled.
+            </summary>
+            <param name="e">Event arguments.</param>
+            <returns>
+            A value indicating whether the event should be handled.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.AllowKeyUp(System.Windows.Input.KeyEventArgs)">
+            <summary>
+            Check if the control's KeyUp event should be handled.
+            </summary>
+            <param name="e">Event arguments.</param>
+            <returns>
+            A value indicating whether the event should be handled.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.InteractionHelper.GetLogicalKey(System.Windows.FlowDirection,System.Windows.Input.Key)">
+            <summary>
+            Translates keys for proper RightToLeft mode support.
+            </summary>
+            <param name="flowDirection">Control's flow direction mode.</param>
+            <param name="originalKey">Original key.</param>
+            <returns>
+            A translated key code, indicating how the original key should be interpreted.
+            </returns>
+        </member>
+        <member name="P:System.Windows.Controls.InteractionHelper.Control">
+            <summary>
+            Gets the control the InteractionHelper is targeting.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.InteractionHelper.IsFocused">
+            <summary>
+            Gets a value indicating whether the control has focus.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.InteractionHelper.IsMouseOver">
+            <summary>
+            Gets a value indicating whether the mouse is over the control.
+            </summary> 
+        </member>
+        <member name="P:System.Windows.Controls.InteractionHelper.IsReadOnly">
+            <summary>
+            Gets a value indicating whether the read-only property is set.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.InteractionHelper.IsPressed">
+            <summary>
+            Gets a value indicating whether the mouse button is pressed down
+            over the control.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.InteractionHelper.LastClickTime">
+            <summary>
+            Gets or sets the last time the control was clicked.
+            </summary>
+            <remarks>
+            The value is stored as Utc time because it is slightly more
+            performant than converting to local time.
+            </remarks>
+        </member>
+        <member name="P:System.Windows.Controls.InteractionHelper.LastClickPosition">
+            <summary>
+            Gets or sets the mouse position of the last click.
+            </summary>
+            <remarks>The value is relative to the control.</remarks>
+        </member>
+        <member name="P:System.Windows.Controls.InteractionHelper.ClickCount">
+            <summary>
+            Gets the number of times the control was clicked.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.ItemsControlHelper">
+            <summary>
+            The ItemContainerGenerator provides useful utilities for ItemsControls.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.ItemsControlHelper._itemsHost">
+            <summary>
+            A Panel that is used as the ItemsHost of the ItemsControl.  This
+            property will only be valid when the ItemsControl is live in the
+            tree and has generated containers for some of its items.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.ItemsControlHelper._scrollHost">
+            <summary>
+            A ScrollViewer that is used to scroll the items in the ItemsHost.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.ItemsControlHelper.#ctor(System.Windows.Controls.ItemsControl)">
+            <summary>
+            Initializes a new instance of the ItemContainerGenerator.
+            </summary>
+            <param name="control">
+            The ItemsControl being tracked by the ItemContainerGenerator.
+            </param>
+        </member>
+        <member name="M:System.Windows.Controls.ItemsControlHelper.OnApplyTemplate">
+            <summary>
+            Apply a control template to the ItemsControl.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.ItemsControlHelper.PrepareContainerForItemOverride(System.Windows.DependencyObject,System.Windows.Style)">
+            <summary>
+            Prepares the specified container to display the specified item.
+            </summary>
+            <param name="element">
+            Container element used to display the specified item.
+            </param>
+            <param name="parentItemContainerStyle">
+            The ItemContainerStyle for the parent ItemsControl.
+            </param>
+        </member>
+        <member name="M:System.Windows.Controls.ItemsControlHelper.UpdateItemContainerStyle(System.Windows.Style)">
+            <summary>
+            Update the style of any generated items when the ItemContainerStyle
+            has been changed.
+            </summary>
+            <param name="itemContainerStyle">The ItemContainerStyle.</param>
+            <remarks>
+            Silverlight does not support setting a Style multiple times, so we
+            only attempt to set styles on elements whose style hasn't already
+            been set.
+            </remarks>
+        </member>
+        <member name="M:System.Windows.Controls.ItemsControlHelper.ScrollIntoView(System.Windows.FrameworkElement)">
+            <summary>
+            Scroll the desired element into the ScrollHost's viewport.
+            </summary>
+            <param name="element">Element to scroll into view.</param>
+        </member>
+        <member name="P:System.Windows.Controls.ItemsControlHelper.ItemsControl">
+            <summary>
+            Gets or sets the ItemsControl being tracked by the
+            ItemContainerGenerator.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.ItemsControlHelper.ItemsHost">
+            <summary>
+            Gets a Panel that is used as the ItemsHost of the ItemsControl.
+            This property will only be valid when the ItemsControl is live in
+            the tree and has generated containers for some of its items.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.ItemsControlHelper.ScrollHost">
+            <summary>
+            Gets a ScrollViewer that is used to scroll the items in the
+            ItemsHost.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.VisualStates">
+            <summary>
+            Names and helpers for visual states in the controls.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupCommon">
+            <summary>
+            Common state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateNormal">
+            <summary>
+            Normal state of the Common state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateReadOnly">
+            <summary>
+            Normal state of the Common state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateMouseOver">
+            <summary>
+            MouseOver state of the Common state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StatePressed">
+            <summary>
+            Pressed state of the Common state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateDisabled">
+            <summary>
+            Disabled state of the Common state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupFocus">
+            <summary>
+            Focus state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateUnfocused">
+            <summary>
+            Unfocused state of the Focus state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateFocused">
+            <summary>
+            Focused state of the Focus state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupSelection">
+            <summary>
+            Selection state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateSelected">
+            <summary>
+            Selected state of the Selection state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateUnselected">
+            <summary>
+            Unselected state of the Selection state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateSelectedInactive">
+            <summary>
+            Selected inactive state of the Selection state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupExpansion">
+            <summary>
+            Expansion state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateExpanded">
+            <summary>
+            Expanded state of the Expansion state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateCollapsed">
+            <summary>
+            Collapsed state of the Expansion state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupPopup">
+            <summary>
+            Popup state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StatePopupOpened">
+            <summary>
+            Opened state of the Popup state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StatePopupClosed">
+            <summary>
+            Closed state of the Popup state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupValidation">
+            <summary>
+            ValidationStates state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateValid">
+            <summary>
+            The valid state for the ValidationStates group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateInvalidFocused">
+            <summary>
+            Invalid, focused state for the ValidationStates group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateInvalidUnfocused">
+            <summary>
+            Invalid, unfocused state for the ValidationStates group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupExpandDirection">
+            <summary>
+            ExpandDirection state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateExpandDown">
+            <summary>
+            Down expand direction state of ExpandDirection state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateExpandUp">
+            <summary>
+            Up expand direction state of ExpandDirection state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateExpandLeft">
+            <summary>
+            Left expand direction state of ExpandDirection state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateExpandRight">
+            <summary>
+            Right expand direction state of ExpandDirection state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupHasItems">
+            <summary>
+            HasItems state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateHasItems">
+            <summary>
+            HasItems state of the HasItems state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateNoItems">
+            <summary>
+            NoItems state of the HasItems state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupIncrease">
+            <summary>
+            Increment state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateIncreaseEnabled">
+            <summary>
+            State enabled for increment group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateIncreaseDisabled">
+            <summary>
+            State disabled for increment group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupDecrease">
+            <summary>
+            Decrement state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateDecreaseEnabled">
+            <summary>
+            State enabled for decrement group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateDecreaseDisabled">
+            <summary>
+            State disabled for decrement group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupInteractionMode">
+            <summary>
+            InteractionMode state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateEdit">
+            <summary>
+            Edit of the DisplayMode state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateDisplay">
+            <summary>
+            Display of the DisplayMode state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupLocked">
+            <summary>
+            DisplayMode state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateLocked">
+            <summary>
+            Edit of the DisplayMode state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateUnlocked">
+            <summary>
+            Display of the DisplayMode state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateActive">
+            <summary>
+            Active state.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateInactive">
+            <summary>
+            Inactive state.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupActive">
+            <summary>
+            Active state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateUnwatermarked">
+            <summary>
+            Non-watermarked state.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateWatermarked">
+            <summary>
+            Watermarked state.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupWatermark">
+            <summary>
+            Watermark state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateCalendarButtonUnfocused">
+            <summary>
+            Unfocused state for Calendar Buttons.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateCalendarButtonFocused">
+            <summary>
+            Focused state for Calendar Buttons.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupCalendarButtonFocus">
+            <summary>
+            CalendarButtons Focus state group.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateBusy">
+            <summary>
+            Busy state for BusyIndicator.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateIdle">
+            <summary>
+            Idle state for BusyIndicator.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupBusyStatus">
+            <summary>
+            Busyness group name.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateVisible">
+            <summary>
+            Visible state name for BusyIndicator.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.StateHidden">
+            <summary>
+            Hidden state name for BusyIndicator.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.VisualStates.GroupVisibility">
+            <summary>
+            BusyDisplay group.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.VisualStates.GoToState(System.Windows.Controls.Control,System.Boolean,System.String[])">
+            <summary>
+            Use VisualStateManager to change the visual state of the control.
+            </summary>
+            <param name="control">
+            Control whose visual state is being changed.
+            </param>
+            <param name="useTransitions">
+            A value indicating whether to use transitions when updating the
+            visual state, or to snap directly to the new visual state.
+            </param>
+            <param name="stateNames">
+            Ordered list of state names and fallback states to transition into.
+            Only the first state to be found will be used.
+            </param>
+        </member>
+        <member name="M:System.Windows.Controls.VisualStates.GetImplementationRoot(System.Windows.DependencyObject)">
+            <summary>
+            Gets the implementation root of the Control.
+            </summary>
+            <param name="dependencyObject">The DependencyObject.</param>
+            <remarks>
+            Implements Silverlight's corresponding internal property on Control.
+            </remarks>
+            <returns>Returns the implementation root or null.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.VisualStates.TryGetVisualStateGroup(System.Windows.DependencyObject,System.String)">
+            <summary>
+            This method tries to get the named VisualStateGroup for the 
+            dependency object. The provided object's ImplementationRoot will be 
+            looked up in this call.
+            </summary>
+            <param name="dependencyObject">The dependency object.</param>
+            <param name="groupName">The visual state group's name.</param>
+            <returns>Returns null or the VisualStateGroup object.</returns>
+        </member>
+        <member name="T:System.Windows.Controls.LayoutTransformer">
+            <summary>
+            Represents a control that applies a layout transformation to its Content.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.LayoutTransformer.TransformRootName">
+            <summary>
+            Name of the TransformRoot template part.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.LayoutTransformer.PresenterName">
+            <summary>
+            Name of the Presenter template part.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.LayoutTransformer.AcceptableDelta">
+            <summary>
+            Acceptable difference between two doubles.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.LayoutTransformer.DecimalsAfterRound">
+            <summary>
+            Number of decimals to round the Matrix to.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.LayoutTransformer.LayoutTransformProperty">
+            <summary>
+            Identifies the LayoutTransform DependencyProperty.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.LayoutTransformer._transformRoot">
+            <summary>
+            Root element for performing transformations.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.LayoutTransformer._contentPresenter">
+            <summary>
+            ContentPresenter element for displaying the content.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.LayoutTransformer._matrixTransform">
+            <summary>
+            RenderTransform/MatrixTransform applied to _transformRoot.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.LayoutTransformer._transformation">
+            <summary>
+            Transformation matrix corresponding to _matrixTransform.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.LayoutTransformer._childActualSize">
+            <summary>
+            Actual DesiredSize of Child element (the value it returned from its MeasureOverride method).
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.#ctor">
+            <summary>
+            Initializes a new instance of the LayoutTransformer class.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.OnApplyTemplate">
+            <summary>
+            Builds the visual tree for the LayoutTransformer control when a new 
+            template is applied.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.LayoutTransformChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            Handles changes to the Transform DependencyProperty.
+            </summary>
+            <param name="o">Source of the change.</param>
+            <param name="e">Event args.</param>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.ApplyLayoutTransform">
+            <summary>
+            Applies the layout transform on the LayoutTransformer control content.
+            </summary>
+            <remarks>
+            Only used in advanced scenarios (like animating the LayoutTransform). 
+            Should be used to notify the LayoutTransformer control that some aspect 
+            of its Transform property has changed. 
+            </remarks>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.ProcessTransform(System.Windows.Media.Transform)">
+            <summary>
+            Processes the Transform to determine the corresponding Matrix.
+            </summary>
+            <param name="transform">Transform to process.</param>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.GetTransformMatrix(System.Windows.Media.Transform)">
+            <summary>
+            Walks the Transform(Group) and returns the corresponding Matrix.
+            </summary>
+            <param name="transform">Transform(Group) to walk.</param>
+            <returns>Computed Matrix.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.MeasureOverride(System.Windows.Size)">
+            <summary>
+            Provides the behavior for the "Measure" pass of layout.
+            </summary>
+            <param name="availableSize">The available size that this element can give to child elements.</param>
+            <returns>The size that this element determines it needs during layout, based on its calculations of child element sizes.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.ArrangeOverride(System.Windows.Size)">
+            <summary>
+            Provides the behavior for the "Arrange" pass of layout.
+            </summary>
+            <param name="finalSize">The final area within the parent that this element should use to arrange itself and its children.</param>
+            <returns>The actual size used.</returns>
+            <remarks>
+            Using the WPF paramater name finalSize instead of Silverlight's finalSize for clarity
+            </remarks>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.ComputeLargestTransformedSize(System.Windows.Size)">
+            <summary>
+            Compute the largest usable size (greatest area) after applying the transformation to the specified bounds.
+            </summary>
+            <param name="arrangeBounds">Arrange bounds.</param>
+            <returns>Largest Size possible.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.IsSizeSmaller(System.Windows.Size,System.Windows.Size)">
+            <summary>
+            Returns true if Size a is smaller than Size b in either dimension.
+            </summary>
+            <param name="a">Second Size.</param>
+            <param name="b">First Size.</param>
+            <returns>True if Size a is smaller than Size b in either dimension.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.RoundMatrix(System.Windows.Media.Matrix,System.Int32)">
+            <summary>
+            Rounds the non-offset elements of a Matrix to avoid issues due to floating point imprecision.
+            </summary>
+            <param name="matrix">Matrix to round.</param>
+            <param name="decimals">Number of decimal places to round to.</param>
+            <returns>Rounded Matrix.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.RectTransform(System.Windows.Rect,System.Windows.Media.Matrix)">
+            <summary>
+            Implements WPF's Rect.Transform on Silverlight.
+            </summary>
+            <param name="rect">Rect to transform.</param>
+            <param name="matrix">Matrix to transform with.</param>
+            <returns>Bounding box of transformed Rect.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.MatrixMultiply(System.Windows.Media.Matrix,System.Windows.Media.Matrix)">
+            <summary>
+            Implements WPF's Matrix.Multiply on Silverlight.
+            </summary>
+            <param name="matrix1">First matrix.</param>
+            <param name="matrix2">Second matrix.</param>
+            <returns>Multiplication result.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.MatrixHasInverse(System.Windows.Media.Matrix)">
+            <summary>
+            Implements WPF's Matrix.HasInverse on Silverlight.
+            </summary>
+            <param name="matrix">Matrix to check for inverse.</param>
+            <returns>True if the Matrix has an inverse.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.LayoutTransformer.DiagnosticWriteLine(System.String)">
+            <summary>
+            Outputs diagnostic info if DIAGNOSTICWRITELINE is defined.
+            </summary>
+            <param name="message">Diagnostic message.</param>
+        </member>
+        <member name="P:System.Windows.Controls.LayoutTransformer.LayoutTransform">
+            <summary>
+            Gets or sets the layout transform to apply on the LayoutTransformer 
+            control content.
+            </summary>
+            <remarks>
+            Corresponds to UIElement.LayoutTransform.
+            </remarks>
+        </member>
+        <member name="P:System.Windows.Controls.LayoutTransformer.Child">
+            <summary>
+            Gets the child element being transformed.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.Properties.Resources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.Accordion_InvalidManipulationOfSelectionCollections">
+            <summary>
+              Looks up a localized string similar to The modification made to the collection lead to an invalid Selection state. Please check the SelectionMode to allow zero or multiple items..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.Accordion_OnActionFinish_InvalidFinish">
+            <summary>
+              Looks up a localized string similar to Should not signal a finish when item is not expected to perform an action..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.Accordion_OnExpandDirectionPropertyChanged_InvalidValue">
+            <summary>
+              Looks up a localized string similar to Invalid ExpandDirection value &apos;{0}&apos;..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.Accordion_OnSelectedIndicesChanged_InvalidWrite">
+            <summary>
+              Looks up a localized string similar to Cannot set read-only property SelectedIndices..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.Accordion_OnSelectedItemsChanged_InvalidWrite">
+            <summary>
+              Looks up a localized string similar to Cannot set read-only property SelectedItems..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.Accordion_OnSelectionModePropertyChanged_InvalidValue">
+            <summary>
+              Looks up a localized string similar to Invalid SelectionMode value &apos;{0}&apos;..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.Accordion_OnSelectionSequencepropertyChanged_InvalidValue">
+            <summary>
+              Looks up a localized string similar to Invalid SelectionSequence value &apos;{0}&apos;..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.Accordion_UnsupportedCollectionAction">
+            <summary>
+              Looks up a localized string similar to Unsupported collection action &apos;{0}&apos;..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.AccordionItem_InvalidWriteToContentTargetSize">
+            <summary>
+              Looks up a localized string similar to ContentTargetSize is a read-only value and is set through Accordion..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.AccordionItem_InvalidWriteToExpandDirection">
+            <summary>
+              Looks up a localized string similar to ExpandDirection is a read-only value and is set through Accordion..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.AccordionItem_OnIsSelectedPropertyChanged_InvalidChange">
+            <summary>
+              Looks up a localized string similar to Cannot modify the IsSelected property while item is locked..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.AccordionItem_StartAction_InvalidAction">
+            <summary>
+              Looks up a localized string similar to Invalid Action &apos;{0}&apos;..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.AccordionItem_StartAction_InvalidCall">
+            <summary>
+              Looks up a localized string similar to Cannot start an action when there is no action scheduled..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.Automation_OperationCannotBePerformed">
+            <summary>
+              Looks up a localized string similar to Cannot perform operation..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.Expander_OnExpandDirectionPropertyChanged_InvalidValue">
+            <summary>
+              Looks up a localized string similar to Invalid ExpandDirection value &apos;{0}&apos;..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.TransitioningContentControl_TransitionNotFound">
+            <summary>
+              Looks up a localized string similar to Transition &apos;{0}&apos; was not defined..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Properties.Resources.TransitiotioningContentControl_IsTransitioningReadOnly">
+            <summary>
+              Looks up a localized string similar to IsTransitioning property is read-only..
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.TransitioningContentControl">
+            <summary>
+            Represents a control with a single piece of content and when that content 
+            changes performs a transition animation. 
+            </summary>
+            <QualityBand>Experimental</QualityBand>
+            <remarks>The API for this control will change considerably in the future.</remarks>
+        </member>
+        <member name="F:System.Windows.Controls.TransitioningContentControl.PresentationGroup">
+            <summary>
+            The name of the group that holds the presentation states.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.TransitioningContentControl.NormalState">
+            <summary>
+            The name of the state that represents a normal situation where no
+            transition is currently being used.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.TransitioningContentControl.DefaultTransitionState">
+            <summary>
+            The name of the state that represents the default transition.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.TransitioningContentControl.PreviousContentPresentationSitePartName">
+            <summary>
+            The name of the control that will display the previous content.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.TransitioningContentControl.CurrentContentPresentationSitePartName">
+            <summary>
+            The name of the control that will display the current content.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.TransitioningContentControl._allowIsTransitioningWrite">
+            <summary>
+            Indicates whether the control allows writing IsTransitioning.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.TransitioningContentControl.IsTransitioningProperty">
+            <summary>
+            Identifies the IsTransitioning dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.TransitioningContentControl.OnIsTransitioningPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            IsTransitioningProperty property changed handler.
+            </summary>
+            <param name="d">TransitioningContentControl that changed its IsTransitioning.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="F:System.Windows.Controls.TransitioningContentControl._currentTransition">
+            <summary>
+            The storyboard that is used to transition old and new content.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.TransitioningContentControl.TransitionProperty">
+            <summary>
+            Identifies the Transition dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.TransitioningContentControl.OnTransitionPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            TransitionProperty property changed handler.
+            </summary>
+            <param name="d">TransitioningContentControl that changed its Transition.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="F:System.Windows.Controls.TransitioningContentControl.RestartTransitionOnContentChangeProperty">
+            <summary>
+            Identifies the RestartTransitionOnContentChange dependency property.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.TransitioningContentControl.OnRestartTransitionOnContentChangePropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            RestartTransitionOnContentChangeProperty property changed handler.
+            </summary>
+            <param name="d">TransitioningContentControl that changed its RestartTransitionOnContentChange.</param>
+            <param name="e">Event arguments.</param>
+        </member>
+        <member name="M:System.Windows.Controls.TransitioningContentControl.OnRestartTransitionOnContentChangeChanged(System.Boolean,System.Boolean)">
+            <summary>
+            Called when the RestartTransitionOnContentChangeProperty changes.
+            </summary>
+            <param name="oldValue">The old value of RestartTransitionOnContentChange.</param>
+            <param name="newValue">The new value of RestartTransitionOnContentChange.</param>
+        </member>
+        <member name="M:System.Windows.Controls.TransitioningContentControl.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:System.Windows.Controls.TransitioningContentControl"/> class.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.TransitioningContentControl.OnApplyTemplate">
+            <summary>
+            Builds the visual tree for the TransitioningContentControl control 
+            when a new template is applied.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.TransitioningContentControl.OnContentChanged(System.Object,System.Object)">
+            <summary>
+            Called when the value of the <see cref="P:System.Windows.Controls.ContentControl.Content"/> property changes.
+            </summary>
+            <param name="oldContent">The old value of the <see cref="P:System.Windows.Controls.ContentControl.Content"/> property.</param>
+            <param name="newContent">The new value of the <see cref="P:System.Windows.Controls.ContentControl.Content"/> property.</param>
+        </member>
+        <member name="M:System.Windows.Controls.TransitioningContentControl.StartTransition(System.Object,System.Object)">
+            <summary>
+            Starts the transition.
+            </summary>
+            <param name="oldContent">The old content.</param>
+            <param name="newContent">The new content.</param>
+        </member>
+        <member name="M:System.Windows.Controls.TransitioningContentControl.OnTransitionCompleted(System.Object,System.EventArgs)">
+            <summary>
+            Handles the Completed event of the transition storyboard.
+            </summary>
+            <param name="sender">The source of the event.</param>
+            <param name="e">The <see cref="T:System.EventArgs"/> instance containing the event data.</param>
+        </member>
+        <member name="M:System.Windows.Controls.TransitioningContentControl.AbortTransition">
+            <summary>
+            Aborts the transition and releases the previous content.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.TransitioningContentControl.GetStoryboard(System.String)">
+            <summary>
+            Attempts to find a storyboard that matches the newTransition name.
+            </summary>
+            <param name="newTransition">The new transition.</param>
+            <returns>A storyboard or null, if no storyboard was found.</returns>
+        </member>
+        <member name="P:System.Windows.Controls.TransitioningContentControl.CurrentContentPresentationSite">
+            <summary>
+            Gets or sets the current content presentation site.
+            </summary>
+            <value>The current content presentation site.</value>
+        </member>
+        <member name="P:System.Windows.Controls.TransitioningContentControl.PreviousContentPresentationSite">
+            <summary>
+            Gets or sets the previous content presentation site.
+            </summary>
+            <value>The previous content presentation site.</value>
+        </member>
+        <member name="P:System.Windows.Controls.TransitioningContentControl.IsTransitioning">
+            <summary>
+            Gets a value indicating whether this instance is currently performing
+            a transition.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.TransitioningContentControl.CurrentTransition">
+            <summary>
+            Gets or sets the storyboard that is used to transition old and new content.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.TransitioningContentControl.Transition">
+            <summary>
+            Gets or sets the name of the transition to use. These correspond
+            directly to the VisualStates inside the PresentationStates group.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.TransitioningContentControl.RestartTransitionOnContentChange">
+            <summary>
+            Gets or sets a value indicating whether the current transition
+            will be aborted when setting new content during a transition.
+            </summary>
+        </member>
+        <member name="E:System.Windows.Controls.TransitioningContentControl.TransitionCompleted">
+            <summary>
+            Occurs when the current transition has completed.
+            </summary>
+        </member>
+    </members>
+</doc>
