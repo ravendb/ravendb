@@ -136,6 +136,7 @@
     </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="System.Windows.Browser" />
+    <Reference Include="System.Xml.Linq, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="TiledBG">
       <HintPath>..\SharedLibs\Silverlight\TiledBG.dll</HintPath>
     </Reference>

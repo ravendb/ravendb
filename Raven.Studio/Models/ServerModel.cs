@@ -119,7 +119,7 @@ namespace Raven.Studio.Models
 		{
 			if (HtmlPage.Document.DocumentUri.Scheme == "file")
 			{
-				return "http://ravenhq.com:8080";
+				return "http://localhost:8080";
 			}
 			var localPath = HtmlPage.Document.DocumentUri.LocalPath;
 			var lastIndexOfRaven = localPath.LastIndexOf("/raven/", StringComparison.Ordinal);

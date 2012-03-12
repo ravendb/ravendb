@@ -502,9 +502,19 @@ namespace Raven.Client.Document
 			};
 #endif
 #if !NET_3_5
+#if SILVERLIGHT
+			// required to ensure just a single auth dialog
+			var task = jsonRequestFactory.CreateHttpJsonRequest(this, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions)
+				.ExecuteRequest();
+#endif
 			asyncDatabaseCommandsGenerator = () =>
 			{
+
+#if SILVERLIGHT
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, task);
+#else
 				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId);
+#endif
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
 				return asyncServerClient.ForDatabase(DefaultDatabase);
