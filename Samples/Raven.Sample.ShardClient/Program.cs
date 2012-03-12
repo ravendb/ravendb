@@ -28,18 +28,19 @@ namespace Raven.Sample.ShardClient
 			                    		ShardAccessStrategy = new ParallelShardAccessStrategy(),
 										ShardResolutionStrategy = new ShardResolutionByRegion(),
 			                    	};
+
 			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
 			using (var session = documentStore.OpenSession())
 			{
-				//store 2 items in the 2 shards
+				//store 3 items in the 3 shards
 				session.Store(new Company { Name = "Company 1", Region = "Asia" });
 				session.Store(new Company { Name = "Company 2", Region = "Middle East" });
 				session.Store(new Company { Name = "Company 3", Region = "America" });
 				session.SaveChanges();
 
 				//get all, should automagically retrieve from each shard
-				var allCompanies = session.Advanced.LuceneQuery<Company>()
-					.WaitForNonStaleResults().ToArray();
+				var allCompanies = session.Query<Company>()
+					.Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToArray();
 
 				foreach (var company in allCompanies)
 					Console.WriteLine(company.Name);
