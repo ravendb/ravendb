@@ -1,0 +1,284 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>System.Windows.Controls.Theming.Toolkit</name>
+    </assembly>
+    <members>
+        <member name="T:System.Windows.Controls.Theming.ResourceNotFoundException">
+            <summary>
+            Exception thrown when resource is not found.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.ResourceNotFoundException.#ctor">
+            <summary>
+            Initializes a new instance of the ResourceNotFoundException class.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.ResourceNotFoundException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the ResourceNotFoundException class.
+            </summary>
+            <param name="message">The exception message.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.ResourceNotFoundException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the ResourceNotFoundException class.
+            </summary>
+            <param name="message">The exception message.</param>
+            <param name="innerException">The inner exception.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.ResourceNotFoundException.#ctor(System.String,System.Uri)">
+            <summary>
+            Initializes a new instance of the ResourceNotFoundException class.
+            </summary>
+            <param name="message">The exception message.</param>
+            <param name="uri">The uri of the resource.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.ResourceNotFoundException.#ctor(System.String,System.Uri,System.Exception)">
+            <summary>
+            Initializes a new instance of the ResourceNotFoundException class.
+            </summary>
+            <param name="message">The exception message.</param>
+            <param name="uri">The uri of the resource.</param>
+            <param name="innerException">The inner exception.</param>
+        </member>
+        <member name="P:System.Windows.Controls.Theming.ResourceNotFoundException.Uri">
+            <summary>
+            Gets the uri of the resource that could not be found.
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.Theming.Properties.Resources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Theming.Properties.Resources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Theming.Properties.Resources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Theming.Properties.Resources.ResourceParser_CanOnlyParseXAMLFilesWithResourceDictionaryAsTheRootElement">
+            <summary>
+              Looks up a localized string similar to Cannot parse XAML files which do not have a ResourceDictionary as the root element..
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Theming.Properties.Resources.Theme_ResourceNotFound">
+            <summary>
+              Looks up a localized string similar to Resource not found at &apos;{0}&apos;..
+            </summary>
+        </member>
+        <member name="T:System.Windows.Controls.Theming.ResourceParser">
+            <summary>
+            Parse streams containing theme resources.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Theming.ResourceParser.OldXamlNamespace">
+            <summary>
+            The default old XAML namespace.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Theming.ResourceParser.NewXamlNamespace">
+            <summary>
+            The default new XAML namespace.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Theming.ResourceParser.StyleXaml">
+            <summary>
+            The XAML markup for an empty Style declaration.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Theming.ResourceParser.StyleXamlWithPrefix">
+            <summary>
+            The XAML markup for an empty Style declaration with a TargetType
+            using an XML prefix.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.ResourceParser.IsXamlElement``1(System.String,System.String)">
+            <summary>
+            Determines whether an XML element is a type in the core Silverlight
+            namespace.
+            </summary>
+            <typeparam name="T">The type to check for.</typeparam>
+            <param name="name">The name of the element.</param>
+            <param name="ns">The namespace of the element.</param>
+            <returns>
+            A value indicating whether an the element is the Silverlight type.
+            </returns>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.ResourceParser.Parse(System.IO.Stream,System.Boolean)">
+            <summary>
+            Retrieves a resource dictionary from an input stream.
+            </summary>
+            <param name="stream">
+            A stream containing the XAML for a  resource dictionary.
+            </param>
+            <param name="checkTypes">
+            A value indicating whether styles in the resource dictionary should
+            be filtered to types that have been loaded by the application.
+            </param>
+            <returns>A resource dictionary.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.ResourceParser.ParseResources(System.Xml.XmlReader,System.Xml.XmlWriter,System.Boolean)">
+            <summary>
+            Transform a ResourceDictionary.
+            </summary>
+            <param name="reader">Reader with the resources.</param>
+            <param name="writer">Writer with the transformed resources.</param>
+            <param name="checkTypes">
+            A value indicating whether styles in the resource dictionary should
+            be filtered to types that have been loaded by the application.
+            </param>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.ResourceParser.ParseElement(System.Xml.XmlReader,System.Xml.XmlWriter,System.Boolean)">
+            <summary>
+            Process an element's opening tag.
+            </summary>
+            <param name="reader">Reader with the resources.</param>
+            <param name="writer">Writer with the transformed resources.</param>
+            <param name="checkTypes">
+            A value indicating whether styles in the resource dictionary should
+            be filtered to types that have been loaded by the application.
+            </param>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.ResourceParser.IsStyleTargetTypeLoaded(System.Xml.XmlReader)">
+            <summary>
+            Determine if the current element in the reader represents a Style
+            whose TargetType has been loaded in the assembly.
+            </summary>
+            <param name="reader">Reader with the resources.</param>
+            <returns>
+            A value indicating whether the element is not a style or it is a
+            Style with a TargetType loaded in this assembly.
+            </returns>
+        </member>
+        <member name="T:System.Windows.Controls.Theming.Theme">
+            <summary>
+            Implicitly applies a set of styles to all descendent FrameworkElements.
+            </summary>
+            <QualityBand>Preview</QualityBand>
+        </member>
+        <member name="F:System.Windows.Controls.Theming.Theme._applicationThemeResources">
+            <summary>
+            Stores the ResourceDictionary corresponding to the current application theme.
+            </summary>
+        </member>
+        <member name="F:System.Windows.Controls.Theming.Theme._applicationThemeUri">
+            <summary>
+            Stores the Uri corresponding to the application theme resources.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.Theme.#ctor">
+            <summary>
+            Initializes a new instance of the Theme class.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.Theme.#ctor(System.Reflection.Assembly,System.String)">
+            <summary>
+            Initializes a new instance of the Theme class.
+            </summary>
+            <param name="themeAssembly">
+            Assembly with the embedded resource containing the theme to apply.
+            </param>
+            <param name="themeResourceName">
+            Name of the embedded resource containing the theme to apply.
+            </param>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.Theme.#ctor(System.IO.Stream)">
+            <summary>
+            Initializes a new instance of the Theme class.
+            </summary>
+            <param name="themeResourceStream">
+            A resource stream containing the theme to apply.
+            </param>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.Theme.#ctor(System.Uri)">
+            <summary>
+            Initializes a new instance of the Theme class.
+            </summary>
+            <param name="themeUri">URI of a ResourceDictionary containing a theme.</param>
+        </member>
+        <member name="F:System.Windows.Controls.Theming.Theme.ThemeUriProperty">
+            <summary>
+            Identifies the ThemeUri DependencyProperty.
+            </summary>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.Theme.OnThemeUriPropertyChanged(System.Windows.DependencyObject,System.Windows.DependencyPropertyChangedEventArgs)">
+            <summary>
+            Handles changes to the ThemeUri DependencyProperty.
+            </summary>
+            <param name="o">DependencyObject that changed.</param>
+            <param name="e">Event data for the DependencyPropertyChangedEvent.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.Theme.OnThemeUriPropertyChanged(System.Uri,System.Uri)">
+            <summary>
+            Handles changes to the ThemeUri property.
+            </summary>
+            <param name="oldValue">Old value.</param>
+            <param name="newValue">New value.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.Theme.GetApplicationThemeUri(System.Windows.Application)">
+            <summary>
+            Gets the current application-level theme Uri.
+            </summary>
+            <param name="app">Application instance.</param>
+            <returns>Theme Uri.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.Theme.SetApplicationThemeUri(System.Windows.Application,System.Uri)">
+            <summary>
+            Sets the current application-level theme Uri.
+            </summary>
+            <param name="app">Application instance.</param>
+            <param name="themeUri">Theme Uri.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.Theme.LoadAndApplyThemeFromUri(System.Uri,System.Windows.ResourceDictionary,System.Windows.ResourceDictionary,System.Action{System.Windows.ResourceDictionary})">
+            <summary>
+            Loads and applies a theme from a specified Uri.
+            </summary>
+            <param name="themeUri">Theme Uri.</param>
+            <param name="currentTheme">Current theme.</param>
+            <param name="owner">ResourceDictionary owner.</param>
+            <param name="onNewThemeAvailable">Action called when the new theme instance is available.</param>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.Theme.LoadAndApplyThemeFromStream(System.IO.Stream,System.Windows.ResourceDictionary,System.Windows.ResourceDictionary)">
+            <summary>
+            Loads and applies a theme from a Stream.
+            </summary>
+            <param name="stream">Stream containing the theme ResourceDictionary.</param>
+            <param name="currentTheme">Current theme.</param>
+            <param name="owner">ResourceDictionary owner.</param>
+            <returns>New current theme.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.Theme.LoadThemeResources(System.IO.Stream,System.Windows.ResourceDictionary)">
+            <summary>
+            Load a theme from a Stream.
+            </summary>
+            <param name="stream">A Stream containing the theme to load.</param>
+            <param name="owner">ResourceDictionary owner.</param>
+            <returns>ResourceDictionary corresponding to the loaded theme.</returns>
+        </member>
+        <member name="M:System.Windows.Controls.Theming.Theme.UnloadThemeResources(System.Windows.ResourceDictionary,System.Windows.ResourceDictionary)">
+            <summary>
+            Unloads the specified theme ResourceDictionary.
+            </summary>
+            <param name="theme">ResourceDictionary to unload.</param>
+            <param name="owner">ResourceDictionary owner.</param>
+        </member>
+        <member name="P:System.Windows.Controls.Theming.Theme.ThemeResources">
+            <summary>
+            Gets the ResourceDictionary corresponding to the current theme.
+            </summary>
+        </member>
+        <member name="P:System.Windows.Controls.Theming.Theme.ThemeUri">
+            <summary>
+            Gets or sets the URI of a ResourceDictionary containing a theme.
+            </summary>
+        </member>
+    </members>
+</doc>

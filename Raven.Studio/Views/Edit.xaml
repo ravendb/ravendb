@@ -1,16 +1,15 @@
-﻿<Infrastructure:View xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<Infrastructure:View x:Class="Raven.Studio.Views.Edit"
+					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 					 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
 					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
-					 xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
-					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 					 xmlns:Studio="clr-namespace:Raven.Studio"
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-					 x:Class="Raven.Studio.Views.Edit"
+					 xmlns:Controls="clr-namespace:System.Windows.Controls"
 					 mc:Ignorable="d"
 					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel">
 
@@ -47,11 +46,11 @@
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 
-		<shared:ContextMenuService.ContextMenu>
-			<shared:ContextMenu>
-				<shared:MenuItem Header="Copy Document Id to Clipboard" />
-			</shared:ContextMenu>
-		</shared:ContextMenuService.ContextMenu>
+		<Controls:ContextMenuService.ContextMenu>
+			<Controls:ContextMenu>
+				<Controls:MenuItem Header="Copy Document Id to Clipboard" />
+			</Controls:ContextMenu>
+		</Controls:ContextMenuService.ContextMenu>
 
 		<Border Grid.Row="0"
 				Grid.ColumnSpan="3"

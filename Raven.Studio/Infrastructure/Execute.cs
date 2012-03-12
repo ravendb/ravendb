@@ -30,7 +30,7 @@ namespace Raven.Studio.Infrastructure
 			return tcs.Task;
 		}
 
-		public static Task<TResult> OnTheUI<TResult>(Func<TResult> action)
+		public static Task OnTheUI<TResult>(Func<TResult> action)
 		{
 			if (Deployment.Current.Dispatcher.CheckAccess())
 			{

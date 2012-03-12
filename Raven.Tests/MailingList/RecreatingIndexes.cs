@@ -54,6 +54,5 @@ namespace Raven.Tests.MailingList
 				Assert.Equal(IndexCreationOptions.Noop, result);
 			}
 		}
- 
 	}
 }

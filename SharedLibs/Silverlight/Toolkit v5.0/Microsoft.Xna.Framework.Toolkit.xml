@@ -1,0 +1,330 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.Xna.Framework.Toolkit</name>
+    </assembly>
+    <members>
+        <member name="T:Microsoft.Xna.Framework.Input.ButtonState">
+            <summary>
+            Identifies the state of a controller button. 
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Input.ButtonState.Released">
+            <summary>
+            The button is pressed.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Input.ButtonState.Pressed">
+            <summary>
+            The button is released.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Input.Keyboard">
+            <summary>
+            Allows retrieval of keystrokes from a keyboard input device. 
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.Keyboard.GetState">
+            <summary>
+            Returns the current keyboard state.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.Keyboard.CheckModifiers">
+            <summary>
+            We must handle modifier separately because sometimes they won't raise keyup event.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Input.Keyboard.RootControl">
+            <summary>
+            Gets or sets the control used for keyboard processing.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Input.KeyboardState">
+            <summary>
+            Represents a state of keystrokes recorded by a keyboard input device. 
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.KeyboardState.#ctor(Microsoft.Xna.Framework.Input.KeyboardState)">
+            <summary>
+            Initializes a new instance of the KeyboardState class. 
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.KeyboardState.#ctor(System.Windows.Input.Key[])">
+            <summary>
+            Initializes a new instance of the KeyboardState class. 
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.KeyboardState.IsKeyDown(System.Windows.Input.Key)">
+            <summary>
+            Returns whether a specified key is currently being pressed.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.KeyboardState.IsKeyUp(System.Windows.Input.Key)">
+            <summary>
+            Returns whether a specified key is currently not pressed.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.KeyboardState.GetPressedKeys">
+            <summary>
+            Gets an array of values that correspond to the keyboard keys that are currently being pressed.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.KeyboardState.op_Equality(Microsoft.Xna.Framework.Input.KeyboardState,Microsoft.Xna.Framework.Input.KeyboardState)">
+            <summary>
+            Compares two objects to determine whether they are the same.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.KeyboardState.op_Inequality(Microsoft.Xna.Framework.Input.KeyboardState,Microsoft.Xna.Framework.Input.KeyboardState)">
+            <summary>
+            Compares two objects to determine whether they are different.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Input.KeyboardState.Item(System.Windows.Input.Key)">
+            <summary>
+            Returns the state of a particular key.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Input.KeyState">
+            <summary>
+            Identifies the state of a keyboard key. 
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Input.KeyState.Down">
+            <summary>
+            Key is pressed.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Input.KeyState.Up">
+            <summary>
+            Key is released.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Input.Mouse">
+            <summary>
+            Allows retrieval of position and button clicks from a mouse input device. 
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.Mouse.GetState">
+            <summary>
+            Gets the current state of the mouse, including mouse position and buttons pressed.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.Mouse.SetPosition(System.Int32,System.Int32)">
+            <summary>
+            Sets the position of the mouse cursor relative to the upper-left corner of the control.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Input.Mouse.RootControl">
+            <summary>
+            Gets or sets the control used for mouse processing. Mouse coordinates returned by GetState are relative to the upper-left corner of this control.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Input.MouseState">
+            <summary>
+            Represents the state of a mouse input device, including mouse cursor position and buttons pressed. 
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.MouseState.#ctor(System.Int32,System.Int32,System.Int32,Microsoft.Xna.Framework.Input.ButtonState,Microsoft.Xna.Framework.Input.ButtonState,Microsoft.Xna.Framework.Input.ButtonState,Microsoft.Xna.Framework.Input.ButtonState,Microsoft.Xna.Framework.Input.ButtonState)">
+            <summary>
+            Initializes a new instance of the MouseState class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.MouseState.GetHashCode">
+            <summary>
+            Gets the hash code for this instance.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.MouseState.op_Equality(Microsoft.Xna.Framework.Input.MouseState,Microsoft.Xna.Framework.Input.MouseState)">
+            <summary>
+            Determines whether two MouseState instances are equal.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Input.MouseState.op_Inequality(Microsoft.Xna.Framework.Input.MouseState,Microsoft.Xna.Framework.Input.MouseState)">
+            <summary>
+            Determines whether two MouseState instances are not equal.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Input.MouseState.X">
+            <summary>
+            Specifies the horizontal position of the mouse cursor.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Input.MouseState.Y">
+            <summary>
+            Specifies the vertical position of the mouse cursor.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Input.MouseState.LeftButton">
+            <summary>
+            Returns the state of the left mouse button.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Input.MouseState.RightButton">
+            <summary>
+            Returns the state of the right mouse button.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Input.MouseState.MiddleButton">
+            <summary>
+            Returns the state of the middle mouse button.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Input.MouseState.XButton1">
+            <summary>
+            Returns the state of XBUTTON1.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Input.MouseState.XButton2">
+            <summary>
+            Returns the state of XBUTTON2.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Input.MouseState.ScrollWheelValue">
+            <summary>
+            Gets the cumulative mouse scroll wheel value since the game was started.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SilverlightEffectInternalParameter">
+            <summary>
+            Internal parameter class for SilverlightEffect
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectInternalParameter.#ctor(Microsoft.Xna.Framework.Graphics.GraphicsDevice,System.String)">
+            <summary>Creates a new effect parameter</summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.SilverlightEffectInternalParameter.Name">
+            <summary>
+            Get or set the name of the parameter
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SilverlightEffect">
+            <summary>
+            Provides support for .fx files.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffect.#ctor(Microsoft.Xna.Framework.Graphics.EffectTechnique[])">
+            <summary>
+            Creates a new SilverlightEffect with default parameter settings.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.SilverlightEffect.Parameters">
+            <summary>
+            Get the parameters list.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter">
+            <summary>
+            Parameter class for SilverlightEffect
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter.#ctor(System.String)">
+            <summary>Creates a new effect parameter</summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter.SetValue(System.Single)">
+            <summary>
+            Affect a single value to the parameter
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter.SetValue(Microsoft.Xna.Framework.Vector2)">
+            <summary>
+            Affect a Vector2 value to the parameter
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter.SetValue(Microsoft.Xna.Framework.Vector3)">
+            <summary>
+            Affect a Vector3 value to the parameter
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter.SetValue(Microsoft.Xna.Framework.Vector4)">
+            <summary>
+            Affect a Vector4 value to the parameter
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter.SetValue(Microsoft.Xna.Framework.Matrix)">
+            <summary>
+            Affect a Matrix value to the parameter
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter.SetValue(Microsoft.Xna.Framework.Matrix[])">
+            <summary>
+            Affect an array of Matrix value to the parameter
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter.SetValue(System.Single,System.Single,System.Single,System.Single)">
+            <summary>
+            Affect a 4 floats to the parameter
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter.SetValue(System.Boolean,System.Boolean,System.Boolean,System.Boolean)">
+            <summary>
+            Affect 4 booleans value to the parameter
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter.SetValue(Microsoft.Xna.Framework.Color,System.Single)">
+            <summary>
+            Affect a color (with alpha value) to the parameter
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter.SetValue(Microsoft.Xna.Framework.Color)">
+            <summary>
+            Affect a color value to the parameter
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.SilverlightEffectParameter.Name">
+            <summary>
+            Get or set the name of the parameter
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SilverlightEffectParametersCollection">
+            <summary>
+            Define the collection of parameters for SilverlightEffect class.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.SilverlightEffectParametersCollection.Item(System.Int32)">
+            <summary>Gets a specific SilverlightEffectParameter object by using an index value.</summary>
+            <param name="index">Index of the SilverlightEffectParameter to get.</param>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.SilverlightEffectParametersCollection.Item(System.String)">
+            <summary>Gets a specific SilverlightEffectParameter by name.</summary>
+            <param name="name">The name of the SilverlightEffectParameter to retrieve.</param>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.SilverlightEffectParametersCollection.Count">
+            <summary>Gets the number of EffectParameter objects in this EffectParameterCollection.</summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectPass.#ctor(System.String,Microsoft.Xna.Framework.Graphics.GraphicsDevice,System.IO.Stream,System.IO.Stream,System.IO.Stream,System.IO.Stream)">
+            <summary>
+            Creates a new effect pass.
+            Marked as internal to prevent users from creating it.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectPass.Apply">
+            <summary>Begins this pass</summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.SilverlightEffectPass.Name">
+            <summary>
+            Get or set the name of the pass
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.SilverlightEffectReader">
+            <summary>
+            Read SilverlightEffect.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.SilverlightEffectReader.Read(Microsoft.Xna.Framework.Content.ContentReader,Microsoft.Xna.Framework.Graphics.SilverlightEffect)">
+            <summary>
+            Read and create a SilverlightEffect
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SilverlightEffectState">
+            <summary>
+            We need a class to handle the difference between .fx files (which use independent states settings) 
+            and XNA (which uses group of states)
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SilverlightEffectState.ProcessState(Microsoft.Xna.Framework.Graphics.GraphicsDevice)">
+            <summary>
+            Check if we must emit a new state
+            </summary>
+        </member>
+    </members>
+</doc>
