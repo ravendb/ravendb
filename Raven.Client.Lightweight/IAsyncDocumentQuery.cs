@@ -7,7 +7,7 @@ using System;
 namespace Raven.Client
 {
 	///<summary>
-	/// Asyncronous query against a raven index
+	/// Asynchronous query against a raven index
 	///</summary>
 	public interface IAsyncDocumentQuery<T> : IDocumentQueryBase<T, IAsyncDocumentQuery<T>>
 	{

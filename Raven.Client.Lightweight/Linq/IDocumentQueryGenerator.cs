@@ -8,7 +8,7 @@ namespace Raven.Client.Linq
 	public interface IDocumentQueryGenerator
 	{
 		/// <summary>
-		/// Gets the conventions asosciated with this query
+		/// Gets the conventions associated with this query
 		/// </summary>
 		DocumentConvention Conventions { get; }
 
@@ -16,6 +16,7 @@ namespace Raven.Client.Linq
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>
 		IDocumentQuery<T> Query<T>(string indexName);
+
 #if !NET_3_5
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>

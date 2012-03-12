@@ -1,18 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
-using Raven.Client.Shard.ShardStrategy;
-using Raven.Client.Shard.ShardStrategy.ShardAccess;
 using Raven.Server;
+using System.Linq;
 
 namespace Raven.Tests.Shard.BlogModel
 {
 	public abstract class ShardingScenario : RavenTest, IDisposable
 	{
-		protected readonly ShardedDocumentStore shardedDocumentStore;
-		protected readonly Dictionary<string, RavenDbServer> servers;
+		protected readonly ShardedDocumentStore ShardedDocumentStore;
+		protected readonly Dictionary<string, RavenDbServer> Servers;
 
 		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
 		{
@@ -48,7 +47,7 @@ namespace Raven.Tests.Shard.BlogModel
 				throw;
 			}
 
-			servers = new Dictionary<string, RavenDbServer>
+			Servers = new Dictionary<string, RavenDbServer>
 			{
 				{"Users", users},
 				{"Blogs", blogs},
@@ -57,35 +56,32 @@ namespace Raven.Tests.Shard.BlogModel
 				{"Posts03", posts3}
 			};
 
-			var shards = new Shards
-			{
-				new DocumentStore {Identifier = "Users", Url = "http://localhost:8079"},
-				new DocumentStore {Identifier = "Blogs", Url = "http://localhost:8078"},
-				new DocumentStore {Identifier = "Blogs", Url = "http://localhost:8078"},
-				new DocumentStore {Identifier = "Posts01", Url = "http://localhost:8077"},
-				new DocumentStore {Identifier = "Posts02", Url = "http://localhost:8076"},
-				new DocumentStore {Identifier = "Posts03", Url = "http://localhost:8075"}
-			};
-
+			var shards = new List<IDocumentStore>
+			             	{
+			             		new DocumentStore {Identifier = "Users", Url = "http://localhost:8079"},
+			             		new DocumentStore {Identifier = "Blogs", Url = "http://localhost:8078"},
+			             		new DocumentStore {Identifier = "Posts01", Url = "http://localhost:8077"},
+			             		new DocumentStore {Identifier = "Posts02", Url = "http://localhost:8076"},
+			             		new DocumentStore {Identifier = "Posts03", Url = "http://localhost:8075"}
+			             	}.ToDictionary(x => x.Identifier, x => x);
 
 			foreach (var shard in shards)
 			{
-				shard.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
-				shard.Initialize();
+				shard.Value.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 			}
 
-			shardedDocumentStore = new ShardedDocumentStore(new ShardStrategy
+			ShardedDocumentStore = new ShardedDocumentStore(new ShardStrategy
 															{
 																ShardAccessStrategy = new SequentialShardAccessStrategy(),
-																ShardSelectionStrategy = new BlogShardSelectionStrategy(3),
-																ShardResolutionStrategy = new BlogShardResolutionStrategy(3)
+																ShardResolutionStrategy = new BlogShardResolutionStrategy(3),
 															}, shards);
+			ShardedDocumentStore = (ShardedDocumentStore) ShardedDocumentStore.Initialize();
 		}
 
 		public void Dispose()
 		{
-			shardedDocumentStore.Dispose();
-			foreach (var ravenDbServer in servers)
+			ShardedDocumentStore.Dispose();
+			foreach (var ravenDbServer in Servers)
 			{
 				ravenDbServer.Value.Dispose();
 			}

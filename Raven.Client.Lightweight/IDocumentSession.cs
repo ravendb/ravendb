@@ -144,5 +144,6 @@ namespace Raven.Client
 		void Store(object entity, string id);
 #endif
 	}
+
 #endif
 }

@@ -172,8 +172,10 @@ namespace Raven.Abstractions.Connection
 						throw;
 
 					var response = e.Response as HttpWebResponse;
-					if (response == null ||
-						response.StatusCode != HttpStatusCode.Unauthorized)
+					if (response == null)
+						throw;
+
+					if (response.StatusCode != HttpStatusCode.Unauthorized)
 					{
 						using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
 						{
@@ -186,6 +188,10 @@ namespace Raven.Abstractions.Connection
 					if (handleUnauthorizedResponse != null && handleUnauthorizedResponse(connectionStringOptions, e.Response))
 					{
 						RecreateWebRequest();
+					}
+					else
+					{
+						throw;
 					}
 				}
 			}

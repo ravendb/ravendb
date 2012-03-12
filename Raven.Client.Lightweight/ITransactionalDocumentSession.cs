@@ -8,7 +8,7 @@ using System;
 namespace Raven.Client
 {
 	/// <summary>
-	/// Implementors of this interface provide transactional operations
+	/// Implementers of this interface provide transactional operations
 	/// Note that this interface is mostly useful only for expert usage
 	/// </summary>
 	public interface ITransactionalDocumentSession

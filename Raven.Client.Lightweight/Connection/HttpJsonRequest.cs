@@ -18,13 +18,13 @@ using System.Threading.Tasks;
 #endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Connection
 {
@@ -72,11 +72,11 @@ namespace Raven.Client.Connection
 			this.Method = method;
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
-			WriteMetadata(metadata);
 			webRequest.Method = method;
 			if (method == "POST" || method == "PUT" || method == "PATCH")
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
+			WriteMetadata(metadata);
 		}
 
 #if !NET_3_5

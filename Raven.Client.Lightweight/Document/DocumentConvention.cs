@@ -130,7 +130,7 @@ namespace Raven.Client.Document
 		public List<ITypeConverter> IdentityTypeConvertors { get; set; }
 
 		/// <summary>
-		/// Gets or sets the identity parts separator used by the hilo generators
+		/// Gets or sets the identity parts separator used by the HiLo generators
 		/// </summary>
 		/// <value>The identity parts separator.</value>
 		public string IdentityPartsSeparator { get; set; }
@@ -390,13 +390,13 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Handles unauthenticate responses, usually by authenticating against the oauth server
+		/// Handles unauthenticated responses, usually by authenticating against the oauth server
 		/// </summary>
 		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleUnauthorizedResponse { get; set; }
 
 #if !NET_3_5
 		/// <summary>
-		/// Begins handling of unauthenticate responses, usually by authenticating against the oauth server
+		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
 		/// in async manner
 		/// </summary>
 		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }

@@ -154,25 +154,6 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public Attachment HeadAttachment(string key)
-		{
-			Api.JetSetCurrentIndex(session, Files, "by_name");
-			Api.MakeKey(session, Files, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Files, SeekGrbit.SeekEQ) == false)
-			{
-				return null;
-			}
-
-			var metadata = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode);
-			return new Attachment
-			{
-				Data = delegate{ throw new Exception("Cannot get data from HEAD call"); },
-				Size = (int)GetAttachmentStream(key).Length,
-				Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
-				Metadata = RavenJObject.Parse(metadata)
-			};
-		}
-
 		private Stream GetAttachmentStream(string key)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");

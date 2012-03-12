@@ -82,6 +82,15 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		Attachment GetAttachment(string key);
 
+
+		/// <summary>
+		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		Attachment HeadAttachment(string key);
+
+
 		/// <summary>
 		/// Deletes the attachment with the specified key
 		/// </summary>
@@ -169,7 +178,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Executed the specified commands as a single batch
 		/// </summary>
-		/// <param name="commandDatas">The command data.</param>
+		/// <param name="commandDatas">The command data.</param> 
 		BatchResult[] Batch(IEnumerable<ICommandData> commandDatas);
 
 		/// <summary>
@@ -300,7 +309,7 @@ namespace Raven.Client.Connection
 		IDisposable DisableAllCaching();
 
 		/// <summary>
-		/// Perform a single POST requst containing multiple nested GET requests
+		/// Perform a single POST request containing multiple nested GET requests
 		/// </summary>
 		GetResponse[] MultiGet(GetRequest[] requests);
 
@@ -313,8 +322,13 @@ namespace Raven.Client.Connection
 		/// Retrieves the document metadata for the specified document key.
 		/// </summary>
 		/// <param name="key">The key.</param>
-		/// <returns>The document metadata for the specifed document, or null if the document does not exist</returns>
+		/// <returns>The document metadata for the specified document, or null if the document does not exist</returns>
 		JsonDocumentMetadata Head(string key);
+
+		/// <summary>
+		/// Get the full URL for the given document key
+		/// </summary>
+		string UrlFor(string documentKey);
 	}
 }
 #endif

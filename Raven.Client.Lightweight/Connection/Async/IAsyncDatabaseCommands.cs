@@ -221,7 +221,7 @@ namespace Raven.Client.Connection.Async
 		IDisposable DisableAllCaching();
 
 		/// <summary>
-		/// Perform a single POST requst containing multiple nested GET requests
+		/// Perform a single POST request containing multiple nested GET requests
 		/// </summary>
 		Task<GetResponse[]> MultiGetAsync(GetRequest[] requests);
 

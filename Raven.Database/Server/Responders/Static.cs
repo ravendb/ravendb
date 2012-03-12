@@ -65,6 +65,7 @@ namespace Raven.Database.Server.Responders
 							return;
 						}
 						context.WriteHeaders(attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag);
+						context.Response.ContentLength64 = attachmentAndHeaders.Size;
 					});
 					break;
 				case "PUT":

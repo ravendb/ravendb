@@ -96,7 +96,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected int? pageSize;
 
-		private QueryOperation queryOperation;
+		protected QueryOperation queryOperation;
 
 		/// <summary>
 		/// The query to use
@@ -146,7 +146,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   Grant access to the database commands
 		/// </summary>
-		public IDatabaseCommands DatabaseCommands
+		public virtual IDatabaseCommands DatabaseCommands
 		{
 			get { return theDatabaseCommands; }
 		}
@@ -156,7 +156,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   Grant access to the async database commands
 		/// </summary>
-		public IAsyncDatabaseCommands AsyncDatabaseCommands
+		public virtual IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
 			get { return theAsyncDatabaseCommands; }
 		}
@@ -367,16 +367,11 @@ namespace Raven.Client.Document
 			timeout = waitTimeout;
 		}
 
-		private void InitializeQueryOperation(Action<string, string> setOperationHeaders)
+		protected QueryOperation InitializeQueryOperation(Action<string, string> setOperationHeaders)
 		{
-			foreach (var documentQueryListener in queryListeners)
-			{
-				documentQueryListener.BeforeQueryExecuted(this);
-			}
-
 			var query = theQueryText.ToString();
 			var indexQuery = GenerateIndexQuery(query);
-			queryOperation = new QueryOperation(theSession,
+			return new QueryOperation(theSession,
 												indexName,
 												indexQuery,
 												projectionFields,
@@ -402,28 +397,34 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private void InitSync()
+		protected virtual void InitSync()
 		{
 			if (queryOperation != null) 
 				return;
 			theSession.IncrementRequestCount();
-			foreach (var key in DatabaseCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
-			{
-				DatabaseCommands.OperationsHeaders.Remove(key);
-			}
-			InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
+			ClearSortHints(DatabaseCommands);
+			ExecuteBeforeQueryListeners();
+			queryOperation = InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
 			ExecuteActualQuery();
 		}
 
+		protected void ClearSortHints(IDatabaseCommands shardDbCommands)
+		{
+			foreach (var key in shardDbCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
+			{
+				shardDbCommands.OperationsHeaders.Remove(key);
+			}
+		}
 
-		private void ExecuteActualQuery()
+
+		protected virtual void ExecuteActualQuery()
 		{
 			while (true)
 			{
 				using (queryOperation.EnterQueryContext())
 				{
 					queryOperation.LogQuery();
-					var result = theDatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
+					var result = DatabaseCommands.Query(indexName, queryOperation.IndexQuery, includes.ToArray());
 					if (queryOperation.IsAcceptable(result) == false)
 					{
 						Thread.Sleep(100);
@@ -451,7 +452,7 @@ namespace Raven.Client.Document
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+		public virtual Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
 		{
 			if (queryOperation == null)
 			{
@@ -459,14 +460,14 @@ namespace Raven.Client.Document
 				{
 					DatabaseCommands.OperationsHeaders.Remove(key);
 				}
-				InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
+				ExecuteBeforeQueryListeners();
+				queryOperation = InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback);
 
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
-
 
 #endif
 
@@ -494,11 +495,21 @@ namespace Raven.Client.Document
 			{
 				AsyncDatabaseCommands.OperationsHeaders.Remove(key);
 			}
-			InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
+			ExecuteBeforeQueryListeners();
+
+			queryOperation = InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
 			theSession.IncrementRequestCount();
 			return ExecuteActualQueryAsync();
 		}
 #endif
+
+		protected void ExecuteBeforeQueryListeners()
+		{
+			foreach (var documentQueryListener in queryListeners)
+			{
+				documentQueryListener.BeforeQueryExecuted(this);
+			}
+		}
 
 		/// <summary>
 		///   Gets the fields for projection
@@ -557,7 +568,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		///   Gets the enumerator.
 		/// </summary>
-		public IEnumerator<T> GetEnumerator()
+		public virtual IEnumerator<T> GetEnumerator()
 		{
 			InitSync();
 			while (true)
@@ -570,7 +581,7 @@ namespace Raven.Client.Document
 				{
 					if (queryOperation.ShouldQueryAgain(e) == false)
 						throw;
-					ExecuteActualQuery(); // retry the query, not that we explicity not incrementing the session request cuont here
+					ExecuteActualQuery(); // retry the query, note that we explicitly not incrementing the session request count here
 				}
 			}
 		}
@@ -1356,7 +1367,7 @@ If you really want to do in memory filtering on the data returned from the query
 		#endregion
 
 #if !NET_3_5
-		private Task<QueryOperation> ExecuteActualQueryAsync()
+		protected virtual Task<QueryOperation> ExecuteActualQueryAsync()
 		{
 			using(queryOperation.EnterQueryContext())
 			{
