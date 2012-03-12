@@ -490,7 +490,7 @@ namespace Raven.Client.Document
 		private Task<QueryOperation> InitAsync()
 		{
 			if (queryOperation != null)
-				return Task.Factory.StartNew(() => queryOperation);
+				return TaskResult(queryOperation);
 			foreach (var key in AsyncDatabaseCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
 			{
 				AsyncDatabaseCommands.OperationsHeaders.Remove(key);
@@ -1387,7 +1387,7 @@ If you really want to do in memory filtering on the data returned from the query
 			}
 		}
 
-		private Task TaskDelay(int dueTimeMilliseconds)
+		private static Task TaskDelay(int dueTimeMilliseconds)
 		{
 			var taskComplectionSource = new TaskCompletionSource<object>();
 			var cancellationTokenRegistration = new CancellationTokenRegistration();
@@ -1398,6 +1398,13 @@ If you really want to do in memory filtering on the data returned from the query
 				taskComplectionSource.TrySetResult(null);
 			});
 			timer.Change(dueTimeMilliseconds, -1);
+			return taskComplectionSource.Task;
+		}
+
+		private static Task<TResult> TaskResult<TResult>(TResult value)
+		{
+			var taskComplectionSource = new TaskCompletionSource<TResult>();
+			taskComplectionSource.SetResult(value);
 			return taskComplectionSource.Task;
 		}
 #endif
