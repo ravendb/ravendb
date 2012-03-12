@@ -734,6 +734,7 @@ namespace Raven.Database
 			var list = new List<RavenJObject>();
 			var stale = false;
 	    	Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
+			Guid resultEtag = Guid.Empty;
 			TransactionalStorage.Batch(
 				actions =>
 				{
@@ -741,6 +742,8 @@ namespace Raven.Database
 					var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
 					if (viewGenerator == null)
 						throw new InvalidOperationException("Could not find index named: " + index);
+
+					resultEtag = GetIndexEtag(index, null);
 
 					stale = actions.Staleness.IsIndexStale(index, query.Cutoff, query.CutoffEtag);
 
@@ -803,7 +806,8 @@ namespace Raven.Database
 				SkippedResults = query.SkippedResults.Value,
 				TotalResults = query.TotalSize.Value,
 				IndexTimestamp = indexTimestamp.Item1,
-				IndexEtag = indexTimestamp.Item2
+				IndexEtag = indexTimestamp.Item2,
+				ResultEtag = resultEtag
 			};
 		}
 
@@ -1338,15 +1342,7 @@ namespace Raven.Database
 				lastReducedEtag = accessor.Staleness.GetMostRecentReducedEtag(indexName);
 				touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
 			});
-			if (queryResult != null)
-			{
-				// the index changed between the time when we got it and the time 
-				// we actually call this, we need to return something random so that
-				// the next time we won't get 304
-				if (lastReducedEtag != null && queryResult.IndexEtag != lastReducedEtag.Value ||
-					lastDocEtag != queryResult.IndexEtag)
-					return Guid.NewGuid();
-			}
+			
 
 			var indexDefinition = GetIndexDefinition(indexName);
 			if (indexDefinition == null)
@@ -1363,9 +1359,18 @@ namespace Raven.Database
 				{
 					list.AddRange(lastReducedEtag.Value.ToByteArray());
 				}
-				
 
-				return new Guid(md5.ComputeHash(list.ToArray()));
+				var indexEtag = new Guid(md5.ComputeHash(list.ToArray()));
+
+				if (queryResult != null && queryResult.ResultEtag != indexEtag)
+				{
+					// the index changed between the time when we got it and the time 
+					// we actually call this, we need to return something random so that
+					// the next time we won't get 304
+					return Guid.NewGuid();
+				}
+
+				return indexEtag;
 			}
 		}
 	}

@@ -59,6 +59,12 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public Guid IndexEtag { get; set; }
 
+		/// <summary>
+		/// The ETag value for this index current state, which include what we docs we indexed,
+		/// what document were deleted, etc.
+		/// </summary>
+		public Guid ResultEtag { get; set; }
+
 	    /// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.
 		/// </summary>
