@@ -24,7 +24,7 @@ namespace Raven.Smuggler
 			            	{
 			            		{
 			            			"metadata-filter:{=}", "Filter documents by a metadata property." + Environment.NewLine +
-			            			                       "Usage example: @metadata.Raven-Entity-Name=Birds", (key, val) => options.Filters["@metadata." + key] = val
+			            			                       "Usage example: Raven-Entity-Name=Posts", (key, val) => options.Filters["@metadata." + key] = val
 			            			},
 			            		{
 			            			"filter:{=}", "Filter documents by a document property" + Environment.NewLine +
