@@ -12,11 +12,12 @@
     <RootNamespace>Raven.Tests.Silverlight.UnitTestProvider</RootNamespace>
     <AssemblyName>Raven.Tests.Silverlight.UnitTestProvider</AssemblyName>
     <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v5.0</TargetFrameworkVersion>
     <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
     <SilverlightApplication>false</SilverlightApplication>
     <ValidateXaml>true</ValidateXaml>
     <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <!-- This property group is only here to support building this project using the 
        MSBuild 3.5 toolset. In order to work correctly with this older toolset, it needs 
@@ -52,14 +53,14 @@
     <AssemblyOriginatorKeyFile>Raven.Tests.Silverlight.UnitTestProvider.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AsyncCtpLibrary_Silverlight">
-      <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
+    <Reference Include="AsyncCtpLibrary_Silverlight5">
+      <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight5.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Silverlight.Testing">
-      <HintPath>..\SharedLibs\Microsoft.Silverlight.Testing.dll</HintPath>
+      <HintPath>..\SharedLibs\Silverlight\Microsoft.Silverlight.Testing.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTesting.Silverlight">
-      <HintPath>..\SharedLibs\Microsoft.VisualStudio.QualityTools.UnitTesting.Silverlight.dll</HintPath>
+      <HintPath>..\SharedLibs\Silverlight\Microsoft.VisualStudio.QualityTools.UnitTesting.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System.Windows" />
