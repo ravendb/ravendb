@@ -15,6 +15,7 @@ using Raven.Client.Connection.Profiling;
 #if !NET_3_5
 using System.Collections.Concurrent;
 using Raven.Client.Connection.Async;
+using System.Threading.Tasks;
 using Raven.Client.Document.Async;
 #else
 using Raven.Client.Util;
@@ -425,7 +426,7 @@ namespace Raven.Client.Document
 					return null;
 
 				var authRequest = PrepareOAuthRequest(oauthSource);
-				return authRequest.GetResponseAsync()
+				return Task<WebResponse>.Factory.FromAsync(authRequest.BeginGetResponse, authRequest.EndGetResponse, null)
 					.AddUrlIfFaulting(authRequest.RequestUri)
 					.ConvertSecurityExceptionToServerNotFound()
 					.ContinueWith(task =>
