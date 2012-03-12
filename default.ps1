@@ -203,7 +203,7 @@ task MeasurePerformance -depends CompileTests {
 	}
 }
 
-task TestSilverlight {
+task TestSilverlight -depends CompileTests {
 	
 	try{
     start "$build_dir\Raven.Server.exe" "--ram --set=Raven/Port==8079"
