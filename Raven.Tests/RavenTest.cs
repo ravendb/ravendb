@@ -167,7 +167,14 @@ namespace Raven.Tests
 
 			try
 			{
-				using (var documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize())
+				using (var documentStore = new DocumentStore
+				                           	{
+												Conventions =
+													{
+														FailoverBehavior = FailoverBehavior.FailImmediately
+													},
+				                           		Url = "http://localhost:" + port
+				                           	}.Initialize())
 				{
 					CreateDefaultIndexes(documentStore);
 				}
