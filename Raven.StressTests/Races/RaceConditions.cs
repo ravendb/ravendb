@@ -1,3 +1,4 @@
+using Raven.StressTests.Tenants;
 using Raven.Tests.Bugs;
 using Raven.Tests.Bugs.Caching;
 using Raven.Tests.MailingList.MapReduceIssue;
@@ -11,6 +12,12 @@ namespace Raven.StressTests.Races
 {
 	public class RaceConditions : StressTest
 	{
+		[Fact]
+		public void ConcurrentlyOpenedTenantsUsingEsent()
+		{
+			Run<ConcurrentlyOpenedTenantsUsingEsent>(x => x.CanConcurrentlyPutDocsToDifferentTenants());
+		}
+
 		[Fact]
 		public void CachingOfDocumentInclude()
 		{
