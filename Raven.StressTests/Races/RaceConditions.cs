@@ -1,4 +1,5 @@
 using Raven.Tests.Bugs;
+using Raven.Tests.Bugs.Caching;
 using Raven.Tests.MailingList.MapReduceIssue;
 using Raven.Tests.ManagedStorage;
 using Raven.Tests.MultiGet;
@@ -10,6 +11,12 @@ namespace Raven.StressTests.Races
 {
 	public class RaceConditions : StressTest
 	{
+		[Fact]
+		public void CachingOfDocumentInclude()
+		{
+			Run<CachingOfDocumentInclude>(x => x.New_query_returns_correct_value_when_cache_is_enabled_and_data_changes());
+		}
+
 		[Fact]
 		public void CanPageThroughReduceResults()
 		{
@@ -31,19 +38,19 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void AfterCommitWillNotRetainSameEtag()
 		{
-			Run<Etags>(x => x.AfterCommitWillNotRetainSameEtag(), 1000);
+			Run<Etags>(x => x.AfterCommitWillNotRetainSameEtag());
 		}
 		
 		[Fact]
 		public void CanAddAndReadFileAfterReopen()
 		{
-			Run<Documents>(x => x.CanAddAndReadFileAfterReopen(), 100000);
+			Run<Documents>(x => x.CanAddAndReadFileAfterReopen(), 10000);
 		}
 		
 		[Fact]
 		public void CanAggressivelyCacheLoads()
 		{
-			Run<AggressiveCaching>(x => x.CanAggressivelyCacheLoads(), 100000);
+			Run<AggressiveCaching>(x => x.CanAggressivelyCacheLoads(), 10000);
 		}
 	}
 }
