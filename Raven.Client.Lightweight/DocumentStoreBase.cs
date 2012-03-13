@@ -74,7 +74,7 @@ namespace Raven.Client
 		/// Gets the conventions.
 		/// </summary>
 		/// <value>The conventions.</value>
-		public DocumentConvention Conventions { get; set; }
+		public virtual DocumentConvention Conventions { get; set; }
 
 		/// <summary>
 		/// Gets or sets the URL.

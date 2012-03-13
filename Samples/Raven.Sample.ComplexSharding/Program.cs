@@ -44,12 +44,12 @@ namespace Raven.Sample.ComplexSharding
 			             		{"Posts03", new DocumentStore {Url = "http://localhost:8085"}},
 			             	};
 
-			var shardStrategy = new ShardStrategy
+			var shardStrategy = new ShardStrategy(shards)
 			{
 				ShardAccessStrategy =new ParallelShardAccessStrategy(),
 				ShardResolutionStrategy = new BlogShardResolutionStrategy(3),
 			};
-			var documentStore = new ShardedDocumentStore(shardStrategy, shards);
+			var documentStore = new ShardedDocumentStore(shardStrategy);
 			documentStore.Initialize();
 
 			using(var session = documentStore.OpenSession())

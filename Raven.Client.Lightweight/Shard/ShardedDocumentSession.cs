@@ -66,7 +66,11 @@ namespace Raven.Client.Shard
 			IEnumerable<KeyValuePair<string, IDatabaseCommands>> cmds = shardDbCommands;
 
 			if (shardIds == null)
+			{
+
+
 				return cmds.Select(x => Tuple.Create(x.Key, x.Value)).ToList();
+			}
 
 			var list = new List<Tuple<string, IDatabaseCommands>>();
 			foreach (var shardId in shardIds)
@@ -467,6 +471,18 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("You cannot defer commands using the sharded document session, because we don't know which shard to use");
 		}
 
+		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata)
+		{
+			var shardId = shardStrategy.ShardResolutionStrategy.GenerateShardIdFor(entity);
+			if (string.IsNullOrEmpty(shardId))
+				throw new InvalidOperationException("Could not find shard id for " + entity + " because " + shardStrategy.ShardAccessStrategy + " returned null or empty string for the document shard id.");
+			metadata[Constants.RavenShardId] = shardId;
+			var modifyDocumentId = shardStrategy.ModifyDocumentId(Conventions, shardId, id);
+			if(modifyDocumentId != id)
+				TrySetIdentity(entity, modifyDocumentId);
+			base.StoreEntityInUnitOfWork(modifyDocumentId, entity, etag, metadata);
+		}
+
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
@@ -488,13 +504,7 @@ namespace Raven.Client.Shard
 					var entity = data.Entities[index];
 					var metadata = GetMetadataFor(entity);
 					var shardId = metadata.Value<string>(Constants.RavenShardId);
-
-					if (shardId == null)
-					{
-						shardId = shardStrategy.ShardResolutionStrategy.GenerateShardIdFor(entity);
-						metadata[Constants.RavenShardId] = shardId;
-					}
-
+					
 					var shardSaveChangesData = saveChangesPerShard.GetOrAdd(shardId);
 					shardSaveChangesData.Entities.Add(entity);
 					shardSaveChangesData.Commands.Add(data.Commands[index]);
