@@ -585,14 +585,19 @@ more responsive application.
 			var metadata = new RavenJObject();
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
+			StoreEntityInUnitOfWork(id, entity, etag, metadata);
+		}
+
+		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata)
+		{
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
-			{
-				Key = id,
-				Metadata = metadata,
-				OriginalMetadata = new RavenJObject(),
-				ETag = etag,
-				OriginalValue = new RavenJObject()
-			});
+			                                	{
+			                                		Key = id,
+			                                		Metadata = metadata,
+			                                		OriginalMetadata = new RavenJObject(),
+			                                		ETag = etag,
+			                                		OriginalValue = new RavenJObject()
+			                                	});
 			if (id != null)
 				entitiesByKey[id] = entity;
 		}

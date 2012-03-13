@@ -422,6 +422,14 @@ namespace Raven.Client.Document
 		/// Whatever or not RavenDB will automatically enlist in distributed transactions
 		///</summary>
 		public bool EnlistInDistributedTransactions { get; set; }
+
+		/// <summary>
+		/// Clone the current conventions to a new instance
+		/// </summary>
+		public DocumentConvention Clone()
+		{
+			return (DocumentConvention)MemberwiseClone();
+		}
 	}
 
 
