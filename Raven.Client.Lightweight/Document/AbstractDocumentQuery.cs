@@ -490,7 +490,7 @@ namespace Raven.Client.Document
 		private Task<QueryOperation> InitAsync()
 		{
 			if (queryOperation != null)
-				return TaskEx.Run(() => queryOperation);
+				return TaskResult(queryOperation);
 			foreach (var key in AsyncDatabaseCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
 			{
 				AsyncDatabaseCommands.OperationsHeaders.Remove(key);
@@ -595,7 +595,7 @@ namespace Raven.Client.Document
 			try
 			{
 				var list = currentQueryOperation.Complete<T>();
-				return TaskEx.Run(() => Tuple.Create(currentQueryOperation, list));
+				return Task.Factory.StartNew(() => Tuple.Create(currentQueryOperation, list));
 			}
 			catch (Exception e)
 			{
@@ -1377,14 +1377,35 @@ If you really want to do in memory filtering on the data returned from the query
 					{
 						if (queryOperation.IsAcceptable(task.Result) == false)
 						{
-							return TaskEx.Delay(100)
+							return TaskDelay(100)
 								.ContinueWith(_ => ExecuteActualQueryAsync())
 								.Unwrap();
 						}
 						InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
-						return TaskEx.Run(() => queryOperation);
+						return Task.Factory.StartNew(() => queryOperation);
 					}).Unwrap();
 			}
+		}
+
+		private static Task TaskDelay(int dueTimeMilliseconds)
+		{
+			var taskComplectionSource = new TaskCompletionSource<object>();
+			var cancellationTokenRegistration = new CancellationTokenRegistration();
+			var timer = new Timer(o =>
+			{
+				cancellationTokenRegistration.Dispose();
+				((Timer)o).Dispose();
+				taskComplectionSource.TrySetResult(null);
+			});
+			timer.Change(dueTimeMilliseconds, -1);
+			return taskComplectionSource.Task;
+		}
+
+		private static Task<TResult> TaskResult<TResult>(TResult value)
+		{
+			var taskComplectionSource = new TaskCompletionSource<TResult>();
+			taskComplectionSource.SetResult(value);
+			return taskComplectionSource.Task;
 		}
 #endif
 	 
@@ -1461,7 +1482,7 @@ If you really want to do in memory filtering on the data returned from the query
 			}
 
 			var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
-											whereParams.AllowWildcards && whereParams.IsAnalyzed);
+											whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
 			if (whereParams.Value is string == false)
 				return escaped;
@@ -1497,7 +1518,7 @@ If you really want to do in memory filtering on the data returned from the query
 				return NumberUtil.NumberToString((float)whereParams.Value);
 		   
 
-			return RavenQuery.Escape(whereParams.Value.ToString(), false);
+			return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
 		}
 
 		/// <summary>

@@ -105,11 +105,16 @@ namespace Raven.Tests.Bugs.Caching
 
 				using (var s = store.OpenSession())
 				{
-					var results = s.Query<User>("index").Customize(q => q.WaitForNonStaleResultsAsOf(firstTime)).Where(u => u.Email == "same.email@example.com").ToArray();
+					var results = s.Query<User>("index")
+						.Customize(q => q.WaitForNonStaleResultsAsOf(firstTime))
+						.Where(u => u.Email == "same.email@example.com")
+						.ToArray();
 					// Cache is done by url, so including a cutoff date invalidates the cache.
 
 					// the second query should stay in cache and return the correct value
-					results = s.Query<User>("index").Where(u => u.Email == "same.email@example.com").ToArray();
+					results = s.Query<User>("index")
+						.Where(u => u.Email == "same.email@example.com")
+						.ToArray();
 					Assert.Equal(1, results.Length);
 				}
 
@@ -127,13 +132,18 @@ namespace Raven.Tests.Bugs.Caching
 
 				using (var s = store.OpenSession())
 				{
-					var results = s.Query<User>("index").Customize(q => q.WaitForNonStaleResultsAsOf(secondTime)).Where(u => u.Email == "same.email@example.com").ToArray();
+					var results = s.Query<User>("index")
+						.Customize(q => q.WaitForNonStaleResultsAsOf(secondTime))
+						.Where(u => u.Email == "same.email@example.com")
+						.ToArray();
 					// this works, since we don't hit the cache
 					Assert.Equal(2, results.Length);
 
 					// we now hit the cache, but it should be invalidated since the underlying index *has* changed
 					// it isn't invalidated, and the result returns just 1 result
-					results = s.Query<User>("index").Where(u => u.Email == "same.email@example.com").ToArray();
+					results = s.Query<User>("index")
+						.Where(u => u.Email == "same.email@example.com")
+						.ToArray();
 					Assert.Equal(2, results.Length);
 				}
 			}

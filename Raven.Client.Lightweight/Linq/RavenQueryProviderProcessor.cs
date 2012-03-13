@@ -11,6 +11,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
@@ -648,7 +649,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					{
 						luceneQuery.NegateNext();
 					}
-					luceneQuery.Search(expressionInfo.Path, searchTerms);
+					luceneQuery.Search(expressionInfo.Path, RavenQuery.Escape(searchTerms, false, false));
 					luceneQuery.Boost(boost);
 
 					if ((options & SearchOptions.And) == SearchOptions.And)

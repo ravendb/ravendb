@@ -100,24 +100,9 @@ namespace Raven.Bundles.Tests.Authentication
 			using (var session = store.OpenSession())
 			{
 				session.Store(new { Name = "Sprite", Age = 321 });
-				var invalidOperationException = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
-				var webException = invalidOperationException.InnerException as WebException;
+				var webException = Assert.Throws<WebException>(() => session.SaveChanges());
 				Assert.Equal(HttpStatusCode.Unauthorized, ((HttpWebResponse) webException.Response).StatusCode);
 			}
-
-			//using (var session = embeddedStore.OpenSession())
-			//{
-			//    session.Store(new AuthenticationUser
-			//    {
-			//        Name = "Ayende",
-			//        Id = "Raven/Users/Ayende",
-			//        AllowedDatabases = new[] { "*" }
-			//    }.SetPassword("abc"));
-			//    session.SaveChanges();
-			//}
-
-			
-
 		}
 	}
 }

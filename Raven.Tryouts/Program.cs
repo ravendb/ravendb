@@ -5,6 +5,7 @@ using NLog;
 using NLog.Config;
 using Raven.Database.Server;
 using Raven.Tests.Bugs;
+using Raven.Tests.Bugs.Caching;
 using Raven.Tests.Shard.BlogModel;
 
 namespace Raven.Tryouts
@@ -29,14 +30,7 @@ namespace Raven.Tryouts
 					Environment.SetEnvironmentVariable("Run", i.ToString());
 					Console.Clear();
 					Console.WriteLine(i);
-					using (var x = new CanQueryOnlyUsers())
-						x.WhenQueryingForUserById();
-					using (var x = new CanQueryOnlyUsers())
-						x.WhenQueryingForUsersById();
-					using (var x = new CanQueryOnlyUsers())
-						x.WhenStoringUser();
-					using (var x = new CanQueryOnlyUsers())
-						x.WhenQueryingForUserByName();
+					new CachingOfDocumentInclude().New_query_returns_correct_value_when_cache_is_enabled_and_data_changes();
 				}
 			}
 			catch (Exception e)
