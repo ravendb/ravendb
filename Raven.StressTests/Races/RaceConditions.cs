@@ -27,12 +27,6 @@ namespace Raven.StressTests.Races
 		{
 			Run<MultiGetNonStaleRequslts>(x => x.ShouldBeAbleToGetNonStaleResults());
 		}
-
-		[Fact]
-		public void CaseSensitiveDeletes_ShouldWork()
-		{
-			Run<CaseSensitiveDeletes>(x => x.ShouldWork(), 1000);
-		}
 		
 		[Fact]
 		public void AfterCommitWillNotRetainSameEtag()
