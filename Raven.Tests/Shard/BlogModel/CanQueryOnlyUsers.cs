@@ -1,5 +1,6 @@
 using System.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Server;
 using Xunit;
 
 namespace Raven.Tests.Shard.BlogModel
@@ -13,11 +14,24 @@ namespace Raven.Tests.Shard.BlogModel
 			{
 				var user = session.Load<User>("users/1");
 				Assert.Null(user);
-
-				Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
-				Servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 			}
+
+			AssertNumberOfRequests(Servers["Users"], 1);
+			Servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
+				.ForEach(server => AssertNumberOfRequests(server.Value, 0));
+		}
+
+		private void AssertNumberOfRequests(RavenDbServer server, int numberOfRequests)
+		{
+			/*try
+			{*/
+			Assert.Equal(numberOfRequests, server.Server.NumberOfRequests);
+			/*}
+			catch (Exception)
+			{
+				Console.WriteLine(server.Server.LastRequests.ToArray());
+				throw;
+			}*/
 		}
 
 		[Fact]
@@ -43,7 +57,7 @@ namespace Raven.Tests.Shard.BlogModel
 			{
 				session.Store(new User { Name = "Fitzchak Yitzchaki" });
 				Assert.Equal(2, Servers["Users"].Server.NumberOfRequests); // HiLo
-				
+
 				session.SaveChanges();
 				Assert.Equal(3, Servers["Users"].Server.NumberOfRequests);
 				Servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
@@ -56,7 +70,7 @@ namespace Raven.Tests.Shard.BlogModel
 
 				Assert.Equal(4, Servers["Users"].Server.NumberOfRequests);
 				Assert.NotNull(user);
-				Assert.Equal("Fitzchak Yitzchaki", user.Name);			
+				Assert.Equal("Fitzchak Yitzchaki", user.Name);
 				Servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
 					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
 			}

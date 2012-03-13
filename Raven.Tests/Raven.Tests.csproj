@@ -479,6 +479,7 @@
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
     <Compile Include="Bugs\Vlko\RelationIdIndex.cs" />
     <Compile Include="Bugs\WaitForNonStaleResultsAsOfLastWrite.cs" />
+    <Compile Include="Bugs\WhenDoingSimpleLoad.cs" />
     <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />
     <Compile Include="Bugs\when_querying_cases_by_name_in_danish.cs" />
     <Compile Include="Bugs\WhereEntityIs.cs" />
