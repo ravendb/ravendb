@@ -110,6 +110,12 @@ namespace Raven.Abstractions.Json
 			return obj;
 		}
 
+		public static RavenJToken SelectTokenWithRavenSyntaxReturningSingleValue(this RavenJToken self, string path)
+		{
+			var tuple = SelectTokenWithRavenSyntaxReturningFlatStructure(self, path).FirstOrDefault();
+			return tuple == null ? null : tuple.Item1;
+		}
+
 		public static IEnumerable<Tuple<RavenJToken, RavenJToken>> SelectTokenWithRavenSyntaxReturningFlatStructure(this RavenJToken self, string path)
 		{
 			var pathParts = path.Split(new[]{','}, StringSplitOptions.RemoveEmptyEntries);

@@ -28,6 +28,57 @@ namespace Raven.Tests.Shard.BlogModel
 			}
 		}
 
+
+		[Fact]
+		public void CanSortFromMultipleServers()
+		{
+			using (var session = ShardedDocumentStore.OpenSession())
+			{
+				session.Store(new Post { Title = "Item 1", UserId = "2"});
+				session.Store(new Post { Title = "Item 2", UserId = "1" });
+				session.Store(new Post { Title = "Item 3", UserId = "3" });
+				session.SaveChanges();
+			}
+
+			using (var session = ShardedDocumentStore.OpenSession())
+			{
+				var posts = session.Query<Post>()
+					.Customize(x => x.WaitForNonStaleResults())
+					.OrderBy(x => x.UserId)
+					.ToList();
+
+				Assert.Equal(3, posts.Count);
+				Assert.Equal("Item 2", posts[0].Title);
+				Assert.Equal("Item 1", posts[1].Title);
+				Assert.Equal("Item 3", posts[2].Title);
+			}
+		}
+
+		[Fact]
+		public void CanPageFromMultipleServers()
+		{
+			using (var session = ShardedDocumentStore.OpenSession())
+			{
+				session.Store(new Post { Title = "Item 1", UserId = "2" });
+				session.Store(new Post { Title = "Item 2", UserId = "1" });
+				session.Store(new Post { Title = "Item 3", UserId = "3" });
+				session.SaveChanges();
+			}
+
+			using (var session = ShardedDocumentStore.OpenSession())
+			{
+				var posts = session.Query<Post>()
+					.Customize(x => x.WaitForNonStaleResults())
+					.OrderBy(x => x.UserId)
+					.Take(2)
+					.ToList();
+
+				Assert.Equal(2, posts.Count);
+				Assert.Equal("Item 2", posts[0].Title);
+				Assert.Equal("Item 1", posts[1].Title);
+			}
+		}
+
 		[Fact]
 		public void ThrwoWhenThereIsAPostInMoreThanOneShard_Query()
 		{

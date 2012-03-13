@@ -24,11 +24,6 @@ namespace Raven.Client
 	/// </summary>
 	public abstract class DocumentStoreBase : IDocumentStore
 	{
-		protected DocumentStoreBase()
-		{
-			Conventions = new DocumentConvention();
-		}
-
 		public abstract void Dispose();
 		
 		/// <summary>
@@ -70,11 +65,17 @@ namespace Raven.Client
 		public abstract IDatabaseCommands DatabaseCommands { get; }
 #endif
 
+		private DocumentConvention conventions;
+
 		/// <summary>
 		/// Gets the conventions.
 		/// </summary>
 		/// <value>The conventions.</value>
-		public virtual DocumentConvention Conventions { get; set; }
+		public virtual DocumentConvention Conventions
+		{
+			get { return conventions ?? (conventions = new DocumentConvention()); }
+			set { conventions = value; }
+		}
 
 		/// <summary>
 		/// Gets or sets the URL.

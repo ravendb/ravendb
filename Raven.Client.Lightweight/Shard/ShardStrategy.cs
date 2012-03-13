@@ -10,6 +10,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Security.Cryptography;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Json;
 using Raven.Client.Document;
 
 namespace Raven.Client.Shard
@@ -64,11 +65,28 @@ namespace Raven.Client.Shard
 		indexEtag = new Guid(MD5Core.GetHash(buffer));
 
 #endif
+			var results = queryResults.SelectMany(x => x.Results);
+
+			// apply sorting
+			if (query.SortedFields != null)
+			{
+				foreach (var sortedField in query.SortedFields)
+				{
+					var copy = sortedField;
+					results = sortedField.Descending ?
+						results.OrderByDescending(x => x.SelectTokenWithRavenSyntaxReturningSingleValue(copy.Field)) :
+						results.OrderBy(x => x.SelectTokenWithRavenSyntaxReturningSingleValue(copy.Field));
+				}
+			}
+
+			// apply take
+			results = results.Take(query.PageSize);
+
 
 			return new QueryResult
 					{
 						Includes = queryResults.SelectMany(x => x.Includes).ToList(),
-						Results = queryResults.SelectMany(x => x.Results).ToList(),
+						Results = results.ToList(),
 
 						IndexName = queryResults.Select(x => x.IndexName).FirstOrDefault(),
 						IndexTimestamp = queryResults.Select(x => x.IndexTimestamp).OrderBy(x => x).FirstOrDefault(),

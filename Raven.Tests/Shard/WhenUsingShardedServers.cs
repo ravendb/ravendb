@@ -62,13 +62,13 @@ namespace Raven.Tests.Shard
 			shardResolution.Stub(x => x.MetadataShardIdFor(company1)).Return("Shard1");
 			shardResolution.Stub(x => x.MetadataShardIdFor(company2)).Return("Shard1");
 
-			shardStrategy = new ShardStrategy { ShardResolutionStrategy = shardResolution };
+			shardStrategy = new ShardStrategy(shards) { ShardResolutionStrategy = shardResolution };
 		}
 
 		[Fact]
 		public void CanOverrideTheShardIdGeneration()
 		{
-			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
+			using (var documentStore = new ShardedDocumentStore(shardStrategy))
 			{
 				documentStore.Initialize();
 
@@ -92,7 +92,7 @@ namespace Raven.Tests.Shard
 		public void CanQueryUsingInt()
 		{
 			shardStrategy.ShardAccessStrategy = new SequentialShardAccessStrategy();
-			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
+			using (var documentStore = new ShardedDocumentStore(shardStrategy))
 			{
 				documentStore.Initialize();
 
@@ -106,7 +106,7 @@ namespace Raven.Tests.Shard
 		[Fact]
 		public void CanInsertIntoTwoShardedServers()
 		{
-			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards))
+			using (var documentStore = new ShardedDocumentStore(shardStrategy))
 			{
 				documentStore.Initialize();
 
@@ -122,7 +122,7 @@ namespace Raven.Tests.Shard
 		[Fact]
 		public void CanGetSingleEntityFromCorrectShardedServer()
 		{
-			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
+			using (var documentStore = new ShardedDocumentStore(shardStrategy).Initialize())
 			using (var session = documentStore.OpenSession())
 			{
 				//store item that goes in 2nd shard
@@ -143,7 +143,7 @@ namespace Raven.Tests.Shard
 		{
 			shardStrategy.ShardAccessStrategy = new SequentialShardAccessStrategy();
 
-			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
+			using (var documentStore = new ShardedDocumentStore(shardStrategy).Initialize())
 			using (var session = documentStore.OpenSession())
 			{
 				//store item that goes in 2nd shard
@@ -166,7 +166,7 @@ namespace Raven.Tests.Shard
 			//get them in simple single threaded sequence for this test
 			shardStrategy.ShardAccessStrategy = new SequentialShardAccessStrategy();
 
-			using (var documentStore = new ShardedDocumentStore(shardStrategy, shards).Initialize())
+			using (var documentStore = new ShardedDocumentStore(shardStrategy).Initialize())
 			using (var session = documentStore.OpenSession())
 			{
 				//store 2 items in 2 shards

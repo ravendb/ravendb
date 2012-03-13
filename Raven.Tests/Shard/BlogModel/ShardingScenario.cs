@@ -70,11 +70,11 @@ namespace Raven.Tests.Shard.BlogModel
 				shard.Value.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 			}
 
-			ShardedDocumentStore = new ShardedDocumentStore(new ShardStrategy
+			ShardedDocumentStore = new ShardedDocumentStore(new ShardStrategy(shards)
 															{
 																ShardAccessStrategy = new SequentialShardAccessStrategy(),
 																ShardResolutionStrategy = new BlogShardResolutionStrategy(3),
-															}, shards);
+															});
 			ShardedDocumentStore = (ShardedDocumentStore) ShardedDocumentStore.Initialize();
 		}
 
