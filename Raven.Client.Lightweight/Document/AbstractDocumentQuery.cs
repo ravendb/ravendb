@@ -1482,7 +1482,7 @@ If you really want to do in memory filtering on the data returned from the query
 			}
 
 			var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
-											whereParams.AllowWildcards && whereParams.IsAnalyzed);
+											whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
 			if (whereParams.Value is string == false)
 				return escaped;
@@ -1518,7 +1518,7 @@ If you really want to do in memory filtering on the data returned from the query
 				return NumberUtil.NumberToString((float)whereParams.Value);
 		   
 
-			return RavenQuery.Escape(whereParams.Value.ToString(), false);
+			return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
 		}
 
 		/// <summary>

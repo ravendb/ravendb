@@ -17,7 +17,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public static string Escape(string term)
 		{
-			return Escape(term, false);
+			return Escape(term, false, true);
 		}
 
 		/// <summary>
@@ -29,7 +29,7 @@ namespace Raven.Client.Connection
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
 		/// </remarks>
-		public static string Escape(string term, bool allowWildcards)
+		public static string Escape(string term, bool allowWildcards, bool makePhrase)
 		{
 			// method doesn't allocate a StringBuilder unless the string requires escaping
 			// also this copies chunks of the original string into the StringBuilder which
@@ -97,7 +97,7 @@ namespace Raven.Client.Connection
 					case ' ':
 					case '\t':
 						{
-							if (!isPhrase)
+							if (!isPhrase && makePhrase)
 							{
 								if (buffer == null)
 								{
