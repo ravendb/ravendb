@@ -87,10 +87,15 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void LazyMultiLoadOperationWouldBeInTheSession()
 		{
+			var ids = new List<string>();
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				for (int i = 1; i <= 4; i++)
-					session.Store(new User{Id="users/" + i, Name = "User " + i});
+				{
+					var entity = new User{ Id = "users/"+i, Name = ids.LastOrDefault()};
+					session.Store(entity);
+					ids.Add(entity.Id);
+				}
 				session.SaveChanges();
 			}
 			Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
@@ -99,8 +104,8 @@ namespace Raven.Tests.Shard.BlogModel
 
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
-				var result1 = session.Advanced.Lazily.Load<User>("users/1", "users/2");
-				var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
+				var result1 = session.Advanced.Lazily.Load<User>(ids[0], ids[1]);
+				var result2 = session.Advanced.Lazily.Load<User>(ids[2], ids[3]);
 				
 				var a = result1.Value;
 				Assert.Equal(2, a.Length);
@@ -124,25 +129,30 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void LazyLoadOperationWillHandleIncludes()
 		{
+			var ids = new List<string>();
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				for (int i = 1; i <= 4; i++)
-					session.Store(new User { Id = "users/" + i, Name = "users/" + (i + 1) });
+				{
+					var entity = new User { Name = ids.LastOrDefault()};
+					session.Store(entity);
+					ids.Add(entity.Id);
+				}
 				session.SaveChanges();
 			}
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				var result1 = session.Advanced.Lazily
 					.Include("Name")
-					.Load<User>("users/1");
+					.Load<User>(ids[1]);
 				var result2 = session.Advanced.Lazily
 					.Include("Name")
-					.Load<User>("users/3");
+					.Load<User>(ids[3]);
 
 				Assert.NotNull(result1.Value);
 				Assert.NotNull(result2.Value);
-				Assert.True(session.Advanced.IsLoaded("users/2"));
-				Assert.True(session.Advanced.IsLoaded("users/4"));
+				Assert.True(session.Advanced.IsLoaded(result1.Value.Name));
+				Assert.True(session.Advanced.IsLoaded(result2.Value.Name));
 			}
 		}
 	}

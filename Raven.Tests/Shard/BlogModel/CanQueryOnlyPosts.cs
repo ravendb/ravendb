@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 using Xunit;
@@ -76,94 +77,6 @@ namespace Raven.Tests.Shard.BlogModel
 				Assert.Equal(2, posts.Count);
 				Assert.Equal("Item 2", posts[0].Title);
 				Assert.Equal("Item 1", posts[1].Title);
-			}
-		}
-
-		[Fact]
-		public void ThrwoWhenThereIsAPostInMoreThanOneShard_Query()
-		{
-			var post = new Post {Id = "posts/1", Title = "Item 1"};
-			for (int i = 0; i < 2; i++)
-				using (var session = ShardedDocumentStore.OpenSession())
-				{
-					session.Store(post);
-					session.SaveChanges();
-				}
-
-			Assert.Equal(2, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 1));
-			Assert.Equal(1, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 0));
-			Servers.Where(server => server.Key.StartsWith("Posts") == false)
-				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
-
-			using (var session = ShardedDocumentStore.OpenSession())
-			{
-				Assert.Throws<InvalidOperationException>(() => session.Query<Post>().ToList());
-			}
-		}
-
-		[Fact]
-		public void ThrwoWhenThereIsAPostInMoreThanOneShard_Load()
-		{
-			var post = new Post {Id = "posts/1", Title = "Item 1"};
-			for (int i = 0; i < 2; i++)
-				using (var session = ShardedDocumentStore.OpenSession())
-				{
-					session.Store(post);
-					session.SaveChanges();
-				}
-
-			Assert.Equal(2, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 1));
-			Assert.Equal(1, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 0));
-			Servers.Where(server => server.Key.StartsWith("Posts") == false)
-				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
-
-			using (var session = ShardedDocumentStore.OpenSession())
-			{
-				Assert.Throws<InvalidOperationException>(() => session.Load<Post>(1));
-			}
-		}
-
-		[Fact]
-		public void ThrwoWhenThereIsAPostInMoreThanOneShard_LoadMany()
-		{
-			var post = new Post {Id = "posts/1", Title = "Item 1"};
-			for (int i = 0; i < 2; i++)
-				using (var session = ShardedDocumentStore.OpenSession())
-				{
-					session.Store(post);
-					session.SaveChanges();
-				}
-
-			Assert.Equal(2, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 1));
-			Assert.Equal(1, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 0));
-			Servers.Where(server => server.Key.StartsWith("Posts") == false)
-				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
-
-			using (var session = ShardedDocumentStore.OpenSession())
-			{
-				Assert.Throws<InvalidOperationException>(() => session.Load<Post>("posts/1", "posts/2"));
-			}
-		}
-
-		[Fact]
-		public void ThrwoWhenThereIsAPostInMoreThanOneShard_LoadManyWithInclude()
-		{
-			var post = new Post {Id = "posts/1", Title = "Item 1", UserId = "users/fitzchak"};
-			for (int i = 0; i < 2; i++)
-				using (var session = ShardedDocumentStore.OpenSession())
-				{
-					session.Store(post);
-					session.SaveChanges();
-				}
-
-			Assert.Equal(2, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 1));
-			Assert.Equal(1, Servers.Count(server => server.Key.StartsWith("Posts") && server.Value.Server.NumberOfRequests == 0));
-			Servers.Where(server => server.Key.StartsWith("Posts") == false)
-				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
-
-			using (var session = ShardedDocumentStore.OpenSession())
-			{
-				Assert.Throws<InvalidOperationException>(() => session.Include("UserId").Load<Post>("posts/1", "posts/2"));
 			}
 		}
 

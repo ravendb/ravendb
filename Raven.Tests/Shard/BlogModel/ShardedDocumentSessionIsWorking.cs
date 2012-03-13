@@ -12,15 +12,18 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void MultiLoadShouldWork()
 		{
+			string id;
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
-				session.Store(new User { Name = "Fitzchak Yitzchaki" });
+				var entity = new User { Name = "Fitzchak Yitzchaki" };
+				session.Store(entity);
+				id = entity.Id;
 				session.SaveChanges();
 			}
 
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
-				var users = session.Load<User>("users/1", "users/2");
+				var users = session.Load<User>(id, "does not exists");
 				Assert.NotNull(users);
 				Assert.Equal(2, users.Length);
 				Assert.Equal("Fitzchak Yitzchaki", users[0].Name);

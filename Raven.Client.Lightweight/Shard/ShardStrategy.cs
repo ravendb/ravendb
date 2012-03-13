@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
+#if !SILVERLIGHT 
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,11 +28,13 @@ namespace Raven.Client.Shard
 
 		public ShardStrategy(IDictionary<string, IDocumentStore> shards)
 		{
-			this.shards = new Dictionary<string, IDocumentStore>(shards, StringComparer.InvariantCultureIgnoreCase);
-
+			if (shards == null) throw new ArgumentNullException("shards");
 			if (shards.Count == 0)
 				throw new ArgumentException("Shards collection must have at least one item", "shards");
 
+			this.shards = new Dictionary<string, IDocumentStore>(shards, StringComparer.InvariantCultureIgnoreCase);
+
+		
 			Conventions = shards.First().Value.Conventions.Clone();
 
 			ShardAccessStrategy = new SequentialShardAccessStrategy();

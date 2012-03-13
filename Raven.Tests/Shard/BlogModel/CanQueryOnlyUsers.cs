@@ -54,9 +54,12 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void WhenStoringUser()
 		{
+			string id;
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
-				session.Store(new User { Name = "Fitzchak Yitzchaki" });
+				var entity = new User { Name = "Fitzchak Yitzchaki" };
+				session.Store(entity);
+				id = entity.Id;
 				AssertNumberOfRequests(Servers["Users"], 2); // HiLo
 
 				session.SaveChanges();
@@ -67,7 +70,7 @@ namespace Raven.Tests.Shard.BlogModel
 
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
-				var user = session.Load<User>("users/1");
+				var user = session.Load<User>(id);
 				Assert.NotNull(user);
 				Assert.Equal("Fitzchak Yitzchaki", user.Name);
 

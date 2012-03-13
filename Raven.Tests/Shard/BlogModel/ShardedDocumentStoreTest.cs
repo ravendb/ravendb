@@ -11,8 +11,8 @@ namespace Raven.Tests.Shard.BlogModel
 	{
 		[Fact]
 		public void WillThrowIsThereIsNoShards()
-		{										   
-			Assert.Throws<ArgumentException>(() => new ShardStrategy(null));
+		{
+			Assert.Throws<ArgumentNullException>(() => new ShardStrategy(null));
 			Assert.Throws<ArgumentException>(() => new ShardStrategy(new Dictionary<string, IDocumentStore>()));
 		}
 
