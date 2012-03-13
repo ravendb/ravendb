@@ -39,8 +39,8 @@ namespace Raven.Tests
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 
-			var documentStore = new EmbeddableDocumentStore()
-			{
+			var documentStore = new EmbeddableDocumentStore
+			                    	{
 				Configuration =
 					{
 						DataDirectory = path,

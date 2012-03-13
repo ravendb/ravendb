@@ -42,6 +42,10 @@ namespace Raven.Database.Server
 		public InMemoryRavenConfiguration DefaultConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
+#if DEBUG
+		public readonly ConcurrentQueue<string> LastRequests = new ConcurrentQueue<string>();
+#endif
+
 		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { }; 
 
 		private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
@@ -516,6 +520,7 @@ namespace Raven.Database.Server
 
 			try
 			{
+				RecordRequest(ctx);
 				OnDispatchingRequest(ctx);
 
 				if (DefaultConfiguration.HttpCompression)
@@ -567,6 +572,15 @@ namespace Raven.Database.Server
 				}
 			}
 			return false;
+		}
+
+		[Conditional("DEBUG")]
+		private void RecordRequest(IHttpContext ctx)
+		{
+			string result;
+			if(LastRequests.Count > 128)
+				LastRequests.TryDequeue(out result);
+			LastRequests.Enqueue(ctx.Request.RawUrl);
 		}
 
 		private void HandleHttpCompressionFromClient(IHttpContext ctx)
