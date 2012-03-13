@@ -271,6 +271,9 @@ namespace Raven.Client.Document.SessionOperations
 					return SortOptions.Int;
 				case "Int64":
 					return SortOptions.Long;
+				case "Double":
+				case "Decimal":
+					return SortOptions.Double;
 				case "Single":
 					return SortOptions.Float;
 				case "String":
