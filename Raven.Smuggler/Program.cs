@@ -23,14 +23,6 @@ namespace Raven.Smuggler
 			optionSet = new OptionSet
 			            	{
 			            		{
-			            			"metadata-filter:{=}", "Filter documents by a metadata property." + Environment.NewLine +
-			            			                       "Usage example: @metadata.Raven-Entity-Name=Birds", (key, val) => options.Filters["@metadata." + key] = val
-			            			},
-			            		{
-			            			"filter:{=}", "Filter documents by a document property" + Environment.NewLine +
-			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters[key] = val
-			            			},
-			            		{
 			            			"operate-on-types:", "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
 			            			                     "Default is all items." + Environment.NewLine +
 			            			                     "Usage example: Indexes,Documents,Attachments", value =>
@@ -45,10 +37,18 @@ namespace Raven.Smuggler
 			            			                                                                     		}
 			            			                                                                     	}
 			            			},
+			            		{
+			            			"metadata-filter:{=}", "Filter documents by a metadata property." + Environment.NewLine +
+			            			                       "Usage example: Raven-Entity-Name=Posts", (key, val) => options.Filters["@metadata." + key] = val
+			            			},
+			            		{
+			            			"filter:{=}", "Filter documents by a document property" + Environment.NewLine +
+			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters[key] = val
+			            			},
+			            		{"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
 			            		{"u|user|username:", "The username to use when the database requires the client to authenticate.", value => connectionStringOptions.Credentials.UserName = value},
 			            		{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => connectionStringOptions.Credentials.Password = value},
 			            		{"domain:", "The domain to use when the database requires the client to authenticate.", value => connectionStringOptions.Credentials.Domain = value},
-			            		{"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
 			            		{"key|api-key:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};

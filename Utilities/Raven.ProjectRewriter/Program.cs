@@ -26,6 +26,66 @@ namespace Raven.ProjectRewriter
 				@"Raven.Client.Lightweight\Raven.Client.Lightweight.g.3.5.csproj",
 				"Raven.Json",
 				"Raven.Abstractions");
+
+			GenerateSilverlight4(@"Raven.Client.Silverlight\Raven.Client.Silverlight.csproj",
+				@"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");
+		}
+
+		private static void GenerateSilverlight4(string srcPath, string destFile, params string[] references)
+		{
+			var database = XDocument.Load(srcPath);
+			foreach (var element in database.Root.Descendants(xmlns + "DefineConstants").ToArray())
+			{
+				if (element.Value.EndsWith(";") == false)
+					element.Value += ";";
+				element.Value += "SL_4";
+			}
+
+			foreach (var element in database.Root.Descendants(xmlns + "ProjectReference").ToArray())
+			{
+				if (references.Contains(element.Element(xmlns + "Name").Value) == false)
+					continue;
+				element.Attribute("Include").Value = element.Attribute("Include").Value.Replace(".csproj", ".g.4.csproj");
+				element.Element(xmlns + "Name").Value += "-4";
+			}
+
+			foreach (var element in database.Root.Descendants(xmlns + "Reference").ToArray())
+			{
+				if (element.Attribute("Include").Value == "AsyncCtpLibrary_Silverlight5")
+				{
+					element.Attribute("Include").Value = "AsyncCtpLibrary_Silverlight";
+					var hintPath = element.Descendants(xmlns + "HintPath").FirstOrDefault();
+					if (hintPath != null)
+						hintPath.Value = hintPath.Value.Replace("Silverlight5", "Silverlight");
+				}
+				if (element.Attribute("Include").Value.Contains("Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"))
+				{
+					element.Attribute("Include").Value = element.Attribute("Include").Value.Replace("5.0.5.0", "2.0.5.0");
+					var hintPath = element.Descendants(xmlns + "HintPath").FirstOrDefault();
+					if (hintPath != null)
+						hintPath.Value = hintPath.Value.Replace(@"Microsoft SDKs\Silverlight\v5.0\", @"Microsoft SDKs\Silverlight\v4.0\");
+				}
+				if (element.Attribute("Include").Value.Contains("Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"))
+					element.Attribute("Include").Value = element.Attribute("Include").Value.Replace("5.0.5.0", "2.0.5.0");
+			}
+
+			foreach (var element in database.Root.Descendants(xmlns + "TargetFrameworkVersion"))
+			{
+				element.Value = "v4.0";
+			}
+			foreach (var element in database.Root.Descendants(xmlns + "AssemblyName"))
+			{
+				element.Value += "-4";
+			}
+			using (var xmlWriter = XmlWriter.Create(destFile,
+													new XmlWriterSettings
+													{
+														Indent = true
+													}))
+			{
+				database.WriteTo(xmlWriter);
+				xmlWriter.Flush();
+			}
 		}
 
 		private static void Generate35(string srcPath, string destFile, params string[] references)
@@ -43,7 +103,10 @@ namespace Raven.ProjectRewriter
 				if (references.Contains(element.Element(xmlns + "Name").Value) == false)
 					continue;
 				element.Attribute("Include").Value = element.Attribute("Include").Value.Replace(".csproj", ".g.3.5.csproj");
-				element.Element(xmlns + "Name").Value += "-3.5";
+				{
+					element.Element(xmlns + "Project").Value = "{4C18FC25-0B1E-42E3-A423-3A99F1AC57EE}";
+					element.Element(xmlns + "Name").Value += "-3.5";
+				}
 			}
 
 			foreach (var element in database.Root.Descendants(xmlns + "Reference").ToArray())

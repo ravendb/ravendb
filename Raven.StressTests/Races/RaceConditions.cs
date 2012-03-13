@@ -45,5 +45,11 @@ namespace Raven.StressTests.Races
 		{
 			Run<Documents>(x => x.CanAddAndReadFileAfterReopen(), 100000);
 		}
+		
+		[Fact]
+		public void CanAggressivelyCacheLoads()
+		{
+			Run<AggressiveCaching>(x => x.CanAggressivelyCacheLoads(), 100000);
+		}
 	}
 }
