@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Server;
@@ -23,15 +24,15 @@ namespace Raven.Tests.Shard.BlogModel
 
 		private void AssertNumberOfRequests(RavenDbServer server, int numberOfRequests)
 		{
-			/*try
-			{*/
-			Assert.Equal(numberOfRequests, server.Server.NumberOfRequests);
-			/*}
-			catch (Exception)
+			try
 			{
-				Console.WriteLine(server.Server.LastRequests.ToArray());
+				Assert.Equal(numberOfRequests, server.Server.NumberOfRequests);
+			}
+			catch
+			{
+				Console.WriteLine(string.Join(Environment.NewLine, server.Server.LastRequests));
 				throw;
-			}*/
+			}
 		}
 
 		[Fact]
@@ -44,9 +45,9 @@ namespace Raven.Tests.Shard.BlogModel
 				Assert.Null(users[0]);
 				Assert.Null(users[1]);
 
-				Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
+				AssertNumberOfRequests(Servers["Users"], 1);
 				Servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+					.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 			}
 		}
 
@@ -56,23 +57,23 @@ namespace Raven.Tests.Shard.BlogModel
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				session.Store(new User { Name = "Fitzchak Yitzchaki" });
-				Assert.Equal(2, Servers["Users"].Server.NumberOfRequests); // HiLo
+				AssertNumberOfRequests(Servers["Users"], 2); // HiLo
 
 				session.SaveChanges();
-				Assert.Equal(3, Servers["Users"].Server.NumberOfRequests);
+				AssertNumberOfRequests(Servers["Users"], 3);
 				Servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+					.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 			}
 
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				var user = session.Load<User>("users/1");
-
-				Assert.Equal(4, Servers["Users"].Server.NumberOfRequests);
 				Assert.NotNull(user);
 				Assert.Equal("Fitzchak Yitzchaki", user.Name);
+
+				AssertNumberOfRequests(Servers["Users"], 4);
 				Servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+					.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 			}
 		}
 
@@ -85,9 +86,9 @@ namespace Raven.Tests.Shard.BlogModel
 					.FirstOrDefault(x => x.Name == "Fitzchak");
 				Assert.Null(user);
 
-				Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
+				AssertNumberOfRequests(Servers["Users"], 1);
 				Servers.Where(ravenDbServer => ravenDbServer.Key != "Users")
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+					.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 			}
 		}
 	}
