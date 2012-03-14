@@ -549,6 +549,8 @@
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
     <Compile Include="MailingList\AttachmentContentType.cs" />
+    <Compile Include="MailingList\BooleanCollection.cs" />
+    <Compile Include="MailingList\DtcIssue.cs" />
     <Compile Include="MailingList\Everett\CanReadBytes.cs" />
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\BuildStarted.cs" />
@@ -632,6 +634,7 @@
     <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\TimeZoneQueries.cs" />
     <Compile Include="MailingList\transformedresults_customid_test.cs" />
+    <Compile Include="MailingList\UriProperty.cs" />
     <Compile Include="MailingList\Victor.cs" />
     <Compile Include="MailingList\Vitaly.cs" />
     <Compile Include="MailingList\Vlad.cs" />

@@ -51,11 +51,18 @@ namespace Raven.Client.Linq
 		public Guid IndexEtag { get; set; }
 
 		/// <summary>
+		/// Gets or sets a value indicating whether any of the documents returned by this query
+		/// are non authoritative (modified by uncommitted transaction).
+		/// </summary>
+		public bool NonAuthoritativeInformation { get; set; }
+
+		/// <summary>
 		/// Update the query stats from the query results
 		/// </summary>
 		internal void UpdateQueryStats(QueryResult qr)
 		{
 			IsStale = qr.IsStale;
+			NonAuthoritativeInformation= qr.NonAuthoritativeInformation;
 			TotalResults = qr.TotalResults;
 			SkippedResults = qr.SkippedResults;
 			Timestamp = qr.IndexTimestamp;
@@ -63,5 +70,7 @@ namespace Raven.Client.Linq
 			IndexTimestamp = qr.IndexTimestamp;
 			IndexEtag = qr.IndexEtag;
 		}
+
+		
 	}
 }

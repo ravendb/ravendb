@@ -544,9 +544,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (memberExpression.Type == typeof(bool))
 			{
+				var memberInfo = GetMember(memberExpression);
+
 				luceneQuery.WhereEquals(new WhereParams
 				{
-					FieldName = GetFullMemberPath(memberExpression),
+					FieldName = memberInfo.Path,
 					Value = boolValue,
 					IsAnalyzed = true,
 					AllowWildcards = false
@@ -556,16 +558,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				throw new NotSupportedException("Expression type not supported: " + memberExpression);
 			}
-		}
-
-		private static string GetFullMemberPath(MemberExpression memberExpression)
-		{
-			var parentExpression = memberExpression.Expression as MemberExpression;
-			if (parentExpression != null)
-			{
-				return GetFullMemberPath(parentExpression) + "." + memberExpression.Member.Name;
-			}
-			return memberExpression.Member.Name;
 		}
 
 		private void VisitMethodCall(MethodCallExpression expression)

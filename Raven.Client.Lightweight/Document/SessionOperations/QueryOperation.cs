@@ -230,6 +230,24 @@ namespace Raven.Client.Document.SessionOperations
 
 		public bool IsAcceptable(QueryResult result)
 		{
+			if(sessionOperations.AllowNonAuthoritativeInformation == false && 
+				result.NonAuthoritativeInformation)
+			{
+				if (sp.Elapsed > sessionOperations.NonAuthoritativeInformationTimeout)
+				{
+					sp.Stop();
+					throw new TimeoutException(
+						string.Format("Waited for {0:#,#;;0}ms for the query to return authoritative result.",
+									  sp.ElapsedMilliseconds));
+				}
+				log.Debug(
+						"Non authoritative query results on authoritative query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
+						indexQuery.Query,
+						indexName,
+						sessionOperations.StoreIdentifier,
+						result.IndexEtag);
+				return false;
+			}
 			if (waitForNonStaleResults && result.IsStale)
 			{
 				if (sp.Elapsed > timeout)

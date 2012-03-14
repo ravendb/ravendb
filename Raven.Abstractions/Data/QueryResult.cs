@@ -65,7 +65,13 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public Guid ResultEtag { get; set; }
 
-	    /// <summary>
+		/// <summary>
+		/// Gets or sets a value indicating whether any of the documents returned by this query
+		/// are non authoritative (modified by uncommitted transaction).
+		/// </summary>
+		public bool NonAuthoritativeInformation { get; set; }
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.
 		/// </summary>
 		public QueryResult()
