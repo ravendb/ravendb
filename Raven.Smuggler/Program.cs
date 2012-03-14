@@ -18,7 +18,7 @@ namespace Raven.Smuggler
 
 		private Program()
 		{
-			connectionStringOptions = new RavenConnectionStringOptions {Credentials = new NetworkCredential()};
+			connectionStringOptions = new RavenConnectionStringOptions();
 			options = new SmugglerOptions();
 			optionSet = new OptionSet
 			            	{
@@ -46,12 +46,17 @@ namespace Raven.Smuggler
 			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters[key] = val
 			            			},
 			            		{"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
-			            		{"u|user|username:", "The username to use when the database requires the client to authenticate.", value => connectionStringOptions.Credentials.UserName = value},
-			            		{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => connectionStringOptions.Credentials.Password = value},
-			            		{"domain:", "The domain to use when the database requires the client to authenticate.", value => connectionStringOptions.Credentials.Domain = value},
+			            		{"u|user|username:", "The username to use when the database requires the client to authenticate.", value => Credentials.UserName = value},
+			            		{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => Credentials.Password = value},
+			            		{"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
 			            		{"key|api-key:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};
+		}
+
+		private NetworkCredential Credentials
+		{
+			get { return connectionStringOptions.Credentials ?? (connectionStringOptions.Credentials = new NetworkCredential()); }
 		}
 
 		static void Main(string[] args)
