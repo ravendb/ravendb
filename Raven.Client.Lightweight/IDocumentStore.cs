@@ -14,11 +14,12 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#else
+using Raven.Client.Indexes;
 #endif
 #if !NET_3_5
 using Raven.Client.Connection.Async;
 using Raven.Client.Indexes;
-
 #endif
 
 namespace Raven.Client
