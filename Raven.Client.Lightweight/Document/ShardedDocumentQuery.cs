@@ -109,6 +109,7 @@ namespace Raven.Client.Document
 				orderByFields = orderByFields,
 				groupByFields = groupByFields,
 				aggregationOp = aggregationOp,
+				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes)
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
@@ -157,7 +158,12 @@ namespace Raven.Client.Document
 				var currentQueryResults = shardQueryOperation.CurrentQueryResults;
 				foreach (var include in currentQueryResults.Includes.Concat(currentQueryResults.Results))
 				{
-					var id = include.Value<RavenJObject>(Constants.Metadata).Value<string>("@id");
+					var includeMetadata = include.Value<RavenJObject>(Constants.Metadata);
+					if(includeMetadata == null)
+						continue;
+					var id = includeMetadata.Value<string>("@id");
+					if(id == null)
+						continue;
 					shardsPerId.GetOrAdd(id).Add(shardQueryOperation);
 				}
 			}

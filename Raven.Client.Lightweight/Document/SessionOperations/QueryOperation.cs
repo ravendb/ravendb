@@ -22,6 +22,7 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly Action<string, string> setOperationHeaders;
 		private readonly bool waitForNonStaleResults;
 		private readonly TimeSpan timeout;
+		private readonly Func<IEnumerable<object>, IEnumerable<object>> transformResults;
 		private QueryResult currentQueryResults;
 		private readonly string[] projectionFields;
 		private bool firstRequest = true;
@@ -50,13 +51,15 @@ namespace Raven.Client.Document.SessionOperations
 			HashSet<KeyValuePair<string, Type>> sortByHints,
 			bool waitForNonStaleResults,
 			Action<string, string> setOperationHeaders,
-			TimeSpan timeout)
+			TimeSpan timeout,
+			Func<IEnumerable<object>, IEnumerable<object>> transformResults)
 		{
 			this.indexQuery = indexQuery;
 			this.sortByHints = sortByHints;
 			this.waitForNonStaleResults = waitForNonStaleResults;
 			this.setOperationHeaders = setOperationHeaders;
 			this.timeout = timeout;
+			this.transformResults = transformResults;
 			this.projectionFields = projectionFields;
 			this.sessionOperations = sessionOperations;
 			this.indexName = indexName;
@@ -112,7 +115,10 @@ namespace Raven.Client.Document.SessionOperations
 				.Select(Deserialize<T>)
 				.ToList();
 
-			return list;
+			if (transformResults == null)
+				return list;
+
+			return transformResults(list.Cast<object>()).Cast<T>().ToList();
 		}
 
 		private T Deserialize<T>(RavenJObject result)

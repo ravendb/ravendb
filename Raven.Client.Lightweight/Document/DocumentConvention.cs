@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
@@ -32,7 +33,14 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentConvention
 	{
+		public delegate IEnumerable<object> ApplyReduceFunctionFunc(
+			Type indexType,
+			Type resultType,
+			IEnumerable<object> results,
+			Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults);
+
 		private Dictionary<Type, PropertyInfo> idPropertyCache = new Dictionary<Type, PropertyInfo>();
+		private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentConvention"/> class.
@@ -70,8 +78,35 @@ namespace Raven.Client.Document
 				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
 			};
 			MaxNumberOfRequestsPerSession = 30;
+			ApplyReduceFunction = DefaultApplyReduceFunction;
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] {IdentityPartsSeparator}, StringSplitOptions.RemoveEmptyEntries) .Last();
+		}
+
+		private IEnumerable<object> DefaultApplyReduceFunction(
+			Type indexType, 
+			Type resultType, 
+			IEnumerable<object> results, 
+			Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults)
+		{
+			Func<IEnumerable<object>, IEnumerable> compile;
+			if(compiledReduceCache.TryGetValue(indexType, out compile) == false)
+			{
+				compile = generateTransformResults();
+				compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>(compiledReduceCache)
+				{
+					{indexType, compile}
+				};
+			}
+			return compile(results).Cast<object>()
+				.Select(result =>
+				{
+					// we got an anonymous object and we need to get the reduce results
+					var ravenJTokenWriter = new RavenJTokenWriter();
+					var jsonSerializer = CreateSerializer();
+					jsonSerializer.Serialize(ravenJTokenWriter, result);
+					return jsonSerializer.Deserialize(new RavenJTokenReader(ravenJTokenWriter.Token), resultType);
+				});
 		}
 
 		public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
@@ -430,6 +465,12 @@ namespace Raven.Client.Document
 		{
 			return (DocumentConvention)MemberwiseClone();
 		}
+
+		/// <summary>
+		/// This is called in order to ensure that reduce function in a sharded environment is run 
+		/// over the merged results
+		/// </summary>
+		public ApplyReduceFunctionFunc ApplyReduceFunction { get; set; }
 	}
 
 

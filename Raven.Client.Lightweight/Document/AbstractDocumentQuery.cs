@@ -57,6 +57,9 @@ namespace Raven.Client.Document
 		/// The index to query
 		/// </summary>
 		protected readonly string indexName;
+
+		protected Func<IEnumerable<object>, IEnumerable<object>> transformResultsFunc;
+
 		private int currentClauseDepth;
 
 		private KeyValuePair<string, string> lastEquality;
@@ -378,7 +381,8 @@ namespace Raven.Client.Document
 												sortByHints,
 												theWaitForNonStaleResults,
 												setOperationHeaders,
-												timeout);
+												timeout,
+												transformResultsFunc);
 		}
 
 #if !SILVERLIGHT
@@ -535,6 +539,12 @@ namespace Raven.Client.Document
 		public void RandomOrdering(string seed)
 		{
 			AddOrder(Constants.RandomFieldName + ";" + seed, false);
+		}
+
+		public IDocumentQueryCustomization TransformResults(Func<IEnumerable<object>, IEnumerable<object>> resultsTransformer)
+		{
+			this.transformResultsFunc = resultsTransformer;
+			return this;
 		}
 
 		/// <summary>

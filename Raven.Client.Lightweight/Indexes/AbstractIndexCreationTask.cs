@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 #if !NET_3_5
 using System.Threading.Tasks;
@@ -36,6 +37,11 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		/// <returns></returns>
 		public abstract IndexDefinition CreateIndexDefinition();
+
+		protected internal virtual IEnumerable<object> ApplyReduceFunction(IEnumerable<object> enumerable)
+		{
+			return enumerable;
+		}
 
 		/// <summary>
 		/// Gets the name of the index.
@@ -145,6 +151,15 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public class AbstractIndexCreationTask<TDocument, TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
 	{
+		protected internal override IEnumerable<object> ApplyReduceFunction(IEnumerable<object> enumerable)
+		{
+			return Conventions.ApplyReduceFunction(GetType(), typeof (TReduceResult), enumerable, () =>
+			{
+				var compile = Reduce.Compile();
+				return (objects => compile(objects.Cast<TReduceResult>()));
+			});
+		}
+
 		/// <summary>
 		/// Creates the index definition.
 		/// </summary>

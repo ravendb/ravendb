@@ -64,8 +64,7 @@ namespace Raven.Client.Shard
 				indexEtag = new Guid(md5.ComputeHash(buffer));
 			}
 #else
-		indexEtag = new Guid(MD5Core.GetHash(buffer));
-
+			indexEtag = new Guid(MD5Core.GetHash(buffer));
 #endif
 			var results = queryResults.SelectMany(x => x.Results);
 

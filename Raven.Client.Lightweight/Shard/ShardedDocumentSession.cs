@@ -452,8 +452,12 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
-			var indexCreator = new TIndexCreator();
-			return Query<T>(indexCreator.IndexName);
+			var indexCreator = new TIndexCreator
+			{
+				Conventions = Conventions
+			};
+			return Query<T>(indexCreator.IndexName)
+				.Customize(x=>x.TransformResults(indexCreator.ApplyReduceFunction));
 		}
 
 		public ILoaderWithInclude<object> Include(string path)

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Client.Shard;
 using Raven.Client;
 
@@ -29,6 +30,11 @@ namespace Raven.Sample.ShardClient
 
 			using (var documentStore = new ShardedDocumentStore(shardStrategy).Initialize())
 			{
+				foreach (var shard in shards)
+				{
+					new InvoicesAmount().Execute(shard.Value); // TODO: use the sharded doc store
+				}
+
 				using (var session = documentStore.OpenSession())
 				{
 					//store 3 items in the 3 shards
@@ -49,16 +55,42 @@ namespace Raven.Sample.ShardClient
 
 				using (var session = documentStore.OpenSession())
 				{
-					session.Query<Company>()
-						.Where(x => x.Region == "America")
+					var reduceResults = session.Query<InvoicesAmount.ReduceResult, InvoicesAmount>()
+						.Customize(x => x.WaitForNonStaleResults())
 						.ToList();
 
-					session.Load<Company>("Middle East-companies-1");
-
-					session.Query<Invoice>()
-						.Where(x => x.CompanyId == "Asia/companies/1")
-						.ToList();
+					foreach (var reduceResult in reduceResults)
+					{
+						Console.WriteLine(reduceResult.Amount);
+					}
 				}
+			}
+		}
+
+		public class InvoicesAmount : AbstractIndexCreationTask<Invoice, InvoicesAmount.ReduceResult>
+		{
+			public class ReduceResult
+			{
+				public int Amount { get; set; }
+			}
+
+			public InvoicesAmount()
+			{
+				Map = invoices =>
+				      from invoice in invoices
+				      select new
+				      {
+				      	invoice.Amount
+				      };
+
+				Reduce = results =>
+				         from result in results
+				         group result by "constant"
+				         into g
+				         select new
+				         {
+				         	Amount = g.Sum(x => x.Amount)
+				         };
 			}
 		}
 	}

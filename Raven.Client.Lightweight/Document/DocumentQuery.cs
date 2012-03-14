@@ -80,6 +80,7 @@ namespace Raven.Client.Document
 				orderByFields = orderByFields,
 				groupByFields = groupByFields,
 				aggregationOp = aggregationOp,
+				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes)
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);

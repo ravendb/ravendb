@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using Raven.Abstractions.Indexing;
 
@@ -20,6 +21,12 @@ namespace Raven.Client.Indexes
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
 			IndexSortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
+		}
+
+		protected internal override IEnumerable<object> ApplyReduceFunction(IEnumerable<object> enumerable)
+		{
+			var compile = Reduce.Compile();
+			return compile(enumerable.Cast<TReduceResult>()).Cast<object>();
 		}
 
 		/// <summary>
