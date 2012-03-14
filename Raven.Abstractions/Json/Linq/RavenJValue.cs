@@ -407,6 +407,16 @@ namespace Raven.Json.Linq
 							return false;
 					}
 					break;
+				case JTokenType.Uri:
+					switch (v2._valueType)
+					{
+						case JTokenType.String:
+						case JTokenType.Uri:
+							break;
+						default:
+							return false;
+					}
+					break;
 				default:
 					if (v1._valueType != v2._valueType)
 						return false;
@@ -501,6 +511,9 @@ namespace Raven.Json.Linq
 
 					return guid1.CompareTo(guid2);
 				case JTokenType.Uri:
+					if (objB is string)
+						objB = new Uri((string) objB);
+
 					if (!(objB is Uri))
 						throw new ArgumentException("Object must be of type Uri.");
 
