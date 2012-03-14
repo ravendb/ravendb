@@ -79,12 +79,19 @@ namespace Raven.Client.Connection
 		/// Updates the replication information if needed.
 		/// </summary>
 		/// <param name="serverClient">The server client.</param>
-		public void UpdateReplicationInformationIfNeeded(ServerClient serverClient)
+		public 
+#if !NET_3_5
+			Task
+#else
+			void
+#endif
+			
+			UpdateReplicationInformationIfNeeded(ServerClient serverClient)
 		{
 			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
-				return;
+				return new CompletedTask();
 			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-				return;
+				return new CompletedTask();
 			lock (replicationLock)
 			{
 				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow
@@ -92,9 +99,9 @@ namespace Raven.Client.Connection
 					|| refreshReplicationInformationTask != null
 #endif
 )
-					return;
+					return new CompletedTask();
 #if !NET_3_5
-				refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
+				return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
 					.ContinueWith(task =>
 					{
 						if (task.Exception != null)

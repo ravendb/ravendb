@@ -31,8 +31,20 @@ namespace Raven.Tests.Shard.BlogModel
 		{
 			return new ShardedDocumentStore(new ShardStrategy(new Dictionary<string, IDocumentStore>
 			                                                     	{
-			                                                     		{"default", new DocumentStore {Url = "http://localhost:8079/"}}
+			                                                     		{"default", CreateDocumentStore(8079)}
 			                                                     	}));
+		}
+
+		private static IDocumentStore CreateDocumentStore(int port)
+		{
+			return new DocumentStore
+			{
+				Url = string.Format("http://localhost:{0}/", port),
+				Conventions =
+				{
+					FailoverBehavior = FailoverBehavior.FailImmediately
+				}
+			};
 		}
 
 		[Fact]
