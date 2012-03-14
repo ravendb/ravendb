@@ -19,7 +19,6 @@ using Raven.Client.Indexes;
 #endif
 #if !NET_3_5
 using Raven.Client.Connection.Async;
-using Raven.Client.Indexes;
 #endif
 
 namespace Raven.Client
