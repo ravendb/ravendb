@@ -260,7 +260,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
-			var databaseUrl = RootDatabaseUrl;
+			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			databaseUrl = databaseUrl + "databases/" + database + "/";
 			if (databaseUrl == url)
 				return this;
@@ -276,7 +276,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public IAsyncDatabaseCommands ForDefaultDatabase()
 		{
-			var databaseUrl = RootDatabaseUrl;
+			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == url)
 				return this;
 			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId)
@@ -285,19 +285,7 @@ namespace Raven.Client.Connection.Async
 			};
 		}
 
-		private string RootDatabaseUrl
-		{
-			get
-			{
-				var databaseUrl = url;
-				var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
-				if (indexOfDatabases != -1)
-					databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
-				if (databaseUrl.EndsWith("/") == false)
-					databaseUrl += "/";
-				return databaseUrl;
-			}
-		}
+		
 		
 
 		/// <summary>

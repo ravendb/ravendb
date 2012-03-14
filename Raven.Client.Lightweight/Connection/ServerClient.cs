@@ -26,6 +26,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
@@ -940,7 +941,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// </summary>
 		public IDatabaseCommands ForDatabase(string database)
 		{
-			var databaseUrl = DefaultDatabaseUrl;
+			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == Url)
 				return this;
 			databaseUrl = databaseUrl + "databases/" + database;
@@ -952,7 +953,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		public IDatabaseCommands ForDefaultDatabase()
 		{
-			var databaseUrl = DefaultDatabaseUrl;
+			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == Url)
 				return this;
 			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, null, jsonRequestFactory, currentSessionId)
@@ -961,19 +962,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			};
 		}
 
-		private string DefaultDatabaseUrl
-		{
-			get
-			{
-				var databaseUrl = url;
-				var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
-				if (indexOfDatabases != -1)
-					databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
-				if (databaseUrl.EndsWith("/") == false)
-					databaseUrl += "/";
-				return databaseUrl;
-			}
-		}
+		
 
 		/// <summary>
 		/// Gets a value indicating whether [supports promotable transactions].
