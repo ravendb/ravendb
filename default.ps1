@@ -183,15 +183,12 @@ task Test  -depends Compile {
 task CompileTests -depends Compile {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\RavenDB.Tests.sln" /p:OutDir="$buildartifacts_dir\Tests\" }
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\RavenDB.Tests.sln" /p:OutDir="$buildartifacts_dir\" }
 }
 
 task StressTest -depends CompileTests {
-
-	$old = Get-Location
-	Set-Location $build_dir
-	
-	cp (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
+	Copy-Item (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
+	Copy-Item (Get-DependencyPackageFiles Newtonsoft.Json) $build_dir -force
 	
 	@("Raven.StressTests.dll") | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
@@ -211,10 +208,10 @@ task MeasurePerformance -depends CompileTests {
 	}
 }
 
-task TestSilverlight -depends CompileTests {
+task TestSilverlight -depends CompileTests,CopyServer {
 	try
 	{
-		start "$build_dir\Raven.Server.exe" "--ram --set=Raven/Port==8079"
+		start "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079"
 		exec { & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml" }
 	}
 	finally
@@ -283,7 +280,6 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output -Type directory | Out-Null
 	New-Item $build_dir\Output\Web -Type directory | Out-Null
 	New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
-	New-Item $build_dir\Output\Server -Type directory | Out-Null
 	New-Item $build_dir\Output\EmbeddedClient -Type directory | Out-Null
 	New-Item $build_dir\Output\Client -Type directory | Out-Null
 	New-Item $build_dir\Output\Client-3.5 -Type directory | Out-Null
@@ -340,6 +336,7 @@ task CopyBundles {
 }
 
 task CopyServer {
+	New-Item $build_dir\Output\Server -Type directory | Out-Null
 	$server_files | ForEach-Object { Copy-Item "$_" $build_dir\Output\Server }
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
