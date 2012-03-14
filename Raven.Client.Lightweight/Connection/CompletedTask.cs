@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿#if !NET_3_5
+using System.Threading.Tasks;
 
 namespace Raven.Client.Connection
 {
@@ -12,3 +13,4 @@ namespace Raven.Client.Connection
 		}
 	}
 }
+#endif
