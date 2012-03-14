@@ -282,7 +282,6 @@ namespace Raven.Database.Indexing
 			}
 			var fieldsToFetch = new FieldsToFetch(new string[0], AggregationOperation.None, null);
 			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch, indexQueryTriggers).GetLuceneQuery();
-
 		}
 
 		public IEnumerable<IndexQueryResult> Query(

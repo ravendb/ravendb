@@ -739,7 +739,6 @@ namespace Raven.Database
 			TransactionalStorage.Batch(
 				actions =>
 				{
-
 					var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
 					if (viewGenerator == null)
 						throw new InvalidOperationException("Could not find index named: " + index);
@@ -760,7 +759,9 @@ namespace Raven.Database
 					                                      viewGenerator.ReduceDefinition == null
 					                                      	? Constants.DocumentIdFieldName
 					                                      	: Constants.ReduceKeyFieldName);
-					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch), fieldsToFetch, IndexQueryTriggers)
+                    Func<IndexQueryResult, bool> shouldIncludeInResults = 
+                        result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch);
+					var collection = from queryResult in IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers)
 									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
 										 into doc
 										 where doc != null

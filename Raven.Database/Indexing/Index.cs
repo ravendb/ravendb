@@ -620,10 +620,27 @@ namespace Raven.Database.Indexing
 					{
 						var luceneQuery = GetLuceneQuery();
 
+                        if (indexQuery.Query.Contains(" INTERSECT "))
+                        {
+                            var subQueries = indexQuery.Query.Split(new[] { " INTERSECT " }, StringSplitOptions.RemoveEmptyEntries);
+                            var subLuceneQueries = subQueries.Select(q => GetLuceneQuery(q)).ToList();
+
+                            foreach (var subQuery in subQueries)
+                            {
+                                var luceneSubQuery = GetLuceneQuery(subQuery);
+                                var search = ExecuteQuery(indexSearcher, luceneSubQuery, 0, 128, indexQuery);   
+                                //How to make this work with Filters, Sorting, Paging etc, would be nicer if we could use existing mechanims!!!                                 
+                                var subQueryDocs = search.ScoreDocs                          
+                                                        .Select(x => indexSearcher.Doc(x.doc).Get(Constants.DocumentIdFieldName)) 
+                                                        .ToList();
+                                var totalHits = search.TotalHits;
+                            }
+                        }
+
 						foreach (var indexQueryTrigger in indexQueryTriggers)
 						{
 							luceneQuery = indexQueryTrigger.Value.ProcessQuery(parent.name, luceneQuery, indexQuery);
-						}
+						}                        
 
 						int start = indexQuery.Start;
 						int pageSize = indexQuery.PageSize;
@@ -679,7 +696,6 @@ namespace Raven.Database.Indexing
 			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start, int pageSize)
 			{
 				var min = Math.Min(start, search.TotalHits);
-
 
 				// we are paging, we need to check that we don't have duplicates in the previous page
 				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
@@ -737,9 +753,13 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			public Query GetLuceneQuery()
-			{
-				string query = indexQuery.Query;
+            public Query GetLuceneQuery()
+            {
+                return GetLuceneQuery(indexQuery.Query);
+            }
+			
+            private Query GetLuceneQuery(string query)
+			{				
 				Query luceneQuery;
 				if (String.IsNullOrEmpty(query))
 				{
