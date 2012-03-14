@@ -56,6 +56,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\raven.client.lightweight\extensions\MultiDatabase.cs">
+      <Link>Imports\MultiDatabase.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
