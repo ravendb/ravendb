@@ -18,7 +18,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Smuggler
 {
-	public class SmugglerApi
+	public class SmugglerApi : ISmugglerApi
 	{
 		public RavenConnectionStringOptions ConnectionStringOptions { get; private set; }
 		private readonly HttpRavenRequestFactory httpRavenRequestFactory = new HttpRavenRequestFactory();
