@@ -9,7 +9,6 @@ using System.IO;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
-using Raven.Client.Shard;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Server;
