@@ -17,6 +17,8 @@ using Raven.Client.Silverlight.Connection;
 #endif
 #if !NET_3_5
 using Raven.Client.Connection.Async;
+using Raven.Client.Indexes;
+
 #endif
 
 namespace Raven.Client
@@ -141,5 +143,10 @@ namespace Raven.Client
 		/// document store
 		///</summary>
 		Guid? GetLastWrittenEtag();
+
+		/// <summary>
+		/// Executes the index creation.
+		/// </summary>
+		void ExecuteIndex<T>() where T : AbstractIndexCreationTask, new();
 	}
 }

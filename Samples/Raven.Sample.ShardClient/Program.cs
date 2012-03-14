@@ -30,10 +30,7 @@ namespace Raven.Sample.ShardClient
 
 			using (var documentStore = new ShardedDocumentStore(shardStrategy).Initialize())
 			{
-				foreach (var shard in shards)
-				{
-					new InvoicesAmount().Execute(shard.Value); // TODO: use the sharded doc store
-				}
+				documentStore.ExecuteIndex<InvoicesAmount>();
 
 				using (var session = documentStore.OpenSession())
 				{
