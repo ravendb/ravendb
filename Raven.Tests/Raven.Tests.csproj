@@ -550,6 +550,7 @@
     <Compile Include="LocalClientTest.cs" />
     <Compile Include="MailingList\AttachmentContentType.cs" />
     <Compile Include="MailingList\BooleanCollection.cs" />
+    <Compile Include="MailingList\DtcIssue.cs" />
     <Compile Include="MailingList\Everett\CanReadBytes.cs" />
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\BuildStarted.cs" />

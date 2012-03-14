@@ -135,6 +135,8 @@ namespace Raven.Database.Server.Responders
 			}
 			
 			context.Response.AddHeader("ETag", indexEtag.ToString());
+			if(queryResult.NonAuthoritativeInformation)
+				context.SetStatusToNonAuthoritativeInformation();
 			context.WriteJson(queryResult);
 		}
 

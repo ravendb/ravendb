@@ -735,6 +735,7 @@ namespace Raven.Database
 			var stale = false;
 	    	Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
 			Guid resultEtag = Guid.Empty;
+			var nonAuthoritativeInformation = false;
 			TransactionalStorage.Batch(
 				actions =>
 				{
@@ -763,6 +764,7 @@ namespace Raven.Database
 									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
 										 into doc
 										 where doc != null
+										 let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation  ?? false)
 										 select doc;
 
 					var transformerErrors = new List<string>();
@@ -803,6 +805,7 @@ namespace Raven.Database
 				IndexName = index,
 				Results = list,
 				IsStale = stale,
+				NonAuthoritativeInformation = nonAuthoritativeInformation,
 				SkippedResults = query.SkippedResults.Value,
 				TotalResults = query.TotalSize.Value,
 				IndexTimestamp = indexTimestamp.Item1,

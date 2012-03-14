@@ -100,6 +100,7 @@ namespace Raven.Client.Connection
 		{
 			return new QueryResult
 			{
+				NonAuthoritativeInformation = Convert.ToBoolean(json["NonAuthoritativeInformation"].ToString()),
 				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 				IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
 				IndexEtag = new Guid(etagHeader),
