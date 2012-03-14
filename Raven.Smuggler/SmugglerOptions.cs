@@ -20,8 +20,6 @@ namespace Raven.Smuggler
 			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments;
 		}
 
-		public SmugglerAction Action { get; set; }
-
 		public string File { get; set; }
 
 		public Dictionary<string, string> Filters { get; set; }
@@ -59,11 +57,5 @@ namespace Raven.Smuggler
 		Documents,
 		Indexes,
 		Attachments,
-	}
-
-	public enum SmugglerAction
-	{
-		Import = 1,
-		Export,
 	}
 }

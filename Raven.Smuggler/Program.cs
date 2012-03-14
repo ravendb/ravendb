@@ -66,10 +66,11 @@ namespace Raven.Smuggler
 			if (args.Length < 3)
 				PrintUsageAndExit(-1);
 
+			SmugglerAction action = SmugglerAction.Export;
 			if (string.Equals(args[0], "in", StringComparison.OrdinalIgnoreCase))
-				options.Action = SmugglerAction.Import;
+				action = SmugglerAction.Import;
 			else if (string.Equals(args[0], "out", StringComparison.OrdinalIgnoreCase))
-				options.Action = SmugglerAction.Export;
+				action = SmugglerAction.Export;
 			else
 				PrintUsageAndExit(-1);
 
@@ -97,7 +98,7 @@ namespace Raven.Smuggler
 
 			try
 			{
-				switch (options.Action)
+				switch (action)
 				{
 					case SmugglerAction.Import:
 						smugglerApi.ImportData(options);
