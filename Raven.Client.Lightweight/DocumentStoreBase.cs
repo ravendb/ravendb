@@ -64,6 +64,14 @@ namespace Raven.Client
 		public abstract IDocumentSession OpenSession(string database, ICredentials credentialsForSession);
 		public abstract IDocumentSession OpenSession(ICredentials credentialsForSession);
 		public abstract IDatabaseCommands DatabaseCommands { get; }
+
+		/// <summary>
+		/// Executes the index creation.
+		/// </summary>
+		public virtual void ExecuteIndex<T>() where T : AbstractIndexCreationTask, new()
+		{
+			new T().Execute(this);
+		}
 #endif
 
 		private DocumentConvention conventions;
@@ -163,14 +171,6 @@ namespace Raven.Client
 			if (etagHolder == null)
 				return null;
 			return etagHolder.Etag;
-		}
-
-		/// <summary>
-		/// Executes the index creation.
-		/// </summary>
-		public virtual void ExecuteIndex<T>() where T : AbstractIndexCreationTask, new()
-		{
-			new T().Execute(this);
 		}
 
 		protected void EnsureNotClosed()

@@ -125,6 +125,12 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The database commands.</value>
 		IDatabaseCommands DatabaseCommands { get; }
+
+		
+		/// <summary>
+		/// Executes the index creation.
+		/// </summary>
+		void ExecuteIndex<T>() where T : AbstractIndexCreationTask, new();
 #endif
 
 		/// <summary>
@@ -143,10 +149,5 @@ namespace Raven.Client
 		/// document store
 		///</summary>
 		Guid? GetLastWrittenEtag();
-
-		/// <summary>
-		/// Executes the index creation.
-		/// </summary>
-		void ExecuteIndex<T>() where T : AbstractIndexCreationTask, new();
 	}
 }
