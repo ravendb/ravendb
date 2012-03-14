@@ -5,6 +5,7 @@ using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Server;
 using System.Linq;
+using Xunit;
 
 namespace Raven.Tests.Shard.BlogModel
 {
@@ -76,6 +77,19 @@ namespace Raven.Tests.Shard.BlogModel
 																ShardResolutionStrategy = new BlogShardResolutionStrategy(3),
 															});
 			ShardedDocumentStore = (ShardedDocumentStore) ShardedDocumentStore.Initialize();
+		}
+
+		protected void AssertNumberOfRequests(RavenDbServer server, int numberOfRequests)
+		{
+			try
+			{
+				Assert.Equal(numberOfRequests, server.Server.NumberOfRequests);
+			}
+			catch
+			{
+				Console.WriteLine(string.Join(Environment.NewLine, server.Server.LastRequests));
+				throw;
+			}
 		}
 
 		public void Dispose()
