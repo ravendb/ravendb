@@ -183,7 +183,7 @@ task Test  -depends Compile {
 task CompileTests -depends Compile {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\RavenDB.Tests.sln" /p:OutDir="$buildartifacts_dir\" }
+	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\RavenDB.Tests.sln" /p:OutDir="$buildartifacts_dir\Tests\" }
 }
 
 task StressTest -depends CompileTests {
@@ -212,15 +212,14 @@ task MeasurePerformance -depends CompileTests {
 }
 
 task TestSilverlight -depends CompileTests {
-	
-	try{
-    start "$build_dir\Raven.Server.exe" "--ram --set=Raven/Port==8079"
-    exec { 
-      & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml"
-    }
+	try
+	{
+		start "$build_dir\Raven.Server.exe" "--ram --set=Raven/Port==8079"
+		exec { & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml" }
 	}
-	finally{
-    ps "Raven.Server" | kill
+	finally
+	{
+		ps "Raven.Server" | kill
 	}
 }
 
