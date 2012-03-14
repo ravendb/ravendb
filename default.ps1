@@ -252,7 +252,7 @@ task OpenSource {
 
 task RunTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds
 
-task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest,MeasurePerformance
+task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest
 
 task Release -depends RunTests,DoRelease
 
