@@ -264,7 +264,8 @@
 							Orientation="Horizontal">
 					<Databases:LicenseView Margin="0,0,15,0"
 										   DataContext="{Binding Path=Server.Value.License}" />
-					<TextBlock Text="{Binding Path=Server.Value.BuildNumber, StringFormat='Build #\{0\}'}" />
+					<TextBlock Margin="0,0,15,0" Text="{Binding Path=Server.Value.BuildNumber, StringFormat='Server Build #\{0\}'}" />
+					<TextBlock Text="{Binding AssemblyVersion, StringFormat='Client Build #\{0\}'}" />
 				</StackPanel>
 			</toolkit:DockPanel>
 		</Grid>
