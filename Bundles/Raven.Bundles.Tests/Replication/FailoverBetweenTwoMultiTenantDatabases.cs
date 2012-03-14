@@ -1,4 +1,6 @@
-﻿using Raven.Client.Connection;
+﻿using System;
+using System.Diagnostics;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Xunit;
@@ -82,10 +84,21 @@ namespace Raven.Bundles.Tests.Replication
 
 				servers[0].Dispose();
 
-				using (var session = store.OpenSession())
+				while (true)
 				{
-					var load = session.Load<Item>("items/1");
-					Assert.NotNull(load);
+					try
+					{
+						using (var session = store.OpenSession())
+						{
+							var load = session.Load<Item>("items/1");
+							Assert.NotNull(load);
+						}
+					}
+					catch (Exception)
+					{
+						Debugger.Launch();
+						throw;
+					}
 				}
 			}
 		}
@@ -113,7 +126,7 @@ namespace Raven.Bundles.Tests.Replication
 			                   	})
 			{
 				store.Initialize();
-				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase(null);
+				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("FailoverTest");
 				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
 					.Wait();
 
@@ -127,10 +140,21 @@ namespace Raven.Bundles.Tests.Replication
 
 				servers[0].Dispose();
 
-				using (var session = store.OpenSession())
+				while (true)
 				{
-					var load = session.Load<Item>("items/1");
-					Assert.NotNull(load);
+					try
+					{
+						using (var session = store.OpenSession())
+						{
+							var load = session.Load<Item>("items/1");
+							Assert.NotNull(load);
+							return;
+						}
+					}
+					catch (Exception)
+					{
+						Debugger.Launch();
+					}
 				}
 			}
 		}
