@@ -129,9 +129,8 @@ namespace Raven.Storage.Esent.StorageActions
 			if(Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ)) 
 			{// for map-reduce indexes, we use the reduce stats
 
-				var lastReducedIndex = Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce,
-																	  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"])
-					.Value;
+				var retrieveColumnAsDateTime = Api.RetrieveColumnAsDateTime(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"]) ?? DateTime.MinValue;
+				var lastReducedIndex = retrieveColumnAsDateTime;
 				var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,
 																		  tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]).TransfromToGuidWithProperSorting();
 				return Tuple.Create(lastReducedIndex, lastReducedEtag);
