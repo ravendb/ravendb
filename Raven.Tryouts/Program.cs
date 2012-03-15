@@ -15,8 +15,8 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-            new IntersectionQuery().CanPeformIntersectionQuery_Embedded();
-            new IntersectionQuery().CanPerformIntersectionQuery_Remotely();
+			new IntersectionQuery().CanPeformIntersectionQuery_Embedded();
+			new IntersectionQuery().CanPerformIntersectionQuery_Remotely();
 		}
 	}
 }

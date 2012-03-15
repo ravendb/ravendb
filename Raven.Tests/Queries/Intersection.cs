@@ -71,13 +71,13 @@ namespace Raven.Tests.Queries
                                                             from t in s.Types
                                                             select new { s.Name, t.Colour, t.Size }"
 
-//                                                    Map = @"from s in docs.TShirts
-//                                                            select new 
-//                                                                    { 
-//                                                                        s.Name, 
-//                                                                        Color = s.Types.Select(x=>x.Color),
-//                                                                        Size = s.Types.Select(x=>x.Size) 
-//                                                                    }"
+                                                    //Map = @"from s in docs.TShirts
+                                                    //        select new 
+                                                    //                { 
+                                                    //                    s.Name, 
+                                                    //                    Color = s.Types.Select(x=>x.Color),
+                                                    //                    Size = s.Types.Select(x=>x.Size) 
+                                                    //                }"
                                                 });
 
                 s.Store(new TShirt
@@ -111,9 +111,13 @@ namespace Raven.Tests.Queries
 
             using (var s = store.OpenSession())
             {
+                //Existing queries can only handle an OR here, what we want is AND or INTERSECT
+                var existingResults = s.Advanced.LuceneQuery<TShirt>("TShirtNested")                             
+                   .Where("(Colour:Blue AND Size:Small) OR (Colour:Gray AND Size:Large)")
+                   .ToList();
+
                 //Sample query "Name:Wolf INTERSECT Color:Blue AND Size:Small INTERSECT Color:Gray AND Size:Large"
-                var results = s.Advanced.LuceneQuery<TShirt>("TShirtNested")
-                    //.Where("Colour:Black")                    
+                var results = s.Advanced.LuceneQuery<TShirt>("TShirtNested")                             
                     .Where("Colour:Blue AND Size:Small INTERSECT Colour:Gray AND Size:Large")
                     .ToList();
 

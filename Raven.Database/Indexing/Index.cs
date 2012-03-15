@@ -610,6 +610,55 @@ namespace Raven.Database.Indexing
 					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
 			}
 
+			public IEnumerable<IndexQueryResult> IntersectionQuery()
+			{
+				using (IndexStorage.EnsureInvariantCulture())
+				{
+					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
+					IndexSearcher indexSearcher;
+					using (parent.GetSearcher(out indexSearcher))
+					{
+						var subQueries = indexQuery.Query.Split(new[] { " INTERSECT " }, StringSplitOptions.RemoveEmptyEntries);
+						var subLuceneQueries = subQueries.Select(q => GetLuceneQuery(q)).ToList();
+
+						var subQueryDocsIds = new List<SubQueryResult>();
+						foreach (var subQuery in subQueries)
+						{
+							var luceneSubQuery = GetLuceneQuery(subQuery);
+							var search = ExecuteQuery(indexSearcher, luceneSubQuery, 0, 128, indexQuery);
+							//How to make this work with Filters, Sorting, Paging etc, would be nicer if we could use existing mechanisms!!!                                 
+							var subQueryDocs = search.ScoreDocs
+													.Select(x => new SubQueryResult
+                                                                { 
+                                                                    LuceneID = x.doc, 
+                                                                    RavenDocID =  indexSearcher.Doc(x.doc).Get(Constants.DocumentIdFieldName), 
+                                                                    Score = x.score
+                                                                })
+													.ToList();
+							if (subQueryDocsIds.Count == 0)
+								subQueryDocsIds.AddRange(subQueryDocs);
+							else
+								subQueryDocsIds = subQueryDocsIds.IntersectBy(subQueryDocs, t => t.RavenDocID).ToList();
+							var totalHits = search.TotalHits;
+						}
+
+						return subQueryDocsIds.Select(result =>
+							{
+								Document document = indexSearcher.Doc(result.LuceneID);
+								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, result.Score);
+								return parent.RetrieveDocument(document, fieldsToFetch, result.Score);
+							});
+					}
+				}
+			}
+
+            private class SubQueryResult
+            {
+                public int LuceneID { get; set; }
+                public string RavenDocID { get; set; }
+                public float Score { get; set; }
+            }
+
 			public IEnumerable<IndexQueryResult> Query()
 			{
 				using (IndexStorage.EnsureInvariantCulture())
@@ -619,24 +668,7 @@ namespace Raven.Database.Indexing
 					using (parent.GetSearcher(out indexSearcher))
 					{
 						var luceneQuery = GetLuceneQuery();
-
-                        if (indexQuery.Query.Contains(" INTERSECT "))
-                        {
-                            var subQueries = indexQuery.Query.Split(new[] { " INTERSECT " }, StringSplitOptions.RemoveEmptyEntries);
-                            var subLuceneQueries = subQueries.Select(q => GetLuceneQuery(q)).ToList();
-
-                            foreach (var subQuery in subQueries)
-                            {
-                                var luceneSubQuery = GetLuceneQuery(subQuery);
-                                var search = ExecuteQuery(indexSearcher, luceneSubQuery, 0, 128, indexQuery);   
-                                //How to make this work with Filters, Sorting, Paging etc, would be nicer if we could use existing mechanims!!!                                 
-                                var subQueryDocs = search.ScoreDocs                          
-                                                        .Select(x => indexSearcher.Doc(x.doc).Get(Constants.DocumentIdFieldName)) 
-                                                        .ToList();
-                                var totalHits = search.TotalHits;
-                            }
-                        }
-
+						
 						foreach (var indexQueryTrigger in indexQueryTriggers)
 						{
 							luceneQuery = indexQueryTrigger.Value.ProcessQuery(parent.name, luceneQuery, indexQuery);
@@ -753,12 +785,12 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-            public Query GetLuceneQuery()
-            {
-                return GetLuceneQuery(indexQuery.Query);
-            }
+			public Query GetLuceneQuery()
+			{
+				return GetLuceneQuery(indexQuery.Query);
+			}
 			
-            private Query GetLuceneQuery(string query)
+			private Query GetLuceneQuery(string query)
 			{				
 				Query luceneQuery;
 				if (String.IsNullOrEmpty(query))

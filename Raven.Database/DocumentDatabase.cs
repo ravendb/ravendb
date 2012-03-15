@@ -101,7 +101,7 @@ namespace Raven.Database
 		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
 		private System.Threading.Tasks.Task indexingBackgroundTask;
 		private System.Threading.Tasks.Task reducingBackgroundTask;
-	    private readonly TaskScheduler backgroundTaskScheduler;
+		private readonly TaskScheduler backgroundTaskScheduler;
 
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
@@ -370,7 +370,7 @@ namespace Raven.Database
 		{
 			workContext.StopWork();
 			indexingBackgroundTask.Wait();
-		    reducingBackgroundTask.Wait();
+			reducingBackgroundTask.Wait();
 		}
 
 		public WorkContext WorkContext
@@ -384,7 +384,7 @@ namespace Raven.Database
 		{
 			workContext.StartWork();
 			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-		        new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
+				new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
@@ -465,7 +465,7 @@ namespace Raven.Database
 					else
 					{
 						newEtag = actions.Transactions.AddDocumentInTransaction(key, etag,
-						                                                        document, metadata, transactionInformation);
+																				document, metadata, transactionInformation);
 					}
 					workContext.ShouldNotifyAboutWork(() => "PUT " + key);
 				});
@@ -624,8 +624,8 @@ namespace Raven.Database
 								Delete(doc.Key, null, null);
 							else
 								Put(doc.Key, null,
-								    doc.Data,
-								    doc.Metadata, null);
+									doc.Data,
+									doc.Metadata, null);
 						});
 						actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
 						workContext.ShouldNotifyAboutWork(() => "COMMIT " + txId);
@@ -710,11 +710,11 @@ namespace Raven.Database
 			}
 			IndexDefinitionStorage.AddIndex(definition);
 			IndexStorage.CreateIndexImplementation(definition);
-		    TransactionalStorage.Batch(actions =>
-		    {
-		        actions.Indexing.AddIndex(name, definition.IsMapReduce);
-		        workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
-		    });
+			TransactionalStorage.Batch(actions =>
+			{
+				actions.Indexing.AddIndex(name, definition.IsMapReduce);
+				workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
+			});
 			workContext.ClearErrorsFor(name);
 			return name;
 		}
@@ -733,7 +733,7 @@ namespace Raven.Database
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
 			var stale = false;
-	    	Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
+			Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
 			Guid resultEtag = Guid.Empty;
 			var nonAuthoritativeInformation = false;
 			TransactionalStorage.Batch(
@@ -756,11 +756,11 @@ namespace Raven.Database
 					var docRetriever = new DocumentRetriever(actions, ReadTriggers);
 					var indexDefinition = GetIndexDefinition(index);
 					var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
-					                                      viewGenerator.ReduceDefinition == null
-					                                      	? Constants.DocumentIdFieldName
-					                                      	: Constants.ReduceKeyFieldName);
-                    Func<IndexQueryResult, bool> shouldIncludeInResults = 
-                        result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch);
+														  viewGenerator.ReduceDefinition == null
+															? Constants.DocumentIdFieldName
+															: Constants.ReduceKeyFieldName);
+					Func<IndexQueryResult, bool> shouldIncludeInResults = 
+						result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch);
 					var collection = from queryResult in IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers)
 									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
 										 into doc
@@ -899,16 +899,16 @@ namespace Raven.Database
 						attachment.Data = () => new MemoryStream(new byte[0]);
 						attachment.Size = 0;
 						attachment.Metadata = new RavenJObject
-						                      	{
-						                      		{
-						                      			"Raven-Read-Veto",
-						                      			new RavenJObject
-						                      				{
-						                      					{"Reason", readVetoResult.Reason},
-						                      					{"Trigger", attachmentReadTrigger.ToString()}
-						                      				}
-						                      			}
-						                      	};
+												{
+													{
+														"Raven-Read-Veto",
+														new RavenJObject
+															{
+																{"Reason", readVetoResult.Reason},
+																{"Trigger", attachmentReadTrigger.ToString()}
+															}
+														}
+												};
 						foundResult = true;
 						break;
 					case ReadVetoResult.ReadAllow.Ignore:
@@ -1248,7 +1248,7 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.Indexing.DeleteIndex(index);
-			    actions.Indexing.AddIndex(index, indexDefinition.IsMapReduce);
+				actions.Indexing.AddIndex(index, indexDefinition.IsMapReduce);
 				workContext.ShouldNotifyAboutWork(() => "RESET INDEX " + index);
 			});
 		}
@@ -1271,9 +1271,9 @@ namespace Raven.Database
 		}
 
 		static string productVersion;
-	    private volatile bool disposed;
+		private volatile bool disposed;
 
-	    public static string ProductVersion
+		public static string ProductVersion
 		{
 			get
 			{
@@ -1309,12 +1309,12 @@ namespace Raven.Database
 		/// <summary>
 		/// Whatever this database has been disposed
 		/// </summary>
-	    public bool Disposed
-	    {
-	        get { return disposed; }
-	    }
+		public bool Disposed
+		{
+			get { return disposed; }
+		}
 
-	    /// <summary>
+		/// <summary>
 		/// Get the total size taken by the database on the disk.
 		/// This explicitly does NOT include in memory indexes or in memory database.
 		/// It does include any reserved space on the file system, which may significantly increase
