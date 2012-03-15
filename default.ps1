@@ -256,7 +256,7 @@ task CopySamples {
 	$samples = @("Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `
                "Raven.Sample.EventSourcing", "Raven.Bundles.Sample.EventSourcing.ShoppingCartAggregator", `
                "Raven.Samples.IndexReplication", "Raven.Samples.Includes", "Raven.Sample.SimpleClient", `
-               "Raven.Sample.ComplexSharding", "Raven.Sample.MultiTenancy", "Raven.Sample.Suggestions", `
+               "Raven.Sample.MultiTenancy", "Raven.Sample.Suggestions", `
                "Raven.Sample.LiveProjections", "Raven.Sample.FullTextSearch")
 	$exclude = @("bin", "obj", "Data", "Plugins")
 	
