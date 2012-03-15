@@ -654,7 +654,8 @@ namespace Raven.Database.Server
 
 			if (jsonDocument == null ||
 				jsonDocument.Metadata == null ||
-				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists))
+				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) || 
+				jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))
 				return false;
 
 			var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
@@ -670,15 +671,15 @@ namespace Raven.Database.Server
 
 				config.CustomizeValuesForTenant(tenantId);
 
+				var dataDir = config.Settings["Raven/DataDir"];
+				if (dataDir == null)
+					throw new InvalidOperationException("Could not find Raven/DataDir");
+				
 				foreach (var setting in document.Settings)
 				{
 					config.Settings[setting.Key] = setting.Value;
 				}
 
-
-				var dataDir = config.Settings["Raven/DataDir"];
-				if (dataDir == null)
-					throw new InvalidOperationException("Could not find Raven/DataDir");
 				if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
 				{
 					var baseDataPath = Path.GetDirectoryName(DefaultResourceStore.Configuration.DataDirectory);

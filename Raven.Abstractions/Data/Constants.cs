@@ -18,8 +18,10 @@ namespace Raven.Abstractions.Data
 		public const string RavenClrType = "Raven-Clr-Type";
 		public const string RavenEntityName = "Raven-Entity-Name";
 		public const string RavenReadOnly = "Raven-Read-Only";
+		// This is used to indicate that a document exists in an uncommitted transaction
 		public const string RavenDocumentDoesNotExists = "Raven-Document-Does-Not-Exists";
 		public const string Metadata = "@metadata";
 		public const string NotForReplication = "Raven-Not-For-Replication";
+		public const string RavenDeleteMarker = "Raven-Delete-Marker";
 	}
 }
