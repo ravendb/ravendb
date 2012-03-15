@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="Company.cs" />
     <Compile Include="Invoice.cs" />
+    <Compile Include="InvoicesAmountByDate.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

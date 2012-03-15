@@ -5,9 +5,10 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Document;
-using Raven.Client.Indexes;
 using Raven.Client.Shard;
 using Raven.Client;
 
@@ -20,7 +21,7 @@ namespace Raven.Sample.ShardClient
 			var shards = new Dictionary<string, IDocumentStore>
 			             	{
 			             		{"Asia", new DocumentStore {Url = "http://localhost:8080"}},
-			             		{"Middle East", new DocumentStore {Url = "http://localhost:8081"}},
+			             		{"Middle-East", new DocumentStore {Url = "http://localhost:8081"}},
 			             		{"America", new DocumentStore {Url = "http://localhost:8082"}},
 			             	};
 
@@ -32,66 +33,40 @@ namespace Raven.Sample.ShardClient
 			{
 				foreach (var shard in shards)
 				{
-					new InvoicesAmount().Execute(shard.Value); // TODO: use the sharded doc store
+					new InvoicesAmountByDate().Execute(shard.Value); // TODO: use the sharded doc store
 				}
 
 				using (var session = documentStore.OpenSession())
 				{
-					//store 3 items in the 3 shards
 					var asian = new Company { Name = "Company 1", Region = "Asia" };
 					session.Store(asian);
-					var middleEastern = new Company { Name = "Company 2", Region = "Middle East" };
+					var middleEastern = new Company { Name = "Company 2", Region = "Middle-East" };
 					session.Store(middleEastern);
 					var american = new Company { Name = "Company 3", Region = "America" };
 					session.Store(american);
 
-					// store 3 invoices
-					session.Store(new Invoice { CompanyId = american.Id, Amount = 3 });
-					session.Store(new Invoice { CompanyId = asian.Id, Amount = 5 });
-					session.Store(new Invoice { CompanyId = middleEastern.Id, Amount = 12 });
+					session.Store(new Invoice { CompanyId = american.Id, Amount = 3, IssuedAt = DateTime.Today.AddDays(-1) });
+					session.Store(new Invoice { CompanyId = asian.Id, Amount = 5, IssuedAt = DateTime.Today.AddDays(-1) });
+					session.Store(new Invoice { CompanyId = middleEastern.Id, Amount = 12, IssuedAt = DateTime.Today });
 					session.SaveChanges();
-
 				}
+
 
 				using (var session = documentStore.OpenSession())
 				{
-					var reduceResults = session.Query<InvoicesAmount.ReduceResult, InvoicesAmount>()
-						.Customize(x => x.WaitForNonStaleResults())
+					var reduceResults = session.Query<InvoicesAmountByDate.ReduceResult, InvoicesAmountByDate>()
 						.ToList();
 
 					foreach (var reduceResult in reduceResults)
 					{
-						Console.WriteLine(reduceResult.Amount);
+						string dateStr = reduceResult.IssuedAt.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture);
+						Console.WriteLine("{0}: {1}", dateStr, reduceResult.Amount);
 					}
+					Console.WriteLine();
 				}
 			}
 		}
 
-		public class InvoicesAmount : AbstractIndexCreationTask<Invoice, InvoicesAmount.ReduceResult>
-		{
-			public class ReduceResult
-			{
-				public int Amount { get; set; }
-			}
-
-			public InvoicesAmount()
-			{
-				Map = invoices =>
-				      from invoice in invoices
-				      select new
-				      {
-				      	invoice.Amount
-				      };
-
-				Reduce = results =>
-				         from result in results
-				         group result by "constant"
-				         into g
-				         select new
-				         {
-				         	Amount = g.Sum(x => x.Amount)
-				         };
-			}
-		}
 	}
 }
+
