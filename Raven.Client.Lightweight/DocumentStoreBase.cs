@@ -68,9 +68,9 @@ namespace Raven.Client
 		/// <summary>
 		/// Executes the index creation.
 		/// </summary>
-		public virtual void ExecuteIndex<T>() where T : AbstractIndexCreationTask, new()
+		public virtual void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
 		{
-			new T().Execute(this);
+			indexCreationTask.Execute(DatabaseCommands, Conventions);
 		}
 #endif
 

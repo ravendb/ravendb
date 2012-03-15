@@ -130,7 +130,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Executes the index creation.
 		/// </summary>
-		void ExecuteIndex<T>() where T : AbstractIndexCreationTask, new();
+		void ExecuteIndex(AbstractIndexCreationTask indexCreationTask);
 #endif
 
 		/// <summary>

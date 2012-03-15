@@ -15,6 +15,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
+using Raven.Client.Indexes;
 
 namespace Raven.Client.Shard
 {
@@ -288,9 +289,14 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Executes the index creation against each of the shards.
 		/// </summary>
-		public override void ExecuteIndex<T>()
+		public override void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
 		{
-			ShardStrategy.Shards.ForEach(shard => new T().Execute(shard.Value));
+			var list = ShardStrategy.Shards.Values.Select(x => x.DatabaseCommands).ToList();
+			ShardStrategy.ShardAccessStrategy.Apply<object>(list, (commands, i) =>
+			{
+				indexCreationTask.Execute(commands, Conventions);
+				return null;
+			});
 		}
 	}
 }

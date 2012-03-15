@@ -31,7 +31,7 @@ namespace Raven.Sample.ShardClient
 
 			using (var documentStore = new ShardedDocumentStore(shardStrategy).Initialize())
 			{
-				documentStore.ExecuteIndex<InvoicesAmount>();
+				new InvoicesAmountByDate().Execute(documentStore);
 
 				using (var session = documentStore.OpenSession())
 				{

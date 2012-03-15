@@ -104,7 +104,7 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		public void Execute(IDocumentStore store)
 		{
-			Execute(store.DatabaseCommands, store.Conventions);
+			store.ExecuteIndex(this);
 		}
 
 		/// <summary>
