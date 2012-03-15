@@ -1,4 +1,3 @@
-#if !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="ShardedDocumentStore.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -285,6 +284,13 @@ namespace Raven.Client.Shard
 			return store.DatabaseCommands;
 
 		}
+
+		/// <summary>
+		/// Executes the index creation against each of the shards.
+		/// </summary>
+		public override void ExecuteIndex<T>()
+		{
+			ShardStrategy.Shards.ForEach(shard => new T().Execute(shard.Value));
+		}
 	}
 }
-#endif

@@ -8,6 +8,7 @@ using System.Net;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Document;
 #if SILVERLIGHT
@@ -63,6 +64,14 @@ namespace Raven.Client
 		public abstract IDocumentSession OpenSession(string database, ICredentials credentialsForSession);
 		public abstract IDocumentSession OpenSession(ICredentials credentialsForSession);
 		public abstract IDatabaseCommands DatabaseCommands { get; }
+
+		/// <summary>
+		/// Executes the index creation.
+		/// </summary>
+		public virtual void ExecuteIndex<T>() where T : AbstractIndexCreationTask, new()
+		{
+			new T().Execute(this);
+		}
 #endif
 
 		private DocumentConvention conventions;

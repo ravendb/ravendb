@@ -16,23 +16,5 @@ namespace Raven.StressTests.Races
 		{
 			Run<CanQueryOnlyUsers>(x => x.WhenQueryingForUserById());
 		}
-
-		[Fact]
-		public void CanQueryOnlyUsers_WhenQueryingForUserByName()
-		{
-			Run<CanQueryOnlyUsers>(x => x.WhenQueryingForUserByName());
-		}
-
-		[Fact]
-		public void UnlessAccessedLazyOpertionsAreNoOp()
-		{
-			Run<SupportLazyOperations>(x => x.UnlessAccessedLazyOpertionsAreNoOp());
-		}
-		
-		[Fact]
-		public void WithLazyQuery()
-		{
-			Run<SupportLazyOperations>(x => x.WithLazyQuery());
-		}
 	}
 }

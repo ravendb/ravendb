@@ -38,7 +38,7 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public abstract IndexDefinition CreateIndexDefinition();
 
-		protected internal virtual IEnumerable<object> ApplyReduceFunction(IEnumerable<object> enumerable)
+		protected internal virtual IEnumerable<object> ApplyReduceFunctionIfExists(IEnumerable<object> enumerable)
 		{
 			return enumerable;
 		}
@@ -151,8 +151,11 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public class AbstractIndexCreationTask<TDocument, TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
 	{
-		protected internal override IEnumerable<object> ApplyReduceFunction(IEnumerable<object> enumerable)
+		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IEnumerable<object> enumerable)
 		{
+			if (Reduce == null)
+				return enumerable;
+
 			return Conventions.ApplyReduceFunction(GetType(), typeof (TReduceResult), enumerable, () =>
 			{
 				var compile = Reduce.Compile();

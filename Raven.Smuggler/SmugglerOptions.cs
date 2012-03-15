@@ -20,8 +20,9 @@ namespace Raven.Smuggler
 			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments;
 		}
 
-		public SmugglerAction Action { get; set; }
-
+		/// <summary>
+		/// A file to write to when doing an export or read from when doing an import.
+		/// </summary>
 		public string File { get; set; }
 
 		public Dictionary<string, string> Filters { get; set; }
@@ -59,11 +60,5 @@ namespace Raven.Smuggler
 		Documents,
 		Indexes,
 		Attachments,
-	}
-
-	public enum SmugglerAction
-	{
-		Import = 1,
-		Export,
 	}
 }

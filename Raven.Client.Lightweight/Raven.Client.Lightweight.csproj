@@ -60,6 +60,7 @@
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\Async\IAsyncDatabaseCommands.cs" />
     <Compile Include="Connection\CachedRequest.cs" />
+    <Compile Include="Connection\CompletedTask.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\IDatabaseCommands.cs" />
@@ -127,6 +128,7 @@
     <Compile Include="Exceptions\ReadVetoException.cs" />
     <Compile Include="Extensions\DatabaseCommandsExtensions.cs" />
     <Compile Include="Extensions\ExceptionExtensions.cs" />
+    <Compile Include="Extensions\MultiDatabase.cs" />
     <Compile Include="Extensions\MultiTenancyExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
     <Compile Include="IAdvancedDocumentSessionOperations.cs" />

@@ -9,16 +9,18 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Text;
 using Newtonsoft.Json;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Smuggler
 {
-	public class SmugglerApi
+	public class SmugglerApi : ISmugglerApi
 	{
 		public RavenConnectionStringOptions ConnectionStringOptions { get; private set; }
 		private readonly HttpRavenRequestFactory httpRavenRequestFactory = new HttpRavenRequestFactory();
@@ -178,6 +180,8 @@ namespace Raven.Smuggler
 
 		public void ImportData(Stream stream, SmugglerOptions options)
 		{
+			EnsureDatabaseExists();
+
 			var sw = Stopwatch.StartNew();
 			// Try to read the stream compressed, otherwise continue uncompressed.
 			JsonTextReader jsonReader;
@@ -347,6 +351,38 @@ namespace Raven.Smuggler
 			public byte[] Data { get; set; }
 			public RavenJObject Metadata { get; set; }
 			public string Key { get; set; }
+		}
+
+		private bool ensuredDatabaseExists;
+		private void EnsureDatabaseExists()
+		{
+			if (ensuredDatabaseExists ||
+				string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase))
+				return;
+
+			ensuredDatabaseExists = true;
+
+			var document = MultiDatabase.CreateDatabaseDocument(ConnectionStringOptions.DefaultDatabase);
+			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(ConnectionStringOptions.Url);
+
+			var docUrl = rootDatabaseUrl + "/docs/Raven/Databases/" + ConnectionStringOptions.DefaultDatabase;
+
+			try
+			{
+				CreateRequest(docUrl)
+					.ExecuteRequest();
+				return;
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+					throw;
+			}
+
+			var request = CreateRequest(docUrl, "PUT");
+			request.Write(document);
+			request.ExecuteRequest();
 		}
 	}
 }

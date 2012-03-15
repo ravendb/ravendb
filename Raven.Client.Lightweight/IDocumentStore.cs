@@ -14,6 +14,8 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#else
+using Raven.Client.Indexes;
 #endif
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -123,6 +125,12 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The database commands.</value>
 		IDatabaseCommands DatabaseCommands { get; }
+
+		
+		/// <summary>
+		/// Executes the index creation.
+		/// </summary>
+		void ExecuteIndex<T>() where T : AbstractIndexCreationTask, new();
 #endif
 
 		/// <summary>

@@ -1,6 +1,10 @@
 # starts the server in debug mode in the shard1 and shard2 directories, 
 # meaning that they will use the specified configuration
 
+#Set the current location to the path to the current file.
+$scriptpath = $MyInvocation.MyCommand.Path
+$dir = Split-Path $scriptpath
+Set-Location $dir
 
 . ..\Samples.ps1
 

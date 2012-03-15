@@ -706,6 +706,7 @@
     <Compile Include="Security\OAuth\HttpWebRequestExtensions.cs" />
     <Compile Include="Shard\BlogModel\Blog.cs" />
     <Compile Include="Shard\BlogModel\BlogShardResolutionStrategy.cs" />
+    <Compile Include="Shard\BlogModel\CanMapReduce.cs" />
     <Compile Include="Shard\BlogModel\CanQueryOnlyUsers.cs" />
     <Compile Include="Shard\BlogModel\CanQueryOnlyPosts.cs" />
     <Compile Include="Shard\BlogModel\SupportLazyOperations.cs" />

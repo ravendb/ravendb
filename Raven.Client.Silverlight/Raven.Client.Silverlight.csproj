@@ -281,6 +281,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
       <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\MultiDatabase.cs">
+      <Link>Imports\Extensions\MultiDatabase.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\ParallelExtensions.cs">
       <Link>Imports\Extensions\ParallelExtensions.cs</Link>
     </Compile>

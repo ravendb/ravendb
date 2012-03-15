@@ -457,7 +457,7 @@ namespace Raven.Client.Shard
 				Conventions = Conventions
 			};
 			return Query<T>(indexCreator.IndexName)
-				.Customize(x=>x.TransformResults(indexCreator.ApplyReduceFunction));
+				.Customize(x=>x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
 		}
 
 		public ILoaderWithInclude<object> Include(string path)

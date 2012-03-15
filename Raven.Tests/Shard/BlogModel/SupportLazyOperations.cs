@@ -32,24 +32,24 @@ namespace Raven.Tests.Shard.BlogModel
 			Servers.Where(server => server.Key == "Users")
 				.ForEach(server =>
 				         	{
-				         		Assert.Equal(1, server.Value.Server.NumberOfRequests);
+				         		AssertNumberOfRequests(server.Value, 1);
 				         		Assert.Equal(2, server.Value.Database.Statistics.CountOfDocuments);
 				         	});
 			Servers.Where(server => server.Key != "Users")
-				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+				.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				var users = session.Query<User>().Lazily();
 
-				Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
+				AssertNumberOfRequests(Servers["Users"], 1);
 				Servers.Where(server => server.Key != "Users")
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+					.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 
 				Assert.Equal(2, users.Value.Count());
-				Assert.Equal(2, Servers["Users"].Server.NumberOfRequests);
+				AssertNumberOfRequests(Servers["Users"], 2);
 				Servers.Where(server => server.Key != "Users")
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+					.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 			}
 		}
 
@@ -61,7 +61,7 @@ namespace Raven.Tests.Shard.BlogModel
 				var result1 = session.Advanced.Lazily.Load<User>("users/1", "users/2");
 				var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
 			}
-			Servers.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+			Servers.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 		}
 
 		[Fact]
@@ -73,14 +73,14 @@ namespace Raven.Tests.Shard.BlogModel
 				var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
 
 				Assert.Equal(new User[2], result2.Value);
-				Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
+				AssertNumberOfRequests(Servers["Users"], 1);
 				Servers.Where(server => server.Key != "Users")
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+					.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 
 				Assert.Equal(new User[2], result1.Value);
-				Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
+				AssertNumberOfRequests(Servers["Users"], 1);
 				Servers.Where(server => server.Key != "Users")
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+					.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 			}
 		}
 
@@ -92,32 +92,32 @@ namespace Raven.Tests.Shard.BlogModel
 			{
 				for (int i = 1; i <= 4; i++)
 				{
-					var entity = new User{ Id = "users/"+i, Name = ids.LastOrDefault()};
+					var entity = new User {Id = "users/" + i, Name = ids.LastOrDefault()};
 					session.Store(entity);
 					ids.Add(entity.Id);
 				}
 				session.SaveChanges();
 			}
-			Assert.Equal(1, Servers["Users"].Server.NumberOfRequests);
+			AssertNumberOfRequests(Servers["Users"], 1);
 			Servers.Where(server => server.Key != "Users")
-				.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+				.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				var result1 = session.Advanced.Lazily.Load<User>(ids[0], ids[1]);
 				var result2 = session.Advanced.Lazily.Load<User>(ids[2], ids[3]);
-				
+
 				var a = result1.Value;
 				Assert.Equal(2, a.Length);
-				Assert.Equal(2, Servers["Users"].Server.NumberOfRequests);
+				AssertNumberOfRequests(Servers["Users"], 2);
 				Servers.Where(server => server.Key != "Users")
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+					.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 
 				var b = result2.Value;
 				Assert.Equal(2, b.Length);
-				Assert.Equal(2, Servers["Users"].Server.NumberOfRequests);
+				AssertNumberOfRequests(Servers["Users"], 2);
 				Servers.Where(server => server.Key != "Users")
-					.ForEach(server => Assert.Equal(0, server.Value.Server.NumberOfRequests));
+					.ForEach(server => AssertNumberOfRequests(server.Value, 0));
 
 				foreach (var user in b.Concat(a))
 				{
@@ -134,7 +134,7 @@ namespace Raven.Tests.Shard.BlogModel
 			{
 				for (int i = 1; i <= 4; i++)
 				{
-					var entity = new User { Name = ids.LastOrDefault()};
+					var entity = new User {Name = ids.LastOrDefault()};
 					session.Store(entity);
 					ids.Add(entity.Id);
 				}

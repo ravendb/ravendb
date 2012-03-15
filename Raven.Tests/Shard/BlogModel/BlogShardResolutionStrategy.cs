@@ -49,7 +49,10 @@ namespace Raven.Tests.Shard.BlogModel
 				return new[] { "Users" };
 			if (requestData.EntityType == typeof(Blog))
 				return new[] { "Blogs" };
-			if (requestData.EntityType == typeof (Post))
+			if (requestData.EntityType == typeof (Post) 
+				|| requestData.EntityType == typeof (TotalVotesUp.ReduceResult)
+				|| requestData.EntityType == typeof (TotalPostsPerDay.ReduceResult)
+				)
 				return Enumerable.Range(0, numberOfShardsForPosts).Select(i => "Posts" + (i + 1).ToString("D2")).ToArray();
 
 			throw new ArgumentException("Cannot get shard id for '" + requestData.EntityType + "' because it is not a User, Blog or Post");

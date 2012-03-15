@@ -187,11 +187,8 @@ task CompileTests -depends Compile {
 }
 
 task StressTest -depends CompileTests {
-
-	$old = Get-Location
-	Set-Location $build_dir
-	
-	cp (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
+	Copy-Item (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
+	Copy-Item (Get-DependencyPackageFiles Newtonsoft.Json) $build_dir -force
 	
 	@("Raven.StressTests.dll") | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
@@ -211,16 +208,15 @@ task MeasurePerformance -depends CompileTests {
 	}
 }
 
-task TestSilverlight -depends CompileTests {
-	
-	try{
-    start "$build_dir\Raven.Server.exe" "--ram --set=Raven/Port==8079"
-    exec { 
-      & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml"
-    }
+task TestSilverlight -depends CompileTests,CopyServer {
+	try
+	{
+		start "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079"
+		exec { & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml" }
 	}
-	finally{
-    ps "Raven.Server" | kill
+	finally
+	{
+		ps "Raven.Server" | kill
 	}
 }
 
@@ -252,7 +248,7 @@ task OpenSource {
 
 task RunTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds
 
-task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest,MeasurePerformance
+task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest
 
 task Release -depends RunTests,DoRelease
 
@@ -284,7 +280,6 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output -Type directory | Out-Null
 	New-Item $build_dir\Output\Web -Type directory | Out-Null
 	New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
-	New-Item $build_dir\Output\Server -Type directory | Out-Null
 	New-Item $build_dir\Output\EmbeddedClient -Type directory | Out-Null
 	New-Item $build_dir\Output\Client -Type directory | Out-Null
 	New-Item $build_dir\Output\Client-3.5 -Type directory | Out-Null
@@ -341,6 +336,7 @@ task CopyBundles {
 }
 
 task CopyServer {
+	New-Item $build_dir\Output\Server -Type directory | Out-Null
 	$server_files | ForEach-Object { Copy-Item "$_" $build_dir\Output\Server }
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
