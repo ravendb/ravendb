@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using Raven.Client.Connection;
+﻿using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Xunit;
@@ -84,21 +82,10 @@ namespace Raven.Bundles.Tests.Replication
 
 				servers[0].Dispose();
 
-				while (true)
+				using (var session = store.OpenSession())
 				{
-					try
-					{
-						using (var session = store.OpenSession())
-						{
-							var load = session.Load<Item>("items/1");
-							Assert.NotNull(load);
-						}
-					}
-					catch (Exception)
-					{
-						Debugger.Launch();
-						throw;
-					}
+					var load = session.Load<Item>("items/1");
+					Assert.NotNull(load);
 				}
 			}
 		}
@@ -116,14 +103,14 @@ namespace Raven.Bundles.Tests.Replication
 			                 store2.Url + "databases/FailoverTest");
 
 			using (var store = new DocumentStore
-			                   	{
-			                   		DefaultDatabase = "FailoverTest",
-			                   		Url = store1.Url + "databases/FailoverTest",
-			                   		Conventions =
-			                   			{
-			                   				FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
-			                   			}
-			                   	})
+								{
+									DefaultDatabase = "FailoverTest",
+									Url = store1.Url + "databases/FailoverTest",
+									Conventions =
+										{
+											FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
+										}
+								})
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("FailoverTest");
@@ -140,21 +127,10 @@ namespace Raven.Bundles.Tests.Replication
 
 				servers[0].Dispose();
 
-				while (true)
+				using (var session = store.OpenSession())
 				{
-					try
-					{
-						using (var session = store.OpenSession())
-						{
-							var load = session.Load<Item>("items/1");
-							Assert.NotNull(load);
-							return;
-						}
-					}
-					catch (Exception)
-					{
-						Debugger.Launch();
-					}
+					var load = session.Load<Item>("items/1");
+					Assert.NotNull(load);
 				}
 			}
 		}
