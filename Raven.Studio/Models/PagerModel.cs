@@ -16,7 +16,6 @@ namespace Raven.Studio.Models
 			SetTotalResults();
 		}
 
-		private bool totalResultsPreviouslySet;
 		public void SetTotalResults(Observable<long?> observable = null)
 		{
 			TotalResults = observable ?? new Observable<long?>();
@@ -24,7 +23,6 @@ namespace Raven.Studio.Models
 			                                {
 												if (((Observable<long?>)sender).Value == TotalResults.Value) 
 													return;
-			                                	totalResultsPreviouslySet = true;
 			                                	OnPropertyChanged("TotalPages");
 			                                	OnPropertyChanged("HasNextPage");
 			                                };
