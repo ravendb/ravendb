@@ -23,8 +23,11 @@ namespace Raven.Client.Indexes
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 		}
 
-		protected internal override IEnumerable<object> ApplyReduceFunction(IEnumerable<object> enumerable)
+		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IEnumerable<object> enumerable)
 		{
+			if (Reduce == null)
+				return enumerable;
+			
 			var compile = Reduce.Compile();
 			return compile(enumerable.Cast<TReduceResult>()).Cast<object>();
 		}

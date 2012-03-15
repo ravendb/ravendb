@@ -80,10 +80,6 @@ namespace Raven.Client.Shard
 				}
 			}
 
-			// apply take
-			results = results.Take(query.PageSize);
-
-
 			return new QueryResult
 					{
 						Includes = queryResults.SelectMany(x => x.Includes).ToList(),

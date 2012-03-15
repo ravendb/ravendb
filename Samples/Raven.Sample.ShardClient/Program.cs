@@ -63,7 +63,7 @@ namespace Raven.Sample.ShardClient
 				}
 			}
 		}
-
+		
 		public class InvoicesAmount : AbstractIndexCreationTask<Invoice, InvoicesAmount.ReduceResult>
 		{
 			public class ReduceResult
