@@ -40,19 +40,12 @@ namespace Raven.Studio.Models
 				OnPropertyChanged();
 				OnPropertyChanged("CurrentPage");
 				OnPropertyChanged("TotalPages");
-				OnPropertyChanged("NextPage");
-				OnPropertyChanged("PrevPage");
 			}
 		}
 
 		public int CurrentPage
 		{
-			get
-			{
-				OnPropertyChanged("NextPage");
-				OnPropertyChanged("PrevPage");
-				return Skip/PageSize + 1 + (Skip != 0 && Skip < PageSize ? 1 : 0);
-			}
+			get { return Skip/PageSize + 1 + (Skip != 0 && Skip < PageSize ? 1 : 0); }
 		}
 
 		public Observable<long?> TotalResults { get; private set; }
