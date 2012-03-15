@@ -193,6 +193,7 @@ namespace Raven.Database.Server.Responders
 					Path = req.Url
 				}.Uri;
 				RawUrl = Url.ToString();
+				IsLocal = realRequest.IsLocal;
 				Headers = new NameValueCollection();
 				foreach (var header in req.Headers)
 				{
@@ -200,6 +201,7 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
+			public bool IsLocal { get; set; }
 			public NameValueCollection Headers { get; set; }
 
 			public Stream InputStream
