@@ -21,7 +21,7 @@ namespace Raven.Tests.Shard.BlogModel
 				session.SaveChanges();
 			}
 
-			ShardedDocumentStore.ExecuteIndex<TotalVotesUp>();
+			new TotalVotesUp().Execute(ShardedDocumentStore);
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				var posts = session.Query<TotalVotesUp.ReduceResult, TotalVotesUp>()
@@ -45,7 +45,7 @@ namespace Raven.Tests.Shard.BlogModel
 				session.SaveChanges();
 			}
 
-			ShardedDocumentStore.ExecuteIndex<TotalPostsPerDay>();
+			new TotalPostsPerDay().Execute(ShardedDocumentStore);
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				var posts = session.Query<TotalPostsPerDay.ReduceResult, TotalPostsPerDay>()
@@ -77,7 +77,7 @@ namespace Raven.Tests.Shard.BlogModel
 				session.SaveChanges();
 			}
 
-			ShardedDocumentStore.ExecuteIndex<PostSearch>();
+			new PostSearch().Execute(ShardedDocumentStore);
 			using (var session = ShardedDocumentStore.OpenSession())
 			{
 				var posts = session.Query<PostSearch.Result, PostSearch>()
