@@ -441,7 +441,8 @@ namespace Raven.Client.Shard
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
-			return Query<T>(indexName);
+			return Query<T>(indexName)
+				.Customize(x => x.TransformResults((query, results) => results.Take(query.PageSize)));
 		}
 
 		/// <summary>

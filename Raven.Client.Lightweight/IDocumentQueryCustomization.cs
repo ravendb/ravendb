@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 
 namespace Raven.Client
 {
@@ -111,6 +112,6 @@ namespace Raven.Client
 		/// <summary>
 		/// Execute the transfromation function on the results of this query.
 		/// </summary>
-		IDocumentQueryCustomization TransformResults(Func<IEnumerable<object>, IEnumerable<object>> resultsTransformer);
+		IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer);
 	}
 }

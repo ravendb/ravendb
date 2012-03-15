@@ -58,7 +58,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly string indexName;
 
-		protected Func<IEnumerable<object>, IEnumerable<object>> transformResultsFunc;
+		protected Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResultsFunc;
 
 		private int currentClauseDepth;
 
@@ -541,7 +541,7 @@ namespace Raven.Client.Document
 			AddOrder(Constants.RandomFieldName + ";" + seed, false);
 		}
 
-		public IDocumentQueryCustomization TransformResults(Func<IEnumerable<object>, IEnumerable<object>> resultsTransformer)
+		public IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer)
 		{
 			this.transformResultsFunc = resultsTransformer;
 			return this;

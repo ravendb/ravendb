@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 #if !NET_3_5
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
@@ -38,9 +39,9 @@ namespace Raven.Client.Indexes
 		/// <returns></returns>
 		public abstract IndexDefinition CreateIndexDefinition();
 
-		protected internal virtual IEnumerable<object> ApplyReduceFunctionIfExists(IEnumerable<object> enumerable)
+		protected internal virtual IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery,IEnumerable<object> enumerable)
 		{
-			return enumerable;
+			return enumerable.Take(indexQuery.PageSize);
 		}
 
 		/// <summary>
@@ -151,16 +152,16 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public class AbstractIndexCreationTask<TDocument, TReduceResult> : AbstractGenericIndexCreationTask<TReduceResult>
 	{
-		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IEnumerable<object> enumerable)
+		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery,IEnumerable<object> enumerable)
 		{
 			if (Reduce == null)
-				return enumerable;
+				return enumerable.Take(indexQuery.PageSize);
 
 			return Conventions.ApplyReduceFunction(GetType(), typeof (TReduceResult), enumerable, () =>
 			{
 				var compile = Reduce.Compile();
 				return (objects => compile(objects.Cast<TReduceResult>()));
-			});
+			}).Take(indexQuery.PageSize);
 		}
 
 		/// <summary>

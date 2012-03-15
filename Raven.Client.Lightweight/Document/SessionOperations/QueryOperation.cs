@@ -22,7 +22,7 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly Action<string, string> setOperationHeaders;
 		private readonly bool waitForNonStaleResults;
 		private readonly TimeSpan timeout;
-		private readonly Func<IEnumerable<object>, IEnumerable<object>> transformResults;
+		private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults;
 		private QueryResult currentQueryResults;
 		private readonly string[] projectionFields;
 		private bool firstRequest = true;
@@ -52,7 +52,7 @@ namespace Raven.Client.Document.SessionOperations
 			bool waitForNonStaleResults,
 			Action<string, string> setOperationHeaders,
 			TimeSpan timeout,
-			Func<IEnumerable<object>, IEnumerable<object>> transformResults)
+			Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults)
 		{
 			this.indexQuery = indexQuery;
 			this.sortByHints = sortByHints;
@@ -118,7 +118,7 @@ namespace Raven.Client.Document.SessionOperations
 			if (transformResults == null)
 				return list;
 
-			return transformResults(list.Cast<object>()).Cast<T>().ToList();
+			return transformResults(indexQuery, list.Cast<object>()).Cast<T>().ToList();
 		}
 
 		private T Deserialize<T>(RavenJObject result)
@@ -230,7 +230,7 @@ namespace Raven.Client.Document.SessionOperations
 
 		public bool IsAcceptable(QueryResult result)
 		{
-			if(sessionOperations.AllowNonAuthoritativeInformation == false && 
+			if (sessionOperations.AllowNonAuthoritativeInformation == false &&
 				result.NonAuthoritativeInformation)
 			{
 				if (sp.Elapsed > sessionOperations.NonAuthoritativeInformationTimeout)
@@ -259,9 +259,9 @@ namespace Raven.Client.Document.SessionOperations
 				}
 				log.Debug(
 						"Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
-						indexQuery.Query, 
-						indexName, 
-						sessionOperations.StoreIdentifier, 
+						indexQuery.Query,
+						indexName,
+						sessionOperations.StoreIdentifier,
 						result.IndexEtag);
 				return false;
 			}

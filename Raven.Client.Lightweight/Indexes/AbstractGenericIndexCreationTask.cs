@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 
 namespace Raven.Client.Indexes
@@ -23,13 +24,13 @@ namespace Raven.Client.Indexes
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 		}
 
-		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IEnumerable<object> enumerable)
+		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuey, IEnumerable<object> enumerable)
 		{
 			if (Reduce == null)
-				return enumerable;
+				return enumerable.Take(indexQuey.PageSize);
 			
 			var compile = Reduce.Compile();
-			return compile(enumerable.Cast<TReduceResult>()).Cast<object>();
+			return compile(enumerable.Cast<TReduceResult>()).Cast<object>().Take(indexQuey.PageSize);
 		}
 
 		/// <summary>
