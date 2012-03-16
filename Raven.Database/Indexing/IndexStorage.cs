@@ -282,7 +282,6 @@ namespace Raven.Database.Indexing
 			}
 			var fieldsToFetch = new FieldsToFetch(new string[0], AggregationOperation.None, null);
 			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch, indexQueryTriggers).GetLuceneQuery();
-
 		}
 
 		public IEnumerable<IndexQueryResult> Query(
@@ -298,7 +297,11 @@ namespace Raven.Database.Indexing
 				log.Debug("Query on non existing index '{0}'", index);
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
-			return new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers).Query();
+
+			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
+			if (query.Query.Contains(" INTERSECT "))
+				return indexQueryOperation.IntersectionQuery();
+			return indexQueryOperation.Query();
 		}
 
 		protected internal static IDisposable EnsureInvariantCulture()

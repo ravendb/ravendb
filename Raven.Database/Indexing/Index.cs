@@ -608,7 +608,7 @@ namespace Raven.Database.Indexing
 
 				if (fieldsToFetch.IsDistinctQuery)
 					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
-			}
+			}			
 
 			public IEnumerable<IndexQueryResult> Query()
 			{
@@ -619,11 +619,11 @@ namespace Raven.Database.Indexing
 					using (parent.GetSearcher(out indexSearcher))
 					{
 						var luceneQuery = GetLuceneQuery();
-
+						
 						foreach (var indexQueryTrigger in indexQueryTriggers)
 						{
 							luceneQuery = indexQueryTrigger.Value.ProcessQuery(parent.name, luceneQuery, indexQuery);
-						}
+						}                        
 
 						int start = indexQuery.Start;
 						int pageSize = indexQuery.PageSize;
@@ -665,6 +665,54 @@ namespace Raven.Database.Indexing
 				}
 			}
 
+            public IEnumerable<IndexQueryResult> IntersectionQuery()
+            {
+                using (IndexStorage.EnsureInvariantCulture())
+                {
+                    AssertQueryDoesNotContainFieldsThatAreNotIndexes();
+                    IndexSearcher indexSearcher;
+                    using (parent.GetSearcher(out indexSearcher))
+                    {
+                        var subQueries = indexQuery.Query.Split(new[] { " INTERSECT " }, StringSplitOptions.RemoveEmptyEntries);
+                        var subLuceneQueries = subQueries.Select(q => GetLuceneQuery(q)).ToList();
+
+                        var subQueryResults = new List<SubQueryResult>();
+                        //How to make this work with Paging, Distinct etc, would be nicer if we could use existing mechanisms!!!        
+                        //Otherwise we'll end up duplicating some of the work that is in the regular Query() method (above)
+                        foreach (var subQuery in subQueries)
+                        {
+                            var luceneSubQuery = GetLuceneQuery(subQuery);
+                            var search = ExecuteQuery(indexSearcher, luceneSubQuery, 0, 128, indexQuery);                                                     
+                            var subQueryDocs = search.ScoreDocs.Select(x => new SubQueryResult
+                                                                        {
+                                                                            LuceneID = x.doc,
+                                                                            RavenDocID = indexSearcher.Doc(x.doc).Get(Constants.DocumentIdFieldName),
+                                                                            Score = x.score
+                                                                        })
+                                                                        .ToList();
+                            if (subQueryResults.Count == 0)
+                                subQueryResults.AddRange(subQueryDocs);
+                            else
+                                subQueryResults = subQueryResults.IntersectBy(subQueryDocs, t => t.RavenDocID).ToList();                            
+                        }
+
+                        return subQueryResults.Select(result =>
+                                                {
+                                                    Document document = indexSearcher.Doc(result.LuceneID);
+                                                    IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, result.Score);
+                                                    return parent.RetrieveDocument(document, fieldsToFetch, result.Score);
+                                                });
+                    }
+                }
+            }
+
+            private class SubQueryResult
+            {
+                public int LuceneID { get; set; }
+                public string RavenDocID { get; set; }
+                public float Score { get; set; }
+            }
+
 			private bool ShouldIncludeInResults(IndexQueryResult indexQueryResult)
 			{
 				if (shouldIncludeInResults(indexQueryResult) == false)
@@ -679,7 +727,6 @@ namespace Raven.Database.Indexing
 			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start, int pageSize)
 			{
 				var min = Math.Min(start, search.TotalHits);
-
 
 				// we are paging, we need to check that we don't have duplicates in the previous page
 				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
@@ -739,7 +786,11 @@ namespace Raven.Database.Indexing
 
 			public Query GetLuceneQuery()
 			{
-				string query = indexQuery.Query;
+				return GetLuceneQuery(indexQuery.Query);
+			}
+			
+			private Query GetLuceneQuery(string query)
+			{				
 				Query luceneQuery;
 				if (String.IsNullOrEmpty(query))
 				{
