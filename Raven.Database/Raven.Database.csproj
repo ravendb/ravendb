@@ -128,6 +128,7 @@
     <Compile Include="Indexing\BackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IndexBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexingWorkStats.cs" />
+    <Compile Include="Indexing\IntersectionCollector.cs" />
     <Compile Include="Indexing\NotForQueryingAttribute.cs" />
     <Compile Include="Indexing\Sorting\RandomFieldComparatorSource.cs" />
     <Compile Include="Indexing\Sorting\RandomFieldComparator.cs" />

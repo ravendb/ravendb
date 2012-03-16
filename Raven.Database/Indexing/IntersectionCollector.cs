@@ -1,0 +1,76 @@
+using System.Collections.Generic;
+using System.Linq;
+using Lucene.Net.Index;
+using Lucene.Net.Search;
+using Raven.Abstractions.Data;
+
+namespace Raven.Database.Indexing
+{
+	public class IntersectionCollector : Collector
+	{
+		readonly Dictionary<string, SubQueryResult> results = new Dictionary<string, SubQueryResult>();
+		private int currentBase;
+		private IndexReader currentReader;
+
+		public IntersectionCollector(Searchable indexSearcher, IEnumerable<ScoreDoc> scoreDocs)
+		{
+			foreach (var scoreDoc in scoreDocs)
+			{
+				var document = indexSearcher.Doc(scoreDoc.doc);
+				var subQueryResult = new SubQueryResult
+				{
+					LuceneId = scoreDoc.doc,
+					RavenDocId = document.Get(Constants.DocumentIdFieldName) ?? document.Get(Constants.ReduceKeyFieldName),
+					Score = scoreDoc.score,
+					Count = 1
+				};
+				results[subQueryResult.RavenDocId] = subQueryResult;
+			}
+		}
+
+
+		public class SubQueryResult
+		{
+			public int LuceneId { get; set; }
+			public string RavenDocId { get; set; }
+			public float Score { get; set; }
+			public int Count { get; set; }
+		}
+
+		public override void SetScorer(Scorer scorer)
+		{
+			// nothing to do with us
+		}
+
+		
+		public override void Collect(int doc)
+		{
+			var document = currentReader.Document(currentBase + doc);
+			var key = document.Get(Constants.DocumentIdFieldName) ?? document.Get(Constants.ReduceKeyFieldName);
+
+			SubQueryResult value;
+			if (results.TryGetValue(key, out value))
+				value.Count++;
+		}
+
+
+		public override void SetNextReader(IndexReader reader, int docBase)
+		{
+			currentReader = reader;
+			currentBase = docBase;
+		}
+
+		
+		public override bool AcceptsDocsOutOfOrder()
+		{
+			return true;
+		}
+
+		public IEnumerable<SubQueryResult> DocumentsIdsForCount(int expectedCount)
+		{
+			return from value in results.Values
+				   where value.Count == expectedCount 
+				   select value;
+		}
+	}
+}

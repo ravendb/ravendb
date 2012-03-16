@@ -674,33 +674,24 @@ namespace Raven.Database.Indexing
                     using (parent.GetSearcher(out indexSearcher))
                     {
                         var subQueries = indexQuery.Query.Split(new[] { " INTERSECT " }, StringSplitOptions.RemoveEmptyEntries);
+						if(subQueries.Length <= 1)
+							throw new InvalidOperationException("Invalid INTRESECT query, found only a single intersect clause.");
 
-                        var subQueryResults = new List<SubQueryResult>();
-                        //How to make this work with Paging, Distinct etc, would be nicer if we could use existing mechanisms!!!        
-                        //Otherwise we'll end up duplicating some of the work that is in the regular Query() method (above)
-                        foreach (var subQuery in subQueries)
-                        {
-                            var luceneSubQuery = GetLuceneQuery(subQuery);
-                            var search = ExecuteQuery(indexSearcher, luceneSubQuery, 0, 128, indexQuery);
-                        	var subQueryDocs = search.ScoreDocs.Select(x =>
-                        	{
-                        		var document = indexSearcher.Doc(x.doc);
-                        		return new SubQueryResult
-                        		{
-                        			LuceneId = x.doc,
-                        			RavenDocID =
-                        				document.Get(Constants.DocumentIdFieldName) ?? document.Get(Constants.ReduceKeyFieldName),
-                        			Score = x.score
-                        		};
-                        	})
-                        		.ToList();
-                            if (subQueryResults.Count == 0)
-                                subQueryResults.AddRange(subQueryDocs);
-                            else
-                                subQueryResults = subQueryResults.IntersectBy(subQueryDocs, t => t.RavenDocID).ToList();                            
-                        }
 
-                        return subQueryResults.Select(result =>
+						var luceneQuery = GetLuceneQuery(subQueries[0]);
+						var search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
+
+                    	var intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
+
+						Filter filter = indexQuery.GetFilter();
+                    	for (int i = 1; i < subQueries.Length; i++)
+                    	{
+							var luceneSubQuery = GetLuceneQuery(subQueries[i]);
+							indexSearcher.Search(luceneSubQuery, filter, intersectionCollector);
+		
+                    	}
+                       
+                        return intersectionCollector.DocumentsIdsForCount(subQueries.Length).Select(result =>
                                                 {
                                                     var document = indexSearcher.Doc(result.LuceneId);
                                                     return parent.RetrieveDocument(document, fieldsToFetch, result.Score);
@@ -709,12 +700,6 @@ namespace Raven.Database.Indexing
                 }
             }
 
-            private class SubQueryResult
-            {
-                public int LuceneId { get; set; }
-                public string RavenDocID { get; set; }
-                public float Score { get; set; }
-            }
 
 			private bool ShouldIncludeInResults(IndexQueryResult indexQueryResult)
 			{
