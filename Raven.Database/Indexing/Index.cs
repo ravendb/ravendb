@@ -674,7 +674,6 @@ namespace Raven.Database.Indexing
                     using (parent.GetSearcher(out indexSearcher))
                     {
                         var subQueries = indexQuery.Query.Split(new[] { " INTERSECT " }, StringSplitOptions.RemoveEmptyEntries);
-                        var subLuceneQueries = subQueries.Select(q => GetLuceneQuery(q)).ToList();
 
                         var subQueryResults = new List<SubQueryResult>();
                         //How to make this work with Paging, Distinct etc, would be nicer if we could use existing mechanisms!!!        
@@ -682,14 +681,19 @@ namespace Raven.Database.Indexing
                         foreach (var subQuery in subQueries)
                         {
                             var luceneSubQuery = GetLuceneQuery(subQuery);
-                            var search = ExecuteQuery(indexSearcher, luceneSubQuery, 0, 128, indexQuery);                                                     
-                            var subQueryDocs = search.ScoreDocs.Select(x => new SubQueryResult
-                                                                        {
-                                                                            LuceneID = x.doc,
-                                                                            RavenDocID = indexSearcher.Doc(x.doc).Get(Constants.DocumentIdFieldName),
-                                                                            Score = x.score
-                                                                        })
-                                                                        .ToList();
+                            var search = ExecuteQuery(indexSearcher, luceneSubQuery, 0, 128, indexQuery);
+                        	var subQueryDocs = search.ScoreDocs.Select(x =>
+                        	{
+                        		var document = indexSearcher.Doc(x.doc);
+                        		return new SubQueryResult
+                        		{
+                        			LuceneId = x.doc,
+                        			RavenDocID =
+                        				document.Get(Constants.DocumentIdFieldName) ?? document.Get(Constants.ReduceKeyFieldName),
+                        			Score = x.score
+                        		};
+                        	})
+                        		.ToList();
                             if (subQueryResults.Count == 0)
                                 subQueryResults.AddRange(subQueryDocs);
                             else
@@ -698,8 +702,7 @@ namespace Raven.Database.Indexing
 
                         return subQueryResults.Select(result =>
                                                 {
-                                                    Document document = indexSearcher.Doc(result.LuceneID);
-                                                    IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, result.Score);
+                                                    var document = indexSearcher.Doc(result.LuceneId);
                                                     return parent.RetrieveDocument(document, fieldsToFetch, result.Score);
                                                 });
                     }
@@ -708,7 +711,7 @@ namespace Raven.Database.Indexing
 
             private class SubQueryResult
             {
-                public int LuceneID { get; set; }
+                public int LuceneId { get; set; }
                 public string RavenDocID { get; set; }
                 public float Score { get; set; }
             }

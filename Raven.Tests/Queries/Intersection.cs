@@ -86,34 +86,18 @@ namespace Raven.Tests.Queries
                                                     Map = @"from s in docs.TShirts
                                                             from t in s.Types
                                                             select new { s.Name, t.Colour, t.Size }"
-
-                                                    //Map = @"from s in docs.TShirts
-                                                    //        select new 
-                                                    //                { 
-                                                    //                    s.Name, 
-                                                    //                    Color = s.Types.Select(x=>x.Color),
-                                                    //                    Size = s.Types.Select(x=>x.Size) 
-                                                    //                }"
                                                 });
 
                 s.Store(tShirt1);
                 s.Store(tShirt2);
                 s.Store(tShirt3);
                 s.SaveChanges();
-
-                //Force the index to update
-                var results = s.Query<TShirt>("TShirtNested")
-                                .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-                                .ToList();
             }
+
+			WaitForIndexing(store);
 
             using (var s = store.OpenSession())
             {
-                //The problem is that xxisting queries can only handle an OR here, what we want is AND/INTERSECT
-                //var existingResults = s.Advanced.LuceneQuery<TShirt>("TShirtNested")                             
-                //   .Where("(Colour:Blue AND Size:Small) OR (Colour:Gray AND Size:Large)")
-                //   .ToList();
-                
                 var results = s.Advanced.LuceneQuery<TShirt>("TShirtNested")                             
                     .Where("Name:Wolf INTERSECT Colour:Blue AND Size:Small INTERSECT Colour:Gray AND Size:Large")
                     .ToList();
