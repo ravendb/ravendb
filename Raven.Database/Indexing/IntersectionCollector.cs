@@ -11,6 +11,7 @@ namespace Raven.Database.Indexing
 		readonly Dictionary<string, SubQueryResult> results = new Dictionary<string, SubQueryResult>();
 		private int currentBase;
 		private IndexReader currentReader;
+		private Scorer currentScorer;
 
 		public IntersectionCollector(Searchable indexSearcher, IEnumerable<ScoreDoc> scoreDocs)
 		{
@@ -27,21 +28,11 @@ namespace Raven.Database.Indexing
 				results[subQueryResult.RavenDocId] = subQueryResult;
 			}
 		}
-
-
-		public class SubQueryResult
-		{
-			public int LuceneId { get; set; }
-			public string RavenDocId { get; set; }
-			public float Score { get; set; }
-			public int Count { get; set; }
-		}
-
+		
 		public override void SetScorer(Scorer scorer)
 		{
-			// nothing to do with us
+			currentScorer = scorer;
 		}
-
 		
 		public override void Collect(int doc)
 		{
@@ -50,16 +41,17 @@ namespace Raven.Database.Indexing
 
 			SubQueryResult value;
 			if (results.TryGetValue(key, out value))
+			{
 				value.Count++;
+				value.Score += currentScorer.Score();
+			}
 		}
-
 
 		public override void SetNextReader(IndexReader reader, int docBase)
 		{
 			currentReader = reader;
 			currentBase = docBase;
 		}
-
 		
 		public override bool AcceptsDocsOutOfOrder()
 		{
@@ -69,8 +61,16 @@ namespace Raven.Database.Indexing
 		public IEnumerable<SubQueryResult> DocumentsIdsForCount(int expectedCount)
 		{
 			return from value in results.Values
-				   where value.Count == expectedCount 
-				   select value;
+				where value.Count == expectedCount 
+				select value;
+		}
+
+		public class SubQueryResult
+		{
+			public int LuceneId { get; set; }
+			public string RavenDocId { get; set; }
+			public float Score { get; set; }
+			public int Count { get; set; }
 		}
 	}
 }

@@ -39,27 +39,6 @@ namespace Raven.Database.Extensions
 					errorAction(e);
 				}
 			}
-		}
-
-		//Sample based on code from http://edulinq.googlecode.com/hg/posts/16-Intersect.html
-		//We've effectively got a limited set of elements which we can yield, but we only want to yield each of them once - so as we see items, 
-		//we can remove them from the set, yielding only if that operation was successful. The initial set is formed from the "second" input sequence, 
-		//and then we just iterate over the "first" input sequence, removing and yielding appropriately:
-		public static IEnumerable<TSource> IntersectBy<TSource, TKey>(this IEnumerable<TSource> first,
-			IEnumerable<TSource> second,
-			Func<TSource, TKey> keySelector,
-			IEqualityComparer<TKey> keyComparer = null)
-		{
-			HashSet<TKey> potentialElements = new HashSet<TKey>(second.Select(keySelector),
-																keyComparer ?? EqualityComparer<TKey>.Default);
-			foreach (TSource item in first)
-			{
-				TKey key = keySelector(item);
-				if (potentialElements.Remove(key))
-				{
-					yield return item;
-				}
-			}                 
-		}
+		}		
 	}
 }

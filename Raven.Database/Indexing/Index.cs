@@ -365,7 +365,7 @@ namespace Raven.Database.Indexing
 		}
 
 		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IEnumerable<IndexingFunc> funcs,
-															 IStorageActionsAccessor actions, WorkContext context, IndexingWorkStats stats)
+															IStorageActionsAccessor actions, WorkContext context, IndexingWorkStats stats)
 		{
 			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
@@ -374,12 +374,12 @@ namespace Raven.Database.Indexing
 				OnError = (exception, o) =>
 				{
 					context.AddError(name,
-									 TryGetDocKey(o),
-									 exception.Message
+									TryGetDocKey(o),
+									exception.Message
 						);
 					logIndexing.WarnException(
 						String.Format("Failed to execute indexing function on {0} on {1}", name,
-										   TryGetDocKey(o)),
+										TryGetDocKey(o)),
 						exception);
 
 					stats.IndexingErrors++;
@@ -388,7 +388,7 @@ namespace Raven.Database.Indexing
 		}
 
 		protected IEnumerable<object> RobustEnumerationReduce(IEnumerable<object> input, IndexingFunc func,
-															  IStorageActionsAccessor actions, WorkContext context,
+															IStorageActionsAccessor actions, WorkContext context,
 			IndexingWorkStats stats)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
@@ -399,12 +399,12 @@ namespace Raven.Database.Indexing
 				OnError = (exception, o) =>
 				{
 					context.AddError(name,
-									 TryGetDocKey(o),
-									 exception.Message
+									TryGetDocKey(o),
+									exception.Message
 						);
 					logIndexing.WarnException(
 						String.Format("Failed to execute indexing function on {0} on {1}", name,
-										   TryGetDocKey(o)),
+										TryGetDocKey(o)),
 						exception);
 
 					stats.ReduceErrors++;
@@ -415,7 +415,7 @@ namespace Raven.Database.Indexing
 		// we don't care about tracking map/reduce stats here, since it is merely
 		// an optimization step
 		protected IEnumerable<object> RobustEnumerationReduceDuringMapPhase(IEnumerable<object> input, IndexingFunc func,
-															  IStorageActionsAccessor actions, WorkContext context)
+															IStorageActionsAccessor actions, WorkContext context)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
 			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
@@ -425,12 +425,12 @@ namespace Raven.Database.Indexing
 				OnError = (exception, o) =>
 				{
 					context.AddError(name,
-									 TryGetDocKey(o),
-									 exception.Message
+									TryGetDocKey(o),
+									exception.Message
 						);
 					logIndexing.WarnException(
 						String.Format("Failed to execute indexing function on {0} on {1}", name,
-										   TryGetDocKey(o)),
+										TryGetDocKey(o)),
 						exception);
 				}
 			}.RobustEnumeration(input, func);
@@ -474,7 +474,7 @@ namespace Raven.Database.Indexing
 																{
 																	Analyzer generateAnalyzer =
 																		generator.Value.GenerateAnalyzerForIndexing(name, luceneDoc,
-																											  currentAnalyzer);
+																											currentAnalyzer);
 																	if (generateAnalyzer != currentAnalyzer &&
 																		currentAnalyzer != analyzer)
 																		currentAnalyzer.Close();
@@ -516,8 +516,8 @@ namespace Raven.Database.Indexing
 				if (numericField != null)
 				{
 					var clonedNumericField = new NumericField(numericField.Name(),
-															  numericField.IsStored() ? Field.Store.YES : Field.Store.NO,
-															  numericField.IsIndexed());
+															numericField.IsStored() ? Field.Store.YES : Field.Store.NO,
+															numericField.IsIndexed());
 					var numericValue = numericField.GetNumericValue();
 					if (numericValue is int)
 					{
@@ -581,7 +581,7 @@ namespace Raven.Database.Indexing
 				}
 
 				logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, name,
-								  sb.ToString());
+								sb.ToString());
 			}
 		}
 
@@ -639,14 +639,20 @@ namespace Raven.Database.Indexing
 								pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
 								skippedResultsInCurrentLoop = 0;
 							}
+
+							///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 							TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 							indexQuery.TotalSize.Value = search.TotalHits;
+							///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
 
-							for (int i = start; i < search.TotalHits && (i - start) < pageSize; i++)
+							for (int i = start; i < indexQuery.TotalSize.Value && (i - start) < pageSize; i++)
 							{
+								/////////////////////////////////////////////////////////////////////
 								Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
+								/////////////////////////////////////////////////////////////////////
+
 								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
@@ -665,41 +671,84 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-            public IEnumerable<IndexQueryResult> IntersectionQuery()
-            {
-                using (IndexStorage.EnsureInvariantCulture())
-                {
-                    AssertQueryDoesNotContainFieldsThatAreNotIndexes();
-                    IndexSearcher indexSearcher;
-                    using (parent.GetSearcher(out indexSearcher))
-                    {
-                        var subQueries = indexQuery.Query.Split(new[] { " INTERSECT " }, StringSplitOptions.RemoveEmptyEntries);
-						if(subQueries.Length <= 1)
-							throw new InvalidOperationException("Invalid INTRESECT query, found only a single intersect clause.");
+			public IEnumerable<IndexQueryResult> IntersectionQuery()
+			{
+				using (IndexStorage.EnsureInvariantCulture())
+				{
+					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
+					IndexSearcher indexSearcher;
+					using (parent.GetSearcher(out indexSearcher))
+					{
+						///TODO Do we need this for INTERSECT queries, does it make sense?!
+						//var luceneQuery = GetLuceneQuery();
+						//foreach (var indexQueryTrigger in indexQueryTriggers)
+						//{
+						//    luceneQuery = indexQueryTrigger.Value.ProcessQuery(parent.name, luceneQuery, indexQuery);
+						//}
 
+						int start = indexQuery.Start;
+						int pageSize = indexQuery.PageSize;
+						int returnedResults = 0;
+						int skippedResultsInCurrentLoop = 0;
+						do
+						{
+							if (skippedResultsInCurrentLoop > 0)
+							{
+								start = start + pageSize;
+								// trying to guesstimate how many results we will need to read from the index
+								// to get enough unique documents to match the page size
+								pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
+								skippedResultsInCurrentLoop = 0;
+							}
 
-						var luceneQuery = GetLuceneQuery(subQueries[0]);
-						var search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
+							///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+							var subQueries = indexQuery.Query.Split(new[] { Constants.IntersectSeperator }, StringSplitOptions.RemoveEmptyEntries);                            
+							if (subQueries.Length <= 1)
+								throw new InvalidOperationException("Invalid INTRESECT query, found only a single intersect clause.");
 
-                    	var intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
+							//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
+							var fisrtSubLuceneQuery = GetLuceneQuery(subQueries[0]);
+							var search = ExecuteQuery(indexSearcher, fisrtSubLuceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
 
-						Filter filter = indexQuery.GetFilter();
-                    	for (int i = 1; i < subQueries.Length; i++)
-                    	{
-							var luceneSubQuery = GetLuceneQuery(subQueries[i]);
-							indexSearcher.Search(luceneSubQuery, filter, intersectionCollector);
-		
-                    	}
-                       
-                        return intersectionCollector.DocumentsIdsForCount(subQueries.Length).Select(result =>
-                                                {
-                                                    var document = indexSearcher.Doc(result.LuceneId);
-                                                    return parent.RetrieveDocument(document, fieldsToFetch, result.Score);
-                                                });
-                    }
-                }
-            }
+							var intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
 
+							Filter filter = indexQuery.GetFilter();
+							for (int i = 1; i < subQueries.Length; i++)
+							{
+								var luceneSubQuery = GetLuceneQuery(subQueries[i]);
+								indexSearcher.Search(luceneSubQuery, filter, intersectionCollector);
+
+							}
+
+							var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
+							indexQuery.TotalSize.Value = intersectResults.Count;                            
+							///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
+
+							for (int i = start; i < indexQuery.TotalSize.Value && (i - start) < pageSize; i++)
+							{
+								/////////////////////////////////////////////////////////////////////                                
+								Document document = indexSearcher.Doc(intersectResults[i].LuceneId);
+								/////////////////////////////////////////////////////////////////////
+
+								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
+								if (ShouldIncludeInResults(indexQueryResult) == false)
+								{
+									indexQuery.SkippedResults.Value++;
+									skippedResultsInCurrentLoop++;
+									continue;
+								}
+
+								returnedResults++;
+								yield return indexQueryResult;
+								if (returnedResults == indexQuery.PageSize)
+									yield break;
+							}
+						} while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
+					}
+				}
+			}           
 
 			private bool ShouldIncludeInResults(IndexQueryResult indexQueryResult)
 			{
@@ -824,7 +873,7 @@ namespace Raven.Database.Indexing
 			}
 
 			private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize,
-										 IndexQuery indexQuery)
+										IndexQuery indexQuery)
 			{
 				Filter filter = indexQuery.GetFilter();
 				Sort sort = indexQuery.GetSort(filter, parent.indexDefinition);
