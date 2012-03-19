@@ -690,6 +690,19 @@ namespace Raven.Database.Indexing
 						int pageSize = indexQuery.PageSize;
 						int returnedResults = 0;
 						int skippedResultsInCurrentLoop = 0;
+
+						///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+						var subQueries = indexQuery.Query.Split(new[] { Constants.IntersectSeperator }, StringSplitOptions.RemoveEmptyEntries);
+						if (subQueries.Length <= 1)
+							throw new InvalidOperationException("Invalid INTRESECT query, found only a single intersect clause.");		
+
+						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
+						var firwtSubLuceneQuery = GetLuceneQuery(subQueries[0]);
+						//var search = ExecuteQuery(indexSearcher, fisrtSubLuceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
+						var search = ExecuteQuery(indexSearcher, firwtSubLuceneQuery, start, pageSize, indexQuery);
+						var intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
+						///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 						do
 						{
 							if (skippedResultsInCurrentLoop > 0)
@@ -701,27 +714,17 @@ namespace Raven.Database.Indexing
 								skippedResultsInCurrentLoop = 0;
 							}
 
-							///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-							var subQueries = indexQuery.Query.Split(new[] { Constants.IntersectSeperator }, StringSplitOptions.RemoveEmptyEntries);                            
-							if (subQueries.Length <= 1)
-								throw new InvalidOperationException("Invalid INTRESECT query, found only a single intersect clause.");
-
-							//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
-							var fisrtSubLuceneQuery = GetLuceneQuery(subQueries[0]);
-							var search = ExecuteQuery(indexSearcher, fisrtSubLuceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
-
-							var intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
-
+							///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////												
 							Filter filter = indexQuery.GetFilter();
 							for (int i = 1; i < subQueries.Length; i++)
 							{
 								var luceneSubQuery = GetLuceneQuery(subQueries[i]);
 								indexSearcher.Search(luceneSubQuery, filter, intersectionCollector);
-
 							}
 
 							var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
-							indexQuery.TotalSize.Value = intersectResults.Count;                            
+							indexQuery.TotalSize.Value = intersectResults.Count;
+							skippedResultsInCurrentLoop = pageSize - intersectResults.Count;
 							///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);

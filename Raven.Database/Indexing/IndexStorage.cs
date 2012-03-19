@@ -299,7 +299,7 @@ namespace Raven.Database.Indexing
 			}
 
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
-            if (query.Query.Contains(Constants.IntersectSeperator))
+			if (query.Query.Contains(Constants.IntersectSeperator))
 				return indexQueryOperation.IntersectionQuery();
 			return indexQueryOperation.Query();
 		}
