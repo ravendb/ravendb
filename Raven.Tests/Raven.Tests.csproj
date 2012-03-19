@@ -530,6 +530,7 @@
     <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
+    <Compile Include="Indexes\ReduceCanUseExtensionMethods.cs" />
     <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="Indexes\WithDecimalValue.cs" />
