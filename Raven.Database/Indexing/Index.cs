@@ -598,7 +598,8 @@ namespace Raven.Database.Indexing
 			private readonly HashSet<string> documentsAlreadySeenInPreviousPage = new HashSet<string>();
 			private readonly OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers;
 
-			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
+			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults,
+										FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
 			{
 				this.parent = parent;
 				this.indexQuery = indexQuery;
@@ -608,7 +609,7 @@ namespace Raven.Database.Indexing
 
 				if (fieldsToFetch.IsDistinctQuery)
 					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
-			}			
+			}
 
 			public IEnumerable<IndexQueryResult> Query()
 			{
@@ -619,11 +620,11 @@ namespace Raven.Database.Indexing
 					using (parent.GetSearcher(out indexSearcher))
 					{
 						var luceneQuery = GetLuceneQuery();
-						
+
 						foreach (var indexQueryTrigger in indexQueryTriggers)
 						{
 							luceneQuery = indexQueryTrigger.Value.ProcessQuery(parent.name, luceneQuery, indexQuery);
-						}                        
+						}
 
 						int start = indexQuery.Start;
 						int pageSize = indexQuery.PageSize;
@@ -639,20 +640,14 @@ namespace Raven.Database.Indexing
 								pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
 								skippedResultsInCurrentLoop = 0;
 							}
-
-							///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 							TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 							indexQuery.TotalSize.Value = search.TotalHits;
-							///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
 
-							for (int i = start; i < indexQuery.TotalSize.Value && (i - start) < pageSize; i++)
+							for (int i = start; i < search.TotalHits && (i - start) < pageSize; i++)
 							{
-								/////////////////////////////////////////////////////////////////////
 								Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
-								/////////////////////////////////////////////////////////////////////
-
 								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
 								if (ShouldIncludeInResults(indexQueryResult) == false)
 								{
@@ -691,17 +686,16 @@ namespace Raven.Database.Indexing
 						int returnedResults = 0;
 						int skippedResultsInCurrentLoop = 0;
 
-						///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 						var subQueries = indexQuery.Query.Split(new[] { Constants.IntersectSeperator }, StringSplitOptions.RemoveEmptyEntries);
 						if (subQueries.Length <= 1)
-							throw new InvalidOperationException("Invalid INTRESECT query, found only a single intersect clause.");		
+							throw new InvalidOperationException("Invalid INTRESECT query, found only a single intersect clause.");
 
 						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
-						var firwtSubLuceneQuery = GetLuceneQuery(subQueries[0]);
-						//var search = ExecuteQuery(indexSearcher, fisrtSubLuceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
-						var search = ExecuteQuery(indexSearcher, firwtSubLuceneQuery, start, pageSize, indexQuery);
+						var firstSubLuceneQuery = GetLuceneQuery(subQueries[0]);
+						//Not sure how to select the page size here??? The problem is that only docs in this search can be part 
+						//of the final result because we're doing an intersection query
+						var search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, start, pageSize, indexQuery);
 						var intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
-						///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 						do
 						{
@@ -710,11 +704,14 @@ namespace Raven.Database.Indexing
 								start = start + pageSize;
 								// trying to guesstimate how many results we will need to read from the index
 								// to get enough unique documents to match the page size
-								pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
+								//pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
+								pageSize = pageSize * 2;
 								skippedResultsInCurrentLoop = 0;
+
+								search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, start, pageSize, indexQuery);
+								intersectionCollector.UpdateInitialItems(indexSearcher, search.ScoreDocs);
 							}
 
-							///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////												
 							Filter filter = indexQuery.GetFilter();
 							for (int i = 1; i < subQueries.Length; i++)
 							{
@@ -725,15 +722,13 @@ namespace Raven.Database.Indexing
 							var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
 							indexQuery.TotalSize.Value = intersectResults.Count;
 							skippedResultsInCurrentLoop = pageSize - intersectResults.Count;
-							///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
+							///TODO we can't have non-distinct results because we're storing the RavenDB ID's in a dictionary!!
+							//RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
 
 							for (int i = start; i < indexQuery.TotalSize.Value && (i - start) < pageSize; i++)
 							{
-								/////////////////////////////////////////////////////////////////////                                
 								Document document = indexSearcher.Doc(intersectResults[i].LuceneId);
-								/////////////////////////////////////////////////////////////////////
 
 								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
 								if (ShouldIncludeInResults(indexQueryResult) == false)
@@ -751,7 +746,7 @@ namespace Raven.Database.Indexing
 						} while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
 					}
 				}
-			}           
+			}
 
 			private bool ShouldIncludeInResults(IndexQueryResult indexQueryResult)
 			{
