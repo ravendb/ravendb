@@ -475,7 +475,8 @@ namespace Raven.Client.Document
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
 				groupByFields = groupByFields,
-				aggregationOp = aggregationOp
+				aggregationOp = aggregationOp,
+				transformResultsFunc = transformResultsFunc
 			}; 
 		}
 

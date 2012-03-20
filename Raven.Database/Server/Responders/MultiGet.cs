@@ -39,7 +39,7 @@ namespace Raven.Database.Server.Responders
 				var requests = context.ReadJsonObject<GetRequest[]>();
 				var results = new GetResponse[requests.Length];
 
-				Executerequests(context, Settings, results, requests);
+				ExecuteRequests(context, Settings, results, requests);
 				
 				context.WriteJson(results);
 			}
@@ -49,7 +49,7 @@ namespace Raven.Database.Server.Responders
 			}
 		}
 
-		private void Executerequests(
+		private void ExecuteRequests(
 			IHttpContext context,
 			InMemoryRavenConfiguration ravenHttpConfiguration, 
 			GetResponse[] results,
@@ -193,6 +193,7 @@ namespace Raven.Database.Server.Responders
 					Path = req.Url
 				}.Uri;
 				RawUrl = Url.ToString();
+				IsLocal = realRequest.IsLocal;
 				Headers = new NameValueCollection();
 				foreach (var header in req.Headers)
 				{
@@ -200,6 +201,7 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
+			public bool IsLocal { get; set; }
 			public NameValueCollection Headers { get; set; }
 
 			public Stream InputStream

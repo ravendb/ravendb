@@ -181,7 +181,7 @@ namespace Raven.Tests.Indexes
 	.Select(user => new {Location = user.Location, Count = 1})",
 				Reduce = @"results
 	.GroupBy(agg => agg.Location)
-	.Select(g => new {Location = g.Key, Count = g.Sum(x => (System.Int32)(x.Count))})"
+	.Select(g => new {Location = g.Key, Count = g.Sum(x => ((System.Int32)(x.Count)))})"
 			};
 
 			Assert.Equal(original.Map, generated.Map);
@@ -205,7 +205,7 @@ namespace Raven.Tests.Indexes
 				Map = expectedIndexString,
 				Reduce = @"results
 	.GroupBy(agg => agg.Location)
-	.Select(g => new {Location = g.Key, Count = g.Sum(x => (System.Int32)(x.Count))})"
+	.Select(g => new {Location = g.Key, Count = g.Sum(x => ((System.Int32)(x.Count)))})"
 			};
 
 			Assert.Equal(expectedIndexString, generated.Map);

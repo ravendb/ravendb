@@ -3,13 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Raven.Client.Shard;
-using Raven.Client;
-
 namespace Raven.Sample.ShardClient
 {
 	public class Company

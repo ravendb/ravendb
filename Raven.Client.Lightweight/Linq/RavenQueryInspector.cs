@@ -139,9 +139,7 @@ namespace Raven.Client.Linq
 
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
-			return indexName.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) ? 
-				new DynamicQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>()) : 
-				new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>( ));
+			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
 		}
 
 		/// <summary>
@@ -163,7 +161,12 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public IDatabaseCommands DatabaseCommands
 		{
-			get { return databaseCommands; }
+			get
+			{
+				if(databaseCommands == null)
+					throw new NotSupportedException("You cannot get database commands for this query");
+				return databaseCommands;
+			}
 		}
 #endif
 
@@ -173,7 +176,12 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
-			get { return asyncDatabaseCommands; }
+			get
+			{
+				if (asyncDatabaseCommands == null)
+					throw new NotSupportedException("You cannot get database commands for this query");
+				return asyncDatabaseCommands;
+			}
 		}
 #endif
 
@@ -182,7 +190,7 @@ namespace Raven.Client.Linq
 		///</summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm()
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>());
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
 			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
 			return ((IRavenQueryInspector)luceneQuery).GetLastEqualityTerm();
 		}
@@ -198,7 +206,7 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
-		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
+		///   This function exists solely to forbid calling ToArray() on a queryable in Silverlight.
 		/// </summary>
 		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
 		public static TOther[] ToArray<TOther>()

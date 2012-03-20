@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.Visitors;
 
@@ -103,7 +104,7 @@ namespace Raven.Database.Linq.Ast
 		                                           ParenthesizedExpression parenthesizedlambdaExpression)
 		{
 			var node = new CastExpression(new TypeReference("Func<dynamic, decimal>"), parenthesizedlambdaExpression, CastType.Cast);
-			var castExpression = lambdaExpression.ExpressionBody as CastExpression;
+			var castExpression = GetAsCastExpression(lambdaExpression.ExpressionBody);
 			if (castExpression != null)
 			{
 				node = new CastExpression(new TypeReference("Func", new List<TypeReference>
@@ -115,10 +116,21 @@ namespace Raven.Database.Linq.Ast
 			return node;
 		}
 
+		private static CastExpression GetAsCastExpression(Expression expressionBody)
+		{
+			var castExpression = expressionBody as CastExpression;
+			if (castExpression != null)
+				return castExpression;
+			var parametrizedNode = expressionBody as ParenthesizedExpression;
+			if (parametrizedNode != null)
+				return GetAsCastExpression(parametrizedNode.Expression);
+			return null;
+		}
+
 		private static INode ModifyLambdaForNumerics(LambdaExpression lambdaExpression,
 		                                        ParenthesizedExpression parenthesizedlambdaExpression)
 		{
-			var castExpression = lambdaExpression.ExpressionBody as CastExpression;
+			var castExpression = GetAsCastExpression(lambdaExpression.ExpressionBody);
 			if (castExpression != null)
 			{
 				return new CastExpression(new TypeReference("Func", new List<TypeReference>

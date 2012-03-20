@@ -1,4 +1,7 @@
-﻿using Raven.Client.Document;
+﻿using System;
+using System.Diagnostics;
+using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Xunit;
 
@@ -19,15 +22,20 @@ namespace Raven.Bundles.Tests.Replication
 			                 store2.Url + "/databases/FailoverTest");
 
 			using (var store = new DocumentStore
-			                   {
-			                   	DefaultDatabase = "FailoverTest",
-			                   	Url = store1.Url,
-			                   	Conventions =
-			                   		{
-			                   			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
-			                   		}
-			                   }.Initialize())
+			                   	{
+			                   		DefaultDatabase = "FailoverTest",
+			                   		Url = store1.Url,
+			                   		Conventions =
+			                   			{
+			                   				FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
+			                   			}
+			                   	})
 			{
+				store.Initialize();
+				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase(null);
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
+					.Wait();
+
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Item {});
@@ -51,20 +59,26 @@ namespace Raven.Bundles.Tests.Replication
 			                 store2.Url + "/databases/FailoverTest");
 
 			using (var store = new DocumentStore
-			                   {
-			                   	DefaultDatabase = "FailoverTest",
-			                   	Url = store1.Url,
-			                   	Conventions =
-			                   		{
-			                   			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
-			                   		}
-			                   }.Initialize())
+			                   	{
+			                   		DefaultDatabase = "FailoverTest",
+			                   		Url = store1.Url,
+			                   		Conventions =
+			                   			{
+			                   				FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
+			                   			}
+			                   	})
 			{
+				store.Initialize();
+				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase(null);
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
+					.Wait();
+
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Item {});
 					session.SaveChanges();
 				}
+
 
 				WaitForDocument(store2.DatabaseCommands.ForDatabase("FailoverTest"), "items/1");
 
@@ -91,15 +105,20 @@ namespace Raven.Bundles.Tests.Replication
 			                 store2.Url + "databases/FailoverTest");
 
 			using (var store = new DocumentStore
-			                   {
-			                   	DefaultDatabase = "FailoverTest",
-			                   	Url = store1.Url + "databases/FailoverTest",
-			                   	Conventions =
-			                   		{
-			                   			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
-			                   		}
-			                   }.Initialize())
+								{
+									DefaultDatabase = "FailoverTest",
+									Url = store1.Url + "databases/FailoverTest",
+									Conventions =
+										{
+											FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
+										}
+								})
 			{
+				store.Initialize();
+				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("FailoverTest");
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
+					.Wait();
+
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Item {});
@@ -110,10 +129,21 @@ namespace Raven.Bundles.Tests.Replication
 
 				servers[0].Dispose();
 
-				using (var session = store.OpenSession())
+				while (true)
 				{
-					var load = session.Load<Item>("items/1");
-					Assert.NotNull(load);
+					try
+					{
+						using (var session = store.OpenSession())
+						{
+							var load = session.Load<Item>("items/1");
+							Assert.NotNull(load);
+						}
+						return;
+					}
+					catch (Exception)
+					{
+						Debugger.Launch();
+					}
 				}
 			}
 		}

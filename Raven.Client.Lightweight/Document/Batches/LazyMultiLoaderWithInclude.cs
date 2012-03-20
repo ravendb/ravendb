@@ -9,8 +9,17 @@ namespace Raven.Client.Document.Batches
 {
 	public class LazyMultiLoaderWithInclude<T> : ILazyLoaderWithInclude<T>
 	{
-		private readonly DocumentSession session;
+		private readonly IDocumentSessionImpl session;
 		private readonly List<string> includes = new List<string>();
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="LazyMultiLoaderWithInclude{T}"/> class.
+		/// </summary>
+		/// <param name="session">The session.</param>
+		internal LazyMultiLoaderWithInclude(IDocumentSessionImpl session)
+		{
+			this.session = session;
+		}
 
 		/// <summary>
 		/// Includes the specified path.
@@ -66,15 +75,6 @@ namespace Raven.Client.Document.Batches
 		{
 			var idAsStr = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof (T), false);
 			return Load(idAsStr);
-		}
-
-		/// <summary>
-		/// Initializes a new instance of the <see cref="LazyMultiLoaderWithInclude{T}"/> class.
-		/// </summary>
-		/// <param name="session">The session.</param>
-		public LazyMultiLoaderWithInclude(DocumentSession session)
-		{
-			this.session = session;
 		}
 
 		/// <summary>

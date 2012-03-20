@@ -42,6 +42,10 @@ namespace Raven.Database.Server
 		public InMemoryRavenConfiguration DefaultConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
+#if DEBUG
+		public readonly ConcurrentQueue<string> LastRequests = new ConcurrentQueue<string>();
+#endif
+
 		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { }; 
 
 		private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
@@ -90,8 +94,8 @@ namespace Raven.Database.Server
 		private Timer databasesCleanupTimer;
 		private int physicalRequestsCount;
 
-		private TimeSpan maxTimeDatabaseCanBeIdle;
-		private TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
+		private readonly TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 		private bool disposed;
 
 		public bool HasPendingRequests
@@ -272,7 +276,7 @@ namespace Raven.Database.Server
 			catch (Exception)
 			{
 				// can't get current request / end new one, probably
-				// listner shutdown
+				// listener shutdown
 				return;
 			}
 
@@ -516,6 +520,7 @@ namespace Raven.Database.Server
 
 			try
 			{
+				RecordRequest(ctx);
 				OnDispatchingRequest(ctx);
 
 				if (DefaultConfiguration.HttpCompression)
@@ -567,6 +572,15 @@ namespace Raven.Database.Server
 				}
 			}
 			return false;
+		}
+
+		[Conditional("DEBUG")]
+		private void RecordRequest(IHttpContext ctx)
+		{
+			string result;
+			if(LastRequests.Count > 128)
+				LastRequests.TryDequeue(out result);
+			LastRequests.Enqueue(ctx.Request.RawUrl);
 		}
 
 		private void HandleHttpCompressionFromClient(IHttpContext ctx)
@@ -677,6 +691,7 @@ namespace Raven.Database.Server
 				config.DatabaseName = tenantId;
 
 				config.Initialize();
+				config.CopyParentSettings(DefaultConfiguration);
 				var documentDatabase = new DocumentDatabase(config);
 				documentDatabase.SpinBackgroundWorkers();
 				return documentDatabase;

@@ -25,10 +25,18 @@ namespace Raven.StressTests
 
 		protected void Run<T>(Action<T> action, int iterations = 1000) where T : new()
 		{
-			for (int i = 0; i < iterations; i++)
+			var i = 0;
+			try
 			{
-				Environment.SetEnvironmentVariable("RunId", i.ToString(CultureInfo.InvariantCulture));
-				RunTest(action, i);
+				for (; i < iterations; i++)
+				{
+					RunTest(action, i);
+				}
+			}
+			catch
+			{
+				Console.WriteLine("Test failed on run #" + i);
+				throw;
 			}
 		}
 
@@ -40,6 +48,7 @@ namespace Raven.StressTests
 				for (int i = 0; i < iterations; i++)
 				{
 					Environment.SetEnvironmentVariable("RunId", i.ToString(CultureInfo.InvariantCulture));
+					Console.WriteLine("run #" + 1);
 					RunTest(action, i);
 				}
 			}
@@ -51,20 +60,12 @@ namespace Raven.StressTests
 
 		private static void RunTest<T>(Action<T> action, int i) where T : new()
 		{
-			try
-			{
-				var test = new T();
-				action(test);
+			var test = new T();
+			action(test);
 
-				var disposable = test as IDisposable;
-				if (disposable != null)
-					disposable.Dispose();
-			}
-			catch
-			{
-				Console.WriteLine("Test failed on run #" + i);
-				throw;
-			}
+			var disposable = test as IDisposable;
+			if (disposable != null)
+				disposable.Dispose();
 		}
 
 		private static void SetupLogging()

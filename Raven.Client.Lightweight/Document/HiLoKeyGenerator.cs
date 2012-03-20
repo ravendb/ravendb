@@ -5,9 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading;
-#if !SILVERLIGHT
 using System.Transactions;
-#endif
 #if !NET_3_5
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
@@ -27,13 +25,13 @@ namespace Raven.Client.Document
 	public class HiLoKeyGenerator
 	{
 		private const string RavenKeyGeneratorsHilo = "Raven/Hilo/";
-		private readonly IDocumentStore documentStore;
 		private readonly string tag;
 		private long capacity;
 		private readonly object generatorLock = new object();
 		private long current;
 		private volatile Hodler currentMax = new Hodler(0);
 		private DateTime lastRequestedUtc;
+		private IDatabaseCommands databaseCommands;
 
 		private class Hodler
 		{
@@ -48,12 +46,9 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
 		/// </summary>
-		/// <param name="documentStore">The document store.</param>
-		/// <param name="tag">The tag.</param>
-		/// <param name="capacity">The capacity.</param>
-		public HiLoKeyGenerator(IDocumentStore documentStore, string tag, long capacity)
+		public HiLoKeyGenerator(IDatabaseCommands databaseCommands, string tag, long capacity)
 		{
-			this.documentStore = documentStore;
+			this.databaseCommands = databaseCommands;
 			this.tag = tag;
 			this.capacity = capacity;
 			current = 0;
@@ -99,10 +94,8 @@ namespace Raven.Client.Document
 
 		private long GetNextMax()
 		{
-#if !SILVERLIGHT
 			using (new TransactionScope(TransactionScopeOption.Suppress))
 			{
-#endif
 			var span = DateTime.UtcNow - lastRequestedUtc;
 			if (span.TotalSeconds < 1)
 			{
@@ -147,37 +140,19 @@ namespace Raven.Client.Document
 					// expected, we need to retry
 				}
 			}
-#if !SILVERLIGHT
 		}
-#endif
 		}
 
-#if !SILVERLIGHT
 		private void PutDocument(JsonDocument document)
 		{
-			documentStore.DatabaseCommands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
+			databaseCommands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
 			                     document.DataAsJson,
 			                     document.Metadata);
 		}
 
 		private JsonDocument GetDocument()
 		{
-			return documentStore.DatabaseCommands.Get(RavenKeyGeneratorsHilo + tag);
+			return databaseCommands.Get(RavenKeyGeneratorsHilo + tag);
 		}
-#else
-		private void PutDocument(JsonDocument document)
-		{
-			documentStore.AsyncDatabaseCommands.PutAsync(RavenKeyGeneratorsHilo + tag, document.Etag,
-			                     document.DataAsJson,
-			                     document.Metadata)
-					.Wait();
-		}
-
-		private JsonDocument GetDocument()
-		{
-			return documentStore.AsyncDatabaseCommands.GetAsync(RavenKeyGeneratorsHilo + tag).Result;
-		}
-#endif
-
 	}
 }

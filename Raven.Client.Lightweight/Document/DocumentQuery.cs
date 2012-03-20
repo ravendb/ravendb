@@ -11,7 +11,6 @@ using Raven.Client.Linq;
 using Raven.Client.Listeners;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
-
 #endif
 
 namespace Raven.Client.Document
@@ -81,6 +80,7 @@ namespace Raven.Client.Document
 				orderByFields = orderByFields,
 				groupByFields = groupByFields,
 				aggregationOp = aggregationOp,
+				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes)
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);

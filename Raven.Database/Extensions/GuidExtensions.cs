@@ -11,6 +11,9 @@ namespace Raven.Database.Extensions
 	{
 		public static Guid TransfromToGuidWithProperSorting(this byte[] bytes)
 		{
+			if (bytes == null)
+				return Guid.Empty;
+
 			return new Guid(bytes);
 		}
 

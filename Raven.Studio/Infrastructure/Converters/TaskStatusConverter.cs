@@ -20,7 +20,7 @@ namespace Raven.Studio.Infrastructure.Converters
 					return "";
 
 					case TaskStatus.Started:
-					return "Task in proccess";
+					return "Task in progress";
 
 					case TaskStatus.Ended:
 					return "Task finished";

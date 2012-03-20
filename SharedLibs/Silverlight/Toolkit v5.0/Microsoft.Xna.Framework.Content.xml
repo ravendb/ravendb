@@ -1,0 +1,1983 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.Xna.Framework.Content</name>
+    </assembly>
+    <members>
+        <member name="T:Microsoft.Xna.Framework.Content.ContentSerializerAttribute">
+            <summary>
+            Marks a field or property to control how it is serialized, or to
+            indicate that protected or private data should be included.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentSerializerAttribute.#ctor">
+            <summary>
+            Constructs an empty serialization descriptor.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentSerializerAttribute.ElementName">
+            <summary>
+            Specifies the XML element name (default=name of the managed type member).
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentSerializerAttribute.FlattenContent">
+            <summary>
+            Write member contents directly into the current XML context,
+            rather than wrapping the member in a new XML element (default=false).
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentSerializerAttribute.Optional">
+            <summary>
+            Don't bother writing this element if the member is null, and gracefully
+            skip past it if not found when deserializing XML (default=false).
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentSerializerAttribute.AllowNull">
+            <summary>
+            Allow this member to have a null value (default=true).
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentSerializerAttribute.SharedResource">
+            <summary>
+            Indicates that this member may be referenced from multiple parents,
+            so it should be serialized as a unique ID reference, then the actual
+            object data only written once at the end of the file (default=false).
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentSerializerAttribute.CollectionItemName">
+            <summary>
+            For collection members, specifies the XML element
+            name for each item in the collection (default="Item").
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ContentSerializerIgnoreAttribute">
+            <summary>
+            Marks public fields or properties to prevent them being serialized.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ContentSerializerTypeVersionAttribute">
+            <summary>
+            Marks a content data class to specify a format version number.
+            Increasing this value will prevent mismatched data files being
+            read from the .xnb binary format.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentSerializerTypeVersionAttribute.#ctor(System.Int32)">
+            <summary>
+            Constructor.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentSerializerTypeVersionAttribute.TypeVersion">
+            <summary>
+            Gets a format version number for this type.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ContentLoadException">
+            <summary>
+            Exception used to report errors from the ContentManager.Load method.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentLoadException.#ctor">
+            <summary>
+            Constructs an empty exception.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentLoadException.#ctor(System.String)">
+            <summary>
+            Constructs an exception with the specified error message.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentLoadException.#ctor(System.String,System.Exception)">
+            <summary>
+            Constructs an exception with the specified error message and inner exception.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ContentManager">
+            <summary>
+            The content manager is the runtime component which rehydrates managed
+            objects from the binary files produced by the design time content pipeline.
+            It also manages the lifespan of the loaded objects: disposing the content
+            manager will also dispose any assets which are themselves IDisposable.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentManager.#ctor(System.IServiceProvider)">
+            <summary>
+            Constructs a content manager rooted off the same directory as the title executable.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentManager.#ctor(System.IServiceProvider,System.String)">
+            <summary>
+            Constructs a content manager  rooted off the specified directory.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentManager.RecordDisposableObject(System.IDisposable)">
+            <summary>
+            Adds a new object to be disposed when we are unloaded.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentManager.Dispose">
+            <summary>
+            Destroys the content manager , and disposes all assets that were loaded by it.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentManager.Dispose(System.Boolean)">
+            <summary>
+            Destroys the content manager , and disposes all assets that were loaded by it.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentManager.Unload">
+            <summary>
+            Disposes all data that was loaded by this manager.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentManager.Load``1(System.String)">
+            <summary>
+            Loads an asset from disk.
+            </summary>
+            <typeparam name="T">Type of the asset to be loaded.</typeparam>
+            <param name="assetName">Asset name, relative to the loader root directory, and not including the .xnb file extension.</param>
+            <returns>The loaded asset. Repeated calls to load the same asset will return the same object instance.</returns>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentManager.ReadAsset``1(System.String,System.Action{System.IDisposable})">
+            <summary>
+            Low level worker method for reading asset data. This routine loads a single
+            XNB file from disk, but unlike the public Load method it does not track what
+            assets have already been loaded, and will return a fresh copy of the asset
+            each time it is called rather than trying to share a single instance.
+            
+            If you want to customize how shared assets are managed, you can do that by
+            overriding the Load method, using your own code to keep track of what has
+            already been loaded, and then calling ReadAsset when you determine that you
+            do actually need to read some data from disk.
+            
+            If you provide a recordDisposableObject delegate, this will be called each
+            time the loader encounters a type that implements IDisposable. This replaces
+            the default lifespan management behavior, so the regular ContentManager.Unload
+            call will no longer have any effect. It is your responsibility to keep track
+            of all the disposable objects and ensure they are disposed at a suitable time.
+            
+            If you pass null for recordDisposableObject, the default lifespan tracking
+            will be used, so unloading or disposing the content manager will free
+            everything that has been loaded through it.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentManager.OpenStream(System.String)">
+            <summary>
+            Opens a stream for reading the specified asset. Derived classes
+            can replace this to implement packfiles or asset compression.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentManager.GetByteBuffer(System.Int32)">
+            <summary>
+            Gets a reusable IO buffer, to reduce loading garbage.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentManager.ServiceProvider">
+            <summary>
+            Gets the component service provider.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentManager.RootDirectory">
+            <summary>
+            Gets the root directory of this content manager.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ContentReader">
+            <summary>
+            Worker object implements most of ContentManager.Load. A fresh
+            one of these is constructed for each asset that gets loaded.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.Create(Microsoft.Xna.Framework.Content.ContentManager,System.IO.Stream,System.String,System.Action{System.IDisposable})">
+            <summary>
+            Public factory method.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.#ctor(Microsoft.Xna.Framework.Content.ContentManager,System.IO.Stream,System.String,System.Action{System.IDisposable},System.Int32)">
+            <summary>
+            Private constructor.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.PrepareStream(System.IO.Stream,System.String,System.Int32@)">
+            <summary>
+            Reads and validates the XNB file prologue, and returns a stream that can be
+            used to read the rest of the file. This is implemented as a static method,
+            so it can be called from the ContentReader constructor, thus allowing us to
+            pick whether to use a DecompressStream before we have to pass that stream
+            on to the base BinaryReader constructor (irritatingly, BinaryReader does
+            not allow you to switch the underlying stream after it is constructed).
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadAsset``1">
+            <summary>
+            Reads an entire asset from the compiled binary format.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadHeader">
+            <summary>
+            Reads and validates the file header, from where PrepareStream left off.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadObject``1">
+            <summary>
+            Reads a single managed object from the compiled binary format.
+            Can be called recursively.
+            </summary>
+            <typeparam name="T">Type of the object to read.</typeparam>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadObject``1(``0)">
+            <summary>
+            Reads a single managed object from the compiled binary format.
+            Can be called recursively.
+            </summary>
+            <typeparam name="T">Type of the object to read.</typeparam>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadObject``1(Microsoft.Xna.Framework.Content.ContentTypeReader)">
+            <summary>
+            Reads a single managed object from the compiled binary format, using the
+            specified type hint (this should be looked up from the Initialize method of
+            the ContentTypeReader that is calling ReadObject, by calling manager.GetTypeReader).
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadObject``1(Microsoft.Xna.Framework.Content.ContentTypeReader,``0)">
+            <summary>
+            Reads a single managed object from the compiled binary format, using the
+            specified type hint (this should be looked up from the Initialize method of
+            the ContentTypeReader that is calling ReadObject, by calling manager.GetTypeReader).
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadObjectInternal``1(System.Object)">
+            <summary>
+            Helper code shared between the various ReadObject overloads.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadObjectInternal``1(Microsoft.Xna.Framework.Content.ContentTypeReader,System.Object)">
+            <summary>
+            Helper code shared between the various ReadObject overloads.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadRawObject``1">
+            <summary>
+            Reads a single managed object from the compiled binary format, as an instance
+            of the specified type. If you specify a base class of the actual object type,
+            only data from this base type will be read.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadRawObject``1(``0)">
+            <summary>
+            Reads a single managed object from the compiled binary format, as an instance
+            of the specified type. If you specify a base class of the actual object type,
+            only data from this base type will be read.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadRawObject``1(Microsoft.Xna.Framework.Content.ContentTypeReader)">
+            <summary>
+            Reads a single managed object from the compiled binary format, using the
+            specified writer reader (this should be looked up from the Initialize method
+            of the ContentTypeReader that is calling ReadRawObject, by calling manager.GetTypeReader).
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadRawObject``1(Microsoft.Xna.Framework.Content.ContentTypeReader,``0)">
+            <summary>
+            Reads a single managed object from the compiled binary format, using the
+            specified writer reader (this should be looked up from the Initialize method
+            of the ContentTypeReader that is calling ReadRawObject, by calling manager.GetTypeReader).
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.InvokeReader``1(Microsoft.Xna.Framework.Content.ContentTypeReader,System.Object)">
+            <summary>
+            Helper for invoking the ContentTypeReader.Read method, avoiding unneccessary boxing.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadSharedResource``1(System.Action{``0})">
+            <summary>
+            Reads a shared resource ID, and records it for subsequent fixup.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadSharedResources(System.Int32)">
+            <summary>
+            Reads the list of shared FrameworkResources, and performs fixups on anything that references them.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadExternalReference``1">
+            <summary>
+            Reads a link to an external file.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.GetPathToReference(System.String)">
+            <summary>
+            Returns the path to a related reference relative to the asset location.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.GetAbsolutePathToReference(System.String)">
+            <summary>
+            Returns an absolute filesystem path to a related reference.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadByteBuffer(System.Int32)">
+            <summary>
+            BinaryReader.ReadBytes creates a new array every time you call it. Over the 
+            course of content loading, this garbage can trigger a significant number of 
+            unnecessary collections, due to sillyness like allocating a new temporary 
+            buffer for each mip level of a texture. To improve load times, this internal 
+            helper allows us to reuse a single buffer for all texture and vertex/index 
+            buffer loading within a single ContentManager.Load call (the buffer is freed 
+            when ContentManager.Load returns).
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.CreateContentLoadException(System.String,System.Object[])">
+            <summary>
+            Helper for constructing content load exceptions.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.CreateContentLoadException(System.Exception,System.String,System.Object[])">
+            <summary>
+            Helper for constructing content load exceptions.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.CreateContentLoadException(System.String,System.Exception,System.String,System.Object[])">
+            <summary>
+            Helper for constructing content load exceptions.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadVector2">
+            <summary>
+            Reads a Vector2 value.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadVector3">
+            <summary>
+            Reads a Vector3 value.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadVector4">
+            <summary>
+            Reads a Vector4 value.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadMatrix">
+            <summary>
+            Reads a Matrix value.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadQuaternion">
+            <summary>
+            Reads a Quaternion value.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadColor">
+            <summary>
+            Reads a Color value.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadSingle">
+            <summary>
+            The .NET Compact Framework has a poor ReadSingle() implementation that allocates
+            each time it is called. We provide a better version that will not create any garbage.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentReader.ReadDouble">
+            <summary>
+            The .NET Compact Framework has a poor ReadDouble() implementation that allocates
+            each time it is called. We provide a better version that will not create any garbage.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentReader.ContentManager">
+            <summary>
+            Backlink to the parent content manager.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentReader.AssetName">
+            <summary>
+            Gets the name of the asset currently being read.
+            This can be useful to include in the exception message
+            if a custom ContentTypeReader encounters an error.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ContentTypeReaderManager">
+            <summary>
+            Singleton manager constructs and keeps track of type reader objects.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReaderManager.#cctor">
+            <summary>
+            Prime the reader list with a magic entry for System.Object.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReaderManager.#ctor(Microsoft.Xna.Framework.Content.ContentReader)">
+            <summary>
+            Most of the time we are a static class, keeping a global stash of instantiated
+            type readers. We expose a bunch of static internal methods for use by ContentReader.
+            But when we call the Initialize method on new type readers, we pass them an
+            actual ContentTypeReaderManager instance, which they can use to access the instance
+            version of GetTypeReader. These temporary instances need to track what ContentReader
+            they belong to, so they give sensible exception messages if badness takes place.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReaderManager.ReadTypeManifest(System.Int32,Microsoft.Xna.Framework.Content.ContentReader)">
+            <summary>
+            Reads the type manifest from the top of the compiled binary format, returning
+            an array of the ContentTypeReader workers it describes, or throwing if there 
+            is a type version mismatch.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReaderManager.GetTypeReader(System.String,Microsoft.Xna.Framework.Content.ContentReader,System.Collections.Generic.List{Microsoft.Xna.Framework.Content.ContentTypeReader}@)">
+            <summary>
+            Demand creates a type reader worker instance, given the
+            assembly qualified name of the reader implementation type.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReaderManager.InstantiateTypeReader(System.String,Microsoft.Xna.Framework.Content.ContentReader,Microsoft.Xna.Framework.Content.ContentTypeReader@)">
+            <summary>
+            Instantiates a reader worker. Returns a boolean indicating whether it
+            created a new instance, as opposed to reusing an existing instantiation.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReaderManager.AddTypeReader(System.String,Microsoft.Xna.Framework.Content.ContentReader,Microsoft.Xna.Framework.Content.ContentTypeReader)">
+            <summary>
+            Adds a new reader instance.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReaderManager.RollbackAddReaders(System.Collections.Generic.List{Microsoft.Xna.Framework.Content.ContentTypeReader})">
+            <summary>
+            Helper for rolling back failed attempts to add new type readers.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReaderManager.RollbackAddReader``1(System.Collections.Generic.Dictionary{``0,Microsoft.Xna.Framework.Content.ContentTypeReader},Microsoft.Xna.Framework.Content.ContentTypeReader)">
+            <summary>
+            Helper for rolling back failed attempts to add new type readers.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReaderManager.GetTypeReader(System.Type,Microsoft.Xna.Framework.Content.ContentReader)">
+            <summary>
+            Looks up a reader for the specified type.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReaderManager.GetTypeReader(System.Type)">
+            <summary>
+            Looks up a reader for the specified type.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReaderManager.ContainsTypeReader(System.Type)">
+            <summary>
+            Checks whether we have a reader for the specified type.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.FrameworkResources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.BadXnb">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.BadXnbGraphicsProfile">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. This file was compiled for the HiDef profile, and cannot be loaded into a {1} GraphicsDevice..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.BadXnbMagic">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. This is not a compiled content file..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.BadXnbPlatform">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. This file was compiled for the wrong target platform..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.BadXnbSize">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. File has been truncated..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.BadXnbTypeVersion">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. File contains the wrong version of type {1}..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.BadXnbVersion">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. This file was compiled using the wrong version of the XNA Framework..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.BadXnbWrongType">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. File contains {1} but trying to load as {2}..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.BeginMustBeCalledBeforeDraw">
+            <summary>
+              Looks up a localized string similar to Begin must be called successfully before a Draw can be called..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.BeginMustBeCalledBeforeEnd">
+            <summary>
+              Looks up a localized string similar to Begin must be called successfully before End can be called..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.BuiltInEffectWrongTextureType">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. File references a {1} but {2} requires a {3}..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.CannotNextSpriteBeginImmediate">
+            <summary>
+              Looks up a localized string similar to Nesting more than one SpriteBatch.Begin when using a SpriteBatch with SpriteSortMode.Immediate is not allowed..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.CantSerializeMember">
+            <summary>
+              Looks up a localized string similar to Unable to serialize member {0} of {1}..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.CantSerializeReadOnlyNull">
+            <summary>
+              Looks up a localized string similar to Cannot deserialize {1}.{0} because it is both null and read-only..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.CharacterNotInFont">
+            <summary>
+              Looks up a localized string similar to The character &apos;{0}&apos; (0x{1:x4}) is not available in this SpriteFont. If applicable, adjust the font&apos;s start and end CharacterRegions to include this character..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.ContentManagerCannotChangeRootDirectory">
+            <summary>
+              Looks up a localized string similar to This property cannot be changed after content has been loaded into the ContentManager..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.EndMustBeCalledBeforeBegin">
+            <summary>
+              Looks up a localized string similar to Begin cannot be called again until End has been successfully called..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.InvalidTitleContainerName">
+            <summary>
+              Looks up a localized string similar to Invalid filename. TitleContainer.OpenStream requires a relative URI..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.ModelHasNoEffect">
+            <summary>
+              Looks up a localized string similar to ModelMeshPart has a null Effect..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.ModelHasNoIEffectMatrices">
+            <summary>
+              Looks up a localized string similar to This model contains a custom effect which does not implement the IEffectMatrices interface, so it cannot be drawn using Model.Draw. Instead, call ModelMesh.Draw after setting the appropriate effect parameters..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.NoDefaultConstructor">
+            <summary>
+              Looks up a localized string similar to Cannot deserialize type {0} because it does not have a parameterless constructor..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.OpenResourceNotBinary">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. Not a binary resource..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.OpenResourceNotFound">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. Resource not found..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.OpenStreamError">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. Cannot open file..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.OpenStreamNotFound">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. File not found..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.ReaderConstructedNewInstance">
+            <summary>
+              Looks up a localized string similar to ContentTypeReader {0} returned a new object instance from its Read method. This should have loaded data into the existingInstance parameter..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.ReadOnlySharedResource">
+            <summary>
+              Looks up a localized string similar to Members marked with ContentSerializerAttribute.SharedResource cannot be read-only..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.ReflectiveReaderTypeNotFound">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. Cannot find type {1}..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.TypeReaderDuplicate">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. ContentTypeReader {1} conflicts with existing handler {2} for type {3}..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.TypeReaderInvalid">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. Cannot instantiate ContentTypeReader {1}..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.TypeReaderNotFound">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. Cannot find ContentTypeReader {1}..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.TypeReaderNotRegistered">
+            <summary>
+              Looks up a localized string similar to Error loading &quot;{0}&quot;. Cannot find ContentTypeReader for {1}..
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.FrameworkResources.XnbNoCompression">
+            <summary>
+              Looks up a localized string similar to Silverlight does not support compressed XNB files..
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.Model">
+            <summary>
+            Model class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.Model.CopyBoneTransformsTo(Microsoft.Xna.Framework.Matrix[])">
+            <summary>
+            Copy transform of bones into specified array.
+            </summary>
+            <param name="destinationBoneTransforms"></param>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.Model.CopyAbsoluteBoneTransformsTo(Microsoft.Xna.Framework.Matrix[])">
+            <summary>
+            Copy absolute transform of bones into specified array.
+            </summary>
+            <param name="destinationBoneTransforms"></param>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.Model.CopyBoneTransformsFrom(Microsoft.Xna.Framework.Matrix[])">
+            <summary>
+            Copy given array matrix to bones.
+            </summary>
+            <param name="sourceBoneTransforms"></param>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.Model.Draw(Microsoft.Xna.Framework.Matrix,Microsoft.Xna.Framework.Matrix,Microsoft.Xna.Framework.Matrix)">
+            <summary>
+            Draws all the meshes within this model, using the specified world,
+            view, and projection matrices. This method requires that all the
+            effects used by the model implement the IEffectMatrices interface.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.Model.root">
+            <summary>
+            root of this model.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.Model.bones">
+            <summary>
+            Bone that are referenced by this model.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.Model.meshes">
+            <summary>
+            Meshes.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.Model.tag">
+            <summary>
+            User Tag
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.Model.sharedDrawBoneMatrices">
+            <summary>
+            Reused by all Draw calls, to avoid creating garbage.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.Model.Read(Microsoft.Xna.Framework.Content.ContentReader)">
+            <summary>
+            input this model content via ContentReader.
+            </summary>
+            <param name="input"></param>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.Model.Root">
+            <summary>
+            Gets Root bone of this model.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.Model.Bones">
+            <summary>
+            Gets bones that are referenced by this model.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.Model.Tag">
+            <summary>
+            Sets and Gets tag object.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.Model.Meshes">
+            <summary>
+            Gets meshes.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.ModelBone">
+            <summary>
+            This class represents bone data of model.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelBone.name">
+            <summary>
+            name of this bone.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelBone.transform">
+            <summary>
+            Bone transfrom.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelBone.index">
+            <summary>
+            index of this bone in bones collection at Model.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelBone.parent">
+            <summary>
+            Parent of this bone.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelBone.children">
+            <summary>
+            Children of this bone.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelBone.Name">
+            <summary>
+            Gets bone name.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelBone.Index">
+            <summary>
+            Gets index of this bone in bones collection at Model.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelBone.Transform">
+            <summary>
+            Gets transform of bone.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelBone.Parent">
+            <summary>
+            Gets parent ModelBone.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelBone.Children">
+            <summary>
+            Gets children of this bone.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.ModelBoneCollection">
+            <summary>
+            This is collection of bone.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelBoneCollection.#ctor(Microsoft.Xna.Framework.Graphics.ModelBone[])">
+            <summary>
+            Initialize new instance of ModelBoneCollection.
+            </summary>
+            <param name="bones"></param>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelBoneCollection.TryGetValue(System.String,Microsoft.Xna.Framework.Graphics.ModelBone@)">
+            <summary>
+            Tries to look up a bone by name.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelBoneCollection.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the objects in this collection.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelBoneCollection.Item(System.String)">
+            <summary>
+            Looks up a bone by name. Throws if not found.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.ModelBoneCollection.Enumerator">
+            <summary>
+            Enumerator interface for iterating over the contents of the collection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelBoneCollection.Enumerator.#ctor(Microsoft.Xna.Framework.Graphics.ModelBone[])">
+            <summary>
+            Internal constructor sets the position to before the first element.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelBoneCollection.Enumerator.MoveNext">
+            <summary>
+            Advances to the next value in the collection.
+            Returns true as long as another value was available.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelBoneCollection.Enumerator.System#Collections#IEnumerator#Reset">
+            <summary>
+            Resets the enumerator to before the start of the collection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelBoneCollection.Enumerator.Dispose">
+            <summary>
+            Implements the IDisposable interface.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelBoneCollection.Enumerator.Current">
+            <summary>
+            Gets the value at the current enumerator position.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelBoneCollection.Enumerator.System#Collections#IEnumerator#Current">
+            <summary>
+            Explicit implementation of the non-generic IEnumerator interface.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.ModelEffectCollection">
+            <summary>
+            Collection of all the effects used on a ModelMesh.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelEffectCollection.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the objects in this collection.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.ModelEffectCollection.Enumerator">
+            <summary>
+            Enumerator interface for iterating over the contents of the collection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelEffectCollection.Enumerator.#ctor(System.Collections.Generic.List{Microsoft.Xna.Framework.Graphics.Effect})">
+            <summary>
+            Internal constructor sets the position to before the first element.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelEffectCollection.Enumerator.MoveNext">
+            <summary>
+            Advances to the next value in the collection.
+            Returns true as long as another value was available.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelEffectCollection.Enumerator.System#Collections#IEnumerator#Reset">
+            <summary>
+            Resets the enumerator to before the start of the collection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelEffectCollection.Enumerator.Dispose">
+            <summary>
+            Implements the IDisposable interface.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelEffectCollection.Enumerator.Current">
+            <summary>
+            Gets the value at the current enumerator position.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelEffectCollection.Enumerator.System#Collections#IEnumerator#Current">
+            <summary>
+            Explicit implementation of the non-generic IEnumerator interface.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.ModelMesh">
+            <summary>
+            Model mesh class.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMesh.name">
+            <summary>
+            Name of this model mesh.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMesh.parentBone">
+            <summary>
+            parent bone of this model mesh.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMesh.boundingSphere">
+            <summary>
+            BoundingSphere that contains this mesh.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMesh.meshParts">
+            <summary>
+            Mesh parts.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMesh.effects">
+            <summary>
+            Effects used by this mesh.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMesh.tag">
+            <summary>
+            Tag object.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMesh.Draw">
+            <summary>
+            Draws all the subparts of this mesh, using their current Effect settings.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMesh.Name">
+            <summary>
+            Gets model mesh name.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMesh.ParentBone">
+            <summary>
+            Parent bone
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMesh.BoundingSphere">
+            <summary>
+            Bounding sphere of this mesh.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMesh.Tag">
+            <summary>
+            Sets and gets Tag object.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMesh.MeshParts">
+            <summary>
+            Gets mesh parts.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMesh.Effects">
+            <summary>
+            Gets the effect list.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.ModelMeshCollection">
+            <summary>
+            ModelMesh collection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshCollection.#ctor(Microsoft.Xna.Framework.Graphics.ModelMesh[])">
+            <summary>
+            Initialize new instance of ModelMeshCollection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshCollection.TryGetValue(System.String,Microsoft.Xna.Framework.Graphics.ModelMesh@)">
+            <summary>
+            Tries to look up a mesh by name.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshCollection.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the objects in this collection.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshCollection.Item(System.String)">
+            <summary>
+            Looks up a mesh by name. Throws if not found.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.ModelMeshCollection.Enumerator">
+            <summary>
+            Enumerator interface for iterating over the contents of the collection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshCollection.Enumerator.#ctor(Microsoft.Xna.Framework.Graphics.ModelMesh[])">
+            <summary>
+            Internal constructor sets the position to before the first element.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshCollection.Enumerator.MoveNext">
+            <summary>
+            Advances to the next value in the collection.
+            Returns true as long as another value was available.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshCollection.Enumerator.System#Collections#IEnumerator#Reset">
+            <summary>
+            Resets the enumerator to before the start of the collection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshCollection.Enumerator.Dispose">
+            <summary>
+            Implements the IDisposable interface.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshCollection.Enumerator.Current">
+            <summary>
+            Gets the value at the current enumerator position.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshCollection.Enumerator.System#Collections#IEnumerator#Current">
+            <summary>
+            Explicit implementation of the non-generic IEnumerator interface.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.ModelMeshPart">
+            <summary>
+            ModelMeshPart.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshPart.Draw">
+            <summary>
+            Draw this model mesh part.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMeshPart.startIndex">
+            <summary>
+            Location in the index buffer at which to start reading vertices.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMeshPart.primitiveCount">
+            <summary>
+            Number of faces to render.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMeshPart.vertexOffset">
+            <summary>
+            Gets offset in vertices from top of vertex buffer.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMeshPart.numVertices">
+            <summary>
+            Number of vertices used in this mesh part. starting from VertexStartIndex + FaceStartIndex.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMeshPart.effect">
+            <summary>
+            Material for this mesh part
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMeshPart.tag">
+            <summary>
+            Tag object.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.ModelMeshPart.parent">
+            <summary>
+            Parent object.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshPart.StartIndex">
+            <summary>
+            Location in the index buffer at which to start reading vertices.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshPart.PrimitiveCount">
+            <summary>
+            Number of faces to render.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshPart.VertexOffset">
+            <summary>
+            Gets offset in vertices from top of vertex buffer.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshPart.NumVertices">
+            <summary>
+            Number of vertices used in this mesh part. starting from VertexStartIndex + FaceStartIndex.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshPart.IndexBuffer">
+            <summary>
+            Index buffer
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshPart.VertexBuffer">
+            <summary>
+            Gets vertex buffer to render this mesh.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshPart.Effect">
+            <summary>
+            Material for this mesh part.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshPart.Tag">
+            <summary>
+            Sets and Gets Tag object.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.ModelMeshPartCollection">
+            <summary>
+            ModelMeshPart collection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshPartCollection.#ctor(Microsoft.Xna.Framework.Graphics.ModelMeshPart[])">
+            <summary>
+            Initialize new instance of ModelMeshPartCollection.
+            </summary>
+            <param name="parts"></param>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshPartCollection.GetEnumerator">
+            <summary>
+            Returns an enumerator that iterates through the objects in this collection.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.ModelMeshPartCollection.Enumerator">
+            <summary>
+            Enumerator interface for iterating over the contents of the collection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshPartCollection.Enumerator.#ctor(Microsoft.Xna.Framework.Graphics.ModelMeshPart[])">
+            <summary>
+            Internal constructor sets the position to before the first element.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshPartCollection.Enumerator.MoveNext">
+            <summary>
+            Advances to the next value in the collection.
+            Returns true as long as another value was available.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshPartCollection.Enumerator.System#Collections#IEnumerator#Reset">
+            <summary>
+            Resets the enumerator to before the start of the collection.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.ModelMeshPartCollection.Enumerator.Dispose">
+            <summary>
+            Implements the IDisposable interface.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshPartCollection.Enumerator.Current">
+            <summary>
+            Gets the value at the current enumerator position.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.ModelMeshPartCollection.Enumerator.System#Collections#IEnumerator#Current">
+            <summary>
+            Explicit implementation of the non-generic IEnumerator interface.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ResourceContentManager">
+            <summary>
+            ContentManager subclass which is specialized to read from .resx resource
+            files, rather than directly from individual files on disk.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ResourceContentManager.#ctor(System.IServiceProvider,System.Resources.ResourceManager)">
+            <summary>
+            Constructs a content manager that will read from the specified ResourceManager.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ResourceContentManager.OpenStream(System.String)">
+            <summary>
+            Opens a stream for reading the specified resource.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SpriteSortMode">
+            <summary>
+            SpriteSortMode
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.SpriteSortMode.Deferred">
+            <summary>
+            Queue up sprites and draw them all during the End call.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.SpriteSortMode.Immediate">
+            <summary>
+            Draw sprites directly in the order they are submitted.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.SpriteSortMode.Texture">
+            <summary>
+            Sort sprites by texture.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.SpriteSortMode.BackToFront">
+            <summary>
+            Sort sprites by depth, from back to front.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.SpriteSortMode.FrontToBack">
+            <summary>
+            Sort sprites by depth, from front to back.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SpriteEffects">
+            <summary>
+            SpriteEffects
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.SpriteEffects.None">
+            <summary>
+            No special behavior.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.SpriteEffects.FlipHorizontally">
+            <summary>
+            Flip the sprite from left to right.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.SpriteEffects.FlipVertically">
+            <summary>
+            Flip the sprite from top to bottom.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SpriteBatch">
+            <summary>
+            SpriteBatch
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.#ctor(Microsoft.Xna.Framework.Graphics.GraphicsDevice)">
+            <summary>
+            Creates a new sprite batch object.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Dispose">
+            <summary>
+            Disposes the resource.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Begin">
+            <summary>
+            Begins a sprite batch operation using deferred sorting, with default 
+            renderstates (BlendState.AlphaBlend, SamplerState.LinearClamp, 
+            DepthStencilState.None, RasterizerState.CullCounterClockwise).
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Begin(Microsoft.Xna.Framework.Graphics.SpriteSortMode,Microsoft.Xna.Framework.Graphics.BlendState)">
+            <summary>
+            Begins a sprite batch operation using the specified sorting and blend mode, 
+            with default renderstates (SamplerState.LinearClamp, DepthStencilState.None, 
+            RasterizerState.CullCounterClockwise). If you pass a null blend state, 
+            the default is BlendState.AlphaBlend.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Begin(Microsoft.Xna.Framework.Graphics.SpriteSortMode,Microsoft.Xna.Framework.Graphics.BlendState,Microsoft.Xna.Framework.Graphics.SamplerState,Microsoft.Xna.Framework.Graphics.DepthStencilState,Microsoft.Xna.Framework.Graphics.RasterizerState)">
+            <summary>
+            Begins a sprite batch operation using the specified sorting, blend mode, and 
+            state options. Passing null for any of the state objects selects the default 
+            (BlendState.AlphaBlend, SamplerState.LinearClamp, DepthStencilState.None, 
+            RasterizerState.CullCounterClockwise).
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Begin(Microsoft.Xna.Framework.Graphics.SpriteSortMode,Microsoft.Xna.Framework.Graphics.BlendState,Microsoft.Xna.Framework.Graphics.SamplerState,Microsoft.Xna.Framework.Graphics.DepthStencilState,Microsoft.Xna.Framework.Graphics.RasterizerState,Microsoft.Xna.Framework.Graphics.Effect)">
+            <summary>
+            Begins a sprite batch operation using the specified sorting, blend mode, and 
+            state options, plus a custom effect. Passing null for any of the state objects
+            selects the default (BlendState.AlphaBlend, SamplerState.LinearClamp,
+            DepthStencilState.None, RasterizerState.CullCounterClockwise).
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Begin(Microsoft.Xna.Framework.Graphics.SpriteSortMode,Microsoft.Xna.Framework.Graphics.BlendState,Microsoft.Xna.Framework.Graphics.SamplerState,Microsoft.Xna.Framework.Graphics.DepthStencilState,Microsoft.Xna.Framework.Graphics.RasterizerState,Microsoft.Xna.Framework.Graphics.Effect,Microsoft.Xna.Framework.Matrix)">
+            <summary>
+            Begins a sprite batch operation using the specified sorting, blend mode, and 
+            state options, plus a custom effect and a 2D transform matrix. Passing null
+            for any any of the state objects selects the default (BlendState.AlphaBlend,
+            SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullCounterClockwise).
+            Passing a null effect selects the default SpriteBatch shader.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.End">
+            <summary>
+            Ends a sprite batch operation.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Draw(Microsoft.Xna.Framework.Graphics.Texture2D,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Color)">
+            <summary>
+            Draws a sprite.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Draw(Microsoft.Xna.Framework.Graphics.Texture2D,Microsoft.Xna.Framework.Vector2,System.Nullable{Microsoft.Xna.Framework.Rectangle},Microsoft.Xna.Framework.Color)">
+            <summary>
+            Draws a sprite.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Draw(Microsoft.Xna.Framework.Graphics.Texture2D,Microsoft.Xna.Framework.Vector2,System.Nullable{Microsoft.Xna.Framework.Rectangle},Microsoft.Xna.Framework.Color,System.Single,Microsoft.Xna.Framework.Vector2,System.Single,Microsoft.Xna.Framework.Graphics.SpriteEffects,System.Single)">
+            <summary>
+            Draws a sprite.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Draw(Microsoft.Xna.Framework.Graphics.Texture2D,Microsoft.Xna.Framework.Vector2,System.Nullable{Microsoft.Xna.Framework.Rectangle},Microsoft.Xna.Framework.Color,System.Single,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Graphics.SpriteEffects,System.Single)">
+            <summary>
+            Draws a sprite.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Draw(Microsoft.Xna.Framework.Graphics.Texture2D,Microsoft.Xna.Framework.Rectangle,Microsoft.Xna.Framework.Color)">
+            <summary>
+            Draws a sprite.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Draw(Microsoft.Xna.Framework.Graphics.Texture2D,Microsoft.Xna.Framework.Rectangle,System.Nullable{Microsoft.Xna.Framework.Rectangle},Microsoft.Xna.Framework.Color)">
+            <summary>
+            Draws a sprite.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Draw(Microsoft.Xna.Framework.Graphics.Texture2D,Microsoft.Xna.Framework.Rectangle,System.Nullable{Microsoft.Xna.Framework.Rectangle},Microsoft.Xna.Framework.Color,System.Single,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Graphics.SpriteEffects,System.Single)">
+            <summary>
+            Draws a sprite.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.DrawString(Microsoft.Xna.Framework.Graphics.SpriteFont,System.String,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Color)">
+            <summary>
+            Draw text on the screen
+            </summary>
+            <param name="text">text to draw</param>
+            <param name="spriteFont">the font to use to draw this text.</param>
+            <param name="position">where to put the text on the screen.  this value is the upper left corner of the text.</param>
+            <param name="color">the color the text will be.</param>
+            <exception cref="T:System.ArgumentException">an argument exception is thrown if the parameter "text" contains a character that
+            this font does not know how to render.</exception>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.DrawString(Microsoft.Xna.Framework.Graphics.SpriteFont,System.Text.StringBuilder,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Color)">
+            <summary>
+            Draw text on the screen, from a StringBuilder source parameter
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.DrawString(Microsoft.Xna.Framework.Graphics.SpriteFont,System.String,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Color,System.Single,Microsoft.Xna.Framework.Vector2,System.Single,Microsoft.Xna.Framework.Graphics.SpriteEffects,System.Single)">
+            <summary>
+            Draw text on the screen
+            </summary>
+            <param name="text">text to draw</param>
+            <param name="spriteFont">the font to use to draw this text.</param>
+            <param name="position">where to put the text on the screen.  this value is the position
+            at which the origin will be placed.</param>
+            <param name="color">the color the text will be.</param>
+            <param name="rotation">a value, in radians, used to rotate the entire string.  the string is rotated around origin.</param>
+            <param name="origin">a position in the string, specified in pixels.  this is the point that the text will rotate around.</param>
+            <param name="scale">the scale the sprite will be drawn at.  1.0 is normal.</param>
+            <param name="effects">effects to apply to the text.</param>
+            <param name="layerDepth">The sorting depth of the text, between 0 and 1.</param>
+            <exception cref="T:System.ArgumentException">an argument exception is thrown if the parameter "text" contains a character that
+            this font does not know how to render.</exception>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.DrawString(Microsoft.Xna.Framework.Graphics.SpriteFont,System.Text.StringBuilder,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Color,System.Single,Microsoft.Xna.Framework.Vector2,System.Single,Microsoft.Xna.Framework.Graphics.SpriteEffects,System.Single)">
+            <summary>
+            Draw text on the screen, from a StringBuilder source parameter
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.DrawString(Microsoft.Xna.Framework.Graphics.SpriteFont,System.String,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Color,System.Single,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Graphics.SpriteEffects,System.Single)">
+            <summary>
+            Draw text on the screen
+            </summary>
+            <param name="spriteFont">the font to use to draw this text.</param>
+            <param name="text">text to draw</param>
+            <param name="position">where to put the text on the screen.  this value is the position
+            at which the origin will be placed.</param>
+            <param name="color">the color the text will be.</param>
+            <param name="rotation">a value, in radians, used to rotate the entire string.  the string is rotated around origin.</param>
+            <param name="origin">a position in the string, specified in pixels.  this is the point that the text will rotate around.</param>
+            <param name="scale">the scale the sprite will be drawn at.  1.0 is normal.</param>
+            <param name="effects">effects to apply to the text.</param>
+            <param name="layerDepth">The sorting depth of the text, between 0 and 1.</param>
+            <exception cref="T:System.ArgumentException">an argument exception is thrown if the parameter "text" contains a character that
+            this font does not know how to render.</exception>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.DrawString(Microsoft.Xna.Framework.Graphics.SpriteFont,System.Text.StringBuilder,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Color,System.Single,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Graphics.SpriteEffects,System.Single)">
+            <summary>
+            Draw text on the screen, from a StringBuilder source parameter
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.InternalDraw(Microsoft.Xna.Framework.Graphics.Texture2D,Microsoft.Xna.Framework.Vector4@,System.Boolean,System.Nullable{Microsoft.Xna.Framework.Rectangle}@,Microsoft.Xna.Framework.Color,System.Single,Microsoft.Xna.Framework.Vector2@,Microsoft.Xna.Framework.Graphics.SpriteEffects,System.Single)">
+            <summary>
+            Internal worker shared by the various Draw overloads.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.Flush">
+            <summary>
+            Sends queued sprites to the graphics device.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.SortSprites">
+            <summary>
+            Sorts the array of queued sprites, generating a table of reordering indices.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.RenderBatch(Microsoft.Xna.Framework.Graphics.Texture2D,Microsoft.Xna.Framework.Graphics.SpriteBatch.SpriteInfo[],System.Int32,System.Int32)">
+            <summary>
+            Submits a batch of sprites to the GPU.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.PlatformRenderBatch(Microsoft.Xna.Framework.Graphics.Texture2D,Microsoft.Xna.Framework.Graphics.SpriteBatch.SpriteInfo[],System.Int32,System.Int32)">
+            <summary>
+            Submits a batch of sprites to the GPU.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.SetRenderState">
+            <summary>
+            Sets GPU renderstates for drawing sprites using the specified blend mode.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.AllocateBuffers">
+            <summary>
+            Creates vertex and index buffers on app startup, and lazily after any device resets.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteBatch.CreateIndexData">
+            <summary>
+            Helper for filling the sprite index buffer.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SpriteBatch.SpriteInfo">
+            <summary>
+            Everything needed to draw an individual sprite.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SpriteBatch.TextureComparer">
+            <summary>
+            Comparison function for sorting sprites by texture.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SpriteBatch.BackToFrontComparer">
+            <summary>
+            Comparison function for sorting sprites from back to front.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SpriteBatch.FrontToBackComparer">
+            <summary>
+            Comparison function for sorting sprites from front to back.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SpriteFont">
+            <summary>
+            The main runtime font class. These objects are loaded from XNB format
+            using the ContentManager, and contain all the information needed to
+            render text to the screen.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteFont.#ctor(Microsoft.Xna.Framework.Graphics.Texture2D,System.Collections.Generic.List{Microsoft.Xna.Framework.Rectangle},System.Collections.Generic.List{Microsoft.Xna.Framework.Rectangle},System.Collections.Generic.List{System.Char},System.Int32,System.Single,System.Collections.Generic.List{Microsoft.Xna.Framework.Vector3},System.Nullable{System.Char})">
+            <summary>
+            The constructor is internal, because fonts should only be created
+            by loading from XNB files (using the ContentManager, which calls
+            into the FontReader helper class).
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteFont.MeasureString(System.String)">
+            <summary>
+            Get the size a string will be when drawn to the screen, in pixels.
+            </summary>
+            <param name="text">the text to measure</param>
+            <returns>a vector2 containing the width and height of the text.</returns>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteFont.MeasureString(System.Text.StringBuilder)">
+            <summary>
+            Get the size a StringBuilder will be when drawn to the screen, in pixels.
+            </summary>
+            <param name="text">the text to measure</param>
+            <returns>a vector2 containing the width and height of the text.</returns>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteFont.InternalMeasure(Microsoft.Xna.Framework.Graphics.SpriteFont.StringProxy@)">
+            <summary>
+            Worker used by the two public MeasureString overloads. This indirects 
+            through a StringProxy argument, so it can be used to measure both
+            string and StringBuilder data, without creating any garbage.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteFont.InternalDraw(Microsoft.Xna.Framework.Graphics.SpriteFont.StringProxy@,Microsoft.Xna.Framework.Graphics.SpriteBatch,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Color,System.Single,Microsoft.Xna.Framework.Vector2,Microsoft.Xna.Framework.Vector2@,Microsoft.Xna.Framework.Graphics.SpriteEffects,System.Single)">
+            <summary>
+            called by all the public draw functions to do the hard work of actually drawing
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteFont.GetIndexForCharacter(System.Char)">
+            <summary>
+            Look up what font glyph corresponds to this Unicode character.
+            </summary>
+            <param name="character">character to look up</param>
+            <returns>an index into glyphData or croppingData</returns>
+            <exception cref="T:System.ArgumentException">ArgumentException is thrown if character is not in this font.</exception>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.SpriteFont.LineSpacing">
+            <summary>
+            Get and set the height per line of this font, measured in pixels.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.SpriteFont.Spacing">
+            <summary>
+            Get and set the spacing for this font, which is the amount of space in between
+            characters.  this value is measured in pixels.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.SpriteFont.DefaultCharacter">
+            <summary>
+            Gets the default character for this font. If set to anything other than null,
+            this will be automatically substituted any time you attempt to draw or measure
+            characters that are not in the font. If set to null, missing characters will
+            produce an exception.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.SpriteFont.Characters">
+            <summary>
+            Gets a collection of all the characters that are included in this font.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.SpriteFont.StringProxy">
+            <summary>
+            We want to be able to draw and measure both string and StringBuilder data.
+            But we can't rely on any kind of polymorphism or interfaces to do this,
+            because we don't want to cause any boxing or allocations. This value type
+            can wrap either a string or a StringBuilder, and is passed around by reference,
+            allowing the public APIs to wrap either type of object for use by the internal
+            drawing helpers.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteFont.StringProxy.#ctor(System.String)">
+            <summary>
+            Constructs a proxy for drawing or measuring a string parameter.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.SpriteFont.StringProxy.#ctor(System.Text.StringBuilder)">
+            <summary>
+            Constructs a proxy for drawing or measuring a StringBuilder parameter.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Xna.Framework.Graphics.SpriteFont.StringProxy.Length">
+            <summary>
+            The length of the wrapped text.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Graphics.SpriteFont.StringProxy.Item(System.Int32)">
+            <summary>
+            Indexer reads a specific character from the wrapped text.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.SpriteFontReader">
+            <summary>
+            Content pipeline support class for loading Font objects from the
+            compiled XNB format. This is invoked whenever you use
+            ContentManager.Load to read a Font object.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ContentTypeReader`1">
+            <summary>
+            Generic wrapper around ContentTypeReader adds strong typing.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ContentTypeReader">
+            <summary>
+            Worker for reading a specific managed type from binary format.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReader.#ctor(System.Type)">
+            <summary>
+            Constructs a custom reader for the specified type.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReader.Initialize(Microsoft.Xna.Framework.Content.ContentTypeReaderManager)">
+            <summary>
+            Creation hook for looking up and caching any nested type readers.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReader.Read(Microsoft.Xna.Framework.Content.ContentReader,System.Object)">
+            <summary>
+            Reads an object from binary format.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentTypeReader.TargetType">
+            <summary>
+            Gets the type handled by this reader component.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentTypeReader.TypeVersion">
+            <summary>
+            Gets a format version number for this type.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ContentTypeReader.CanDeserializeIntoExistingObject">
+            <summary>
+            Is this component able to load data into an existing object, or must it always construct a new instance?
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReader`1.#ctor">
+            <summary>
+            Constructs a custom reader.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReader`1.Read(Microsoft.Xna.Framework.Content.ContentReader,System.Object)">
+            <summary>
+            Cast the base read call to a strong type.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ContentTypeReader`1.Read(Microsoft.Xna.Framework.Content.ContentReader,`0)">
+            <summary>
+            Strongly typed version of the read method.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ArrayReader`1">
+            <summary>
+            Read array types.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.EffectReader">
+            <summary>
+            Dummy reader allows the base effect type to be used polymorphically.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.DictionaryReader`2">
+            <summary>
+            Read System.Collections.Generic.Dictionary.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.EnumReader`1">
+            <summary>
+            Read enum types.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ExternalReferenceReader">
+            <summary>
+            Read external file references.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.IndexBufferReader">
+            <summary>
+            Read index buffer data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ListReader`1">
+            <summary>
+            Read System.Collections.Generic.List.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.Vector2Reader">
+            <summary>
+            Read Vector2 data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.Vector3Reader">
+            <summary>
+            Read Vector3 data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.Vector4Reader">
+            <summary>
+            Read Vector4 data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.MatrixReader">
+            <summary>
+            Read Matrix data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.QuaternionReader">
+            <summary>
+            Read Quaternion data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.PlaneReader">
+            <summary>
+            Read Plane data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.PointReader">
+            <summary>
+            Read Point data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.RectangleReader">
+            <summary>
+            Read Rectangle data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.BoundingBoxReader">
+            <summary>
+            Read BoundingBox data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.BoundingSphereReader">
+            <summary>
+            Read BoundingSphere data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.BoundingFrustumReader">
+            <summary>
+            Read BoundingFrustum data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.RayReader">
+            <summary>
+            Read Ray data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.CurveReader">
+            <summary>
+            Read Curve data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ColorReader">
+            <summary>
+            Read Color data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.NullableReader`1">
+            <summary>
+            Read nullable types.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ObjectReader">
+            <summary>
+            Dummy reader to allow using System.Object as a polymorphic base type.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.StringReader">
+            <summary>
+            Read strings.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ByteReader">
+            <summary>
+            Read bytes.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.SByteReader">
+            <summary>
+            Read signed bytes.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.Int16Reader">
+            <summary>
+            Read shorts.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.UInt16Reader">
+            <summary>
+            Read unsigned shorts.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.Int32Reader">
+            <summary>
+            Read integers.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.UInt32Reader">
+            <summary>
+            Read unsigned integers.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.Int64Reader">
+            <summary>
+            Read longs.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.UInt64Reader">
+            <summary>
+            Read unsigned longs.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.SingleReader">
+            <summary>
+            Read floats.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.DoubleReader">
+            <summary>
+            Read doubles.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.BooleanReader">
+            <summary>
+            Read booleans.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.CharReader">
+            <summary>
+            Read characters.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.DateTimeReader">
+            <summary>
+            Read DateTime objects.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.TimeSpanReader">
+            <summary>
+            Read TimeSpan objects.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.DecimalReader">
+            <summary>
+            Read Decimal objects.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ReflectiveReader`1">
+            <summary>
+            Uses reflection to figure out how to load any arbitrary type.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ReflectiveReader`1.Initialize(Microsoft.Xna.Framework.Content.ContentTypeReaderManager)">
+            <summary>
+            Use reflection to figure out how to serialize this type.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ReflectiveReader`1.Read(Microsoft.Xna.Framework.Content.ContentReader,System.Object)">
+            <summary>
+            Reads an object from disk.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ReflectiveReader`1.CanDeserializeIntoExistingObject">
+            <summary>
+            Are we able to load data into an existing object?
+            </summary>
+        </member>
+        <member name="P:Microsoft.Xna.Framework.Content.ReflectiveReader`1.TypeVersion">
+            <summary>
+            Gets a format version number for this type.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.ReflectiveReaderMemberHelper">
+            <summary>
+            Worker for deserializing a field or property.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ReflectiveReaderMemberHelper.TryCreate(Microsoft.Xna.Framework.Content.ContentTypeReaderManager,System.Type,System.Reflection.FieldInfo)">
+            <summary>
+            Creates a handler for the specified field, if it is appropriate for this to be serialized.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ReflectiveReaderMemberHelper.TryCreate(Microsoft.Xna.Framework.Content.ContentTypeReaderManager,System.Type,System.Reflection.PropertyInfo)">
+            <summary>
+            Creates a handler for the specified property, if it is appropriate for this to be serialized.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ReflectiveReaderMemberHelper.#ctor(Microsoft.Xna.Framework.Content.ContentTypeReaderManager,System.Reflection.FieldInfo,System.Reflection.PropertyInfo,System.Type,System.Boolean)">
+            <summary>
+            Constructor.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ReflectiveReaderMemberHelper.ShouldSerializeMember(Microsoft.Xna.Framework.Content.ContentTypeReaderManager,System.Type,System.Reflection.MemberInfo,System.Type,System.Boolean,System.Boolean,System.Boolean)">
+            <summary>
+            Checks whether it is appropriate to include a field or property in the serialization.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ReflectiveReaderMemberHelper.ShouldSerializeProperty(Microsoft.Xna.Framework.Content.ContentTypeReaderManager,System.Type,System.Reflection.PropertyInfo)">
+            <summary>
+            Checks whether it is appropriate to include a property in the serialization.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ReflectiveReaderMemberHelper.IsSharedResource(System.Reflection.MemberInfo)">
+            <summary>
+            Checks whether this field or property has a shared resource attribute on it.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ReflectiveReaderMemberHelper.ValidateSkippedMember(System.Reflection.MemberInfo)">
+            <summary>
+            Checks if it is cool for us not to be serializing this member.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ReflectiveReaderMemberHelper.Read(Microsoft.Xna.Framework.Content.ContentReader,System.Object)">
+            <summary>
+            Read data from XNB format.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Content.ReflectiveReaderMemberHelper.FixupSharedResource(Microsoft.Xna.Framework.Content.ContentReader,System.Object,System.Object)">
+            <summary>
+            Applies a shared resource fixup.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.Texture2DReader">
+            <summary>
+            Read 2D texture data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.TextureCubeReader">
+            <summary>
+            Read cubemap data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.TextureReader">
+            <summary>
+            Dummy reader allows the base texture type to be used polymorphically.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.VertexBufferReader">
+            <summary>
+            Read vertex buffer data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.VertexDeclarationReader">
+            <summary>
+            Read vertex declarations.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Graphics.DxtDecoder">
+            <summary>
+            Helper for decoding DXT compressed texture data into 32 bit Color format.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.DxtDecoder.#ctor(System.Int32,System.Int32,Microsoft.Xna.Framework.Graphics.SurfaceFormat)">
+            <summary>
+            Constructor.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.DxtDecoder.Decode(System.Byte[])">
+            <summary>
+            Decompresses a DXT texture.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.DxtDecoder.DecodeRgbBlock(System.Byte[],System.Int32,System.Byte[],System.Int32,System.Int32,System.Int32,System.Boolean)">
+            <summary>
+            Decompresses an RGB color block. This is shared between DXT1, DXT3, and DXT5 encodings.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.DxtDecoder.DecodeExplicitAlphaBlock(System.Byte[],System.Int32,System.Byte[],System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Decompresses a DXT3 explicit alpha block.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.DxtDecoder.DecodeInterpolatedAlphaBlock(System.Byte[],System.Int32,System.Byte[],System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Decompresses a DXT5 interpolated alpha block.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.DxtDecoder.Read16(System.Byte[],System.Int32)">
+            <summary>
+            Helper reads 16 bits of DXT encoded data.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.DxtDecoder.Read32(System.Byte[],System.Int32)">
+            <summary>
+            Helper reads 32 bits of DXT encoded data.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.DxtDecoder.Read48(System.Byte[],System.Int32)">
+            <summary>
+            Helper reads 48 bits of DXT encoded data.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.GraphicsContentHelper.GraphicsDeviceFromContentReader(Microsoft.Xna.Framework.Content.ContentReader)">
+            <summary>
+            Gets the graphics device component, for loading GPU resources.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.Graphics.GraphicsContentHelper.IsProfileCompatible(Microsoft.Xna.Framework.Graphics.GraphicsProfile,Microsoft.Xna.Framework.Graphics.GraphicsProfile)">
+            <summary>
+            Checks whether the specified graphics device can load content that was
+            built for the specified target profile. Although the current logic is
+            very simple, this is implemented in such a way that it will fail any time
+            we add a new profile, forcing us to think through the compatibility rules.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.TitleContainer.GetCleanPath(System.String)">
+            <summary>
+            Simplifies a path into canonical format.
+            Converts / to \.
+            Collapses . and .. entries.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.TitleContainer.CollapseParentDirectory(System.String@,System.Int32,System.Int32)">
+            <summary>
+            Helper used by GetCleanPath.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Xna.Framework.TitleContainer.IsCleanPathAbsolute(System.String)">
+            <summary>
+            Checks whether the specified path (which must already
+            have been processed by GetCleanPath) is absolute.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Xna.Framework.Content.TypeNameConverter">
+            <summary>
+            XNB files built using XNA Game Studio 4.0 will contain different assembly qualified
+            type names to those used by this Silverlight implementation, so we must fix up assembly
+            names and keys in order for these types to resolve correctly.
+            </summary>
+        </member>
+    </members>
+</doc>

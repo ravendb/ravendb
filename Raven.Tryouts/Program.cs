@@ -5,6 +5,8 @@ using NLog;
 using NLog.Config;
 using Raven.Database.Server;
 using Raven.Tests.Bugs;
+using Raven.Tests.Bugs.Caching;
+using Raven.Tests.Shard.BlogModel;
 
 namespace Raven.Tryouts
 {
@@ -28,8 +30,7 @@ namespace Raven.Tryouts
 					Environment.SetEnvironmentVariable("Run", i.ToString());
 					Console.Clear();
 					Console.WriteLine(i);
-					var x = new CaseSensitiveDeletes();
-						x.ShouldWork();
+					new CachingOfDocumentInclude().New_query_returns_correct_value_when_cache_is_enabled_and_data_changes();
 				}
 			}
 			catch (Exception e)

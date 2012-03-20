@@ -39,8 +39,8 @@ namespace Raven.Tests
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 
-			var documentStore = new EmbeddableDocumentStore()
-			{
+			var documentStore = new EmbeddableDocumentStore
+			                    	{
 				Configuration =
 					{
 						DataDirectory = path,
@@ -119,6 +119,10 @@ namespace Raven.Tests
 				Thread.Sleep(25);
 		}
 
+		protected virtual void ConfigureServer(RavenConfiguration configuration)
+		{
+		}
+
 		protected void WaitForUserToContinueTheTest()
 		{
 			if (Debugger.IsAttached == false)
@@ -163,7 +167,14 @@ namespace Raven.Tests
 
 			try
 			{
-				using (var documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize())
+				using (var documentStore = new DocumentStore
+				                           	{
+												Conventions =
+													{
+														FailoverBehavior = FailoverBehavior.FailImmediately
+													},
+				                           		Url = "http://localhost:" + port
+				                           	}.Initialize())
 				{
 					CreateDefaultIndexes(documentStore);
 				}

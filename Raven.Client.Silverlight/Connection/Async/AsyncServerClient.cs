@@ -41,6 +41,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		private readonly ICredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? sessionId;
+		private readonly Task veryFirstRequest;
 		private readonly DocumentConvention convention;
 		private readonly ProfilingInformation profilingInformation;
 
@@ -55,7 +56,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
 		/// </summary>
-		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId)
+		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId, Task veryFirstRequest)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
 			this.url = url.EndsWith("/") ? url.Substring(0, url.Length - 1) : url;
@@ -63,13 +64,11 @@ namespace Raven.Client.Silverlight.Connection.Async
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
+			this.veryFirstRequest = veryFirstRequest;
 
-			// required to ensure just a single auth dialog
-			Task task = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/docs?pageSize=0").NoCache(), "GET", credentials, convention)
-				.ExecuteRequest();
 			jsonRequestFactory.ConfigureRequest += (sender, args) =>
 			{
-				args.JsonRequest.WaitForTask = task;
+				args.JsonRequest.WaitForTask = veryFirstRequest;
 			};
 		}
 
@@ -91,9 +90,9 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// </summary>
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
-			var databaseUrl = RootDatabaseUrl;
+			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			databaseUrl = databaseUrl + "databases/" + database + "/";
-			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId)
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId, veryFirstRequest)
 			{
 				operationsHeaders = operationsHeaders
 			};
@@ -101,31 +100,17 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		/// <summary>
 		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interacts
-		/// with the default database
+		/// with the default database. Useful if the database has works against a tenant database.
 		/// </summary>
 		public IAsyncDatabaseCommands ForDefaultDatabase()
 		{
-			var rootDatabaseUrl = RootDatabaseUrl;
+			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (rootDatabaseUrl == url)
 				return this;
-			return new AsyncServerClient(rootDatabaseUrl, convention, credentials, jsonRequestFactory, sessionId)
+			return new AsyncServerClient(rootDatabaseUrl, convention, credentials, jsonRequestFactory, sessionId, veryFirstRequest)
 			{
 				operationsHeaders = operationsHeaders
 			};
-		}
-
-		private string RootDatabaseUrl
-		{
-			get
-			{
-				var databaseUrl = url;
-				var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
-				if (indexOfDatabases != -1)
-					databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
-				if (databaseUrl.EndsWith("/") == false)
-					databaseUrl += "/";
-				return databaseUrl;
-			}
 		}
 
 		/// <summary>
@@ -134,20 +119,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory, sessionId);
-		}
-
-		/// <summary>
-		/// Create a new instance of <see cref="IAsyncDatabaseCommands"/> that will interact
-		/// with the root database. Useful if the database has works against a tenant database.
-		/// </summary>
-		public IAsyncDatabaseCommands GetRootDatabase()
-		{
-			var indexOfDatabases = url.IndexOf("/databases/", StringComparison.Ordinal);
-			if (indexOfDatabases == -1)
-				return this;
-
-			return new AsyncServerClient(url.Substring(0, indexOfDatabases), convention, credentials, jsonRequestFactory, sessionId);
+			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory, sessionId, veryFirstRequest);
 		}
 
 		private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();

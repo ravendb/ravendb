@@ -26,7 +26,7 @@ namespace Raven.Abstractions.Connection
 
 		private HttpWebRequest PrepareOAuthRequest(RavenConnectionStringOptions options, string oauthSource)
 		{
-			var authRequest = (HttpWebRequest) System.Net.WebRequest.Create(oauthSource);
+			var authRequest = (HttpWebRequest) WebRequest.Create(oauthSource);
 			authRequest.Credentials = options.Credentials;
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 			authRequest.Accept = "application/json;charset=UTF-8";

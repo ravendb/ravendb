@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using System;
+using System.Reflection;
+using System.Windows;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -51,5 +53,23 @@ namespace Raven.Studio.Models
 		public Observable<string> LastNotification { get; set; }
 
 		public BindableCollection<Notification> Notifications { get; set; }
+
+
+		public string AssemblyVersion
+		{
+			get
+			{
+				var version = GetAssemblyVersion();
+
+				return version.Split('.')[2];
+			}
+		}
+		string GetAssemblyVersion()
+		{
+			var assemblyName = new AssemblyName(Application.Current.GetType().Assembly.FullName);
+			var v = assemblyName.Version;
+
+			return v == null ? string.Empty : v.ToString();
+		}
 	}
 }

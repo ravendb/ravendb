@@ -22,6 +22,7 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly Action<string, string> setOperationHeaders;
 		private readonly bool waitForNonStaleResults;
 		private readonly TimeSpan timeout;
+		private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults;
 		private QueryResult currentQueryResults;
 		private readonly string[] projectionFields;
 		private bool firstRequest = true;
@@ -50,13 +51,15 @@ namespace Raven.Client.Document.SessionOperations
 			HashSet<KeyValuePair<string, Type>> sortByHints,
 			bool waitForNonStaleResults,
 			Action<string, string> setOperationHeaders,
-			TimeSpan timeout)
+			TimeSpan timeout,
+			Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults)
 		{
 			this.indexQuery = indexQuery;
 			this.sortByHints = sortByHints;
 			this.waitForNonStaleResults = waitForNonStaleResults;
 			this.setOperationHeaders = setOperationHeaders;
 			this.timeout = timeout;
+			this.transformResults = transformResults;
 			this.projectionFields = projectionFields;
 			this.sessionOperations = sessionOperations;
 			this.indexName = indexName;
@@ -112,62 +115,62 @@ namespace Raven.Client.Document.SessionOperations
 				.Select(Deserialize<T>)
 				.ToList();
 
-			return list;
+			if (transformResults == null)
+				return list;
+
+			return transformResults(indexQuery, list.Cast<object>()).Cast<T>().ToList();
 		}
 
 		private T Deserialize<T>(RavenJObject result)
 		{
 			var metadata = result.Value<RavenJObject>("@metadata");
-			if (
-				// we asked for a projection directly from the index
-				projectionFields != null && projectionFields.Length > 0
-				// we got a document without an @id
-				// we aren't querying a document, we are probably querying a map reduce index result or a projection
-			   || metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id")))
+			if ((projectionFields == null || projectionFields.Length <= 0)  &&
+				(metadata != null && string.IsNullOrEmpty(metadata.Value<string>("@id")) == false) )
 			{
-				if (typeof(T) == typeof(RavenJObject))
-					return (T)(object)result;
+				return sessionOperations.TrackEntity<T>(metadata.Value<string>("@id"),
+				                                        result,
+				                                        metadata);
+			}
+
+			if (typeof(T) == typeof(RavenJObject))
+				return (T)(object)result;
 
 #if !NET_3_5
-				if (typeof(T) == typeof(object))
-				{
-					return (T)(object)new DynamicJsonObject(result);
-				}
+			if (typeof(T) == typeof(object) && string.IsNullOrEmpty(result.Value<string>("$type")))
+			{
+				return (T)(object)new DynamicJsonObject(result);
+			}
 #endif
 
-				var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
+			var documentId = result.Value<string>(Constants.DocumentIdFieldName); //check if the result contain the reserved name
 
-				if (!string.IsNullOrEmpty(documentId) && typeof(T) == typeof(string) && // __document_id is present, and result type is a string
-					projectionFields != null && projectionFields.Length == 1 && // We are projecting one field only (although that could be derived from the
-					// previous check, one could never be too careful
-					((metadata != null && result.Count == 2) || (metadata == null && result.Count == 1)) // there are no more props in the result object
-					)
-				{
-					return (T)(object)documentId;
-				}
-
-				HandleInternalMetadata(result);
-
-				var deserializedResult = DeserializedResult<T>(result);
-
-				if (string.IsNullOrEmpty(documentId) == false)
-				{
-					// we need to make an addtional check, since it is possible that a value was explicitly stated
-					// for the identity property, in which case we don't want to override it.
-					var identityProperty = sessionOperations.Conventions.GetIdentityProperty(typeof(T));
-					if (identityProperty == null ||
-						(result[identityProperty.Name] == null ||
-							result[identityProperty.Name].Type == JTokenType.Null))
-					{
-						sessionOperations.TrySetIdentity(deserializedResult, documentId);
-					}
-				}
-
-				return deserializedResult;
+			if (!string.IsNullOrEmpty(documentId) && typeof(T) == typeof(string) && // __document_id is present, and result type is a string
+			    projectionFields != null && projectionFields.Length == 1 && // We are projecting one field only (although that could be derived from the
+			    // previous check, one could never be too careful
+			    ((metadata != null && result.Count == 2) || (metadata == null && result.Count == 1)) // there are no more props in the result object
+				)
+			{
+				return (T)(object)documentId;
 			}
-			return sessionOperations.TrackEntity<T>(metadata.Value<string>("@id"),
-										  result,
-										  metadata);
+
+			HandleInternalMetadata(result);
+
+			var deserializedResult = DeserializedResult<T>(result);
+
+			if (string.IsNullOrEmpty(documentId) == false)
+			{
+				// we need to make an addtional check, since it is possible that a value was explicitly stated
+				// for the identity property, in which case we don't want to override it.
+				var identityProperty = sessionOperations.Conventions.GetIdentityProperty(typeof(T));
+				if (identityProperty == null ||
+				    (result[identityProperty.Name] == null ||
+				     result[identityProperty.Name].Type == JTokenType.Null))
+				{
+					sessionOperations.TrySetIdentity(deserializedResult, documentId);
+				}
+			}
+
+			return deserializedResult;
 		}
 
 
@@ -181,7 +184,23 @@ namespace Raven.Client.Document.SessionOperations
 					return result.Value<T>(projectionFields[0]);
 				}
 			}
-			return (T)sessionOperations.Conventions.CreateSerializer().Deserialize(new RavenJTokenReader(result), typeof(T));
+
+			var jsonSerializer = sessionOperations.Conventions.CreateSerializer();
+			var ravenJTokenReader = new RavenJTokenReader(result);
+
+			var resultTypeString = result.Value<string>("$type");
+			if(string.IsNullOrEmpty(resultTypeString) )
+			{
+				return (T)jsonSerializer.Deserialize(ravenJTokenReader, typeof(T));
+			}
+
+			var resultType = Type.GetType(resultTypeString, false);
+			if(resultType == null) // couldn't find the type, let us give it our best shot
+			{
+				return (T)jsonSerializer.Deserialize(ravenJTokenReader, typeof(T));
+			}
+
+			return (T) jsonSerializer.Deserialize(ravenJTokenReader, resultType);
 		}
 
 		private void HandleInternalMetadata(RavenJObject result)
@@ -216,8 +235,32 @@ namespace Raven.Client.Document.SessionOperations
 			result[idPropName] = new RavenJValue(metadata.Value<string>("@id"));
 		}
 
+		public void ForceResult(QueryResult result)
+		{
+			currentQueryResults = result;
+			currentQueryResults.EnsureSnapshot();
+		}
+
 		public bool IsAcceptable(QueryResult result)
 		{
+			if (sessionOperations.AllowNonAuthoritativeInformation == false &&
+				result.NonAuthoritativeInformation)
+			{
+				if (sp.Elapsed > sessionOperations.NonAuthoritativeInformationTimeout)
+				{
+					sp.Stop();
+					throw new TimeoutException(
+						string.Format("Waited for {0:#,#;;0}ms for the query to return authoritative result.",
+									  sp.ElapsedMilliseconds));
+				}
+				log.Debug(
+						"Non authoritative query results on authoritative query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
+						indexQuery.Query,
+						indexName,
+						sessionOperations.StoreIdentifier,
+						result.IndexEtag);
+				return false;
+			}
 			if (waitForNonStaleResults && result.IsStale)
 			{
 				if (sp.Elapsed > timeout)
@@ -229,9 +272,9 @@ namespace Raven.Client.Document.SessionOperations
 				}
 				log.Debug(
 						"Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
-						indexQuery.Query, 
-						indexName, 
-						sessionOperations.StoreIdentifier, 
+						indexQuery.Query,
+						indexName,
+						sessionOperations.StoreIdentifier,
 						result.IndexEtag);
 				return false;
 			}
@@ -265,6 +308,9 @@ namespace Raven.Client.Document.SessionOperations
 					return SortOptions.Int;
 				case "Int64":
 					return SortOptions.Long;
+				case "Double":
+				case "Decimal":
+					return SortOptions.Double;
 				case "Single":
 					return SortOptions.Float;
 				case "String":

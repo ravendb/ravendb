@@ -26,6 +26,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
@@ -187,7 +188,7 @@ namespace Raven.Client.Connection
 				replicationInformer.IncrementFailureCount(url);
 			}
 			// this should not be thrown, but since I know the value of should...
-			throw new InvalidOperationException(@"Attempted to conect to master and all replicas have failed, giving up.
+			throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
 There is a high probability of a network problem preventing access to all the replicas.
 Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven instances.");
 		}
@@ -405,19 +406,44 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <returns></returns>
 		public Attachment GetAttachment(string key)
 		{
-			return ExecuteWithReplication("GET", operationUrl => DirectGetAttachment(key, operationUrl));
+			return ExecuteWithReplication("GET", operationUrl => DirectGetAttachment("GET", key, operationUrl));
 		}
 
-		private Attachment DirectGetAttachment(string key, string operationUrl)
+		/// <summary>
+		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		public Attachment HeadAttachment(string key)
 		{
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,operationUrl + "/static/" + key,"GET", credentials, convention);
+			return ExecuteWithReplication("HEAD", operationUrl => DirectGetAttachment("HEAD",key, operationUrl));
+		}
+
+		private Attachment DirectGetAttachment(string method, string key, string operationUrl)
+		{
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,operationUrl + "/static/" + key,method, credentials, convention);
+			Func<Stream> data;
 			try
 			{
-				var memoryStream = new MemoryStream(webRequest.ReadResponseBytes());
+				int len;
+				if (method == "GET")
+				{
+					var memoryStream = new MemoryStream(webRequest.ReadResponseBytes());
+					data = () => memoryStream;
+					len = (int)memoryStream.Length;
+				}
+				else
+				{
+					len = int.Parse(webRequest.ResponseHeaders["Content-Length"]);
+					data = () =>
+					{
+						throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
+					};
+				}
 				return new Attachment
 				{
-					Data = () => memoryStream,
-					Size = (int) memoryStream.Length,
+					Data = data,
+					Size = len,
 					Etag = new Guid(webRequest.ResponseHeaders["ETag"]),
 					Metadata = webRequest.ResponseHeaders.FilterHeaders(isServerDocument: false)
 				};
@@ -915,7 +941,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// </summary>
 		public IDatabaseCommands ForDatabase(string database)
 		{
-			var databaseUrl = DefaultDatabaseUrl;
+			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == Url)
 				return this;
 			databaseUrl = databaseUrl + "databases/" + database;
@@ -927,7 +953,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		public IDatabaseCommands ForDefaultDatabase()
 		{
-			var databaseUrl = DefaultDatabaseUrl;
+			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == Url)
 				return this;
 			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, null, jsonRequestFactory, currentSessionId)
@@ -936,19 +962,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			};
 		}
 
-		private string DefaultDatabaseUrl
-		{
-			get
-			{
-				var databaseUrl = url;
-				var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
-				if (indexOfDatabases != -1)
-					databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
-				if (databaseUrl.EndsWith("/") == false)
-					databaseUrl += "/";
-				return databaseUrl;
-			}
-		}
+		
 
 		/// <summary>
 		/// Gets a value indicating whether [supports promotable transactions].
@@ -1107,6 +1121,14 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 			var jo = (RavenJObject) httpJsonRequest.ReadResponseJson();
 			return jo.Deserialize<DatabaseStatistics>(convention);
+		}
+
+		/// <summary>
+		/// Get the full URL for the given document key
+		/// </summary>
+		public string UrlFor(string documentKey)
+		{
+			return url + "/docs/" + documentKey;
 		}
 
 		/// <summary>

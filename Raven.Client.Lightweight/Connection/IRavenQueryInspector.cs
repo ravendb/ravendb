@@ -10,7 +10,6 @@ using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Connection
 {
-
 	/// <summary>
 	/// Provide access to the underlying <see cref="IDocumentQuery{T}"/>
 	/// </summary>

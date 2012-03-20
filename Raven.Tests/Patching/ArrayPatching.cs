@@ -37,6 +37,45 @@ namespace Raven.Tests.Patching
 				patchedDoc.ToString(Formatting.None));
 		}
 
+
+		[Fact]
+		public void AddingEmptyArray()
+		{
+			var patchedDoc = new JsonPatcher(doc).Apply(
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "NewProp",
+						Value = new RavenJArray()
+
+					}
+				});
+
+			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""NewProp"":[]}",
+				patchedDoc.ToString(Formatting.None));
+		}
+
+		[Fact]
+		public void AddingEmptyObject()
+		{
+			var patchedDoc = new JsonPatcher(doc).Apply(
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "NewProp",
+						Value = new RavenJObject()
+
+					}
+				});
+
+			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post 1""},{""author"":""ayende"",""text"":""good post 2""}],""NewProp"":{}}",
+				patchedDoc.ToString(Formatting.None));
+		}
+
 		[Fact]
 		public void AddingItemToArray_WithConcurrency_Ok()
 		{

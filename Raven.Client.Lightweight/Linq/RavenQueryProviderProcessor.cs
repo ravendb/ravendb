@@ -11,6 +11,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
@@ -331,16 +332,14 @@ namespace Raven.Client.Linq
 		/// </summary>
 		/// <param name="expression"></param>
 		/// <returns></returns>
-		protected virtual ExpressionInfo GetMember(System.Linq.Expressions.Expression expression)
+		protected virtual ExpressionInfo GetMember(Expression expression)
 		{
 			var parameterExpression = expression as ParameterExpression;
 			if (parameterExpression != null)
 			{
-
 				if (currentPath.EndsWith(","))
 					currentPath = currentPath.Substring(0, currentPath.Length - 1);
 				return new ExpressionInfo(currentPath, parameterExpression.Type, false);
-
 			}
 
 			string path;
@@ -351,10 +350,13 @@ namespace Raven.Client.Linq
 			//for standard queries, we take just the last part. But for dynamic queries, we take the whole part
 			path = path.Substring(path.IndexOf('.') + 1);
 
-			return new ExpressionInfo(
-				queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, CurrentPath, path),
-				memberType,
-				isNestedPath);
+			if (expression.NodeType == ExpressionType.ArrayLength)
+				path += ".Length";
+
+			var propertyName = indexName == null || indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) 
+				? queryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, CurrentPath, path) 
+				: queryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), indexName, CurrentPath, path);
+			return new ExpressionInfo(propertyName, memberType, isNestedPath);
 		}
 
 		/// <summary>
@@ -542,9 +544,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (memberExpression.Type == typeof(bool))
 			{
+				var memberInfo = GetMember(memberExpression);
+
 				luceneQuery.WhereEquals(new WhereParams
 				{
-					FieldName = GetFullMemberPath(memberExpression),
+					FieldName = memberInfo.Path,
 					Value = boolValue,
 					IsAnalyzed = true,
 					AllowWildcards = false
@@ -554,16 +558,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				throw new NotSupportedException("Expression type not supported: " + memberExpression);
 			}
-		}
-
-		private static string GetFullMemberPath(MemberExpression memberExpression)
-		{
-			var parentExpression = memberExpression.Expression as MemberExpression;
-			if (parentExpression != null)
-			{
-				return GetFullMemberPath(parentExpression) + "." + memberExpression.Member.Name;
-			}
-			return memberExpression.Member.Name;
 		}
 
 		private void VisitMethodCall(MethodCallExpression expression)
@@ -647,7 +641,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					{
 						luceneQuery.NegateNext();
 					}
-					luceneQuery.Search(expressionInfo.Path, searchTerms);
+					luceneQuery.Search(expressionInfo.Path, RavenQuery.Escape(searchTerms, false, false));
 					luceneQuery.Boost(boost);
 
 					if ((options & SearchOptions.And) == SearchOptions.And)

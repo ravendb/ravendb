@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
@@ -32,7 +33,14 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentConvention
 	{
+		public delegate IEnumerable<object> ApplyReduceFunctionFunc(
+			Type indexType,
+			Type resultType,
+			IEnumerable<object> results,
+			Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults);
+
 		private Dictionary<Type, PropertyInfo> idPropertyCache = new Dictionary<Type, PropertyInfo>();
+		private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentConvention"/> class.
@@ -70,8 +78,35 @@ namespace Raven.Client.Document
 				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
 			};
 			MaxNumberOfRequestsPerSession = 30;
+			ApplyReduceFunction = DefaultApplyReduceFunction;
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] {IdentityPartsSeparator}, StringSplitOptions.RemoveEmptyEntries) .Last();
+		}
+
+		private IEnumerable<object> DefaultApplyReduceFunction(
+			Type indexType, 
+			Type resultType, 
+			IEnumerable<object> results, 
+			Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults)
+		{
+			Func<IEnumerable<object>, IEnumerable> compile;
+			if(compiledReduceCache.TryGetValue(indexType, out compile) == false)
+			{
+				compile = generateTransformResults();
+				compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>(compiledReduceCache)
+				{
+					{indexType, compile}
+				};
+			}
+			return compile(results).Cast<object>()
+				.Select(result =>
+				{
+					// we got an anonymous object and we need to get the reduce results
+					var ravenJTokenWriter = new RavenJTokenWriter();
+					var jsonSerializer = CreateSerializer();
+					jsonSerializer.Serialize(ravenJTokenWriter, result);
+					return jsonSerializer.Deserialize(new RavenJTokenReader(ravenJTokenWriter.Token), resultType);
+				});
 		}
 
 		public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
@@ -130,7 +165,7 @@ namespace Raven.Client.Document
 		public List<ITypeConverter> IdentityTypeConvertors { get; set; }
 
 		/// <summary>
-		/// Gets or sets the identity parts separator used by the hilo generators
+		/// Gets or sets the identity parts separator used by the HiLo generators
 		/// </summary>
 		/// <value>The identity parts separator.</value>
 		public string IdentityPartsSeparator { get; set; }
@@ -390,13 +425,13 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Handles unauthenticate responses, usually by authenticating against the oauth server
+		/// Handles unauthenticated responses, usually by authenticating against the oauth server
 		/// </summary>
 		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleUnauthorizedResponse { get; set; }
 
 #if !NET_3_5
 		/// <summary>
-		/// Begins handling of unauthenticate responses, usually by authenticating against the oauth server
+		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
 		/// in async manner
 		/// </summary>
 		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
@@ -422,6 +457,20 @@ namespace Raven.Client.Document
 		/// Whatever or not RavenDB will automatically enlist in distributed transactions
 		///</summary>
 		public bool EnlistInDistributedTransactions { get; set; }
+
+		/// <summary>
+		/// Clone the current conventions to a new instance
+		/// </summary>
+		public DocumentConvention Clone()
+		{
+			return (DocumentConvention)MemberwiseClone();
+		}
+
+		/// <summary>
+		/// This is called in order to ensure that reduce function in a sharded environment is run 
+		/// over the merged results
+		/// </summary>
+		public ApplyReduceFunctionFunc ApplyReduceFunction { get; set; }
 	}
 
 

@@ -1,5 +1,4 @@
 using System.Transactions;
-using Raven.Client.Debug;
 using Raven.Client.Document;
 using Xunit;
 

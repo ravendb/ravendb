@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 
 namespace Raven.Client
 {
@@ -106,5 +108,10 @@ namespace Raven.Client
 		/// this is useful if you want to have repeatable random queries
 		/// </summary>
 		IDocumentQueryCustomization RandomOrdering(string seed);
+
+		/// <summary>
+		/// Execute the transfromation function on the results of this query.
+		/// </summary>
+		IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer);
 	}
 }
