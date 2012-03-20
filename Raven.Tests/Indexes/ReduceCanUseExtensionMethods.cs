@@ -35,7 +35,7 @@ namespace Raven.Tests.Indexes
                 store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<PainfulInputData, IndexedFields>()
                     {
                         Map = documents => from doc in documents
-                                           let tags = doc.Tags.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
+                                           let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
                                            select new IndexedFields()
                                                {
                                                    Tags = tags.ToArray()
@@ -67,7 +67,10 @@ namespace Raven.Tests.Indexes
                     var results = session.Query<IndexedFields>("Hi")
                         .Customize(a => a.WaitForNonStaleResults())
                         .Search(d => d.Tags, "only-one")
+						.As<PainfulInputData>()
                         .ToList();
+
+					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
 
                     Assert.Single(results);
                 }

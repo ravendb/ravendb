@@ -1667,6 +1667,7 @@ namespace Raven.Client.Indexes
 						node.Type.IsGenericType == false)
 					{
 						Out("(");
+						Out("(");
 						Out(node.Type.FullName);
 						Out(")");
 					}
@@ -1698,6 +1699,20 @@ namespace Raven.Client.Indexes
 
 				case ExpressionType.Decrement:
 				case ExpressionType.Increment:
+					Out(")");
+					break;
+
+				case ExpressionType.Convert:
+				case ExpressionType.ConvertChecked:
+					// we only cast enums and types is mscorlib), we don't support anything else
+					// because the VB compiler like to put converts all over the place, and include
+					// types that we can't really support (only exists on the client)
+					if ((node.Type.IsEnum ||
+						 node.Type.Assembly == typeof(string).Assembly) &&
+						node.Type.IsGenericType == false)
+					{
+						Out(")");
+					}
 					Out(")");
 					break;
 
