@@ -12,7 +12,6 @@ namespace Raven.Database.Indexing
 		private int currentBase;
 		private IndexReader currentReader;
 		private Scorer currentScorer;
-		private List<SubQueryResult> skippedItems = new List<SubQueryResult>();
 
 		public IntersectionCollector(Searchable indexSearcher, IEnumerable<ScoreDoc> scoreDocs)
 		{
@@ -23,7 +22,7 @@ namespace Raven.Database.Indexing
 				{
 					LuceneId = scoreDoc.doc,
 					RavenDocId = document.Get(Constants.DocumentIdFieldName) ?? document.Get(Constants.ReduceKeyFieldName),
-					Score = scoreDoc.score,
+					Score = float.IsNaN(scoreDoc.score) ? 0.0f : scoreDoc.score,
 					Count = 1
 				};
 				results[subQueryResult.RavenDocId] = subQueryResult;
@@ -47,16 +46,6 @@ namespace Raven.Database.Indexing
 				value.Count++;
 				value.Score += currentScore;
 			}
-			else
-			{
-				skippedItems.Add(new SubQueryResult
-									{
-										LuceneId = currentBase + doc,
-										RavenDocId = key,
-										Score = currentScore,
-										Count = 1
-									});
-			}
 		}
 
 		public override void SetNextReader(IndexReader reader, int docBase)
@@ -73,41 +62,8 @@ namespace Raven.Database.Indexing
 		public IEnumerable<SubQueryResult> DocumentsIdsForCount(int expectedCount)
 		{
 			return from value in results.Values
-				where value.Count == expectedCount
+				where value.Count >= expectedCount
 				select value;
-		}
-
-		public void UpdateInitialItems(Searchable indexSearcher, IEnumerable<ScoreDoc> docsToAdd)
-		{
-			foreach (var scoreDoc in docsToAdd)
-			{
-				var document = indexSearcher.Doc(scoreDoc.doc);
-				var subQueryResult = new SubQueryResult
-				{
-					LuceneId = scoreDoc.doc,
-					RavenDocId = document.Get(Constants.DocumentIdFieldName) ?? document.Get(Constants.ReduceKeyFieldName),
-					Score = scoreDoc.score,
-					Count = 1
-				};
-				if (results.ContainsKey(subQueryResult.RavenDocId) == false)
-					results[subQueryResult.RavenDocId] = subQueryResult;
-			}
-
-			var copyOfSkippedItems = new List<SubQueryResult>(skippedItems);
-			skippedItems.Clear();
-			foreach (var skippedDoc in copyOfSkippedItems)
-			{
-				SubQueryResult value;
-				if (results.TryGetValue(skippedDoc.RavenDocId, out value))
-				{
-					value.Count++;
-					value.Score += skippedDoc.Score;
-				}
-				else
-				{
-					skippedItems.Add(skippedDoc);
-				}
-			}
 		}
 
 		public class SubQueryResult

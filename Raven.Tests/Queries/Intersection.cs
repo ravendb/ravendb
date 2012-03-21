@@ -43,7 +43,7 @@ namespace Raven.Tests.Queries
 		}
 
 		private void ExecuteTest(IDocumentStore store)
-		{			
+		{
 			using (var s = store.OpenSession())
 			{
 				store.DatabaseCommands.PutIndex("TShirtNested",
@@ -91,7 +91,7 @@ namespace Raven.Tests.Queries
 					.Skip(1)
 					.Take(2)
 					.ToList();
-				Assert.Equal(2, resultPage1.Count);
+				Assert.Equal(2, resultPage1a.Count);
 				Assert.True(resultPage1a.All(x => x.Name == "Wolf"));
 				foreach (var result in resultPage1a)
 				{
@@ -105,7 +105,7 @@ namespace Raven.Tests.Queries
 					.Where("Name:Wolf INTERSECT Colour:Blue AND Size:Small INTERSECT Colour:Gray AND Size:Large")
 					.OrderBy("BarcodeNumber")
 					.Skip(2)
-					.Take(5) //we should only get 4 here!!!!!
+					.Take(10) //we should only get 4 here, want to test a page size larger than what is possible!!!!!
 					.ToList();
 				Assert.Equal(4, resultPage2.Count);
 				Assert.True(resultPage2.All(x => x.Name == "Wolf"));
