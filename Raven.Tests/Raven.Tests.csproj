@@ -530,6 +530,7 @@
     <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
+    <Compile Include="Indexes\ReduceCanUseExtensionMethods.cs" />
     <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="Indexes\WithDecimalValue.cs" />
@@ -551,6 +552,7 @@
     <Compile Include="MailingList\AttachmentContentType.cs" />
     <Compile Include="MailingList\BooleanCollection.cs" />
     <Compile Include="MailingList\CanUpdateInsideDtcWithOptimisticConcurrency.cs" />
+    <Compile Include="MailingList\DeserialisationToObjectTests.cs" />
     <Compile Include="MailingList\DtcIssue.cs" />
     <Compile Include="MailingList\Everett\CanReadBytes.cs" />
     <Compile Include="MailingList\Afif.cs" />
@@ -562,6 +564,7 @@
     <Compile Include="MailingList\MattJohnson.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
     <Compile Include="MailingList\Phil.cs" />
+    <Compile Include="MailingList\JoelAsync.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
     <Compile Include="MailingList\RecreatingIndexes.cs" />
