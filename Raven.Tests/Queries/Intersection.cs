@@ -4,16 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Linq;
 using Xunit;
 using Raven.Abstractions.Indexing;
-using System.Threading;
-using System.Linq.Expressions;
 using Raven.Client.Document;
 
 namespace Raven.Tests.Queries
@@ -65,10 +60,6 @@ namespace Raven.Tests.Queries
 
 			using (var s = store.OpenSession())
 			{
-				var sortedData = s.Query<TShirt>("TShirtNested")
-					.OrderBy(x => x.BarcodeNumber)
-					.ToList();
-
 				//This should be BarCodeNumber = -999, 10001
 				var resultPage1 = s.Advanced.LuceneQuery<TShirt>("TShirtNested")
 					.Where("Name:Wolf INTERSECT Colour:Blue AND Size:Small INTERSECT Colour:Gray AND Size:Large")
