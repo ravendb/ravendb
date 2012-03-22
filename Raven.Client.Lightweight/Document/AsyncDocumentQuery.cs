@@ -562,6 +562,16 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Partition the query so we can intersect different parts of the query
+		/// across different index entries.
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Intersect()
+		{
+			Intersect();
+			return this;
+		}
+
 		///<summary>
 		/// Instruct the index to group by the specified fields using the specified aggregation operation
 		///</summary>

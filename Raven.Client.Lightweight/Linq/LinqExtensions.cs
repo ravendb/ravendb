@@ -60,6 +60,24 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
+		/// Partition the query so we can intersect different parts of the query
+		/// across different index entries.
+		/// </summary>
+		public static IRavenQueryable<T> Intersect<T>(this IQueryable<T> self)
+		{
+			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+			Expression expression = self.Expression;
+			if (expression.Type != typeof(IRavenQueryable<T>))
+			{
+				expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+			}
+			var queryable =
+				self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof (T)), expression));
+			return (IRavenQueryable<T>)queryable;
+	
+		}
+
+		/// <summary>
 		/// Project using a different type
 		/// </summary>
 		public static IRavenQueryable<TResult> AsProjection<TResult>(this IQueryable queryable)
@@ -85,7 +103,7 @@ namespace Raven.Client.Linq
 		/// Suggest alternative values for the queried term
 		/// </summary>
 		public static SuggestionQueryResult Suggest(this IQueryable queryable, SuggestionQuery query)
-		{
+		{ 
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
 			return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);

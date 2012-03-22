@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
+using Raven.Client.Linq;
 using Xunit;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
@@ -37,32 +38,40 @@ namespace Raven.Tests.Queries
 			}
 		}
 
+		[Fact]
+		public void CanPerformIntersectionQuery_Linq()
+		{
+			using (var store = NewDocumentStore(inMemory: false))
+			{
+				CreateIndexAndSampleData(store);
+
+				using(var session = store.OpenSession())
+				{
+					var shirts = session.Query<TShirt>("TShirtNested")
+						.OrderBy(x=>x.BarcodeNumber)
+						.Where(x => x.Name == "Wolf")
+						.Intersect()
+						.Where(x => x.Types.Any(t => t.Colour == "Blue" && t.Size == "Small"))
+						.Intersect()
+						.Where(x => x.Types.Any(t => t.Colour == "Gray" && t.Size == "Large"))
+						.ToList();
+
+					Assert.Equal(6, shirts.Count);
+					Assert.True(shirts.All(x => x.Name == "Wolf"));
+					Assert.Equal(new[] { -999, 10001, 10002, 10003, 10004, 10006 }, shirts.Select(x=>x.BarcodeNumber));
+				}
+			}
+		}
+
 		private void ExecuteTest(IDocumentStore store)
 		{
-			using (var s = store.OpenSession())
-			{
-				store.DatabaseCommands.PutIndex("TShirtNested",
-												new IndexDefinition
-												{
-													Map = @"from s in docs.TShirts
-															from t in s.Types
-															select new { s.Name, t.Colour, t.Size, s.BarcodeNumber }",
-													SortOptions = new Dictionary<String, SortOptions> { { "BarcodeNumber", SortOptions.Int }}
-												});
-				foreach (var sample in GetSampleData())
-				{
-					s.Store(sample);
-				}
-				s.SaveChanges();
-			}
-
-			WaitForIndexing(store);
+			CreateIndexAndSampleData(store);
 
 			using (var s = store.OpenSession())
 			{
 				//This should be BarCodeNumber = -999, 10001
 				var resultPage1 = s.Advanced.LuceneQuery<TShirt>("TShirtNested")
-					.Where("Name:Wolf INTERSECT Colour:Blue AND Size:Small INTERSECT Colour:Gray AND Size:Large")
+					.Where("Name:Wolf INTERSECT Types_Colour:Blue AND Types_Size:Small INTERSECT Types_Colour:Gray AND Types_Size:Large")
 					.OrderBy("BarcodeNumber")
 					.Take(2)
 					.ToList();
@@ -77,7 +86,7 @@ namespace Raven.Tests.Queries
 
 				//This should be BarCodeNumber = 10001, 10002 (i.e. it spans pages 1 & 2)
 				var resultPage1a = s.Advanced.LuceneQuery<TShirt>("TShirtNested")
-					.Where("Name:Wolf INTERSECT Colour:Blue AND Size:Small INTERSECT Colour:Gray AND Size:Large")
+					.Where("Name:Wolf INTERSECT Types_Colour:Blue AND Types_Size:Small INTERSECT Types_Colour:Gray AND Types_Size:Large")
 					.OrderBy("BarcodeNumber")
 					.Skip(1)
 					.Take(2)
@@ -93,7 +102,7 @@ namespace Raven.Tests.Queries
 
 				//This should be BarCodeNumber = 10002, 10003, 10004, 10006 (But NOT 10005
 				var resultPage2 = s.Advanced.LuceneQuery<TShirt>("TShirtNested")
-					.Where("Name:Wolf INTERSECT Colour:Blue AND Size:Small INTERSECT Colour:Gray AND Size:Large")
+					.Where("Name:Wolf INTERSECT Types_Colour:Blue AND Types_Size:Small INTERSECT Types_Colour:Gray AND Types_Size:Large")
 					.OrderBy("BarcodeNumber")
 					.Skip(2)
 					.Take(10) //we should only get 4 here, want to test a page size larger than what is possible!!!!!
@@ -107,6 +116,31 @@ namespace Raven.Tests.Queries
 				}
 				Assert.Equal(new[] { 10002, 10003, 10004, 10006 }, resultPage2.Select(r => r.BarcodeNumber));
 			}
+		}
+
+		private void CreateIndexAndSampleData(IDocumentStore store)
+		{
+			using (var s = store.OpenSession())
+			{
+				store.DatabaseCommands.PutIndex("TShirtNested",
+				                                new IndexDefinition
+				                                {
+				                                	Map =
+				                                	@"from s in docs.TShirts
+															from t in s.Types
+															select new { s.Name, Types_Colour = t.Colour, Types_Size = t.Size, s.BarcodeNumber }",
+				                                	SortOptions =
+				                                	new Dictionary<String, SortOptions> {{"BarcodeNumber", SortOptions.Int}}
+				                                });
+
+				foreach (var sample in GetSampleData())
+				{
+					s.Store(sample);
+				}
+				s.SaveChanges();
+			}
+
+			WaitForIndexing(store);
 		}
 
 		private IEnumerable<TShirt> GetSampleData()
