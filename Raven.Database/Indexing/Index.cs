@@ -619,12 +619,7 @@ namespace Raven.Database.Indexing
 					IndexSearcher indexSearcher;
 					using (parent.GetSearcher(out indexSearcher))
 					{
-						var luceneQuery = GetLuceneQuery();
-
-						foreach (var indexQueryTrigger in indexQueryTriggers)
-						{
-							luceneQuery = indexQueryTrigger.Value.ProcessQuery(parent.name, luceneQuery, indexQuery);
-						}
+						var luceneQuery = ApplyIndexTriggers(GetLuceneQuery());
 
 						int start = indexQuery.Start;
 						int pageSize = indexQuery.PageSize;
@@ -666,6 +661,14 @@ namespace Raven.Database.Indexing
 				}
 			}
 
+			private Query ApplyIndexTriggers(Query luceneQuery)
+			{
+				luceneQuery = indexQueryTriggers.Aggregate(luceneQuery,
+				                                           (current, indexQueryTrigger) =>
+				                                           indexQueryTrigger.Value.ProcessQuery(parent.name, current, indexQuery));
+				return luceneQuery;
+			}
+
 			public IEnumerable<IndexQueryResult> IntersectionQuery()
 			{
 				using (IndexStorage.EnsureInvariantCulture())
@@ -674,13 +677,6 @@ namespace Raven.Database.Indexing
 					IndexSearcher indexSearcher;
 					using (parent.GetSearcher(out indexSearcher))
 					{
-						///TODO Do we need this for INTERSECT queries, does it make sense?!
-						//var luceneQuery = GetLuceneQuery();
-						//foreach (var indexQueryTrigger in indexQueryTriggers)
-						//{
-						//    luceneQuery = indexQueryTrigger.Value.ProcessQuery(parent.name, luceneQuery, indexQuery);
-						//}
-
 						int pageSizeBestGuess = (indexQuery.Start + indexQuery.PageSize) * 2;
 						int returnedResults = 0;
 						int skippedResultsInCurrentLoop = 0;
@@ -691,7 +687,7 @@ namespace Raven.Database.Indexing
 							throw new InvalidOperationException("Invalid INTRESECT query, found only a single intersect clause.");
 
 						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
-						var firstSubLuceneQuery = GetLuceneQuery(subQueries[0]);
+						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0]););
 
 						//Not sure how to select the page size here??? The problem is that only docs in this search can be part 
 						//of the final result because we're doing an intersection query (but we might exclude some of them)
@@ -716,7 +712,7 @@ namespace Raven.Database.Indexing
 							Filter filter = indexQuery.GetFilter();
 							for (int i = 1; i < subQueries.Length; i++)
 							{
-								var luceneSubQuery = GetLuceneQuery(subQueries[i]);
+								var luceneSubQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[i]));
 								indexSearcher.Search(luceneSubQuery, filter, intersectionCollector);
 							}
 
