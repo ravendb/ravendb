@@ -684,7 +684,7 @@ namespace Raven.Database.Indexing
 
 						var subQueries = indexQuery.Query.Split(new[] { Constants.IntersectSeperator }, StringSplitOptions.RemoveEmptyEntries);
 						if (subQueries.Length <= 1)
-							throw new InvalidOperationException("Invalid INTRESECT query, found only a single intersect clause.");
+							throw new InvalidOperationException("Invalid INTRESECT query, must have multiple intersect clauses.");
 
 						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
 						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0]));
