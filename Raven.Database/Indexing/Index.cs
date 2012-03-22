@@ -703,7 +703,6 @@ namespace Raven.Database.Indexing
 							{
 								// We get here because out first attempt didn't get enough docs (after INTERSECTION was calculated)
 								pageSizeBestGuess = pageSizeBestGuess * 2;
-								skippedResultsInCurrentLoop = 0;
 
 								search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
 								intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
@@ -725,7 +724,8 @@ namespace Raven.Database.Indexing
 
 						var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
 						//It's hard to know what to do here, the TotalHits from the base search isn't really the TotalSize, 
-						//because it's before the INTERSECTION has been applied, so only some of those results make it out!!!
+						//because it's before the INTERSECTION has been applied, so only some of those results make it out.
+						//Trying to give an accurate answer is going to be too costly, so we aren't going to try.
 						indexQuery.TotalSize.Value = search.TotalHits;
 						indexQuery.SkippedResults.Value = skippedResultsInCurrentLoop;
 
@@ -734,6 +734,12 @@ namespace Raven.Database.Indexing
 						{
 							Document document = indexSearcher.Doc(intersectResults[i].LuceneId);
 							IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
+							if (ShouldIncludeInResults(indexQueryResult) == false)
+							{
+								indexQuery.SkippedResults.Value++;
+								skippedResultsInCurrentLoop++;
+								continue;
+							}
 							returnedResults++;
 							yield return indexQueryResult;
 							if (returnedResults == indexQuery.PageSize)
