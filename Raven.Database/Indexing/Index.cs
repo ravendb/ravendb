@@ -687,7 +687,7 @@ namespace Raven.Database.Indexing
 							throw new InvalidOperationException("Invalid INTRESECT query, found only a single intersect clause.");
 
 						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
-						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0]););
+						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0]));
 
 						//Not sure how to select the page size here??? The problem is that only docs in this search can be part 
 						//of the final result because we're doing an intersection query (but we might exclude some of them)
@@ -721,8 +721,6 @@ namespace Raven.Database.Indexing
 							intersectMatches = currentIntersectResults.Count;
 							skippedResultsInCurrentLoop = pageSizeBestGuess - intersectMatches;
 
-							///TODO we can't have non-distinct results because we're storing the RavenDB ID's in a dictionary!!
-							//RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
 						} while (previousIntersectMatches < intersectMatches && intersectMatches < indexQuery.PageSize);
 
 						var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
