@@ -146,7 +146,8 @@ namespace Raven.Database.Config
 
 			// HTTP settings
 			HostName = Settings["Raven/HostName"];
-			Port = PortUtil.GetPort(Settings["Raven/Port"]);
+			if(string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
+				Port = PortUtil.GetPort(Settings["Raven/Port"]);
 			SetVirtualDirectory();
 
 			bool httpCompressionTemp;
@@ -727,6 +728,14 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(Settings["Raven/Esent/LogsPath"]) == false)
 				Settings["Raven/Esent/LogsPath"] = Path.Combine(Settings["Raven/Esent/LogsPath"], "Tenants", tenantId);
+		}
+
+		public void CopyParentSettings(InMemoryRavenConfiguration defaultConfiguration)
+		{
+			Port = defaultConfiguration.Port;
+			OAuthTokenCertificate = defaultConfiguration.OAuthTokenCertificate;
+			OAuthTokenServer = defaultConfiguration.OAuthTokenServer;
+			AuthenticationMode = defaultConfiguration.AuthenticationMode;
 		}
 	}
 }

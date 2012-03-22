@@ -19,7 +19,6 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 		private readonly byte[] bookmarkBuffer;
-		private readonly byte[] ignoredBuffer;
 		private readonly JET_SESID session;
 		private readonly JET_TABLEID table;
 		private Func<T, bool> filter;
@@ -30,7 +29,6 @@ namespace Raven.Storage.Esent.StorageActions
 			this.table = table;
 			this.session = session;
 			bookmarkBuffer = new byte[SystemParameters.BookmarkMost];
-			ignoredBuffer = new byte[SystemParameters.BookmarkMost];
 		}
 
 		public int Count
@@ -42,9 +40,8 @@ namespace Raven.Storage.Esent.StorageActions
 		public void Add(T item)
 		{
 			int actualBookmarkSize;
-			int ignored;
-			Api.JetGetSecondaryIndexBookmark(session, table, ignoredBuffer, ignoredBuffer.Length, out ignored, bookmarkBuffer,
-											 bookmarkBuffer.Length, out actualBookmarkSize, GetSecondaryIndexBookmarkGrbit.None);
+			Api.JetGetBookmark(session, table, bookmarkBuffer,
+			                   bookmarkBuffer.Length, out actualBookmarkSize);
 
 			primaryKeyIndexes.Add(new Key
 			{

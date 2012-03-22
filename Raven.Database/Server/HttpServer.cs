@@ -691,6 +691,7 @@ namespace Raven.Database.Server
 				config.DatabaseName = tenantId;
 
 				config.Initialize();
+				config.CopyParentSettings(DefaultConfiguration);
 				var documentDatabase = new DocumentDatabase(config);
 				documentDatabase.SpinBackgroundWorkers();
 				return documentDatabase;
