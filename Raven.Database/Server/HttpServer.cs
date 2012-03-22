@@ -671,7 +671,7 @@ namespace Raven.Database.Server
 
 				config.CustomizeValuesForTenant(tenantId);
 
-				var dataDir = config.Settings["Raven/DataDir"];
+				var dataDir = document.Settings["Raven/DataDir"];
 				if (dataDir == null)
 					throw new InvalidOperationException("Could not find Raven/DataDir");
 				
