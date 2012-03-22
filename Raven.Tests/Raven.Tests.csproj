@@ -696,6 +696,7 @@
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="MailingList\Phil-Updated.cs" />
     <Compile Include="Queries\Includes.cs" />
+    <Compile Include="Queries\Intersection.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Querying\IndexedUser.cs" />
     <Compile Include="Querying\SearchOperator.cs" />
