@@ -137,7 +137,7 @@ namespace Raven.Database.Indexing
 				}
 				else
 				{
-					if (IndexWriter.IsLocked(directory)) // we had an unclean shutdown
+					if (directory.FileExists("write.lock")) // we had an unclean shutdown
 					{
 						if(configuration.ResetIndexOnUncleanShutdown)
 							throw new InvalidOperationException("Rude shutdown detected on: " + indexDirectory);

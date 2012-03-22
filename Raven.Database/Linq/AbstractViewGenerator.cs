@@ -92,10 +92,10 @@ namespace Raven.Database.Linq
 			Indexes = new Dictionary<string, FieldIndexing>();
 		}
 
-		protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool indexed = true)
+		protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool analyzed = true)
 		{
 			var indexDefinition = new IndexDefinition();
-			indexDefinition.Indexes[name] = indexed ? FieldIndexing.Analyzed : FieldIndexing.NotAnalyzed;
+			indexDefinition.Indexes[name] = analyzed ? FieldIndexing.Analyzed : FieldIndexing.NotAnalyzed;
 			var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
 
 			return anonymousObjectToLuceneDocumentConverter.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO);
