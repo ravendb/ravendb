@@ -720,6 +720,7 @@
     <Compile Include="Shard\BlogModel\ShardedDocumentStoreTest.cs" />
     <Compile Include="Shard\BlogModel\ShardingScenario.cs" />
     <Compile Include="Shard\BlogModel\User.cs" />
+    <Compile Include="Shard\SimpleSharding.cs" />
     <Compile Include="Shard\WhenUsingParallelAccessStrategy.cs" />
     <Compile Include="Shard\WhenUsingShardedServers.cs" />
     <Compile Include="Some.cs" />
