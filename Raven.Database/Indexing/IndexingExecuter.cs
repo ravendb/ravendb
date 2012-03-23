@@ -39,7 +39,7 @@ namespace Raven.Database.Indexing
 
 		protected override void FlushAllIndexes()
 		{
-			context.IndexStorage.FlushMapIndexes();
+			context.IndexStorage.FlushMapIndexes(optimize: true);
 		}
 
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
