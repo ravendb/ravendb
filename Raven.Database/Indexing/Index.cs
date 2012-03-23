@@ -21,6 +21,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
@@ -48,13 +49,14 @@ namespace Raven.Database.Indexing
 		protected readonly string name;
 
 		private readonly AbstractViewGenerator viewGenerator;
+		private readonly InMemoryRavenConfiguration configuration;
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
 
 
-		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
+		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
 		{
 			if (directory == null) throw new ArgumentNullException("directory");
 			if (name == null) throw new ArgumentNullException("name");
@@ -64,6 +66,7 @@ namespace Raven.Database.Indexing
 			this.name = name;
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
+			this.configuration = configuration;
 			logIndexing.Debug("Creating index for {0}", name);
 			this.directory = directory;
 
@@ -139,7 +142,8 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter != null)
 				{
-					if (optimize) indexWriter.Optimize();
+					if (optimize) 
+						indexWriter.Optimize();
 					indexWriter.Commit();
 				}
 			}
@@ -249,6 +253,11 @@ namespace Raven.Database.Indexing
 					UpdateIndexingStats(context, stats);
 
 					WriteTempIndexToDiskIfNeeded(context);
+
+					if (configuration.TransactionMode == TransactionMode.Safe)
+					{
+						Flush(optimize: false);
+					}
 				}
 				finally
 				{

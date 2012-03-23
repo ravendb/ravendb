@@ -194,8 +194,8 @@ namespace Raven.Database.Indexing
 		{
 			var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
 			var indexImplementation = indexDefinition.IsMapReduce
-										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator)
-										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator);
+										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator, configuration)
+										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator, configuration);
 
 			configuration.Container.SatisfyImportsOnce(indexImplementation);
 

@@ -20,6 +20,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
@@ -31,8 +32,8 @@ namespace Raven.Database.Indexing
 {
 	public class MapReduceIndex : Index
 	{
-		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
-			: base(directory, name, indexDefinition, viewGenerator)
+		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
+			: base(directory, name, indexDefinition, viewGenerator, configuration)
 		{
 		}
 

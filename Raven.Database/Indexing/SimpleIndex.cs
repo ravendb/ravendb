@@ -13,6 +13,7 @@ using Lucene.Net.Store;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
@@ -21,8 +22,8 @@ namespace Raven.Database.Indexing
 {
 	public class SimpleIndex : Index
 	{
-		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
-			: base(directory, name, indexDefinition, viewGenerator)
+		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
+			: base(directory, name, indexDefinition, viewGenerator, configuration)
 		{
 		}
 
