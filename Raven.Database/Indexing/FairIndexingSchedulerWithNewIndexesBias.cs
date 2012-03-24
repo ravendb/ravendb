@@ -13,6 +13,8 @@ namespace Raven.Database.Indexing
 	{
 		private int current;
 		private int currentRepeated;
+		private bool activeFiltering;
+		private int lastAmountOfItemsToIndex;
 
 		public IList<IndexToWorkOn> FilterMapIndexes(IList<IndexToWorkOn> indexes)
 		{
@@ -28,8 +30,11 @@ namespace Raven.Database.Indexing
 			{
 				currentRepeated = 0;
 				current = 0;
+				activeFiltering = false;
 				return indexes; // they all have the same one, so there aren't any delayed / new indexes
 			}
+			
+			activeFiltering = true;
 
 			// we have indexes that haven't all caught up with up yet, so we need to start cycling through the 
 			// different levels, starting with the earliest ones, we are biased toward the first ones
@@ -48,6 +53,20 @@ namespace Raven.Database.Indexing
 			currentRepeated++;
 
 			return indexToWorkOns.ToList();
+		}
+
+		public int LastAmountOfItemsToIndex
+		{
+			get { return lastAmountOfItemsToIndex; }
+			set
+			{
+				lastAmountOfItemsToIndex = activeFiltering
+				                           	? // if we are actively filtering, we have multiple levels, so we have to assume 
+				                           // that the max amount is still the current one, this prevent the different levels of indexing batch
+				                           // size from "fighting" over the batch size.
+				                           Math.Max(lastAmountOfItemsToIndex, value)
+				                           	: value;
+			}
 		}
 
 		// here we compare, but only up to the last 116 bits, not the full 128 bits
