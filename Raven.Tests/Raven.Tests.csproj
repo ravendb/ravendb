@@ -528,6 +528,7 @@
     <Compile Include="Indexes\MapOnlyView.cs" />
     <Compile Include="Bugs\Indexing\CanMultiMapIndexNullableValueTypes.cs" />
     <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
+    <Compile Include="Indexes\OldIndexRunWhileNewIndexesAreRunning.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
     <Compile Include="Indexes\ReduceCanUseExtensionMethods.cs" />
