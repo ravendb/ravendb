@@ -379,6 +379,12 @@ If you really want to do in memory filtering on the data returned from the query
 		TSelf GroupBy (AggregationOperation aggregationOperation, params string[] fieldsToGroupBy);
 
 		/// <summary>
+		/// Partition the query so we can intersect different parts of the query
+		/// across different index entries.
+		/// </summary>
+		TSelf Intersect();
+
+		/// <summary>
 		/// Callback to get the results of the query
 		/// </summary>
 		void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted);

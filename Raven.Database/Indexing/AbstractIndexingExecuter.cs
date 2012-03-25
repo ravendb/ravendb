@@ -135,23 +135,9 @@ namespace Raven.Database.Indexing
 
 		protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions);
 
-
 		protected abstract void ExecuteIndxingWork(IList<IndexToWorkOn> indexesToWorkOn);
 
-	
-
 		protected abstract bool IsValidIndex(IndexStats indexesStat);
-
-		public class IndexToWorkOn
-		{
-			public string IndexName { get; set; }
-			public Guid LastIndexedEtag { get; set; }
-
-			public override string ToString()
-			{
-				return string.Format("IndexName: {0}, LastIndexedEtag: {1}", IndexName, LastIndexedEtag);
-			}
-		}
 
 		protected class ComparableByteArray : IComparable<ComparableByteArray>, IComparable
 		{
@@ -189,6 +175,5 @@ namespace Raven.Database.Indexing
 				return ToGuid().ToString();
 			}
 		}
-
 	}
 }

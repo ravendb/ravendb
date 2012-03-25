@@ -7,8 +7,7 @@ namespace Raven.Database.Indexing
 	{
 		private readonly WorkContext context;
 		private int numberOfItemsToIndexInSingleBatch;
-		protected int lastAmountOfItemsToIndex;
-
+		
 		public IndexBatchSizeAutoTuner(WorkContext context)
 		{
 			this.context = context;
@@ -36,7 +35,7 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
-				lastAmountOfItemsToIndex = amountOfItemsToIndex;
+				context.Configuration.IndexingScheduler.LastAmountOfItemsToIndex = amountOfItemsToIndex;
 			}
 		}
 
@@ -47,7 +46,7 @@ namespace Raven.Database.Indexing
 				return;
 			}
 
-			if (lastAmountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch)
+			if (context.Configuration.IndexingScheduler.LastAmountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch)
 			{
 				// this is the first time we hit the limit, we will give another go before we increase
 				// the batch size
@@ -132,7 +131,7 @@ namespace Raven.Database.Indexing
 				return true;
 
 			// we were above the max the last time, we can't reduce the work load now
-			if (lastAmountOfItemsToIndex > NumberOfItemsToIndexInSingleBatch)
+			if (context.Configuration.IndexingScheduler.LastAmountOfItemsToIndex > NumberOfItemsToIndexInSingleBatch)
 				return true;
 
 			var old = NumberOfItemsToIndexInSingleBatch;
