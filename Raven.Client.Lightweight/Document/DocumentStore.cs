@@ -526,7 +526,12 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 		public ReplicationInformer GetReplicationInformerForDatabase(string dbName)
 		{
-			return replicationInformers.GetOrAddAtomically(dbName ?? "default", s => new ReplicationInformer(Conventions));
+			var key = Url;
+			if(string.IsNullOrEmpty(dbName)==false)
+			{
+				key = MultiDatabase.GetRootDatabaseUrl(Url) + "databases/" + dbName;
+			}
+			return replicationInformers.GetOrAddAtomically(key, s => new ReplicationInformer(Conventions));
 		}
 #endif
 
