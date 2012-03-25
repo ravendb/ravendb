@@ -167,6 +167,14 @@ namespace Raven.Client.Connection
 			var currentRequest = Interlocked.Increment(ref requestCount);
 			T result;
 			var threadSafeCopy = replicationInformer.ReplicationDestinations;
+
+			if(convention.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers) && 
+				method == "GET" && 
+				threadSafeCopy.Count)
+			{
+				
+			}
+
 			if (replicationInformer.ShouldExecuteUsing(url, currentRequest, method, true))
 			{
 				if (TryOperation(operation, url, true, out result))

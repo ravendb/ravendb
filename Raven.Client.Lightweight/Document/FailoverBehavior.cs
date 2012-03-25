@@ -1,8 +1,11 @@
-﻿namespace Raven.Client.Document
+﻿using System;
+
+namespace Raven.Client.Document
 {
 	/// <summary>
 	/// Options for handling failover scenarios in replication environment
 	/// </summary>
+	[Flags]
 	public enum FailoverBehavior
 	{
 		/// <summary>
@@ -14,7 +17,7 @@
 		/// read requests when the primary node is down, but don't have to deal with replication
 		/// conflicts if there are writes to the secondary when the primary node is down.
 		/// </remarks>
-		AllowReadsFromSecondaries,
+		AllowReadsFromSecondaries = 1,
 		/// <summary>
 		/// Allow to read from the secondary server(s), but immediately fail writes
 		/// to the secondary server(s).
@@ -29,15 +32,21 @@
 		/// Please note, however, that this means that your code must be prepared to handle
 		/// conflicts in case of different writes to the same document across nodes.
 		/// </remarks>
-		AllowReadsFromSecondariesAndWritesToSecondaries,
+		AllowReadsFromSecondariesAndWritesToSecondaries = 3,
 		/// <summary>
 		/// Immediately fail the request, without attempting any failover. This is true for both 
-		/// reads and writes
+		/// reads and writes. The RavenDB client will not even check that you are using replication.
 		/// </summary>
 		/// <remarks>
 		/// This is mostly useful when your replication setup is meant to be used for backups / external
-		/// needs, and is not meant to be a failover storage
+		/// needs, and is not meant to be a failover storage.
 		/// </remarks>
-		FailImmediately,
+		FailImmediately = 0,
+
+		/// <summary>
+		/// Read requests will be spread across all the servers, instead of doing all the work against the master.
+		/// This should give better read performance, overall. Write requests will always go to the master.
+		/// </summary>
+		ReadFromAllServers = 1024,
 	}
 }

@@ -53,7 +53,7 @@ namespace Raven.Client.Connection
 		{
 			get
 			{
-				if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+				if (conventions.FailoverBehaviorWithoutFlags == FailoverBehavior.FailImmediately)
 					return Empty;
 
 				return replicationDestinations;
@@ -102,15 +102,14 @@ namespace Raven.Client.Connection
 				}
 			}
 		}
-#endif
-
+#else
 		/// <summary>
 		/// Updates the replication information if needed.
 		/// </summary>
 		/// <param name="serverClient">The server client.</param>
 		public Task UpdateReplicationInformationIfNeeded(ServerClient serverClient)
 		{
-			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+			if (conventions.FailoverBehaviorWithoutFlags == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
 
 			var taskCopy = refreshReplicationInformationTask;
@@ -139,6 +138,7 @@ namespace Raven.Client.Connection
 					});
 			}
 		}
+#endif
 
 		private class IntHolder
 		{
@@ -180,7 +180,7 @@ namespace Raven.Client.Connection
 
 		private void AssertValidOperation(string method)
 		{
-			switch (conventions.FailoverBehavior)
+			switch (conventions.FailoverBehaviorWithoutFlags)
 			{
 				case FailoverBehavior.AllowReadsFromSecondaries:
 					if (method == "GET")
