@@ -4,6 +4,7 @@ using System.Xml;
 using NLog;
 using NLog.Config;
 using Raven.Bundles.Tests.Authorization.Bugs;
+using Raven.Bundles.Tests.Replication;
 using Raven.Database.Server;
 
 namespace Raven.Tryouts
@@ -28,8 +29,8 @@ namespace Raven.Tryouts
 					Environment.SetEnvironmentVariable("Run", i.ToString());
 					Console.Clear();
 					Console.WriteLine(i);
-					using (var x = new LoadingSavedInfo())
-						x.BugWhenSavingDocumentWithPreviousAuthorization_WithQuery();
+					using (var x = new FailoverBetweenTwoMultiTenantDatabases())
+						x.CanFailoverReplicationBetweenTwoMultiTenantDatabases_WithExplicitUrl();
 				}
 			}
 			finally
