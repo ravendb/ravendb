@@ -528,6 +528,7 @@
     <Compile Include="Indexes\MapOnlyView.cs" />
     <Compile Include="Bugs\Indexing\CanMultiMapIndexNullableValueTypes.cs" />
     <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
+    <Compile Include="Indexes\OldIndexRunWhileNewIndexesAreRunning.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
     <Compile Include="Indexes\ReduceCanUseExtensionMethods.cs" />
@@ -696,6 +697,7 @@
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="MailingList\Phil-Updated.cs" />
     <Compile Include="Queries\Includes.cs" />
+    <Compile Include="Queries\Intersection.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Querying\IndexedUser.cs" />
     <Compile Include="Querying\SearchOperator.cs" />
@@ -719,6 +721,7 @@
     <Compile Include="Shard\BlogModel\ShardedDocumentStoreTest.cs" />
     <Compile Include="Shard\BlogModel\ShardingScenario.cs" />
     <Compile Include="Shard\BlogModel\User.cs" />
+    <Compile Include="Shard\SimpleSharding.cs" />
     <Compile Include="Shard\WhenUsingParallelAccessStrategy.cs" />
     <Compile Include="Shard\WhenUsingShardedServers.cs" />
     <Compile Include="Some.cs" />

@@ -1556,6 +1556,11 @@ If you really want to do in memory filtering on the data returned from the query
 			return lastEquality;
 		}
 
+		public void Intersect()
+		{
+			theQueryText.Append(Constants.IntersectSeperator);
+		}
+
 		/// <summary>
 		/// Order the search results randomly
 		/// </summary>

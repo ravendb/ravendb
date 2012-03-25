@@ -48,21 +48,6 @@ namespace Raven.Tests.Shard.BlogModel
 		}
 
 		[Fact]
-		public void NotSupportedFeatures()
-		{
-			var shardedDocumentStore = GetDocumentStore().Initialize();
-			Assert.Throws<NotSupportedException>(() => shardedDocumentStore.DatabaseCommands);
-			Assert.Throws<NotSupportedException>(() => shardedDocumentStore.AsyncDatabaseCommands);
-			Assert.Throws<NotSupportedException>(() => shardedDocumentStore.Url);
-			Assert.Throws<NotSupportedException>(() => shardedDocumentStore.GetLastWrittenEtag());
-
-			using (var session = (ShardedDocumentSession)shardedDocumentStore.OpenSession())
-			{
-				Assert.Throws<NotSupportedException>(() => session.Defer());
-			}
-		}
-
-		[Fact]
 		public void DtcIsNotSupported()
 		{
 			var shardedDocumentStore = GetDocumentStore().Initialize();

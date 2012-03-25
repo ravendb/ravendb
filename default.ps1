@@ -505,6 +505,10 @@ task CreateNugetPackage {
 		Copy-Item "$_" $build_dir\NuPack\lib\sl50
 		Copy-Item "$_" $build_dir\NuPack-Client\lib\sl50
 	}
+	
+	$all_client_dlls | ForEach-Object { 
+		Copy-Item "$_" $build_dir\NuPack-Embedded\lib\net40
+	}
 
 	# Remove files that are obtained as dependencies
 	Remove-Item $build_dir\NuPack\lib\*\Newtonsoft.Json.* -Recurse

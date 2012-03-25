@@ -1191,7 +1191,7 @@ more responsive application.
 			/// Gets or sets the commands.
 			/// </summary>
 			/// <value>The commands.</value>
-			public IList<ICommandData> Commands { get; set; }
+			public List<ICommandData> Commands { get; set; }
 
 			public int DeferredCommandsCount { get; set; }
 

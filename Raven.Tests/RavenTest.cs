@@ -40,15 +40,15 @@ namespace Raven.Tests
 			path = Path.Combine(path, "TestDb").Substring(6);
 
 			var documentStore = new EmbeddableDocumentStore
-			                    	{
-				Configuration =
-					{
-						DataDirectory = path,
-						RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-						DefaultStorageTypeName = storageType,
-						RunInMemory = storageType == "munin" && inMemory,
-					}
-			};
+									{
+										Configuration =
+											{
+												DataDirectory = path,
+												RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+												DefaultStorageTypeName = storageType,
+												RunInMemory = storageType == "munin" && inMemory,
+											}
+									};
 
 			ModifyStore(documentStore);
 			ModifyConfiguration(documentStore.Configuration);
@@ -75,7 +75,7 @@ namespace Raven.Tests
 
 		protected virtual void ModifyStore(EmbeddableDocumentStore documentStore)
 		{
-			
+
 		}
 
 		static public void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore)
@@ -85,10 +85,10 @@ namespace Raven.Tests
 
 			documentStore.DatabaseCommands.Put("Pls Delete Me", null,
 
-			                                   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
-			                                   new RavenJObject());
+											   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
+											   new RavenJObject());
 
-			documentStore.Configuration.AnonymousUserAccessMode=AnonymousUserAccessMode.All;
+			documentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.All;
 			using (var server = new HttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
 			{
 				server.StartListening();
@@ -105,9 +105,9 @@ namespace Raven.Tests
 		{
 		}
 
-		public static void WaitForIndexing(EmbeddableDocumentStore store)
+		public static void WaitForIndexing(IDocumentStore store)
 		{
-			while (store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
+			while (store.DatabaseCommands.GetStatistics().StaleIndexes.Length > 0)
 			{
 				Thread.Sleep(100);
 			}
@@ -135,7 +135,7 @@ namespace Raven.Tests
 			{
 				documentStore.Initialize();
 				documentStore.DatabaseCommands.Put("Pls Delete Me", null,
-				                                   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }), new RavenJObject());
+												   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }), new RavenJObject());
 
 				Process.Start(documentStore.Url);// start the server
 
@@ -150,12 +150,12 @@ namespace Raven.Tests
 		protected RavenDbServer GetNewServer(int port = 8079, string dataDirectory = "Data")
 		{
 			var ravenConfiguration = new RavenConfiguration
-			                         {
-			                         	Port = port,
-			                         	DataDirectory = dataDirectory,
-			                         	RunInMemory = true,
-			                         	AnonymousUserAccessMode = AnonymousUserAccessMode.All
-			                         };
+									 {
+										 Port = port,
+										 DataDirectory = dataDirectory,
+										 RunInMemory = true,
+										 AnonymousUserAccessMode = AnonymousUserAccessMode.All
+									 };
 
 			ModifyConfiguration(ravenConfiguration);
 
@@ -168,13 +168,13 @@ namespace Raven.Tests
 			try
 			{
 				using (var documentStore = new DocumentStore
-				                           	{
+											{
 												Conventions =
 													{
 														FailoverBehavior = FailoverBehavior.FailImmediately
 													},
-				                           		Url = "http://localhost:" + port
-				                           	}.Initialize())
+												Url = "http://localhost:" + port
+											}.Initialize())
 				{
 					CreateDefaultIndexes(documentStore);
 				}
@@ -195,7 +195,7 @@ namespace Raven.Tests
 
 		public RavenTest()
 		{
-			
+
 			BoundedMemoryTarget boundedMemoryTarget = null;
 			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
 			{
