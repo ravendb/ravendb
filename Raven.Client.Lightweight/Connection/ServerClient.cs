@@ -48,6 +48,7 @@ namespace Raven.Client.Connection
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? currentSessionId;
 		private readonly ProfilingInformation profilingInformation;
+		private int readStripingBase;
 
 		/// <summary>
 		/// Notify when the failover status changed
@@ -78,6 +79,7 @@ namespace Raven.Client.Connection
 			this.convention = convention;
 			OperationsHeaders = new NameValueCollection();
 			replicationInformer.UpdateReplicationInformationIfNeeded(this);
+			readStripingBase = replicationInformer.GetReadStripingBase();
 		}
 
 		/// <summary>
@@ -168,11 +170,20 @@ namespace Raven.Client.Connection
 			T result;
 			var threadSafeCopy = replicationInformer.ReplicationDestinations;
 
-			if(convention.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers) && 
-				method == "GET" && 
-				threadSafeCopy.Count)
+			var shouldReadFromAllServers = ((convention.FailoverBehavior & FailoverBehavior.ReadFromAllServers) == FailoverBehavior.ReadFromAllServers);
+			if (shouldReadFromAllServers && method == "GET")
 			{
-				
+				var replicationIndex = readStripingBase%(threadSafeCopy.Count + 1);
+				// if replicationIndex == destinations count, then we want to use the master
+				if (replicationIndex < threadSafeCopy.Count)
+				{
+					// if it is failing, ignore that, and move to the master or any of the replicas
+					if (replicationInformer.ShouldExecuteUsing(threadSafeCopy[replicationIndex], currentRequest, method, false))
+					{
+						if (TryOperation(operation, threadSafeCopy[replicationIndex], true, out result))
+							return result;
+					}
+				}
 			}
 
 			if (replicationInformer.ShouldExecuteUsing(url, currentRequest, method, true))

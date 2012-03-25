@@ -45,8 +45,13 @@ namespace Raven.Client.Document
 
 		/// <summary>
 		/// Read requests will be spread across all the servers, instead of doing all the work against the master.
-		/// This should give better read performance, overall. Write requests will always go to the master.
+		/// Write requests will always go to the master.
 		/// </summary>
+		/// <remarks>
+		/// This is useful for striping, spreading the read load among multiple servers. The idea is that this will give us better read performance overall.
+		/// A single session will always use the same server, we don't do read striping within a single session.
+		/// Note that using this means that you cannot set UserOptimisticConcurrency to true, because that would generate false concurrency exceptions.
+		/// </remarks>
 		ReadFromAllServers = 1024,
 	}
 }

@@ -53,7 +53,7 @@ namespace Raven.Client.Connection
 		{
 			get
 			{
-				if (conventions.FailoverBehaviorWithoutFlags == FailoverBehavior.FailImmediately)
+				if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 					return Empty;
 
 				return replicationDestinations;
@@ -71,6 +71,7 @@ namespace Raven.Client.Connection
 #if !NET_3_5
 		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder>();
 		private Task refreshReplicationInformationTask;
+		private int readStripingBase;
 #else
 		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
 #endif
@@ -109,7 +110,7 @@ namespace Raven.Client.Connection
 		/// <param name="serverClient">The server client.</param>
 		public Task UpdateReplicationInformationIfNeeded(ServerClient serverClient)
 		{
-			if (conventions.FailoverBehaviorWithoutFlags == FailoverBehavior.FailImmediately)
+			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
 
 			var taskCopy = refreshReplicationInformationTask;
@@ -189,6 +190,10 @@ namespace Raven.Client.Connection
 				case FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries:
 					return;
 				case FailoverBehavior.FailImmediately:
+					var allowReadFromAllServers = (conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) ==
+					                              FailoverBehavior.ReadFromAllServers;
+					if (allowReadFromAllServers && method == "GET")
+						return;
 					break;
 			}
 			throw new InvalidOperationException("Could not replicate " + method +
@@ -357,6 +362,11 @@ namespace Raven.Client.Connection
 						Failing = false
 					});
 			}
+		}
+
+		public int GetReadStripingBase()
+		{
+			return Interlocked.Increment(ref readStripingBase);
 		}
 	}
 

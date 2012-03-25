@@ -118,6 +118,7 @@
     <Compile Include="Document\SessionOperations\LoadOperation.cs" />
     <Compile Include="Document\SessionOperations\MultiLoadOperation.cs" />
     <Compile Include="Document\SessionOperations\QueryOperation.cs" />
+    <Compile Include="Document\SessionOptions.cs" />
     <Compile Include="Document\ShardedDocumentQuery.cs" />
     <Compile Include="Document\SpatialDocumentQuery.cs" />
     <Compile Include="EntityStored.cs" />
