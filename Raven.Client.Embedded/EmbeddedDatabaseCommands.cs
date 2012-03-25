@@ -461,6 +461,14 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Force the database commands to read directly from the master, unless there has been a failover.
+		/// </summary>
+		public void ForceReadFromMaster()
+		{
+			// nothing to do, there is no replication for embedded 
+		}
+
+		/// <summary>
 		/// It seems that we can't promote a transaction inside the same process
 		/// </summary>
 		public bool SupportsPromotableTransactions

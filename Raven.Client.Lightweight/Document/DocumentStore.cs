@@ -251,7 +251,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public override IDocumentSession OpenSession()
 		{
-			return OpenSessionInternal();
+			return OpenSession(new OpenSessionOptions());
 		}
 
 		/// <summary>
@@ -259,27 +259,13 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override IDocumentSession OpenSession(string database)
 		{
-			return OpenSessionInternal(database);
+			return OpenSession(new OpenSessionOptions
+			{
+				Database = database
+			});
 		}
 
-		/// <summary>
-		/// Opens the session for a particular database with the specified credentials
-		/// </summary>
-		public override IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
-		{
-			return OpenSessionInternal(database, credentialsForSession);
-		}
-
-		/// <summary>
-		/// Opens the session with the specified credentials.
-		/// </summary>
-		/// <param name="credentialsForSession">The credentials for session.</param>
-		public override IDocumentSession OpenSession(ICredentials credentialsForSession)
-		{
-			return OpenSessionInternal(credentialsForSession: credentialsForSession);
-		}
-
-		private IDocumentSession OpenSessionInternal(string database = null, ICredentials credentialsForSession = null)
+		public override IDocumentSession OpenSession(OpenSessionOptions options)
 		{
 			EnsureNotClosed();
 
@@ -287,9 +273,10 @@ namespace Raven.Client.Document
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new DocumentSession(this, listeners, sessionId, SetupCommands(DatabaseCommands, database, credentialsForSession)
+				var session = new DocumentSession(this, listeners, sessionId, 
+					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options)
 #if !NET_3_5
-, SetupCommandsAsync(AsyncDatabaseCommands, database, credentialsForSession)
+				  , SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials)
 #endif
 );
 				AfterSessionCreated(session);
@@ -301,12 +288,14 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private static IDatabaseCommands SetupCommands(IDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession)
+		private static IDatabaseCommands SetupCommands(IDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession, OpenSessionOptions options)
 		{
 			if (database != null)
 				databaseCommands = databaseCommands.ForDatabase(database);
 			if (credentialsForSession != null)
 				databaseCommands = databaseCommands.With(credentialsForSession);
+			if (options.ForceReadFromMaster)
+				databaseCommands.ForceReadFromMaster();
 			return databaseCommands;
 		}
 
@@ -524,7 +513,7 @@ namespace Raven.Client.Document
 		}
 
 #if !SILVERLIGHT
-		public ReplicationInformer GetReplicationInformerForDatabase(string dbName)
+		public ReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
 		{
 			var key = Url;
 			if(string.IsNullOrEmpty(dbName)==false)

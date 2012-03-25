@@ -61,8 +61,7 @@ namespace Raven.Client
 #if !SILVERLIGHT
 		public abstract IDocumentSession OpenSession();
 		public abstract IDocumentSession OpenSession(string database);
-		public abstract IDocumentSession OpenSession(string database, ICredentials credentialsForSession);
-		public abstract IDocumentSession OpenSession(ICredentials credentialsForSession);
+		public abstract IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
 		public abstract IDatabaseCommands DatabaseCommands { get; }
 
 		/// <summary>

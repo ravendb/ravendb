@@ -15,6 +15,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 
 namespace Raven.Client.Shard
@@ -197,20 +198,13 @@ namespace Raven.Client.Shard
 		}
 
 		/// <summary>
-		/// Opens the session for a particular database with the specified credentials
+		/// Opens the session with the specified options.
 		/// </summary>
-		public override IDocumentSession OpenSession(string database, ICredentials credentialsForSession)
+		public override IDocumentSession OpenSession(OpenSessionOptions sessionOptions)
 		{
-			return OpenSessionInternal(ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands.ForDatabase(database).With(credentialsForSession)));
-		}
-
-		/// <summary>
-		/// Opens the session with the specified credentials.
-		/// </summary>
-		/// <param name="credentialsForSession">The credentials for session.</param>
-		public override IDocumentSession OpenSession(ICredentials credentialsForSession)
-		{
-			return OpenSessionInternal(ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands.With(credentialsForSession)));
+			return OpenSessionInternal(ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.DatabaseCommands
+				.ForDatabase(sessionOptions.Database)
+				.With(sessionOptions.Credentials)));
 		}
 
 		private IDocumentSession OpenSessionInternal(Dictionary<string, IDatabaseCommands> shardDbCommands)

@@ -110,15 +110,9 @@ namespace Raven.Client
 		IDocumentSession OpenSession(string database);
 
 		/// <summary>
-		/// Opens the session for a particular database with the specified credentials
+		/// Opens the session with the specified options.
 		/// </summary>
-		IDocumentSession OpenSession(string database, ICredentials credentialsForSession);
-
-		/// <summary>
-		/// Opens the session with the specified credentials.
-		/// </summary>
-		/// <param name="credentialsForSession">The credentials for session.</param>
-		IDocumentSession OpenSession(ICredentials credentialsForSession);
+		IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
 
 		/// <summary>
 		/// Gets the database commands.
