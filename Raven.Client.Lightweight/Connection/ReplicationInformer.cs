@@ -38,6 +38,7 @@ namespace Raven.Client.Connection
 		private readonly object replicationLock = new object();
 		private List<string> replicationDestinations = new List<string>();
 		private static readonly List<string> Empty = new List<string>();
+		private int readStripingBase;
 
 		/// <summary>
 		/// Notify when the failover status changed
@@ -71,7 +72,6 @@ namespace Raven.Client.Connection
 #if !NET_3_5
 		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder>();
 		private Task refreshReplicationInformationTask;
-		private int readStripingBase;
 #else
 		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
 #endif
