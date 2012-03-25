@@ -55,8 +55,8 @@ namespace Raven.Database.Commercial
 				DisableFloatingLicenses = true,
 				SubscriptionEndpoint = "http://uberprof.com/Subscriptions.svc"
 			};
-			licenseValidator.LicenseInvalidated+=LicenseValidatorOnLicenseInvalidated;
-			licenseValidator.MultipleLicensesWereDiscovered += LicenseValidatorOnMultipleLicensesWereDiscovered;
+			licenseValidator.LicenseInvalidated += OnLicenseInvalidated;
+			licenseValidator.MultipleLicensesWereDiscovered += OnMultipleLicensesWereDiscovered;
 
 			if (string.IsNullOrEmpty(licenseText))
 			{
@@ -125,7 +125,7 @@ namespace Raven.Database.Commercial
 			return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "license.xml");
 		}
 
-		private void LicenseValidatorOnMultipleLicensesWereDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
+		private void OnMultipleLicensesWereDiscovered(object sender, DiscoveryHost.ClientDiscoveredEventArgs clientDiscoveredEventArgs)
 		{
 			logger.Error("A duplicate license was found at {0} for user {1}. User Id: {2}. Both licenses were disabled!", 
 				clientDiscoveredEventArgs.MachineName, 
@@ -143,7 +143,7 @@ namespace Raven.Database.Commercial
 			};
 		}
 
-		private void LicenseValidatorOnLicenseInvalidated(InvalidationType invalidationType)
+		private void OnLicenseInvalidated(InvalidationType invalidationType)
 		{
 			logger.Error("The license have expired and can no longer be used");
 			CurrentLicense = new LicensingStatus
