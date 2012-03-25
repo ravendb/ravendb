@@ -283,6 +283,8 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\EmbeddedClient -Type directory | Out-Null
 	New-Item $build_dir\Output\Client -Type directory | Out-Null
 	New-Item $build_dir\Output\Client-3.5 -Type directory | Out-Null
+	New-Item $build_dir\Output\Silverlight -Type directory | Out-Null
+	New-Item $build_dir\Output\Silverlight-4 -Type directory | Out-Null
 	New-Item $build_dir\Output\Bundles -Type directory | Out-Null
 	New-Item $build_dir\Output\Samples -Type directory | Out-Null
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
@@ -298,10 +300,10 @@ task CopyEmbeddedClient {
 }
 
 task CopySilverlight { 
-	New-Item $build_dir\Output\Silverlight -Type directory | Out-Null
 	$silverlight_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight }
-	
-	New-Item $build_dir\Output\Silverlight-4 -Type directory | Out-Null
+}
+
+task CopySilverlight-4 { 
 	$silverlight4_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight-4 }
 }
 
@@ -407,6 +409,7 @@ task DoRelease -depends Compile, `
 	CopyBackup, `
 	CopyClient, `
 	CopySilverlight, `
+	CopySilverlight-4, `
 	CopyClient35, `
 	CopyWeb, `
 	CopyBundles, `
