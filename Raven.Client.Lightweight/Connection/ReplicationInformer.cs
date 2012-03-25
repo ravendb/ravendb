@@ -75,44 +75,59 @@ namespace Raven.Client.Connection
 		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
 #endif
 
+#if NET_3_5
 		/// <summary>
 		/// Updates the replication information if needed.
 		/// </summary>
 		/// <param name="serverClient">The server client.</param>
-		public 
-#if !NET_3_5
-			Task
-#else
-			void
-#endif
-			
-			UpdateReplicationInformationIfNeeded(ServerClient serverClient)
+		public void UpdateReplicationInformationIfNeeded(ServerClient serverClient)
 		{
 			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
-#if !NET_3_5
-				return new CompletedTask();
-#else
 				return;
-#endif
+
 			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-#if !NET_3_5
-				return new CompletedTask();
-#else
 				return;
-#endif
 			lock (replicationLock)
 			{
-				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow
-#if !NET_3_5
-					|| refreshReplicationInformationTask != null
-#endif
-)
-#if !NET_3_5
-				return new CompletedTask();
-#else
+				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 					return;
+
+				try 
+				{          
+					RefreshReplicationInformation(serverClient);
+				}
+				catch (System.Exception e)
+				{
+					log.ErrorException("Failed to refresh replication information", e);
+				}
+			}
+		}
 #endif
-#if !NET_3_5
+
+		/// <summary>
+		/// Updates the replication information if needed.
+		/// </summary>
+		/// <param name="serverClient">The server client.</param>
+		public Task UpdateReplicationInformationIfNeeded(ServerClient serverClient)
+		{
+			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+				return new CompletedTask();
+
+			var taskCopy = refreshReplicationInformationTask;
+			if (taskCopy != null)
+				return taskCopy;
+
+			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+				return new CompletedTask();
+			lock (replicationLock)
+			{
+				taskCopy = refreshReplicationInformationTask;
+				if (taskCopy != null)
+					return taskCopy;
+
+				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+					return new CompletedTask();
+
 				return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
 					.ContinueWith(task =>
 					{
@@ -122,16 +137,6 @@ namespace Raven.Client.Connection
 						}
 						refreshReplicationInformationTask = null;
 					});
-#else
-				try 
-				{          
-					RefreshReplicationInformation(serverClient);
-				}
-				catch (System.Exception e)
-				{
-					log.ErrorException("Failed to refresh replication information", e);
-				}
-#endif
 			}
 		}
 
@@ -251,7 +256,6 @@ namespace Raven.Client.Connection
 		{
 			var serverHash = GetServerHash(commands);
 
-			lastReplicationUpdate = SystemTime.UtcNow;
 			JsonDocument document;
 			try
 			{
@@ -264,7 +268,10 @@ namespace Raven.Client.Connection
 				document = TryLoadReplicationInformationFromLocalCache(serverHash);
 			}
 			if (document == null)
+			{
+				lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
 				return;
+			}
 
 			TrySavingReplicationInformationToLocalCache(serverHash, document);
 
@@ -282,6 +289,8 @@ namespace Raven.Client.Connection
 					continue;
 				failureCounts[replicationDestination] = new IntHolder();
 			}
+
+			lastReplicationUpdate = SystemTime.UtcNow;
 		}
 
 		private JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
