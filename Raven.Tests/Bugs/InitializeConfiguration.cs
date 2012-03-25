@@ -18,6 +18,7 @@ namespace Raven.Tests.Bugs
 			store = new DocumentStore {Url = "http://localhost:7079"};
 		}
 
+
 		public void Dispose()
 		{
 			store.Dispose();
