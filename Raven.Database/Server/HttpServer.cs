@@ -247,14 +247,14 @@ namespace Raven.Database.Server
 				DocumentDatabase database;
 				if (ResourcesStoresCache.TryGetValue(db, out database) == false)
 				{
-					if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
-					{
-						// this document might not be actively working with user, but it is actively doing indexes, we will 
-						// wait with unloading this database until it hasn't done indexing for a while.
-						// This prevent us from shutting down big databases that have been left alone to do indexing work.
-						return; 
-					}
 					databaseLastRecentlyUsed.TryRemove(db, out time);
+					return;
+				}
+				if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
+				{
+					// this document might not be actively working with user, but it is actively doing indexes, we will 
+					// wait with unloading this database until it hasn't done indexing for a while.
+					// This prevent us from shutting down big databases that have been left alone to do indexing work.
 					return;
 				}
 				try
