@@ -220,9 +220,25 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
-		public static IRavenQueryable<T> Include<T>(this IRavenQueryable<T> source, Expression<Func<T, object>> path)
+		/// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+		/// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
+		/// <returns></returns>
+		public static IRavenQueryable<TResult> Include<TResult>(this IRavenQueryable<TResult> source, Expression<Func<TResult, object>> path)
 		{
 			source.Customize(x => x.Include(path));
+			return source;
+		}
+
+		/// <summary>
+		/// Includes the specified path in the query, loading the document specified in that path
+		/// </summary>
+		/// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+		/// <typeparam name="TInclude">The type of the object that you want to include.</typeparam>
+		/// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
+		/// <returns></returns>
+		public static IRavenQueryable<TResult> Include<TResult, TInclude>(this IRavenQueryable<TResult> source, Expression<Func<TResult, object>> path)
+		{
+			source.Customize(x => x.Include<TResult, TInclude>(path));
 			return source;
 		}
 

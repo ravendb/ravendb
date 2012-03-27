@@ -355,7 +355,28 @@ namespace Raven.Client.Document
 		/// <param name = "path">The path.</param>
 		IDocumentQueryCustomization IDocumentQueryCustomization.Include<TResult>(Expression<Func<TResult, object>> path)
 		{
+			var body = path.Body as UnaryExpression;
+			if (body != null)
+			{
+				switch (body.NodeType)
+				{
+					case ExpressionType.Convert:
+					case ExpressionType.ConvertChecked:
+						throw new InvalidOperationException("You cannot use Include<TResult> on value type. Please use the Include<TResult, TInclude> overload.");
+				}
+			}
+			
 			Include(path.ToPropertyPath());
+			return this;
+		}
+
+		public IDocumentQueryCustomization Include<TResult, TInclude>(Expression<Func<TResult, object>> path)
+		{
+			var fullId = DocumentConvention.FindFullDocumentKeyFromNonStringIdentifier(-1, typeof (TInclude), false);
+			var idPrefix = fullId.Replace("-1", string.Empty);
+
+			var id = path.ToPropertyPath() + "(" + idPrefix + ")";
+			Include(id);
 			return this;
 		}
 

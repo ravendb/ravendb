@@ -62,13 +62,22 @@ namespace Raven.Client
 		/// </summary>
 		IDocumentQueryCustomization WaitForNonStaleResults();
 
+		/// <summary>
+		/// Includes the specified path in the query, loading the document specified in that path
+		/// </summary>
+		/// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+		/// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
+		/// <returns></returns>
+		IDocumentQueryCustomization Include<TResult>(Expression<Func<TResult, object>> path);
 
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
-		/// <param name="path">The path.</param>
-		IDocumentQueryCustomization Include<T>(Expression<Func<T, object>> path);
-
+		/// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+		/// <typeparam name="TInclude">The type of the object that you want to include.</typeparam>
+		/// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
+		/// <returns></returns>
+		IDocumentQueryCustomization Include<TResult, TInclude>(Expression<Func<TResult, object>> path);
 
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
