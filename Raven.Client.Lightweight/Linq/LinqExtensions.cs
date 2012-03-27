@@ -38,8 +38,8 @@ namespace Raven.Client.Linq
 
 
 #endif
-#if !NET_3_5
 
+#if !NET_3_5 && !SILVERLIGHT
 		public static Lazy<IDictionary<string, IEnumerable<FacetValue>>> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
@@ -50,6 +50,11 @@ namespace Raven.Client.Linq
 			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
 			return documentSession.AddLazyOperation<IDictionary<string, IEnumerable<FacetValue>>>(lazyOperation, null);
 		}
+#endif
+
+#if !NET_3_5
+
+
 
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document
