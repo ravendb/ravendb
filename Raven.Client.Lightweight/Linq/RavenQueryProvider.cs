@@ -150,17 +150,16 @@ namespace Raven.Client.Linq
 			Type elementType = TypeSystem.GetElementType(expression.Type);
 			try
 			{
-				return
-					(IQueryable)
-					Activator.CreateInstance(typeof(RavenQueryInspector<>).MakeGenericType(elementType),
-											 new object[] { this, ravenQueryStatistics, indexName, expression
+				var makeGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
+				var args = new object[] { this, ravenQueryStatistics, indexName, expression, queryGenerator
 #if !SILVERLIGHT
-												 ,databaseCommands
+				                                      ,databaseCommands
 #endif
 #if !NET_3_5
-												 ,asyncDatabaseCommands
+				                                      ,asyncDatabaseCommands
 #endif
-												 });
+				                                    };
+				return (IQueryable) Activator.CreateInstance(makeGenericType, args);
 			}
 			catch (TargetInvocationException tie)
 			{
