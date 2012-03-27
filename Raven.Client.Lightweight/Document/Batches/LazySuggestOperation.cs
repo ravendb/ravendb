@@ -10,7 +10,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
 {
-	class LazySuggestOperation : ILazyOperation
+#if !NET_3_5
+
+	public class LazySuggestOperation : ILazyOperation
 	{
 		private readonly string index;
 		private readonly SuggestionQuery suggestionQuery;
@@ -71,4 +73,5 @@ namespace Raven.Client.Document.Batches
 			return null;
 		}
 	}
+#endif
 }
