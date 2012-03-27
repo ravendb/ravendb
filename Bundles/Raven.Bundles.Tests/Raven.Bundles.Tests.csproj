@@ -88,6 +88,7 @@
     <Compile Include="Replication\MultihopReplication.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailureHandling.cs" />
+    <Compile Include="Replication\ReadStriping.cs" />
     <Compile Include="Replication\ReplicationWithOAuth.cs" />
     <Compile Include="Replication\ReplicationBase.cs" />
     <Compile Include="Replication\SimpleReplication.cs" />

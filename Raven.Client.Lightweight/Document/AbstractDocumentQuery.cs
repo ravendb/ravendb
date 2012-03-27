@@ -183,6 +183,11 @@ namespace Raven.Client.Document
 		}
 #endif
 
+		InMemoryDocumentSessionOperations IRavenQueryInspector.Session
+		{
+			get { return theSession; }
+		}
+
 		/// <summary>
 		///   Gets the query text built so far
 		/// </summary>

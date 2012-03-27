@@ -420,7 +420,7 @@ namespace Raven.Client.Shard
 			                                         , null
 #endif
 				);
-			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, indexName, null, null
+			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, indexName, null, this, null
 #if !NET_3_5
 			                                  , null
 #endif

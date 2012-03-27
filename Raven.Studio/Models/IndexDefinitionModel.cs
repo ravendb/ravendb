@@ -322,7 +322,20 @@ namespace Raven.Studio.Models
 			public override void Execute(object parameter)
 			{
 				index.UpdateIndex();
-				ApplicationModel.Current.AddNotification(new Notification("saving index " + index.Name));
+				if (index.Reduce == "")
+					index.Reduce = null;
+				if (index.TransformResults == "")
+					index.TransformResults = null;
+
+				var mapIndexes = (from mapItem in index.Maps where mapItem.Text == "" select index.Maps.IndexOf(mapItem)).ToList();
+				mapIndexes.Sort();
+
+				for (int i = mapIndexes.Count - 1; i >= 0; i++)
+				{
+					index.Maps.RemoveAt(mapIndexes[i]);
+				}
+
+					ApplicationModel.Current.AddNotification(new Notification("saving index " + index.Name));
 				DatabaseCommands.PutIndexAsync(index.Name, index.index, true)
 					.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("index " + index.Name + " saved")))
 					.Catch();

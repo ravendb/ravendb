@@ -1333,7 +1333,7 @@ namespace Raven.Database
 			return totalIndexSize + TransactionalStorage.GetDatabaseSizeInBytes();
 		}
 
-		public Guid GetIndexEtag(string indexName, QueryResult queryResult)
+		public Guid GetIndexEtag(string indexName, Guid? previousEtag)
 		{
 			Guid lastDocEtag = Guid.Empty;
 			Guid? lastReducedEtag = null;
@@ -1366,7 +1366,7 @@ namespace Raven.Database
 
 				var indexEtag = new Guid(md5.ComputeHash(list.ToArray()));
 
-				if (queryResult != null && queryResult.ResultEtag != indexEtag)
+				if (previousEtag != null && previousEtag != indexEtag)
 				{
 					// the index changed between the time when we got it and the time 
 					// we actually call this, we need to return something random so that

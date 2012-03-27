@@ -471,6 +471,11 @@ namespace Raven.Client.Document
 		/// over the merged results
 		/// </summary>
 		public ApplyReduceFunctionFunc ApplyReduceFunction { get; set; }
+
+		public FailoverBehavior FailoverBehaviorWithoutFlags
+		{
+			get { return FailoverBehavior & (~FailoverBehavior.ReadFromAllServers); }
+		}
 	}
 
 

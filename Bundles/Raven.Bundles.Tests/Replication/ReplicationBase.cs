@@ -18,6 +18,7 @@ using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
 using IOExtensions = database::Raven.Database.Extensions.IOExtensions;
+using System.Linq;
 
 namespace Raven.Bundles.Tests.Replication
 {
@@ -133,21 +134,18 @@ namespace Raven.Bundles.Tests.Replication
 			
 		}
 
-		protected void SetupReplication(IDatabaseCommands source, string url)
+		protected void SetupReplication(IDatabaseCommands source, params string[] urls)
 		{
 			source.Put(replication::Raven.Bundles.Replication.ReplicationConstants.RavenReplicationDestinations,
 			           null, new RavenJObject
-			                 {
-			                 	{
-			                 	"Destinations", new RavenJArray
-			                 	                {
-			                 	                	new RavenJObject
-			                 	                	{
-			                 	                		{"Url", url}
-			                 	                	}
-			                 	                }
-			                 	}
-			                 }, new RavenJObject());
+			           {
+			           	{
+			           		"Destinations", new RavenJArray(urls.Select(url => new RavenJObject
+			           		{
+			           			{"Url", url}
+			           		}))
+			           		}
+			           }, new RavenJObject());
 		}
 
 		protected TDocument WaitForDocument<TDocument>(IDocumentStore store2, string expectedId) where TDocument : class
