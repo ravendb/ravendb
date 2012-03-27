@@ -332,7 +332,7 @@ namespace Raven.Client.Document
 #if !NET_3_5
 , AsyncDatabaseCommands
 #endif
-), ravenQueryStatistics, indexName, null, Advanced.DatabaseCommands
+), ravenQueryStatistics, indexName, null, this, Advanced.DatabaseCommands
 #if !NET_3_5
 , AsyncDatabaseCommands
 #endif

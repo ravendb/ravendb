@@ -12,6 +12,8 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
+using Raven.Client.Document;
+
 #endif
 
 namespace Raven.Client.Linq
@@ -30,6 +32,7 @@ namespace Raven.Client.Linq
 #endif
 #if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+		private InMemoryDocumentSessionOperations session;
 #endif
 
 		/// <summary>
@@ -39,7 +42,8 @@ namespace Raven.Client.Linq
 			IRavenQueryProvider provider, 
 			RavenQueryStatistics queryStats,
 			string indexName,
-			Expression expression
+			Expression expression,
+			InMemoryDocumentSessionOperations session
 #if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
 #endif
@@ -55,6 +59,7 @@ namespace Raven.Client.Linq
 			this.provider = provider.For<T>();
 			this.queryStats = queryStats;
 			this.indexName = indexName;
+			this.session = session;
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
@@ -181,6 +186,13 @@ namespace Raven.Client.Linq
 				if (asyncDatabaseCommands == null)
 					throw new NotSupportedException("You cannot get database commands for this query");
 				return asyncDatabaseCommands;
+			}
+		}
+		public InMemoryDocumentSessionOperations Session
+		{
+			get
+			{
+				return session;
 			}
 		}
 #endif

@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Client.Document.Batches;
 
 namespace Raven.Client.Linq
 {
@@ -28,10 +30,21 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public static IDictionary<string, IEnumerable<FacetValue>> ToFacets<T>(this IQueryable<T> queryable, string facetDoc)
 		{
-			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.ToString();
 
 			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
+		}
+
+		public static Lazy<IDictionary<string, IEnumerable<FacetValue>>> LazyToFacets<T>(this IQueryable<T> queryable, string facetDoc)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+			var query = ravenQueryInspector.ToString();
+
+			var lazyOperation = new LazyToFacetsOperation(ravenQueryInspector.IndexQueried, facetDoc, new IndexQuery {Query = query});
+
+			var documentSession = ((DocumentSession) ravenQueryInspector.Session);
+			return documentSession.AddLazyOperation<IDictionary<string, IEnumerable<FacetValue>>>(lazyOperation, null);
 		}
 #endif
 #if !NET_3_5
