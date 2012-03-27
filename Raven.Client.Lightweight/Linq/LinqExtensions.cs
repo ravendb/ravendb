@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Client.Document.Batches;
 
 namespace Raven.Client.Linq
 {
@@ -28,10 +30,21 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public static IDictionary<string, IEnumerable<FacetValue>> ToFacets<T>(this IQueryable<T> queryable, string facetDoc)
 		{
-			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.ToString();
 
 			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
+		}
+
+		public static Lazy<IDictionary<string, IEnumerable<FacetValue>>> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+			var query = ravenQueryInspector.ToString();
+
+			var lazyOperation = new LazyToFacetsOperation(ravenQueryInspector.IndexQueried, facetDoc, new IndexQuery {Query = query});
+
+			var documentSession = ((DocumentSession) ravenQueryInspector.Session);
+			return documentSession.AddLazyOperation<IDictionary<string, IEnumerable<FacetValue>>>(lazyOperation, null);
 		}
 #endif
 #if !NET_3_5
@@ -107,6 +120,28 @@ namespace Raven.Client.Linq
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
 			return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);
+		}
+
+		/// <summary>
+		/// Lazy Suggest alternative values for the queried term
+		/// </summary>
+		public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable)
+		{
+			return SuggestLazy(queryable, new SuggestionQuery());
+		}
+
+		/// <summary>
+		/// Lazy Suggest alternative values for the queried term
+		/// </summary>
+		public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable, SuggestionQuery query)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
+
+			var lazyOperation = new LazySuggestOperation(ravenQueryInspector.IndexQueried, query);
+
+			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
+			return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
 		}
 #endif
 

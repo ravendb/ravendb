@@ -282,6 +282,7 @@ namespace Raven.Client.Document.Async
 				ravenQueryStatistics,
 				indexName,
 				null,
+				this,
 #if !SILVERLIGHT
 				null,
 #endif

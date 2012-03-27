@@ -14,6 +14,8 @@ using Raven.Client.Connection.Async;
 #endif
 #if !Silverlight
 using Raven.Client.Connection;
+using Raven.Client.Document;
+
 #endif
 
 namespace Raven.Client.Linq
@@ -133,7 +135,7 @@ namespace Raven.Client.Linq
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
 		{
-			return new RavenQueryInspector<S>(this, ravenQueryStatistics, indexName, expression
+			return new RavenQueryInspector<S>(this, ravenQueryStatistics, indexName, expression, (InMemoryDocumentSessionOperations)queryGenerator
 #if !SILVERLIGHT
 				, databaseCommands
 #endif
