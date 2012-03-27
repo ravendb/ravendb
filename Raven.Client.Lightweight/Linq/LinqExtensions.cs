@@ -36,18 +36,21 @@ namespace Raven.Client.Linq
 			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
 		}
 
+
+#endif
+#if !NET_3_5
+
 		public static Lazy<IDictionary<string, IEnumerable<FacetValue>>> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.ToString();
 
-			var lazyOperation = new LazyToFacetsOperation(ravenQueryInspector.IndexQueried, facetDoc, new IndexQuery {Query = query});
+			var lazyOperation = new LazyToFacetsOperation(ravenQueryInspector.IndexQueried, facetDoc, new IndexQuery { Query = query });
 
-			var documentSession = ((DocumentSession) ravenQueryInspector.Session);
+			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
 			return documentSession.AddLazyOperation<IDictionary<string, IEnumerable<FacetValue>>>(lazyOperation, null);
 		}
-#endif
-#if !NET_3_5
+
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document
 		/// </summary>
@@ -121,7 +124,7 @@ namespace Raven.Client.Linq
 			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
 			return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);
 		}
-
+#if !NET_3_5
 		/// <summary>
 		/// Lazy Suggest alternative values for the queried term
 		/// </summary>
@@ -143,6 +146,8 @@ namespace Raven.Client.Linq
 			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
 			return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
 		}
+#endif
+
 #endif
 
 		private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query)

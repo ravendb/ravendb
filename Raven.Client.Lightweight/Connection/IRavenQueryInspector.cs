@@ -4,10 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
+using Raven.Client.Document;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
-using Raven.Client.Document;
-
 #endif
 
 namespace Raven.Client.Connection

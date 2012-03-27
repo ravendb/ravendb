@@ -8,6 +8,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
 {
+#if !NET_3_5
 	public class LazyToFacetsOperation : ILazyOperation
 	{
 		private readonly string index;
@@ -74,4 +75,5 @@ namespace Raven.Client.Document.Batches
 			return null;
 		}
 	}
+#endif
 }
