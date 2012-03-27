@@ -10,13 +10,13 @@ namespace Raven.Client.Document.Batches
 {
 	public class LazyToFacetsOperation : ILazyOperation
 	{
-		private readonly string key;
+		private readonly string index;
 		private readonly string facetSetupDoc;
 		private readonly IndexQuery query;
 
-		public LazyToFacetsOperation(string key, string facetSetupDoc, IndexQuery query)
+		public LazyToFacetsOperation(string index, string facetSetupDoc, IndexQuery query)
 		{
-			this.key = key;
+			this.index = index;
 			this.facetSetupDoc = facetSetupDoc;
 			this.query = query;
 		}
@@ -25,10 +25,10 @@ namespace Raven.Client.Document.Batches
 		{
 			return new GetRequest
 			{
-				Url = string.Format("/facets/{0}?facetDoc={1}&query={2}",
-				                    Uri.EscapeUriString(key),
-				                    Uri.EscapeDataString(facetSetupDoc),
-				                    Uri.EscapeDataString(query.Query))
+				Url = "/facets/" + index,
+				Query = string.Format("facetDoc={0}&query={1}",
+				                      facetSetupDoc,
+				                      query.Query)
 			};
 		}
 

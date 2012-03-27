@@ -36,7 +36,7 @@ namespace Raven.Client.Linq
 			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
 		}
 
-		public static Lazy<IDictionary<string, IEnumerable<FacetValue>>> LazyToFacets<T>(this IQueryable<T> queryable, string facetDoc)
+		public static Lazy<IDictionary<string, IEnumerable<FacetValue>>> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.ToString();
