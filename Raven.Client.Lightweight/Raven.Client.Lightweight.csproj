@@ -98,7 +98,7 @@
     <Compile Include="Document\Batches\LazyMultiLoadOperation.cs" />
     <Compile Include="Document\Batches\LazyQueryOperation.cs" />
     <Compile Include="Document\Batches\LazySuggestOperation.cs" />
-    <Compile Include="Document\Batches\LazyToFacetsOperation.cs" />
+    <Compile Include="Document\Batches\LazyFacetsOperation.cs" />
     <Compile Include="Document\DefaultRavenContractResolver.cs" />
     <Compile Include="Document\DocumentConvention.cs" />
     <Compile Include="Document\AbstractDocumentQuery.cs" />

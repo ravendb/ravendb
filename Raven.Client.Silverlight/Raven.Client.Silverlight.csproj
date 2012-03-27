@@ -251,6 +251,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyOperation.cs">
       <Link>Imports\Document\Batches\ILazyOperation.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyFacetsOperation.cs">
+      <Link>Imports\Document\Batches\LazyFacetsOperation.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyMultiLoaderWithInclude.cs">
       <Link>Imports\Document\Batches\LazyMultiLoaderWithInclude.cs</Link>
     </Compile>

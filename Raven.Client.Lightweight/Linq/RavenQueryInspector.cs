@@ -31,8 +31,8 @@ namespace Raven.Client.Linq
 #endif
 #if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
-		private InMemoryDocumentSessionOperations session;
 #endif
+		private InMemoryDocumentSessionOperations session;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
@@ -172,6 +172,8 @@ namespace Raven.Client.Linq
 				return databaseCommands;
 			}
 		}
+
+		
 #endif
 
 #if !NET_3_5
@@ -187,6 +189,8 @@ namespace Raven.Client.Linq
 				return asyncDatabaseCommands;
 			}
 		}
+#endif
+
 		public InMemoryDocumentSessionOperations Session
 		{
 			get
@@ -194,7 +198,6 @@ namespace Raven.Client.Linq
 				return session;
 			}
 		}
-#endif
 
 		///<summary>
 		/// Get the last equality term for the query

@@ -1,21 +1,23 @@
-﻿using System;
+﻿#if !NET_3_5
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+#if !SILVERLIGHT
 using Raven.Client.Shard;
+#endif
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
 {
-#if !NET_3_5
-	public class LazyToFacetsOperation : ILazyOperation
+	public class LazyFacetsOperation : ILazyOperation
 	{
 		private readonly string index;
 		private readonly string facetSetupDoc;
 		private readonly IndexQuery query;
 
-		public LazyToFacetsOperation(string index, string facetSetupDoc, IndexQuery query)
+		public LazyFacetsOperation(string index, string facetSetupDoc, IndexQuery query)
 		{
 			this.index = index;
 			this.facetSetupDoc = facetSetupDoc;
@@ -48,6 +50,7 @@ namespace Raven.Client.Document.Batches
 			Result = result.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
 		}
 
+#if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var result = new Dictionary<string, IEnumerable<FacetValue>>();
@@ -69,11 +72,12 @@ namespace Raven.Client.Document.Batches
 
 			Result = result;
 		}
+#endif
 
 		public IDisposable EnterContext()
 		{
 			return null;
 		}
 	}
-#endif
 }
+#endif
