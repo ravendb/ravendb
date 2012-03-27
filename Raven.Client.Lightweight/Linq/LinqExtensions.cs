@@ -121,6 +121,28 @@ namespace Raven.Client.Linq
 			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
 			return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);
 		}
+
+		/// <summary>
+		/// Lazy Suggest alternative values for the queried term
+		/// </summary>
+		public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable)
+		{
+			return SuggestLazy(queryable, new SuggestionQuery());
+		}
+
+		/// <summary>
+		/// Lazy Suggest alternative values for the queried term
+		/// </summary>
+		public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable, SuggestionQuery query)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
+
+			var lazyOperation = new LazySuggestOperation(ravenQueryInspector.IndexQueried, query);
+
+			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
+			return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
+		}
 #endif
 
 		private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query)
