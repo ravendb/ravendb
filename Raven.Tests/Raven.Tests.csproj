@@ -523,6 +523,7 @@
     <Compile Include="Indexes\DynamicFieldIndexing.cs" />
     <Compile Include="Indexes\DynamicQueryMapping.cs" />
     <Compile Include="Indexes\ExpressionOperatorPrecedenceTest.cs" />
+    <Compile Include="Indexes\IndexWithSubProperty.cs" />
     <Compile Include="Indexes\LinqIndexesFromClient.cs" />
     <Compile Include="Indexes\LuceneAnalyzerUtils.cs" />
     <Compile Include="Indexes\MapOnlyView.cs" />

@@ -19,9 +19,12 @@ namespace Raven.Client.Indexes
 		protected AbstractGenericIndexCreationTask()
 		{
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
+			StoresStrings = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
+			IndexesStrings = new Dictionary<string, FieldIndexing>();
 			IndexSortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
+			AnalyzersStrings = new Dictionary<string, string>();
 		}
 
 		protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuey, IEnumerable<object> enumerable)
@@ -53,6 +56,15 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
+		/// Index storage options
+		/// </summary>
+		protected IDictionary<string, FieldStorage> StoresStrings
+		{
+			get;
+			set;
+		}
+
+		/// <summary>
 		/// Index sort options
 		/// </summary>
 		protected IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> IndexSortOptions
@@ -71,9 +83,27 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
+		/// Index sort options
+		/// </summary>
+		protected IDictionary<string, string> AnalyzersStrings
+		{
+			get;
+			set;
+		}
+
+		/// <summary>
 		/// Indexing options
 		/// </summary>
 		protected IDictionary<Expression<Func<TReduceResult, object>>, FieldIndexing> Indexes
+		{
+			get;
+			set;
+		}
+
+		/// <summary>
+		/// Indexing options
+		/// </summary>
+		protected IDictionary<string, FieldIndexing> IndexesStrings
 		{
 			get;
 			set;
@@ -88,11 +118,43 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
+		/// Register a field to be indexed
+		/// </summary>
+		protected void Index(string field, FieldIndexing indexing)
+		{
+			IndexesStrings.Add(field, indexing);
+		}
+
+		/// <summary>
 		/// Register a field to be stored
 		/// </summary>
 		protected void Store(Expression<Func<TReduceResult, object>> field, FieldStorage storage)
 		{
 			Stores.Add(field, storage);
+		}
+
+		/// <summary>
+		/// Register a field to be stored
+		/// </summary>
+		protected void Store(string field, FieldStorage storage)
+		{
+			StoresStrings.Add(field, storage);
+		}
+
+		/// <summary>
+		/// Register a field to be analyzed
+		/// </summary>
+		protected void Analyze(Expression<Func<TReduceResult, object>> field, string analyzer)
+		{
+			Analyzers.Add(field, analyzer);
+		}
+
+		/// <summary>
+		/// Register a field to be analyzed
+		/// </summary>
+		protected void Analyze(string field, string analyzer)
+		{
+			AnalyzersStrings.Add(field, analyzer);
 		}
 
 		/// <summary>

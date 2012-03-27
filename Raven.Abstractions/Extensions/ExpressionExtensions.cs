@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Extensions
 		/// Turn an expression like x=&lt; x.User.Name to "User.Name"
 		///</summary>
 		///<param name="expr">Expression for member access</param>
-		public static string ToPropertyPath<T, TProperty>(this Expression<Func<T, TProperty>> expr)
+		public static string ToPropertyPath<T, TProperty>(this Expression<Func<T, TProperty>> expr, string separator = ".")
 		{
 			var expression = expr.Body;
 
@@ -47,7 +47,7 @@ namespace Raven.Abstractions.Extensions
 				parts.Insert(0, me.Member.Name);
 				me = me.Expression as MemberExpression;
 			}
-			return String.Join(".", parts.ToArray());
+			return String.Join(separator, parts.ToArray());
 		}
 	}
 }
