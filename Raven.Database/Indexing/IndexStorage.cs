@@ -55,6 +55,10 @@ namespace Raven.Database.Indexing
 			this.configuration = configuration;
 			path = configuration.IndexStoragePath;
 
+			if (Directory.Exists(path) == false && configuration.RunInMemory == false)
+				Directory.CreateDirectory(path);
+
+
 			var crashMarkerPath = Path.Combine(path, "indexing.crash-marker");
 
 			if (File.Exists(crashMarkerPath))
@@ -71,9 +75,7 @@ namespace Raven.Database.Indexing
 			// a power outage while the server was running.
 			crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 
-			if (Directory.Exists(path) == false && configuration.RunInMemory == false)
-				Directory.CreateDirectory(path);
-
+		
 			foreach (var indexName in indexDefinitionStorage.IndexNames)
 			{
 				OpenIndexOnStartup(documentDatabase, indexName);
