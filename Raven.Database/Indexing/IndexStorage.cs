@@ -59,23 +59,25 @@ namespace Raven.Database.Indexing
 				Directory.CreateDirectory(path);
 
 
-			var crashMarkerPath = Path.Combine(path, "indexing.crash-marker");
-
-			if (File.Exists(crashMarkerPath))
+			if (configuration.RunInMemory == false)
 			{
-				// the only way this can happen is if we crashed because of a power outage
-				// in this case, we consider all open indexes to be corrupt and force them
-				// to be reset. This is because to get better perf, we don't flush the files to disk,
-				// so in the case of a power outage, we can't be sure that there wasn't still stuff in
-				// the OS buffer that wasn't written yet.
-				configuration.ResetIndexOnUncleanShutdown = true;
+				var crashMarkerPath = Path.Combine(path, "indexing.crash-marker");
+
+				if (File.Exists(crashMarkerPath))
+				{
+					// the only way this can happen is if we crashed because of a power outage
+					// in this case, we consider all open indexes to be corrupt and force them
+					// to be reset. This is because to get better perf, we don't flush the files to disk,
+					// so in the case of a power outage, we can't be sure that there wasn't still stuff in
+					// the OS buffer that wasn't written yet.
+					configuration.ResetIndexOnUncleanShutdown = true;
+				}
+
+				// The delete on close ensures that the only way this file will exists is if there was
+				// a power outage while the server was running.
+				crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 			}
 
-			// The delete on close ensures that the only way this file will exists is if there was
-			// a power outage while the server was running.
-			crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
-
-		
 			foreach (var indexName in indexDefinitionStorage.IndexNames)
 			{
 				OpenIndexOnStartup(documentDatabase, indexName);
@@ -243,7 +245,8 @@ namespace Raven.Database.Indexing
 				index.Dispose();
 			}
 			dummyAnalyzer.Close();
-			crashMarker.Dispose();
+			if (crashMarker != null)
+				crashMarker.Dispose();
 		}
 
 		#endregion
