@@ -14,9 +14,15 @@ namespace Raven.Client.Document
 	public class MultiTypeHiLoKeyGenerator
 	{
 		private readonly IDatabaseCommands databaseCommands;
+		private readonly IDocumentStore documentStore;
 		private readonly int capacity;
 		private readonly object generatorLock = new object();
 		private IDictionary<string, HiLoKeyGenerator> keyGeneratorsByTag = new Dictionary<string, HiLoKeyGenerator>();
+
+		private IDatabaseCommands DatabaseCommands
+		{
+			get { return databaseCommands ?? documentStore.DatabaseCommands; }
+		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="MultiTypeHiLoKeyGenerator"/> class.
@@ -26,6 +32,16 @@ namespace Raven.Client.Document
 			this.databaseCommands = databaseCommands;
 			this.capacity = capacity;
 		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="MultiTypeHiLoKeyGenerator"/> class.
+		/// </summary>
+		public MultiTypeHiLoKeyGenerator(IDocumentStore documentStore, int capacity)
+		{
+			this.documentStore = documentStore;
+			this.capacity = capacity;
+		}
+
 
 		/// <summary>
 		/// Generates the document key.
@@ -48,7 +64,7 @@ namespace Raven.Client.Document
 				if (keyGeneratorsByTag.TryGetValue(tag, out value))
 					return value.GenerateDocumentKey(conventions, entity);
 
-				value = new HiLoKeyGenerator(databaseCommands, tag, capacity);
+				value = new HiLoKeyGenerator(DatabaseCommands, tag, capacity);
 				// doing it this way for thread safety
 				keyGeneratorsByTag = new Dictionary<string, HiLoKeyGenerator>(keyGeneratorsByTag)
 				{

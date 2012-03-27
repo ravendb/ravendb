@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void DocumentKeyGenerator()
 		{
-			var generator = new MultiTypeHiLoKeyGenerator(store.DatabaseCommands, 5);
+			var generator = new MultiTypeHiLoKeyGenerator(store, 5);
 			store.Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(store.Conventions, entity);
 			store.Initialize();
 		}
