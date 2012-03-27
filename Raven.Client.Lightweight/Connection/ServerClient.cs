@@ -48,6 +48,7 @@ namespace Raven.Client.Connection
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? currentSessionId;
 		private readonly ProfilingInformation profilingInformation;
+		private int readStripingBase;
 
 		/// <summary>
 		/// Notify when the failover status changed
@@ -78,6 +79,7 @@ namespace Raven.Client.Connection
 			this.convention = convention;
 			OperationsHeaders = new NameValueCollection();
 			replicationInformer.UpdateReplicationInformationIfNeeded(this);
+			readStripingBase = replicationInformer.GetReadStripingBase();
 		}
 
 		/// <summary>
@@ -167,6 +169,24 @@ namespace Raven.Client.Connection
 			var currentRequest = Interlocked.Increment(ref requestCount);
 			T result;
 			var threadSafeCopy = replicationInformer.ReplicationDestinations;
+
+			var shouldReadFromAllServers = ((convention.FailoverBehavior & FailoverBehavior.ReadFromAllServers) == FailoverBehavior.ReadFromAllServers);
+			if (shouldReadFromAllServers && method == "GET")
+			{
+				var replicationIndex = readStripingBase%(threadSafeCopy.Count + 1);
+				// if replicationIndex == destinations count, then we want to use the master
+				// if replicationIndex < 0, then we were explicitly instructed to use the master
+				if (replicationIndex < threadSafeCopy.Count && replicationIndex >= 0)
+				{
+					// if it is failing, ignore that, and move to the master or any of the replicas
+					if (replicationInformer.ShouldExecuteUsing(threadSafeCopy[replicationIndex], currentRequest, method, false))
+					{
+						if (TryOperation(operation, threadSafeCopy[replicationIndex], true, out result))
+							return result;
+					}
+				}
+			}
+
 			if (replicationInformer.ShouldExecuteUsing(url, currentRequest, method, true))
 			{
 				if (TryOperation(operation, url, true, out result))
@@ -933,6 +953,14 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		public IDatabaseCommands With(ICredentials credentialsForSession)
 		{
 			return new ServerClient(url, convention, credentialsForSession, replicationInformerGetter, databaseName, jsonRequestFactory, currentSessionId);
+		}
+
+		/// <summary>
+		/// Force the database commands to read directly from the master, unless there has been a failover.
+		/// </summary>
+		public void ForceReadFromMaster()
+		{
+			readStripingBase = -1;// this means that will have to use the master url first
 		}
 
 		/// <summary>

@@ -250,8 +250,16 @@ namespace Raven.Database.Server
 					databaseLastRecentlyUsed.TryRemove(db, out time);
 					return;
 				}
+				if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
+				{
+					// this document might not be actively working with user, but it is actively doing indexes, we will 
+					// wait with unloading this database until it hasn't done indexing for a while.
+					// This prevent us from shutting down big databases that have been left alone to do indexing work.
+					return;
+				}
 				try
 				{
+					
 					database.Dispose();
 				}
 				catch (Exception e)
@@ -654,7 +662,8 @@ namespace Raven.Database.Server
 
 			if (jsonDocument == null ||
 				jsonDocument.Metadata == null ||
-				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists))
+				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) || 
+				jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))
 				return false;
 
 			var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
@@ -670,15 +679,15 @@ namespace Raven.Database.Server
 
 				config.CustomizeValuesForTenant(tenantId);
 
+				var dataDir = document.Settings["Raven/DataDir"];
+				if (dataDir == null)
+					throw new InvalidOperationException("Could not find Raven/DataDir");
+				
 				foreach (var setting in document.Settings)
 				{
 					config.Settings[setting.Key] = setting.Value;
 				}
 
-
-				var dataDir = config.Settings["Raven/DataDir"];
-				if (dataDir == null)
-					throw new InvalidOperationException("Could not find Raven/DataDir");
 				if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
 				{
 					var baseDataPath = Path.GetDirectoryName(DefaultResourceStore.Configuration.DataDirectory);

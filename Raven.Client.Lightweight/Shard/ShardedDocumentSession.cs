@@ -8,6 +8,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
+using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -38,8 +39,7 @@ namespace Raven.Client.Shard
 #endif
 		private readonly ShardStrategy shardStrategy;
 		private readonly IDictionary<string, IDatabaseCommands> shardDbCommands;
-		private readonly ShardedDocumentStore documentStore;
-
+		private readonly IDictionary<string, List<ICommandData>> deferredCommandsByShard = new Dictionary<string, List<ICommandData>>();
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ShardedDocumentSession"/> class.
 		/// </summary>
@@ -56,7 +56,6 @@ namespace Raven.Client.Shard
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardDbCommands = shardDbCommands;
-			this.documentStore = documentStore;
 		}
 
 		private IList<Tuple<string,IDatabaseCommands>> GetShardsToOperateOn(ShardRequestData resultionData)
@@ -67,8 +66,6 @@ namespace Raven.Client.Shard
 
 			if (shardIds == null)
 			{
-
-
 				return cmds.Select(x => Tuple.Create(x.Key, x.Value)).ToList();
 			}
 
@@ -471,9 +468,39 @@ namespace Raven.Client.Shard
 			return new MultiLoaderWithInclude<T>(this).Include(path);
 		}
 
-		public override void Defer(params Abstractions.Commands.ICommandData[] commands)
+		public override void Defer(params ICommandData[] commands)
 		{
-			throw new NotSupportedException("You cannot defer commands using the sharded document session, because we don't know which shard to use");
+			var cmdsByShard = commands.Select(cmd =>
+			{
+				var shardsToOperateOn = GetShardsToOperateOn(new ShardRequestData
+				{
+					Key = cmd.Key
+				}).Select(x => x.Item1).ToList();
+
+				if (shardsToOperateOn.Count == 0)
+				{
+					throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Key +
+					                                    " because it matched no shards");
+				}
+
+				if (shardsToOperateOn.Count > 1)
+				{
+					throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Key +
+					                                    " because it matched multiple shards");
+
+				}
+
+				return new
+				{
+					shard = shardsToOperateOn[0],
+					cmd
+				};
+			}).GroupBy(x => x.shard);
+
+			foreach (var cmdByShard in cmdsByShard)
+			{
+				deferredCommandsByShard.GetOrAdd(cmdByShard.Key).AddRange(cmdByShard.Select(x => x.cmd));
+			}
 		}
 
 		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata)
@@ -496,14 +523,23 @@ namespace Raven.Client.Shard
 			using (EntitiesToJsonCachingScope())
 			{
 				var data = PrepareForSaveChanges();
-				if (data.Commands.Count == 0)
+				if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
 					return; // nothing to do here
 
 				IncrementRequestCount();
 				LogBatch(data);
-				
+
 				// split by shards
 				var saveChangesPerShard = new Dictionary<string, SaveChangesData>();
+
+				foreach (var deferredCommands in deferredCommandsByShard)
+				{
+					var saveChangesData = saveChangesPerShard.GetOrAdd(deferredCommands.Key);
+					saveChangesData.DeferredCommandsCount += deferredCommands.Value.Count;
+					saveChangesData.Commands.AddRange(deferredCommands.Value);
+				}
+				deferredCommandsByShard.Clear();
+
 				for (int index = 0; index < data.Entities.Count; index++)
 				{
 					var entity = data.Entities[index];

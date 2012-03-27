@@ -98,7 +98,7 @@ namespace Raven.Database.Indexing
 
 		protected override void FlushAllIndexes()
 		{
-			context.IndexStorage.FlushReduceIndexes();
+			context.IndexStorage.FlushReduceIndexes(optimize: true);
 		}
 
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
