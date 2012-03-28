@@ -26,6 +26,8 @@ namespace Raven.Studio.Features.Logs
 			ModelUrl = "/logs";
 			Logs = new BindableCollection<LogItem>(log => log.TimeStamp, new KeysComparer<LogItem>(x => x.Message));
 			DisplayedLogs = new BindableCollection<LogItem>(log => log.TimeStamp, new KeysComparer<LogItem>(x => x.Message));
+			Logs.CollectionChanged += (sender, args) => OnPropertyChanged("PendingLogs");
+			DisplayedLogs.CollectionChanged += (sender, args) => OnPropertyChanged("PendingLogs");
 		}
 
 		protected override Task LoadedTimerTickedAsync()
@@ -93,6 +95,11 @@ namespace Raven.Studio.Features.Logs
 				showErrorsOnly = value;
 				OnPropertyChanged();
 			}
+		}
+
+		public int PendingLogs
+		{
+			get { return Logs.Count - DisplayedLogs.Count; }
 		}
 
 		public override void LoadModelParameters(string parameters)
