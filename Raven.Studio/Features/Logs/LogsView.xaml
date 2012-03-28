@@ -30,9 +30,12 @@
 					<TextBlock Text="Logs"
 							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
 							   VerticalAlignment="Center" />
-					<TextBlock Text="{Binding Path=Logs.Count, StringFormat='(\{0\} Entries)'}"
-							   Margin="10,0,0,0"
+					<TextBlock Text="{Binding Path=DisplayedLogs.Count, StringFormat='(\{0\} Entries)'}"
+							   Margin="10,2,0,0"
 							   Style="{StaticResource Style_TextBlock_InlineSubHeader}" />
+					<TextBlock Text="{Binding Path=PendingLogs, StringFormat='Click refresh in order to load \{0\} more log entires'}"
+							   Visibility="{Binding PendingLogs, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}"
+							   Margin="10,5,0,0" />
 				</StackPanel>
 				<StackPanel toolkit:DockPanel.Dock="Right"
 							Orientation="Horizontal">
