@@ -306,7 +306,10 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
-		  
+			public NameValueCollection GetHeaders()
+			{
+				throw new NotSupportedException();
+			}
 		}
 	}
 

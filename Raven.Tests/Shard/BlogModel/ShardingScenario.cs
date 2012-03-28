@@ -81,15 +81,7 @@ namespace Raven.Tests.Shard.BlogModel
 
 		protected void AssertNumberOfRequests(RavenDbServer server, int numberOfRequests)
 		{
-			try
-			{
-				Assert.Equal(numberOfRequests, server.Server.NumberOfRequests);
-			}
-			catch
-			{
-				Console.WriteLine(string.Join(Environment.NewLine, server.Server.LastRequests));
-				throw;
-			}
+			Assert.Equal(numberOfRequests, server.Server.NumberOfRequests);
 		}
 
 		public void Dispose()

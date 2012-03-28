@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
+using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 
@@ -74,6 +76,11 @@ namespace Raven.Database.Server.Abstractions
 			{
 				file.CopyTo(OutputStream);
 			}
+		}
+
+		public NameValueCollection GetHeaders()
+		{
+			return response.Headers;
 		}
 
 		public void SetPublicCachability()

@@ -42,10 +42,6 @@ namespace Raven.Database.Server
 		public InMemoryRavenConfiguration DefaultConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
-#if DEBUG
-		public readonly ConcurrentQueue<string> LastRequests = new ConcurrentQueue<string>();
-#endif
-
 		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { }; 
 
 		private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
@@ -526,9 +522,9 @@ namespace Raven.Database.Server
 				requestAuthorizer.Authorize(ctx) == false)
 				return false;
 
+			Action onResponseEnd = null;
 			try
 			{
-				RecordRequest(ctx);
 				OnDispatchingRequest(ctx);
 
 				if (DefaultConfiguration.HttpCompression)
@@ -536,7 +532,10 @@ namespace Raven.Database.Server
 
 				HandleHttpCompressionFromClient(ctx);
 
-				
+				if (BeforeDispatchingRequest != null)
+				{
+					onResponseEnd = BeforeDispatchingRequest(ctx);
+				}
 
 				// Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
 				AddAccessControlHeaders(ctx);
@@ -578,20 +577,15 @@ namespace Raven.Database.Server
 				{
 					// this can happen during system shutdown
 				}
+				if (onResponseEnd != null)
+					onResponseEnd();
 			}
 			return false;
 		}
 
-		[Conditional("DEBUG")]
-		private void RecordRequest(IHttpContext ctx)
-		{
-			string result;
-			if(LastRequests.Count > 128)
-				LastRequests.TryDequeue(out result);
-			LastRequests.Enqueue(ctx.Request.RawUrl);
-		}
+		public Func<IHttpContext, Action> BeforeDispatchingRequest { get; set; }
 
-		private void HandleHttpCompressionFromClient(IHttpContext ctx)
+		private static void HandleHttpCompressionFromClient(IHttpContext ctx)
 		{
 			var encoding = ctx.Request.Headers["Content-Encoding"];
 			if (encoding == null)
