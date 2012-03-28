@@ -30,7 +30,19 @@ namespace Raven.Database.Linq.PrivateExtensions
 			return new DynamicNullObject();
 		}
 
-		 public static string Reverse(string str)
+		public static object Reverse(object o)
+		{
+			if (o == null)
+				return new DynamicNullObject();
+
+			var s = o as string;
+			if (s != null)
+				return Reverse(s);
+
+			return Reverse((IEnumerable<object>) o);
+		}
+
+		 private static string Reverse(string str)
 		 {
 		 	var stringBuilder = new StringBuilder(str.Length);
 		 	for (int i = str.Length-1; i >= 0; i--)
@@ -40,7 +52,7 @@ namespace Raven.Database.Linq.PrivateExtensions
 		 	return stringBuilder.ToString();
 		 }
 
-		 public static IEnumerable<dynamic> Reverse(IEnumerable<object> self)
+		 private static IEnumerable<dynamic> Reverse(IEnumerable<object> self)
 		 {
 // ReSharper disable InvokeAsExtensionMethod
 		 	return Enumerable.Reverse(self);

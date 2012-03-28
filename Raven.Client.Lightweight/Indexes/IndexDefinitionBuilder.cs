@@ -19,7 +19,7 @@ namespace Raven.Client.Indexes
 	/// <summary>
 	/// This class provides a way to define a strongly typed index on the client.
 	/// </summary>
-	public class IndexDefinitionBuilder<TDocument, TReduceResult> 
+	public class IndexDefinitionBuilder<TDocument, TReduceResult>
 	{
 		/// <summary>
 		/// Gets or sets the map function
@@ -36,9 +36,9 @@ namespace Raven.Client.Indexes
 		/// Gets or sets the reduce function
 		/// </summary>
 		/// <value>The reduce.</value>
-		public Expression<Func<IClientSideDatabase,IEnumerable<TReduceResult>, IEnumerable>> TransformResults { get; set; }
+		public Expression<Func<IClientSideDatabase, IEnumerable<TReduceResult>, IEnumerable>> TransformResults { get; set; }
 
-	    /// <summary>
+		/// <summary>
 		/// Gets or sets the stores options
 		/// </summary>
 		/// <value>The stores.</value>
@@ -71,15 +71,18 @@ namespace Raven.Client.Indexes
 		/// Get os set the analyzers
 		/// </summary>
 		public IDictionary<string, string> AnalyzersStrings { get; set; }
-	    /// <summary>
+		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
 		/// </summary>
 		public IndexDefinitionBuilder()
 		{
 			Stores = new Dictionary<Expression<Func<TReduceResult, object>>, FieldStorage>();
+			StoresStrings = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
+			IndexesStrings = new Dictionary<string, FieldIndexing>();
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
+			AnalyzersStrings = new Dictionary<string, string>();
 		}
 
 		/// <summary>
@@ -91,7 +94,7 @@ namespace Raven.Client.Indexes
 				throw new InvalidOperationException(
 					string.Format("Map is required to generate an index, you cannot create an index without a valid Map property (in index {0}).", GetType().Name));
 
-		    string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
+			string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs(Map.Body)) ? "docs" : "docs." + convention.GetTypeTagName(typeof(TDocument));
 			var indexDefinition = new IndexDefinition
 			{
 				Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
@@ -104,7 +107,7 @@ namespace Raven.Client.Indexes
 
 			foreach (var indexesString in IndexesStrings)
 			{
-				if(indexDefinition.Indexes.ContainsKey(indexesString.Key))
+				if (indexDefinition.Indexes.ContainsKey(indexesString.Key))
 					throw new InvalidOperationException("There is a duplicate key in indexes: " + indexesString.Key);
 				indexDefinition.Indexes.Add(indexesString);
 			}
@@ -125,22 +128,22 @@ namespace Raven.Client.Indexes
 
 			if (Map != null)
 				indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Map, convention,
-				                                                                                                     querySource,
-				                                                                                                     translateIdentityProperty
-				                                                                                                     	: true);
+																													 querySource,
+																													 translateIdentityProperty
+																														: true);
 
 			return indexDefinition;
 		}
 
 #if !NET_3_5
-	    private static bool ContainsWhereEntityIs(Expression body)
-	    {
-	        var whereEntityIsVisitor = new WhereEntityIsVisitor();
-	        whereEntityIsVisitor.Visit(body);
-	        return whereEntityIsVisitor.HasWhereEntityIs;
-	    }
+		private static bool ContainsWhereEntityIs(Expression body)
+		{
+			var whereEntityIsVisitor = new WhereEntityIsVisitor();
+			whereEntityIsVisitor.Visit(body);
+			return whereEntityIsVisitor.HasWhereEntityIs;
+		}
 
-	    private class WhereEntityIsVisitor : ExpressionVisitor
+		private class WhereEntityIsVisitor : ExpressionVisitor
 		{
 			public bool HasWhereEntityIs { get; set; }
 
