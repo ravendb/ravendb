@@ -539,6 +539,7 @@
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="Indexes\WithDecimalValue.cs" />
     <Compile Include="IndexQueryUrl.cs" />
+    <Compile Include="Issues\RavenDB_187.cs" />
     <Compile Include="Issues\RavenDB_72.cs" />
     <Compile Include="Json\CloningTests.cs" />
     <Compile Include="Json\JsonNetBugsTests.cs" />

@@ -275,6 +275,16 @@ namespace Raven.Storage.Managed
 				{
 					if (existingEtag != etag)
 					{
+						if(etag.Value == Guid.Empty)
+						{
+							RavenJObject metadata;
+							ReadMetadata(key, existingEtag, readResult.Data, out metadata);
+							if (metadata.ContainsKey(Constants.RavenDeleteMarker) && metadata.Value<bool>(Constants.RavenDeleteMarker))
+							{
+								return existingEtag;
+							}
+						}
+
 						throw new ConcurrencyException(op + " attempted on document '" + key +
 													   "' using a non current etag")
 						{
