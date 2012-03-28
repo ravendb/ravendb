@@ -31,11 +31,15 @@
 			this.menuStrip1 = new System.Windows.Forms.MenuStrip();
 			this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.clearToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.ignoreHiloToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.StartServers = new System.Windows.Forms.Button();
 			this.groupBox1 = new System.Windows.Forms.GroupBox();
 			this.NumberOfServers = new System.Windows.Forms.NumericUpDown();
 			this.label1 = new System.Windows.Forms.Label();
 			this.ServerTabs = new System.Windows.Forms.TabControl();
+			this.setupMasterMasterReplicationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.setupSlaveMasterReplicationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
 			this.menuStrip1.SuspendLayout();
 			this.groupBox1.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.NumberOfServers)).BeginInit();
@@ -54,7 +58,11 @@
 			// optionsToolStripMenuItem
 			// 
 			this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.clearToolStripMenuItem});
+            this.clearToolStripMenuItem,
+            this.toolStripMenuItem1,
+            this.ignoreHiloToolStripMenuItem,
+            this.setupMasterMasterReplicationToolStripMenuItem,
+            this.setupSlaveMasterReplicationToolStripMenuItem});
 			this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
 			this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 20);
 			this.optionsToolStripMenuItem.Text = "&Options";
@@ -62,9 +70,18 @@
 			// clearToolStripMenuItem
 			// 
 			this.clearToolStripMenuItem.Name = "clearToolStripMenuItem";
-			this.clearToolStripMenuItem.Size = new System.Drawing.Size(101, 22);
+			this.clearToolStripMenuItem.Size = new System.Drawing.Size(246, 22);
 			this.clearToolStripMenuItem.Text = "&Clear";
 			this.clearToolStripMenuItem.Click += new System.EventHandler(this.clearToolStripMenuItem_Click);
+			// 
+			// ignoreHiloToolStripMenuItem
+			// 
+			this.ignoreHiloToolStripMenuItem.Checked = true;
+			this.ignoreHiloToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+			this.ignoreHiloToolStripMenuItem.Name = "ignoreHiloToolStripMenuItem";
+			this.ignoreHiloToolStripMenuItem.Size = new System.Drawing.Size(246, 22);
+			this.ignoreHiloToolStripMenuItem.Text = "Ignore &Hilo";
+			this.ignoreHiloToolStripMenuItem.Click += new System.EventHandler(this.ignoreHiloToolStripMenuItem_Click);
 			// 
 			// StartServers
 			// 
@@ -119,6 +136,25 @@
 			this.ServerTabs.Size = new System.Drawing.Size(560, 306);
 			this.ServerTabs.TabIndex = 3;
 			// 
+			// setupMasterMasterReplicationToolStripMenuItem
+			// 
+			this.setupMasterMasterReplicationToolStripMenuItem.Name = "setupMasterMasterReplicationToolStripMenuItem";
+			this.setupMasterMasterReplicationToolStripMenuItem.Size = new System.Drawing.Size(246, 22);
+			this.setupMasterMasterReplicationToolStripMenuItem.Text = "Setup &Master/Master Replication";
+			this.setupMasterMasterReplicationToolStripMenuItem.Click += new System.EventHandler(this.setupMasterMasterReplicationToolStripMenuItem_Click);
+			// 
+			// setupSlaveMasterReplicationToolStripMenuItem
+			// 
+			this.setupSlaveMasterReplicationToolStripMenuItem.Name = "setupSlaveMasterReplicationToolStripMenuItem";
+			this.setupSlaveMasterReplicationToolStripMenuItem.Size = new System.Drawing.Size(246, 22);
+			this.setupSlaveMasterReplicationToolStripMenuItem.Text = "Setup &Slave/Master Replication";
+			this.setupSlaveMasterReplicationToolStripMenuItem.Click += new System.EventHandler(this.setupSlaveMasterReplicationToolStripMenuItem_Click);
+			// 
+			// toolStripMenuItem1
+			// 
+			this.toolStripMenuItem1.Name = "toolStripMenuItem1";
+			this.toolStripMenuItem1.Size = new System.Drawing.Size(243, 6);
+			// 
 			// Shell
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -149,6 +185,10 @@
 		private System.Windows.Forms.NumericUpDown NumberOfServers;
 		private System.Windows.Forms.Label label1;
 		private System.Windows.Forms.TabControl ServerTabs;
+		private System.Windows.Forms.ToolStripMenuItem ignoreHiloToolStripMenuItem;
+		private System.Windows.Forms.ToolStripMenuItem setupMasterMasterReplicationToolStripMenuItem;
+		private System.Windows.Forms.ToolStripMenuItem setupSlaveMasterReplicationToolStripMenuItem;
+		private System.Windows.Forms.ToolStripSeparator toolStripMenuItem1;
 
 	}
 }

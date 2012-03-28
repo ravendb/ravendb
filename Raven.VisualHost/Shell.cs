@@ -10,14 +10,18 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Database.Config;
+using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
+using Raven.Json.Linq;
 using Raven.Server;
 
 namespace Raven.VisualHost
 {
 	public partial class Shell : Form
 	{
+		private bool ignoreHilo = true;
 		readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 		public Shell()
 		{
@@ -33,7 +37,8 @@ namespace Raven.VisualHost
 				var ravenDbServer = new RavenDbServer(new RavenConfiguration
 				{
 					Port = 8079 - i,
-					RunInMemory = true
+					RunInMemory = true,
+					AnonymousUserAccessMode = AnonymousUserAccessMode.All
 				});
 
 				var serverLog = new ServerLog
@@ -65,9 +70,17 @@ namespace Raven.VisualHost
 			}
 		}
 
-		private static Action AdaptHttpContext(IHttpContext httpContext, ServerLog serverLog)
+		private readonly string[] pathsToFilter = new[]
 		{
-			if (httpContext.Request.Url.AbsolutePath == "/favicon.ico")
+			"/docs/Raven/Replication/Destinations",
+			"/favicon.ico"
+		};
+
+		private Action AdaptHttpContext(IHttpContext httpContext, ServerLog serverLog)
+		{
+			if (pathsToFilter.Contains(httpContext.Request.Url.AbsolutePath))
+				return null;
+			if (ignoreHilo && httpContext.Request.Url.AbsolutePath.StartsWith("/docs/Raven/Hilo/"))
 				return null;
 			if (httpContext.Request.Headers["Raven-Timer-Request"] != null)
 				return null;
@@ -116,6 +129,55 @@ namespace Raven.VisualHost
 				log.Clear();
 				serverLog.Text = log.Url;
 			}
+		}
+
+		private void ignoreHiloToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			((ToolStripMenuItem) sender).Checked = ignoreHilo = !ignoreHilo;
+		}
+
+		private void setupMasterMasterReplicationToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			foreach (var ravenDbServer in servers)
+			{
+				var replicationServer = servers.Where(s => s != ravenDbServer);
+
+				var doc = new RavenJObject
+				{
+					{
+						"Destinations", new RavenJArray(replicationServer.Select(s => new RavenJObject
+						{
+							{"Url", s.Database.Configuration.ServerUrl}
+						}))
+						}
+				};
+				ravenDbServer.Database.Put("Raven/Replication/Destinations", null, doc, new RavenJObject(), null);
+			}
+
+			MessageBox.Show("Setup replication between all servers (Master/Master)");
+
+		}
+
+		private void setupSlaveMasterReplicationToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			var ravenDbServer = servers.FirstOrDefault();
+			if (ravenDbServer == null)
+				return;
+
+			var replicationServer = servers.Where(s => s != ravenDbServer);
+
+			var doc = new RavenJObject
+				{
+					{
+						"Destinations", new RavenJArray(replicationServer.Select(s => new RavenJObject
+						{
+							{"Url", s.Database.Configuration.ServerUrl}
+						}))
+						}
+				};
+			ravenDbServer.Database.Put("Raven/Replication/Destinations", null, doc, new RavenJObject(), null);
+
+			MessageBox.Show("Setup replication between all servers (Master/Slave)");
 		}
 	}
 }

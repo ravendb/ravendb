@@ -9,6 +9,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Web;
 using System.Windows.Forms;
 using Newtonsoft.Json;
 using Raven.Json.Linq;
@@ -39,7 +40,16 @@ namespace Raven.VisualHost
 				{
 					EndInvoke(asyncResult);
 				}
-				RequestsLists.Items.Add(new ListViewItem(new string[] { request.Method, request.Status.ToString(), request.Url })
+				var url = request.Url;
+				var startsIndex = url.IndexOf("&start=");
+				if (startsIndex != -1)
+					url = url.Substring(0, startsIndex);
+				RequestsLists.Items.Add(new ListViewItem(new[]
+				{
+					request.Method, 
+					request.Status.ToString(), 
+					HttpUtility.UrlDecode(HttpUtility.UrlDecode(url))
+				})
 				{
 					Tag = request
 				});
@@ -54,6 +64,15 @@ namespace Raven.VisualHost
 				return;
 			}
 			var trackedRequest = ((TrackedRequest)RequestsLists.SelectedItems[0].Tag);
+
+			if(trackedRequest.Method == "GET" || trackedRequest.Method == "DELETE")
+			{
+				this.tabControl1.SelectedTab = ResponseTextTab;
+			}
+			else
+			{
+				this.tabControl1.SelectedTab = RequestTextTab;
+			}
 
 			RequestText.Text = GetRequestText(trackedRequest);
 			ResponseText.Text = GetResponseText(trackedRequest);
@@ -86,7 +105,7 @@ namespace Raven.VisualHost
 		{
 			stream.Position = 0;
 
-			if(headers["Content-Type"] == "application/json; charset=utf-8")
+			if(headers["Content-Type"] == "application/json; charset=utf-8" && stream.Length > 0)
 			{
 				var t = RavenJToken.Load(new JsonTextReader(new StreamReader(stream)));
 				requestStringBuilder.Append(t.ToString(Formatting.Indented));
@@ -123,6 +142,15 @@ namespace Raven.VisualHost
 			Reset();
 			RequestsLists.Items.Clear();
 			NumOfRequests = 0;
+		}
+
+		private void KillServer_Click(object sender, EventArgs e)
+		{
+			Server.Dispose();
+			foreach (Control control in Controls)
+			{
+				control.BackColor =Color.DarkRed;
+			}
 		}
 	}
 }
