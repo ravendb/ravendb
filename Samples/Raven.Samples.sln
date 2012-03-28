@@ -51,6 +51,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Raven.Client.Lightweight.FS
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Raven.Sample.FSharp", "Raven.Sample.FSharp\Raven.Sample.FSharp.fsproj", "{33A1012F-409E-4CB4-97F3-F25E27BA7B61}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.ReplicationComplex", "Raven.Sample.ReplicationComplex\Raven.Sample.ReplicationComplex.csproj", "{7A1461CE-DCCA-47EC-9E9A-199872DFD38A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -281,6 +283,16 @@ Global
 		{33A1012F-409E-4CB4-97F3-F25E27BA7B61}.Release|Mixed Platforms.Build.0 = Release|x86
 		{33A1012F-409E-4CB4-97F3-F25E27BA7B61}.Release|x86.ActiveCfg = Release|x86
 		{33A1012F-409E-4CB4-97F3-F25E27BA7B61}.Release|x86.Build.0 = Release|x86
+		{7A1461CE-DCCA-47EC-9E9A-199872DFD38A}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{7A1461CE-DCCA-47EC-9E9A-199872DFD38A}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{7A1461CE-DCCA-47EC-9E9A-199872DFD38A}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{7A1461CE-DCCA-47EC-9E9A-199872DFD38A}.Debug|x86.ActiveCfg = Debug|x86
+		{7A1461CE-DCCA-47EC-9E9A-199872DFD38A}.Debug|x86.Build.0 = Debug|x86
+		{7A1461CE-DCCA-47EC-9E9A-199872DFD38A}.Release|Any CPU.ActiveCfg = Release|x86
+		{7A1461CE-DCCA-47EC-9E9A-199872DFD38A}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{7A1461CE-DCCA-47EC-9E9A-199872DFD38A}.Release|Mixed Platforms.Build.0 = Release|x86
+		{7A1461CE-DCCA-47EC-9E9A-199872DFD38A}.Release|x86.ActiveCfg = Release|x86
+		{7A1461CE-DCCA-47EC-9E9A-199872DFD38A}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
