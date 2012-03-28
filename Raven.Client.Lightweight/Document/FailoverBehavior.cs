@@ -53,6 +53,6 @@ namespace Raven.Client.Document
 		/// Note that using this means that you cannot set UserOptimisticConcurrency to true, because that would generate concurrency exceptions.
 		/// If you want to use that, you have to open the session with ForceReadFromMaster set to true.
 		/// </remarks>
-		ReadFromAllServers = 1024,
+		ReadFromAllServers = (1 | 1024),
 	}
 }
