@@ -101,6 +101,8 @@ namespace Raven.Database.Indexing
 		{
 			lock (waitForWork)
 			{
+				if (doWork == false)
+					return;
 				var increment = Interlocked.Increment(ref workCounter);
 				if (log.IsDebugEnabled)
 				{
