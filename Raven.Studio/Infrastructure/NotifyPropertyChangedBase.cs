@@ -1,6 +1,8 @@
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -19,7 +21,7 @@ namespace Raven.Studio.Infrastructure
 				EventState firstOrDefault = PropertyChangedInternal.GetInvocationList()
 					.Select(x => ((EventState) x.Target))
 					.FirstOrDefault(x => x.Value == value);
-				
+
 				if (firstOrDefault == null)
 					return;
 
@@ -51,15 +53,13 @@ namespace Raven.Studio.Infrastructure
 			handler(this, new PropertyChangedEventArgs(""));
 		}
 
-		protected void OnPropertyChanged()
+		protected void OnPropertyChanged<T>(Expression<Func<T>> path)
 		{
-			var stackTrace = new StackTrace();
-			var name = stackTrace.GetFrame(1).GetMethod().Name.Substring(4);
-
-			OnPropertyChanged(name);
+			var member = (MemberExpression) path.Body;
+			OnPropertyChanged(member.Member.Name);
 		}
 
-		protected void OnPropertyChanged(string name)
+		private void OnPropertyChanged(string name)
 		{
 			var handler = PropertyChangedInternal;
 			if (handler == null)

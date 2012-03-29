@@ -23,8 +23,8 @@ namespace Raven.Studio.Models
 			                                {
 												if (((Observable<long?>)sender).Value == TotalResults.Value) 
 													return;
-			                                	OnPropertyChanged("TotalPages");
-			                                	OnPropertyChanged("HasNextPage");
+			                                	OnPropertyChanged(() => TotalPages);
+												OnPropertyChanged(() => HasNextPage);
 			                                };
 		}
 
@@ -35,9 +35,9 @@ namespace Raven.Studio.Models
 			set
 			{
 				pageSize = value;
-				OnPropertyChanged();
-				OnPropertyChanged("CurrentPage");
-				OnPropertyChanged("TotalPages");
+				OnPropertyChanged(() => PageSize);
+				OnPropertyChanged(() => CurrentPage);
+				OnPropertyChanged(() => TotalPages);
 			}
 		}
 
@@ -79,9 +79,9 @@ namespace Raven.Studio.Models
 			set
 			{
 				skip = Math.Max((short) 0, value);
-				OnPropertyChanged();
-				OnPropertyChanged("CurrentPage");
-				OnPropertyChanged("HasPrevPage");
+				OnPropertyChanged(() => Skip);
+				OnPropertyChanged(() => CurrentPage);
+				OnPropertyChanged(() => HasPrevPage);
 			}
 		}
 
