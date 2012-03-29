@@ -18,7 +18,7 @@ namespace Raven.Bundles.Expiration
 	public class ExpiredDocumentsCleaner : IStartupTask, IDisposable
 	{
 		public const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";
-		private Logger logger = LogManager.GetCurrentClassLogger();
+		private readonly Logger logger = LogManager.GetCurrentClassLogger();
 		private Timer timer;
 		public DocumentDatabase Database { get; set; }
 
