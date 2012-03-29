@@ -16,7 +16,16 @@ namespace Raven.Abstractions.Data
 		public bool EnlistInDistributedTransactions { get; set; }
 		public string DefaultDatabase { get; set; }
 		public Guid ResourceManagerId { get; set; }
-		public string Url { get; set; }
+		private string url;
+		public string Url
+		{
+			get { return url; }
+			set
+			{
+				url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
+			}
+		}
+
 		public string ApiKey { get; set; }
 
 		internal string CurrentOAuthToken { get; set; }

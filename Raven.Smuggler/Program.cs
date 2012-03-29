@@ -81,9 +81,10 @@ namespace Raven.Smuggler
 
 			var url = args[1];
 			if (url == null)
+			{
 				PrintUsageAndExit(-1);
-			if (url.EndsWith("/") == false)
-				url += "/";
+				return;
+			}
 			connectionStringOptions.Url = url;
 
 			options.File = args[2];

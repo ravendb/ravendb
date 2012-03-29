@@ -518,7 +518,7 @@ namespace Raven.Client.Document
 			var key = Url;
 			if(string.IsNullOrEmpty(dbName)==false)
 			{
-				key = MultiDatabase.GetRootDatabaseUrl(Url) + "databases/" + dbName;
+				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
 			}
 			return replicationInformers.GetOrAddAtomically(key, s => new ReplicationInformer(Conventions));
 		}

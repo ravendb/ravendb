@@ -43,8 +43,8 @@ namespace Raven.Client.Extensions
 			var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
 			if (indexOfDatabases != -1)
 				databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
-			if (databaseUrl.EndsWith("/") == false)
-				databaseUrl += "/";
+			if (databaseUrl.EndsWith("/"))
+				return databaseUrl.Substring(0, databaseUrl.Length - 1);
 			return databaseUrl;
 		}
 	}

@@ -409,6 +409,7 @@ namespace Raven.Database
 
 		public JsonDocument Get(string key, TransactionInformation transactionInformation)
 		{
+			key = key.Trim();
 			JsonDocument document = null;
 			TransactionalStorage.Batch(actions =>
 			{
@@ -422,6 +423,7 @@ namespace Raven.Database
 
 		public JsonDocumentMetadata GetDocumentMetadata(string key, TransactionInformation transactionInformation)
 		{
+			key = key.Trim();
 			JsonDocumentMetadata document = null;
 			TransactionalStorage.Batch(actions =>
 			{
@@ -441,6 +443,7 @@ namespace Raven.Database
 				// that the key is no longer sequential
 				key = Guid.NewGuid().ToString();
 			}
+			key = key.Trim();
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;
@@ -483,8 +486,8 @@ namespace Raven.Database
 
 		private long GetNextIdentityValueWithoutOverritingOnExistingDocuments(string key, IStorageActionsAccessor actions, TransactionInformation transactionInformation)
 		{
+			key = key.Trim();
 			long nextIdentityValue;
-
 			do
 			{
 				nextIdentityValue = actions.General.GetNextIdentityValue(key);
@@ -547,6 +550,8 @@ namespace Raven.Database
 
 		public bool Delete(string key, Guid? etag, TransactionInformation transactionInformation)
 		{
+			key = key.Trim();
+			
 			var deleted = false;
 			log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
 			TransactionalStorage.Batch(actions =>
@@ -698,6 +703,8 @@ namespace Raven.Database
 		[MethodImpl(MethodImplOptions.Synchronized)]
 		public string PutIndex(string name, IndexDefinition definition)
 		{
+			name = name.Trim();
+			
 			switch (FindIndexCreationOptions(definition, ref name))
 			{
 				case IndexCreationOptions.Noop:
@@ -866,6 +873,7 @@ namespace Raven.Database
 
 		public Attachment GetStatic(string name)
 		{
+			name = name.Trim();
 			Attachment attachment = null;
 			TransactionalStorage.Batch(actions =>
 			{
@@ -936,6 +944,8 @@ namespace Raven.Database
 		public void PutStatic(string name, Guid? etag, Stream data, RavenJObject metadata)
 		{
 			if (name == null) throw new ArgumentNullException("name");
+			name = name.Trim();
+			
 			if (Encoding.Unicode.GetByteCount(name) >= 255)
 				throw new ArgumentException("The key must be a maximum of 255 bytes in Unicode, 127 characters", "name");
 
@@ -960,6 +970,7 @@ namespace Raven.Database
 
 		public void DeleteStatic(string name, Guid? etag)
 		{
+			name = name.Trim(); 
 			TransactionalStorage.Batch(actions =>
 			{
 				AssertAttachmentDeleteOperationNotVetoed(name);
@@ -981,6 +992,7 @@ namespace Raven.Database
 
 		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, int start, int pageSize)
 		{
+			idPrefix = idPrefix.Trim(); 
 			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
@@ -1068,6 +1080,7 @@ namespace Raven.Database
 
 		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)
 		{
+			docId = docId.Trim();
 			var result = PatchResult.Patched;
 			bool shouldRetry = false;
 			int retries = 128;

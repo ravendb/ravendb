@@ -11,7 +11,12 @@ namespace Raven.Database.Server.Abstractions
 	{
 		public static string GetRequestUrl(this IHttpContext context)
 		{
-			string localPath = context.Request.Url.LocalPath;
+			string localPath = context.Request.RawUrl;
+			var indexOfQuery = localPath.IndexOf('?');
+			if (indexOfQuery != -1)
+				localPath = localPath.Substring(0, indexOfQuery);
+			if (localPath.StartsWith("//"))
+				localPath = localPath.Substring(1);
 			if (context.Configuration.VirtualDirectory != "/" &&
 				localPath.StartsWith(context.Configuration.VirtualDirectory, StringComparison.InvariantCultureIgnoreCase))
 			{
