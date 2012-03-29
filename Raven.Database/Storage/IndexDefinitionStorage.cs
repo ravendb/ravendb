@@ -106,6 +106,7 @@ namespace Raven.Database.Storage
 						indexDefinition.Name = MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index));
 					ResolveAnalyzers(indexDefinition);
 					AddAndCompileIndex(indexDefinition);
+					AddIndex(indexDefinition.Name, indexDefinition);
 				}
 				catch (Exception e)
 				{
@@ -209,12 +210,7 @@ namespace Raven.Database.Storage
 		{
 			if (indexCache.ContainsKey(indexDef.Name))
 			{
-				var indexDefinition = GetIndexDefinition(indexDef.Name);
-				if(indexDefinition == null)
-				{
-					
-				}
-				return indexDefinition.Equals(indexDef)
+				return GetIndexDefinition(indexDef.Name).Equals(indexDef)
 					? IndexCreationOptions.Noop
 					: IndexCreationOptions.Update;
 			}
