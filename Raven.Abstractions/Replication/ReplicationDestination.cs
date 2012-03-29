@@ -17,11 +17,20 @@ namespace Raven.Abstractions.Replication
 		/// </summary>
 		public string ConnectionStringName { get; set; }
 
+		private string url;
+
 		/// <summary>
 		/// Gets or sets the URL of the replication destination
 		/// </summary>
 		/// <value>The URL.</value>
-		public string Url { get; set; }
+		public string Url
+		{
+			get { return url; }
+			set 
+			{
+				url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
+			}
+		}
 
 		/// <summary>
 		/// The replication server username to use
