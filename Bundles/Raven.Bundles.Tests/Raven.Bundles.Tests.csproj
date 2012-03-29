@@ -93,6 +93,7 @@
     <Compile Include="Replication\ReplicationBase.cs" />
     <Compile Include="Replication\SimpleReplication.cs" />
     <Compile Include="Replication\WritesDuringFailover.cs" />
+    <Compile Include="UniqueConstraints\Bugs\Lars.cs" />
     <Compile Include="UniqueConstraints\CreateTests.cs" />
     <Compile Include="UniqueConstraints\DeleteTests.cs" />
     <Compile Include="UniqueConstraints\UniqueConstraintsTest.cs" />

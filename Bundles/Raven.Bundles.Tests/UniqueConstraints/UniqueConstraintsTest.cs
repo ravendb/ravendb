@@ -11,8 +11,7 @@
 	{
 		protected UniqueConstraintsTest()
 		{
-			this.DocumentStore = new EmbeddableDocumentStore();
-			this.DocumentStore.RunInMemory = true;
+			this.DocumentStore = new EmbeddableDocumentStore {RunInMemory = true};
 			this.DocumentStore.Configuration.PluginsDirectory = Path.GetDirectoryName(typeof(UniqueConstraintsPutTrigger).Assembly.Location);
 			this.DocumentStore.RegisterListener(new UniqueConstraintsStoreListener());
 

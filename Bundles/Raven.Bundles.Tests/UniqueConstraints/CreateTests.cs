@@ -1,4 +1,5 @@
-﻿namespace Raven.Bundles.Tests.UniqueConstraints
+﻿extern alias database;
+namespace Raven.Bundles.Tests.UniqueConstraints
 {
 	using System;
 
@@ -66,25 +67,45 @@
 			}
 		}
 
-		/* Can't run this test because it doesn't compile for some reason
 		[Fact]
 		public void Will_veto_on_same_constraint()
 		{
 			var user = new User { Email = "foo@bar.com", Name = "Khan" };
 			var sameEmailUser = new User { Email = "foo@bar.com", Name = "James" };
 
-			
-			Assert.Throws<OperationVetoedException>(
+			using (var session = DocumentStore.OpenSession())
+			{
+				session.Store(user);
+				session.SaveChanges();
+			}
+
+			Assert.Throws<database::Raven.Database.Exceptions.OperationVetoedException>(
 				() =>
 					{
 						using (var session = DocumentStore.OpenSession())
 						{
-							session.Store(user);
 							session.Store(sameEmailUser);
 							session.SaveChanges();
 						}
 					});
 		}
-		 * */
+
+		[Fact]
+		public void Will_veto_on_same_constraint_same_tx()
+		{
+			var user = new User { Email = "foo@bar.com", Name = "Khan" };
+			var sameEmailUser = new User { Email = "foo@bar.com", Name = "James" };
+
+			Assert.Throws<database::Raven.Database.Exceptions.OperationVetoedException>(
+				() =>
+				{
+					using (var session = DocumentStore.OpenSession())
+					{
+						session.Store(user);
+						session.Store(sameEmailUser);
+						session.SaveChanges();
+					}
+				});
+		}
 	}
 }
