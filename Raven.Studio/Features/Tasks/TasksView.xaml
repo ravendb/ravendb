@@ -1,16 +1,16 @@
-﻿<navigation:Page xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-				 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-				 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-				 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-				 xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
-				 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-				 xmlns:Tasks="clr-namespace:Raven.Studio.Features.Tasks"
-				 x:Class="Raven.Studio.Features.Tasks.TasksView"
-				 mc:Ignorable="d"
-				 d:DesignWidth="640"
-				 d:DesignHeight="480"
-				 Title="Tasks"
-				 DataContext="{Binding Path=Server.Value.SelectedDatabase.Value}">
+﻿<sdk:Page x:Class="Raven.Studio.Features.Tasks.TasksView"
+		  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+		  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+		  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		  xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+		  xmlns:Tasks="clr-namespace:Raven.Studio.Features.Tasks"
+		  xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+		  mc:Ignorable="d"
+		  d:DesignWidth="640"
+		  d:DesignHeight="480"
+		  Title="Tasks"
+		  DataContext="{Binding Path=Server.Value.SelectedDatabase.Value}">
 
 	<Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
@@ -48,4 +48,4 @@
 		</toolkit:DockPanel>
 		<Tasks:TaskView  Grid.Row="1"/>
 	</Grid>
-</navigation:Page>
+</sdk:Page>

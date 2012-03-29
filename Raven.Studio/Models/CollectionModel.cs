@@ -16,14 +16,14 @@ namespace Raven.Studio.Models
 		public string Name
 		{
 			get { return name; }
-			set { name = value; OnPropertyChanged();}
+			set { name = value; OnPropertyChanged(() => Name);}
 		}
 
 		private int count;
 		public int Count
 		{
 			get { return count; }
-			set { count = value; OnPropertyChanged();}
+			set { count = value; OnPropertyChanged(() => Count);}
 		}
 	}
 }

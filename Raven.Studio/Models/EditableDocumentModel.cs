@@ -113,10 +113,10 @@ namespace Raven.Studio.Models
 			set
 			{
 				neighborIds = value;
-				OnPropertyChanged();
-				OnPropertyChanged("CurrentIndexDisplay");
-				OnPropertyChanged("PrevDocument");
-				OnPropertyChanged("NextDocument");
+				OnPropertyChanged(() => NeighborIds);
+				OnPropertyChanged(() => CurrentIndexDisplay);
+				OnPropertyChanged(() => PrevDocument);
+				OnPropertyChanged(() => NextDocument);
 			}
 		}
 
@@ -219,7 +219,7 @@ namespace Raven.Studio.Models
 																	   return x.Value.Value<string>();
 																   return x.Value.ToString(Formatting.None);
 															   });
-			OnPropertyChanged("Metadata");
+			OnPropertyChanged(() => Metadata);
 			JsonMetadata = metadataAsJson.ToString(Formatting.Indented);
 		}
 
@@ -233,7 +233,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				searchEnabled = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => SearchEnabled);
 			}
 		}
 
@@ -244,10 +244,10 @@ namespace Raven.Studio.Models
 			set
 			{
 				localId = value;
-				OnPropertyChanged();
-				OnPropertyChanged("CurrentIndexDisplay");
-				OnPropertyChanged("PrevDocument");
-				OnPropertyChanged("NextDocument");
+				OnPropertyChanged(() => LocalId);
+				OnPropertyChanged(() => CurrentIndexDisplay);
+				OnPropertyChanged(() => PrevDocument);
+				OnPropertyChanged(() => NextDocument);
 			}
 		}
 
@@ -278,8 +278,8 @@ namespace Raven.Studio.Models
 			set
 			{
 				jsonMetadata = value;
-				OnPropertyChanged();
-				OnPropertyChanged("DocumentSize");
+				OnPropertyChanged(() => JsonMetadata);
+				OnPropertyChanged(() => DocumentSize);
 			}
 		}
 
@@ -290,8 +290,8 @@ namespace Raven.Studio.Models
 			set
 			{
 				mode = value;
-				OnPropertyChanged();
-				OnPropertyChanged("DisplayId");
+				OnPropertyChanged(() => Mode);
+				OnPropertyChanged(() => DisplayId);
 			}
 		}
 
@@ -302,8 +302,8 @@ namespace Raven.Studio.Models
 			{
 				jsonData = value;
 				UpdateReferences();
-				OnPropertyChanged();
-				OnPropertyChanged("DocumentSize");
+				OnPropertyChanged(() => JsonData);
+				OnPropertyChanged(() => DocumentSize);
 			}
 		}
 
@@ -397,7 +397,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				document.Value.Key = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Key);
 			}
 		}
 
@@ -417,8 +417,8 @@ namespace Raven.Studio.Models
 			set
 			{
 				document.Value.Etag = value;
-				OnPropertyChanged();
-				OnPropertyChanged("Metadata");
+				OnPropertyChanged(() => Etag);
+				OnPropertyChanged(() => Metadata);
 			}
 		}
 
@@ -428,8 +428,8 @@ namespace Raven.Studio.Models
 			set
 			{
 				document.Value.LastModified = value;
-				OnPropertyChanged();
-				OnPropertyChanged("Metadata");
+				OnPropertyChanged(() => LastModified);
+				OnPropertyChanged(() => Metadata);
 			}
 		}
 

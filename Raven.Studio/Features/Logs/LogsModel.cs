@@ -26,8 +26,8 @@ namespace Raven.Studio.Features.Logs
 			ModelUrl = "/logs";
 			Logs = new BindableCollection<LogItem>(log => log.TimeStamp, new KeysComparer<LogItem>(x => x.Message));
 			DisplayedLogs = new BindableCollection<LogItem>(log => log.TimeStamp, new KeysComparer<LogItem>(x => x.Message));
-			Logs.CollectionChanged += (sender, args) => OnPropertyChanged("PendingLogs");
-			DisplayedLogs.CollectionChanged += (sender, args) => OnPropertyChanged("PendingLogs");
+			Logs.CollectionChanged += (sender, args) => OnPropertyChanged(() => PendingLogs);
+			DisplayedLogs.CollectionChanged += (sender, args) => OnPropertyChanged(() => PendingLogs);
 		}
 
 		protected override Task LoadedTimerTickedAsync()
@@ -71,7 +71,7 @@ namespace Raven.Studio.Features.Logs
 			set
 			{
 				isLogsEnabled = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => IsLogsEnabled);
 			}
 		}
 
@@ -82,7 +82,7 @@ namespace Raven.Studio.Features.Logs
 			set
 			{
 				enablingLogsInstructions = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => EnablingLogsInstructions);
 			}
 		}
 
@@ -93,7 +93,7 @@ namespace Raven.Studio.Features.Logs
 			set
 			{
 				showErrorsOnly = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => ShowErrorsOnly);
 			}
 		}
 

@@ -29,7 +29,7 @@ namespace Raven.Studio.Models
 			Fields = new BindableCollection<FieldProperties>(field => field.Name);
 
 			statistics = Database.Value.Statistics;
-			statistics.PropertyChanged += (sender, args) => OnPropertyChanged("ErrorsCount");
+			statistics.PropertyChanged += (sender, args) => OnPropertyChanged(() => ErrorsCount);
 		}
 
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
@@ -138,7 +138,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				index.Name = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Name);
 			}
 		}
 
@@ -154,7 +154,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				header = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Header);
 			}
 		}
 
@@ -165,7 +165,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				showReduce = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => ShowReduce);
 			}
 		}
 
@@ -175,7 +175,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				index.Reduce = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Reduce);
 			}
 		}
 
@@ -186,7 +186,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				showTransformResults = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => ShowTransformResults);
 			}
 		}
 
@@ -196,7 +196,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				index.TransformResults = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => TransformResults);
 			}
 		}
 

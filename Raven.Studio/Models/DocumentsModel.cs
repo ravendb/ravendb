@@ -82,7 +82,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				header = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Header);
 			}
 		}
 
@@ -93,7 +93,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				isLoadingDocuments = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => IsLoadingDocuments);
 			}
 		}
 	}
