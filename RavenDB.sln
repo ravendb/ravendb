@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.VisualHost", "Raven.V
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Web", "Raven.Web\Raven.Web.csproj", "{F49C2ED0-1844-44B4-A595-5FD152853B9C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.StressTests", "Raven.StressTests\Raven.StressTests.csproj", "{005A5143-4E38-424B-A2D1-25EF88DA05CB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -203,6 +205,16 @@ Global
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|x86.ActiveCfg = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

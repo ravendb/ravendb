@@ -129,7 +129,7 @@ namespace Raven.Database.Storage
 			get { return path; }
 		}
 
-		public string AddIndex(IndexDefinition indexDefinition)
+		public string CreateAndPersistIndex(IndexDefinition indexDefinition)
 		{
 			var transformer = AddAndCompileIndex(indexDefinition);
 			if (configuration.RunInMemory == false)
@@ -148,15 +148,20 @@ namespace Raven.Database.Storage
 			var transformer = new DynamicViewCompiler(name, indexDefinition, extensions, path, configuration);
 			var generator = transformer.GenerateInstance();
 			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
-			indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) =>
-			{
-				if (definition.IsCompiled)
-					throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
-				return indexDefinition;
-			});
+			
 			logger.Info("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
 							  transformer.CompiledQueryText);
 			return transformer;
+		}
+
+		public void AddIndex(string name, IndexDefinition definition)
+		{
+			indexDefinitions.AddOrUpdate(name, definition, (s1, def) =>
+			{
+				if (def.IsCompiled)
+					throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
+				return definition;
+			});
 		}
 
 		public void RemoveIndex(string name)
@@ -204,7 +209,12 @@ namespace Raven.Database.Storage
 		{
 			if (indexCache.ContainsKey(indexDef.Name))
 			{
-				return GetIndexDefinition(indexDef.Name).Equals(indexDef)
+				var indexDefinition = GetIndexDefinition(indexDef.Name);
+				if(indexDefinition == null)
+				{
+					
+				}
+				return indexDefinition.Equals(indexDef)
 					? IndexCreationOptions.Noop
 					: IndexCreationOptions.Update;
 			}
@@ -254,5 +264,7 @@ namespace Raven.Database.Storage
 				indexDefinition.Analyzers[a.Key] = "Lucene.Net.Analysis." + a.Value;
 			}
 		}
+
+		
 	}
 }

@@ -715,14 +715,22 @@ namespace Raven.Database
 					DeleteIndex(name);
 					break;
 			}
+
+			// this has to happen in this fashion so we will expose the in memory status after the commit, but 
+			// before the rest of the world is notified about this.
+			IndexDefinitionStorage.CreateAndPersistIndex(definition);
+			IndexStorage.CreateIndexImplementation(definition);
+			
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.Indexing.AddIndex(name, definition.IsMapReduce);
 				workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
 			});
 
-			IndexStorage.CreateIndexImplementation(definition);
-			IndexDefinitionStorage.AddIndex(definition);
+			// The act of adding it here make it visible to other threads
+			// we have to do it in this way so first we prepare all the elements of the 
+			// index, then we add it to the storage in a way that make it public
+			IndexDefinitionStorage.AddIndex(name, definition);
 			
 			workContext.ClearErrorsFor(name);
 			return name;
