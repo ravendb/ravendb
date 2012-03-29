@@ -715,13 +715,15 @@ namespace Raven.Database
 					DeleteIndex(name);
 					break;
 			}
-			IndexDefinitionStorage.AddIndex(definition);
-			IndexStorage.CreateIndexImplementation(definition);
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.Indexing.AddIndex(name, definition.IsMapReduce);
 				workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
 			});
+
+			IndexStorage.CreateIndexImplementation(definition);
+			IndexDefinitionStorage.AddIndex(definition);
+			
 			workContext.ClearErrorsFor(name);
 			return name;
 		}
