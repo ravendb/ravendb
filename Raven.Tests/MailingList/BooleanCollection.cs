@@ -60,14 +60,14 @@ namespace Raven.Tests.MailingList
 					Id = "messages/1",
 					From = "Paul",
 					Recipients = new List<Message.Recipient>()
-                                                   {
-                                                       new Message.Recipient()
-                                                           {
-                                                               To = "Joe",
-                                                               HasRead = true,
-                                                               HasReadInt = 1
-                                                           }
-                                                   }
+												   {
+													   new Message.Recipient()
+														   {
+															   To = "Joe",
+															   HasRead = true,
+															   HasReadInt = 1
+														   }
+												   }
 				};
 				session.Store(msg);
 				session.SaveChanges();

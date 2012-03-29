@@ -93,16 +93,16 @@ namespace Raven.Tests.Issues
 
 			var users = new List<User>();
 			users.AddRange(new[]
-                               {
-                                   new User {Id = null, DisplayName = "Fred Smith"},
-                                   new User {Id = null, DisplayName = "Jane Doe"},
-                                   new User {Id = null, DisplayName = "John Doe"},
-                                   new User {Id = null, DisplayName = "Pure Krome"},
-                                   new User {Id = null, DisplayName = "Ayende Rahien"},
-                                   new User {Id = null, DisplayName = "Itamar Syn-Hershko"},
-                                   new User {Id = null, DisplayName = "Oren Eini"},
-                                   new User {Id = null, DisplayName = null} // <--- Assume this is an option field....
-                               });
+							   {
+								   new User {Id = null, DisplayName = "Fred Smith"},
+								   new User {Id = null, DisplayName = "Jane Doe"},
+								   new User {Id = null, DisplayName = "John Doe"},
+								   new User {Id = null, DisplayName = "Pure Krome"},
+								   new User {Id = null, DisplayName = "Ayende Rahien"},
+								   new User {Id = null, DisplayName = "Itamar Syn-Hershko"},
+								   new User {Id = null, DisplayName = "Oren Eini"},
+								   new User {Id = null, DisplayName = null} // <--- Assume this is an option field....
+							   });
 			using (IDocumentSession documentSession = documentStore.OpenSession())
 			{
 				foreach (User user in users)
