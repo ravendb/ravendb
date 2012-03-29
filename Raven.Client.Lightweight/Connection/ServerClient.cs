@@ -970,9 +970,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		public IDatabaseCommands ForDatabase(string database)
 		{
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
+			databaseUrl = databaseUrl + "/databases/" + database;
 			if (databaseUrl == Url)
 				return this;
-			databaseUrl = databaseUrl + "databases/" + database;
 			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId)
 			       {
 			       	OperationsHeaders = OperationsHeaders

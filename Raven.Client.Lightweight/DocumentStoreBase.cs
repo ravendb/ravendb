@@ -85,10 +85,16 @@ namespace Raven.Client
 			set { conventions = value; }
 		}
 
+		private string url;
+
 		/// <summary>
 		/// Gets or sets the URL.
 		/// </summary>
-		public virtual string Url { get; set; }
+		public virtual string Url
+		{
+			get { return url; }
+			set { url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value; }
+		}
 
 		///<summary>
 		/// Whatever or not we will automatically enlist in distributed transactions

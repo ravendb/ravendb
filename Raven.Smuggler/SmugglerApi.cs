@@ -89,7 +89,7 @@ namespace Raven.Smuggler
 			while (true)
 			{
 				RavenJArray indexes = null;
-				var request = CreateRequest("indexes?pageSize=128&start=" + totalCount);
+				var request = CreateRequest("/indexes?pageSize=128&start=" + totalCount);
 				request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)));
 
 				if (indexes.Length == 0)
@@ -113,7 +113,7 @@ namespace Raven.Smuggler
 			while (true)
 			{
 				RavenJArray documents = null;
-				var request = CreateRequest("docs?pageSize=128&etag=" + lastEtag);
+				var request = CreateRequest("/docs?pageSize=128&etag=" + lastEtag);
 				request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
 
 				if (documents.Length == 0)
@@ -138,7 +138,7 @@ namespace Raven.Smuggler
 			while (true)
 			{
 				RavenJArray attachmentInfo = null;
-				var request = CreateRequest("static/?pageSize=128&etag=" + lastEtag);
+				var request = CreateRequest("/static/?pageSize=128&etag=" + lastEtag);
 				request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)));
 
 				if (attachmentInfo.Length == 0)
@@ -154,7 +154,7 @@ namespace Raven.Smuggler
 					Console.WriteLine("Downloading attachment: {0}", item.Value<string>("Key"));
 
 					byte[] attachmentData = null;
-					var requestData = CreateRequest("static/" + item.Value<string>("Key"));
+					var requestData = CreateRequest("/static/" + item.Value<string>("Key"));
 					requestData.ExecuteRequest(reader => attachmentData = reader.ReadData());
 
 					new RavenJObject
@@ -230,7 +230,7 @@ namespace Raven.Smuggler
 				if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
 					continue;
 
-				var request = CreateRequest("indexes/" + indexName, "PUT");
+				var request = CreateRequest("/indexes/" + indexName, "PUT");
 				request.Write(index.Value<RavenJObject>("definition"));
 				request.ExecuteRequest();
 			}
@@ -287,7 +287,7 @@ namespace Raven.Smuggler
 					}.Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
 				Console.WriteLine("Importing attachment {0}", attachmentExportInfo.Key);
 
-				var request = CreateRequest("static/" + attachmentExportInfo.Key, "PUT");
+				var request = CreateRequest("/static/" + attachmentExportInfo.Key, "PUT");
 				if (attachmentExportInfo.Metadata != null)
 				{
 					foreach (var header in attachmentExportInfo.Metadata)
@@ -336,7 +336,7 @@ namespace Raven.Smuggler
 							    });
 			}
 				
-			var request = CreateRequest("bulk_docs", "POST");
+			var request = CreateRequest("/bulk_docs", "POST");
 			request.Write(commands);
 			request.ExecuteRequest();
 

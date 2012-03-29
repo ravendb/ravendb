@@ -261,7 +261,7 @@ namespace Raven.Client.Connection.Async
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
-			databaseUrl = databaseUrl + "databases/" + database + "/";
+			databaseUrl = databaseUrl + "/databases/" + database + "/";
 			if (databaseUrl == url)
 				return this;
 			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId)
