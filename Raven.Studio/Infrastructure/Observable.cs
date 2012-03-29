@@ -36,7 +36,7 @@ namespace Raven.Studio.Infrastructure
 			set
 			{
 				this.value = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Value);
 				var onActions = actions;
 				actions = null;
 				if (onActions == null) 

@@ -73,7 +73,7 @@ namespace Raven.Studio.Models
 		public bool IsGeneratingSampleData
 		{
 			get { return isGeneratingSampleData; }
-			set { isGeneratingSampleData = value; OnPropertyChanged(); }
+			set { isGeneratingSampleData = value; OnPropertyChanged(() => IsGeneratingSampleData); }
 		}
 
 		#region Commands

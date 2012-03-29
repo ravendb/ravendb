@@ -33,8 +33,8 @@ namespace Raven.Tests
 			{
 				store.ParseConnectionString("Url=http://localhost:8079/;");
 
-				Assert.Equal("http://localhost:8079/", store.Url);
-				Assert.Equal("http://localhost:8079/", store.Identifier);
+				Assert.Equal("http://localhost:8079", store.Url);
+				Assert.Equal("http://localhost:8079", store.Identifier);
 				Assert.NotNull(store.ResourceManagerId);
 				Assert.NotNull(store.Credentials);
 				Assert.Null(store.DefaultDatabase);
@@ -74,8 +74,8 @@ namespace Raven.Tests
 			{
 				store.ParseConnectionString("Url=http://localhost:8079/;ResourceManagerId=d5723e19-92ad-4531-adad-8611e6e05c8a;");
 
-				Assert.Equal("http://localhost:8079/", store.Url);
-				Assert.Equal("http://localhost:8079/", store.Identifier);
+				Assert.Equal("http://localhost:8079", store.Url);
+				Assert.Equal("http://localhost:8079", store.Identifier);
 				Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", store.ResourceManagerId.ToString());
 				Assert.NotNull(store.Credentials);
 				Assert.Null(store.DefaultDatabase);
@@ -106,8 +106,8 @@ namespace Raven.Tests
 			{
 				store.ParseConnectionString("Url=http://localhost:8079/;DefaultDatabase=DevMachine;");
 
-				Assert.Equal("http://localhost:8079/", store.Url);
-				Assert.Equal("http://localhost:8079/ (DB: DevMachine)", store.Identifier);
+				Assert.Equal("http://localhost:8079", store.Url);
+				Assert.Equal("http://localhost:8079 (DB: DevMachine)", store.Identifier);
 				Assert.NotNull(store.ResourceManagerId);
 				Assert.NotNull(store.Credentials);
 				Assert.Equal("DevMachine", store.DefaultDatabase);
@@ -122,8 +122,8 @@ namespace Raven.Tests
 			{
 				store.ParseConnectionString("Url=http://localhost:8079/;DefaultDatabase=DevMachine;ResourceManagerId=d5723e19-92ad-4531-adad-8611e6e05c8a;");
 
-				Assert.Equal("http://localhost:8079/", store.Url);
-				Assert.Equal("http://localhost:8079/ (DB: DevMachine)", store.Identifier);
+				Assert.Equal("http://localhost:8079", store.Url);
+				Assert.Equal("http://localhost:8079 (DB: DevMachine)", store.Identifier);
 				Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", store.ResourceManagerId.ToString());
 				Assert.NotNull(store.Credentials);
 				Assert.Equal("DevMachine", store.DefaultDatabase);

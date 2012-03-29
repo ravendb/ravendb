@@ -26,7 +26,7 @@ namespace Raven.Studio.Models
 				if (height == value)
 					return;
 				height = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Height);
 				SetWidthBasedOnHeight();
 			}
 		}
@@ -38,7 +38,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				width = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Width);
 			}
 		}
 

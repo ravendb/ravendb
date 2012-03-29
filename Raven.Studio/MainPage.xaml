@@ -1,8 +1,7 @@
 ﻿<UserControl x:Class="Raven.Studio.MainPage"
 			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
-			 xmlns:uriMapper="clr-namespace:System.Windows.Navigation;assembly=System.Windows.Controls.Navigation"
+			 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
 			 xmlns:Controls="clr-namespace:System.Windows.Controls"
 			 xmlns:TiledBG="clr-namespace:TiledBG;assembly=TiledBG"
 			 xmlns:Databases="clr-namespace:Raven.Studio.Features.Databases"
@@ -200,35 +199,35 @@
 				</TiledBG:TiledBGControl>
 			</Grid>
 
-			<navigation:Frame x:Name="ContentFrame"
+			<sdk:Frame x:Name="ContentFrame"
 							  Style="{StaticResource ContentFrameStyle}"
 							  Source=""
 							  Navigated="ContentFrame_Navigated"
 							  NavigationFailed="ContentFrame_NavigationFailed"
 							  Margin="15,0">
 
-				<navigation:Frame.UriMapper>
-					<uriMapper:UriMapper>
-						<uriMapper:UriMapping Uri=""
+				<sdk:Frame.UriMapper>
+					<sdk:UriMapper>
+						<sdk:UriMapping Uri=""
 											  MappedUri="/Views/Home.xaml" />
-						<uriMapper:UriMapping Uri="/indexes-errors/{indexName}"
+						<sdk:UriMapping Uri="/indexes-errors/{indexName}"
 											  MappedUri="/Views/IndexesErrors.xaml" />
-						<uriMapper:UriMapping Uri="/indexes-errors"
+						<sdk:UriMapping Uri="/indexes-errors"
 											  MappedUri="/Views/IndexesErrors.xaml" />
-						<uriMapper:UriMapping Uri="/indexes/{indexName}"
+						<sdk:UriMapping Uri="/indexes/{indexName}"
 											  MappedUri="/Views/Index.xaml" />
-						<uriMapper:UriMapping Uri="/query/{indexName}"
+						<sdk:UriMapping Uri="/query/{indexName}"
 											  MappedUri="/Views/Query.xaml" />
-						<uriMapper:UriMapping Uri="/logs/{errors}"
+						<sdk:UriMapping Uri="/logs/{errors}"
 											  MappedUri="/Views/Logs.xaml" />
-						<uriMapper:UriMapping Uri="/terms/{indexName}"
+						<sdk:UriMapping Uri="/terms/{indexName}"
 											  MappedUri="/Views/Terms.xaml" />
-						<uriMapper:UriMapping Uri="/{pageName}"
+						<sdk:UriMapping Uri="/{pageName}"
 											  MappedUri="/Views/{pageName}.xaml" />
 						
-					</uriMapper:UriMapper>
-				</navigation:Frame.UriMapper>
-			</navigation:Frame>
+					</sdk:UriMapper>
+				</sdk:Frame.UriMapper>
+			</sdk:Frame>
 		</Grid>
 
 		<RavenControls:NotificationArea Grid.RowSpan="999"

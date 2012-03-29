@@ -21,7 +21,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				queryIndexAutoComplete = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => QueryIndexAutoComplete);
 			}
 		}
 
@@ -34,7 +34,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				isSpatialQuerySupported = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => IsSpatialQuerySupported);
 			}
 		}
 
@@ -45,7 +45,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				isSpatialQuery = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => IsSpatialQuery);
 			}
 		}
 
@@ -56,7 +56,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				latitude = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Latitude);
 			}
 		}
 
@@ -67,7 +67,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				longitude = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Longitude);
 			}
 		}
 
@@ -78,7 +78,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				radius = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Radius);
 			}
 		}
 
@@ -99,7 +99,7 @@ namespace Raven.Studio.Models
 				}
 
 				indexName = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => IndexName);
 				RestoreHistory();
 			}
 		}
@@ -114,7 +114,7 @@ namespace Raven.Studio.Models
 			public string Value
 			{
 				get { return value; }
-				set { this.value = value; OnPropertyChanged();}
+				set { this.value = value; OnPropertyChanged(() => Value);}
 			}
 		}
 
@@ -175,7 +175,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				isDynamicQuery = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => IsDynamicQuery);
 			}
 		}
 
@@ -197,7 +197,7 @@ namespace Raven.Studio.Models
 						IndexName = "dynamic/" + dynamicSelectedOption;
 						break;
 				}
-				OnPropertyChanged();
+				OnPropertyChanged(() => DynamicSelectedOption);
 			}
 		}
 
@@ -274,7 +274,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				queryTime = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => QueryTime);
 			}
 		}
 		private RavenQueryStatistics results;
@@ -284,7 +284,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				results = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Results);
 			}
 		}
 
@@ -292,7 +292,7 @@ namespace Raven.Studio.Models
 		public string Error
 		{
 			get { return error; }
-			set { error = value; OnPropertyChanged(); }
+			set { error = value; OnPropertyChanged(() => Error); }
 		}
 
 		public Observable<DocumentsModel> DocumentsResult { get; private set; }

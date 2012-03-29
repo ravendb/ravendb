@@ -80,7 +80,6 @@ namespace Raven.Studio.Models
 
 		public CollectionsModel()
 		{
-			OnPropertyChanged();
 			ModelUrl = "/collections";
 		}
 

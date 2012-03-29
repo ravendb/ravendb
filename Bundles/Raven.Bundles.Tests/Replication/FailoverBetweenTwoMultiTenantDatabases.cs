@@ -105,12 +105,12 @@ namespace Raven.Bundles.Tests.Replication
 			store2.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
 
 			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"),
-			                 store2.Url + "databases/FailoverTest");
+			                 store2.Url + "/databases/FailoverTest");
 
 			using (var store = new DocumentStore
 								{
 									DefaultDatabase = "FailoverTest",
-									Url = store1.Url + "databases/FailoverTest",
+									Url = store1.Url + "/databases/FailoverTest",
 									Conventions =
 										{
 											FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries

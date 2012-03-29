@@ -1,6 +1,5 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
 					xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 					xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
@@ -10,7 +9,8 @@
 					xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 					xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 					xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-					xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d">
+					xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+					mc:Ignorable="d">
 
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Brushes.xaml" />
@@ -740,7 +740,7 @@
   </Style>
 
   <!-- Content Frame Style -->
-  <Style x:Key="ContentFrameStyle" TargetType="navigation:Frame">
+  <Style x:Key="ContentFrameStyle" TargetType="sdk:Frame">
 	<Setter Property="Background" Value="Transparent"/>
 	<Setter Property="BorderBrush" Value="Transparent"/>
 	<Setter Property="Padding" Value="0,0,0,15"/>
@@ -986,7 +986,7 @@
   <!-- ******CONTENT PAGE STYLES****** -->
   <!-- ******************************* -->
   <!-- Page Style -->
-  <Style x:Key="PageStyle" TargetType="navigation:Page"/>
+  <Style x:Key="PageStyle" TargetType="sdk:Page"/>
 
   <!-- Page ScrollViewer Style -->
   <Style x:Key="PageScrollViewerStyle" TargetType="ScrollViewer">

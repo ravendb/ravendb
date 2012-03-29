@@ -40,7 +40,7 @@ namespace Raven.Tests.Bugs.Iulian
 
 				using (var s = store.OpenSession())
 				{
-					Event loaded = s.Load<Event>(Uri.EscapeDataString(Uri.EscapeDataString(id)));
+					Event loaded = s.Load<Event>(id);
 					// this fails
 					Assert.NotNull(loaded);
 					Assert.Equal("tag", loaded.Tag);

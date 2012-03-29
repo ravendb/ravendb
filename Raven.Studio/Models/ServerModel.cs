@@ -26,7 +26,7 @@ namespace Raven.Studio.Models
 		public string BuildNumber
 		{
 			get { return buildNumber; }
-			private set { buildNumber = value; OnPropertyChanged(); }
+			private set { buildNumber = value; OnPropertyChanged(() => BuildNumber); }
 		}
 
 		public ServerModel()

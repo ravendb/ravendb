@@ -31,7 +31,7 @@ namespace Raven.Studio.Features.Query
 			set
 			{
 				completionProvider = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => CompletionProvider);
 			}
 		}
 
