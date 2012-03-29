@@ -37,6 +37,8 @@ namespace Raven.Bundles.Tests.Replication
 				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
 					.Wait();
 
+				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
+
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Item {});
