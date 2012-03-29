@@ -16,7 +16,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void IndexingEachFieldInEachDocumentSeparetedly()
 		{
-			Run<IndexingEachFieldInEachDocumentSeparetedly>(x=>x.ForIndexing());
+			Run<IndexingEachFieldInEachDocumentSeparetedly>(x=>x.ForIndexing(), 100000);
 		}
 
 		[Fact]
