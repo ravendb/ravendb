@@ -21,19 +21,19 @@ namespace Raven.Tests.Bugs
 				using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
 				{
 					server.StartListening();
-					var documentStore = new DocumentStore
+					using (var documentStore = new DocumentStore
 					{
 						Url = "http://localhost:8079"
-					}.Initialize();
+					}.Initialize())
+					{
+						var session = documentStore.OpenSession();
 
-					var session = documentStore.OpenSession();
+						var entity = new LinqIndexesFromClient.User();
+						session.Store(entity);
 
-					var entity = new LinqIndexesFromClient.User();
-					session.Store(entity);
-
-					Assert.Equal("http://localhost:8079/docs/users/1",
-						session.Advanced.GetDocumentUrl(entity));
-
+						Assert.Equal("http://localhost:8079/docs/users/1",
+						             session.Advanced.GetDocumentUrl(entity));
+					}
 				}
 			}
 		}
