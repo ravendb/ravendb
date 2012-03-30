@@ -234,7 +234,12 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override void Dispose()
 		{
-			if (jsonRequestFactory != null) jsonRequestFactory.Dispose();
+			if (jsonRequestFactory != null) 
+				jsonRequestFactory.Dispose();
+			foreach (var replicationInformer in replicationInformers)
+			{
+				replicationInformer.Value.Dispose();
+			}
 			WasDisposed = true;
 			var afterDispose = AfterDispose;
 			if (afterDispose != null)
