@@ -255,7 +255,7 @@ namespace Raven.Client.Document
 		{
 			var buffer = e.ToString();
 			Console.WriteLine(buffer);
-			File.AppendAllText(@"C:\stress-StackTrace.txt", buffer + Environment.NewLine + Environment.NewLine);
+			File.AppendAllText(@"C:\stress-StackTrace.txt", string.Format("StackTrace recorded.{0}{1}{0}{0}", Environment.NewLine, buffer));
 		}
 
 		#endregion
