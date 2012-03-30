@@ -101,7 +101,7 @@ namespace Raven.Database
 		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
 		private System.Threading.Tasks.Task indexingBackgroundTask;
 		private System.Threading.Tasks.Task reducingBackgroundTask;
-	    private readonly TaskScheduler backgroundTaskScheduler;
+		private readonly TaskScheduler backgroundTaskScheduler;
 
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
@@ -370,7 +370,7 @@ namespace Raven.Database
 		{
 			workContext.StopWork();
 			indexingBackgroundTask.Wait();
-		    reducingBackgroundTask.Wait();
+			reducingBackgroundTask.Wait();
 		}
 
 		public WorkContext WorkContext
@@ -384,7 +384,7 @@ namespace Raven.Database
 		{
 			workContext.StartWork();
 			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-		        new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
+				new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
@@ -409,6 +409,8 @@ namespace Raven.Database
 
 		public JsonDocument Get(string key, TransactionInformation transactionInformation)
 		{
+			if (key == null) throw new ArgumentNullException("key");
+			key = key.Trim();
 			JsonDocument document = null;
 			TransactionalStorage.Batch(actions =>
 			{
@@ -422,6 +424,8 @@ namespace Raven.Database
 
 		public JsonDocumentMetadata GetDocumentMetadata(string key, TransactionInformation transactionInformation)
 		{
+			if (key == null) throw new ArgumentNullException("key");
+			key = key.Trim();
 			JsonDocumentMetadata document = null;
 			TransactionalStorage.Batch(actions =>
 			{
@@ -440,6 +444,10 @@ namespace Raven.Database
 				// we no longer sort by the key, so it doesn't matter
 				// that the key is no longer sequential
 				key = Guid.NewGuid().ToString();
+			}
+			else
+			{
+				key = key.Trim();
 			}
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
@@ -465,7 +473,7 @@ namespace Raven.Database
 					else
 					{
 						newEtag = actions.Transactions.AddDocumentInTransaction(key, etag,
-						                                                        document, metadata, transactionInformation);
+																				document, metadata, transactionInformation);
 					}
 					workContext.ShouldNotifyAboutWork(() => "PUT " + key);
 				});
@@ -484,7 +492,6 @@ namespace Raven.Database
 		private long GetNextIdentityValueWithoutOverritingOnExistingDocuments(string key, IStorageActionsAccessor actions, TransactionInformation transactionInformation)
 		{
 			long nextIdentityValue;
-
 			do
 			{
 				nextIdentityValue = actions.General.GetNextIdentityValue(key);
@@ -547,6 +554,9 @@ namespace Raven.Database
 
 		public bool Delete(string key, Guid? etag, TransactionInformation transactionInformation)
 		{
+			if (key == null) throw new ArgumentNullException("key");
+			key = key.Trim();
+			
 			var deleted = false;
 			log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
 			TransactionalStorage.Batch(actions =>
@@ -624,8 +634,8 @@ namespace Raven.Database
 								Delete(doc.Key, null, null);
 							else
 								Put(doc.Key, null,
-								    doc.Data,
-								    doc.Metadata, null);
+									doc.Data,
+									doc.Metadata, null);
 						});
 						actions.Attachments.DeleteAttachment("transactions/recoveryInformation/" + txId, null);
 						workContext.ShouldNotifyAboutWork(() => "COMMIT " + txId);
@@ -698,6 +708,9 @@ namespace Raven.Database
 		[MethodImpl(MethodImplOptions.Synchronized)]
 		public string PutIndex(string name, IndexDefinition definition)
 		{
+			if (name == null) throw new ArgumentNullException("name");
+			name = name.Trim();
+			
 			switch (FindIndexCreationOptions(definition, ref name))
 			{
 				case IndexCreationOptions.Noop:
@@ -708,13 +721,23 @@ namespace Raven.Database
 					DeleteIndex(name);
 					break;
 			}
-			IndexDefinitionStorage.AddIndex(definition);
+
+			// this has to happen in this fashion so we will expose the in memory status after the commit, but 
+			// before the rest of the world is notified about this.
+			IndexDefinitionStorage.CreateAndPersistIndex(definition);
 			IndexStorage.CreateIndexImplementation(definition);
-		    TransactionalStorage.Batch(actions =>
-		    {
-		        actions.Indexing.AddIndex(name, definition.IsMapReduce);
-		        workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
-		    });
+			
+			TransactionalStorage.Batch(actions =>
+			{
+				actions.Indexing.AddIndex(name, definition.IsMapReduce);
+				workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
+			});
+
+			// The act of adding it here make it visible to other threads
+			// we have to do it in this way so first we prepare all the elements of the 
+			// index, then we add it to the storage in a way that make it public
+			IndexDefinitionStorage.AddIndex(name, definition);
+			
 			workContext.ClearErrorsFor(name);
 			return name;
 		}
@@ -733,13 +756,12 @@ namespace Raven.Database
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
 			var stale = false;
-	    	Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
+			Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
 			Guid resultEtag = Guid.Empty;
 			var nonAuthoritativeInformation = false;
 			TransactionalStorage.Batch(
 				actions =>
 				{
-
 					var viewGenerator = IndexDefinitionStorage.GetViewGenerator(index);
 					if (viewGenerator == null)
 						throw new InvalidOperationException("Could not find index named: " + index);
@@ -757,10 +779,12 @@ namespace Raven.Database
 					var docRetriever = new DocumentRetriever(actions, ReadTriggers);
 					var indexDefinition = GetIndexDefinition(index);
 					var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
-					                                      viewGenerator.ReduceDefinition == null
-					                                      	? Constants.DocumentIdFieldName
-					                                      	: Constants.ReduceKeyFieldName);
-					var collection = from queryResult in IndexStorage.Query(index, query, result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch), fieldsToFetch, IndexQueryTriggers)
+														  viewGenerator.ReduceDefinition == null
+															? Constants.DocumentIdFieldName
+															: Constants.ReduceKeyFieldName);
+					Func<IndexQueryResult, bool> shouldIncludeInResults = 
+						result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch);
+					var collection = from queryResult in IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers)
 									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
 										 into doc
 										 where doc != null
@@ -865,6 +889,8 @@ namespace Raven.Database
 
 		public Attachment GetStatic(string name)
 		{
+			if (name == null) throw new ArgumentNullException("name");
+			name = name.Trim();
 			Attachment attachment = null;
 			TransactionalStorage.Batch(actions =>
 			{
@@ -898,16 +924,16 @@ namespace Raven.Database
 						attachment.Data = () => new MemoryStream(new byte[0]);
 						attachment.Size = 0;
 						attachment.Metadata = new RavenJObject
-						                      	{
-						                      		{
-						                      			"Raven-Read-Veto",
-						                      			new RavenJObject
-						                      				{
-						                      					{"Reason", readVetoResult.Reason},
-						                      					{"Trigger", attachmentReadTrigger.ToString()}
-						                      				}
-						                      			}
-						                      	};
+												{
+													{
+														"Raven-Read-Veto",
+														new RavenJObject
+															{
+																{"Reason", readVetoResult.Reason},
+																{"Trigger", attachmentReadTrigger.ToString()}
+															}
+														}
+												};
 						foundResult = true;
 						break;
 					case ReadVetoResult.ReadAllow.Ignore:
@@ -935,6 +961,8 @@ namespace Raven.Database
 		public void PutStatic(string name, Guid? etag, Stream data, RavenJObject metadata)
 		{
 			if (name == null) throw new ArgumentNullException("name");
+			name = name.Trim();
+			
 			if (Encoding.Unicode.GetByteCount(name) >= 255)
 				throw new ArgumentException("The key must be a maximum of 255 bytes in Unicode, 127 characters", "name");
 
@@ -959,6 +987,8 @@ namespace Raven.Database
 
 		public void DeleteStatic(string name, Guid? etag)
 		{
+			if (name == null) throw new ArgumentNullException("name");
+			name = name.Trim(); 
 			TransactionalStorage.Batch(actions =>
 			{
 				AssertAttachmentDeleteOperationNotVetoed(name);
@@ -980,6 +1010,8 @@ namespace Raven.Database
 
 		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, int start, int pageSize)
 		{
+			if (idPrefix == null) throw new ArgumentNullException("idPrefix");
+			idPrefix = idPrefix.Trim(); 
 			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
@@ -1067,6 +1099,8 @@ namespace Raven.Database
 
 		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)
 		{
+			if (docId == null) throw new ArgumentNullException("docId");
+			docId = docId.Trim();
 			var result = PatchResult.Patched;
 			bool shouldRetry = false;
 			int retries = 128;
@@ -1247,7 +1281,7 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.Indexing.DeleteIndex(index);
-			    actions.Indexing.AddIndex(index, indexDefinition.IsMapReduce);
+				actions.Indexing.AddIndex(index, indexDefinition.IsMapReduce);
 				workContext.ShouldNotifyAboutWork(() => "RESET INDEX " + index);
 			});
 		}
@@ -1270,9 +1304,9 @@ namespace Raven.Database
 		}
 
 		static string productVersion;
-	    private volatile bool disposed;
+		private volatile bool disposed;
 
-	    public static string ProductVersion
+		public static string ProductVersion
 		{
 			get
 			{
@@ -1308,12 +1342,12 @@ namespace Raven.Database
 		/// <summary>
 		/// Whatever this database has been disposed
 		/// </summary>
-	    public bool Disposed
-	    {
-	        get { return disposed; }
-	    }
+		public bool Disposed
+		{
+			get { return disposed; }
+		}
 
-	    /// <summary>
+		/// <summary>
 		/// Get the total size taken by the database on the disk.
 		/// This explicitly does NOT include in memory indexes or in memory database.
 		/// It does include any reserved space on the file system, which may significantly increase
@@ -1332,7 +1366,7 @@ namespace Raven.Database
 			return totalIndexSize + TransactionalStorage.GetDatabaseSizeInBytes();
 		}
 
-		public Guid GetIndexEtag(string indexName, QueryResult queryResult)
+		public Guid GetIndexEtag(string indexName, Guid? previousEtag)
 		{
 			Guid lastDocEtag = Guid.Empty;
 			Guid? lastReducedEtag = null;
@@ -1365,7 +1399,7 @@ namespace Raven.Database
 
 				var indexEtag = new Guid(md5.ComputeHash(list.ToArray()));
 
-				if (queryResult != null && queryResult.ResultEtag != indexEtag)
+				if (previousEtag != null && previousEtag != indexEtag)
 				{
 					// the index changed between the time when we got it and the time 
 					// we actually call this, we need to return something random so that

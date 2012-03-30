@@ -65,7 +65,7 @@ namespace Raven.Client.Document.Batches
 		public void HandleResponse(GetResponse response)
 		{
 			if (response.Status == 404)
-				throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName);
+				throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + Environment.NewLine + response.Result);
 			var json = RavenJObject.Parse(response.Result);
 			var queryResult = SerializationHelper.ToQueryResult(json, response.Headers["ETag"]);
 			RequiresRetry = queryOperation.IsAcceptable(queryResult) == false;

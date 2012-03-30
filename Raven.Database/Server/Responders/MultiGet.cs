@@ -192,7 +192,7 @@ namespace Raven.Database.Server.Responders
 					Query = req.Query,
 					Path = req.Url
 				}.Uri;
-				RawUrl = Url.ToString();
+				RawUrl = req.Url;
 				IsLocal = realRequest.IsLocal;
 				Headers = new NameValueCollection();
 				foreach (var header in req.Headers)
@@ -306,7 +306,10 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
-		  
+			public NameValueCollection GetHeaders()
+			{
+				throw new NotSupportedException();
+			}
 		}
 	}
 

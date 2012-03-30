@@ -42,10 +42,6 @@ namespace Raven.Database.Server
 		public InMemoryRavenConfiguration DefaultConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
-#if DEBUG
-		public readonly ConcurrentQueue<string> LastRequests = new ConcurrentQueue<string>();
-#endif
-
 		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { }; 
 
 		private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
@@ -250,8 +246,16 @@ namespace Raven.Database.Server
 					databaseLastRecentlyUsed.TryRemove(db, out time);
 					return;
 				}
+				if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
+				{
+					// this document might not be actively working with user, but it is actively doing indexes, we will 
+					// wait with unloading this database until it hasn't done indexing for a while.
+					// This prevent us from shutting down big databases that have been left alone to do indexing work.
+					return;
+				}
 				try
 				{
+					
 					database.Dispose();
 				}
 				catch (Exception e)
@@ -518,9 +522,9 @@ namespace Raven.Database.Server
 				requestAuthorizer.Authorize(ctx) == false)
 				return false;
 
+			Action onResponseEnd = null;
 			try
 			{
-				RecordRequest(ctx);
 				OnDispatchingRequest(ctx);
 
 				if (DefaultConfiguration.HttpCompression)
@@ -528,7 +532,10 @@ namespace Raven.Database.Server
 
 				HandleHttpCompressionFromClient(ctx);
 
-				
+				if (BeforeDispatchingRequest != null)
+				{
+					onResponseEnd = BeforeDispatchingRequest(ctx);
+				}
 
 				// Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
 				AddAccessControlHeaders(ctx);
@@ -570,20 +577,15 @@ namespace Raven.Database.Server
 				{
 					// this can happen during system shutdown
 				}
+				if (onResponseEnd != null)
+					onResponseEnd();
 			}
 			return false;
 		}
 
-		[Conditional("DEBUG")]
-		private void RecordRequest(IHttpContext ctx)
-		{
-			string result;
-			if(LastRequests.Count > 128)
-				LastRequests.TryDequeue(out result);
-			LastRequests.Enqueue(ctx.Request.RawUrl);
-		}
+		public Func<IHttpContext, Action> BeforeDispatchingRequest { get; set; }
 
-		private void HandleHttpCompressionFromClient(IHttpContext ctx)
+		private static void HandleHttpCompressionFromClient(IHttpContext ctx)
 		{
 			var encoding = ctx.Request.Headers["Content-Encoding"];
 			if (encoding == null)
@@ -654,7 +656,8 @@ namespace Raven.Database.Server
 
 			if (jsonDocument == null ||
 				jsonDocument.Metadata == null ||
-				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists))
+				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) || 
+				jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))
 				return false;
 
 			var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
@@ -670,15 +673,15 @@ namespace Raven.Database.Server
 
 				config.CustomizeValuesForTenant(tenantId);
 
+				var dataDir = document.Settings["Raven/DataDir"];
+				if (dataDir == null)
+					throw new InvalidOperationException("Could not find Raven/DataDir");
+				
 				foreach (var setting in document.Settings)
 				{
 					config.Settings[setting.Key] = setting.Value;
 				}
 
-
-				var dataDir = config.Settings["Raven/DataDir"];
-				if (dataDir == null)
-					throw new InvalidOperationException("Could not find Raven/DataDir");
 				if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
 				{
 					var baseDataPath = Path.GetDirectoryName(DefaultResourceStore.Configuration.DataDirectory);

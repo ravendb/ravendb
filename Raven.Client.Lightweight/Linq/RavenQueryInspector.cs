@@ -10,6 +10,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Document;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
 #endif
@@ -31,6 +32,7 @@ namespace Raven.Client.Linq
 #if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 #endif
+		private InMemoryDocumentSessionOperations session;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
@@ -39,7 +41,8 @@ namespace Raven.Client.Linq
 			IRavenQueryProvider provider, 
 			RavenQueryStatistics queryStats,
 			string indexName,
-			Expression expression
+			Expression expression,
+			InMemoryDocumentSessionOperations session
 #if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
 #endif
@@ -55,6 +58,7 @@ namespace Raven.Client.Linq
 			this.provider = provider.For<T>();
 			this.queryStats = queryStats;
 			this.indexName = indexName;
+			this.session = session;
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
@@ -168,6 +172,8 @@ namespace Raven.Client.Linq
 				return databaseCommands;
 			}
 		}
+
+		
 #endif
 
 #if !NET_3_5
@@ -184,6 +190,14 @@ namespace Raven.Client.Linq
 			}
 		}
 #endif
+
+		public InMemoryDocumentSessionOperations Session
+		{
+			get
+			{
+				return session;
+			}
+		}
 
 		///<summary>
 		/// Get the last equality term for the query

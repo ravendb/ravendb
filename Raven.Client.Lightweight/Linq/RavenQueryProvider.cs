@@ -14,6 +14,8 @@ using Raven.Client.Connection.Async;
 #endif
 #if !Silverlight
 using Raven.Client.Connection;
+using Raven.Client.Document;
+
 #endif
 
 namespace Raven.Client.Linq
@@ -133,7 +135,7 @@ namespace Raven.Client.Linq
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
 		{
-			return new RavenQueryInspector<S>(this, ravenQueryStatistics, indexName, expression
+			return new RavenQueryInspector<S>(this, ravenQueryStatistics, indexName, expression, (InMemoryDocumentSessionOperations)queryGenerator
 #if !SILVERLIGHT
 				, databaseCommands
 #endif
@@ -148,17 +150,16 @@ namespace Raven.Client.Linq
 			Type elementType = TypeSystem.GetElementType(expression.Type);
 			try
 			{
-				return
-					(IQueryable)
-					Activator.CreateInstance(typeof(RavenQueryInspector<>).MakeGenericType(elementType),
-											 new object[] { this, ravenQueryStatistics, indexName, expression
+				var makeGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
+				var args = new object[] { this, ravenQueryStatistics, indexName, expression, queryGenerator
 #if !SILVERLIGHT
-												 ,databaseCommands
+				                                      ,databaseCommands
 #endif
 #if !NET_3_5
-												 ,asyncDatabaseCommands
+				                                      ,asyncDatabaseCommands
 #endif
-												 });
+				                                    };
+				return (IQueryable) Activator.CreateInstance(makeGenericType, args);
 			}
 			catch (TargetInvocationException tie)
 			{

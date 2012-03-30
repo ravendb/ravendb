@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections.Generic;
+using Raven.Client.Document;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
 #endif
@@ -33,6 +34,11 @@ namespace Raven.Client.Connection
 		/// </summary>
 		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
 #endif
+
+		/// <summary>
+		/// The query session
+		/// </summary>
+		InMemoryDocumentSessionOperations Session { get; }
 
 		/// <summary>
 		/// The last term that we asked the query to use equals on

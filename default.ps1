@@ -42,15 +42,15 @@ properties {
 			return "$build_dir\$_"
 		}
   
-	$silverlight4_dlls = @( "Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???", "MissingBitFromSilverlight.???", 
-						(Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4)) |
+	$silverlight4_dlls = @( "Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???", 
+						(Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 		
-	$silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???", "MissingBitFromSilverlight.???", 
-						(Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4)) |
+	$silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???", 
+						(Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -283,6 +283,8 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\EmbeddedClient -Type directory | Out-Null
 	New-Item $build_dir\Output\Client -Type directory | Out-Null
 	New-Item $build_dir\Output\Client-3.5 -Type directory | Out-Null
+	New-Item $build_dir\Output\Silverlight -Type directory | Out-Null
+	New-Item $build_dir\Output\Silverlight-4 -Type directory | Out-Null
 	New-Item $build_dir\Output\Bundles -Type directory | Out-Null
 	New-Item $build_dir\Output\Samples -Type directory | Out-Null
 	New-Item $build_dir\Output\Smuggler -Type directory | Out-Null
@@ -298,10 +300,10 @@ task CopyEmbeddedClient {
 }
 
 task CopySilverlight { 
-	New-Item $build_dir\Output\Silverlight -Type directory | Out-Null
 	$silverlight_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight }
-	
-	New-Item $build_dir\Output\Silverlight-4 -Type directory | Out-Null
+}
+
+task CopySilverlight-4 { 
 	$silverlight4_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight-4 }
 }
 
@@ -407,6 +409,7 @@ task DoRelease -depends Compile, `
 	CopyBackup, `
 	CopyClient, `
 	CopySilverlight, `
+	CopySilverlight-4, `
 	CopyClient35, `
 	CopyWeb, `
 	CopyBundles, `
@@ -504,6 +507,10 @@ task CreateNugetPackage {
 	$silverlight_dlls | ForEach-Object { 
 		Copy-Item "$_" $build_dir\NuPack\lib\sl50
 		Copy-Item "$_" $build_dir\NuPack-Client\lib\sl50
+	}
+	
+	$all_client_dlls | ForEach-Object { 
+		Copy-Item "$_" $build_dir\NuPack-Embedded\lib\net40
 	}
 
 	# Remove files that are obtained as dependencies

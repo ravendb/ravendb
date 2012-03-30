@@ -158,6 +158,7 @@
     <Compile Include="Bugs\Indexing\CanHaveAnIndexNameThatStartsWithDynamic.cs" />
     <Compile Include="Bugs\Indexing\WithStringReverse.cs" />
     <Compile Include="Bugs\Indexing\InvalidIndexes.cs" />
+    <Compile Include="Bugs\InitializeConfiguration.cs" />
     <Compile Include="Bugs\Issue355.cs" />
     <Compile Include="Bugs\JsonReferences.cs" />
     <Compile Include="Bugs\LarsErik.cs" />
@@ -194,6 +195,7 @@
     <Compile Include="Bugs\Orders.cs" />
     <Compile Include="Bugs\PoisonIndexes\PoisonIndex.cs" />
     <Compile Include="Bugs\Queries\Boolean.cs" />
+    <Compile Include="Bugs\Queries\CanIncludeValueType.cs" />
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
     <Compile Include="Bugs\QueryingOnEmptyArray.cs" />
     <Compile Include="Bugs\QueryingOnEmptyString.cs" />
@@ -523,11 +525,13 @@
     <Compile Include="Indexes\DynamicFieldIndexing.cs" />
     <Compile Include="Indexes\DynamicQueryMapping.cs" />
     <Compile Include="Indexes\ExpressionOperatorPrecedenceTest.cs" />
+    <Compile Include="Indexes\IndexWithSubProperty.cs" />
     <Compile Include="Indexes\LinqIndexesFromClient.cs" />
     <Compile Include="Indexes\LuceneAnalyzerUtils.cs" />
     <Compile Include="Indexes\MapOnlyView.cs" />
     <Compile Include="Bugs\Indexing\CanMultiMapIndexNullableValueTypes.cs" />
     <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
+    <Compile Include="Indexes\OldIndexRunWhileNewIndexesAreRunning.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
     <Compile Include="Indexes\ReduceCanUseExtensionMethods.cs" />
@@ -535,6 +539,8 @@
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="Indexes\WithDecimalValue.cs" />
     <Compile Include="IndexQueryUrl.cs" />
+    <Compile Include="Issues\RavenDB_187.cs" />
+    <Compile Include="Issues\RavenDB_72.cs" />
     <Compile Include="Json\CloningTests.cs" />
     <Compile Include="Json\JsonNetBugsTests.cs" />
     <Compile Include="Json\RavenJObjects.cs" />
@@ -696,6 +702,7 @@
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="MailingList\Phil-Updated.cs" />
     <Compile Include="Queries\Includes.cs" />
+    <Compile Include="Queries\Intersection.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Querying\IndexedUser.cs" />
     <Compile Include="Querying\SearchOperator.cs" />
@@ -719,6 +726,7 @@
     <Compile Include="Shard\BlogModel\ShardedDocumentStoreTest.cs" />
     <Compile Include="Shard\BlogModel\ShardingScenario.cs" />
     <Compile Include="Shard\BlogModel\User.cs" />
+    <Compile Include="Shard\SimpleSharding.cs" />
     <Compile Include="Shard\WhenUsingParallelAccessStrategy.cs" />
     <Compile Include="Shard\WhenUsingShardedServers.cs" />
     <Compile Include="Some.cs" />

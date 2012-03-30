@@ -6,11 +6,13 @@
 using System;
 using System.CodeDom.Compiler;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
@@ -202,9 +204,24 @@ namespace Raven.Database.Linq
 			return null;
 		}
 
+		private class CacheEntry
+		{
+			public int Usages;
+			public string Source;
+			public Type Type;
+		}
+
+		private static readonly ConcurrentDictionary<string, CacheEntry> cacheEntries = new ConcurrentDictionary<string, CacheEntry>();
 
 		public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath)
 		{
+			CacheEntry entry;
+			if(cacheEntries.TryGetValue(source, out entry))
+			{
+				Interlocked.Increment(ref entry.Usages);
+				return entry.Type;
+			}
+
 			var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
 			var assemblies = new HashSet<string>
 			{
@@ -250,7 +267,26 @@ namespace Raven.Database.Linq
 				}
 				throw new InvalidOperationException(sb.ToString());
 			}
-			return results.CompiledAssembly.GetType(name);
+			Type result = results.CompiledAssembly.GetType(name);
+
+			cacheEntries.TryAdd(source, new CacheEntry
+			{
+				Source = source,
+				Type = result,
+				Usages = 1
+			});
+
+			if(cacheEntries.Count > 256)
+			{
+				var kvp = cacheEntries.OrderBy(x=>x.Value.Usages).FirstOrDefault();
+				if(kvp.Key != null)
+				{
+					CacheEntry _;
+					cacheEntries.TryRemove(kvp.Key, out _);
+				}
+			}
+
+			return result;
 		}
 	}
 }

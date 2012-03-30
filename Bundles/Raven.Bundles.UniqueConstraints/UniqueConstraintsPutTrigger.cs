@@ -49,6 +49,7 @@
 			{
 				return VetoResult.Allowed;
 			}
+			entityName += "/";
 
 			var properties = metadata.Value<RavenJArray>(Constants.EnsureUniqueConstraints);
 

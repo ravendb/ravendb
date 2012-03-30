@@ -22,7 +22,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				indexName = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => IndexName);
 			}
 		}
 
@@ -33,7 +33,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				terms = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Terms);
 			}
 		}
 

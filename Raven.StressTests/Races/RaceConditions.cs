@@ -1,6 +1,7 @@
 using Raven.StressTests.Tenants;
 using Raven.Tests.Bugs;
 using Raven.Tests.Bugs.Caching;
+using Raven.Tests.Bugs.Indexing;
 using Raven.Tests.MailingList.MapReduceIssue;
 using Raven.Tests.ManagedStorage;
 using Raven.Tests.MultiGet;
@@ -12,6 +13,12 @@ namespace Raven.StressTests.Races
 {
 	public class RaceConditions : StressTest
 	{
+		[Fact]
+		public void IndexingEachFieldInEachDocumentSeparetedly()
+		{
+			Run<IndexingEachFieldInEachDocumentSeparetedly>(x=>x.ForIndexing());
+		}
+
 		[Fact]
 		public void ConcurrentlyOpenedTenantsUsingEsent()
 		{

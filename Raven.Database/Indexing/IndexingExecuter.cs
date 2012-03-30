@@ -39,7 +39,7 @@ namespace Raven.Database.Indexing
 
 		protected override void FlushAllIndexes()
 		{
-			context.IndexStorage.FlushMapIndexes();
+			context.IndexStorage.FlushMapIndexes(optimize: true);
 		}
 
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
@@ -54,6 +54,8 @@ namespace Raven.Database.Indexing
 
 		protected override void ExecuteIndxingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
+			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
+
 			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
 
 			JsonDocument[] jsonDocs = null;

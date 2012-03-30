@@ -40,6 +40,9 @@ namespace Raven.Abstractions.MEF
 		public void Add(Lazy<T, IPartMetadata> item)
 		{
 			int insertAt = inner.TakeWhile(lazy => item.Metadata.Order >= lazy.Metadata.Order).Count();
+			// force the lazy to create its value.
+			// the reason we are doing that is that otherwise, we run into errors if we have multi thread creations of the item
+			GC.KeepAlive(item.Value);
 			inner.Insert(insertAt, item);
 		}
 

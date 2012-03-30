@@ -47,6 +47,8 @@ namespace Raven.Database.Indexing
 		private static readonly Logger startupLog = LogManager.GetLogger(typeof (IndexStorage).FullName + ".Startup");
 		private readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();
 
+		private readonly FileStream crashMarker;
+
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
 		{
 			this.indexDefinitionStorage = indexDefinitionStorage;
@@ -55,6 +57,26 @@ namespace Raven.Database.Indexing
 
 			if (Directory.Exists(path) == false && configuration.RunInMemory == false)
 				Directory.CreateDirectory(path);
+
+
+			if (configuration.RunInMemory == false)
+			{
+				var crashMarkerPath = Path.Combine(path, "indexing.crash-marker");
+
+				if (File.Exists(crashMarkerPath))
+				{
+					// the only way this can happen is if we crashed because of a power outage
+					// in this case, we consider all open indexes to be corrupt and force them
+					// to be reset. This is because to get better perf, we don't flush the files to disk,
+					// so in the case of a power outage, we can't be sure that there wasn't still stuff in
+					// the OS buffer that wasn't written yet.
+					configuration.ResetIndexOnUncleanShutdown = true;
+				}
+
+				// The delete on close ensures that the only way this file will exists is if there was
+				// a power outage while the server was running.
+				crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
+			}
 
 			foreach (var indexName in indexDefinitionStorage.IndexNames)
 			{
@@ -137,7 +159,7 @@ namespace Raven.Database.Indexing
 				}
 				else
 				{
-					if (IndexWriter.IsLocked(directory)) // we had an unclean shutdown
+					if (directory.FileExists("write.lock")) // we had an unclean shutdown
 					{
 						if(configuration.ResetIndexOnUncleanShutdown)
 							throw new InvalidOperationException("Rude shutdown detected on: " + indexDirectory);
@@ -194,8 +216,8 @@ namespace Raven.Database.Indexing
 		{
 			var viewGenerator = indexDefinitionStorage.GetViewGenerator(indexDefinition.Name);
 			var indexImplementation = indexDefinition.IsMapReduce
-										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator)
-										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator);
+										? (Index)new MapReduceIndex(directory, directoryPath, indexDefinition, viewGenerator, configuration)
+										: new SimpleIndex(directory, directoryPath, indexDefinition, viewGenerator, configuration);
 
 			configuration.Container.SatisfyImportsOnce(indexImplementation);
 
@@ -223,6 +245,8 @@ namespace Raven.Database.Indexing
 				index.Dispose();
 			}
 			dummyAnalyzer.Close();
+			if (crashMarker != null)
+				crashMarker.Dispose();
 		}
 
 		#endregion
@@ -282,7 +306,6 @@ namespace Raven.Database.Indexing
 			}
 			var fieldsToFetch = new FieldsToFetch(new string[0], AggregationOperation.None, null);
 			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch, indexQueryTriggers).GetLuceneQuery();
-
 		}
 
 		public IEnumerable<IndexQueryResult> Query(
@@ -298,7 +321,11 @@ namespace Raven.Database.Indexing
 				log.Debug("Query on non existing index '{0}'", index);
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
-			return new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers).Query();
+
+			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
+			if (query.Query != null && query.Query.Contains(Constants.IntersectSeperator))
+				return indexQueryOperation.IntersectionQuery();
+			return indexQueryOperation.Query();
 		}
 
 		protected internal static IDisposable EnsureInvariantCulture()

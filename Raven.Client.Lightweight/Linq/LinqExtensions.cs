@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Document;
+using Raven.Client.Document.Batches;
 
 namespace Raven.Client.Linq
 {
@@ -28,13 +30,32 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public static IDictionary<string, IEnumerable<FacetValue>> ToFacets<T>(this IQueryable<T> queryable, string facetDoc)
 		{
-			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.ToString();
 
 			return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, new IndexQuery { Query = query }, facetDoc);
 		}
+
+
 #endif
+
+#if !NET_3_5 && !SILVERLIGHT
+		public static Lazy<IDictionary<string, IEnumerable<FacetValue>>> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+			var query = ravenQueryInspector.ToString();
+
+			var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.IndexQueried, facetDoc, new IndexQuery { Query = query });
+
+			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
+			return documentSession.AddLazyOperation<IDictionary<string, IEnumerable<FacetValue>>>(lazyOperation, null);
+		}
+#endif
+
 #if !NET_3_5
+
+
+
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document
 		/// </summary>
@@ -57,6 +78,24 @@ namespace Raven.Client.Linq
 			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
 			ravenQueryInspector.Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
 			return results;
+		}
+
+		/// <summary>
+		/// Partition the query so we can intersect different parts of the query
+		/// across different index entries.
+		/// </summary>
+		public static IRavenQueryable<T> Intersect<T>(this IQueryable<T> self)
+		{
+			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+			Expression expression = self.Expression;
+			if (expression.Type != typeof(IRavenQueryable<T>))
+			{
+				expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+			}
+			var queryable =
+				self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof (T)), expression));
+			return (IRavenQueryable<T>)queryable;
+	
 		}
 
 		/// <summary>
@@ -85,11 +124,35 @@ namespace Raven.Client.Linq
 		/// Suggest alternative values for the queried term
 		/// </summary>
 		public static SuggestionQueryResult Suggest(this IQueryable queryable, SuggestionQuery query)
-		{
+		{ 
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
 			return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);
 		}
+#if !NET_3_5
+		/// <summary>
+		/// Lazy Suggest alternative values for the queried term
+		/// </summary>
+		public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable)
+		{
+			return SuggestLazy(queryable, new SuggestionQuery());
+		}
+
+		/// <summary>
+		/// Lazy Suggest alternative values for the queried term
+		/// </summary>
+		public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable, SuggestionQuery query)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
+
+			var lazyOperation = new LazySuggestOperation(ravenQueryInspector.IndexQueried, query);
+
+			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
+			return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
+		}
+#endif
+
 #endif
 
 		private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query)
@@ -202,9 +265,25 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
-		public static IRavenQueryable<T> Include<T>(this IRavenQueryable<T> source, Expression<Func<T, object>> path)
+		/// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+		/// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
+		/// <returns></returns>
+		public static IRavenQueryable<TResult> Include<TResult>(this IRavenQueryable<TResult> source, Expression<Func<TResult, object>> path)
 		{
 			source.Customize(x => x.Include(path));
+			return source;
+		}
+
+		/// <summary>
+		/// Includes the specified path in the query, loading the document specified in that path
+		/// </summary>
+		/// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+		/// <typeparam name="TInclude">The type of the object that you want to include.</typeparam>
+		/// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
+		/// <returns></returns>
+		public static IRavenQueryable<TResult> Include<TResult, TInclude>(this IRavenQueryable<TResult> source, Expression<Func<TResult, object>> path)
+		{
+			source.Customize(x => x.Include<TResult, TInclude>(path));
 			return source;
 		}
 

@@ -191,6 +191,16 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Partition the query so we can intersect different parts of the query
+		/// across different index entries.
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Intersect()
+		{
+			Intersect();
+			return this;
+		}
+
+		/// <summary>
 		/// Provide statistics about the query, such as total count of matching records
 		/// </summary>
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Statistics(out RavenQueryStatistics stats)

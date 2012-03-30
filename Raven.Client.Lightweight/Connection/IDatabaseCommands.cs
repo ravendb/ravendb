@@ -329,6 +329,11 @@ namespace Raven.Client.Connection
 		/// Get the full URL for the given document key
 		/// </summary>
 		string UrlFor(string documentKey);
+
+		/// <summary>
+		/// Force the database commands to read directly from the master, unless there has been a failover.
+		/// </summary>
+		void ForceReadFromMaster();
 	}
 }
 #endif

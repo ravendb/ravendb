@@ -650,6 +650,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					}
 
 					break;
+				case "Intersect":
+					VisitExpression(expression.Arguments[0]);
+					luceneQuery.Intersect();
+					chainedWhere = false;
+					break;
 				case "In":
 					var memberInfo = GetMember(expression.Arguments[0]);
 					var objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));

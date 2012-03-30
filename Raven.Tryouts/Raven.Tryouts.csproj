@@ -66,6 +66,7 @@
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Newtonsoft.Json, Version=4.0.8.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Newtonsoft.Json.4.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
@@ -78,6 +79,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -112,6 +114,10 @@
     <ProjectReference Include="..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
       <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
       <Name>Raven.Storage.Managed</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.StressTests\Raven.StressTests.csproj">
+      <Project>{005A5143-4E38-424B-A2D1-25EF88DA05CB}</Project>
+      <Name>Raven.StressTests</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>

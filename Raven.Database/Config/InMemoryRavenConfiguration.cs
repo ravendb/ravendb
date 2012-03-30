@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -41,6 +42,8 @@ namespace Raven.Database.Config
 
 			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory/2);
 			MaxNumberOfParallelIndexTasks = 8;
+
+			IndexingScheduler = new FairIndexingSchedulerWithNewIndexesBias();
 
 			Catalog = new AggregateCatalog(
 				new AssemblyCatalog(typeof(DocumentDatabase).Assembly)
@@ -328,6 +331,11 @@ namespace Raven.Database.Config
 		#endregion
 
 		#region Index settings
+
+		/// <summary>
+		/// The indexing scheduler to use
+		/// </summary>
+		public IIndexingScheduler IndexingScheduler { get; set; }
 
 		/// <summary>
 		/// Max number of items to take for indexing in a batch

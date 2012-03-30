@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Rhino.Licensing.Discovery
 {
 	///<summary>
-	/// Publish the precense of a client over the network
+	/// Publish the presence of a client over the network
 	///</summary>
 	public class DiscoveryClient : IDisposable
 	{
@@ -42,7 +42,7 @@ namespace Rhino.Licensing.Discovery
 		{
 			if ((DateTime.UtcNow - lastPublish) < publishLimit)
 				return;
-			// avoid a ping storm when we re-publish because we disocvered another client
+			// avoid a ping storm when we re-publish because we discovered another client
 			lock(this)
 			{
 				if ((DateTime.UtcNow - lastPublish) < publishLimit)

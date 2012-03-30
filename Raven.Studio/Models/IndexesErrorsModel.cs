@@ -13,7 +13,7 @@ namespace Raven.Studio.Models
 			private set
 			{
 				errors = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Errors);
 			}
 		}
 
@@ -24,8 +24,8 @@ namespace Raven.Studio.Models
 			set
 			{
 				indexName = value;
-				OnPropertyChanged();
-				OnPropertyChanged("IsShowingErrorForASpecificIndex");
+				OnPropertyChanged(() => IndexName);
+				OnPropertyChanged(() => IsShowingErrorForASpecificIndex);
 			}
 		}
 
@@ -37,7 +37,7 @@ namespace Raven.Studio.Models
 		public IndexesErrorsModel()
 		{
 			ModelUrl = "/indexes-errors";
-			Database.Value.Statistics.PropertyChanged += (sender, args) => OnPropertyChanged("Errors");
+			Database.Value.Statistics.PropertyChanged += (sender, args) => OnPropertyChanged(() => Errors);
 		}
 
 		public override void LoadModelParameters(string parameters)

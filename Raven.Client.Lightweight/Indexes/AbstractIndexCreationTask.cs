@@ -173,12 +173,15 @@ namespace Raven.Client.Indexes
 			return new IndexDefinitionBuilder<TDocument, TReduceResult>
 			{
 				Indexes = Indexes,
+				IndexesStrings = IndexesStrings,
 				SortOptions = IndexSortOptions,
 				Analyzers = Analyzers,
+				AnalyzersStrings = AnalyzersStrings,
 				Map = Map,
 				Reduce = Reduce,
 				TransformResults = TransformResults,
-				Stores = Stores
+				Stores = Stores,
+				StoresStrings = StoresStrings
 			}.ToIndexDefinition(Conventions);
 		}
 

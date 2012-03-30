@@ -433,6 +433,7 @@ Enjoy...
 			else
 			{
 				ManagedInstallerClass.InstallHelper(new[] { Assembly.GetExecutingAssembly().Location });
+				SetRecoveryOptions("RavenDB");
 				var startController = new ServiceController(ProjectInstaller.SERVICE_NAME);
 				startController.Start();
 			}
@@ -442,5 +443,31 @@ Enjoy...
 		{
 			return (ServiceController.GetServices().Count(s => s.ServiceName == ProjectInstaller.SERVICE_NAME) > 0);
 		}
+
+		static void SetRecoveryOptions(string serviceName)
+		{
+			int exitCode;
+			var arguments = string.Format("failure {0} reset= 500 actions= restart/60000", serviceName);
+			using (var process = new Process())
+			{
+				var startInfo = process.StartInfo;
+				startInfo.FileName = "sc";
+				startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+
+				// tell Windows that the service should restart if it fails
+				startInfo.Arguments = arguments;
+
+				process.Start();
+				process.WaitForExit();
+
+				exitCode = process.ExitCode;
+
+				process.Close();
+			}
+
+			if (exitCode != 0)
+				throw new InvalidOperationException(
+					"Failed to set the service recovery policy. Command: " + Environment.NewLine+ "sc " + arguments + Environment.NewLine + "Exit code: " + exitCode);
+		} 
 	}
 }

@@ -38,6 +38,7 @@ namespace Raven.Client.Connection
 		private readonly object replicationLock = new object();
 		private List<string> replicationDestinations = new List<string>();
 		private static readonly List<string> Empty = new List<string>();
+		private int readStripingBase;
 
 		/// <summary>
 		/// Notify when the failover status changed
@@ -75,44 +76,58 @@ namespace Raven.Client.Connection
 		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
 #endif
 
+#if NET_3_5
 		/// <summary>
 		/// Updates the replication information if needed.
 		/// </summary>
 		/// <param name="serverClient">The server client.</param>
-		public 
-#if !NET_3_5
-			Task
-#else
-			void
-#endif
-			
-			UpdateReplicationInformationIfNeeded(ServerClient serverClient)
+		public void UpdateReplicationInformationIfNeeded(ServerClient serverClient)
 		{
 			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
-#if !NET_3_5
-				return new CompletedTask();
-#else
 				return;
-#endif
+
 			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
-#if !NET_3_5
-				return new CompletedTask();
-#else
 				return;
-#endif
 			lock (replicationLock)
 			{
-				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow
-#if !NET_3_5
-					|| refreshReplicationInformationTask != null
-#endif
-)
-#if !NET_3_5
-				return new CompletedTask();
-#else
+				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 					return;
-#endif
-#if !NET_3_5
+
+				try 
+				{          
+					RefreshReplicationInformation(serverClient);
+				}
+				catch (System.Exception e)
+				{
+					log.ErrorException("Failed to refresh replication information", e);
+				}
+			}
+		}
+#else
+		/// <summary>
+		/// Updates the replication information if needed.
+		/// </summary>
+		/// <param name="serverClient">The server client.</param>
+		public Task UpdateReplicationInformationIfNeeded(ServerClient serverClient)
+		{
+			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
+				return new CompletedTask();
+
+			var taskCopy = refreshReplicationInformationTask;
+			if (taskCopy != null)
+				return taskCopy;
+
+			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+				return new CompletedTask();
+			lock (replicationLock)
+			{
+				taskCopy = refreshReplicationInformationTask;
+				if (taskCopy != null)
+					return taskCopy;
+
+				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
+					return new CompletedTask();
+
 				return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
 					.ContinueWith(task =>
 					{
@@ -122,18 +137,9 @@ namespace Raven.Client.Connection
 						}
 						refreshReplicationInformationTask = null;
 					});
-#else
-				try 
-				{          
-					RefreshReplicationInformation(serverClient);
-				}
-				catch (System.Exception e)
-				{
-					log.ErrorException("Failed to refresh replication information", e);
-				}
-#endif
 			}
 		}
+#endif
 
 		private class IntHolder
 		{
@@ -175,7 +181,7 @@ namespace Raven.Client.Connection
 
 		private void AssertValidOperation(string method)
 		{
-			switch (conventions.FailoverBehavior)
+			switch (conventions.FailoverBehaviorWithoutFlags)
 			{
 				case FailoverBehavior.AllowReadsFromSecondaries:
 					if (method == "GET")
@@ -184,6 +190,10 @@ namespace Raven.Client.Connection
 				case FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries:
 					return;
 				case FailoverBehavior.FailImmediately:
+					var allowReadFromAllServers = (conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) ==
+					                              FailoverBehavior.ReadFromAllServers;
+					if (allowReadFromAllServers && method == "GET")
+						return;
 					break;
 			}
 			throw new InvalidOperationException("Could not replicate " + method +
@@ -251,7 +261,6 @@ namespace Raven.Client.Connection
 		{
 			var serverHash = GetServerHash(commands);
 
-			lastReplicationUpdate = SystemTime.UtcNow;
 			JsonDocument document;
 			try
 			{
@@ -264,7 +273,10 @@ namespace Raven.Client.Connection
 				document = TryLoadReplicationInformationFromLocalCache(serverHash);
 			}
 			if (document == null)
+			{
+				lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
 				return;
+			}
 
 			TrySavingReplicationInformationToLocalCache(serverHash, document);
 
@@ -282,6 +294,8 @@ namespace Raven.Client.Connection
 					continue;
 				failureCounts[replicationDestination] = new IntHolder();
 			}
+
+			lastReplicationUpdate = SystemTime.UtcNow;
 		}
 
 		private JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
@@ -348,6 +362,11 @@ namespace Raven.Client.Connection
 						Failing = false
 					});
 			}
+		}
+
+		public int GetReadStripingBase()
+		{
+			return Interlocked.Increment(ref readStripingBase);
 		}
 	}
 

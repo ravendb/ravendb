@@ -198,7 +198,7 @@ namespace Raven.Database.Server.Responders
 			}
 
 			var queryResult = Database.Query(index, indexQuery);
-			indexEtag = Database.GetIndexEtag(index, queryResult);
+			indexEtag = Database.GetIndexEtag(index, queryResult.ResultEtag);
 			return queryResult;
 		}
 
@@ -228,7 +228,7 @@ namespace Raven.Database.Server.Responders
 			// if that is the case. This can also happen when the optmizer
 			// decided to switch indexes for a query.
 			indexEtag = (dynamicIndexName  == null || queryResult.IndexName == dynamicIndexName) ?
-				Database.GetIndexEtag(queryResult.IndexName, queryResult) : 
+				Database.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag) : 
 				Guid.NewGuid();
 
 			return queryResult;

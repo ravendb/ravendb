@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -102,12 +103,12 @@ namespace Raven.Bundles.Tests.Replication
 			store2.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
 
 			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"),
-			                 store2.Url + "databases/FailoverTest");
+			                 store2.Url + "/databases/FailoverTest");
 
 			using (var store = new DocumentStore
 								{
 									DefaultDatabase = "FailoverTest",
-									Url = store1.Url + "databases/FailoverTest",
+									Url = store1.Url + "/databases/FailoverTest",
 									Conventions =
 										{
 											FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries
@@ -116,8 +117,9 @@ namespace Raven.Bundles.Tests.Replication
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase("FailoverTest");
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
-					.Wait();
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands).Wait();
+
+				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
 
 				using (var session = store.OpenSession())
 				{
@@ -129,21 +131,10 @@ namespace Raven.Bundles.Tests.Replication
 
 				servers[0].Dispose();
 
-				while (true)
+				using (var session = store.OpenSession())
 				{
-					try
-					{
-						using (var session = store.OpenSession())
-						{
-							var load = session.Load<Item>("items/1");
-							Assert.NotNull(load);
-						}
-						return;
-					}
-					catch (Exception)
-					{
-						Debugger.Launch();
-					}
+					var load = session.Load<Item>("items/1");
+					Assert.NotNull(load);
 				}
 			}
 		}
