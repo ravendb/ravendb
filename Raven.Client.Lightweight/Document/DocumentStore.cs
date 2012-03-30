@@ -236,10 +236,12 @@ namespace Raven.Client.Document
 		{
 			if (jsonRequestFactory != null) 
 				jsonRequestFactory.Dispose();
+#if !SILVERLIGHT
 			foreach (var replicationInformer in replicationInformers)
 			{
 				replicationInformer.Value.Dispose();
 			}
+#endif
 			WasDisposed = true;
 			var afterDispose = AfterDispose;
 			if (afterDispose != null)
