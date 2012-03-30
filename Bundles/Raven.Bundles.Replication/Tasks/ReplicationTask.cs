@@ -513,7 +513,7 @@ namespace Raven.Bundles.Replication.Tasks
 			var url = x.Url;
 			if (string.IsNullOrEmpty(x.Database) == false)
 			{
-				url = "/databases/" + x.Database;
+				url = url + "/databases/" + x.Database;
 			}
 			replicationStrategy.ConnectionStringOptions = new RavenConnectionStringOptions
 			{
