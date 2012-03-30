@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Connection;
@@ -234,7 +235,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override void Dispose()
 		{
-			if (jsonRequestFactory != null) 
+			GC.SuppressFinalize(this);
+			if (jsonRequestFactory != null)
 				jsonRequestFactory.Dispose();
 #if !SILVERLIGHT
 			foreach (var replicationInformer in replicationInformers)
@@ -246,6 +248,14 @@ namespace Raven.Client.Document
 			var afterDispose = AfterDispose;
 			if (afterDispose != null)
 				afterDispose(this, EventArgs.Empty);
+		}
+
+		private readonly StackTrace e = new StackTrace();
+		~DocumentStore()
+		{
+			var buffer = e.ToString();
+			Console.WriteLine(buffer);
+			File.AppendAllText(@"C:\stress-StackTrace.txt", buffer + Environment.NewLine + Environment.NewLine);
 		}
 
 		#endregion
@@ -280,10 +290,10 @@ namespace Raven.Client.Document
 			currentSessionId = sessionId;
 			try
 			{
-				var session = new DocumentSession(this, listeners, sessionId, 
+				var session = new DocumentSession(this, listeners, sessionId,
 					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options)
 #if !NET_3_5
-				  , SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials)
+, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials)
 #endif
 );
 				AfterSessionCreated(session);
@@ -391,9 +401,9 @@ namespace Raven.Client.Document
 			{
 				if (string.IsNullOrEmpty(currentOauthToken))
 					return;
-				
-				SetHeader(args.Request.Headers, "Authorization",currentOauthToken);
-				
+
+				SetHeader(args.Request.Headers, "Authorization", currentOauthToken);
+
 			};
 #if !SILVERLIGHT
 			Conventions.HandleUnauthorizedResponse = (response) =>
@@ -409,7 +419,7 @@ namespace Raven.Client.Document
 				using (var reader = new StreamReader(stream))
 				{
 					currentOauthToken = "Bearer " + reader.ReadToEnd();
-					return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization",currentOauthToken));
+					return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", currentOauthToken));
 
 				}
 			};
@@ -435,7 +445,7 @@ namespace Raven.Client.Document
 						using (var reader = new StreamReader(stream))
 						{
 							currentOauthToken = "Bearer " + reader.ReadToEnd();
-							return (Action<HttpWebRequest>)(request => SetHeader(request.Headers,"Authorization", currentOauthToken));
+							return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", currentOauthToken));
 						}
 					});
 			};
@@ -527,7 +537,7 @@ namespace Raven.Client.Document
 		{
 			var key = Url;
 			dbName = dbName ?? DefaultDatabase;
-			if(string.IsNullOrEmpty(dbName)==false)
+			if (string.IsNullOrEmpty(dbName) == false)
 			{
 				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
 			}
