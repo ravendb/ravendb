@@ -178,10 +178,7 @@ namespace Raven.Bundles.Tests.Replication
 			}
 
 			var jsonDocumentMetadata = commands.Head(expectedId);
-			if (jsonDocumentMetadata == null)
-			{
-				Debugger.Launch();
-			}
+			
 			Assert.NotNull(jsonDocumentMetadata);
 		}
 	}

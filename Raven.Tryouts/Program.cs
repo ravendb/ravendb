@@ -6,7 +6,7 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			new RaceConditions().SupportLazyOperations_LazyOperationsAreBatched();
+			new BundelsRaceConditions().FailoverBetweenTwoMultiTenantDatabases_CanReplicateBetweenTwoMultiTenantDatabases();
 		}
 	}
 }

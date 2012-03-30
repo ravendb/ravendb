@@ -34,16 +34,22 @@ namespace Raven.Bundles.Tests.Replication
 			{
 				store.Initialize();
 				var replicationInformerForDatabase = store.GetReplicationInformerForDatabase(null);
-				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded((ServerClient) store.DatabaseCommands)
+				var databaseCommands = (ServerClient) store.DatabaseCommands;
+				replicationInformerForDatabase.UpdateReplicationInformationIfNeeded(databaseCommands)
 					.Wait();
 
-				Assert.NotEmpty(replicationInformerForDatabase.ReplicationDestinations);
+				var replicationDestinations = replicationInformerForDatabase.ReplicationDestinations;
+				
+				Assert.NotEmpty(replicationDestinations);
 
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Item {});
 					session.SaveChanges();
 				}
+
+				var sanityCheck = store.DatabaseCommands.Head("items/1");
+				Assert.NotNull(sanityCheck);
 
 				WaitForDocument(store2.DatabaseCommands.ForDatabase("FailoverTest"), "items/1");
 			}

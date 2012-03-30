@@ -6,6 +6,7 @@ using NLog.Config;
 using Raven.Bundles.Tests.Authorization.Bugs;
 using Raven.Bundles.Tests.Replication;
 using Raven.Database.Server;
+using Raven.StressTests.Races;
 
 namespace Raven.Tryouts
 {
@@ -13,43 +14,7 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			if (Directory.Exists("Logs"))
-			{
-				foreach (var file in Directory.GetFiles("Logs"))
-				{
-					File.Delete(file);
-				}
-			}
-			SetupLogging();
-
-			try
-			{
-				for (int i = 0; i < 1000; i++)
-				{
-					Environment.SetEnvironmentVariable("Run", i.ToString());
-					Console.Clear();
-					Console.WriteLine(i);
-					using (var x = new FailoverBetweenTwoMultiTenantDatabases())
-						x.CanFailoverReplicationBetweenTwoMultiTenantDatabases_WithExplicitUrl();
-				}
-			}
-			finally
-			{
-				LogManager.Flush();
-			}
-		}
-
-
-		private static void SetupLogging()
-		{
-			HttpEndpointRegistration.RegisterHttpEndpointTarget();
-
-			using (var stream = typeof(Program).Assembly.GetManifestResourceStream("Raven.Tryouts.DefaultLogging.config"))
-			using (var reader = XmlReader.Create(stream))
-			{
-				LogManager.Configuration = new XmlLoggingConfiguration(reader, "default-config");
-			}
-
+			new BundelsRaceConditions().FailoverBetweenTwoMultiTenantDatabases_CanReplicateBetweenTwoMultiTenantDatabases();
 		}
 	}
 }
