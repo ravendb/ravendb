@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using NLog;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Logging;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 
@@ -14,7 +14,7 @@ namespace Raven.Client.Document.SessionOperations
 {
 	public class QueryOperation
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogProvider.GetCurrentClassLogger();
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		private readonly string indexName;
 		private readonly IndexQuery indexQuery;

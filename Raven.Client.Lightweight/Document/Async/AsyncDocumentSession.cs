@@ -6,16 +6,12 @@
 #if !NET_3_5
 
 using System;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Net;
 using System.Threading.Tasks;
-using NLog;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
-using Raven.Client.Listeners;
 using Raven.Client.Util;
 
 namespace Raven.Client.Document.Async

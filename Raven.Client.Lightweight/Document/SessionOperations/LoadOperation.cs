@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Net;
-using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Client.Document.SessionOperations
 {
 	public class LoadOperation
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogProvider.GetCurrentClassLogger();
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		private readonly Func<IDisposable> disableAllCaching;
 		private readonly string id;
