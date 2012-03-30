@@ -19,8 +19,8 @@ namespace Raven.Tests.Document
 	{
 		private readonly string path;
 		private readonly int port;
-		private RavenDbServer server;
-		private IDocumentStore documentStore;
+		private readonly RavenDbServer server;
+		private readonly IDocumentStore documentStore;
 
 		public AsyncDocumentStoreServerTests()
 		{
@@ -32,16 +32,12 @@ namespace Raven.Tests.Document
 			documentStore = new DocumentStore { Url = "http://localhost:" + port }.Initialize();
 		}
 
-		#region IDisposable Members
-
 		public void Dispose()
 		{
 			documentStore.Dispose();
 			server.Dispose();
 			IOExtensions.DeleteDirectory(path);
 		}
-
-		#endregion
 
 		[Fact]
 		public void Can_insert_sync_and_get_async()

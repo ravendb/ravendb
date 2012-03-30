@@ -501,6 +501,7 @@
     <Compile Include="Document\Contact.cs" />
     <Compile Include="Document\CustomDynamicClass.cs" />
     <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
+    <Compile Include="Document\DocumentStoreServerGranularTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests_DifferentProcess.cs" />
     <Compile Include="Document\DynamicDocuments.cs" />
