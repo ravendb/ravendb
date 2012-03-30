@@ -19,6 +19,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -42,7 +43,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Guid Id { get; private set; }
 
-		protected static readonly NLog.Logger log = NLog.LogManager.GetCurrentClassLogger();
+		protected static readonly ILog log = LogProvider.GetCurrentClassLogger();
 
 		/// <summary>
 		/// The entities waiting to be deleted
