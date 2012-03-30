@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
-using System.Net;
 using System.Transactions;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -18,10 +17,7 @@ using Raven.Database.Server;
 using Raven.Json.Linq;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Indexing;
-using Raven.Database.Json;
 using Raven.Server;
 using Raven.Tests.Indexes;
 using Xunit;
@@ -57,11 +53,13 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Should_insert_into_db_and_set_id()
 		{
-			var session = documentStore.OpenSession();
-			var entity = new Company {Name = "Company"};
-			session.Store(entity);
-			session.SaveChanges();
-			Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
+			using (var session = documentStore.OpenSession())
+			{
+				var entity = new Company {Name = "Company"};
+				session.Store(entity);
+				session.SaveChanges();
+				Assert.NotEqual(Guid.Empty.ToString(), entity.Id);
+			}
 		}
 
 		[Fact]
@@ -175,70 +173,76 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_create_index_with_decimal_as_firstfield()
 		{
-			var session = documentStore.OpenSession();
-			var company = new Company {Name = "Company 1", Phone = 5, AccountsReceivable = (decimal) 3904.39};
-			session.Store(company);
-			session.SaveChanges();
+			using (var session = documentStore.OpenSession())
+			{
+				var company = new Company {Name = "Company 1", Phone = 5, AccountsReceivable = (decimal) 3904.39};
+				session.Store(company);
+				session.SaveChanges();
 
-			documentStore.DatabaseCommands.PutIndex("company_by_name",
-			                                        new IndexDefinition
-			                                        	{
-			                                        		Map = "from doc in docs where doc.Name != null select new { doc.AccountsReceivable, doc.Name}",
-			                                        		Stores = {{"Name", FieldStorage.Yes}, {"AccountsReceivable", FieldStorage.Yes}}
-			                                        	});
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+				                                        new IndexDefinition
+				                                        	{
+				                                        		Map = "from doc in docs where doc.Name != null select new { doc.AccountsReceivable, doc.Name}",
+				                                        		Stores = {{"Name", FieldStorage.Yes}, {"AccountsReceivable", FieldStorage.Yes}}
+				                                        	});
 
-			var q = session.Query<Company>("company_by_name")
-				.Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)));
-			var single = q.ToList().SingleOrDefault();
+				var q = session.Query<Company>("company_by_name")
+					.Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)));
+				var single = q.ToList().SingleOrDefault();
 
-			Assert.NotNull(single);
-			Assert.Equal("Company 1", single.Name);
-			Assert.Equal((decimal) 3904.39, single.AccountsReceivable);
+				Assert.NotNull(single);
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal((decimal) 3904.39, single.AccountsReceivable);
+			}
 		}
 
 		[Fact]
 		public void Can_select_from_index_using_linq_method_chain_using_decimal_and_greater_than_or_equal()
 		{
-			var session = documentStore.OpenSession();
-			var company = new Company {Name = "Company 1", Phone = 5, AccountsReceivable = (decimal) 3904.39};
-			session.Store(company);
-			session.SaveChanges();
-			documentStore.DatabaseCommands.PutIndex("company_by_name", new
-			                                                           	IndexDefinition
-			                                                           	{
-			                                                           		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.AccountsReceivable}",
-			                                                           		Stores = {{"Name", FieldStorage.Yes}, {"AccountsReceivable", FieldStorage.Yes}}
-			                                                           	});
-			var q = session.Query<Company>("company_by_name")
-				.Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)))
-				.Where(x => x.AccountsReceivable > 1);
-			var single = q.ToList().SingleOrDefault();
-			Assert.NotNull(single);
-			Assert.Equal("Company 1", single.Name);
-			Assert.Equal((decimal) 3904.39, single.AccountsReceivable);
+			using (var session = documentStore.OpenSession())
+			{
+				var company = new Company {Name = "Company 1", Phone = 5, AccountsReceivable = (decimal) 3904.39};
+				session.Store(company);
+				session.SaveChanges();
+				documentStore.DatabaseCommands.PutIndex("company_by_name", new
+				                                                           	IndexDefinition
+				                                                           	{
+				                                                           		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.AccountsReceivable}",
+				                                                           		Stores = {{"Name", FieldStorage.Yes}, {"AccountsReceivable", FieldStorage.Yes}}
+				                                                           	});
+				var q = session.Query<Company>("company_by_name")
+					.Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)))
+					.Where(x => x.AccountsReceivable > 1);
+				var single = q.ToList().SingleOrDefault();
+				Assert.NotNull(single);
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal((decimal) 3904.39, single.AccountsReceivable);
+			}
 		}
 
 		[Fact]
 		public void Can_create_index_with_decimal_as_lastfield()
 		{
-			var session = documentStore.OpenSession();
-			var company = new Company {Name = "Company 1", Phone = 5, AccountsReceivable = (decimal) 3904.39};
-			session.Store(company);
-			session.SaveChanges();
+			using (var session = documentStore.OpenSession())
+			{
+				var company = new Company {Name = "Company 1", Phone = 5, AccountsReceivable = (decimal) 3904.39};
+				session.Store(company);
+				session.SaveChanges();
 
-			documentStore.DatabaseCommands.PutIndex("company_by_name", new IndexDefinition
-			                                                           	{
-			                                                           		Map = "from doc in docs where doc.Name != null select new {  doc.Name, doc.AccountsReceivable }",
-			                                                           		Stores = {{"Name", FieldStorage.Yes}, {"AccountsReceivable", FieldStorage.Yes}}
-			                                                           	});
+				documentStore.DatabaseCommands.PutIndex("company_by_name", new IndexDefinition
+				                                                           	{
+				                                                           		Map = "from doc in docs where doc.Name != null select new {  doc.Name, doc.AccountsReceivable }",
+				                                                           		Stores = {{"Name", FieldStorage.Yes}, {"AccountsReceivable", FieldStorage.Yes}}
+				                                                           	});
 
-			var q = session.Query<Company>("company_by_name")
-				.Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)));
-			var single = q.ToList().SingleOrDefault();
+				var q = session.Query<Company>("company_by_name")
+					.Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)));
+				var single = q.ToList().SingleOrDefault();
 
-			Assert.NotNull(single);
-			Assert.Equal("Company 1", single.Name);
-			Assert.Equal((decimal) 3904.39, single.AccountsReceivable);
+				Assert.NotNull(single);
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal((decimal) 3904.39, single.AccountsReceivable);
+			}
 		}
 
 		[Fact]
@@ -396,30 +400,33 @@ namespace Raven.Tests.Document
 		public void Can_get_entity_back_with_enum()
 		{
 			var company = new Company {Name = "Company Name", Type = Company.CompanyType.Private};
-			var session = documentStore.OpenSession();
-			session.Store(company);
-
-			session.SaveChanges();
-			session = documentStore.OpenSession();
-
-			var companyFound = session.Load<Company>(company.Id);
-
-			Assert.Equal(companyFound.Type, company.Type);
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+			}
+			using (var session = documentStore.OpenSession())
+			{
+				var companyFound = session.Load<Company>(company.Id);
+				Assert.Equal(companyFound.Type, company.Type);
+			}
 		}
 
 		[Fact]
 		public void Can_store_and_get_array_metadata()
 		{
-			var session = documentStore.OpenSession();
-			var company = new Company {Name = "Company"};
-			session.Store(company);
-			var metadata = session.Advanced.GetMetadataFor(company);
-			metadata["Raven-Allowed-Users"] = new RavenJArray("ayende", "oren", "rob");
+			using (var session = documentStore.OpenSession())
+			{
+				var company = new Company {Name = "Company"};
+				session.Store(company);
+				var metadata = session.Advanced.GetMetadataFor(company);
+				metadata["Raven-Allowed-Users"] = new RavenJArray("ayende", "oren", "rob");
 
-			session.SaveChanges();
-			var metadataFromServer = session.Advanced.GetMetadataFor(session.Load<Company>(company.Id));
-			var users = ((RavenJArray) metadataFromServer["Raven-Allowed-Users"]).Cast<RavenJValue>().Select(x => (string) x.Value).ToArray();
-			Assert.Equal(new[] {"ayende", "oren", "rob"}, users);
+				session.SaveChanges();
+				var metadataFromServer = session.Advanced.GetMetadataFor(session.Load<Company>(company.Id));
+				var users = ((RavenJArray) metadataFromServer["Raven-Allowed-Users"]).Cast<RavenJValue>().Select(x => (string) x.Value).ToArray();
+				Assert.Equal(new[] {"ayende", "oren", "rob"}, users);
+			}
 		}
 
 		[Fact]
@@ -530,205 +537,221 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_get_two_documents_in_one_call()
 		{
-			var session = documentStore.OpenSession();
-			session.Store(new Company {Name = "Company A", Id = "1"});
-			session.Store(new Company {Name = "Company B", Id = "2"});
-			session.SaveChanges();
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(new Company {Name = "Company A", Id = "1"});
+				session.Store(new Company {Name = "Company B", Id = "2"});
+				session.SaveChanges();
+			}
 
-
-			var session2 = documentStore.OpenSession();
-
-			var companies = session2.Load<Company>("1", "2");
-			Assert.Equal(2, companies.Length);
-			Assert.Equal("Company A", companies[0].Name);
-			Assert.Equal("Company B", companies[1].Name);
+			using (var session = documentStore.OpenSession())
+			{
+				var companies = session.Load<Company>("1", "2");
+				Assert.Equal(2, companies.Length);
+				Assert.Equal("Company A", companies[0].Name);
+				Assert.Equal("Company B", companies[1].Name);
+			}
 		}
 
 
 		[Fact]
 		public void Can_delete_document()
 		{
-			var session = documentStore.OpenSession();
-			var entity = new Company {Name = "Company"};
-			session.Store(entity);
-			session.SaveChanges();
+			using (var session = documentStore.OpenSession())
+			{
+				var entity = new Company {Name = "Company"};
+				session.Store(entity);
+				session.SaveChanges();
+				using (var session2 = documentStore.OpenSession())
+					Assert.NotNull(session2.Load<Company>(entity.Id));
 
-			using (var session2 = documentStore.OpenSession())
-				Assert.NotNull(session2.Load<Company>(entity.Id));
+				session.Delete(entity);
+				session.SaveChanges();
 
-			session.Delete(entity);
-			session.SaveChanges();
-
-			using (var session3 = documentStore.OpenSession())
-				Assert.Null(session3.Load<Company>(entity.Id));
+				using (var session3 = documentStore.OpenSession())
+					Assert.Null(session3.Load<Company>(entity.Id));
+			}
 		}
 
 		[Fact]
 		public void Can_project_from_index()
 		{
-			var session = documentStore.OpenSession();
-			var company = new Company {Name = "Company 1", Phone = 5};
-			session.Store(company);
-			session.SaveChanges();
+			using (var session = documentStore.OpenSession())
+			{
+				var company = new Company {Name = "Company 1", Phone = 5};
+				session.Store(company);
+				session.SaveChanges();
 
-			documentStore.DatabaseCommands.PutIndex("company_by_name",
-			                                        new IndexDefinition
-			                                        	{
-			                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
-			                                        		Stores = {{"Name", FieldStorage.Yes}, {"Phone", FieldStorage.Yes}},
-			                                        		Indexes = {{"Name", FieldIndexing.NotAnalyzed}}
-			                                        	});
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+				                                        new IndexDefinition
+				                                        	{
+				                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+				                                        		Stores = {{"Name", FieldStorage.Yes}, {"Phone", FieldStorage.Yes}},
+				                                        		Indexes = {{"Name", FieldIndexing.NotAnalyzed}}
+				                                        	});
 
-			var q = session
-				.Advanced.LuceneQuery<Company>("company_by_name")
-				.SelectFields<Company>("Name", "Phone")
-				.WaitForNonStaleResults();
-			var single = q.Single();
-			Assert.Equal("Company 1", single.Name);
-			Assert.Equal(5, single.Phone);
+				var q = session
+					.Advanced.LuceneQuery<Company>("company_by_name")
+					.SelectFields<Company>("Name", "Phone")
+					.WaitForNonStaleResults();
+				var single = q.Single();
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal(5, single.Phone);
+			}
 		}
 
 		[Fact]
 		public void Can_select_from_index_using_linq_method_chain()
 		{
-			var session = documentStore.OpenSession();
-			var company = new Company {Name = "Company 1", Phone = 5};
-			session.Store(company);
-			session.SaveChanges();
+			using (var session = documentStore.OpenSession())
+			{
+				var company = new Company {Name = "Company 1", Phone = 5};
+				session.Store(company);
+				session.SaveChanges();
 
-			documentStore.DatabaseCommands.PutIndex("company_by_name",
-			                                        new IndexDefinition
-			                                        	{
-			                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
-			                                        		Stores = {{"Name", FieldStorage.Yes}, {"Phone", FieldStorage.Yes}}
-			                                        	});
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+				                                        new IndexDefinition
+				                                        	{
+				                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+				                                        		Stores = {{"Name", FieldStorage.Yes}, {"Phone", FieldStorage.Yes}}
+				                                        	});
 
-			var q = session.Query<Company>("company_by_name")
-				.Customize(query => query.WaitForNonStaleResults())
-				.Where(x => x.Name == (company.Name));
-			var single = q.ToArray()[0];
-			Assert.Equal("Company 1", single.Name);
-			Assert.Equal(5, single.Phone);
+				var q = session.Query<Company>("company_by_name")
+					.Customize(query => query.WaitForNonStaleResults())
+					.Where(x => x.Name == (company.Name));
+				var single = q.ToArray()[0];
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal(5, single.Phone);
+			}
 		}
 
 		[Fact]
 		public void Can_select_from_index_using_linq_method_chain_with_variable()
 		{
-			var session = documentStore.OpenSession();
-			var company = new Company {Name = "Company 1", Phone = 5};
-			session.Store(company);
-			session.SaveChanges();
+			using (var session = documentStore.OpenSession())
+			{
+				var company = new Company {Name = "Company 1", Phone = 5};
+				session.Store(company);
+				session.SaveChanges();
 
-			documentStore.DatabaseCommands.PutIndex("company_by_name",
-			                                        new IndexDefinition
-			                                        	{
-			                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
-			                                        		Stores = {{"Name", FieldStorage.Yes}, {"Phone", FieldStorage.Yes}}
-			                                        	});
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+				                                        new IndexDefinition
+				                                        	{
+				                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+				                                        		Stores = {{"Name", FieldStorage.Yes}, {"Phone", FieldStorage.Yes}}
+				                                        	});
 
-			var name = company.Name;
-			var q = session.Query<Company>("company_by_name")
-				.Customize(query => query.WaitForNonStaleResults())
-				.Where(x => x.Name == (name));
-			var single = q.ToArray()[0];
-			Assert.Equal("Company 1", single.Name);
-			Assert.Equal(5, single.Phone);
+				var name = company.Name;
+				var q = session.Query<Company>("company_by_name")
+					.Customize(query => query.WaitForNonStaleResults())
+					.Where(x => x.Name == (name));
+				var single = q.ToArray()[0];
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal(5, single.Phone);
+			}
 		}
 
 		[Fact]
 		public void Can_select_from_index_using_linq_with_no_where_clause()
 		{
-			var session = documentStore.OpenSession();
-			var company = new Company {Name = "Company 1", Phone = 5};
-			session.Store(company);
-			session.SaveChanges();
+			using (var session = documentStore.OpenSession())
+			{
+				var company = new Company {Name = "Company 1", Phone = 5};
+				session.Store(company);
+				session.SaveChanges();
 
-			documentStore.DatabaseCommands.PutIndex("company_by_name",
-			                                        new IndexDefinition
-			                                        	{
-			                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
-			                                        		Stores = {{"Name", FieldStorage.Yes}, {"Phone", FieldStorage.Yes}}
-			                                        	});
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+				                                        new IndexDefinition
+				                                        	{
+				                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+				                                        		Stores = {{"Name", FieldStorage.Yes}, {"Phone", FieldStorage.Yes}}
+				                                        	});
 
-			var name = company.Name;
-			var q = session.Query<Company>("company_by_name")
-				.Customize(query => query.WaitForNonStaleResults());
-			var single = q.ToArray()[0];
-			Assert.Equal("Company 1", single.Name);
-			Assert.Equal(5, single.Phone);
+				var name = company.Name;
+				var q = session.Query<Company>("company_by_name")
+					.Customize(query => query.WaitForNonStaleResults());
+				var single = q.ToArray()[0];
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal(5, single.Phone);
+			}
 		}
 
 		[Fact]
 		public void Can_select_from_index_using_linq_method_chain_using_integer()
 		{
-			var session = documentStore.OpenSession();
-			var company = new Company {Name = "Company 1", Phone = 5};
-			session.Store(company);
-			session.SaveChanges();
+			using (var session = documentStore.OpenSession())
+			{
+				var company = new Company {Name = "Company 1", Phone = 5};
+				session.Store(company);
+				session.SaveChanges();
 
-			documentStore.DatabaseCommands.PutIndex("company_by_name",
-			                                        new IndexDefinition
-			                                        	{
-			                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
-			                                        		Stores = {{"Name", FieldStorage.Yes}, {"Phone", FieldStorage.Yes}}
-			                                        	});
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+				                                        new IndexDefinition
+				                                        	{
+				                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+				                                        		Stores = {{"Name", FieldStorage.Yes}, {"Phone", FieldStorage.Yes}}
+				                                        	});
 
-			var q = session.Query<Company>("company_by_name")
-				.Customize(query => query.WaitForNonStaleResults())
-				.Where(x => x.Phone == 5);
-			var single = q.ToArray()[0];
-			Assert.Equal("Company 1", single.Name);
-			Assert.Equal(5, single.Phone);
+				var q = session.Query<Company>("company_by_name")
+					.Customize(query => query.WaitForNonStaleResults())
+					.Where(x => x.Phone == 5);
+				var single = q.ToArray()[0];
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal(5, single.Phone);
+			}
 		}
 
 		[Fact]
 		public void Can_select_from_index_using_linq_method_chain_using_integer_and_greater_than_or_equal()
 		{
-			var session = documentStore.OpenSession();
-			var company = new Company {Name = "Company 1", Phone = 5};
-			session.Store(company);
-			session.SaveChanges();
+			using (var session = documentStore.OpenSession())
+			{
+				var company = new Company {Name = "Company 1", Phone = 5};
+				session.Store(company);
+				session.SaveChanges();
 
-			documentStore.DatabaseCommands.PutIndex("company_by_name",
-			                                        new IndexDefinition
-			                                        	{
-			                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
-			                                        		Stores = {{"Name", FieldStorage.Yes}, {"Phone", FieldStorage.Yes}}
-			                                        	});
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+				                                        new IndexDefinition
+				                                        	{
+				                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+				                                        		Stores = {{"Name", FieldStorage.Yes}, {"Phone", FieldStorage.Yes}}
+				                                        	});
 
-			var q = session.Query<Company>("company_by_name")
-				.Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)))
-				.Where(x => x.Phone > 1);
-			var single = q.ToArray()[0];
-			Assert.Equal("Company 1", single.Name);
-			Assert.Equal(5, single.Phone);
+				var q = session.Query<Company>("company_by_name")
+					.Customize(query => query.WaitForNonStaleResults(TimeSpan.FromHours(1)))
+					.Where(x => x.Phone > 1);
+				var single = q.ToArray()[0];
+				Assert.Equal("Company 1", single.Name);
+				Assert.Equal(5, single.Phone);
+			}
 		}
 
 		[Fact]
 		public void Optimistic_concurrency()
 		{
-			var session = documentStore.OpenSession();
-			session.Advanced.UseOptimisticConcurrency = true;
-			var company = new Company {Name = "Company 1"};
-			session.Store(company);
-			session.SaveChanges();
-
-			using (var session2 = documentStore.OpenSession())
+			using (var session = documentStore.OpenSession())
 			{
-				var company2 = session2.Load<Company>(company.Id);
-				company2.Name = "foo";
-				session2.SaveChanges();
-			}
+				session.Advanced.UseOptimisticConcurrency = true;
+				var company = new Company {Name = "Company 1"};
+				session.Store(company);
+				session.SaveChanges();
 
-			company.Name = "Company 2";
-			Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+				using (var session2 = documentStore.OpenSession())
+				{
+					var company2 = session2.Load<Company>(company.Id);
+					company2.Name = "foo";
+					session2.SaveChanges();
+				}
+
+				company.Name = "Company 2";
+				Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+			}
 		}
 
 		[Fact]
 		public void Can_insert_with_transaction()
 		{
 			const string id = "Company/id";
-
 			using (var session = documentStore.OpenSession())
 			{
 				Assert.Null(session.Load<Company>(id));
@@ -771,19 +794,20 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Should_update_stored_entity()
 		{
+			using (var session = documentStore.OpenSession())
+			{
+				var company = new Company {Name = "Company 1"};
+				session.Store(company);
+				session.SaveChanges();
 
-			var session = documentStore.OpenSession();
-			var company = new Company {Name = "Company 1"};
-			session.Store(company);
+				var id = company.Id;
+				company.Name = "Company 2";
+				session.SaveChanges();
 
-			session.SaveChanges();
-
-			var id = company.Id;
-			company.Name = "Company 2";
-			session.SaveChanges();
-			var companyFound = session.Load<Company>(company.Id);
-			Assert.Equal("Company 2", companyFound.Name);
-			Assert.Equal(id, company.Id);
+				var companyFound = session.Load<Company>(company.Id);
+				Assert.Equal("Company 2", companyFound.Name);
+				Assert.Equal(id, company.Id);
+			}
 		}
 
 		[Fact]
@@ -841,81 +865,84 @@ namespace Raven.Tests.Document
 		[Fact]
 		public void Can_sort_from_index()
 		{
-			var session = documentStore.OpenSession();
+			using (var session = documentStore.OpenSession())
+			{
 
-			session.Store(new Company {Name = "Company 1", Phone = 5});
-			session.Store(new Company {Name = "Company 2", Phone = 3});
-			session.SaveChanges();
+				session.Store(new Company {Name = "Company 1", Phone = 5});
+				session.Store(new Company {Name = "Company 2", Phone = 3});
+				session.SaveChanges();
 
-			documentStore.DatabaseCommands.PutIndex("company_by_name",
-			                                        new IndexDefinition
-			                                        	{
-			                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
-			                                        		Indexes = {{"Phone", FieldIndexing.Analyzed}}
-			                                        	});
+				documentStore.DatabaseCommands.PutIndex("company_by_name",
+				                                        new IndexDefinition
+				                                        	{
+				                                        		Map = "from doc in docs where doc.Name != null select new { doc.Name, doc.Phone}",
+				                                        		Indexes = {{"Phone", FieldIndexing.Analyzed}}
+				                                        	});
 
-			// Wait until the index is built
-			session.Advanced.LuceneQuery<Company>("company_by_name")
-				.WaitForNonStaleResults()
-				.ToArray();
+				// Wait until the index is built
+				session.Advanced.LuceneQuery<Company>("company_by_name")
+					.WaitForNonStaleResults()
+					.ToArray();
 
-			var companies = session.Advanced.LuceneQuery<Company>("company_by_name")
-				.OrderBy("Phone")
-				.WaitForNonStaleResults()
-				.ToArray();
+				var companies = session.Advanced.LuceneQuery<Company>("company_by_name")
+					.OrderBy("Phone")
+					.WaitForNonStaleResults()
+					.ToArray();
 
-			Assert.Equal("Company 2", companies[0].Name);
-			Assert.Equal("Company 1", companies[1].Name);
+				Assert.Equal("Company 2", companies[0].Name);
+				Assert.Equal("Company 1", companies[1].Name);
+			}
 		}
 
 		[Fact]
 		public void Can_query_from_spatial_index()
 		{
-			var session = documentStore.OpenSession();
-
-			foreach (Event @event in SpatialIndexTestHelper.GetEvents())
+			using (var session = documentStore.OpenSession())
 			{
-				session.Store(@event);
-			}
+				foreach (Event @event in SpatialIndexTestHelper.GetEvents())
+				{
+					session.Store(@event);
+				}
 
-			session.SaveChanges();
+				session.SaveChanges();
 
-			var indexDefinition = new IndexDefinition
-			                      	{
-			                      		Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
-			                      		Indexes =
-			                      			{
-			                      				{"Tag", FieldIndexing.NotAnalyzed}
-			                      			}
-			                      	};
+				var indexDefinition = new IndexDefinition
+				                      	{
+				                      		Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude, e.Longitude) }",
+				                      		Indexes =
+				                      			{
+				                      				{"Tag", FieldIndexing.NotAnalyzed}
+				                      			}
+				                      	};
 
-			documentStore.DatabaseCommands.PutIndex("eventsByLatLng", indexDefinition);
+				documentStore.DatabaseCommands.PutIndex("eventsByLatLng", indexDefinition);
 
-			// Wait until the index is built
-			session.Advanced.LuceneQuery<Event>("eventsByLatLng")
-				.WaitForNonStaleResults()
-				.ToArray();
+				// Wait until the index is built
+				session.Advanced.LuceneQuery<Event>("eventsByLatLng")
+					.WaitForNonStaleResults()
+					.ToArray();
 
-			const double lat = 38.96939, lng = -77.386398;
-			const double radius = 6.0;
+				const double lat = 38.96939, lng = -77.386398;
+				const double radius = 6.0;
 
-			var events = session.Advanced.LuceneQuery<Event>("eventsByLatLng")
-				.WhereEquals("Tag", "Event")
-				.WithinRadiusOf(radius, lat, lng)
-				.SortByDistance()
-				.WaitForNonStaleResults()
-				.ToArray();
+				var events = session.Advanced.LuceneQuery<Event>("eventsByLatLng")
+					.WhereEquals("Tag", "Event")
+					.WithinRadiusOf(radius, lat, lng)
+					.SortByDistance()
+					.WaitForNonStaleResults()
+					.ToArray();
 
-			Assert.Equal(7, events.Length);
+				Assert.Equal(7, events.Length);
 
-			double previous = 0;
-			foreach (var e in events)
-			{
-				double distance = Raven.Database.Indexing.SpatialIndex.GetDistanceMi(lat, lng, e.Latitude, e.Longitude);
-				Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
-				Assert.True(distance < radius);
-				Assert.True(distance >= previous);
-				previous = distance;
+				double previous = 0;
+				foreach (var e in events)
+				{
+					double distance = Raven.Database.Indexing.SpatialIndex.GetDistanceMi(lat, lng, e.Latitude, e.Longitude);
+					Console.WriteLine("Venue: " + e.Venue + ", Distance " + distance);
+					Assert.True(distance < radius);
+					Assert.True(distance >= previous);
+					previous = distance;
+				}
 			}
 		}
 
