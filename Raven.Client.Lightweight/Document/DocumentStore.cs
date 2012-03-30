@@ -485,10 +485,13 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			databaseCommandsGenerator = () =>
 			{
-				var serverClient = new ServerClient(Url, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId);
-				if (string.IsNullOrEmpty(DefaultDatabase))
-					return serverClient;
-				return serverClient.ForDatabase(DefaultDatabase);
+				string databaseUrl = Url;
+				if (string.IsNullOrEmpty(DefaultDatabase) == false)
+				{
+					databaseUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
+				}
+				return new ServerClient(databaseUrl, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId);
 			};
 #endif
 #if !NET_3_5
@@ -516,6 +519,7 @@ namespace Raven.Client.Document
 		public ReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
 		{
 			var key = Url;
+			dbName = dbName ?? DefaultDatabase;
 			if(string.IsNullOrEmpty(dbName)==false)
 			{
 				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
