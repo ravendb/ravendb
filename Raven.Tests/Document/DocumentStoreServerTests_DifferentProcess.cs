@@ -27,47 +27,46 @@ namespace Raven.Tests.Document
 			{
 				WaitForNetwork("http://localhost:8079");
 
-				var documentStore = new DocumentStore { Url = "http://localhost:8079" };
-				documentStore.Initialize();
-
-				var company = new Company { Name = "Company Name" };
-				var durableEnlistment = new ManyDocumentsViaDTC.DummyEnlistmentNotification();
-				using (var tx = new TransactionScope())
+				using (var documentStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
-					var session = documentStore.OpenSession();
-					session.Store(company);
-					session.SaveChanges();
+					var company = new Company {Name = "Company Name"};
+					var durableEnlistment = new ManyDocumentsViaDTC.DummyEnlistmentNotification();
+					using (var tx = new TransactionScope())
+					{
+						var session = documentStore.OpenSession();
+						session.Store(company);
+						session.SaveChanges();
 
-					Assert.Equal(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
+						Assert.Equal(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
 
-					Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
-													  durableEnlistment, EnlistmentOptions.None);
+						Transaction.Current.EnlistDurable(ManyDocumentsViaDTC.DummyEnlistmentNotification.Id,
+						                                  durableEnlistment, EnlistmentOptions.None);
 
-					Assert.NotEqual(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
-
-
-					tx.Complete();
-				}
+						Assert.NotEqual(Guid.Empty, Transaction.Current.TransactionInformation.DistributedIdentifier);
 
 
-				for (int i = 0; i < 15; i++)// wait for commit
-				{
-					using (var session2 = documentStore.OpenSession())
-						if (session2.Load<Company>(company.Id) != null)
-							break;
-					Thread.Sleep(100);
-				}
-				using (var session2 = documentStore.OpenSession())
-					Assert.NotNull((session2.Load<Company>(company.Id)));
+						tx.Complete();
+					}
 
-				for (int i = 0; i < 15; i++) // we have to wait to be notified, too
-				{
-					if(durableEnlistment.WasCommitted == false)
+
+					for (int i = 0; i < 15; i++) // wait for commit
+					{
+						using (var session2 = documentStore.OpenSession())
+							if (session2.Load<Company>(company.Id) != null)
+								break;
 						Thread.Sleep(100);
+					}
+					using (var session2 = documentStore.OpenSession())
+						Assert.NotNull((session2.Load<Company>(company.Id)));
+
+					for (int i = 0; i < 15; i++) // we have to wait to be notified, too
+					{
+						if (durableEnlistment.WasCommitted == false)
+							Thread.Sleep(100);
+					}
+
+					Assert.True(durableEnlistment.WasCommitted);
 				}
-
-				Assert.True(durableEnlistment.WasCommitted);
-
 			}
 			finally
 			{
