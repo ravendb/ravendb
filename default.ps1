@@ -559,7 +559,7 @@ task CreateNugetPackageFineGrained {
 		$accessKey = $accessKey.Trim()
 		
 		# Push to nuget repository
-		$packages | ForEach-Object {= 
+		$packages | ForEach-Object {
 			&"$tools_dir\NuGet.exe" push "$($_.BaseName).$nugetVersion.nupkg" $accessKey
 		}
 	}
