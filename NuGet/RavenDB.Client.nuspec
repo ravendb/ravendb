@@ -11,7 +11,7 @@
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
 		<tags>nosql ravendb raven document database client</tags>
 		<dependencies>
-			<dependency id="RavenDB.Abstractions" version="" />
+			<dependency id="Newtonsoft.Json" version="[4.0.8]"/>
 			<dependency id="NLog" version="[2.0.0.2000]" />
 		</dependencies>
 		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>

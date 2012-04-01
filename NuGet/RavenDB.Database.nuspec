@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package>
 	<metadata>
-		<id>RavenDB.Abstractions</id>
+		<id>RavenDB.Database</id>
 		<version>1.0</version>
 		<authors>Hibernating Rhinos</authors>
-		<description>Core Abstractions used by other RavenDB packages</description>
+		<description>RavenDB database package</description>
 		<language>en-US</language>
 		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
 		<projectUrl>http://www.ravendb.net/</projectUrl>
@@ -12,6 +12,7 @@
 		<tags>nosql ravendb raven document database</tags>
 		<dependencies>
 			<dependency id="Newtonsoft.Json" version="[4.0.8]"/>
+			<dependency id="NLog" version="[2.0.0.2000]" />
 		</dependencies>
 		<frameworkAssemblies>
 			<frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />

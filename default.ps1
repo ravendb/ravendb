@@ -585,25 +585,14 @@ task CreateNugetPackage {
 
 task CreateNugetPackageFineGrained {
 	# (re-)defining alternative package dll properties here, don't want to interfer with exisiting nuget package creation
-	$abstraction_dlls_3_5 = @("Raven.Abstractions-3.5.???") |
-		ForEach-Object { 
-			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
-			return "$build_dir\$_"
-		}
 		
-	$abstraction_dlls = @("Raven.Abstractions.???") |
-		ForEach-Object { 
-			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
-			return "$build_dir\$_"
-		}
-		
-	$client_dlls_3_5 = @("Raven.Client.Lightweight-3.5.???") |
+	$client_dlls_3_5 = @("Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 	 
-	$client_dlls = @("Raven.Client.Lightweight.???") |
+	$client_dlls = @("Raven.Abstractions.???", "Raven.Client.Lightweight.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -615,7 +604,7 @@ task CreateNugetPackageFineGrained {
 			return "$build_dir\$_"
 		}
 		
-	$silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |
+	$silverlight_dlls = @("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -639,9 +628,15 @@ task CreateNugetPackageFineGrained {
 			return "$build_dir\$_"
 		}
 		
-	$embedded_dlls = @("Raven.Database.???", "BouncyCastle.Crypto.???",
+	$database_dlls = @("Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 						  "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???",
 						  "Lucene.Net.Contrib.SpellChecker.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap"  ) |
+		ForEach-Object { 
+			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
+			return "$build_dir\$_"
+		}
+	
+	$embedded_dlls = @("Raven.Client.Embedded.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -653,12 +648,6 @@ task CreateNugetPackageFineGrained {
 	
 	New-Item $nuget_dir -Type directory | Out-Null
 	
-	New-Item $nuget_dir\RavenDB.Abstractions -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.Abstractions\lib -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.Abstractions\lib\net35 -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.Abstractions\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Abstractions.nuspec $nuget_dir\RavenDB.Abstractions\RavenDB.Abstractions.nuspec
-
 	New-Item $nuget_dir\RavenDB.Client -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\net35 -Type directory | Out-Null
@@ -682,17 +671,16 @@ task CreateNugetPackageFineGrained {
 	New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.MvcIntegration.nuspec $nuget_dir\RavenDB.Client.MvcIntegration\RavenDB.Client.MvcIntegration.nuspec
 
+	New-Item $nuget_dir\RavenDB.Database -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Database\lib -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Database\lib\net40 -Type directory | Out-Null
+	Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
+	
 	New-Item $nuget_dir\RavenDB.Embedded -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Embedded\lib -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
 
-	$abstraction_dlls_3_5 | ForEach-Object { 
-		Copy-Item "$_" $nuget_dir\RavenDB.Abstractions\lib\net35
-	}	
-	$abstraction_dlls | ForEach-Object { 
-		Copy-Item "$_" $nuget_dir\RavenDB.Abstractions\lib\net40
-	}
 	$client_dlls_3_5 | ForEach-Object { 
 		Copy-Item "$_" $nuget_dir\RavenDB.Client\lib\net35
 	}
@@ -710,6 +698,9 @@ task CreateNugetPackageFineGrained {
 	}
 	$client_fsharp_dlls | ForEach-Object { 
 		Copy-Item "$_" $nuget_dir\RavenDB.Client.FSharp\lib\net40
+	}
+	$database_dlls | ForEach-Object { 
+		Copy-Item "$_" $nuget_dir\RavenDB.Database\lib\net40
 	}
 	$embedded_dlls | ForEach-Object { 
 		Copy-Item "$_" $nuget_dir\RavenDB.Embedded\lib\net40
