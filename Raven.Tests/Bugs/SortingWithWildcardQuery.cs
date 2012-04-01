@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
@@ -15,7 +16,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class SortingWithWildcardQuery : RemoteClientTest
+	public class SortingWithWildcardQuery : RemoteClientTest, IDisposable
 	{
 		private readonly string path;
 		private readonly RavenDbServer ravenDbServer;
