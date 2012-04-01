@@ -306,23 +306,7 @@ namespace Raven.Client.Document
 			WaitForNonStaleResults(waitTimeout);
 			return this;
 		}
-
-		/// <summary>
-		/// Selects the specified fields directly from the index
-		/// </summary>
-		/// <typeparam name="TProjection">The type of the projection.</typeparam>
-		/// <param name="fields">The fields.</param>
-		IDocumentQueryCustomization IDocumentQueryCustomization.CreateQueryForSelectedFields<TProjection>(params string[] fields)
-		{
-			return CreateQueryForSelectedFields<TProjection>(fields);
-		}
-
-
-		/// <summary>
-		/// Selects the specified fields directly from the index
-		/// </summary>
-		protected abstract IDocumentQueryCustomization CreateQueryForSelectedFields<TProjection>(string[] fields);
-
+		
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>

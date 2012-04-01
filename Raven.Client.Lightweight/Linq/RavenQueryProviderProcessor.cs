@@ -13,6 +13,7 @@ using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Linq
@@ -404,8 +405,17 @@ namespace Raven.Client.Linq
 			if (lambdaExpression != null)
 				return GetMemberExpression(lambdaExpression.Body);
 
+			var memberExpression = expression as MemberExpression;
 
-			return (MemberExpression)expression;
+			if(memberExpression == null)
+			{
+				throw new InvalidOperationException("Could not understand how to translate '" + expression + "' to a RavenDB query." +
+				                                    Environment.NewLine +
+				                                    "Are you trying to do computation during the query?" + Environment.NewLine +
+													"RavenDB doesn't allow computation during the query, computation is only allowed during index. Consider moving the operation to an index.");
+			}
+
+			return memberExpression;	
 		}
 
 		private void VisitEquals(MethodCallExpression expression)
@@ -1156,7 +1166,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			if (customizeQuery != null)
 				customizeQuery((IDocumentQueryCustomization)asyncLuceneQuery);
 
-			return asyncLuceneQuery;
+
+			return asyncLuceneQuery.SelectFields<T>(FieldsToFetch.ToArray());
 		}
 
 

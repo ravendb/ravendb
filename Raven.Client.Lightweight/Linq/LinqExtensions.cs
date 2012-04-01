@@ -76,7 +76,6 @@ namespace Raven.Client.Linq
 			var ofType = queryable.OfType<TResult>();
 			var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
 			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
-			ravenQueryInspector.Customize(x => x.CreateQueryForSelectedFields<TResult>(null));
 			return results;
 		}
 
@@ -106,9 +105,7 @@ namespace Raven.Client.Linq
 			var ofType = queryable.OfType<TResult>();
 			var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
 			var ravenQueryInspector = ((RavenQueryInspector<TResult>)results);
-			var fields = typeof (TResult).GetProperties().Select(x => x.Name).ToArray();
-			ravenQueryInspector.FieldsToFetch(fields);
-			ravenQueryInspector.Customize(x => x.CreateQueryForSelectedFields<TResult>(fields));
+			ravenQueryInspector.FieldsToFetch(typeof(TResult).GetProperties().Select(x => x.Name));
 			return (IRavenQueryable<TResult>)results;
 		}
 #if !SILVERLIGHT
