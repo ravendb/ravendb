@@ -1166,7 +1166,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			if (customizeQuery != null)
 				customizeQuery((IDocumentQueryCustomization)asyncLuceneQuery);
 
-			return asyncLuceneQuery;
+
+			return asyncLuceneQuery.SelectFields<T>(FieldsToFetch.ToArray());
 		}
 
 
