@@ -1,26 +1,39 @@
-﻿namespace Raven.Tests.Silverlight
-{
-	using System.Linq;
-	using System.Collections.Generic;
-	using System.Threading.Tasks;
-	using Client.Document;
-	using Client.Extensions;
-	using Document;
-	using Microsoft.Silverlight.Testing;
-	using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Silverlight.Testing;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Tests.Document;
 
-	public class AsyncDatabaseCommandsTests : RavenTestBase
+namespace Raven.Tests.Silverlight
+{
+	public class AsyncDatabaseCommandsTests : RavenTestBase, IDisposable
 	{
+		private readonly IDocumentStore documentStore;
+
+		public AsyncDatabaseCommandsTests()
+		{
+			documentStore = new DocumentStore { Url = Url + Port }.Initialize();
+
+		}
+
+		public void Dispose()
+		{
+			documentStore.Dispose();
+		}
+
 		[Asynchronous]
-		public IEnumerable<Task> Can_get_documents_async()
+		public IEnumerable<Task> CanGetDocumentsAsync()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var store = new DocumentStore { Url = Url + Port };
-			store.Initialize();
-			var cmd = store.AsyncDatabaseCommands;
+			var cmd = documentStore.AsyncDatabaseCommands;
 			yield return cmd.EnsureDatabaseExistsAsync(dbname);
 
-			using (var session = store.OpenAsyncSession(dbname))
+			using (var session = documentStore.OpenAsyncSession(dbname))
 			{
 				session.Store(new Company { Name = "Hai" });
 				session.Store(new Company { Name = "I can haz cheezburgr?" });
@@ -35,15 +48,13 @@
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_get_documents_whose_id_starts_with_a_prefix()
+		public IEnumerable<Task> CanGetDocumentsWhoseIdStartsWithAPrefix()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var store = new DocumentStore { Url = Url + Port };
-			store.Initialize();
-			var cmd = store.AsyncDatabaseCommands;
+			var cmd = documentStore.AsyncDatabaseCommands;
 			yield return cmd.EnsureDatabaseExistsAsync(dbname);
 
-			using (var session = store.OpenAsyncSession(dbname))
+			using (var session = documentStore.OpenAsyncSession(dbname))
 			{
 				session.Store(new Company { Name = "Something with the desired prefix" });
 				session.Store(new Contact { Surname = "Something without the desired prefix" });
@@ -59,11 +70,9 @@
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_get_a_list_of_databases_async()
+		public IEnumerable<Task> CanGetAListOfDatabasesAsync()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			var task = documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(25);
@@ -73,11 +82,8 @@
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Should_not_cache_the_list_of_databases()
+		public IEnumerable<Task> ShouldNotCacheTheListOfDatabases()
 		{
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
-
 			var first = GenerateNewDatabaseName();
 			yield return documentStore.AsyncDatabaseCommands
 				.EnsureDatabaseExistsAsync(first);
@@ -100,15 +106,13 @@
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_get_delete_a_dcoument_by_id()
+		public IEnumerable<Task> CanGetDeleteADcoumentById()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var store = new DocumentStore { Url = Url + Port };
-			store.Initialize();
-			yield return store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			var entity = new Company { Name = "Async Company #1" };
-			using (var session = store.OpenAsyncSession(dbname))
+			using (var session = documentStore.OpenAsyncSession(dbname))
 			{
 				session.Store(entity);
 				yield return session.SaveChangesAsync();
@@ -117,7 +121,7 @@
 					.DeleteDocumentAsync(entity.Id);
 			}
 
-			using (var for_verifying = store.OpenAsyncSession(dbname))
+			using (var for_verifying = documentStore.OpenAsyncSession(dbname))
 			{
 				var verification = for_verifying.LoadAsync<Company>(entity.Id);
 				yield return verification;
@@ -127,15 +131,13 @@
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> The_response_for_getting_documents_should_not_be_cached()
+		public IEnumerable<Task> TheResponseForGettingDocumentsShouldNotBeCached()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var store = new DocumentStore { Url = Url + Port };
-			store.Initialize();
-			var cmd = store.AsyncDatabaseCommands;
+			var cmd = documentStore.AsyncDatabaseCommands;
 			yield return cmd.EnsureDatabaseExistsAsync(dbname);
 
-			using (var session = store.OpenAsyncSession(dbname))
+			using (var session = documentStore.OpenAsyncSession(dbname))
 			{
 				session.Store(new Company { Name = "Hai" });
 				session.Store(new Company { Name = "I can haz cheezburgr?" });
@@ -148,7 +150,7 @@
 
 			Assert.AreEqual(3, task.Result.Length);
 
-			using (var session = store.OpenAsyncSession(dbname))
+			using (var session = documentStore.OpenAsyncSession(dbname))
 			{
 				yield return session.Advanced.AsyncDatabaseCommands
 					.DeleteDocumentAsync(task.Result[0].Key);
