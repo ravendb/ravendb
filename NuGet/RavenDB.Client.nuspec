@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+	<metadata>
+		<id>RavenDB.Client</id>
+		<version>1.0</version>
+		<authors>Hibernating Rhinos</authors>
+		<description>RavenDB client libraries</description>
+		<language>en-US</language>
+		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
+		<projectUrl>http://www.ravendb.net/</projectUrl>
+		<requireLicenseAcceptance>true</requireLicenseAcceptance>
+		<tags>nosql ravendb raven document database client</tags>
+		<dependencies>
+			<dependency id="Newtonsoft.Json" version="[4.0.8]"/>
+			<dependency id="NLog" version="[2.0.0.2000]" />
+		</dependencies>
+		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
+	</metadata>
+</package>
