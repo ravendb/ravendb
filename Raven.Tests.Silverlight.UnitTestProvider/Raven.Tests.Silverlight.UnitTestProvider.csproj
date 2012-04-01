@@ -56,11 +56,13 @@
     <Reference Include="AsyncCtpLibrary_Silverlight5">
       <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight5.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Silverlight.Testing">
-      <HintPath>..\SharedLibs\Silverlight\Microsoft.Silverlight.Testing.dll</HintPath>
+    <Reference Include="Microsoft.Silverlight.Testing, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\Testing\Microsoft.Silverlight.Testing.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTesting.Silverlight">
-      <HintPath>..\SharedLibs\Silverlight\Microsoft.VisualStudio.QualityTools.UnitTesting.Silverlight.dll</HintPath>
+    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTesting.Silverlight, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\Testing\Microsoft.VisualStudio.QualityTools.UnitTesting.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System.Windows" />

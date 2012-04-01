@@ -19,12 +19,14 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void AssertInitialized()
 		{
-			var shardedDocumentStore = GetDocumentStore();
-			Assert.Throws<InvalidOperationException>(() => shardedDocumentStore.DisableAggressiveCaching());
-			Assert.Throws<InvalidOperationException>(() => shardedDocumentStore.AggressivelyCacheFor(TimeSpan.FromSeconds(1)));
-			shardedDocumentStore.Initialize();
-			Assert.DoesNotThrow(() => shardedDocumentStore.DisableAggressiveCaching());
-			Assert.DoesNotThrow(() => shardedDocumentStore.AggressivelyCacheFor(TimeSpan.FromSeconds(1)));
+			using (var shardedDocumentStore = GetDocumentStore())
+			{
+				Assert.Throws<InvalidOperationException>(() => shardedDocumentStore.DisableAggressiveCaching());
+				Assert.Throws<InvalidOperationException>(() => shardedDocumentStore.AggressivelyCacheFor(TimeSpan.FromSeconds(1)));
+				shardedDocumentStore.Initialize();
+				Assert.DoesNotThrow(() => shardedDocumentStore.DisableAggressiveCaching());
+				Assert.DoesNotThrow(() => shardedDocumentStore.AggressivelyCacheFor(TimeSpan.FromSeconds(1)));
+			}
 		}
 
 		private static ShardedDocumentStore GetDocumentStore()
@@ -50,7 +52,7 @@ namespace Raven.Tests.Shard.BlogModel
 		[Fact]
 		public void DtcIsNotSupported()
 		{
-			var shardedDocumentStore = GetDocumentStore().Initialize();
+			using (var shardedDocumentStore = GetDocumentStore().Initialize())
 			using (var session = (ShardedDocumentSession)shardedDocumentStore.OpenSession())
 			{
 				var txId = Guid.NewGuid();

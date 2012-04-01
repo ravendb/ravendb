@@ -3,7 +3,6 @@ using System.Linq;
 using LinQTests;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Indexes;
 using Raven.Server;
 using Xunit;
 
@@ -12,29 +11,32 @@ namespace Raven.Tests.MailingList.Thor
 	public class LinqTest : RavenTest, IDisposable
 	{
 		private readonly RavenDbServer ravenDbServer;
+		private readonly IDocumentStore documentStore;
 
 		public LinqTest()
 		{
 			ravenDbServer = GetNewServer();
+
+			documentStore = new DocumentStore
+			           	{
+			           		Url = "http://localhost:8079",
+			           		Conventions = {DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites}
+			           	}.Initialize();
 		}
 
 		public void Dispose()
 		{
+			documentStore.Dispose();
 			ravenDbServer.Dispose();
 		}
 
 		[Fact]
 		public void SingleTransportWithoutChildren_Raven()
 		{
-			//IDocumentStore docStore = new EmbeddableDocumentStore();
-			IDocumentStore docStore = new DocumentStore { Url = "http://localhost:8079" };
-			docStore.Initialize();
-			docStore.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
-
 			// Create Index
-			new TransportsIndex().Execute(docStore);
+			new TransportsIndex().Execute(documentStore);
 
-			using (var session = docStore.OpenSession())
+			using (var session = documentStore.OpenSession())
 			{
 				// Store a single Transport
 				session.Store(new Transport { Id = "A1", ChildId = "Test" });
@@ -57,15 +59,10 @@ namespace Raven.Tests.MailingList.Thor
 		[Fact]
 		public void SingleChildAndNoTransport_Raven()
 		{
-			//IDocumentStore docStore = new EmbeddableDocumentStore();
-			IDocumentStore docStore = new DocumentStore { Url = "http://localhost:8079" };
-			docStore.Initialize();
-			docStore.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
-
 			// Create Index
-			new TransportsIndex().Execute(docStore);
+			new TransportsIndex().Execute(documentStore);
 
-			using (var session = docStore.OpenSession())
+			using (var session = documentStore.OpenSession())
 			{
 				// Store a single Transport
 				session.Store(new Child { Id = "B1", Name = "Thor Arne" });
@@ -84,15 +81,10 @@ namespace Raven.Tests.MailingList.Thor
 		[Fact]
 		public void MultipleChildrenWithMultipleTransports_Raven()
 		{
-			//IDocumentStore docStore = new EmbeddableDocumentStore();
-			IDocumentStore docStore = new DocumentStore { Url = "http://localhost:8079" };
-			docStore.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
-			docStore.Initialize();
-
 			// Create Index
-			new TransportsIndex().Execute(docStore);
+			new TransportsIndex().Execute(documentStore);
 
-			using (var session = docStore.OpenSession())
+			using (var session = documentStore.OpenSession())
 			{
 				// Store two children
 				session.Store(new Child { Id = "B1", Name = "Thor Arne" });

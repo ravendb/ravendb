@@ -501,6 +501,7 @@
     <Compile Include="Document\Contact.cs" />
     <Compile Include="Document\CustomDynamicClass.cs" />
     <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
+    <Compile Include="Document\DocumentStoreServerGranularTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests_DifferentProcess.cs" />
     <Compile Include="Document\DynamicDocuments.cs" />
@@ -769,6 +770,7 @@
     <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
+    <Compile Include="Track\AsyncProjectionShouldWork.cs" />
     <Compile Include="Track\RavenDB053.cs" />
     <Compile Include="Track\RavenDB17.cs" />
     <Compile Include="Transactions\Deletes.cs" />

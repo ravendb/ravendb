@@ -1,5 +1,6 @@
 using Raven.Bundles.Tests.Authentication;
 using Raven.Bundles.Tests.Replication;
+using Raven.Tests.Shard.BlogModel;
 using Xunit;
 
 namespace Raven.StressTests.Races
@@ -34,6 +35,12 @@ namespace Raven.StressTests.Races
 		public void AsyncSimpleLogin()
 		{
 			Run<AsyncSimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 10000);
+		}
+		
+		[Fact]
+		public void CanMergeResultFromAllPostsShards()
+		{
+			Run<CanQueryOnlyPosts>(x => x.CanMergeResultFromAllPostsShards(), 10000);
 		}
 	}
 }
