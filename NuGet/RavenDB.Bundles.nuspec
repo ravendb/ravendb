@@ -3,8 +3,10 @@
 	<metadata>
 		<id>RavenDB.Database</id>
 		<version>1.0</version>
+		<title>RavenDB Database</title>
 		<authors>Hibernating Rhinos</authors>
-		<description>RavenDB database package</description>
+		<summary>This package includes the RavenDB database binaries.</summary>
+		<description>Use this package if you want to run RavenDB binaries in your application folder. Don't use this package if you just want to work with existing RavenDB server, in order to so just use the client API which is in the RavenDB.Client package. RavenDB is a document database for the .NET/Windows platform, offering a flexible data model design to fit the needs of real world systems.</description>
 		<language>en-US</language>
 		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
 		<projectUrl>http://www.ravendb.net/</projectUrl>

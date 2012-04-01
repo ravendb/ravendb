@@ -3,8 +3,10 @@
 	<metadata>
 		<id>RavenDB.Client.FSharp</id>
 		<version>1.0</version>
+		<title>RavenDB Client for FSharp</title>
 		<authors>Hibernating Rhinos</authors>
-		<description>RavenDB client FSharp library</description>
+		<summary>This package includes the clinet API of RavenDB.</summary>
+		<description>This package includes the clinet API of RavenDB to use in FSharp project. RavenDB is a document database for the .NET/Windows platform, offering a flexible data model design to fit the needs of real world systems.</description>
 		<language>en-US</language>
 		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
 		<projectUrl>http://www.ravendb.net/</projectUrl>

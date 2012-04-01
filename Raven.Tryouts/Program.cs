@@ -6,7 +6,7 @@ namespace Raven.Tryouts
 	{
 		private static void Main()
 		{
-			new RaceConditions().IndexingEachFieldInEachDocumentSeparetedly();
+			new BundelsRaceConditions().FailoverBetweenTwoMultiTenantDatabases_CanReplicateBetweenTwoMultiTenantDatabases();
 		}
 	}
 }

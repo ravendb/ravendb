@@ -501,6 +501,7 @@
     <Compile Include="Document\Contact.cs" />
     <Compile Include="Document\CustomDynamicClass.cs" />
     <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
+    <Compile Include="Document\DocumentStoreServerGranularTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests_DifferentProcess.cs" />
     <Compile Include="Document\DynamicDocuments.cs" />
@@ -569,11 +570,13 @@
     <Compile Include="MailingList\Mark2.cs" />
     <Compile Include="MailingList\MattJohnson.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
+    <Compile Include="MailingList\Nick.cs" />
     <Compile Include="MailingList\Phil.cs" />
     <Compile Include="MailingList\JoelAsync.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
     <Compile Include="MailingList\RecreatingIndexes.cs" />
+    <Compile Include="MailingList\RyanD.cs" />
     <Compile Include="MailingList\Stacey\Image.cs" />
     <Compile Include="MailingList\Stacey\ImageByName.cs" />
     <Compile Include="MailingList\Stacey\InServerTesting.cs" />
@@ -767,6 +770,7 @@
     <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
+    <Compile Include="Track\AsyncProjectionShouldWork.cs" />
     <Compile Include="Track\RavenDB053.cs" />
     <Compile Include="Track\RavenDB17.cs" />
     <Compile Include="Transactions\Deletes.cs" />

@@ -47,12 +47,14 @@ namespace Raven.Bundles.Replication.Tasks
 
 			httpRavenRequestFactory = new HttpRavenRequestFactory {RequestTimeoutInMs = replicationRequestTimeoutInMs};
 
-			new Thread(Execute)
+			var thread = new Thread(Execute)
 			{
 				IsBackground = true,
 				Name = "Replication Thread"
-			}.Start();
-
+			};
+			// make sure that the doc db waits for the replication thread shutdown
+			docDb.ExtensionsState.TryAdd(thread, new DisposableAction(thread.Join));
+			thread.Start();
 		}
 
 		private void Execute()
@@ -513,7 +515,7 @@ namespace Raven.Bundles.Replication.Tasks
 			var url = x.Url;
 			if (string.IsNullOrEmpty(x.Database) == false)
 			{
-				url = "/databases/" + x.Database;
+				url = url + "/databases/" + x.Database;
 			}
 			replicationStrategy.ConnectionStringOptions = new RavenConnectionStringOptions
 			{

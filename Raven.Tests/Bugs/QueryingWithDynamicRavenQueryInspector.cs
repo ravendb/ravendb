@@ -39,27 +39,29 @@ namespace Raven.Tests.Bugs.Queries
 
 			using (var server = GetNewServer(port, path))
 			{
-				var store = new DocumentStore { Url = "http://localhost:"  +port };
-				store.Initialize();
-
-				using (var s = store.OpenSession())
+				using (var store = new DocumentStore { Url = "http://localhost:" + port })
 				{
-					s.Store(blogOne);
-					s.Store(blogTwo);
-					s.Store(blogThree);
-					s.SaveChanges();
-				}
+					store.Initialize();
 
-				using (var s = store.OpenSession())
-				{
-					var blogs = s.Query<Blog>().AsQueryable();
+					using (var s = store.OpenSession())
+					{
+						s.Store(blogOne);
+						s.Store(blogTwo);
+						s.Store(blogThree);
+						s.SaveChanges();
+					}
 
-					var blogQuery = from b in blogs
-									where b.Title == "two"
-									select b;
+					using (var s = store.OpenSession())
+					{
+						var blogs = s.Query<Blog>().AsQueryable();
 
-					var results = blogs.Provider.CreateQuery(blogQuery.Expression).As<Blog>().ToArray();
-					Assert.True(results.Any(x => x.Title == "two"));
+						var blogQuery = from b in blogs
+						                where b.Title == "two"
+						                select b;
+
+						var results = blogs.Provider.CreateQuery(blogQuery.Expression).As<Blog>().ToArray();
+						Assert.True(results.Any(x => x.Title == "two"));
+					}
 				}
 			}
 		}

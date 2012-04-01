@@ -5,6 +5,7 @@ using Raven.Tests.Bugs.Indexing;
 using Raven.Tests.MailingList.MapReduceIssue;
 using Raven.Tests.ManagedStorage;
 using Raven.Tests.MultiGet;
+using Raven.Tests.Shard.BlogModel;
 using Raven.Tests.Transactions;
 using Raven.Tests.Views;
 using Xunit;
@@ -14,9 +15,21 @@ namespace Raven.StressTests.Races
 	public class RaceConditions : StressTest
 	{
 		[Fact]
+		public void  SupportLazyOperations_LazyOperationsAreBatched()
+		{
+			Run<SupportLazyOperations>(x => x.LazyOperationsAreBatched());
+		}
+
+		[Fact]
+		public void CanQueryOnlyUsers_WhenQueryingForUserById()
+		{
+			Run<CanQueryOnlyUsers>(x=>x.WhenQueryingForUserById());
+		}
+
+		[Fact]
 		public void IndexingEachFieldInEachDocumentSeparetedly()
 		{
-			Run<IndexingEachFieldInEachDocumentSeparetedly>(x=>x.ForIndexing());
+			Run<IndexingEachFieldInEachDocumentSeparetedly>(x=>x.ForIndexing(), 100000);
 		}
 
 		[Fact]

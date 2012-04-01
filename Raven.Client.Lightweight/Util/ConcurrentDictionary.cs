@@ -1,10 +1,12 @@
 ﻿#if NET_3_5
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Client.Util
 {
-	public class ConcurrentDictionary<K,V>
+	public class ConcurrentDictionary<K,V> : IEnumerable<KeyValuePair<K,V>>
 	{
 		readonly Dictionary<K,V> items;
 
@@ -70,6 +72,19 @@ namespace Raven.Client.Util
 				if (items.TryGetValue(key, out val))
 					items.Remove(key);
 			}
+		}
+
+		public IEnumerator<KeyValuePair<K, V>> GetEnumerator()
+		{
+			lock(items)
+			{
+				return items.ToList().GetEnumerator();
+			}
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
 		}
 	}
 }
