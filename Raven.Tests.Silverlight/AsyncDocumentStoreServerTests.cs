@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Silverlight.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
@@ -14,42 +12,33 @@ using Raven.Tests.Document;
 
 namespace Raven.Tests.Silverlight
 {
-	public class AsyncDocumentStoreServerTests : RavenTestBase, IDisposable
+	public class AsyncDocumentStoreServerTests : RavenTestBase
 	{
-		private readonly IDocumentStore documentStore;
-
-		public AsyncDocumentStoreServerTests()
-		{
-			documentStore = new DocumentStore {Url = Url + Port}.Initialize();
-		}
-
-		public void Dispose()
-		{
-			documentStore.Dispose();
-		}
-
 		[Asynchronous]
 		public IEnumerable<Task> CanInsertAsyncAndMultiGetAsync()
 		{
 			var dbname = GenerateNewDatabaseName();
-			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
-
-			var entity1 = new Company {Name = "Async Company #1"};
-			var entity2 = new Company {Name = "Async Company #2"};
-			using (var session_for_storing = documentStore.OpenAsyncSession(dbname))
+			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				session_for_storing.Store(entity1);
-				session_for_storing.Store(entity2);
-				yield return session_for_storing.SaveChangesAsync();
-			}
+				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
-			using (var session_for_loading = documentStore.OpenAsyncSession(dbname))
-			{
-				var task = session_for_loading.LoadAsync<Company>(new[] {entity1.Id, entity2.Id});
-				yield return task;
+				var entity1 = new Company {Name = "Async Company #1"};
+				var entity2 = new Company {Name = "Async Company #2"};
+				using (var session_for_storing = documentStore.OpenAsyncSession(dbname))
+				{
+					session_for_storing.Store(entity1);
+					session_for_storing.Store(entity2);
+					yield return session_for_storing.SaveChangesAsync();
+				}
 
-				Assert.AreEqual(entity1.Name, task.Result[0].Name);
-				Assert.AreEqual(entity2.Name, task.Result[1].Name);
+				using (var session_for_loading = documentStore.OpenAsyncSession(dbname))
+				{
+					var task = session_for_loading.LoadAsync<Company>(new[] {entity1.Id, entity2.Id});
+					yield return task;
+
+					Assert.AreEqual(entity1.Name, task.Result[0].Name);
+					Assert.AreEqual(entity2.Name, task.Result[1].Name);
+				}
 			}
 		}
 
@@ -57,21 +46,24 @@ namespace Raven.Tests.Silverlight
 		public IEnumerable<Task> CanInsertAsyncAndLoadAsync()
 		{
 			var dbname = GenerateNewDatabaseName();
-			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
-
-			var entity = new Company {Name = "Async Company #1"};
-			using (var session_for_storing = documentStore.OpenAsyncSession(dbname))
+			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				session_for_storing.Store(entity);
-				yield return session_for_storing.SaveChangesAsync();
-			}
+				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
-			using (var session_for_loading = documentStore.OpenAsyncSession(dbname))
-			{
-				var task = session_for_loading.LoadAsync<Company>(entity.Id);
-				yield return task;
+				var entity = new Company {Name = "Async Company #1"};
+				using (var session_for_storing = documentStore.OpenAsyncSession(dbname))
+				{
+					session_for_storing.Store(entity);
+					yield return session_for_storing.SaveChangesAsync();
+				}
 
-				Assert.AreEqual(entity.Name, task.Result.Name);
+				using (var session_for_loading = documentStore.OpenAsyncSession(dbname))
+				{
+					var task = session_for_loading.LoadAsync<Company>(entity.Id);
+					yield return task;
+
+					Assert.AreEqual(entity.Name, task.Result.Name);
+				}
 			}
 		}
 
@@ -79,37 +71,40 @@ namespace Raven.Tests.Silverlight
 		public IEnumerable<Task> CanInsertAsyncAndDeleteAsync()
 		{
 			var dbname = GenerateNewDatabaseName();
-			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
-
-			var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
-			using (var session = documentStore.OpenAsyncSession(dbname))
+			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				session.Store(entity);
-				yield return session.SaveChangesAsync();
-			}
+				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
-			using (var for_loading = documentStore.OpenAsyncSession(dbname))
-			{
-				var loading = for_loading.LoadAsync<Company>(entity.Id);
-				yield return loading;
-				Assert.IsNotNull(loading.Result);
-			}
+				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
+				using (var session = documentStore.OpenAsyncSession(dbname))
+				{
+					session.Store(entity);
+					yield return session.SaveChangesAsync();
+				}
 
-			using (var for_deleting = documentStore.OpenAsyncSession(dbname))
-			{
-				var loading = for_deleting.LoadAsync<Company>(entity.Id);
-				yield return loading;
+				using (var for_loading = documentStore.OpenAsyncSession(dbname))
+				{
+					var loading = for_loading.LoadAsync<Company>(entity.Id);
+					yield return loading;
+					Assert.IsNotNull(loading.Result);
+				}
 
-				for_deleting.Delete(loading.Result);
-				yield return for_deleting.SaveChangesAsync();
-			}
+				using (var for_deleting = documentStore.OpenAsyncSession(dbname))
+				{
+					var loading = for_deleting.LoadAsync<Company>(entity.Id);
+					yield return loading;
 
-			using (var for_verifying = documentStore.OpenAsyncSession(dbname))
-			{
-				var verification = for_verifying.LoadAsync<Company>(entity.Id);
-				yield return verification;
+					for_deleting.Delete(loading.Result);
+					yield return for_deleting.SaveChangesAsync();
+				}
 
-				Assert.IsNull(verification.Result);
+				using (var for_verifying = documentStore.OpenAsyncSession(dbname))
+				{
+					var verification = for_verifying.LoadAsync<Company>(entity.Id);
+					yield return verification;
+
+					Assert.IsNull(verification.Result);
+				}
 			}
 		}
 
@@ -117,38 +112,41 @@ namespace Raven.Tests.Silverlight
 		public IEnumerable<Task> CanQueryByIndex()
 		{
 			var dbname = GenerateNewDatabaseName();
-			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
-
-			var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
-			using (var session = documentStore.OpenAsyncSession(dbname))
+			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				session.Store(entity);
-				yield return (session.SaveChangesAsync());
-			}
+				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
-			var task = documentStore.AsyncDatabaseCommands
-				.ForDatabase(dbname)
-				.PutIndexAsync("Test", new IndexDefinition
-				                       	{
-				                       		Map =
-				                       			"from doc in docs.Companies select new { doc.Name }"
-				                       	}, true);
-			yield return (task);
-
-			Task<QueryResult> query = null;
-			for (int i = 0; i < 50; i++)
-			{
-				query = documentStore.AsyncDatabaseCommands
-					.ForDatabase(dbname)
-					.QueryAsync("Test", new IndexQuery(), null);
-				yield return (query);
-				if (query.Result.IsStale)
+				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
+				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					yield return Delay(100);
-					continue;
+					session.Store(entity);
+					yield return (session.SaveChangesAsync());
 				}
-				Assert.AreNotEqual(0, query.Result.TotalResults);
-				yield break;
+
+				var task = documentStore.AsyncDatabaseCommands
+					.ForDatabase(dbname)
+					.PutIndexAsync("Test", new IndexDefinition
+					                       	{
+					                       		Map =
+					                       			"from doc in docs.Companies select new { doc.Name }"
+					                       	}, true);
+				yield return (task);
+
+				Task<QueryResult> query = null;
+				for (int i = 0; i < 50; i++)
+				{
+					query = documentStore.AsyncDatabaseCommands
+						.ForDatabase(dbname)
+						.QueryAsync("Test", new IndexQuery(), null);
+					yield return (query);
+					if (query.Result.IsStale)
+					{
+						yield return Delay(100);
+						continue;
+					}
+					Assert.AreNotEqual(0, query.Result.TotalResults);
+					yield break;
+				}
 			}
 		}
 
@@ -156,41 +154,44 @@ namespace Raven.Tests.Silverlight
 		public IEnumerable<Task> CanProjectValueFromCollection()
 		{
 			var dbname = GenerateNewDatabaseName();
-			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
-
-			using (var session = documentStore.OpenAsyncSession(dbname))
+			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				session.Store(new Company
-				              	{
-				              		Name = "Project Value Company",
-				              		Contacts = new List<Contact>
-				              		           	{
-				              		           		new Contact {Surname = "Abbot"},
-				              		           		new Contact {Surname = "Costello"}
-				              		           	}
-				              	});
-				yield return session.SaveChangesAsync();
+				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
-				
-				Task<QueryResult> query;
-				do
+				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					query = documentStore.AsyncDatabaseCommands
-						.ForDatabase(dbname)
-						.QueryAsync("dynamic",
-						            new IndexQuery
-						            {
-						            	FieldsToFetch = new[] {"Contacts,Surname"}
-						            },
-						            new string[0]);
-					yield return query;
-					if (query.Result.IsStale)
-						yield return Delay(100);
-				} while (query.Result.IsStale);
-				var ravenJToken = (RavenJArray)query.Result.Results[0]["Contacts"];
-				Assert.AreEqual(2, ravenJToken.Count());
-				Assert.AreEqual("Abbot", ravenJToken[0].Value<string>("Surname"));
-				Assert.AreEqual("Costello", ravenJToken[1].Value<string>("Surname"));
+					session.Store(new Company
+					              	{
+					              		Name = "Project Value Company",
+					              		Contacts = new List<Contact>
+					              		           	{
+					              		           		new Contact {Surname = "Abbot"},
+					              		           		new Contact {Surname = "Costello"}
+					              		           	}
+					              	});
+					yield return session.SaveChangesAsync();
+
+
+					Task<QueryResult> query;
+					do
+					{
+						query = documentStore.AsyncDatabaseCommands
+							.ForDatabase(dbname)
+							.QueryAsync("dynamic",
+							            new IndexQuery
+							            	{
+							            		FieldsToFetch = new[] {"Contacts,Surname"}
+							            	},
+							            new string[0]);
+						yield return query;
+						if (query.Result.IsStale)
+							yield return Delay(100);
+					} while (query.Result.IsStale);
+					var ravenJToken = (RavenJArray) query.Result.Results[0]["Contacts"];
+					Assert.AreEqual(2, ravenJToken.Count());
+					Assert.AreEqual("Abbot", ravenJToken[0].Value<string>("Surname"));
+					Assert.AreEqual("Costello", ravenJToken[1].Value<string>("Surname"));
+				}
 			}
 		}
 	}
