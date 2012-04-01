@@ -50,7 +50,7 @@ namespace Raven.Tests.Bugs
 			var areaOneDocTwo = new DummyGeoDoc(55.6821978456, 13.6076183965);
 			var areaOneDocThree = new DummyGeoDoc(55.673251569, 13.5946697607);
 
-			// This item is 12 miles (approx 19 km) from the closests in areaOne 
+			// This item is 12 miles (approx 19 km) from the closest in areaOne 
 			var closeButOutsideAreaOne = new DummyGeoDoc(55.8634157297, 13.5497731987);
 
 			// This item is about 3900 miles from areaOne
