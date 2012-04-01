@@ -29,10 +29,8 @@ namespace Raven.Tests.Silverlight
 			documentStore.Dispose();
 		}
 
-		// TODO: fix old test.
 		[Asynchronous]
-		[Ignore]
-		//[ExpectedException(typeof(NotSupportedException))]
+		[ExpectedException(typeof(NotSupportedException))]
 		public IEnumerable<Task> CallingToListRaisesAnException()
 		{
 			var dbname = GenerateNewDatabaseName();
@@ -40,13 +38,9 @@ namespace Raven.Tests.Silverlight
 
 			using (var session = documentStore.OpenAsyncSession(dbname))
 			{
-				//NOTE: shouldn't compile
-				//var query = session.Query<Company>()
-				//            .Where(x => x.Name == "Doesn't Really Matter")
-				//            .ToList();
-
-				// should compile
-				var list = new List<string>().ToList();
+				var query = session.Query<Company>()
+				            .Where(x => x.Name == "Doesn't Really Matter")
+				            .ToList();
 			}
 		}
 
