@@ -3,8 +3,9 @@
 	<metadata>
 		<id>RavenDB.Embedded</id>
 		<version>1.0</version>
+		<title>RavenDB Embedded</title>
 		<authors>Hibernating Rhinos</authors>
-		<description>RavenDB embedded database</description>
+		<description>This package let you include RavenDB embedded in-process with your application. RavenDB is a document database for the .NET/Windows platform, offering a flexible data model design to fit the needs of real world systems.</description>
 		<language>en-US</language>
 		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
 		<projectUrl>http://www.ravendb.net/</projectUrl>
