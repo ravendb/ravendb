@@ -99,14 +99,6 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Selects the specified fields directly from the index
-		/// </summary>
-		protected override IDocumentQueryCustomization CreateQueryForSelectedFields<TProjection>(string[] fields)
-		{
-			return (IDocumentQueryCustomization) SelectFields<TProjection>(fields);
-		}
-
-		/// <summary>
 		/// Adds an ordering for a specific field to the query
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>

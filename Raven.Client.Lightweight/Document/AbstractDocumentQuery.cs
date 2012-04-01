@@ -319,11 +319,6 @@ namespace Raven.Client.Document
 
 
 		/// <summary>
-		/// Selects the specified fields directly from the index
-		/// </summary>
-		protected abstract IDocumentQueryCustomization CreateQueryForSelectedFields<TProjection>(string[] fields);
-
-		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
 		/// <param name = "radius">The radius.</param>
