@@ -30,7 +30,8 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		[ExpectedException(typeof(NotSupportedException))]
+		[Ignore] // ToList should be an Obsolete method which will throw NotSupportedException exception when invoking.
+		// [ExpectedException(typeof(NotSupportedException))]
 		public IEnumerable<Task> CallingToListRaisesAnException()
 		{
 			var dbname = GenerateNewDatabaseName();
@@ -38,9 +39,13 @@ namespace Raven.Tests.Silverlight
 
 			using (var session = documentStore.OpenAsyncSession(dbname))
 			{
-				var query = session.Query<Company>()
-				            .Where(x => x.Name == "Doesn't Really Matter")
-				            .ToList();
+				//NOTE: shouldn't compile
+				//var query = session.Query<Company>()
+				//            .Where(x => x.Name == "Doesn't Really Matter")
+				//            .ToList();
+
+				// should compile
+				var list = new List<string>().ToList();
 			}
 		}
 
