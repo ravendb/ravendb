@@ -17,20 +17,21 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanRunSpatialQueriesInMemory()
 		{
-			var documentStore = new EmbeddableDocumentStore { RunInMemory = true };
-			documentStore.Initialize();
-			var def = new IndexDefinitionBuilder<Listing>
+			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
 			{
-				Map = listings => from listingItem in listings
-								  select new
-								  {
-									  listingItem.ClassCodes,
-									  listingItem.Latitude,
-									  listingItem.Longitude,
-									  _ = SpatialIndex.Generate(listingItem.Latitude, listingItem.Longitude)
-								  }
-			};
-			documentStore.DatabaseCommands.PutIndex("RadiusClassifiedSearch", def);
+				var def = new IndexDefinitionBuilder<Listing>
+				          	{
+				          		Map = listings => from listingItem in listings
+				          		                  select new
+				          		                         	{
+				          		                         		listingItem.ClassCodes,
+				          		                         		listingItem.Latitude,
+				          		                         		listingItem.Longitude,
+				          		                         		_ = SpatialIndex.Generate(listingItem.Latitude, listingItem.Longitude)
+				          		                         	}
+				          	};
+				documentStore.DatabaseCommands.PutIndex("RadiusClassifiedSearch", def);
+			}
 		}
 
 		public class Listing
@@ -55,44 +56,45 @@ namespace Raven.Tests.Bugs
 			// This item is about 3900 miles from areaOne
 			var newYork = new DummyGeoDoc(40.7137578228, -74.0126901936);
 
-			var documentStore = new EmbeddableDocumentStore { RunInMemory = true };
-			documentStore.Initialize();
-			var session = documentStore.OpenSession();
-
-			session.Store(areaOneDocOne);
-			session.Store(areaOneDocTwo);
-			session.Store(areaOneDocThree);
-			session.Store(closeButOutsideAreaOne);
-			session.Store(newYork);
-			session.SaveChanges();
-
-			var indexDefinition = new IndexDefinition
+			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+			using (var session = documentStore.OpenSession())
 			{
-				Map = "from doc in docs select new { _ = SpatialIndex.Generate(doc.Latitude, doc.Longitude) }"
-			};
 
-			documentStore.DatabaseCommands.PutIndex("FindByLatLng", indexDefinition);
+				session.Store(areaOneDocOne);
+				session.Store(areaOneDocTwo);
+				session.Store(areaOneDocThree);
+				session.Store(closeButOutsideAreaOne);
+				session.Store(newYork);
+				session.SaveChanges();
 
-			// Wait until the index is built
-			session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
-									.WaitForNonStaleResults()
-									.ToArray();
+				var indexDefinition = new IndexDefinition
+				                      	{
+				                      		Map = "from doc in docs select new { _ = SpatialIndex.Generate(doc.Latitude, doc.Longitude) }"
+				                      	};
 
-			const double lat = 55.6836422426, lng = 13.5871808352; // in the middle of AreaOne
-			const double radius = 5.0;
-			
-			// Expcted is that 5.0 will return 3 results
-			var nearbyDocs = session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
-									.WithinRadiusOf(radius, lat, lng)
-									.WaitForNonStaleResults()
-									.ToArray();
+				documentStore.DatabaseCommands.PutIndex("FindByLatLng", indexDefinition);
 
-			Assert.NotEqual(null, nearbyDocs);
-			Assert.Equal(3, nearbyDocs.Length);
-			var dist = DistanceUtils.GetInstance();
-			Assert.Equal(true, nearbyDocs.All(x => dist.GetDistanceMi(x.Latitude, x.Longitude, lat, lng) < radius));
+				// Wait until the index is built
+				session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+					.WaitForNonStaleResults()
+					.ToArray();
 
-			session.Dispose();
+				const double lat = 55.6836422426, lng = 13.5871808352; // in the middle of AreaOne
+				const double radius = 5.0;
+
+				// Expected is that 5.0 will return 3 results
+				var nearbyDocs = session.Advanced.LuceneQuery<DummyGeoDoc>("FindByLatLng")
+					.WithinRadiusOf(radius, lat, lng)
+					.WaitForNonStaleResults()
+					.ToArray();
+
+				Assert.NotEqual(null, nearbyDocs);
+				Assert.Equal(3, nearbyDocs.Length);
+				var dist = DistanceUtils.GetInstance();
+				Assert.Equal(true, nearbyDocs.All(x => dist.GetDistanceMi(x.Latitude, x.Longitude, lat, lng) < radius));
+
+				session.Dispose();
+			}
 		}
 
 		public class DummyGeoDoc
