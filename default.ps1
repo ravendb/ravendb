@@ -220,13 +220,6 @@ task TestSilverlight -depends CompileTests,CopyServer {
 	}
 }
 
-task TestStackoverflowSampleBuilds {
-
-	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-
-	exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\ETL\Raven.Etl.sln" /p:RavenIncludesPath="$buildartifacts_dir\" /p:OutDir="$buildartifacts_dir\Raven.Etl\" }
-}
-
 task ReleaseNoTests -depends OpenSource,DoRelease {
 
 }
@@ -246,9 +239,9 @@ task OpenSource {
 	$global:uploadCategory = "RavenDB"
 }
 
-task RunTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds
+task RunTests -depends Test,TestSilverlight
 
-task RunAllTests -depends Test,TestSilverlight,TestStackoverflowSampleBuilds,StressTest
+task RunAllTests -depends Test,TestSilverlight,StressTest
 
 task Release -depends RunTests,DoRelease
 
