@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Server;
@@ -22,7 +24,7 @@ namespace Raven.Tests.Track
 		public AsyncProjectionShouldWork()
 		{
 			ravenDbServer = GetNewServer();
-			store = new DocumentStore() { Url = "http://localhost:8079" }.Initialize();
+			store = new DocumentStore { Url = "http://localhost:8079" }.Initialize();
 			new TestObjs_Summary().Execute(store);
 
 			using (var session = store.OpenSession())
@@ -72,7 +74,7 @@ namespace Raven.Tests.Track
 					.AsProjection<Summary>()
 					.ToList();
 
-				Assert.Equal(2, q.Count);
+				AssertResult(q);
 			}
 		}
 
@@ -88,9 +90,20 @@ namespace Raven.Tests.Track
 
 				q.ContinueWith(task =>
 				               	{
-									Assert.False(task.IsFaulted);
-				               		Assert.Equal(2, task.Result.Count);
+									Assert.False(task.IsFaulted, task.Exception.ExtractSingleInnerException().ToString());
+				               		AssertResult(task.Result);
 				               	}).Wait();
+			}
+		}
+
+		private void AssertResult(IList<Summary> q)
+		{
+			Assert.Equal(2, q.Count);
+
+			for (var i = 1; i < q.Count; i++)
+			{
+				Assert.NotNull(q[i].MyId);
+				Assert.True(q[i].MyName.StartsWith("Doc"));
 			}
 		}
 	}
