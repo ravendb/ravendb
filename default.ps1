@@ -586,58 +586,64 @@ task CreateNugetPackage {
 task CreateNugetPackageFineGrained {
 	# (re-)defining alternative package dll properties here, don't want to interfer with exisiting nuget package creation
 		
-	$client_dlls_3_5 = @("Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???") |
-		ForEach-Object { 
+	$client_dlls_3_5 = @("Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???") |% { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 	 
-	$client_dlls = @("Raven.Abstractions.???", "Raven.Client.Lightweight.???") |
-		ForEach-Object { 
+	$client_dlls = @("Raven.Abstractions.???", "Raven.Client.Lightweight.???") |% { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
   
-	$silverlight4_dlls = @("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |
-		ForEach-Object { 
+	$silverlight4_dlls = @("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |% { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 		
-	$silverlight_dlls = @("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |
-		ForEach-Object { 
+	$silverlight_dlls = @("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |% { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 		
-	$client_fsharp_dlls = @("Raven.Client.Lightweight.FSharp.???") |
-		ForEach-Object { 
+	$client_fsharp_dlls = @("Raven.Client.Lightweight.FSharp.???")  |% { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 		
-	$mvcintegration_dlls = @("Raven.Client.MvcIntegration.???") |
-		ForEach-Object { 
+	$client_mvcintegration_dlls = @("Raven.Client.MvcIntegration.???")  |% { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 	
-	$client_debug_dlls = @("Raven.Client.Debug.???") |
-		ForEach-Object { 
+	$client_debug_dlls = @("Raven.Client.Debug.???")  |% { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 		
 	$database_dlls = @("Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 						  "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???",
-						  "Lucene.Net.Contrib.SpellChecker.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap"  ) |
-		ForEach-Object { 
+						  "Lucene.Net.Contrib.SpellChecker.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap" ) |% { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
-	
-	$embedded_dlls = @("Raven.Client.Embedded.???") |
-		ForEach-Object { 
+
+	$embedded_dlls = @("Raven.Client.Embedded.???")  |% { 
+			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
+			return "$build_dir\$_"
+		}
+		
+	$client_morelikethis_dlls = @("Raven.Client.MoreLikeThis.???") |% { 
+			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
+			return "$build_dir\$_"
+		}
+		
+	$client_uniqueconstraints_dlls = @("Raven.Client.UniqueConstraints.???") |% { 
+			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
+			return "$build_dir\$_"
+		}
+		
+	$client_versioning_dlls = @("Raven.Client.Versioning.???") |% { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
@@ -648,63 +654,48 @@ task CreateNugetPackageFineGrained {
 	
 	New-Item $nuget_dir -Type directory | Out-Null
 	
-	New-Item $nuget_dir\RavenDB.Client -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.Client\lib -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\net35 -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\net40 -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\sl40 -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\sl50 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.nuspec $nuget_dir\RavenDB.Client\RavenDB.Client.nuspec
 	
-	New-Item $nuget_dir\RavenDB.Client.FSharp -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.Client.FSharp\lib -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.Client.FSharp\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Client.FSharp.nuspec $nuget_dir\RavenDB.Client.FSharp\RavenDB.Client.FSharp.nuspec
-	
-	New-Item $nuget_dir\RavenDB.Client.Debug -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.Client.Debug\lib -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client.Debug\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.Debug.nuspec $nuget_dir\RavenDB.Client.Debug\RavenDB.Client.Debug.nuspec
 	
-	New-Item $nuget_dir\RavenDB.Client.MvcIntegration -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Client.FSharp\lib\net40 -Type directory | Out-Null
+	Copy-Item $base_dir\NuGet\RavenDB.Client.FSharp.nuspec $nuget_dir\RavenDB.Client.FSharp\RavenDB.Client.FSharp.nuspec
+	
+	New-Item $nuget_dir\RavenDB.Client.MoreLikeThis\lib\net40 -Type directory | Out-Null
+	Copy-Item $base_dir\NuGet\RavenDB.Client.MoreLikeThis.nuspec $nuget_dir\RavenDB.Client.MoreLikeThis\RavenDB.Client.MoreLikeThis.nuspec
+	
 	New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.MvcIntegration.nuspec $nuget_dir\RavenDB.Client.MvcIntegration\RavenDB.Client.MvcIntegration.nuspec
+	
+	New-Item $nuget_dir\RavenDB.Client.UniqueConstraints\lib\net40 -Type directory | Out-Null
+	Copy-Item $base_dir\NuGet\RavenDB.Client.UniqueConstraints.nuspec $nuget_dir\RavenDB.Client.UniqueConstraints\RavenDB.Client.UniqueConstraints.nuspec
+	
+	New-Item $nuget_dir\RavenDB.Client.Versioning\lib\net40 -Type directory | Out-Null
+	Copy-Item $base_dir\NuGet\RavenDB.Client.Versioning.nuspec $nuget_dir\RavenDB.Client.Versioning\RavenDB.Client.Versioning.nuspec
 
-	New-Item $nuget_dir\RavenDB.Database -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.Database\lib -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Database\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
 	
-	New-Item $nuget_dir\RavenDB.Embedded -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.Embedded\lib -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
 
-	$client_dlls_3_5 | ForEach-Object { 
-		Copy-Item "$_" $nuget_dir\RavenDB.Client\lib\net35
-	}
-	$client_dlls | ForEach-Object { 
-		Copy-Item "$_" $nuget_dir\RavenDB.Client\lib\net40
-	}
-	$silverlight4_dlls | ForEach-Object { 
-		Copy-Item "$_" $nuget_dir\RavenDB.Client\lib\sl40
-	}
-	$silverlight_dlls | ForEach-Object { 
-		Copy-Item "$_" $nuget_dir\RavenDB.Client\lib\sl50
-	}
-	$client_debug_dlls | ForEach-Object { 
-		Copy-Item "$_" $nuget_dir\RavenDB.Client.Debug\lib\net40
-	}
-	$client_fsharp_dlls | ForEach-Object { 
-		Copy-Item "$_" $nuget_dir\RavenDB.Client.FSharp\lib\net40
-	}
-	$database_dlls | ForEach-Object { 
-		Copy-Item "$_" $nuget_dir\RavenDB.Database\lib\net40
-	}
-	$embedded_dlls | ForEach-Object { 
-		Copy-Item "$_" $nuget_dir\RavenDB.Embedded\lib\net40
-	}
+	$client_dlls_3_5 |% { Copy-Item "$_" $nuget_dir\RavenDB.Client\lib\net35 }
+	$client_dlls |% { Copy-Item "$_" $nuget_dir\RavenDB.Client\lib\net40 }
+	$silverlight4_dlls |% { Copy-Item "$_" $nuget_dir\RavenDB.Client\lib\sl40 }
+	$silverlight_dlls |% { Copy-Item "$_" $nuget_dir\RavenDB.Client\lib\sl50 }
+	$client_debug_dlls |% { Copy-Item "$_" $nuget_dir\RavenDB.Client.Debug\lib\net40 }
+	$client_fsharp_dlls |% { Copy-Item "$_" $nuget_dir\RavenDB.Client.FSharp\lib\net40 }
+	$client_morelikethis_dlls |% { Copy-Item "$_" $nuget_dir\RavenDB.Client.MoreLikeThis\lib\net40 }
+	$client_mvcintegration_dlls |% { Copy-Item "$_" $nuget_dir\RavenDB.Client.MvcIntegration\lib\net40 }
+	$client_uniqueconstraints_dlls |% { Copy-Item "$_" $nuget_dir\RavenDB.Client.UniqueConstraints\lib\net40 }
+	$client_versioning_dlls |% { Copy-Item "$_" $nuget_dir\RavenDB.Client.Versioning\lib\net40 }
+	$database_dlls |% { Copy-Item "$_" $nuget_dir\RavenDB.Database\lib\net40 }
+	$embedded_dlls |% { Copy-Item "$_" $nuget_dir\RavenDB.Embedded\lib\net40 }
 	
 	$nugetVersion = "$version.$env:buildlabel"
 	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
