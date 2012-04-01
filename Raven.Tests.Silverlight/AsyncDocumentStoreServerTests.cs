@@ -1,26 +1,37 @@
-﻿using Raven.Abstractions.Data;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Silverlight.Testing;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Json.Linq;
+using Raven.Tests.Document;
 
 namespace Raven.Tests.Silverlight
 {
-	using System.Collections.Generic;
-	using System.Linq;
-	using System.Threading.Tasks;
-	using Client.Document;
-	using Client.Extensions;
-	using Document;
-	using Microsoft.Silverlight.Testing;
-	using Microsoft.VisualStudio.TestTools.UnitTesting;
-
-	public class AsyncDocumentStoreServerTests : RavenTestBase
+	public class AsyncDocumentStoreServerTests : RavenTestBase, IDisposable
 	{
+		private readonly IDocumentStore documentStore;
+
+		public AsyncDocumentStoreServerTests()
+		{
+			documentStore = new DocumentStore {Url = Url + Port}.Initialize();
+		}
+
+		public void Dispose()
+		{
+			documentStore.Dispose();
+		}
+
 		[Asynchronous]
-		public IEnumerable<Task> Can_insert_async_and_multi_get_async()
+		public IEnumerable<Task> CanInsertAsyncAndMultiGetAsync()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore {Url = Url + Port};
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			var entity1 = new Company {Name = "Async Company #1"};
@@ -43,11 +54,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_insert_async_and_load_async()
+		public IEnumerable<Task> CanInsertAsyncAndLoadAsync()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore {Url = Url + Port};
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			var entity = new Company {Name = "Async Company #1"};
@@ -67,11 +76,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_insert_async_and_delete_async()
+		public IEnumerable<Task> CanInsertAsyncAndDeleteAsync()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore {Url = Url + Port};
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
@@ -107,11 +114,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_query_by_index()
+		public IEnumerable<Task> CanQueryByIndex()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore {Url = Url + Port};
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
@@ -133,7 +138,6 @@ namespace Raven.Tests.Silverlight
 			Task<QueryResult> query = null;
 			for (int i = 0; i < 50; i++)
 			{
-
 				query = documentStore.AsyncDatabaseCommands
 					.ForDatabase(dbname)
 					.QueryAsync("Test", new IndexQuery(), null);
@@ -149,11 +153,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_project_value_from_collection()
+		public IEnumerable<Task> CanProjectValueFromCollection()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore {Url = Url + Port};
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			using (var session = documentStore.OpenAsyncSession(dbname))

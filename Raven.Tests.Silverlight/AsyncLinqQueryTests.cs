@@ -1,27 +1,41 @@
-﻿using Raven.Abstractions.Indexing;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Silverlight.Testing;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Raven.Abstractions.Indexing;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
+using Raven.Client.Linq;
+using Raven.Tests.Document;
+using Raven.Tests.Silverlight.Entities;
 
 namespace Raven.Tests.Silverlight
 {
-	using System.Collections.Generic;
-	using System.Linq;
-	using System.Threading.Tasks;
-	using Client.Document;
-	using Client.Extensions;
-	using Client.Linq;
-	using Document;
-	using Entities;
-	using Microsoft.Silverlight.Testing;
-	using Microsoft.VisualStudio.TestTools.UnitTesting;
-
-	public class AsyncLinqQueryTests : RavenTestBase
+	public class AsyncLinqQueryTests : RavenTestBase, IDisposable
 	{
-		[Asynchronous][Ignore]
+		private readonly IDocumentStore documentStore;
+
+		public AsyncLinqQueryTests()
+		{
+			documentStore = new DocumentStore { Url = Url + Port }.Initialize();
+
+		}
+
+		public void Dispose()
+		{
+			documentStore.Dispose();
+		}
+
+		// TODO: fix old test.
+		[Asynchronous]
+		[Ignore]
 		//[ExpectedException(typeof(NotSupportedException))]
-		public IEnumerable<Task> Calling_ToList_raises_an_exception()
+		public IEnumerable<Task> CallingToListRaisesAnException()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			using (var session = documentStore.OpenAsyncSession(dbname))
@@ -37,11 +51,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_perform_a_simple_where()
+		public IEnumerable<Task> CanPerformASimpleWhere()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
@@ -53,9 +65,9 @@ namespace Raven.Tests.Silverlight
 
 			using (var session = documentStore.OpenAsyncSession(dbname))
 			{
-			var query = session.Query<Company>()
-						.Where(x => x.Name == "Async Company #1")
-						.ToListAsync();
+				var query = session.Query<Company>()
+					.Where(x => x.Name == "Async Company #1")
+					.ToListAsync();
 				yield return query;
 
 				Assert.AreEqual(1, query.Result.Count);
@@ -64,11 +76,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_get_total_count()
+		public IEnumerable<Task> CanGetTotalCount()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
@@ -93,11 +103,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_get_total_count_from_stats()
+		public IEnumerable<Task> CanGetTotalCountFromStats()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
@@ -121,11 +129,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_query_specific_index()
+		public IEnumerable<Task> CanQuerySpecificIndex()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			yield return documentStore.AsyncDatabaseCommands.ForDatabase(dbname).PutIndexAsync("test", new IndexDefinition
@@ -158,11 +164,9 @@ namespace Raven.Tests.Silverlight
 
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_test_two_conditions_in_a_where_clause()
+		public IEnumerable<Task> CanTestTwoConditionsInAWhereClause()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			using (var session = documentStore.OpenAsyncSession(dbname))
@@ -185,11 +189,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_query_on_not_equal()
+		public IEnumerable<Task> CanQueryOnNotEqual()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			using (var s = documentStore.OpenAsyncSession(dbname))
@@ -211,11 +213,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_perform_an_order_by()
+		public IEnumerable<Task> CanPerformAnOrderBy()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			using (var session = documentStore.OpenAsyncSession(dbname))
@@ -242,11 +242,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_perform_a_where_starts_with()
+		public IEnumerable<Task> CanPerformAWhereStartsWith()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			using (var session = documentStore.OpenAsyncSession(dbname))
@@ -269,11 +267,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_perform_an_include_in_a_linq_query()
+		public IEnumerable<Task> CanPerformAnIncludeInALinqQuery()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			var customer = new Customer { Name = "Customer #1", Id = "customer/1", Email = "someone@customer.com" };
@@ -303,12 +299,11 @@ namespace Raven.Tests.Silverlight
 			}
 		}
 
-		[Asynchronous][Ignore]
-		public IEnumerable<Task> Can_perform_a_projection_in_a_linq_query()
+		[Asynchronous]
+		[Ignore]
+		public IEnumerable<Task> CanPerformAProjectionInALinqQuery()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			var entity = new Company { Name = "Async Company #1", Id = "companies/1" };
@@ -336,11 +331,9 @@ namespace Raven.Tests.Silverlight
 		}
 
 		[Asynchronous]
-		public IEnumerable<Task> Can_perform_an_any()
+		public IEnumerable<Task> CanPerformAnAny()
 		{
 			var dbname = GenerateNewDatabaseName();
-			var documentStore = new DocumentStore { Url = Url + Port };
-			documentStore.Initialize();
 			yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
 
 			using (var session = documentStore.OpenAsyncSession(dbname))
