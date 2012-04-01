@@ -90,7 +90,15 @@ namespace Raven.Tests.Track
 
 				q.ContinueWith(task =>
 				               	{
-									Assert.False(task.IsFaulted, task.Exception.ExtractSingleInnerException().ToString());
+				               		try
+				               		{
+				               			Assert.False(task.IsFaulted);
+				               		}
+				               		catch (Exception)
+				               		{
+				               			Console.WriteLine(task.Exception.ExtractSingleInnerException().ToString());
+				               			throw;
+				               		}
 				               		AssertResult(task.Result);
 				               	}).Wait();
 			}
