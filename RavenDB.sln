@@ -33,11 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.VisualHost", "Raven.V
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Web", "Raven.Web\Raven.Web.csproj", "{F49C2ED0-1844-44B4-A595-5FD152853B9C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.StressTests", "Raven.StressTests\Raven.StressTests.csproj", "{005A5143-4E38-424B-A2D1-25EF88DA05CB}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NuGet", "NuGet", "{081F76C1-F429-4E7D-9402-76B446EE29EA}"
 	ProjectSection(SolutionItems) = preProject
-		NuGet\RavenDB.Client.Debug.nuspec = NuGet\RavenDB.Client.Debug.nuspec
 		NuGet\RavenDB.Client.FSharp.nuspec = NuGet\RavenDB.Client.FSharp.nuspec
 		NuGet\RavenDB.Client.MvcIntegration.nuspec = NuGet\RavenDB.Client.MvcIntegration.nuspec
 		NuGet\RavenDB.Client.nuspec = NuGet\RavenDB.Client.nuspec
@@ -219,16 +216,6 @@ Global
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{F49C2ED0-1844-44B4-A595-5FD152853B9C}.Release|x86.ActiveCfg = Release|Any CPU
-		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|x86.ActiveCfg = Release|Any CPU
 		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6828A6A5-B925-4716-8D08-2B26353C54C2}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
