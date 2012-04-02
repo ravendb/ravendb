@@ -324,7 +324,7 @@ namespace Raven.Database.Indexing
 						context.AddError(name, null, e.Message);
 					},
 					x => x.Dispose());
-				return count;
+				return count + reduceKeys.Length;
 			});
 			logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name,
 							  string.Join(", ", reduceKeys)));
