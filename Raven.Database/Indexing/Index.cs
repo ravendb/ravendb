@@ -143,7 +143,7 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter == null) 
 					return;
-				if (docCountSinceLastOptimization > 2048)
+				if (configuration.MergeIndexSegmentsOnIdle && docCountSinceLastOptimization > 2048)
 				{
 					indexWriter.Optimize();
 					docCountSinceLastOptimization = 0;
