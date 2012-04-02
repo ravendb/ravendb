@@ -192,7 +192,7 @@ task MeasurePerformance -depends Compile {
 	}
 }
 
-task TestSilverlight -depends Compile CopyServer {
+task TestSilverlight -depends Compile, CopyServer {
 	try
 	{
 		start "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079"
