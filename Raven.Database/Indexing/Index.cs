@@ -143,12 +143,14 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter == null) 
 					return;
+
+				indexWriter.Commit();
+
 				if (configuration.MergeIndexSegmentsOnIdle && docCountSinceLastOptimization > 2048)
 				{
 					indexWriter.Optimize();
 					docCountSinceLastOptimization = 0;
 				}
-				indexWriter.Commit();
 			}
 		}
 
