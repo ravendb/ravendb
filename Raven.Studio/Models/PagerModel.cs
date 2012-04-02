@@ -21,8 +21,6 @@ namespace Raven.Studio.Models
 			TotalResults = observable ?? new Observable<long?>();
 			TotalResults.PropertyChanged += (sender, args) =>
 			                                {
-												if (((Observable<long?>)sender).Value == TotalResults.Value) 
-													return;
 			                                	OnPropertyChanged(() => TotalPages);
 												OnPropertyChanged(() => HasNextPage);
 			                                };
