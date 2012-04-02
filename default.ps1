@@ -150,14 +150,7 @@ task Compile -depends Init {
 	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
 	
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.ProjectRewriter\Raven.ProjectRewriter.csproj" /p:OutDir="$buildartifacts_dir\" }
-	if($global:commercial) {
-		exec { &"$build_dir\Raven.ProjectRewriter.exe" "commercial" }
-		cp "..\RavenDB_Commercial.snk" "Raven.Database\RavenDB.snk"
-	}
-	else {
-		exec { &"$build_dir\Raven.ProjectRewriter.exe" }
-		cp "Raven.Database\Raven.Database.csproj" "Raven.Database\Raven.Database.g.csproj"
-	}
+	exec { &"$build_dir\Raven.ProjectRewriter.exe" }
 	
 	try { 
 		ExecuteTask("BeforeCompile")
@@ -167,9 +160,6 @@ task Compile -depends Init {
 	} finally { 
 		ExecuteTask("AfterCompile")
 	}
-	  
-	exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Bundles\Raven.Bundles.sln" /p:OutDir="$buildartifacts_dir\" }
-	exec { & "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Samples\Raven.Samples.sln" /p:OutDir="$buildartifacts_dir\" }  
 }
 
 task Test -depends Compile {
@@ -180,13 +170,7 @@ task Test -depends Compile {
 	}
 }
 
-task CompileTests -depends Compile {
-	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-	
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\RavenDB.Tests.sln" /p:OutDir="$buildartifacts_dir\" }
-}
-
-task StressTest -depends CompileTests {
+task StressTest -depends Compile {
 	Copy-Item (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
 	Copy-Item (Get-DependencyPackageFiles Newtonsoft.Json) $build_dir -force
 	
@@ -196,7 +180,7 @@ task StressTest -depends CompileTests {
 	}
 }
 
-task MeasurePerformance -depends CompileTests {
+task MeasurePerformance -depends Compile {
 	$RavenDbStableLocation = "F:\RavenDB"
 	$DataLocation = "F:\Data"
 	$LogsLocation = "F:\PerformanceLogs"
@@ -208,7 +192,7 @@ task MeasurePerformance -depends CompileTests {
 	}
 }
 
-task TestSilverlight -depends CompileTests,CopyServer {
+task TestSilverlight -depends Compile CopyServer {
 	try
 	{
 		start "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079"
@@ -224,18 +208,11 @@ task ReleaseNoTests -depends OpenSource,DoRelease {
 
 }
 
-task Commercial {
-	$global:commercial = $true
-	$global:uploadCategory = "RavenDB-Commercial"
-}
-
 task Unstable {
-	$global:commercial = $false
 	$global:uploadCategory = "RavenDB-Unstable"
 }
 
 task OpenSource {
-	$global:commercial = $false
 	$global:uploadCategory = "RavenDB"
 }
 
@@ -441,9 +418,7 @@ task Upload -depends DoRelease {
 	}
 	
 	
-}
-
-task UploadCommercial -depends Commercial, DoRelease, Upload	
+}	
 
 task UploadOpenSource -depends OpenSource, DoRelease, Upload	
 

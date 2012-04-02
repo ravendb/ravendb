@@ -3,9 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Linq;
-using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -16,9 +14,6 @@ namespace Raven.ProjectRewriter
 		static XNamespace xmlns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
 		static void Main(string[] args)
 		{
-			if (args.Length == 1 && args[0] == "commercial")
-				MarkDatabaseProjectAsCommercial(xmlns);
-
 			Generate35(@"Raven.Abstractions\Raven.Abstractions.csproj",
 				@"Raven.Abstractions\Raven.Abstractions.g.3.5.csproj",
 				"Raven.Json");
@@ -142,26 +137,6 @@ namespace Raven.ProjectRewriter
 				element.Value += "-3.5";
 			}
 			using (var xmlWriter = XmlWriter.Create(destFile,
-													new XmlWriterSettings
-													{
-														Indent = true
-													}))
-			{
-				database.WriteTo(xmlWriter);
-				xmlWriter.Flush();
-			}
-		}
-
-		private static void MarkDatabaseProjectAsCommercial(XNamespace xmlns)
-		{
-			var database = XDocument.Load(@"Raven.Database\Raven.Database.csproj");
-			foreach (var element in database.Root.Descendants(xmlns + "DefineConstants").ToArray())
-			{
-				if (element.Value.EndsWith(";") == false)
-					element.Value += ";";
-				element.Value += "COMMERCIAL";
-			}
-			using (var xmlWriter = XmlWriter.Create(@"Raven.Database\Raven.Database.g.csproj",
 													new XmlWriterSettings
 													{
 														Indent = true
