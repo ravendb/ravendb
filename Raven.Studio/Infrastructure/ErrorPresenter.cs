@@ -73,7 +73,7 @@ namespace Raven.Studio.Infrastructure
 					{
 						case HttpStatusCode.Unauthorized:
 						case HttpStatusCode.Forbidden:
-							WriteCustomMessage("Could not authenticate against server", writer);
+							WriteCustomMessage("Could not authenticate against the server", writer);
 							break;
 						default:
 							using (var streamReader = new StreamReader(webResponse.GetResponseStream()))

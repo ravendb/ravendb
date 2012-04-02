@@ -27,7 +27,7 @@ namespace Raven.Abstractions.Data
 		private RavenJObject metadata;
 
 		/// <summary>
-		/// 	Gets or sets the document data as json.
+		/// Gets or sets the document data as json.
 		/// </summary>
 		/// <value>The data as json.</value>
 		public RavenJObject DataAsJson
@@ -37,7 +37,7 @@ namespace Raven.Abstractions.Data
 		}
 
 		/// <summary>
-		/// 	Gets or sets the metadata for the document
+		/// Gets or sets the metadata for the document
 		/// </summary>
 		/// <value>The metadata.</value>
 		public RavenJObject Metadata
@@ -47,13 +47,13 @@ namespace Raven.Abstractions.Data
 		}
 
 		/// <summary>
-		/// 	Gets or sets the key for the document
+		/// Gets or sets the key for the document
 		/// </summary>
 		/// <value>The key.</value>
 		public string Key { get; set; }
 
 		/// <summary>
-		/// 	Gets or sets a value indicating whether this document is non authoritative (modified by uncommitted transaction).
+		/// Gets or sets a value indicating whether this document is non authoritative (modified by uncommitted transaction).
 		/// </summary>
 		public bool? NonAuthoritativeInformation { get; set; }
 
@@ -64,7 +64,7 @@ namespace Raven.Abstractions.Data
 		public Guid? Etag { get; set; }
 
 		/// <summary>
-		/// 	Gets or sets the last modified date for the document
+		/// Gets or sets the last modified date for the document
 		/// </summary>
 		/// <value>The last modified.</value>
 		public DateTime? LastModified { get; set; }
@@ -76,7 +76,7 @@ namespace Raven.Abstractions.Data
 		public int SerializedSizeOnDisk;
 
 		/// <summary>
-		/// 	Translate the json document to a <see cref = "RavenJObject" />
+		/// Translate the json document to a <see cref = "RavenJObject" />
 		/// </summary>
 		/// <returns></returns>
 		public RavenJObject ToJson()

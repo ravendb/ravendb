@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using NLog;
+using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Data;
@@ -156,7 +157,7 @@ namespace Raven.Bundles.Replication.Reponsders
 			};
 
 			var history = metadata[ReplicationConstants.RavenReplicationHistory];
-			if (history == null) // no history, not a parent
+			if (history == null || history.Type == JTokenType.Null) // no history, not a parent
 				return false;
 
 			return history.Values().Contains(version, new RavenJTokenEqualityComparer());

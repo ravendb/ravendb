@@ -26,7 +26,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				selectedDatabase = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => SelectedDatabase);
 				if (changeDatabase.CanExecute(selectedDatabase.Name))
 					changeDatabase.Execute(selectedDatabase);
 			}

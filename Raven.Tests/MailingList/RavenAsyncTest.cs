@@ -17,8 +17,8 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void SyncQuery()
 		{
-			using(GetNewServer())
-			using(var store = new DocumentStore
+			using (GetNewServer())
+			using (var store = new DocumentStore
 			{
 				Url = "http://localhost:8079"
 			}.Initialize())
@@ -47,6 +47,51 @@ namespace Raven.Tests.MailingList
 				var results2 = session.Query<Dummy>().ToListAsync();
 				results2.Wait();
 				Assert.Equal(0, results2.Result.Count);
+			}
+		}
+
+		[Fact]
+		public void AsyncLoadNonExistant()
+		{
+			// load a non-existant entity
+			using (GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize()) 
+			using (var session = store.OpenAsyncSession())
+			{
+				var loaded = session.LoadAsync<Dummy>("dummies/-1337");
+				loaded.Wait();
+				Assert.Null(loaded.Result);
+			}
+		}
+
+		[Fact]
+		public void AsyncLoad()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				using (var session = store.OpenAsyncSession())
+				{
+					session.Store(new Dummy() );
+
+					session.SaveChangesAsync().Wait();
+				}
+				using (var session = store.OpenAsyncSession())
+				{
+					session.LoadAsync<Dummy>("dummies/1").Wait();
+					Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+				}
+				using (var session = store.OpenAsyncSession())
+				{
+					session.LoadAsync<Dummy>("dummies/1").Wait();
+					Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+				}
 			}
 		}
 	}

@@ -11,6 +11,7 @@ namespace Raven.Database.Server.Abstractions
 {
 	public interface IHttpRequest
 	{
+		bool IsLocal { get; }
 		NameValueCollection Headers { get;  }
 		Stream InputStream { get; }
 		NameValueCollection QueryString { get; }

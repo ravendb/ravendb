@@ -66,7 +66,7 @@ namespace Raven.Studio.Features.Documents
 			set
 			{
 				toolTipText = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => ToolTipText);
 			}
 		}
 
@@ -77,7 +77,7 @@ namespace Raven.Studio.Features.Documents
 			set
 			{
 				data = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Data);
 			}
 		}
 
@@ -173,7 +173,7 @@ namespace Raven.Studio.Features.Documents
 			}
 			set
 			{
-				collectionType = value; OnPropertyChanged();
+				collectionType = value; OnPropertyChanged(() => CollectionType);
 			}
 		}
 
@@ -185,7 +185,7 @@ namespace Raven.Studio.Features.Documents
 			}
 			set
 			{
-				clrType = value; OnPropertyChanged();
+				clrType = value; OnPropertyChanged(() => ClrType);
 			}
 		}
 
@@ -193,13 +193,13 @@ namespace Raven.Studio.Features.Documents
 		public DateTime LastModified
 		{
 			get { return lastModified; }
-			set { lastModified = value; OnPropertyChanged(); }
+			set { lastModified = value; OnPropertyChanged(() => LastModified); }
 		}
 
 		public string Id
 		{
 			get { return id; }
-			set { id = value; OnPropertyChanged(); }
+			set { id = value; OnPropertyChanged(() => Id); }
 		}
 
 		public JsonDocument InnerDocument

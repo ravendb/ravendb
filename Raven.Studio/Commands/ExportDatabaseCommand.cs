@@ -36,7 +36,7 @@ namespace Raven.Studio.Commands
 		{
 			var saveFile = new SaveFileDialog
 						   {
-							   /*TODO, In Silverlight 5: DefaultFileName = string.Format("Dump of {0}, {1}", ApplicationModel.Database.Value.Name, DateTimeOffset.Now.ToString()), */
+							   DefaultFileName = string.Format("Dump of {0}, {1}", ApplicationModel.Database.Value.Name, DateTimeOffset.Now.ToString("MMM dd yyyy HH-mm")),
 							   DefaultExt = ".raven.dump",
 							   Filter = "Raven Dumps|*.raven.dump",
 						   };

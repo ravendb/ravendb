@@ -158,6 +158,7 @@
     <Compile Include="Bugs\Indexing\CanHaveAnIndexNameThatStartsWithDynamic.cs" />
     <Compile Include="Bugs\Indexing\WithStringReverse.cs" />
     <Compile Include="Bugs\Indexing\InvalidIndexes.cs" />
+    <Compile Include="Bugs\InitializeConfiguration.cs" />
     <Compile Include="Bugs\Issue355.cs" />
     <Compile Include="Bugs\JsonReferences.cs" />
     <Compile Include="Bugs\LarsErik.cs" />
@@ -194,6 +195,7 @@
     <Compile Include="Bugs\Orders.cs" />
     <Compile Include="Bugs\PoisonIndexes\PoisonIndex.cs" />
     <Compile Include="Bugs\Queries\Boolean.cs" />
+    <Compile Include="Bugs\Queries\CanIncludeValueType.cs" />
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
     <Compile Include="Bugs\QueryingOnEmptyArray.cs" />
     <Compile Include="Bugs\QueryingOnEmptyString.cs" />
@@ -295,7 +297,7 @@
     <Compile Include="Bugs\FailDelete.cs" />
     <Compile Include="Bugs\FailStore.cs" />
     <Compile Include="Bugs\FindPropertyNameForIndex.cs" />
-    <Compile Include="Bugs\GetDocumentUrlOnTrasient.cs" />
+    <Compile Include="Bugs\GetDocumentUrlOnTransient.cs" />
     <Compile Include="Bugs\HierarchicalData.cs" />
     <Compile Include="Bugs\HierarchyFromClient.cs" />
     <Compile Include="Bugs\HiLoServerKeysNotExported.cs" />
@@ -479,6 +481,7 @@
     <Compile Include="Bugs\Vlko\QueryWithMultipleWhere.cs" />
     <Compile Include="Bugs\Vlko\RelationIdIndex.cs" />
     <Compile Include="Bugs\WaitForNonStaleResultsAsOfLastWrite.cs" />
+    <Compile Include="Bugs\WhenDoingSimpleLoad.cs" />
     <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />
     <Compile Include="Bugs\when_querying_cases_by_name_in_danish.cs" />
     <Compile Include="Bugs\WhereEntityIs.cs" />
@@ -498,6 +501,7 @@
     <Compile Include="Document\Contact.cs" />
     <Compile Include="Document\CustomDynamicClass.cs" />
     <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
+    <Compile Include="Document\DocumentStoreServerGranularTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests.cs" />
     <Compile Include="Document\DocumentStoreServerTests_DifferentProcess.cs" />
     <Compile Include="Document\DynamicDocuments.cs" />
@@ -522,17 +526,22 @@
     <Compile Include="Indexes\DynamicFieldIndexing.cs" />
     <Compile Include="Indexes\DynamicQueryMapping.cs" />
     <Compile Include="Indexes\ExpressionOperatorPrecedenceTest.cs" />
+    <Compile Include="Indexes\IndexWithSubProperty.cs" />
     <Compile Include="Indexes\LinqIndexesFromClient.cs" />
     <Compile Include="Indexes\LuceneAnalyzerUtils.cs" />
     <Compile Include="Indexes\MapOnlyView.cs" />
     <Compile Include="Bugs\Indexing\CanMultiMapIndexNullableValueTypes.cs" />
     <Compile Include="Indexes\MapReduceIndexOnLargeDataSet.cs" />
+    <Compile Include="Indexes\OldIndexRunWhileNewIndexesAreRunning.cs" />
     <Compile Include="Indexes\QueryingOnDefaultIndex.cs" />
     <Compile Include="Indexes\QueryingOnStaleIndexes.cs" />
+    <Compile Include="Indexes\ReduceCanUseExtensionMethods.cs" />
     <Compile Include="Indexes\ShoppingCartEventsToShopingCart.cs" />
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="Indexes\WithDecimalValue.cs" />
     <Compile Include="IndexQueryUrl.cs" />
+    <Compile Include="Issues\RavenDB_187.cs" />
+    <Compile Include="Issues\RavenDB_72.cs" />
     <Compile Include="Json\CloningTests.cs" />
     <Compile Include="Json\JsonNetBugsTests.cs" />
     <Compile Include="Json\RavenJObjects.cs" />
@@ -547,18 +556,32 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\AttachmentContentType.cs" />
+    <Compile Include="MailingList\BooleanCollection.cs" />
+    <Compile Include="MailingList\CanUpdateInsideDtcWithOptimisticConcurrency.cs" />
+    <Compile Include="MailingList\DeserialisationToObjectTests.cs" />
+    <Compile Include="MailingList\DtcIssue.cs" />
+    <Compile Include="MailingList\Everett\CanReadBytes.cs" />
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\BuildStarted.cs" />
     <Compile Include="MailingList\Everett616.cs" />
     <Compile Include="MailingList\IndexWhereClause .cs" />
+    <Compile Include="MailingList\Johnson.cs" />
     <Compile Include="MailingList\Mark2.cs" />
+    <Compile Include="MailingList\MattJohnson.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
+    <Compile Include="MailingList\Nick.cs" />
     <Compile Include="MailingList\Phil.cs" />
+    <Compile Include="MailingList\JoelAsync.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
+    <Compile Include="MailingList\RecreatingIndexes.cs" />
+    <Compile Include="MailingList\RyanD.cs" />
+    <Compile Include="MailingList\Scott.cs" />
     <Compile Include="MailingList\Stacey\Image.cs" />
     <Compile Include="MailingList\Stacey\ImageByName.cs" />
     <Compile Include="MailingList\Stacey\InServerTesting.cs" />
+    <Compile Include="MailingList\StatsTest.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />
     <Compile Include="MailingList\Thor\LinqTest.cs" />
@@ -625,6 +648,7 @@
     <Compile Include="MailingList\Stats.cs" />
     <Compile Include="MailingList\TimeZoneQueries.cs" />
     <Compile Include="MailingList\transformedresults_customid_test.cs" />
+    <Compile Include="MailingList\UriProperty.cs" />
     <Compile Include="MailingList\Victor.cs" />
     <Compile Include="MailingList\Vitaly.cs" />
     <Compile Include="MailingList\Vlad.cs" />
@@ -682,6 +706,7 @@
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="MailingList\Phil-Updated.cs" />
     <Compile Include="Queries\Includes.cs" />
+    <Compile Include="Queries\Intersection.cs" />
     <Compile Include="Queries\ParameterisedDynamicQuery.cs" />
     <Compile Include="Querying\IndexedUser.cs" />
     <Compile Include="Querying\SearchOperator.cs" />
@@ -696,13 +721,18 @@
     <Compile Include="Security\OAuth\HttpWebRequestExtensions.cs" />
     <Compile Include="Shard\BlogModel\Blog.cs" />
     <Compile Include="Shard\BlogModel\BlogShardResolutionStrategy.cs" />
-    <Compile Include="Shard\BlogModel\BlogShardSelectionStrategy.cs" />
+    <Compile Include="Shard\BlogModel\CanMapReduce.cs" />
     <Compile Include="Shard\BlogModel\CanQueryOnlyUsers.cs" />
+    <Compile Include="Shard\BlogModel\CanQueryOnlyPosts.cs" />
+    <Compile Include="Shard\BlogModel\SupportLazyOperations.cs" />
     <Compile Include="Shard\BlogModel\Post.cs" />
+    <Compile Include="Shard\BlogModel\ShardedDocumentSessionIsWorking.cs" />
+    <Compile Include="Shard\BlogModel\ShardedDocumentStoreTest.cs" />
     <Compile Include="Shard\BlogModel\ShardingScenario.cs" />
     <Compile Include="Shard\BlogModel\User.cs" />
-    <Compile Include="Shard\When_Using_Parallel_Access_Strategy.cs" />
-    <Compile Include="Shard\When_Using_Sharded_Servers.cs" />
+    <Compile Include="Shard\SimpleSharding.cs" />
+    <Compile Include="Shard\WhenUsingParallelAccessStrategy.cs" />
+    <Compile Include="Shard\WhenUsingShardedServers.cs" />
     <Compile Include="Some.cs" />
     <Compile Include="Spatial\Event.cs" />
     <Compile Include="Spatial\SpatialIndexTest.cs" />
@@ -741,6 +771,7 @@
     <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
+    <Compile Include="Track\AsyncProjectionShouldWork.cs" />
     <Compile Include="Track\RavenDB053.cs" />
     <Compile Include="Track\RavenDB17.cs" />
     <Compile Include="Transactions\Deletes.cs" />
@@ -843,7 +874,9 @@
     <EmbeddedResource Include="MailingList\MapReduceIssue\MvcMusicStore_Dump.json" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -98,7 +98,7 @@ namespace Raven.Tests.Storage
 		}
 
 		[Fact]
-		public void Querying_by_non_existant_document_returns_null()
+		public void Querying_by_non_existent_document_returns_null()
 		{
 			Assert.Null(db.Get("1", null));
 		}

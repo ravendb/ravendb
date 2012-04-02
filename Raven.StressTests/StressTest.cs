@@ -5,11 +5,14 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Globalization;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Xml;
 using NLog;
 using NLog.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using System.Linq;
 
 namespace Raven.StressTests
 {
@@ -25,10 +28,19 @@ namespace Raven.StressTests
 
 		protected void Run<T>(Action<T> action, int iterations = 1000) where T : new()
 		{
-			for (int i = 0; i < iterations; i++)
+			var i = 0;
+			try
 			{
-				Environment.SetEnvironmentVariable("RunId", i.ToString(CultureInfo.InvariantCulture));
-				RunTest(action, i);
+				for (; i < Math.Min(iterations, 1000); i++)
+				{
+					Console.Write("\r"+i);
+					RunTest(action, i);
+				}
+			}
+			catch
+			{
+				Console.WriteLine("Test failed on run #" + i);
+				throw;
 			}
 		}
 
@@ -40,6 +52,7 @@ namespace Raven.StressTests
 				for (int i = 0; i < iterations; i++)
 				{
 					Environment.SetEnvironmentVariable("RunId", i.ToString(CultureInfo.InvariantCulture));
+					Console.WriteLine("run #" + 1);
 					RunTest(action, i);
 				}
 			}
@@ -51,19 +64,23 @@ namespace Raven.StressTests
 
 		private static void RunTest<T>(Action<T> action, int i) where T : new()
 		{
-			try
-			{
-				var test = new T();
-				action(test);
+			var test = new T();
+			action(test);
 
-				var disposable = test as IDisposable;
-				if (disposable != null)
-					disposable.Dispose();
-			}
-			catch
+			var disposable = test as IDisposable;
+			if (disposable != null)
+				disposable.Dispose();
+
+			var activeTcpListeners = IPGlobalProperties
+				.GetIPGlobalProperties()
+				.GetActiveTcpListeners();
+
+			for (int j = 8000; j < 8079; j--)
 			{
-				Console.WriteLine("Test failed on run #" + i);
-				throw;
+				if(activeTcpListeners.Any(x=>x.Port == j))
+				{
+					throw new InvalidOperationException("Port " + j + " is still busy after the test");
+				}
 			}
 		}
 

@@ -4,7 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Client;
@@ -15,38 +18,52 @@ namespace Raven.Sample.ShardClient
 	{
 		static void Main()
 		{
-			var shards = new Shards
+			var shards = new Dictionary<string, IDocumentStore>
+			             	{
+			             		{"Asia", new DocumentStore {Url = "http://localhost:8080"}},
+			             		{"Middle-East", new DocumentStore {Url = "http://localhost:8081"}},
+			             		{"America", new DocumentStore {Url = "http://localhost:8082"}},
+			             	};
+
+			var shardStrategy = new ShardStrategy(shards)
+				.ShardingOn<Company>(x => x.Region)
+				.ShardingOn<Invoice>(x => x.CompanyId);
+
+			using (var documentStore = new ShardedDocumentStore(shardStrategy).Initialize())
 			{
-				CreateShard("Asia", "http://localhost:8080"),
-				CreateShard("Middle-East", "http://localhost:8081"),
-			};
+				new InvoicesAmountByDate().Execute(documentStore);
 
-			using (var documentStore = new ShardedDocumentStore(new ShardStrategy(), shards).Initialize())
-			using (var session = documentStore.OpenSession())
-			{
-				//store 2 items in the 2 shards
-				session.Store(new Company { Name = "Company 1", Region = "Asia" });
-				session.Store(new Company { Name = "Company 2", Region = "Middle East" });
-				session.SaveChanges();
+				using (var session = documentStore.OpenSession())
+				{
+					var asian = new Company { Name = "Company 1", Region = "Asia" };
+					session.Store(asian);
+					var middleEastern = new Company { Name = "Company 2", Region = "Middle-East" };
+					session.Store(middleEastern);
+					var american = new Company { Name = "Company 3", Region = "America" };
+					session.Store(american);
 
-				//get all, should automagically retrieve from each shard
-				var allCompanies = session.Advanced.LuceneQuery<Company>()
-					.WaitForNonStaleResults().ToArray();
+					session.Store(new Invoice { CompanyId = american.Id, Amount = 3, IssuedAt = DateTime.Today.AddDays(-1) });
+					session.Store(new Invoice { CompanyId = asian.Id, Amount = 5, IssuedAt = DateTime.Today.AddDays(-1) });
+					session.Store(new Invoice { CompanyId = middleEastern.Id, Amount = 12, IssuedAt = DateTime.Today });
+					session.SaveChanges();
+				}
 
-				foreach (var company in allCompanies)
-					Console.WriteLine(company.Name);
+
+				using (var session = documentStore.OpenSession())
+				{
+					var reduceResults = session.Query<InvoicesAmountByDate.ReduceResult, InvoicesAmountByDate>()
+						.ToList();
+
+					foreach (var reduceResult in reduceResults)
+					{
+						string dateStr = reduceResult.IssuedAt.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture);
+						Console.WriteLine("{0}: {1}", dateStr, reduceResult.Amount);
+					}
+					Console.WriteLine();
+				}
 			}
 		}
-
-		private static DocumentStore CreateShard(string identifier, string url)
-		{
-			var documentStore = new DocumentStore
-			{
-				Identifier = identifier,
-				Url = url,
-			};
-
-			return documentStore;
-		}
+		
 	}
 }
+

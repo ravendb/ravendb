@@ -8,6 +8,23 @@ namespace Raven.Tests.MultiGet
 	public class MultiGetMultiGet : RemoteClientTest
 	{
 		[Fact]
+		public void MulityGetShouldBehaveTheSameForLazyAndNotLazy()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			{
+				using (var session = store.OpenSession())
+				{
+					var result1 = session.Load<User>("users/1", "users/2");
+					var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
+
+					Assert.Equal(new User[2], result1);
+					Assert.Equal(new User[2], result2.Value);
+				}
+			}
+		}
+
+		[Fact]
 		public void UnlessAccessedLazyOpertionsAreNoOp()
 		{
 			using(GetNewServer())
@@ -19,7 +36,6 @@ namespace Raven.Tests.MultiGet
 					var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
 					Assert.Equal(0, session.Advanced.NumberOfRequests);
 				}
-				
 			}
 		}
 
@@ -33,11 +49,11 @@ namespace Raven.Tests.MultiGet
 				{
 					var result1 = session.Advanced.Lazily.Load<User>("users/1", "users/2");
 					var result2 = session.Advanced.Lazily.Load<User>("users/3", "users/4");
-					var a = result2.Value;
+
+					Assert.Equal(new User[2], result2.Value);
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
-					Assert.Equal(new User[0], a);
-					var b = result1.Value;
-					Assert.Equal(new User[0], b);
+
+					Assert.Equal(new User[2], result1.Value);
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
 				}
 
@@ -98,9 +114,10 @@ namespace Raven.Tests.MultiGet
 					var result2 = session.Advanced.Lazily
 						.Include("Name")
 						.Load<User>("users/3");
-					var a = result2.Value;
+
+					Assert.NotNull(result1.Value);
+					Assert.NotNull(result2.Value);
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
-					var b = result1.Value;
 					Assert.Equal(1, session.Advanced.NumberOfRequests);
 
 					Assert.True(session.Advanced.IsLoaded("users/2"));
@@ -109,7 +126,5 @@ namespace Raven.Tests.MultiGet
 
 			}
 		}
-
-
 	}
 }

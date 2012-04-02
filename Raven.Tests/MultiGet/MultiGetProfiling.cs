@@ -2,7 +2,6 @@
 using System.Linq;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
-using Raven.Client.Debug;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Document;

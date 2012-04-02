@@ -16,18 +16,23 @@ namespace Raven.Studio.Models
 			SetTotalResults();
 		}
 
-		private bool totalResultsPreviouslySet;
 		public void SetTotalResults(Observable<long?> observable = null)
 		{
 			TotalResults = observable ?? new Observable<long?>();
-			TotalResults.PropertyChanged += (sender, args) =>
-			                                {
-												if (totalResultsPreviouslySet && ((Observable<long?>)sender).Value == TotalResults.Value) 
-													return;
-			                                	totalResultsPreviouslySet = true;
-			                                	OnPropertyChanged("TotalPages");
-			                                	OnPropertyChanged("HasNextPage");
-			                                };
+			TotalResults.PropertyChanged += (sender, args) => CalculateTotalPages();
+		}
+
+		private void CalculateTotalPages()
+		{
+			int add = (TotalResults.Value ?? 0) % PageSize == 0 ? 0 : 1;
+			TotalPages = (TotalResults.Value ?? 0) / PageSize + add;
+
+			// if all documents from this page where deleted we want to go the the previous page so we won't show an empty page
+			if (totalPages < CurrentPage && totalPages != 0)
+				NavigateToPrevPage();
+
+			if (totalPages == 0)
+				totalPages = 1;
 		}
 
 		private int pageSize;
@@ -37,9 +42,9 @@ namespace Raven.Studio.Models
 			set
 			{
 				pageSize = value;
-				OnPropertyChanged();
-				OnPropertyChanged("CurrentPage");
-				OnPropertyChanged("TotalPages");
+				OnPropertyChanged(() => PageSize);
+				OnPropertyChanged(() => CurrentPage);
+				OnPropertyChanged(() => TotalPages);
 			}
 		}
 
@@ -49,18 +54,16 @@ namespace Raven.Studio.Models
 		}
 
 		public Observable<long?> TotalResults { get; private set; }
+
+		private long totalPages;
 		public long TotalPages
 		{
-			get
+			get { return totalPages; }
+			private set
 			{
-				int add = (TotalResults.Value ?? 0) % PageSize == 0 ? 0 : 1;
-				var totalPages = (TotalResults.Value ?? 0)/ PageSize + add;
-
-				// if all documents from this page where deleted we want to go the the previous page so we won't show an empty page
-				if(totalPages < CurrentPage && totalPages != 0) 
-					NavigateToPrevPage();
-
-				return totalPages == 0 ? 1 : totalPages;
+				totalPages = value;
+				OnPropertyChanged(() => TotalPages);
+				OnPropertyChanged(() => HasNextPage);
 			}
 		}
 
@@ -81,9 +84,9 @@ namespace Raven.Studio.Models
 			set
 			{
 				skip = Math.Max((short) 0, value);
-				OnPropertyChanged();
-				OnPropertyChanged("CurrentPage");
-				OnPropertyChanged("HasPrevPage");
+				OnPropertyChanged(() => Skip);
+				OnPropertyChanged(() => CurrentPage);
+				OnPropertyChanged(() => HasPrevPage);
 			}
 		}
 

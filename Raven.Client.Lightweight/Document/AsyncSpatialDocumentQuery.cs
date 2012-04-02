@@ -73,6 +73,7 @@ namespace Raven.Client.Document
 			lng = other.lng;				
 		}
 
+
 		
 		/// <summary>
 		/// Generates the index query.
@@ -96,6 +97,11 @@ namespace Raven.Client.Document
 				generateIndexQuery.PageSize = pageSize.Value;
 
 			return generateIndexQuery;
+		}
+
+		public override IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
+		{
+			return new AsyncSpatialDocumentQuery<TProjection>((AsyncDocumentQuery<TProjection>)base.SelectFields<TProjection>(fields), radius, lat, lng);
 		}
 	}
 }

@@ -20,6 +20,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
+using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
@@ -31,8 +32,8 @@ namespace Raven.Database.Indexing
 {
 	public class MapReduceIndex : Index
 	{
-		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
-			: base(directory, name, indexDefinition, viewGenerator)
+		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
+			: base(directory, name, indexDefinition, viewGenerator, configuration)
 		{
 		}
 
@@ -236,7 +237,7 @@ namespace Raven.Database.Indexing
 				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));
 				writer.DeleteDocuments(
 					keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
-				return true;
+				return keys.Length;
 			});
 		}
 
@@ -323,7 +324,7 @@ namespace Raven.Database.Indexing
 						context.AddError(name, null, e.Message);
 					},
 					x => x.Dispose());
-				return true;
+				return count + reduceKeys.Length;
 			});
 			logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name,
 							  string.Join(", ", reduceKeys)));

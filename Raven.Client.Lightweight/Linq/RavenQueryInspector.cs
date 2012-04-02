@@ -10,6 +10,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Document;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
 #endif
@@ -31,6 +32,7 @@ namespace Raven.Client.Linq
 #if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 #endif
+		private InMemoryDocumentSessionOperations session;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
@@ -39,7 +41,8 @@ namespace Raven.Client.Linq
 			IRavenQueryProvider provider, 
 			RavenQueryStatistics queryStats,
 			string indexName,
-			Expression expression
+			Expression expression,
+			InMemoryDocumentSessionOperations session
 #if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
 #endif
@@ -55,6 +58,7 @@ namespace Raven.Client.Linq
 			this.provider = provider.For<T>();
 			this.queryStats = queryStats;
 			this.indexName = indexName;
+			this.session = session;
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
@@ -139,9 +143,7 @@ namespace Raven.Client.Linq
 
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
-			return indexName.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) ? 
-				new DynamicQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>()) : 
-				new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>( ));
+			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
 		}
 
 		/// <summary>
@@ -163,8 +165,15 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public IDatabaseCommands DatabaseCommands
 		{
-			get { return databaseCommands; }
+			get
+			{
+				if(databaseCommands == null)
+					throw new NotSupportedException("You cannot get database commands for this query");
+				return databaseCommands;
+			}
 		}
+
+		
 #endif
 
 #if !NET_3_5
@@ -173,16 +182,29 @@ namespace Raven.Client.Linq
 		/// </summary>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
-			get { return asyncDatabaseCommands; }
+			get
+			{
+				if (asyncDatabaseCommands == null)
+					throw new NotSupportedException("You cannot get database commands for this query");
+				return asyncDatabaseCommands;
+			}
 		}
 #endif
+
+		public InMemoryDocumentSessionOperations Session
+		{
+			get
+			{
+				return session;
+			}
+		}
 
 		///<summary>
 		/// Get the last equality term for the query
 		///</summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm()
 		{
-			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, null, new HashSet<string>(), new Dictionary<string, string>());
+			var ravenQueryProvider = new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
 			var luceneQuery = ravenQueryProvider.GetLuceneQueryFor(expression);
 			return ((IRavenQueryInspector)luceneQuery).GetLastEqualityTerm();
 		}
@@ -198,7 +220,7 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
-		///   This function exists solely to forbid calling ToList() on a queryable in Silverlight.
+		///   This function exists solely to forbid calling ToArray() on a queryable in Silverlight.
 		/// </summary>
 		[Obsolete("You cannot execute a query synchronously from the Silverlight client. Instead, use queryable.ToListAsync().", true)]
 		public static TOther[] ToArray<TOther>()

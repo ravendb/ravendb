@@ -12,7 +12,7 @@ namespace Raven.Munin.Tests
 	public class Removes : SimpleFileTest
 	{
 		[Fact]
-		public void RemovingNonExistantIsNoOp()
+		public void RemovingNonExistentIsNoOp()
 		{
 			Assert.True(Table.Remove(RavenJToken.FromObject("a")));
 		}

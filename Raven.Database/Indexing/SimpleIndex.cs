@@ -13,6 +13,7 @@ using Lucene.Net.Store;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
@@ -21,8 +22,8 @@ namespace Raven.Database.Indexing
 {
 	public class SimpleIndex : Index
 	{
-		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator)
-			: base(directory, name, indexDefinition, viewGenerator)
+		public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
+			: base(directory, name, indexDefinition, viewGenerator, configuration)
 		{
 		}
 
@@ -36,7 +37,6 @@ namespace Raven.Database.Indexing
 			var count = 0;
 			Write(context, (indexWriter, analyzer, stats) =>
 			{
-				bool madeChanges = false;
 				var processedKeys = new HashSet<string>();
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
 					.Where(x => x != null)
@@ -46,10 +46,10 @@ namespace Raven.Database.Indexing
 					if(doc.__document_id == null)
 						throw new ArgumentException(string.Format("Cannot index something which doesn't have a document id, but got: '{0}'", doc));
 
+					count++;
 					string documentId = doc.__document_id.ToString();
 					if (processedKeys.Add(documentId) == false)
 						return doc;
-					madeChanges = true;
 					batchers.ApplyAndIgnoreAllErrors(
 						exception =>
 						{
@@ -78,7 +78,7 @@ namespace Raven.Database.Indexing
 
 					if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
 					{
-						madeChanges = true;
+						count += 1;
 						luceneDoc.GetFields().Clear();
 						luceneDoc.SetBoost(boost);
 						documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
@@ -113,7 +113,7 @@ namespace Raven.Database.Indexing
 						context.AddError(name, null, e.Message);
 					},
 					x => x.Dispose());
-				return madeChanges;
+				return count;
 			});
 			logIndexing.Debug("Indexed {0} documents for {1}", count, name);
 		}
@@ -215,7 +215,7 @@ namespace Raven.Database.Indexing
 						context.AddError(name, null, e.Message);
 					},
 					batcher => batcher.Dispose());
-				return true;
+				return keys.Length;
 			});
 		}
 	}

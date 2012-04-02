@@ -22,7 +22,6 @@ using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Client.Listeners;
 using Raven.Json.Linq;
 using Raven.Client.Util;
 
@@ -32,10 +31,8 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// Implements Unit of Work for accessing the RavenDB server
 	/// </summary>
-	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSession, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator
-#if !NET_3_5
-, ILazySessionOperations, IEagerSessionOperations
-#endif
+	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
+		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 	{
 #if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
@@ -130,19 +127,25 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Loads the specified id.
 		/// </summary>
-		/// <typeparam name="T"></typeparam>
+		/// <typeparam name="TResult"></typeparam>
 		/// <param name="id">The id.</param>
 		/// <returns></returns>
-		Lazy<T> ILazySessionOperations.Load<T>(string id)
+		Lazy<TResult> ILazySessionOperations.Load<TResult>(string id)
 		{
-			return Lazily.Load(id, (Action<T>)null);
+			return Lazily.Load(id, (Action<TResult>)null);
 		}
 
+		/// <summary>
+		/// Loads the specified ids and a function to call when it is evaluated
+		/// </summary>
 		public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
 		{
 			return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
 		}
 
+		/// <summary>
+		/// Loads the specified id and a function to call when it is evaluated
+		/// </summary>
 		public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
 		{
 			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id));
@@ -240,7 +243,7 @@ namespace Raven.Client.Document
 		/// <param name="ids">The ids.</param>
 		public T[] Load<T>(IEnumerable<string> ids)
 		{
-			return LoadInternal<T>(ids.ToArray());
+			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray());
 		}
 
 		/// <summary>
@@ -261,7 +264,7 @@ namespace Raven.Client.Document
 			return Load<T>(documentKey);
 		}
 
-		internal T[] LoadInternal<T>(string[] ids, string[] includes)
+		public T[] LoadInternal<T>(string[] ids, string[] includes)
 		{
 			if (ids.Length == 0)
 				return new T[0];
@@ -281,7 +284,7 @@ namespace Raven.Client.Document
 			return multiLoadOperation.Complete<T>();
 		}
 
-		internal T[] LoadInternal<T>(string[] ids)
+		public T[] LoadInternal<T>(string[] ids)
 		{
 			if (ids.Length == 0)
 				return new T[0];
@@ -325,11 +328,11 @@ namespace Raven.Client.Document
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, DatabaseCommands
+			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
 #if !NET_3_5
 , AsyncDatabaseCommands
 #endif
-), ravenQueryStatistics, indexName, null, DatabaseCommands
+), ravenQueryStatistics, indexName, null, this, Advanced.DatabaseCommands
 #if !NET_3_5
 , AsyncDatabaseCommands
 #endif
@@ -357,7 +360,7 @@ namespace Raven.Client.Document
 		{
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
-				throw new InvalidOperationException("Cannot refresh a trasient instance");
+				throw new InvalidOperationException("Cannot refresh a transient instance");
 			IncrementRequestCount();
 			var jsonDocument = DatabaseCommands.Get(value.Key);
 			if (jsonDocument == null)
@@ -368,7 +371,7 @@ namespace Raven.Client.Document
 			value.ETag = jsonDocument.Etag;
 			value.OriginalValue = jsonDocument.DataAsJson;
 			var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
-			foreach (PropertyInfo property in entity.GetType().GetProperties())
+			foreach (var property in entity.GetType().GetProperties())
 			{
 				if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
 					continue;
@@ -414,21 +417,11 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public string GetDocumentUrl(object entity)
 		{
-			if (string.IsNullOrEmpty(DocumentStore.Url))
-				throw new InvalidOperationException("Could not provide document url for embedded instance");
-
 			DocumentMetadata value;
-			string baseUrl = DocumentStore.Url.EndsWith("/") ? DocumentStore.Url + "docs/" : DocumentStore.Url + "/docs/";
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
-			{
-				string id;
-				TryGetIdFromInstance(entity, out id);
-				if (string.IsNullOrEmpty(id))
-					throw new InvalidOperationException("Could not figure out identifier for transient instance");
-				return baseUrl + id;
-			}
+				throw new InvalidOperationException("Could not figure out identifier for transient instance");
 
-			return baseUrl + value.Key;
+			return DatabaseCommands.UrlFor(value.Key);
 		}
 
 		/// <summary>
@@ -450,22 +443,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private void LogBatch(SaveChangesData data)
-		{
-			log.Debug(() =>
-			{
-				var sb = new StringBuilder()
-					.AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
-					.AppendLine();
-				foreach (var commandData in data.Commands)
-				{
-					sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
-				}
-				return sb.ToString();
-			});
-		}
-
-
+		
 		/// <summary>
 		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
 		/// </summary>
@@ -516,10 +494,10 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Promotes the transaction.
+		/// Promotes a transaction specified to a distributed transaction
 		/// </summary>
 		/// <param name="fromTxId">From tx id.</param>
-		/// <returns></returns>
+		/// <returns>The token representing the distributed transaction</returns>
 		public override byte[] PromoteTransaction(Guid fromTxId)
 		{
 			IncrementRequestCount();
@@ -529,7 +507,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Stores the recovery information for the specified transaction
 		/// </summary>
-		/// <param name="resourceManagerId"></param>
+		/// <param name="resourceManagerId">The resource manager Id for this transaction</param>
 		/// <param name="txId">The tx id.</param>
 		/// <param name="recoveryInformation">The recovery information.</param>
 		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
@@ -539,31 +517,17 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Dynamically queries RavenDB using LINQ
+		/// Query RavenDB dynamically using LINQ
 		/// </summary>
 		/// <typeparam name="T">The result of the query</typeparam>
 		public IRavenQueryable<T> Query<T>()
 		{
-			string indexName = "dynamic";
+			var indexName = "dynamic";
 			if (typeof(T).IsEntityType())
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
-			var ravenQueryStatistics = new RavenQueryStatistics();
-			return new RavenQueryInspector<T>(
-				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
-#if !NET_3_5
-, Advanced.AsyncDatabaseCommands
-#endif
-),
-				ravenQueryStatistics,
-				indexName,
-				null,
-				Advanced.DatabaseCommands
-#if !NET_3_5
-, Advanced.AsyncDatabaseCommands
-#endif
-);
+			return Query<T>(indexName);
 		}
 
 		/// <summary>
@@ -576,7 +540,7 @@ namespace Raven.Client.Document
 			{
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
-			return LuceneQuery<T>(indexName);
+			return Advanced.LuceneQuery<T>(indexName);
 		}
 
 		/// <summary>

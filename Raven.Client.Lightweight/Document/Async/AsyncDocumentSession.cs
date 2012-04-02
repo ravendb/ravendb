@@ -218,7 +218,7 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
-			throw new NotSupportedException("Cannot get a document in a syncronous manner using async document session");
+			throw new NotSupportedException("Cannot get a document in a synchronous manner using async document session");
 		}
 
 		/// <summary>
@@ -274,7 +274,7 @@ namespace Raven.Client.Document.Async
 			var ravenQueryStatistics = new RavenQueryStatistics();
 
 			return new RavenQueryInspector<T>(
-				new DynamicRavenQueryProvider<T>(this, indexName, ravenQueryStatistics,
+				new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics,
 #if !SILVERLIGHT
 				null,
 #endif
@@ -282,6 +282,7 @@ namespace Raven.Client.Document.Async
 				ravenQueryStatistics,
 				indexName,
 				null,
+				this,
 #if !SILVERLIGHT
 				null,
 #endif

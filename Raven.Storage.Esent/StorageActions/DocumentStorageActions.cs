@@ -153,6 +153,7 @@ namespace Raven.Storage.Esent.StorageActions
 			};
 		}
 
+
 		private Stream GetAttachmentStream(string key)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_name");

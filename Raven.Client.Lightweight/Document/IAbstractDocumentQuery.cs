@@ -320,5 +320,7 @@ namespace Raven.Client.Document
 		///   The last term that we asked the query to use equals on
 		/// </summary>
 		KeyValuePair<string, string> GetLastEqualityTerm();
+
+		void Intersect();
 	}
 }

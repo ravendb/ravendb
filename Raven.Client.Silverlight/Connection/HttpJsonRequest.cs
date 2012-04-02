@@ -12,6 +12,7 @@ using System.Net;
 using System.Net.Browser;
 using System.Text;
 using System.Threading.Tasks;
+using Ionic.Zlib;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -19,6 +20,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
+using Raven.Abstractions.Connection;
 
 namespace Raven.Client.Silverlight.Connection
 {
@@ -77,6 +79,8 @@ namespace Raven.Client.Silverlight.Connection
 			webRequest.Method = method;
 			if (method != "GET")
 				webRequest.ContentType = "application/json; charset=utf-8";
+			if( method == "POST" || method == "PUT")
+				webRequest.Headers["Content-Encoding"] = "gzip";
 		}
 
 		public Task<RavenJToken> ReadResponseJsonAsync()
@@ -212,7 +216,7 @@ namespace Raven.Client.Silverlight.Connection
 			}
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 
-			using (var responseStream = response.GetResponseStream())
+			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
 				return handleResponse(responseStream);
 			}
@@ -279,13 +283,14 @@ namespace Raven.Client.Silverlight.Connection
 			                                webRequest.GetRequestStreamAsync()
 			                                	.ContinueWith(task =>
 			                                	{
-			                                		var dataStream = task.Result;
+			                                		var dataStream = new GZipStream(task.Result, CompressionMode.Compress);
 			                                		var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
 			                                		return streamWriter.WriteAsync(data)
 			                                			.ContinueWith(writeTask =>
 			                                			{
 			                                				streamWriter.Dispose();
 			                                				dataStream.Dispose();
+															task.Result.Dispose();
 			                                				return writeTask;
 			                                			}).Unwrap();
 			                                	}).Unwrap())
@@ -300,7 +305,7 @@ namespace Raven.Client.Silverlight.Connection
 			postedData = byteArray;
 			return WaitForTask.ContinueWith(_ => webRequest.GetRequestStreamAsync().ContinueWith(t =>
 			{
-				var dataStream = t.Result;
+				var dataStream =new GZipStream(t.Result,CompressionMode.Compress);
 				using (dataStream)
 				{
 					dataStream.Write(byteArray, 0, byteArray.Length);

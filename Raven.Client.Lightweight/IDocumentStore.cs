@@ -14,6 +14,8 @@ using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#else
+using Raven.Client.Indexes;
 #endif
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -108,21 +110,21 @@ namespace Raven.Client
 		IDocumentSession OpenSession(string database);
 
 		/// <summary>
-		/// Opens the session for a particular database with the specified credentials
+		/// Opens the session with the specified options.
 		/// </summary>
-		IDocumentSession OpenSession(string database, ICredentials credentialsForSession);
-
-		/// <summary>
-		/// Opens the session with the specified credentials.
-		/// </summary>
-		/// <param name="credentialsForSession">The credentials for session.</param>
-		IDocumentSession OpenSession(ICredentials credentialsForSession);
+		IDocumentSession OpenSession(OpenSessionOptions sessionOptions);
 
 		/// <summary>
 		/// Gets the database commands.
 		/// </summary>
 		/// <value>The database commands.</value>
 		IDatabaseCommands DatabaseCommands { get; }
+
+		
+		/// <summary>
+		/// Executes the index creation.
+		/// </summary>
+		void ExecuteIndex(AbstractIndexCreationTask indexCreationTask);
 #endif
 
 		/// <summary>

@@ -24,10 +24,10 @@ namespace Raven.Database.Extensions
 {
 	public static class HttpExtensions
 	{
-		static readonly Regex findCharset = new Regex(@"charset=([\w-]+)", RegexOptions.Compiled|RegexOptions.IgnoreCase);
+		static readonly Regex findCharset = new Regex(@"charset=([\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
 		private static readonly string EmbeddedLastChangedDate =
-			File.GetLastWriteTime(typeof (HttpExtensions).Assembly.Location).Ticks.ToString("G");
+			File.GetLastWriteTime(typeof(HttpExtensions).Assembly.Location).Ticks.ToString("G");
 
 		private static readonly Encoding defaultEncoding = new UTF8Encoding(false);
 
@@ -53,8 +53,15 @@ namespace Raven.Database.Extensions
 		public static T ReadJsonObject<T>(this IHttpContext context)
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
-			using (var jsonReader = new JsonTextReader(streamReader))
-				return (T)JsonExtensions.CreateDefaultJsonSerializer().Deserialize(jsonReader, typeof(T));
+			{
+				var readToEnd = streamReader.ReadToEnd();
+				using (var jsonReader = new JsonTextReader(new StringReader(readToEnd)))
+				{
+					var result = JsonExtensions.CreateDefaultJsonSerializer();
+
+					return (T)result.Deserialize(jsonReader, typeof(T));
+				}
+			}
 		}
 
 		public static RavenJArray ReadJsonArray(this IHttpContext context)
@@ -97,7 +104,7 @@ namespace Raven.Database.Extensions
 			else
 			{
 				context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
-				
+
 			}
 
 			var jsonTextWriter = new JsonTextWriter(streamWriter)
@@ -143,7 +150,7 @@ namespace Raven.Database.Extensions
 				if (header.Key.StartsWith("@"))
 					continue;
 
-				var value =  GetHeaderValue(header.Value);
+				var value = GetHeaderValue(header.Value);
 				switch (header.Key)
 				{
 					case "Content-Type":
@@ -216,7 +223,7 @@ namespace Raven.Database.Extensions
 			context.Response.StatusCode = 203;
 			context.Response.StatusDescription = "Non-Authoritative Information";
 		}
-		
+
 		public static void SetStatusToBadRequest(this IHttpContext context)
 		{
 			context.Response.StatusCode = 400;
@@ -260,7 +267,7 @@ namespace Raven.Database.Extensions
 		{
 			self.Request.RemoveFromRequestUrl(token);
 			self.Response.RedirectionPrefix = token;
-			
+
 		}
 
 		public static void RemoveFromRequestUrl(this IHttpRequest self, string token)
@@ -275,6 +282,10 @@ namespace Raven.Database.Extensions
 			if (self.RawUrl.StartsWith(token, StringComparison.InvariantCultureIgnoreCase))
 			{
 				self.RawUrl = self.RawUrl.Substring(token.Length);
+				if(string.IsNullOrEmpty(self.RawUrl))
+				{
+					self.RawUrl = "/";
+				}
 			}
 		}
 
@@ -303,7 +314,7 @@ namespace Raven.Database.Extensions
 				return AggregationOperation.None;
 			}
 
-			return (AggregationOperation)Enum.Parse(typeof (AggregationOperation), aggAsString, true);
+			return (AggregationOperation)Enum.Parse(typeof(AggregationOperation), aggAsString, true);
 		}
 
 		public static DateTime? GetCutOff(this IHttpContext context)
@@ -329,7 +340,7 @@ namespace Raven.Database.Extensions
 				etagAsString = Uri.UnescapeDataString(etagAsString);
 
 				Guid result;
-				if (Guid.TryParse(etagAsString,out result))
+				if (Guid.TryParse(etagAsString, out result))
 					return result;
 				throw new BadRequestException("Could not parse cut off etag query parameter as guid");
 			}
@@ -439,9 +450,9 @@ namespace Raven.Database.Extensions
 
 		public static bool IsAdministrator(this IPrincipal principal)
 		{
-			if(principal == null)
+			if (principal == null)
 				return false;
-			
+
 			var windowsPrincipal = principal as WindowsPrincipal;
 			if (windowsPrincipal != null)
 				return windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator);

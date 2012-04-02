@@ -39,7 +39,7 @@ namespace Raven.Database.Server.Responders
 				var requests = context.ReadJsonObject<GetRequest[]>();
 				var results = new GetResponse[requests.Length];
 
-				Executerequests(context, Settings, results, requests);
+				ExecuteRequests(context, Settings, results, requests);
 				
 				context.WriteJson(results);
 			}
@@ -49,7 +49,7 @@ namespace Raven.Database.Server.Responders
 			}
 		}
 
-		private void Executerequests(
+		private void ExecuteRequests(
 			IHttpContext context,
 			InMemoryRavenConfiguration ravenHttpConfiguration, 
 			GetResponse[] results,
@@ -164,6 +164,11 @@ namespace Raven.Database.Server.Responders
 			{
 				realContext.Log(loggingAction);
 			}
+
+			public void SetRequestFilter(Func<Stream, Stream> requestFilter)
+			{
+				//nothing here
+			}
 		}
 
 		public class MultiGetHttpRequest : IHttpRequest
@@ -187,7 +192,8 @@ namespace Raven.Database.Server.Responders
 					Query = req.Query,
 					Path = req.Url
 				}.Uri;
-				RawUrl = Url.ToString();
+				RawUrl = req.Url;
+				IsLocal = realRequest.IsLocal;
 				Headers = new NameValueCollection();
 				foreach (var header in req.Headers)
 				{
@@ -195,6 +201,7 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
+			public bool IsLocal { get; set; }
 			public NameValueCollection Headers { get; set; }
 
 			public Stream InputStream
@@ -299,7 +306,10 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
-		  
+			public NameValueCollection GetHeaders()
+			{
+				throw new NotSupportedException();
+			}
 		}
 	}
 

@@ -106,6 +106,7 @@ namespace Raven.Database.Storage
 						indexDefinition.Name = MonoHttpUtility.UrlDecode(Path.GetFileNameWithoutExtension(index));
 					ResolveAnalyzers(indexDefinition);
 					AddAndCompileIndex(indexDefinition);
+					AddIndex(indexDefinition.Name, indexDefinition);
 				}
 				catch (Exception e)
 				{
@@ -129,7 +130,7 @@ namespace Raven.Database.Storage
 			get { return path; }
 		}
 
-		public string AddIndex(IndexDefinition indexDefinition)
+		public string CreateAndPersistIndex(IndexDefinition indexDefinition)
 		{
 			var transformer = AddAndCompileIndex(indexDefinition);
 			if (configuration.RunInMemory == false)
@@ -148,15 +149,20 @@ namespace Raven.Database.Storage
 			var transformer = new DynamicViewCompiler(name, indexDefinition, extensions, path, configuration);
 			var generator = transformer.GenerateInstance();
 			indexCache.AddOrUpdate(name, generator, (s, viewGenerator) => generator);
-			indexDefinitions.AddOrUpdate(name, indexDefinition, (s1, definition) =>
-			{
-				if (definition.IsCompiled)
-					throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
-				return indexDefinition;
-			});
+			
 			logger.Info("New index {0}:\r\n{1}\r\nCompiled to:\r\n{2}", transformer.Name, transformer.CompiledQueryText,
 							  transformer.CompiledQueryText);
 			return transformer;
+		}
+
+		public void AddIndex(string name, IndexDefinition definition)
+		{
+			indexDefinitions.AddOrUpdate(name, definition, (s1, def) =>
+			{
+				if (def.IsCompiled)
+					throw new InvalidOperationException("Index " + name + " is a compiled index, and cannot be replaced");
+				return definition;
+			});
 		}
 
 		public void RemoveIndex(string name)
@@ -223,6 +229,7 @@ namespace Raven.Database.Storage
 
 		public static string FixupIndexName(string index, string path)
 		{
+			index = index.Trim();
 			string prefix = null;
 			if (index.StartsWith("Temp/") || index.StartsWith("Auto/"))
 			{
@@ -253,5 +260,7 @@ namespace Raven.Database.Storage
 				indexDefinition.Analyzers[a.Key] = "Lucene.Net.Analysis." + a.Value;
 			}
 		}
+
+		
 	}
 }

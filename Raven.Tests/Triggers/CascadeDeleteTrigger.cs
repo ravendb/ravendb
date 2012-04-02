@@ -21,7 +21,11 @@ namespace Raven.Tests.Triggers
 			var document = Database.Get(key, null);
 			if (document == null)
 				return;
-			Database.Delete(document.Metadata.Value<string>("Cascade-Delete"), null, null);
+			var value = document.Metadata.Value<string>("Cascade-Delete");
+			if(value != null)
+			{
+				Database.Delete(value, null, null);
+			}
 		}
 
 		public override void AfterCommit(string key)
