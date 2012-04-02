@@ -253,11 +253,6 @@ namespace Raven.Database.Indexing
 					UpdateIndexingStats(context, stats);
 
 					WriteTempIndexToDiskIfNeeded(context);
-
-					if (configuration.TransactionMode == TransactionMode.Safe)
-					{
-						Flush(optimize: false);
-					}
 				}
 				finally
 				{
