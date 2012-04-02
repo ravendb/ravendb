@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Windows.Input;
-using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Client.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Query;
