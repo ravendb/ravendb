@@ -1,47 +1,52 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Tests.Bugs.Stacey
 {
-	public abstract class InServerDatabase : IDisposable {
-		protected EmbeddableDocumentStore Embedded;
-		private List<IDocumentStore> ListToDispose = new List<IDocumentStore>();
+	public abstract class InServerDatabase : IDisposable
+	{
+		protected readonly EmbeddableDocumentStore Embedded;
+		private readonly List<IDocumentStore> ListToDispose = new List<IDocumentStore>();
+
 		protected InServerDatabase()
 		{
-			Embedded = new EmbeddableDocumentStore() {
-				RunInMemory = true,
-				UseEmbeddedHttpServer = true,
-			};
+			Embedded = new EmbeddableDocumentStore()
+			           	{
+			           		RunInMemory = true,
+			           		UseEmbeddedHttpServer = true,
+			           	};
 			Embedded.Initialize();
 		}
 
 		protected IDocumentStore DocumentStore()
 		{
-			return new DocumentStore
-			{
-				Url = Embedded.Configuration.ServerUrl,
-				Conventions =
-					{
-						CustomizeJsonSerializer = serializer =>
-						                          serializer.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.All
+			var store = new DocumentStore
+			       	{
+			       		Url = Embedded.Configuration.ServerUrl,
+			       		Conventions =
+			       			{
+			       				CustomizeJsonSerializer = serializer => serializer.TypeNameHandling = TypeNameHandling.All
 
-					}
-			}.Initialize();
+			       			}
+			       	}.Initialize();
+			ListToDispose.Add(store);
+			return store;
 		}
 
-		public void Dispose() {
-			foreach (var documentStore in ListToDispose)
-			{
-				documentStore.Dispose();
-			} 
-			
+		public void Dispose()
+		{
+			ListToDispose
+				.Where(documentStore => documentStore != null)
+				.ForEach(store => store.Dispose());			
+
 			if (Embedded != null)
 				Embedded.Dispose();
-
-			
 		}
 	}
 }

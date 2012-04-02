@@ -1336,7 +1336,18 @@ namespace Raven.Database
 				return new DisposableAction(() => { });
 			var old = disableAllTriggers.Value;
 			disableAllTriggers.Value = true;
-			return new DisposableAction(() => disableAllTriggers.Value = old);
+			return new DisposableAction(() =>
+			{
+				if (disposed)
+					return;
+				try
+				{
+					disableAllTriggers.Value = old;
+				}
+				catch (ObjectDisposedException)
+				{
+				}
+			});
 		}
 
 		/// <summary>

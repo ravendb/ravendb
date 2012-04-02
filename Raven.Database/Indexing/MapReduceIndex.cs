@@ -237,7 +237,7 @@ namespace Raven.Database.Indexing
 				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));
 				writer.DeleteDocuments(
 					keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
-				return true;
+				return keys.Length;
 			});
 		}
 
@@ -324,7 +324,7 @@ namespace Raven.Database.Indexing
 						context.AddError(name, null, e.Message);
 					},
 					x => x.Dispose());
-				return true;
+				return count + reduceKeys.Length;
 			});
 			logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name,
 							  string.Join(", ", reduceKeys)));

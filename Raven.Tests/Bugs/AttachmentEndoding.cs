@@ -40,16 +40,19 @@ namespace Raven.Tests.Bugs
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-				documentStore.Initialize();
-
-				documentStore.DatabaseCommands.PutAttachment("test/hello/world", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
-
-				using (var wc = new WebClient())
+				using (var documentStore = new DocumentStore { Url = "http://localhost:" + port })
 				{
-					var staticJson = wc.DownloadString("http://localhost:8079/static");
-					var value = RavenJArray.Parse(staticJson)[0].Value<string>("Key");
-					Assert.Equal("test/hello/world", value);
+					documentStore.Initialize();
+
+					documentStore.DatabaseCommands.PutAttachment("test/hello/world", null, new MemoryStream(new byte[] {1, 2, 3}),
+					                                             new RavenJObject());
+
+					using (var wc = new WebClient())
+					{
+						var staticJson = wc.DownloadString("http://localhost:8079/static");
+						var value = RavenJArray.Parse(staticJson)[0].Value<string>("Key");
+						Assert.Equal("test/hello/world", value);
+					}
 				}
 			}
 		}

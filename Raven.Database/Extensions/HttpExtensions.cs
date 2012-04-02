@@ -282,6 +282,10 @@ namespace Raven.Database.Extensions
 			if (self.RawUrl.StartsWith(token, StringComparison.InvariantCultureIgnoreCase))
 			{
 				self.RawUrl = self.RawUrl.Substring(token.Length);
+				if(string.IsNullOrEmpty(self.RawUrl))
+				{
+					self.RawUrl = "/";
+				}
 			}
 		}
 

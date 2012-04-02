@@ -91,13 +91,7 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="waitTimeout">The wait timeout.</param>
 		IDocumentQueryCustomization WaitForNonStaleResults(TimeSpan waitTimeout);
-		/// <summary>
-		/// Selects the specified fields directly from the index
-		/// </summary>
-		/// <typeparam name="TProjection">The type of the projection.</typeparam>
-		/// <param name="fields">The fields.</param>
-		IDocumentQueryCustomization CreateQueryForSelectedFields<TProjection>(params string[] fields);
-
+		
 		/// <summary>
 		/// Filter matches to be inside the specified radius
 		/// </summary>

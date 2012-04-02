@@ -7,7 +7,7 @@ namespace Raven.Studio.Commands
 {
 	public class BackupCommand : Command
 	{
-		private StartBackupTask startBackupTask;
+		private readonly StartBackupTask startBackupTask;
 		public BackupCommand(StartBackupTask startBackupTask)
 		{
 			this.startBackupTask = startBackupTask;
@@ -22,12 +22,13 @@ namespace Raven.Studio.Commands
 
 			DatabaseCommands.StartBackupAsync(location.Value)
 				.ContinueWith(task =>
-				{
-					startBackupTask.Status = new BackupStatus
-					{
-						IsRunning = true
-					};
-				}).Catch();
+				              	{
+				              		task.Wait(); // throws
+				              		startBackupTask.Status = new BackupStatus
+				              		                         	{
+				              		                         		IsRunning = true
+				              		                         	};
+				              	}).Catch();
 		}
 	}
 }
