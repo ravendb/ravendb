@@ -416,24 +416,24 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values)
 			{
-				value.Flush();
+				value.Flush(false);
 				value.MergeSegments(); // noop if previously merged
 			}
 		}
 
-		public void FlushMapIndexes(bool optimize = false)
+		public void FlushMapIndexes()
 		{
 			foreach (var value in indexes.Values.Where(value => !value.IsMapReduce))
 			{
-				value.Flush();
+				value.Flush(true);
 			}
 		}
 
-		public void FlushReduceIndexes(bool optimize = false)
+		public void FlushReduceIndexes()
 		{
 			foreach (var value in indexes.Values.Where(value => value.IsMapReduce))
 			{
-				value.Flush();
+				value.Flush(true);
 			}
 		}
 
