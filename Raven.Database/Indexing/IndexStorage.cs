@@ -418,7 +418,7 @@ namespace Raven.Database.Indexing
 			{
 				if (value.IsMapReduce)
 					continue;
-				value.Flush(optimize);
+				value.Flush();
 			}
 		}
 
@@ -428,7 +428,7 @@ namespace Raven.Database.Indexing
 			{
 				if (value.IsMapReduce == false)
 					continue;
-				value.Flush(optimize);
+				value.Flush();
 			}
 		}
 

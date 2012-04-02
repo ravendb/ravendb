@@ -42,6 +42,7 @@ namespace Raven.Database.Indexing
 		private readonly List<Document> currentlyIndexDocuments = new List<Document>();
 		private Directory directory;
 		protected readonly IndexDefinition indexDefinition;
+		private int docCountSinceLastOptimization;
 
 		private readonly ConcurrentDictionary<string, IIndexExtension> indexExtensions =
 			new ConcurrentDictionary<string, IIndexExtension>();
@@ -134,18 +135,20 @@ namespace Raven.Database.Indexing
 
 		#endregion
 
-		public void Flush(bool optimize = false)
+		public void Flush()
 		{
 			lock (writeLock)
 			{
 				if (disposed)
 					return;
-				if (indexWriter != null)
+				if (indexWriter == null) 
+					return;
+				if (docCountSinceLastOptimization > 2048)
 				{
-					if (optimize) 
-						indexWriter.Optimize();
-					indexWriter.Commit();
+					indexWriter.Optimize();
+					docCountSinceLastOptimization = 0;
 				}
+				indexWriter.Commit();
 			}
 		}
 
@@ -209,7 +212,7 @@ namespace Raven.Database.Indexing
 			return new KeyValuePair<string, RavenJToken>(fld.Name(), stringValue);
 		}
 
-		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, IndexingWorkStats, bool> action)
+		protected void Write(WorkContext context, Func<IndexWriter, Analyzer, IndexingWorkStats, int> action)
 		{
 			if (disposed)
 				throw new ObjectDisposedException("Index " + name + " has been disposed");
@@ -238,7 +241,9 @@ namespace Raven.Database.Indexing
 					var stats = new IndexingWorkStats();
 					try
 					{
-						shouldRecreateSearcher = action(indexWriter, searchAnalyzer, stats);
+						var changedDocs = action(indexWriter, searchAnalyzer, stats);
+						docCountSinceLastOptimization += changedDocs;
+						shouldRecreateSearcher = changedDocs > 0;
 						foreach (IIndexExtension indexExtension in indexExtensions.Values)
 						{
 							indexExtension.OnDocumentsIndexed(currentlyIndexDocuments);
