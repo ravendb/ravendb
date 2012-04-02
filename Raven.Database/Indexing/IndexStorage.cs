@@ -412,6 +412,15 @@ namespace Raven.Database.Indexing
 			return result;
 		}
 
+		public void RunIdleOperations()
+		{
+			foreach (var value in indexes.Values)
+			{
+				value.Flush();
+				value.MergeSegments(); // noop if previously merged
+			}
+		}
+
 		public void FlushMapIndexes(bool optimize = false)
 		{
 			foreach (var value in indexes.Values)

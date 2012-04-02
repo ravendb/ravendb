@@ -146,12 +146,17 @@ namespace Raven.Database.Indexing
 
 				indexWriter.Commit();
 
-				if (configuration.MergeIndexSegmentsOnIdle && docCountSinceLastOptimization > 2048)
-				{
-					indexWriter.Optimize();
-					docCountSinceLastOptimization = 0;
-				}
+				if (configuration.MergeIndexSegmentsOnIdle)
+					MergeSegments();
 			}
+		}
+
+		public void MergeSegments()
+		{
+			if (docCountSinceLastOptimization <= 2048) return;
+
+			indexWriter.Optimize();
+			docCountSinceLastOptimization = 0;
 		}
 
 		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
