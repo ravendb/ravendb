@@ -443,17 +443,11 @@ task Upload -depends DoRelease {
 	
 }
 
-task UploadCommercial -depends Commercial, DoRelease, Upload {
-		
-}	
+task UploadCommercial -depends Commercial, DoRelease, Upload	
 
-task UploadOpenSource -depends OpenSource, DoRelease, Upload {
-		
-}	
+task UploadOpenSource -depends OpenSource, DoRelease, Upload	
 
-task UploadUnstable -depends Unstable, DoRelease, Upload {
-		
-}
+task UploadUnstable -depends Unstable, DoRelease, Upload
 
 task CreateNugetPackage {
 
