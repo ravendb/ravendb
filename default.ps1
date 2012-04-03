@@ -90,7 +90,7 @@ task Init -depends Verify40, Clean {
 		$env:buildlabel = "13"
 	}
 	
-	exec { git.exe update-index --assume-unchange "$base_dir\CommonAssemblyInfo.cs" }
+	exec { git.exe update-index --assume-unchanged "$base_dir\CommonAssemblyInfo.cs" }
 	$commit = Get-Git-Commit
 	(Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
 		Foreach-Object { $_ -replace "{build}", $env:buildlabel } |
