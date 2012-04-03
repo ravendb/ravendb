@@ -299,7 +299,7 @@ namespace Raven.Database
 
 		public event EventHandler Disposing;
 
-		#region IDisposable Members
+		
 
 		public void Dispose()
 		{
@@ -377,8 +377,6 @@ namespace Raven.Database
 		{
 			get { return workContext; }
 		}
-
-		#endregion
 
 		public void SpinBackgroundWorkers()
 		{
