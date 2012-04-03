@@ -74,7 +74,7 @@ namespace Raven.StressTests
 				.GetIPGlobalProperties()
 				.GetActiveTcpListeners();
 
-			for (int j = 8079; j > 8000; j--)
+			for (int j = 8079; j > 8020; j--)
 			{
 				if (activeTcpListeners.Any(x => x.Port == j))
 				{
