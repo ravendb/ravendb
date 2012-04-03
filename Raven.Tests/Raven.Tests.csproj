@@ -770,6 +770,7 @@
     <Compile Include="Storage\ReduceStaleness.cs" />
     <Compile Include="Storage\SimilarIndexNames.cs" />
     <Compile Include="Stress\BigDoc.cs" />
+    <Compile Include="Suggestions\SuggestionsLazy.cs" />
     <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />

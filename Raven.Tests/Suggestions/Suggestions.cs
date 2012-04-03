@@ -4,160 +4,113 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
-using Raven.Database.Indexing;
 using Raven.Tests.Bugs;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Tests.Suggestions
 {
 	public class Suggestions : LocalClientTest, IDisposable
 	{
-		#region IDisposable Members
+		private readonly IDocumentStore documentStore;
+
+		public Suggestions()
+		{
+			documentStore = NewDocumentStore();
+		}
 
 		public void Dispose()
 		{
-
+			documentStore.Dispose();
 		}
-
-		#endregion
-
-		protected DocumentStore DocumentStore { get; set; }
 
 		[Fact]
 		public void ExactMatch()
 		{
-			using (var store = NewDocumentStore())
+			documentStore.DatabaseCommands.PutIndex("Test", new IndexDefinition
+			                                                	{
+			                                                		Map = "from doc in docs select new { doc.Name }",
+			                                                	});
+			using (var s = documentStore.OpenSession())
 			{
-				store.DatabaseCommands.PutIndex("Test", new IndexDefinition
-				{
-					Map = "from doc in docs select new { doc.Name }",
-				});
-				using (var s = store.OpenSession())
-				{
-					s.Store(new User { Name = "Ayende" });
-					s.Store(new User { Name = "Oren" });
-					s.SaveChanges();
+				s.Store(new User {Name = "Ayende"});
+				s.Store(new User {Name = "Oren"});
+				s.SaveChanges();
 
-					s.Query<User>("Test").Customize(x => x.WaitForNonStaleResults()).ToList();
-				}
+				s.Query<User>("Test").Customize(x => x.WaitForNonStaleResults()).ToList();
+			}
 
-				using (var s = store.OpenSession())
-				{
-					var suggestionQueryResult = s.Advanced.DatabaseCommands.Suggest("Test",
-																					new SuggestionQuery
-																					{
-																						Field = "Name",
-																						Term = "Oren",
-																						MaxSuggestions = 10,
-																					});
+			using (var s = documentStore.OpenSession())
+			{
+				var suggestionQueryResult = s.Advanced.DatabaseCommands.Suggest("Test",
+				                                                                new SuggestionQuery
+				                                                                	{
+				                                                                		Field = "Name",
+				                                                                		Term = "Oren",
+				                                                                		MaxSuggestions = 10,
+				                                                                	});
 
-					Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-					Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
-				}
+				Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
+				Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
 			}
 		}
 
 		[Fact]
 		public void UsingLinq()
 		{
-			using (var store = NewDocumentStore())
+			documentStore.DatabaseCommands.PutIndex("Test", new IndexDefinition
+			                                        	{
+			                                        		Map = "from doc in docs select new { doc.Name }",
+			                                        	});
+			using (var s = documentStore.OpenSession())
 			{
-				store.DatabaseCommands.PutIndex("Test", new IndexDefinition
-				{
-					Map = "from doc in docs select new { doc.Name }",
-				});
-				using (var s = store.OpenSession())
-				{
-					s.Store(new User { Name = "Ayende" });
-					s.Store(new User { Name = "Oren" });
-					s.SaveChanges();
+				s.Store(new User {Name = "Ayende"});
+				s.Store(new User {Name = "Oren"});
+				s.SaveChanges();
 
-					s.Query<User>("Test").Customize(x => x.WaitForNonStaleResults()).ToList();
-				}
-
-				using (var s = store.OpenSession())
-				{
-					var suggestionQueryResult = s.Query<User>("test")
-						.Where(x => x.Name == "Oren")
-						.Suggest();
-
-					Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-					Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
-				}
+				s.Query<User>("Test").Customize(x => x.WaitForNonStaleResults()).ToList();
 			}
-		}
 
-		[Fact]
-		public void UsingLinq_Lazy()
-		{
-			using(GetNewServer())
-			using (var store = new DocumentStore
+			using (var s = documentStore.OpenSession())
 			{
-				Url = "http://localhost:8079"
-			}.Initialize())
-			{
-				store.DatabaseCommands.PutIndex("Test", new IndexDefinition
-				{
-					Map = "from doc in docs select new { doc.Name }",
-				});
-				using (var s = store.OpenSession())
-				{
-					s.Store(new User { Name = "Ayende" });
-					s.Store(new User { Name = "Oren" });
-					s.SaveChanges();
+				var suggestionQueryResult = s.Query<User>("test")
+					.Where(x => x.Name == "Oren")
+					.Suggest();
 
-					s.Query<User>("Test").Customize(x => x.WaitForNonStaleResults()).ToList();
-				}
-
-				using (var s = store.OpenSession())
-				{
-					var oldRequests = s.Advanced.NumberOfRequests;
-
-					var suggestionQueryResult = s.Query<User>("test")
-						.Where(x => x.Name == "Oren")
-						.SuggestLazy();
-
-					Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
-					Assert.Equal(1, suggestionQueryResult.Value.Suggestions.Length);
-					Assert.Equal("oren", suggestionQueryResult.Value.Suggestions[0]);
-
-					Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
-				}
+				Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
+				Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
 			}
 		}
 
 		[Fact]
 		public void UsingLinq_WithOptions()
 		{
-			using (var store = NewDocumentStore())
+			documentStore.DatabaseCommands.PutIndex("Test", new IndexDefinition
+			                                        	{
+			                                        		Map = "from doc in docs select new { doc.Name }",
+			                                        	});
+			using (var s = documentStore.OpenSession())
 			{
-				store.DatabaseCommands.PutIndex("Test", new IndexDefinition
-				{
-					Map = "from doc in docs select new { doc.Name }",
-				});
-				using (var s = store.OpenSession())
-				{
-					s.Store(new User { Name = "Ayende" });
-					s.Store(new User { Name = "Oren" });
-					s.SaveChanges();
+				s.Store(new User {Name = "Ayende"});
+				s.Store(new User {Name = "Oren"});
+				s.SaveChanges();
 
-					s.Query<User>("Test").Customize(x => x.WaitForNonStaleResults()).ToList();
-				}
+				s.Query<User>("Test").Customize(x => x.WaitForNonStaleResults()).ToList();
+			}
 
-				using (var s = store.OpenSession())
-				{
-					var suggestionQueryResult = s.Query<User>("test")
-						.Where(x => x.Name == "Orin")
-						.Suggest(new SuggestionQuery { Accuracy = 0.4f });
+			using (var s = documentStore.OpenSession())
+			{
+				var suggestionQueryResult = s.Query<User>("test")
+					.Where(x => x.Name == "Orin")
+					.Suggest(new SuggestionQuery {Accuracy = 0.4f});
 
-					Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-					Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
-				}
+				Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
+				Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
 			}
 		}
 
@@ -165,36 +118,33 @@ namespace Raven.Tests.Suggestions
 		[Fact]
 		public void WithTypo()
 		{
-			using (var store = NewDocumentStore())
+			documentStore.DatabaseCommands.PutIndex("Test", new IndexDefinition
+			                                                	{
+			                                                		Map = "from doc in docs select new { doc.Name }",
+			                                                	});
+			using (var s = documentStore.OpenSession())
 			{
-				store.DatabaseCommands.PutIndex("Test", new IndexDefinition
-				{
-					Map = "from doc in docs select new { doc.Name }",
-				});
-				using (var s = store.OpenSession())
-				{
-					s.Store(new User { Name = "Ayende" });
-					s.Store(new User { Name = "Oren" });
-					s.SaveChanges();
+				s.Store(new User {Name = "Ayende"});
+				s.Store(new User {Name = "Oren"});
+				s.SaveChanges();
 
-					s.Query<User>("Test").Customize(x => x.WaitForNonStaleResults()).ToList();
-				}
+				s.Query<User>("Test").Customize(x => x.WaitForNonStaleResults()).ToList();
+			}
 
-				using (var s = store.OpenSession())
-				{
-					var suggestionQueryResult = s.Advanced.DatabaseCommands.Suggest("Test",
-																					new SuggestionQuery
-																					{
-																						Field = "Name",
-																						Term = "Oern",
-																						MaxSuggestions = 10,
-																						Accuracy = 0.2f,
-																						Distance = StringDistanceTypes.Levenshtein
-																					});
+			using (var s = documentStore.OpenSession())
+			{
+				var suggestionQueryResult = s.Advanced.DatabaseCommands.Suggest("Test",
+				                                                                new SuggestionQuery
+				                                                                	{
+				                                                                		Field = "Name",
+				                                                                		Term = "Oern",
+				                                                                		MaxSuggestions = 10,
+				                                                                		Accuracy = 0.2f,
+				                                                                		Distance = StringDistanceTypes.Levenshtein
+				                                                                	});
 
-					Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-					Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
-				}
+				Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
+				Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
 			}
 		}
 	}
