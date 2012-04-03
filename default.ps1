@@ -140,7 +140,7 @@ task Test -depends Compile {
 	Write-Host $test_prjs
 	$test_prjs | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
-		#exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
 	}
 }
 
