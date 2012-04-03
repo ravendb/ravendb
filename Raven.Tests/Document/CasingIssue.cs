@@ -3,8 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using Raven.Database.Extensions;
 using Xunit;
 using System.Linq;
 
@@ -12,7 +10,6 @@ namespace Raven.Tests.Document
 {
 	public class CasingIssue : RemoteClientTest
 	{
-		
 		[Fact]
 		public void CanQueryByEntityType()
 		{
