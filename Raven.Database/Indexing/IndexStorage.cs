@@ -404,7 +404,7 @@ namespace Raven.Database.Indexing
 
 		private Index GetIndexByName(string indexName)
 		{
-			var result = indexes.Where(index => string.Compare(index.Key, indexName, true) == 0)
+			var result = indexes.Where(index => System.String.Compare(index.Key, indexName, System.StringComparison.OrdinalIgnoreCase) == 0)
 				.Select(x => x.Value)
 				.FirstOrDefault();
 			if (result == null)
@@ -412,23 +412,28 @@ namespace Raven.Database.Indexing
 			return result;
 		}
 
-		public void FlushMapIndexes(bool optimize = false)
+		public void RunIdleOperations()
 		{
 			foreach (var value in indexes.Values)
 			{
-				if (value.IsMapReduce)
-					continue;
-				value.Flush();
+				value.Flush(false);
+				value.MergeSegments(); // noop if previously merged
 			}
 		}
 
-		public void FlushReduceIndexes(bool optimize = false)
+		public void FlushMapIndexes()
 		{
-			foreach (var value in indexes.Values)
+			foreach (var value in indexes.Values.Where(value => !value.IsMapReduce))
 			{
-				if (value.IsMapReduce == false)
-					continue;
-				value.Flush();
+				value.Flush(true);
+			}
+		}
+
+		public void FlushReduceIndexes()
+		{
+			foreach (var value in indexes.Values.Where(value => value.IsMapReduce))
+			{
+				value.Flush(true);
 			}
 		}
 

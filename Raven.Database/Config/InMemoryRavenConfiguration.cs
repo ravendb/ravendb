@@ -115,6 +115,10 @@ namespace Raven.Database.Config
 			MaxNumberOfParallelIndexTasks = maxNumberOfParallelIndexTasks != null ? int.Parse(maxNumberOfParallelIndexTasks) : Environment.ProcessorCount;
 			MaxNumberOfParallelIndexTasks = Math.Max(1, MaxNumberOfParallelIndexTasks);
 
+			var mergeIndexSegmentsOnIdle = Settings["Raven/MergeIndexSegmentsOnIdle"];
+			if (mergeIndexSegmentsOnIdle != null)
+				MergeIndexSegmentsOnIdle = bool.Parse(mergeIndexSegmentsOnIdle);
+
 			var minimumQueryCount = Settings["Raven/TempIndexPromotionMinimumQueryCount"];
 			TempIndexPromotionMinimumQueryCount = minimumQueryCount != null ? int.Parse(minimumQueryCount) : 100;
 
@@ -356,6 +360,13 @@ namespace Raven.Database.Config
 		/// Default: The number of processors in the current machine
 		/// </summary>
 		public int MaxNumberOfParallelIndexTasks { get; set; }
+
+		/// <summary>
+		/// Whether to perform index optimization by merging segments when
+		/// an idle is detected
+		/// Default: false
+		/// </summary>
+		public bool MergeIndexSegmentsOnIdle { get; set; }
 
 		/// <summary>
 		/// Time (in milliseconds) the index has to be queried at least once in order for it to

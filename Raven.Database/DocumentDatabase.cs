@@ -389,6 +389,12 @@ namespace Raven.Database
 			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+			// TODO: Spin another thread for PerformIdleOperations?
+		}
+
+		public void RunIdleOperations()
+		{
+			workContext.IndexStorage.RunIdleOperations();
 		}
 
 		private long sequentialUuidCounter;
@@ -1245,8 +1251,8 @@ namespace Raven.Database
 				Started = SystemTime.UtcNow,
 				IsRunning = true,
 			}), new RavenJObject(), null);
-			IndexStorage.FlushMapIndexes(true);
-			IndexStorage.FlushReduceIndexes(true);
+			IndexStorage.FlushMapIndexes();
+			IndexStorage.FlushReduceIndexes();
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup);
 		}
 

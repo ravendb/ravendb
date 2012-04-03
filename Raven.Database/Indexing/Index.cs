@@ -135,7 +135,7 @@ namespace Raven.Database.Indexing
 
 		#endregion
 
-		public void Flush()
+		public void Flush(bool optimize)
 		{
 			lock (writeLock)
 			{
@@ -143,13 +143,20 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter == null) 
 					return;
-				if (docCountSinceLastOptimization > 2048)
-				{
-					indexWriter.Optimize();
-					docCountSinceLastOptimization = 0;
-				}
+
 				indexWriter.Commit();
+
+				if (optimize && configuration.MergeIndexSegmentsOnIdle)
+					MergeSegments();
 			}
+		}
+
+		public void MergeSegments()
+		{
+			if (docCountSinceLastOptimization <= 2048) return;
+
+			indexWriter.Optimize();
+			docCountSinceLastOptimization = 0;
 		}
 
 		public abstract void IndexDocuments(AbstractViewGenerator viewGenerator, IEnumerable<object> documents,
@@ -258,6 +265,9 @@ namespace Raven.Database.Indexing
 					UpdateIndexingStats(context, stats);
 
 					WriteTempIndexToDiskIfNeeded(context);
+
+					if (configuration.TransactionMode == TransactionMode.Safe)
+						Flush(false); // just make sure changes are flushed to disk
 				}
 				finally
 				{
