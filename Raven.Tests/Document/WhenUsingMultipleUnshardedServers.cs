@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="When_Using_Multiple_Unsharded_Servers.cs" company="Hibernating Rhinos LTD">
+// <copyright file="WhenUsingMultipleUnshardedServers.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -9,18 +9,17 @@ using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Xunit;
-using System.Collections.Generic;
 
 namespace Raven.Tests.Document
 {
-	public class When_Using_Multiple_Unsharded_Servers : RemoteClientTest, IDisposable
+	public class WhenUsingMultipleUnshardedServers : RemoteClientTest, IDisposable
 	{
 		private readonly string path1;
 		private readonly string path2;
 		private readonly int port1;
 		private readonly int port2;
 
-		public When_Using_Multiple_Unsharded_Servers()
+		public WhenUsingMultipleUnshardedServers()
 		{
 			port1 = 8079;
 			port2 = 8081;
@@ -33,7 +32,7 @@ namespace Raven.Tests.Document
 		}
 
 		[Fact]
-		public void Can_insert_into_two_servers_running_simultaneously_without_sharding()
+		public void CanInsertIntoTwoServersRunningSimultaneouslyWithoutSharding()
 		{
 			using (var server1 = GetNewServer(port1, path1))
 			using (var server2 = GetNewServer(port2, path2))
@@ -52,8 +51,6 @@ namespace Raven.Tests.Document
 			}
 		}
 
-		#region IDisposable Members
-
 		public void Dispose()
 		{
 			Thread.Sleep(100);
@@ -67,8 +64,5 @@ namespace Raven.Tests.Document
 				catch (Exception) { }
 			}
 		}
-
-		#endregion
-
 	}
 }

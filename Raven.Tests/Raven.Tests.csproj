@@ -502,6 +502,7 @@
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />
     <Compile Include="Document\Company.cs" />
     <Compile Include="Document\Contact.cs" />
+    <Compile Include="Document\DocumentStoreEmbeddedGranularTests.cs" />
     <Compile Include="Document\CustomDynamicClass.cs" />
     <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
     <Compile Include="Document\DocumentStoreServerGranularTests.cs" />
@@ -512,7 +513,7 @@
     <Compile Include="Document\Inheritance.cs" />
     <Compile Include="Document\TagCloud.cs" />
     <Compile Include="Document\TotalCountServerTest.cs" />
-    <Compile Include="Document\When_Using_Multiple_Unsharded_Servers.cs" />
+    <Compile Include="Document\WhenUsingMultipleUnshardedServers.cs" />
     <Compile Include="Document\ZoneCountResult.cs" />
     <Compile Include="IISDeploymentUtil.cs" />
     <Compile Include="IISExpressTestClient.cs" />
