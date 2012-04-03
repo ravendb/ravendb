@@ -11,11 +11,8 @@ using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
-using Raven.Database.Backup;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Database.Extensions;
-using Raven.Database.Json;
 using Xunit;
 using System.Linq;
 
@@ -29,7 +26,7 @@ namespace Raven.Tests.Storage
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = "raven.db.test.esent",
+				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
 			});
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
@@ -65,11 +62,11 @@ namespace Raven.Tests.Storage
 
 			db.Dispose();
 
-			DeleteIfExists("raven.db.test.esent");
+			DeleteIfExists(DataDir);
 
-			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
+			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", DataDir);
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent"});
+			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir});
 
 			var jObject = db.Get("ayende", null).ToJson();
 			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
@@ -88,11 +85,11 @@ namespace Raven.Tests.Storage
 
 			db.Dispose();
 
-			DeleteIfExists("raven.db.test.esent");
+			DeleteIfExists(DataDir);
 
-			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
+			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", DataDir);
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
+			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
 			db.SpinBackgroundWorkers();
 			QueryResult queryResult;
 			do
@@ -129,11 +126,11 @@ namespace Raven.Tests.Storage
 
 			db.Dispose();
 
-			DeleteIfExists("raven.db.test.esent");
+			DeleteIfExists(DataDir);
 
-			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", "raven.db.test.esent");
+			DocumentDatabase.Restore(new RavenConfiguration(), "raven.db.test.backup", DataDir);
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
+			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
 
 			queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
 			{

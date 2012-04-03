@@ -20,7 +20,7 @@ namespace Raven.Tests.Storage
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = "raven.db.test.esent", 
+				DataDirectory = DataDir, 
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
 			});
 

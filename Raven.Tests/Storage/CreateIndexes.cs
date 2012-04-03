@@ -3,12 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using Raven.Abstractions.Indexing;
-using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;
 
@@ -20,18 +17,14 @@ namespace Raven.Tests.Storage
 
 		public CreateIndexes()
 		{
-			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true});
+			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true});
 		}
-
-		#region IDisposable Members
 
 		public override void Dispose()
 		{
 			db.Dispose();
 			base.Dispose();
 		}
-
-		#endregion
 
 		[Fact]
 		public void Index_with_same_name_can_be_added_twice()

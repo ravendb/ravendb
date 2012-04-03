@@ -4,21 +4,22 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.IO;
 using Raven.Database.Extensions;
 
 namespace Raven.Tests.Storage
 {
-	public class AbstractDocumentStorageTest : IDisposable
+	public abstract class AbstractDocumentStorageTest : IDisposable
 	{
-		public AbstractDocumentStorageTest()
+		protected const string DataDir = "raven.db.test.esent";
+
+		protected AbstractDocumentStorageTest()
 		{
-			IOExtensions.DeleteDirectory("raven.db.test.esent");
+			IOExtensions.DeleteDirectory(DataDir);
 		}
 
 		public virtual void Dispose()
 		{
-			IOExtensions.DeleteDirectory("raven.db.test.esent");
+			IOExtensions.DeleteDirectory(DataDir);
 		}
 	}
 }

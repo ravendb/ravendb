@@ -3,11 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Linq;
-using System.Threading;
 using Raven.Json.Linq;
-using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
@@ -26,21 +23,17 @@ namespace Raven.Tests.Views
 		{
 			transactionalStorage = new TransactionalStorage(new RavenConfiguration
 			{
-				DataDirectory = "raven.db.test.esent",
+				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
 			}, () => { });
 			transactionalStorage.Initialize(new DummyUuidGenerator());
 		}
-
-		#region IDisposable Members
 
 		public override void Dispose()
 		{
 			transactionalStorage.Dispose();
 			base.Dispose();
 		}
-
-		#endregion
 
 		[Fact]
 		public void CanStoreValues()

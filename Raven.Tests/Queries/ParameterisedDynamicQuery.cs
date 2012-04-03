@@ -3,10 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Config;
@@ -15,7 +12,6 @@ using Raven.Tests.Storage;
 using Xunit;
 using Raven.Database;
 using Raven.Json.Linq;
-using Raven.Database.Data;
 
 namespace Raven.Tests.Queries
 {
@@ -27,7 +23,7 @@ namespace Raven.Tests.Queries
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 				{
-					DataDirectory = "raven.db.test.esent",
+					DataDirectory = DataDir,
 				});
 			db.SpinBackgroundWorkers();
 		}

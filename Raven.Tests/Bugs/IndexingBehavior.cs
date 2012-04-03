@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -11,9 +10,7 @@ using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Database.Exceptions;
-using Raven.Database.Indexing;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -28,7 +25,7 @@ namespace Raven.Tests.Bugs
 			db =
 				new DocumentDatabase(new RavenConfiguration
 				{
-					DataDirectory = "raven.db.test.esent", 
+					DataDirectory = DataDir, 
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
 				});
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());

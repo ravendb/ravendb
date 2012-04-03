@@ -22,7 +22,7 @@ namespace Raven.Tests.Storage
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = "raven.db.test.esent",
+				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 				Settings =
 					{
@@ -89,7 +89,7 @@ namespace Raven.Tests.Storage
 
 			db.Dispose();
 
-			DeleteIfExists("raven.db.test.esent");
+			DeleteIfExists(DataDir);
 
 			DocumentDatabase.Restore(new RavenConfiguration
 			{
@@ -98,9 +98,9 @@ namespace Raven.Tests.Storage
 						{"Raven/Esent/CircularLog", "false"}
 					}
 
-			}, "raven.db.test.backup", "raven.db.test.esent");
+			}, "raven.db.test.backup", DataDir);
 
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent" });
+			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir });
 
 			var jObject = db.Get("ayende", null).ToJson();
 			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
