@@ -42,15 +42,13 @@ properties {
 			return "$build_dir\$_"
 		}
   
-	$silverlight4_dlls = @( "Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???", 
-						(Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) |
+	$silverlight4_dlls = @("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 		
-	$silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???", 
-						(Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) |
+	$silverlight_dlls = @("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -79,8 +77,8 @@ task Verify40 {
 
 
 task Clean {
-  remove-item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
-  remove-item -force -recurse $release_dir -ErrorAction SilentlyContinue
+	#Remove-Item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
+	Remove-Item -force -recurse $release_dir -ErrorAction SilentlyContinue
 }
 
 task Init -depends Verify40, Clean {
@@ -92,6 +90,7 @@ task Init -depends Verify40, Clean {
 		$env:buildlabel = "13"
 	}
 	
+	exec { git.exe update-index --assume-unchange "$base_dir\CommonAssemblyInfo.cs" }
 	$commit = Get-Git-Commit
 	(Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
 		Foreach-Object { $_ -replace "{build}", $env:buildlabel } |
@@ -223,6 +222,7 @@ task CopySamples {
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output -Type directory | Out-Null
+	New-Item $build_dir\Output\Server -Type directory | Out-Null
 	New-Item $build_dir\Output\Web -Type directory | Out-Null
 	New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
 	New-Item $build_dir\Output\EmbeddedClient -Type directory | Out-Null
@@ -245,11 +245,13 @@ task CopyEmbeddedClient {
 }
 
 task CopySilverlight { 
-	$silverlight_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight }
+	$silverlight_dlls + @((Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) | 
+		ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight }
 }
 
 task CopySilverlight-4 { 
-	$silverlight4_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight-4 }
+	$silverlight4_dlls + @((Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) | 
+		ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight-4 }
 }
 
 task CopySmuggler {
@@ -282,8 +284,7 @@ task CopyBundles {
 	Copy-Item $items $build_dir\Output\Bundles
 }
 
-task CopyServer {
-	New-Item $build_dir\Output\Server -Type directory | Out-Null
+task CopyServer -depends CreateOutpuDirectories {
 	$server_files | ForEach-Object { Copy-Item "$_" $build_dir\Output\Server }
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
@@ -438,14 +439,18 @@ task CreateNugetPackage {
 		Copy-Item "$_" $build_dir\NuPack\lib\net40
 		Copy-Item "$_" $build_dir\NuPack-Client\lib\net40
 	}
-	$silverlight4_dlls | ForEach-Object { 
-		Copy-Item "$_" $build_dir\NuPack\lib\sl40
-		Copy-Item "$_" $build_dir\NuPack-Client\lib\sl40
-	}
-	$silverlight_dlls | ForEach-Object { 
-		Copy-Item "$_" $build_dir\NuPack\lib\sl50
-		Copy-Item "$_" $build_dir\NuPack-Client\lib\sl50
-	}
+	
+	@("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |
+		ForEach-Object {
+			Copy-Item "$build_dir\$_" $build_dir\NuPack\lib\sl50
+			Copy-Item "$build_dir\$_" $build_dir\NuPack-Client\lib\sl50
+		}
+		
+	@("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |
+		ForEach-Object {
+			Copy-Item "$build_dir\$_" $build_dir\NuPack\lib\sl40
+			Copy-Item "$build_dir\$_" $build_dir\NuPack-Client\lib\sl40
+		}
 	
 	$all_client_dlls | ForEach-Object { 
 		Copy-Item "$_" $build_dir\NuPack-Embedded\lib\net40

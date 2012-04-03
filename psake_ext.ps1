@@ -40,6 +40,8 @@ function Get-DependencyPackageFiles
 {
 	param([string]$packageName, [string]$frameworkVersion = "net40")
 	
-	$fullPackageName = Get-ChildItem "$base_dir\packages\$packageName.*" | Sort-Object Name -Descending | Select-Object -First 1
+	$fullPackageName = Get-ChildItem "$base_dir\packages\$packageName.*" | 
+								Sort-Object Name -Descending | 
+								Select-Object -First 1
 	Return "$fullPackageName\lib\$frameworkVersion\*"
 }
