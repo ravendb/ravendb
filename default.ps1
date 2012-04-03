@@ -221,7 +221,7 @@ task CopySamples {
 }
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
-	New-Item $build_dir\Output -Type directory | Out-Null
+	New-Item $build_dir\Output -Type -ErrorAction SilentlyContinue directory | Out-Null
 	New-Item $build_dir\Output\Server -Type directory | Out-Null
 	New-Item $build_dir\Output\Web -Type directory | Out-Null
 	New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
@@ -237,7 +237,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 }
 
 task CleanOutputDirectory { 
-	Remove-Item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
+	Remove-Item $build_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 task CopyEmbeddedClient { 
