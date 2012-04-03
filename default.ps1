@@ -92,36 +92,14 @@ task Init -depends Verify40, Clean {
 		$env:buildlabel = "13"
 	}
 	
-	if($env:buildlabel -ne 13) {
-		$projectFiles = Get-ChildItem -Path $base_dir -Filter "*.csproj" -Recurse | 
-							Where-Object { $_.Directory -notmatch [regex]::Escape($lib_dir) } | 
-							Where-Object { $_.Directory -notmatch [regex]::Escape($tools_dir) }
-		
-		$notclsCompliant = @("Raven.Silverlight.Client", "Raven.Studio", "Raven.Tests.Silverlight")
-		
-		foreach($projectFile in $projectFiles) {
-			
-			$projectName = [System.IO.Path]::GetFileName($projectFile.Directory)
-			$asmInfo = [System.IO.Path]::Combine($projectFile.Directory, [System.IO.Path]::Combine("Properties", "AssemblyInfo.cs"))
-			
-			$clsComliant = "true"
-			if([System.Array]::IndexOf($notclsCompliant, $projectFile.Name) -ne -1) {
-				$clsComliant = "false"
-			}
-			
-			Generate-Assembly-Info `
-				-file $asmInfo `
-				-title "$projectName $version.0.0" `
-				-description "A linq enabled document database for .NET" `
-				-company "Hibernating Rhinos" `
-				-product "RavenDB $version.0.0" `
-				-version "$version.0" `
-				-fileversion "$version.$env:buildlabel.0" `
-				-copyright "Copyright © Hibernating Rhinos 2004 - $((Get-Date).Year)" `
-				-clsCompliant $clsComliant
-		}
-	}
-	
+	$commit = Get-Git-Commit
+	(Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
+		Foreach-Object {
+			$_ = $_ -replace "{build}", $env:buildlabel
+			$_ = $_ -replace "{commit}", $commit
+			{commit}
+		} | 
+		Set-Content "$base_dir\CommonAssemblyInfo.cs"
 	
 	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
