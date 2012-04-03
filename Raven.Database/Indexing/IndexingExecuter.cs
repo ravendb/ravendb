@@ -54,6 +54,8 @@ namespace Raven.Database.Indexing
 
 		protected override void ExecuteIndxingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
+			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
+
 			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
 
 			JsonDocument[] jsonDocs = null;

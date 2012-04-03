@@ -23,9 +23,16 @@
 		</Grid.Resources>
 		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
 			<toolkit:HeaderedContentControl.Header>
-				<toolkit:DockPanel Margin="4"
-								   LastChildFill="False">
-					<StackPanel Orientation="Horizontal">
+				<Grid Margin="4">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition Width="*" />
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition Width="*" />
+						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition Width="Auto" />
+					</Grid.ColumnDefinitions>
+					<StackPanel Grid.Column="0" Orientation="Horizontal">
 						<Image Source="{StaticResource Image_Document_Tiny}"
 							   Stretch="None"
 							   VerticalAlignment="Center"
@@ -38,7 +45,23 @@
 								   Margin="6,0" />
 					</StackPanel>
 
-					<StackPanel toolkit:DockPanel.Dock="Right"
+					<Button Grid.Column="2" Command="{StaticResource NavigateToDocumentByIdCommand}"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							Visibility="{Binding ShowEditControls, Converter={StaticResource BooleanToVisibility}}">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal">
+								<Image Width="20" Height="20" Source="{StaticResource Image_OpenDocument_Small}"
+									   Stretch="UniformToFill"
+									   VerticalAlignment="Center"
+									   Margin="4,0,4,0" />
+								<TextBlock Text="Edit Document By ID"
+										   FontSize="14"
+										   VerticalAlignment="Center" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+					
+					<StackPanel Grid.Column="5"
 								Orientation="Horizontal"
 								VerticalAlignment="Center">
 						<HyperlinkButton Command="{Binding Path=Pager.PrevPage}"
@@ -69,25 +92,10 @@
 						</HyperlinkButton>
 					</StackPanel>
 
-					<StackPanel toolkit:DockPanel.Dock="Right"
+					<StackPanel Grid.Column="4"
 								Orientation="Horizontal"
 								VerticalAlignment="Center"
 								Margin="0,0,10,0">
-
-						<Button Command="{StaticResource NavigateToDocumentByIdCommand}"
-								Style="{StaticResource Style_Button_MouseOverChrome}"
-								Visibility="{Binding ShowEditControls, Converter={StaticResource BooleanToVisibility}}">
-							<Button.Content>
-								<StackPanel Orientation="Horizontal">
-									<Image Source="{StaticResource Image_OpenDocument_Small}"
-										   Stretch="None"
-										   VerticalAlignment="Center"
-										   Margin="4,0,4,0" />
-									<TextBlock Text="Edit Document By ID"
-											   VerticalAlignment="Center" />
-								</StackPanel>
-							</Button.Content>
-						</Button>
 
 						<Button Command="{StaticResource NavigateToCommand}"
 								CommandParameter="/edit?mode=new"
@@ -107,7 +115,7 @@
 
 						<Controls1:ViewSizeControl ViewSize="{Binding Path=Current.Height, Source={StaticResource DocumentSize}, Mode=TwoWay}" />
 					</StackPanel>
-				</toolkit:DockPanel>
+				</Grid>
 
 			</toolkit:HeaderedContentControl.Header>
 

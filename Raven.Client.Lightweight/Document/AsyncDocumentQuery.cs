@@ -455,38 +455,35 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		/// <param name="fields">The fields.</param>
-		public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
+		public virtual IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
 		{
-			return new AsyncDocumentQuery<TProjection>(theSession,
+			var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(theSession,
 #if !SILVERLIGHT
-				theDatabaseCommands,
+			                                                             theDatabaseCommands,
 #endif
 #if !NET_3_5
-				theAsyncDatabaseCommands,
+			                                                             theAsyncDatabaseCommands,
 #endif
-				indexName, fields, queryListeners)
-			{
-				pageSize = pageSize,
-				theQueryText = new StringBuilder(theQueryText.ToString()),
-				start = start,
-				timeout = timeout,
-				cutoff = cutoff,
-				theWaitForNonStaleResults = theWaitForNonStaleResults,
-				sortByHints = sortByHints,
-				orderByFields = orderByFields,
-				groupByFields = groupByFields,
-				aggregationOp = aggregationOp
-			}; 
-		}
-
-		/// <summary>
-		/// Selects the specified fields directly from the index
-		/// </summary>
-		/// <typeparam name="TProjection">The type of the projection.</typeparam>
-		/// <param name="fields">The fields.</param>
-		protected override IDocumentQueryCustomization CreateQueryForSelectedFields<TProjection>(string[] fields)
-		{
-			return (IDocumentQueryCustomization)SelectFields<TProjection>(fields);
+			                                                             indexName, fields, queryListeners)
+			                         	{
+			                         		pageSize = pageSize,
+			                         		theQueryText = new StringBuilder(theQueryText.ToString()),
+			                         		start = start,
+			                         		timeout = timeout,
+			                         		cutoff = cutoff,
+			                         		theWaitForNonStaleResults = theWaitForNonStaleResults,
+			                         		sortByHints = sortByHints,
+			                         		orderByFields = orderByFields,
+			                         		groupByFields = groupByFields,
+			                         		aggregationOp = aggregationOp,
+			                         		transformResultsFunc = transformResultsFunc,
+											includes = new HashSet<string>(includes),
+											negate = negate,
+											queryOperation = queryOperation,
+											queryStats = queryStats
+			                         	};
+			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
+			return asyncDocumentQuery;
 		}
 
 		/// <summary>
@@ -558,6 +555,16 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.CloseSubclause()
 		{
 			CloseSubclause();
+			return this;
+		}
+
+		/// <summary>
+		/// Partition the query so we can intersect different parts of the query
+		/// across different index entries.
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Intersect()
+		{
+			Intersect();
 			return this;
 		}
 

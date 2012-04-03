@@ -19,19 +19,26 @@
 				   d:LayoutOverrides="HorizontalMargin"
 				   StrokeThickness="1.5" />
 		<Grid Margin="10,0">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="Auto" />
+			</Grid.ColumnDefinitions>
 			<TextBlock HorizontalAlignment="Left"
 					   TextWrapping="Wrap"
 					   Text="Search: "
 					   VerticalAlignment="Center" />
 			<TextBox x:Name="searchField"
+					 Grid.Column="1"
 					 HorizontalAlignment="Left"
-					 Margin="51,2,0,2"
 					 TextWrapping="Wrap"
 					 VerticalAlignment="Center"
-					 Width="95"
+					 Width="Auto"
+					 MinWidth="100"
 					 Text="{Binding Source={StaticResource WordHighlightTagger}, Path=HighlightedString, Mode=TwoWay}"
 					 Controls:UpdateSourceTrigger.TextChangeUpdateSourceTrigger="True" />
 			<Button HorizontalAlignment="Right"
+					Grid.Column="2"
 					Margin="0,1,1,1"
 					d:LayoutOverrides="Height"
 					VerticalAlignment="Center"

@@ -25,6 +25,7 @@ namespace Raven.Client.Document.Batches
 		/// <summary>
 		/// Loads the specified ids.
 		/// </summary>
+		/// <param name="ids">The ids.</param>
 		Lazy<TResult[]> Load<TResult>(params string[] ids);
 
 		/// <summary>
@@ -80,7 +81,6 @@ namespace Raven.Client.Document.Batches
 		/// Execute all the lazy requests pending within this session
 		/// </summary>
 		void ExecuteAllPendingLazyOperations();
-	
 	}
 }
 #endif

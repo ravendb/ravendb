@@ -75,6 +75,88 @@ namespace Raven.Tests.Faceted
 		}
 
 		[Fact]
+		public void CanPerformFacetedSearch_Remotely_Lazy()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				Setup(store);
+
+				using (var s = store.OpenSession())
+				{
+					var expressions = new Expression<Func<Camera, bool>>[]
+					{
+						x => x.Cost >= 100 && x.Cost <= 300,
+						x => x.DateOfListing > new DateTime(2000, 1, 1),
+						x => x.Megapixels > 5.0m && x.Cost < 500
+					};
+
+
+					foreach (var exp in expressions)
+					{
+						var oldRequests = s.Advanced.NumberOfRequests;
+
+						var facetResults = s.Query<Camera>("CameraCost")
+							.Where(exp)
+							.ToFacetsLazy("facets/CameraFacets");
+
+						Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
+
+						var filteredData = _data.Where(exp.Compile()).ToList();
+						CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
+
+						Assert.Equal(oldRequests +1, s.Advanced.NumberOfRequests);
+
+					}
+				}
+			}
+		}
+
+		[Fact]
+		public void CanPerformFacetedSearch_Remotely_Lazy_can_work_with_others()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				Setup(store);
+
+				using (var s = store.OpenSession())
+				{
+					var expressions = new Expression<Func<Camera, bool>>[]
+					{
+						x => x.Cost >= 100 && x.Cost <= 300,
+						x => x.DateOfListing > new DateTime(2000, 1, 1),
+						x => x.Megapixels > 5.0m && x.Cost < 500
+					};
+
+
+					foreach (var exp in expressions)
+					{
+						var oldRequests = s.Advanced.NumberOfRequests;
+						var load = s.Advanced.Lazily.Load<Camera>(oldRequests);
+						var facetResults = s.Query<Camera>("CameraCost")
+							.Where(exp)
+							.ToFacetsLazy("facets/CameraFacets");
+
+						Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
+
+						var filteredData = _data.Where(exp.Compile()).ToList();
+						CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
+						var forceLoading = load.Value;
+						Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
+
+					}
+				}
+			}
+		}
+
+		[Fact]
 		public void CanPerformFacetedSearch_Embedded()
 		{
 			using (var store = NewDocumentStore())
@@ -86,6 +168,35 @@ namespace Raven.Tests.Faceted
 
 		private void ExecuteTest(IDocumentStore store)
 		{
+			Setup(store);
+
+			using (var s = store.OpenSession())
+			{
+				var expressions = new Expression<Func<Camera, bool>>[]
+				{
+					x => x.Cost >= 100 && x.Cost <= 300,
+					x => x.DateOfListing > new DateTime(2000, 1, 1),
+					x => x.Megapixels > 5.0m && x.Cost < 500
+				};
+
+				foreach (var exp in expressions)
+				{
+					var facetQueryTimer = Stopwatch.StartNew();
+					var facetResults = s.Query<Camera>("CameraCost")
+						.Where(exp)
+						.ToFacets("facets/CameraFacets");
+					facetQueryTimer.Stop();
+
+					PrintFacetResults(facetResults);
+
+					var filteredData = _data.Where(exp.Compile()).ToList();
+					CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
+				}
+			}
+		}
+
+		private void Setup(IDocumentStore store)
+		{
 			using (var s = store.OpenSession())
 			{
 				s.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = _facets });
@@ -94,7 +205,8 @@ namespace Raven.Tests.Faceted
 				store.DatabaseCommands.PutIndex("CameraCost",
 												new IndexDefinition
 												{
-													Map = @"from camera in docs 
+													Map =
+														@"from camera in docs 
                                                         select new 
                                                         { 
                                                             camera.Manufacturer, 
@@ -119,32 +231,6 @@ namespace Raven.Tests.Faceted
 				s.Query<Camera>("CameraCost")
 					.Customize(x => x.WaitForNonStaleResults())
 					.ToList();
-
-				//WaitForUserToContinueTheTest(store);
-
-				var expressions = new Expression<Func<Camera, bool>>[]
-				{
-					x => x.Cost >= 100 && x.Cost <= 300,
-					x => x.DateOfListing > new DateTime(2000, 1, 1),
-					x => x.Megapixels > 5.0m && x.Cost < 500
-				};
-
-				foreach (var exp in expressions)
-				{
-					Console.WriteLine("Query: " + exp);
-
-					var facetQueryTimer = Stopwatch.StartNew();
-					var facetResults = s.Query<Camera>("CameraCost")
-						.Where(exp)
-						.ToFacets("facets/CameraFacets");
-					facetQueryTimer.Stop();
-
-					Console.WriteLine("Took {0:0.00} msecs", facetQueryTimer.ElapsedMilliseconds);
-					PrintFacetResults(facetResults);
-
-					var filteredData = _data.Where(exp.Compile()).ToList();
-					CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
-				}
 			}
 		}
 

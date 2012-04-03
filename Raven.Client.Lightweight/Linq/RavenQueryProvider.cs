@@ -12,8 +12,11 @@ using Raven.Abstractions.Data;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
 #endif
+#if !Silverlight
 using Raven.Client.Connection;
 using Raven.Client.Document;
+
+#endif
 
 namespace Raven.Client.Linq
 {
@@ -22,8 +25,10 @@ namespace Raven.Client.Linq
 	/// </summary>
 	public class RavenQueryProvider<T> : IRavenQueryProvider
 	{
-		private readonly IDocumentQueryGenerator queryGenerator;
+		private Action<QueryResult> afterQueryExecuted;
+		private Action<IDocumentQueryCustomization> customizeQuery;
 		private readonly string indexName;
+		private readonly IDocumentQueryGenerator queryGenerator;
 		private readonly RavenQueryStatistics ravenQueryStatistics;
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
@@ -31,8 +36,35 @@ namespace Raven.Client.Linq
 #if !NET_3_5
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 #endif
-		private Action<IDocumentQueryCustomization> customizeQuery;
-		private Action<QueryResult> afterQueryExecuted;
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
+		/// </summary>
+		public RavenQueryProvider(
+			IDocumentQueryGenerator queryGenerator,
+			string indexName,
+			RavenQueryStatistics ravenQueryStatistics
+#if !SILVERLIGHT
+, IDatabaseCommands databaseCommands
+#endif
+#if !NET_3_5
+, IAsyncDatabaseCommands asyncDatabaseCommands
+#endif
+)
+		{
+			FieldsToFetch = new HashSet<string>();
+			FieldsToRename = new Dictionary<string, string>();
+
+			this.queryGenerator = queryGenerator;
+			this.indexName = indexName;
+			this.ravenQueryStatistics = ravenQueryStatistics;
+#if !SILVERLIGHT
+			this.databaseCommands = databaseCommands;
+#endif
+#if !NET_3_5
+			this.asyncDatabaseCommands = asyncDatabaseCommands;
+#endif
+		}
 
 		/// <summary>
 		/// Gets the actions for customizing the generated lucene query
@@ -90,35 +122,6 @@ namespace Raven.Client.Linq
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
-		/// </summary>
-		public RavenQueryProvider(
-			IDocumentQueryGenerator queryGenerator,
-			string indexName, 
-			RavenQueryStatistics ravenQueryStatistics
-#if !SILVERLIGHT
-			,IDatabaseCommands databaseCommands
-#endif
-#if !NET_3_5
-			, IAsyncDatabaseCommands asyncDatabaseCommands
-#endif
-		)
-		{
-			FieldsToFetch = new HashSet<string>();
-			FieldsToRename = new Dictionary<string, string>();
-
-			this.queryGenerator = queryGenerator;
-			this.indexName = indexName;
-			this.ravenQueryStatistics = ravenQueryStatistics;
-#if !SILVERLIGHT
-			this.databaseCommands = databaseCommands;
-#endif
-#if !NET_3_5
-			this.asyncDatabaseCommands = asyncDatabaseCommands;
-#endif
-		}
-
-		/// <summary>
 		/// Executes the query represented by a specified expression tree.
 		/// </summary>
 		/// <param name="expression">An expression tree that represents a LINQ query.</param>
@@ -132,7 +135,7 @@ namespace Raven.Client.Linq
 
 		IQueryable<S> IQueryProvider.CreateQuery<S>(Expression expression)
 		{
-			return new RavenQueryInspector<S>(this, ravenQueryStatistics, indexName, expression
+			return new RavenQueryInspector<S>(this, ravenQueryStatistics, indexName, expression, (InMemoryDocumentSessionOperations)queryGenerator
 #if !SILVERLIGHT
 				, databaseCommands
 #endif
@@ -147,17 +150,16 @@ namespace Raven.Client.Linq
 			Type elementType = TypeSystem.GetElementType(expression.Type);
 			try
 			{
-				return
-					(IQueryable)
-					Activator.CreateInstance(typeof(DynamicRavenQueryInspector<>).MakeGenericType(elementType),
-											 new object[] { this, ravenQueryStatistics, indexName, expression
+				var makeGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
+				var args = new object[] { this, ravenQueryStatistics, indexName, expression, queryGenerator
 #if !SILVERLIGHT
-												 ,databaseCommands
+				                                      ,databaseCommands
 #endif
 #if !NET_3_5
-												 ,asyncDatabaseCommands
+				                                      ,asyncDatabaseCommands
 #endif
-												 });
+				                                    };
+				return (IQueryable) Activator.CreateInstance(makeGenericType, args);
 			}
 			catch (TargetInvocationException tie)
 			{
@@ -244,9 +246,18 @@ namespace Raven.Client.Linq
 		}
 #endif
 
-		RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
+		protected virtual RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()
 		{
 			return new RavenQueryProviderProcessor<S>(queryGenerator, customizeQuery, afterQueryExecuted, indexName, FieldsToFetch, FieldsToRename);
+		}
+
+		/// <summary>
+		/// Convert the expression to a Lucene query
+		/// </summary>
+		public IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression)
+		{
+			var processor = GetQueryProviderProcessor<T>();
+			return (IDocumentQuery<TResult>)processor.GetLuceneQueryFor(expression);
 		}
 	}
 }

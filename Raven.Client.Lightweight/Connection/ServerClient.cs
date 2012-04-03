@@ -26,6 +26,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
@@ -47,6 +48,7 @@ namespace Raven.Client.Connection
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? currentSessionId;
 		private readonly ProfilingInformation profilingInformation;
+		private int readStripingBase;
 
 		/// <summary>
 		/// Notify when the failover status changed
@@ -77,6 +79,7 @@ namespace Raven.Client.Connection
 			this.convention = convention;
 			OperationsHeaders = new NameValueCollection();
 			replicationInformer.UpdateReplicationInformationIfNeeded(this);
+			readStripingBase = replicationInformer.GetReadStripingBase();
 		}
 
 		/// <summary>
@@ -166,6 +169,24 @@ namespace Raven.Client.Connection
 			var currentRequest = Interlocked.Increment(ref requestCount);
 			T result;
 			var threadSafeCopy = replicationInformer.ReplicationDestinations;
+
+			var shouldReadFromAllServers = ((convention.FailoverBehavior & FailoverBehavior.ReadFromAllServers) == FailoverBehavior.ReadFromAllServers);
+			if (shouldReadFromAllServers && method == "GET")
+			{
+				var replicationIndex = readStripingBase%(threadSafeCopy.Count + 1);
+				// if replicationIndex == destinations count, then we want to use the master
+				// if replicationIndex < 0, then we were explicitly instructed to use the master
+				if (replicationIndex < threadSafeCopy.Count && replicationIndex >= 0)
+				{
+					// if it is failing, ignore that, and move to the master or any of the replicas
+					if (replicationInformer.ShouldExecuteUsing(threadSafeCopy[replicationIndex], currentRequest, method, false))
+					{
+						if (TryOperation(operation, threadSafeCopy[replicationIndex], true, out result))
+							return result;
+					}
+				}
+			}
+
 			if (replicationInformer.ShouldExecuteUsing(url, currentRequest, method, true))
 			{
 				if (TryOperation(operation, url, true, out result))
@@ -187,7 +208,7 @@ namespace Raven.Client.Connection
 				replicationInformer.IncrementFailureCount(url);
 			}
 			// this should not be thrown, but since I know the value of should...
-			throw new InvalidOperationException(@"Attempted to conect to master and all replicas have failed, giving up.
+			throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
 There is a high probability of a network problem preventing access to all the replicas.
 Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven instances.");
 		}
@@ -390,7 +411,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.InternalServerError)
 					throw;
 
-				using (var stream = httpWebResponse.GetResponseStream())
+				using (var stream = httpWebResponse.GetResponseStreamWithHttpDecompression())
 				using (var reader = new StreamReader(stream))
 				{
 					throw new InvalidOperationException("Internal Server Error: " + Environment.NewLine + reader.ReadToEnd());
@@ -405,19 +426,44 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <returns></returns>
 		public Attachment GetAttachment(string key)
 		{
-			return ExecuteWithReplication("GET", operationUrl => DirectGetAttachment(key, operationUrl));
+			return ExecuteWithReplication("GET", operationUrl => DirectGetAttachment("GET", key, operationUrl));
 		}
 
-		private Attachment DirectGetAttachment(string key, string operationUrl)
+		/// <summary>
+		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		public Attachment HeadAttachment(string key)
 		{
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,operationUrl + "/static/" + key,"GET", credentials, convention);
+			return ExecuteWithReplication("HEAD", operationUrl => DirectGetAttachment("HEAD",key, operationUrl));
+		}
+
+		private Attachment DirectGetAttachment(string method, string key, string operationUrl)
+		{
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,operationUrl + "/static/" + key,method, credentials, convention);
+			Func<Stream> data;
 			try
 			{
-				var memoryStream = new MemoryStream(webRequest.ReadResponseBytes());
+				int len;
+				if (method == "GET")
+				{
+					var memoryStream = new MemoryStream(webRequest.ReadResponseBytes());
+					data = () => memoryStream;
+					len = (int)memoryStream.Length;
+				}
+				else
+				{
+					len = int.Parse(webRequest.ResponseHeaders["Content-Length"]);
+					data = () =>
+					{
+						throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
+					};
+				}
 				return new Attachment
 				{
-					Data = () => memoryStream,
-					Size = (int) memoryStream.Length,
+					Data = data,
+					Size = len,
 					Etag = new Guid(webRequest.ResponseHeaders["ETag"]),
 					Metadata = webRequest.ResponseHeaders.FilterHeaders(isServerDocument: false)
 				};
@@ -910,15 +956,23 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		}
 
 		/// <summary>
+		/// Force the database commands to read directly from the master, unless there has been a failover.
+		/// </summary>
+		public void ForceReadFromMaster()
+		{
+			readStripingBase = -1;// this means that will have to use the master url first
+		}
+
+		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
 		/// with the specified database
 		/// </summary>
 		public IDatabaseCommands ForDatabase(string database)
 		{
-			var databaseUrl = DefaultDatabaseUrl;
+			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
+			databaseUrl = databaseUrl + "/databases/" + database;
 			if (databaseUrl == Url)
 				return this;
-			databaseUrl = databaseUrl + "databases/" + database;
 			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId)
 			       {
 			       	OperationsHeaders = OperationsHeaders
@@ -927,7 +981,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		public IDatabaseCommands ForDefaultDatabase()
 		{
-			var databaseUrl = DefaultDatabaseUrl;
+			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == Url)
 				return this;
 			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, null, jsonRequestFactory, currentSessionId)
@@ -936,19 +990,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			};
 		}
 
-		private string DefaultDatabaseUrl
-		{
-			get
-			{
-				var databaseUrl = url;
-				var indexOfDatabases = databaseUrl.IndexOf("/databases/", StringComparison.Ordinal);
-				if (indexOfDatabases != -1)
-					databaseUrl = databaseUrl.Substring(0, indexOfDatabases);
-				if (databaseUrl.EndsWith("/") == false)
-					databaseUrl += "/";
-				return databaseUrl;
-			}
-		}
+		
 
 		/// <summary>
 		/// Gets a value indicating whether [supports promotable transactions].
@@ -1078,18 +1120,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
 
-				RavenJObject json;
-				try
-				{
-					json = (RavenJObject) request.ReadResponseJson();
-				}
-				catch (WebException e)
-				{
-					var httpWebResponse = e.Response as HttpWebResponse;
-					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
-						throw new InvalidOperationException("could not execute suggestions at this time");
-					throw;
-				}
+				RavenJObject json = (RavenJObject) request.ReadResponseJson();
 
 				return new SuggestionQueryResult
 				{
@@ -1107,6 +1138,14 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 			var jo = (RavenJObject) httpJsonRequest.ReadResponseJson();
 			return jo.Deserialize<DatabaseStatistics>(convention);
+		}
+
+		/// <summary>
+		/// Get the full URL for the given document key
+		/// </summary>
+		public string UrlFor(string documentKey)
+		{
+			return url + "/docs/" + documentKey;
 		}
 
 		/// <summary>

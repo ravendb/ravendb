@@ -1,7 +1,10 @@
-﻿using System.Windows;
+﻿using System;
+using System.Reflection;
+using System.Windows;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
+using System.Linq;
 
 namespace Raven.Studio.Models
 {
@@ -51,5 +54,24 @@ namespace Raven.Studio.Models
 		public Observable<string> LastNotification { get; set; }
 
 		public BindableCollection<Notification> Notifications { get; set; }
+
+
+		public string AssemblyVersion
+		{
+			get
+			{
+				var version = GetAssemblyVersion();
+
+				return version.Split('.')[2];
+			}
+		}
+		string GetAssemblyVersion()
+		{
+			var firstOrDefault = (AssemblyFileVersionAttribute)typeof(ApplicationModel).Assembly.GetCustomAttributes(typeof(AssemblyFileVersionAttribute), true).FirstOrDefault();
+			if (firstOrDefault != null)
+				return firstOrDefault.Version;
+
+			return "0.0.unknown.0";
+		}
 	}
 }

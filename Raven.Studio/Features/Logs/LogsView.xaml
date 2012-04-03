@@ -2,7 +2,6 @@
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-					 xmlns:data="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
 					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
 					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 					 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -30,9 +29,12 @@
 					<TextBlock Text="Logs"
 							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
 							   VerticalAlignment="Center" />
-					<TextBlock Text="{Binding Path=Logs.Count, StringFormat='(\{0\} Entries)'}"
-							   Margin="10,0,0,0"
+					<TextBlock Text="{Binding Path=DisplayedLogs.Count, StringFormat='(\{0\} Entries)'}"
+							   Margin="10,2,0,0"
 							   Style="{StaticResource Style_TextBlock_InlineSubHeader}" />
+					<TextBlock Text="{Binding Path=PendingLogs, StringFormat='Click refresh in order to load \{0\} more log entires'}"
+							   Visibility="{Binding PendingLogs, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}"
+							   Margin="10,5,0,0" />
 				</StackPanel>
 				<StackPanel toolkit:DockPanel.Dock="Right"
 							Orientation="Horizontal">
@@ -92,14 +94,14 @@
 				<RowDefinition Height="*" />
 			</Grid.RowDefinitions>
 
-			<data:DataGrid x:Name="LogsList"
+			<sdk:DataGrid x:Name="LogsList"
 						   AutoGenerateColumns="False"
 						   FrozenColumnCount="1"
 						   IsReadOnly="True"
 						   ItemsSource="{Binding DisplayedLogs}">
-				<data:DataGrid.Columns>
-					<data:DataGridTemplateColumn>
-						<data:DataGridTemplateColumn.CellTemplate>
+				<sdk:DataGrid.Columns>
+					<sdk:DataGridTemplateColumn>
+						<sdk:DataGridTemplateColumn.CellTemplate>
 							<DataTemplate>
 								<Image Stretch="Uniform"
 									   VerticalAlignment="Center"
@@ -124,20 +126,20 @@
 									</i:Interaction.Triggers>
 								</Image>
 							</DataTemplate>
-						</data:DataGridTemplateColumn.CellTemplate>
-					</data:DataGridTemplateColumn>
-					<data:DataGridTextColumn Header="Level"
+						</sdk:DataGridTemplateColumn.CellTemplate>
+					</sdk:DataGridTemplateColumn>
+					<sdk:DataGridTextColumn Header="Level"
 											 Binding="{Binding Level}" />
-					<data:DataGridTextColumn Header="Logged"
+					<sdk:DataGridTextColumn Header="Logged"
 											 Binding="{Binding TimeStamp}" />
-					<data:DataGridTextColumn Header="Message"
+					<sdk:DataGridTextColumn Header="Message"
 											 Binding="{Binding Message, Converter={StaticResource FirstLineOnly}}" />
-					<data:DataGridTextColumn Header="Exception"
+					<sdk:DataGridTextColumn Header="Exception"
 											 Binding="{Binding Exception, Converter={StaticResource FirstLineOnly}}" />
-					<data:DataGridTextColumn Header="Log Name"
+					<sdk:DataGridTextColumn Header="Log Name"
 											 Binding="{Binding LoggerName}" />
-				</data:DataGrid.Columns>
-			</data:DataGrid>
+				</sdk:DataGrid.Columns>
+			</sdk:DataGrid>
 
 			<sdk:GridSplitter Grid.Row="1"
 							  HorizontalAlignment="Stretch"

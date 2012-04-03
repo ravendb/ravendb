@@ -90,8 +90,8 @@ namespace Raven.Database.Server
 		private Timer databasesCleanupTimer;
 		private int physicalRequestsCount;
 
-		private TimeSpan maxTimeDatabaseCanBeIdle;
-		private TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
+		private readonly TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 		private bool disposed;
 
 		public bool HasPendingRequests
@@ -246,8 +246,16 @@ namespace Raven.Database.Server
 					databaseLastRecentlyUsed.TryRemove(db, out time);
 					return;
 				}
+				if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
+				{
+					// this document might not be actively working with user, but it is actively doing indexes, we will 
+					// wait with unloading this database until it hasn't done indexing for a while.
+					// This prevent us from shutting down big databases that have been left alone to do indexing work.
+					return;
+				}
 				try
 				{
+					
 					database.Dispose();
 				}
 				catch (Exception e)
@@ -272,7 +280,7 @@ namespace Raven.Database.Server
 			catch (Exception)
 			{
 				// can't get current request / end new one, probably
-				// listner shutdown
+				// listener shutdown
 				return;
 			}
 
@@ -514,12 +522,20 @@ namespace Raven.Database.Server
 				requestAuthorizer.Authorize(ctx) == false)
 				return false;
 
+			Action onResponseEnd = null;
 			try
 			{
 				OnDispatchingRequest(ctx);
 
 				if (DefaultConfiguration.HttpCompression)
 					AddHttpCompressionIfClientCanAcceptIt(ctx);
+
+				HandleHttpCompressionFromClient(ctx);
+
+				if (BeforeDispatchingRequest != null)
+				{
+					onResponseEnd = BeforeDispatchingRequest(ctx);
+				}
 
 				// Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
 				AddAccessControlHeaders(ctx);
@@ -561,8 +577,28 @@ namespace Raven.Database.Server
 				{
 					// this can happen during system shutdown
 				}
+				if (onResponseEnd != null)
+					onResponseEnd();
 			}
 			return false;
+		}
+
+		public Func<IHttpContext, Action> BeforeDispatchingRequest { get; set; }
+
+		private static void HandleHttpCompressionFromClient(IHttpContext ctx)
+		{
+			var encoding = ctx.Request.Headers["Content-Encoding"];
+			if (encoding == null)
+				return;
+
+			if (encoding.Contains("gzip"))
+			{
+				ctx.SetRequestFilter(stream => new GZipStream(stream, CompressionMode.Decompress));
+			}
+			else if (encoding.Contains("deflate"))
+			{
+				ctx.SetRequestFilter(stream => new DeflateStream(stream, CompressionMode.Decompress));
+			}
 		}
 
 		protected void OnDispatchingRequest(IHttpContext ctx)
@@ -620,7 +656,8 @@ namespace Raven.Database.Server
 
 			if (jsonDocument == null ||
 				jsonDocument.Metadata == null ||
-				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists))
+				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) || 
+				jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))
 				return false;
 
 			var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
@@ -636,15 +673,15 @@ namespace Raven.Database.Server
 
 				config.CustomizeValuesForTenant(tenantId);
 
+				var dataDir = document.Settings["Raven/DataDir"];
+				if (dataDir == null)
+					throw new InvalidOperationException("Could not find Raven/DataDir");
+				
 				foreach (var setting in document.Settings)
 				{
 					config.Settings[setting.Key] = setting.Value;
 				}
 
-
-				var dataDir = config.Settings["Raven/DataDir"];
-				if (dataDir == null)
-					throw new InvalidOperationException("Could not find Raven/DataDir");
 				if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
 				{
 					var baseDataPath = Path.GetDirectoryName(DefaultResourceStore.Configuration.DataDirectory);
@@ -657,6 +694,7 @@ namespace Raven.Database.Server
 				config.DatabaseName = tenantId;
 
 				config.Initialize();
+				config.CopyParentSettings(DefaultConfiguration);
 				var documentDatabase = new DocumentDatabase(config);
 				documentDatabase.SpinBackgroundWorkers();
 				return documentDatabase;

@@ -3,8 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Raven.Client.Document;
@@ -52,7 +50,7 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Creates the indexes found in the specified catalog
 		/// </summary>
-		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to getn indexing tasks from.</param>
+		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
 		/// <param name="documentStore">The document store.</param>
 		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
@@ -74,7 +72,7 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Creates the indexes found in the specified catalog
 		/// </summary>
-		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to getn indexing tasks from.</param>
+		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
 		/// <param name="documentStore">The document store.</param>
 		public static Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{

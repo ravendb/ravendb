@@ -9,6 +9,7 @@ extern alias database;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
+using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Replication;
 using Raven.Client;
@@ -18,6 +19,7 @@ using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
 using IOExtensions = database::Raven.Database.Extensions.IOExtensions;
+using System.Linq;
 
 namespace Raven.Bundles.Tests.Replication
 {
@@ -26,20 +28,12 @@ namespace Raven.Bundles.Tests.Replication
 		private readonly List<IDocumentStore> stores = new List<IDocumentStore>();
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 
-		public ReplicationBase()
-		{
-			for (int i = 0; i < 15; i++)
-			{
-				database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data #" + i);
-			}
-		}
-
-		private const int PortRangeStart = 8500;
+		private const int PortRangeStart = 8079;
 		protected const int RetriesCount = 300;
 
 		public IDocumentStore CreateStore()
 		{
-			var port = PortRangeStart + servers.Count;
+			var port = PortRangeStart - servers.Count;
 			return CreateStoreAtPort(port);
 		}
 
@@ -141,21 +135,19 @@ namespace Raven.Bundles.Tests.Replication
 			
 		}
 
-		protected void SetupReplication(IDatabaseCommands source, string url)
+		protected void SetupReplication(IDatabaseCommands source, params string[] urls)
 		{
+			Assert.NotEmpty(urls);
 			source.Put(replication::Raven.Bundles.Replication.ReplicationConstants.RavenReplicationDestinations,
 			           null, new RavenJObject
-			                 {
-			                 	{
-			                 	"Destinations", new RavenJArray
-			                 	                {
-			                 	                	new RavenJObject
-			                 	                	{
-			                 	                		{"Url", url}
-			                 	                	}
-			                 	                }
-			                 	}
-			                 }, new RavenJObject());
+			           {
+			           	{
+			           		"Destinations", new RavenJArray(urls.Select(url => new RavenJObject
+			           		{
+			           			{"Url", url}
+			           		}))
+			           		}
+			           }, new RavenJObject());
 		}
 
 		protected TDocument WaitForDocument<TDocument>(IDocumentStore store2, string expectedId) where TDocument : class
@@ -184,7 +176,10 @@ namespace Raven.Bundles.Tests.Replication
 					break;
 				Thread.Sleep(100);
 			}
-			Assert.NotNull(commands.Head(expectedId));
+
+			var jsonDocumentMetadata = commands.Head(expectedId);
+			
+			Assert.NotNull(jsonDocumentMetadata);
 		}
 	}
 }

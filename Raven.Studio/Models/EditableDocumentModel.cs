@@ -113,10 +113,10 @@ namespace Raven.Studio.Models
 			set
 			{
 				neighborIds = value;
-				OnPropertyChanged();
-				OnPropertyChanged("CurrentIndexDisplay");
-				OnPropertyChanged("PrevDocument");
-				OnPropertyChanged("NextDocument");
+				OnPropertyChanged(() => NeighborIds);
+				OnPropertyChanged(() => CurrentIndexDisplay);
+				OnPropertyChanged(() => PrevDocument);
+				OnPropertyChanged(() => NextDocument);
 			}
 		}
 
@@ -219,7 +219,7 @@ namespace Raven.Studio.Models
 																	   return x.Value.Value<string>();
 																   return x.Value.ToString(Formatting.None);
 															   });
-			OnPropertyChanged("Metadata");
+			OnPropertyChanged(() => Metadata);
 			JsonMetadata = metadataAsJson.ToString(Formatting.Indented);
 		}
 
@@ -233,7 +233,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				searchEnabled = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => SearchEnabled);
 			}
 		}
 
@@ -244,10 +244,10 @@ namespace Raven.Studio.Models
 			set
 			{
 				localId = value;
-				OnPropertyChanged();
-				OnPropertyChanged("CurrentIndexDisplay");
-				OnPropertyChanged("PrevDocument");
-				OnPropertyChanged("NextDocument");
+				OnPropertyChanged(() => LocalId);
+				OnPropertyChanged(() => CurrentIndexDisplay);
+				OnPropertyChanged(() => PrevDocument);
+				OnPropertyChanged(() => NextDocument);
 			}
 		}
 
@@ -278,8 +278,8 @@ namespace Raven.Studio.Models
 			set
 			{
 				jsonMetadata = value;
-				OnPropertyChanged();
-				OnPropertyChanged("DocumentSize");
+				OnPropertyChanged(() => JsonMetadata);
+				OnPropertyChanged(() => DocumentSize);
 			}
 		}
 
@@ -290,8 +290,8 @@ namespace Raven.Studio.Models
 			set
 			{
 				mode = value;
-				OnPropertyChanged();
-				OnPropertyChanged("DisplayId");
+				OnPropertyChanged(() => Mode);
+				OnPropertyChanged(() => DisplayId);
 			}
 		}
 
@@ -302,8 +302,8 @@ namespace Raven.Studio.Models
 			{
 				jsonData = value;
 				UpdateReferences();
-				OnPropertyChanged();
-				OnPropertyChanged("DocumentSize");
+				OnPropertyChanged(() => JsonData);
+				OnPropertyChanged(() => DocumentSize);
 			}
 		}
 
@@ -359,21 +359,24 @@ namespace Raven.Studio.Models
 
 		private void UpdateReferences()
 		{
-			var referencesIds = Regex.Matches(jsonData, @"""(\w+/\w+)""");
-			References.Clear();
-			foreach (var source in referencesIds.Cast<Match>().Select(x => x.Groups[1].Value).Distinct())
+			if (Seperator != null)
 			{
-				References.Add(new LinkModel
-							   {
-								   Title = source,
-								   HRef = "/Edit?id=" + source
-							   });
+				var referencesIds = Regex.Matches(jsonData, @"""(\w+" + Seperator + @"\w+)");
+				References.Clear();
+				foreach (var source in referencesIds.Cast<Match>().Select(x => x.Groups[1].Value).Distinct())
+				{
+					References.Add(new LinkModel
+					{
+						Title = source,
+						HRef = "/Edit?id=" + source
+					});
+				}
 			}
 		}
 
 		private void UpdateRelated()
 		{
-			DatabaseCommands.GetDocumentsStartingWithAsync(Key + "/", 0, 15)
+			DatabaseCommands.GetDocumentsStartingWithAsync(Key + Seperator, 0, 15)
 				.ContinueOnSuccess(items =>
 								   {
 									   if (items == null)
@@ -394,7 +397,17 @@ namespace Raven.Studio.Models
 			set
 			{
 				document.Value.Key = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Key);
+			}
+		}
+
+		public string Seperator
+		{
+			get
+			{
+				if (document.Value.Key != null && document.Value.Key.Contains("-"))
+					return "-";
+				return "/";
 			}
 		}
 
@@ -404,8 +417,8 @@ namespace Raven.Studio.Models
 			set
 			{
 				document.Value.Etag = value;
-				OnPropertyChanged();
-				OnPropertyChanged("Metadata");
+				OnPropertyChanged(() => Etag);
+				OnPropertyChanged(() => Metadata);
 			}
 		}
 
@@ -415,8 +428,8 @@ namespace Raven.Studio.Models
 			set
 			{
 				document.Value.LastModified = value;
-				OnPropertyChanged();
-				OnPropertyChanged("Metadata");
+				OnPropertyChanged(() => LastModified);
+				OnPropertyChanged(() => Metadata);
 			}
 		}
 
@@ -504,6 +517,18 @@ namespace Raven.Studio.Models
 		{
 			private readonly EditableDocumentModel document;
 
+			public string Seperator
+			{
+				get
+				{
+					if (document.Key.Contains("/"))
+						return "/";
+					if (document.Key.Contains("-"))
+						return "-";
+					return null;
+				}
+			}
+
 			public SaveDocumentCommand(EditableDocumentModel document)
 			{
 				this.document = document;
@@ -530,11 +555,13 @@ namespace Raven.Studio.Models
 				{
 					doc = RavenJObject.Parse(document.JsonData);
 					metadata = RavenJObject.Parse(document.JsonMetadata);
-					if (document.Key != null && document.Key.Contains("/") &&
-						metadata.Value<string>(Constants.RavenEntityName) == null)
+					//if (document.Key != null && document.Key.Contains("/") &&
+					//	metadata.Value<string>(Constants.RavenEntityName) == null)
+					if(document.Key != null && Seperator != null)
 					{
-						var entityName = document.Key.Split(new[] { "/" }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-						if (entityName != null && entityName.Length > 1)
+						var entityName = document.Key.Split(new[] { Seperator }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+					
+					if (entityName != null && entityName.Length > 1)
 						{
 							metadata[Constants.RavenEntityName] = char.ToUpper(entityName[0]) + entityName.Substring(1);
 						}
@@ -542,7 +569,6 @@ namespace Raven.Studio.Models
 						{
 							metadata[Constants.RavenEntityName] = entityName;
 						}
-
 					}
 				}
 				catch (JsonReaderException ex)

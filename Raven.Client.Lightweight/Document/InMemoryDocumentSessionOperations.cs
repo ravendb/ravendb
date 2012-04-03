@@ -8,9 +8,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 #if !SILVERLIGHT
-using System.Runtime.CompilerServices;
 using System.Transactions;
 #endif
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -20,9 +20,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Profiling;
 using Raven.Client.Exceptions;
-using Raven.Client.Listeners;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 
@@ -73,7 +71,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly Dictionary<string, object> entitiesByKey = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
 
-		private readonly DocumentStore documentStore;
+		private readonly DocumentStoreBase documentStore;
 
 		/// <summary>
 		/// all the listeners for this session
@@ -101,7 +99,7 @@ namespace Raven.Client.Document
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
 		/// </summary>
 		protected InMemoryDocumentSessionOperations(
-			DocumentStore documentStore,
+			DocumentStoreBase documentStore, 
 			DocumentSessionListeners listeners,
 			Guid id)
 		{
@@ -124,7 +122,6 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Gets the store identifier for this session.
 		/// The store identifier is the identifier for the particular RavenDB instance.
-		/// This is mostly useful when using sharding.
 		/// </summary>
 		/// <value>The store identifier.</value>
 		public string StoreIdentifier
@@ -232,8 +229,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public bool IsLoaded(string id)
 		{
-			object existingEntity;
-			return entitiesByKey.TryGetValue(id, out existingEntity);
+			return entitiesByKey.ContainsKey(id);
 		}
 
 		/// <summary>
@@ -243,6 +239,8 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public string GetDocumentId(object instance)
 		{
+			if (instance == null)
+				return null;
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(instance, out value) == false)
 				return null;
@@ -287,7 +285,7 @@ namespace Raven.Client.Document
 Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
 Raven provides facilities like Load(string[] keys) to load multiple documents at once and batch saves (call SaveChanges() only once).
 You can increase the limit by setting DocumentConvention.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
-advisable that you'll look into reducing the number of remote calls first, since that will speed up your application signficantly and result in a 
+advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a 
 more responsive application.
 ",
 						MaxNumberOfRequestsPerSession));
@@ -343,7 +341,7 @@ more responsive application.
 			}
 			else
 			{
-				// the local instnace may have been changed, we adhere to the current Unit of Work
+				// the local instance may have been changed, we adhere to the current Unit of Work
 				// instance, and return that, ignoring anything new.
 				return (T)entity;
 			}
@@ -587,14 +585,19 @@ more responsive application.
 			var metadata = new RavenJObject();
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
+			StoreEntityInUnitOfWork(id, entity, etag, metadata);
+		}
+
+		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata)
+		{
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
-			{
-				Key = id,
-				Metadata = metadata,
-				OriginalMetadata = new RavenJObject(),
-				ETag = etag,
-				OriginalValue = new RavenJObject()
-			});
+			                                	{
+			                                		Key = id,
+			                                		Metadata = metadata,
+			                                		OriginalMetadata = new RavenJObject(),
+			                                		ETag = etag,
+			                                		OriginalValue = new RavenJObject()
+			                                	});
 			if (id != null)
 				entitiesByKey[id] = entity;
 		}
@@ -639,7 +642,7 @@ more responsive application.
 			{
 				var value = identityProperty.GetValue(entity, new object[0]);
 				id = value as string;
-				if (id == null && value != null) // need convertion
+				if (id == null && value != null) // need conversion
 				{
 					id = Conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType(), true);
 					return true;
@@ -836,7 +839,7 @@ more responsive application.
 		}
 
 #if !SILVERLIGHT
-		private void TryEnlistInAmbientTransaction()
+		protected virtual void TryEnlistInAmbientTransaction()
 		{
 
 			if (hasEnlisted || Transaction.Current == null)
@@ -1102,7 +1105,7 @@ more responsive application.
 		/// Defer commands to be executed on SaveChanges()
 		/// </summary>
 		/// <param name="commands">The commands to be executed</param>
-		public void Defer(params ICommandData[] commands)
+		public virtual void Defer(params ICommandData[] commands)
 		{
 			deferedCommands.AddRange(commands);
 		}
@@ -1178,11 +1181,17 @@ more responsive application.
 		/// </summary>
 		public class SaveChangesData
 		{
+			public SaveChangesData()
+			{
+				Commands = new List<ICommandData>();
+				Entities = new List<object>();
+			}
+
 			/// <summary>
 			/// Gets or sets the commands.
 			/// </summary>
 			/// <value>The commands.</value>
-			public IList<ICommandData> Commands { get; set; }
+			public List<ICommandData> Commands { get; set; }
 
 			public int DeferredCommandsCount { get; set; }
 
@@ -1191,6 +1200,21 @@ more responsive application.
 			/// </summary>
 			/// <value>The entities.</value>
 			public IList<object> Entities { get; set; }
+		}
+
+		protected void LogBatch(SaveChangesData data)
+		{
+			log.Debug(()=>
+			{
+				var sb = new StringBuilder()
+					.AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)
+					.AppendLine();
+				foreach (var commandData in data.Commands)
+				{
+					sb.AppendFormat("\t{0} {1}", commandData.Method, commandData.Key).AppendLine();
+				}
+				return sb.ToString();
+			});
 		}
 	}
 }

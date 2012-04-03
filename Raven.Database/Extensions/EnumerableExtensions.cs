@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Database.Extensions
 {
@@ -38,6 +39,6 @@ namespace Raven.Database.Extensions
 					errorAction(e);
 				}
 			}
-		}
+		}		
 	}
 }

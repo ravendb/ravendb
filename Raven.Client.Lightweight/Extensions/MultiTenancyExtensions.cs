@@ -4,14 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 #if !SILVERLIGHT
 using System.Transactions;
 #endif
-using Newtonsoft.Json.Linq;
-using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
 
@@ -38,15 +33,7 @@ namespace Raven.Client.Extensions
 		public static void EnsureDatabaseExists(this IDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
 			self = self.ForDefaultDatabase();
-			AssertValidName(name);
-			var doc = RavenJObject.FromObject(new DatabaseDocument
-			{
-				Settings =
-					{
-						{"Raven/DataDir", Path.Combine("~", Path.Combine("Tenants", name))}
-					}
-			});
-			doc.Remove("Id");
+			var doc = MultiDatabase.CreateDatabaseDocument(name);
 			var docId = "Raven/Databases/" + name;
 			
 			using (new TransactionScope(TransactionScopeOption.Suppress))
@@ -75,15 +62,7 @@ namespace Raven.Client.Extensions
 		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
 			self = self.ForDefaultDatabase();
-			AssertValidName(name);
-			var doc = RavenJObject.FromObject(new DatabaseDocument
-			{
-				Settings =
-					{
-						{"Raven/DataDir", Path.Combine("~", Path.Combine("Tenants", name))}
-					}
-			});
-			doc.Remove("Id");
+			var doc = MultiDatabase.CreateDatabaseDocument(name);
 			var docId = "Raven/Databases/" + name;
 
 			return self.GetAsync(docId)
@@ -106,17 +85,5 @@ namespace Raven.Client.Extensions
 		}
 
 #endif
-
-		static readonly string[] invalidDbNameChars = new[] { "/", "\\", "\"", "'", "<", ">"};
-
-		private static void AssertValidName(string name)
-		{
-			if (name == null) throw new ArgumentNullException("name");
-			if (invalidDbNameChars.Any(name.Contains))
-			{
-				throw new ArgumentException("Database name cannot contain any of [" +
-											string.Join(", ", invalidDbNameChars) + "] but was: " + name);
-			}
-		}
 	}
 }

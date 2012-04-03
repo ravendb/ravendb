@@ -11,6 +11,7 @@ using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Abstractions.Indexing;
+using Raven.Database.Config;
 using Raven.Database.Indexing;
 using Raven.Tests.Indexes;
 using Xunit;
@@ -38,27 +39,27 @@ namespace Raven.Tests.Bugs.Indexing
 			var simpleIndex = new SimpleIndex(ramDirectory, "test", new IndexDefinition
 			{
 				Map =
-					@"from s in docs.Softs select new { s.f_platform, s.f_name, s.f_alias,s.f_License,s.f_totaldownload}",
+			                                                        	@"from s in docs.Softs select new { s.f_platform, s.f_name, s.f_alias,s.f_License,s.f_totaldownload}",
 				Analyzers =
-					{
-						{"f_name", typeof (KeywordAnalyzer).AssemblyQualifiedName},
-						{"f_alias", typeof (KeywordAnalyzer).AssemblyQualifiedName},
-					},
+			                                                        	{
+			                                                        		{"f_name", typeof (KeywordAnalyzer).AssemblyQualifiedName},
+			                                                        		{"f_alias", typeof (KeywordAnalyzer).AssemblyQualifiedName},
+			                                                        	},
 				Indexes =
-					{
-						{"f_platform", FieldIndexing.NotAnalyzed},
-						{"f_License", FieldIndexing.NotAnalyzed},
-						{"f_totaldownload", FieldIndexing.NotAnalyzed},
-						{"f_name", FieldIndexing.Analyzed},
-						{"f_alias", FieldIndexing.Analyzed},
-					},
+			                                                        	{
+			                                                        		{"f_platform", FieldIndexing.NotAnalyzed},
+			                                                        		{"f_License", FieldIndexing.NotAnalyzed},
+			                                                        		{"f_totaldownload", FieldIndexing.NotAnalyzed},
+			                                                        		{"f_name", FieldIndexing.Analyzed},
+			                                                        		{"f_alias", FieldIndexing.Analyzed},
+			                                                        	},
 				SortOptions =
-					{
-						{"f_totaldownload", SortOptions.Int},
-						{"f_License", SortOptions.Int},
-					}
+			                                                        	{
+			                                                        		{"f_totaldownload", SortOptions.Int},
+			                                                        		{"f_License", SortOptions.Int},
+			                                                        	}
 
-			}, new MapOnlyView());
+			}, new MapOnlyView(), new InMemoryRavenConfiguration());
 
 			var perFieldAnalyzerWrapper = simpleIndex.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), new List<Action>());
 

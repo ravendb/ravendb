@@ -11,7 +11,7 @@ namespace Raven.Studio.Features.Input
 			set
 			{
 				title = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Title);
 			}
 		}
 
@@ -22,7 +22,7 @@ namespace Raven.Studio.Features.Input
 			set
 			{
 				question = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => Question);
 			}
 		}
 	}

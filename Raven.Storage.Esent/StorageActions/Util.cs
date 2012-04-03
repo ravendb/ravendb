@@ -9,6 +9,7 @@ using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Database;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
@@ -23,6 +24,16 @@ namespace Raven.Storage.Esent.StorageActions
 			var existingEtag = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]).TransfromToGuidWithProperSorting();
 			if (existingEtag != etag && etag != null)
 			{
+				if(etag == Guid.Empty)
+				{
+					var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
+					if(metadata.ContainsKey(Constants.RavenDeleteMarker) && 
+						metadata.Value<bool>(Constants.RavenDeleteMarker))
+					{
+						return existingEtag;
+					}
+				}
+
 				throw new ConcurrencyException(method + " attempted on document '" + key +
 											   "' using a non current etag")
 				{

@@ -22,16 +22,23 @@ namespace Raven.Database.Server.Abstractions
 		    this.queryString = System.Web.HttpUtility.ParseQueryString(Uri.UnescapeDataString(request.Url.Query));
 	        Url = this.request.Url;
 	        RawUrl = this.request.RawUrl;
+			
 		}
 
-	    public NameValueCollection Headers
+		public bool IsLocal
+		{
+			get { return request.IsLocal; }
+		}
+		public NameValueCollection Headers
 		{
 			get { return request.Headers; }
 		}
 
+		private Stream inputStream;
 		public Stream InputStream
 		{
-			get { return request.InputStream; }
+			get { return inputStream ?? (inputStream = request.InputStream); }
+			set { inputStream = value; }
 		}
 
 		public NameValueCollection QueryString

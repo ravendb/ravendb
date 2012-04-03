@@ -12,11 +12,12 @@
     <RootNamespace>Raven.Client.Silverlight</RootNamespace>
     <AssemblyName>Raven.Client.Silverlight</AssemblyName>
     <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v5.0</TargetFrameworkVersion>
     <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
     <SilverlightApplication>false</SilverlightApplication>
     <ValidateXaml>true</ValidateXaml>
     <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <!-- This property group is only here to support building this project using the 
        MSBuild 3.5 toolset. In order to work correctly with this older toolset, it needs 
@@ -55,12 +56,12 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AsyncCtpLibrary_Silverlight">
-      <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight.dll</HintPath>
+    <Reference Include="AsyncCtpLibrary_Silverlight5">
+      <HintPath>..\SharedLibs\AsyncCtpLibrary_Silverlight5.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CSharp, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
-    <Reference Include="MissingBitFromSilverlight">
-      <HintPath>..\SharedLibs\MissingBitFromSilverlight.dll</HintPath>
+    <Reference Include="Microsoft.CSharp, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\Microsoft.CSharp.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="Newtonsoft.Json, Version=4.0.8.0, Culture=neutral, processorArchitecture=MSIL">
@@ -70,11 +71,13 @@
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\sl4\NLog.dll</HintPath>
     </Reference>
-    <Reference Include="System.ComponentModel.Composition, Version=2.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="System.ComponentModel.Composition, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\System.ComponentModel.Composition.dll</HintPath>
+    </Reference>
     <Reference Include="System.Windows" />
     <Reference Include="system" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml" />
     <Reference Include="System.Net" />
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
@@ -129,6 +132,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\Buffers.cs">
       <Link>Imports\Extensions\Buffers.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\ListExtensions.cs">
+      <Link>Imports\Extensions\ListExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\JsonDateTimeISO8601Converter.cs">
       <Link>Imports\Json\JsonDateTimeISO8601Converter.cs</Link>
@@ -220,6 +226,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\RequestStatus.cs">
       <Link>Imports\Connection\Profiling\RequestStatus.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\DocumentStoreBase.cs">
+      <Link>Imports\DocumentStoreBase.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\AbstractDocumentQuery.cs">
       <Link>Imports\Document\AbstractDocumentQuery.cs</Link>
     </Compile>
@@ -237,6 +246,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyOperation.cs">
       <Link>Imports\Document\Batches\ILazyOperation.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyFacetsOperation.cs">
+      <Link>Imports\Document\Batches\LazyFacetsOperation.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\LazyMultiLoaderWithInclude.cs">
       <Link>Imports\Document\Batches\LazyMultiLoaderWithInclude.cs</Link>
@@ -267,6 +279,12 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
       <Link>Imports\Extensions\DatabaseCommandsExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\MultiDatabase.cs">
+      <Link>Imports\Extensions\MultiDatabase.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\ParallelExtensions.cs">
+      <Link>Imports\Extensions\ParallelExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Extensions\TaskExtensions.cs">
       <Link>Imports\Extensions\TaskExtensions.cs</Link>
@@ -328,6 +346,7 @@
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
     <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Data\ServerRequestError.cs" />
+    <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="DotNetZip\Adler.cs" />
     <Compile Include="DotNetZip\BlockState.cs" />
     <Compile Include="DotNetZip\CompressionLevel.cs" />
@@ -568,9 +587,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\DocumentStore.cs">
       <Link>Imports\Document\DocumentStore.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\HiLoKeyGenerator.cs">
-      <Link>Imports\Document\HiLoKeyGenerator.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\ILoaderWithInclude.cs">
       <Link>Imports\Document\ILoaderWithInclude.cs</Link>
     </Compile>
@@ -579,9 +595,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\MultiLoaderWithInclude.cs">
       <Link>Imports\Document\MultiLoaderWithInclude.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\MultiTypeHiLoKeyGenerator.cs">
-      <Link>Imports\Document\MultiTypeHiLoKeyGenerator.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\PromotableRavenClientEnlistment.cs">
       <Link>Imports\Document\PromotableRavenClientEnlistment.cs</Link>
@@ -667,15 +680,6 @@
     <Compile Include="..\Raven.Client.Lightweight\ITransactionalDocumentSession.cs">
       <Link>Imports\ITransactionalDocumentSession.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\DynamicQueryProviderProcessor.cs">
-      <Link>Imports\Linq\DynamicQueryProviderProcessor.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\DynamicRavenQueryInspector.cs">
-      <Link>Imports\Linq\DynamicRavenQueryInspector.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Linq\DynamicRavenQueryProvider.cs">
-      <Link>Imports\Linq\DynamicRavenQueryProvider.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\ExpressionInfo.cs">
       <Link>Imports\Linq\ExpressionInfo.cs</Link>
     </Compile>
@@ -711,45 +715,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\TypeSystem.cs">
       <Link>Imports\Linq\TypeSystem.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDocumentSession.cs">
-      <Link>Imports\Shard\ShardedDocumentSession.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDocumentStore.cs">
-      <Link>Imports\Shard\ShardedDocumentStore.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\Shards.cs">
-      <Link>Imports\Shard\Shards.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\IShardStrategy.cs">
-      <Link>Imports\Shard\ShardStrategy\IShardStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardAccess\IShardAccessStrategy.cs">
-      <Link>Imports\Shard\ShardStrategy\ShardAccess\IShardAccessStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardAccess\ParallelExtensions.cs">
-      <Link>Imports\Shard\ShardStrategy\ShardAccess\ParallelExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardAccess\ParallelShardAccessStrategy.cs">
-      <Link>Imports\Shard\ShardStrategy\ShardAccess\ParallelShardAccessStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardAccess\SequentialShardAccessStrategy.cs">
-      <Link>Imports\Shard\ShardStrategy\ShardAccess\SequentialShardAccessStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardResolution\AllShardsResolutionStrategy.cs">
-      <Link>Imports\Shard\ShardStrategy\ShardResolution\AllShardsResolutionStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardResolution\IShardResolutionStrategy.cs">
-      <Link>Imports\Shard\ShardStrategy\ShardResolution\IShardResolutionStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardResolution\ShardResolutionStrategyData.cs">
-      <Link>Imports\Shard\ShardStrategy\ShardResolution\ShardResolutionStrategyData.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardSelection\IShardSelectionStrategy.cs">
-      <Link>Imports\Shard\ShardStrategy\ShardSelection\IShardSelectionStrategy.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy\ShardStrategy.cs">
-      <Link>Imports\Shard\ShardStrategy\ShardStrategy.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\StoredEntityEventArgs.cs">
       <Link>Imports\StoredEntityEventArgs.cs</Link>

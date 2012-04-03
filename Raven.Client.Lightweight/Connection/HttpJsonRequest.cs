@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -17,13 +18,13 @@ using System.Threading.Tasks;
 #endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Connection
 {
@@ -47,6 +48,7 @@ namespace Raven.Client.Connection
 		internal bool ShouldCacheRequest;
 		public object Headers;
 		private Stream postedStream;
+		private bool writeCalled;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -70,10 +72,11 @@ namespace Raven.Client.Connection
 			this.Method = method;
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
-			WriteMetadata(metadata);
 			webRequest.Method = method;
-			webRequest.Headers["Accept-Encoding"] = "deflate,gzip";
+			if (method == "POST" || method == "PUT" || method == "PATCH")
+				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
+			WriteMetadata(metadata);
 		}
 
 #if !NET_3_5
@@ -157,6 +160,8 @@ namespace Raven.Client.Connection
 
 		public byte[] ReadResponseBytes()
 		{
+			if (writeCalled == false)
+				webRequest.ContentLength = 0;
 			using (var webResponse = webRequest.GetResponse())
 			using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
 			{
@@ -192,6 +197,8 @@ namespace Raven.Client.Connection
 			{
 				try
 				{
+					if(writeCalled == false)
+						webRequest.ContentLength = 0;
 					return ReadStringInternal(webRequest.GetResponse);
 				}
 				catch (WebException e)
@@ -255,8 +262,11 @@ namespace Raven.Client.Connection
 			{
 				postedStream.Position = 0;
 				using (var stream = newWebRequest.GetRequestStream())
+				using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
 				{
-					postedStream.CopyTo(stream);
+					postedStream.CopyTo(commpressedData);
+
+					commpressedData.Flush();
 					stream.Flush();
 				}
 			}
@@ -445,7 +455,6 @@ namespace Raven.Client.Connection
 		{
 			if (metadata == null || metadata.Count == 0)
 			{
-				webRequest.ContentLength = 0;
 				return;
 			}
 
@@ -509,6 +518,7 @@ namespace Raven.Client.Connection
 		/// <param name="data">The data.</param>
 		public void Write(string data)
 		{
+			writeCalled = true;
 			postedData = data;
 
 			HttpRequestHelper.WriteDataToRequest(webRequest, data);
@@ -524,8 +534,9 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public IAsyncResult BeginWrite(string dataToWrite, AsyncCallback callback, object state)
 		{
+			writeCalled = true;
 			postedData = dataToWrite;
-			webRequest.ContentLength = Encoding.UTF8.GetByteCount(dataToWrite) + Encoding.UTF8.GetPreamble().Length;
+			
 			return webRequest.BeginGetRequestStream(callback, state);
 		}
 
@@ -536,10 +547,13 @@ namespace Raven.Client.Connection
 		public void EndWrite(IAsyncResult result)
 		{
 			using (var dataStream = webRequest.EndGetRequestStream(result))
-			using (var writer = new StreamWriter(dataStream, Encoding.UTF8))
+			using (var compressed = new GZipStream(dataStream, CompressionMode.Compress))
+			using (var writer = new StreamWriter(compressed, Encoding.UTF8))
 			{
 				writer.Write(postedData);
 				writer.Flush();
+
+				compressed.Flush();
 				dataStream.Flush();
 			}
 		}
@@ -618,11 +632,15 @@ namespace Raven.Client.Connection
 
 		public void Write(Stream streamToWrite)
 		{
+			writeCalled = true;
 			postedStream = streamToWrite;
-			webRequest.ContentLength = streamToWrite.Length;
+			webRequest.SendChunked = true;
 			using (var stream = webRequest.GetRequestStream())
+			using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
 			{
-				streamToWrite.CopyTo(stream);
+				streamToWrite.CopyTo(commpressedData);
+
+				commpressedData.Flush();
 				stream.Flush();
 			}
 		}

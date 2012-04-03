@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Security.Principal;
 using NLog;
 using Raven.Database.Config;
@@ -23,5 +24,6 @@ namespace Raven.Database.Server.Abstractions
 		void SetResponseFilter(Func<Stream, Stream> responseFilter);
 		void OutputSavedLogItems(Logger logger);
 		void Log(Action<Logger> loggingAction);
+		void SetRequestFilter(Func<Stream, Stream> requestFilter);
 	}
 }

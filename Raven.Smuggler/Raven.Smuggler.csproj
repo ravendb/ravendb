@@ -56,11 +56,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\raven.client.lightweight\extensions\MultiDatabase.cs">
+      <Link>Imports\MultiDatabase.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
+    <Compile Include="ISmugglerApi.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SmugglerAction.cs" />
     <Compile Include="SmugglerApi.cs" />
     <Compile Include="SmugglerOptions.cs" />
     <Compile Include="TrivialJsonToJsonJsonConverter.cs" />

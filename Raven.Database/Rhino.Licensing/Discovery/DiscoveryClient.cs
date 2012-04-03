@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Rhino.Licensing.Discovery
 {
 	///<summary>
-	/// Publish the precense of a client over the network
+	/// Publish the presence of a client over the network
 	///</summary>
 	public class DiscoveryClient : IDisposable
 	{
@@ -42,7 +42,7 @@ namespace Rhino.Licensing.Discovery
 		{
 			if ((DateTime.UtcNow - lastPublish) < publishLimit)
 				return;
-			// avoid a ping storm when we re-publish because we disocvered another client
+			// avoid a ping storm when we re-publish because we discovered another client
 			lock(this)
 			{
 				if ((DateTime.UtcNow - lastPublish) < publishLimit)
@@ -54,7 +54,9 @@ namespace Rhino.Licensing.Discovery
 			Task.Factory.FromAsync<byte[], int, IPEndPoint, int>(udpClient.BeginSend, udpClient.EndSend, buffer, buffer.Length, allHostsGroup, null)
 				.ContinueWith(task =>
 				{
+#pragma warning disable 0219
 					var _ = task.Exception;
+#pragma warning restore 0219
 					// basically just ignoring this error
 				});
 		}

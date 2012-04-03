@@ -47,12 +47,14 @@ namespace Raven.Bundles.Replication.Tasks
 
 			httpRavenRequestFactory = new HttpRavenRequestFactory {RequestTimeoutInMs = replicationRequestTimeoutInMs};
 
-			new Thread(Execute)
+			var thread = new Thread(Execute)
 			{
 				IsBackground = true,
 				Name = "Replication Thread"
-			}.Start();
-
+			};
+			// make sure that the doc db waits for the replication thread shutdown
+			docDb.ExtensionsState.TryAdd(thread, new DisposableAction(thread.Join));
+			thread.Start();
 		}
 
 		private void Execute()
@@ -502,20 +504,18 @@ namespace Raven.Bundles.Replication.Tasks
 				throw new InvalidOperationException("Could not figure out what the replication URL is");
 			if (string.IsNullOrEmpty(options.DefaultDatabase) == false)
 			{
-				if (options.Url.EndsWith("/") == false)
-					options.Url += "/";
-				options.Url += "databases/" + options.DefaultDatabase;
+				options.Url += "/databases/" + options.DefaultDatabase;
 			}
 			replicationStrategy.ConnectionStringOptions = options;
 			return replicationStrategy;
 		}
 
-		private ReplicationStrategy CreateReplicationStrategyFromDocument(ReplicationDestination x, ReplicationStrategy replicationStrategy)
+		private static ReplicationStrategy CreateReplicationStrategyFromDocument(ReplicationDestination x, ReplicationStrategy replicationStrategy)
 		{
 			var url = x.Url;
 			if (string.IsNullOrEmpty(x.Database) == false)
 			{
-				url = "databases/" + x.Database;
+				url = url + "/databases/" + x.Database;
 			}
 			replicationStrategy.ConnectionStringOptions = new RavenConnectionStringOptions
 			{

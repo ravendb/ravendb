@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 
 namespace Raven.Client
 {
@@ -60,13 +62,22 @@ namespace Raven.Client
 		/// </summary>
 		IDocumentQueryCustomization WaitForNonStaleResults();
 
+		/// <summary>
+		/// Includes the specified path in the query, loading the document specified in that path
+		/// </summary>
+		/// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+		/// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
+		/// <returns></returns>
+		IDocumentQueryCustomization Include<TResult>(Expression<Func<TResult, object>> path);
 
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
-		/// <param name="path">The path.</param>
-		IDocumentQueryCustomization Include<T>(Expression<Func<T, object>> path);
-
+		/// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+		/// <typeparam name="TInclude">The type of the object that you want to include.</typeparam>
+		/// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
+		/// <returns></returns>
+		IDocumentQueryCustomization Include<TResult, TInclude>(Expression<Func<TResult, object>> path);
 
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
@@ -80,13 +91,7 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="waitTimeout">The wait timeout.</param>
 		IDocumentQueryCustomization WaitForNonStaleResults(TimeSpan waitTimeout);
-		/// <summary>
-		/// Selects the specified fields directly from the index
-		/// </summary>
-		/// <typeparam name="TProjection">The type of the projection.</typeparam>
-		/// <param name="fields">The fields.</param>
-		IDocumentQueryCustomization CreateQueryForSelectedFields<TProjection>(params string[] fields);
-
+		
 		/// <summary>
 		/// Filter matches to be inside the specified radius
 		/// </summary>
@@ -106,5 +111,10 @@ namespace Raven.Client
 		/// this is useful if you want to have repeatable random queries
 		/// </summary>
 		IDocumentQueryCustomization RandomOrdering(string seed);
+
+		/// <summary>
+		/// Execute the transfromation function on the results of this query.
+		/// </summary>
+		IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer);
 	}
 }

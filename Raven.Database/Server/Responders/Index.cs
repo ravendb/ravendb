@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
 using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -133,6 +135,8 @@ namespace Raven.Database.Server.Responders
 			}
 			
 			context.Response.AddHeader("ETag", indexEtag.ToString());
+			if(queryResult.NonAuthoritativeInformation)
+				context.SetStatusToNonAuthoritativeInformation();
 			context.WriteJson(queryResult);
 		}
 
@@ -157,9 +161,31 @@ namespace Raven.Database.Server.Responders
 		{
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
 
-			return index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase) ? 
+			var sp = Stopwatch.StartNew();
+			var result = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase) ? 
 				PerformQueryAgainstDynamicIndex(context, index, indexQuery, out indexEtag) : 
 				PerformQueryAgainstExistingIndex(context, index, indexQuery, out indexEtag);
+
+			sp.Stop();
+
+			context.Log(log => log.Debug(() =>
+			{
+				var sb = new StringBuilder("\tQuery: ")
+					.Append(indexQuery.Query)
+					.AppendLine();
+				sb.Append("\t").AppendFormat("Time: {0:#,#;;0} ms", sp.ElapsedMilliseconds).AppendLine();
+
+				if (result == null)
+					return sb.ToString();
+
+				sb.Append("\tIndex: ")
+					.AppendLine(result.IndexName);
+				sb.Append("\t").AppendFormat("Results: {0:#,#;;0} returned out of {1:#,#;;0} total.", result.Results.Count, result.TotalResults).AppendLine();
+
+				return sb.ToString();
+			}));
+
+			return result;
 		}
 
 		private QueryResult PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
@@ -172,7 +198,7 @@ namespace Raven.Database.Server.Responders
 			}
 
 			var queryResult = Database.Query(index, indexQuery);
-			indexEtag = Database.GetIndexEtag(index, queryResult);
+			indexEtag = Database.GetIndexEtag(index, queryResult.ResultEtag);
 			return queryResult;
 		}
 
@@ -202,7 +228,7 @@ namespace Raven.Database.Server.Responders
 			// if that is the case. This can also happen when the optmizer
 			// decided to switch indexes for a query.
 			indexEtag = (dynamicIndexName  == null || queryResult.IndexName == dynamicIndexName) ?
-				Database.GetIndexEtag(queryResult.IndexName, queryResult) : 
+				Database.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag) : 
 				Guid.NewGuid();
 
 			return queryResult;

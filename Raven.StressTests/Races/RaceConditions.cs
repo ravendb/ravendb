@@ -1,7 +1,12 @@
+using Raven.StressTests.Tenants;
 using Raven.Tests.Bugs;
+using Raven.Tests.Bugs.Caching;
+using Raven.Tests.Bugs.Indexing;
 using Raven.Tests.MailingList.MapReduceIssue;
+using Raven.Tests.ManagedStorage;
 using Raven.Tests.MultiGet;
 using Raven.Tests.Shard.BlogModel;
+using Raven.Tests.Transactions;
 using Raven.Tests.Views;
 using Xunit;
 
@@ -9,6 +14,36 @@ namespace Raven.StressTests.Races
 {
 	public class RaceConditions : StressTest
 	{
+		[Fact]
+		public void  SupportLazyOperations_LazyOperationsAreBatched()
+		{
+			Run<SupportLazyOperations>(x => x.LazyOperationsAreBatched());
+		}
+
+		[Fact]
+		public void CanQueryOnlyUsers_WhenQueryingForUserById()
+		{
+			Run<CanQueryOnlyUsers>(x=>x.WhenQueryingForUserById());
+		}
+
+		[Fact]
+		public void IndexingEachFieldInEachDocumentSeparetedly()
+		{
+			Run<IndexingEachFieldInEachDocumentSeparetedly>(x=>x.ForIndexing(), 100000);
+		}
+
+		[Fact]
+		public void ConcurrentlyOpenedTenantsUsingEsent()
+		{
+			Run<ConcurrentlyOpenedTenantsUsingEsent>(x => x.CanConcurrentlyPutDocsToDifferentTenants());
+		}
+
+		[Fact]
+		public void CachingOfDocumentInclude()
+		{
+			Run<CachingOfDocumentInclude>(x => x.New_query_returns_correct_value_when_cache_is_enabled_and_data_changes());
+		}
+
 		[Fact]
 		public void CanPageThroughReduceResults()
 		{
@@ -22,21 +57,27 @@ namespace Raven.StressTests.Races
 		}
 
 		[Fact]
-		public void CanQueryOnlyUsers()
-		{
-			Run<CanQueryOnlyUsers>(x => x.WhenQueryingForUserById());
-		}
-
-		[Fact]
 		public void MultiGetNonStaleRequslts()
 		{
 			Run<MultiGetNonStaleRequslts>(x => x.ShouldBeAbleToGetNonStaleResults());
 		}
-
+		
 		[Fact]
-		public void CaseSensitiveDeletes_ShouldWork()
+		public void AfterCommitWillNotRetainSameEtag()
 		{
-			Run<CaseSensitiveDeletes>(storages => storages.ShouldWork(), 1000);
+			Run<Etags>(x => x.AfterCommitWillNotRetainSameEtag());
+		}
+		
+		[Fact]
+		public void CanAddAndReadFileAfterReopen()
+		{
+			Run<Documents>(x => x.CanAddAndReadFileAfterReopen(), 10000);
+		}
+		
+		[Fact]
+		public void CanAggressivelyCacheLoads()
+		{
+			Run<AggressiveCaching>(x => x.CanAggressivelyCacheLoads(), 10000);
 		}
 	}
 }

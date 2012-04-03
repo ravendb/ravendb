@@ -428,5 +428,41 @@ namespace Raven.Tests.Bugs
 				}
 			}
 		}
+
+		[Fact]
+		public void Can_have_special_characters_in_search_text()
+		{
+			const string specialCharacters = "+-!(){}:[]^\"~*";
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					foreach (var specialCharacter in specialCharacters)
+					{
+						var qry = session.Query<Image>()
+							.Customize(x => x.WaitForNonStaleResults())
+							.Search(x => x.Name, specialCharacter.ToString());
+						Assert.Equal(string.Format("Name:<<\\{0}>>", specialCharacter), qry.ToString());
+						qry.ToList();
+					}
+				}
+			}
+		}
+
+		[Fact]
+		public void Can_have_special_characters_in_search_text_string()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					var qry = session.Query<Image>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Search(x => x.Name, "He said: hello there");
+					Assert.Equal("Name:<<He said\\: hello there>>", qry.ToString());
+					qry.ToList();
+				}
+			}
+		}
 	}
 }

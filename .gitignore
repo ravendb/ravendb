@@ -33,6 +33,7 @@ ClientBin/
 /Raven.Tests.Silverlight.Results.xml
 *.g.3.5.csproj
 *.g.csproj
+*.g.4.csproj
 *.docstates
 StyleCop.Cache
 *.dotCover

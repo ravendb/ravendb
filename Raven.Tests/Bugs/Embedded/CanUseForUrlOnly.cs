@@ -8,27 +8,31 @@ namespace Raven.Tests.Bugs.Embedded
 		[Fact]
 		public void WontCreateDirectory()
 		{
-			var embeddableDocumentStore = new EmbeddableDocumentStore() 
+			using (var embeddableDocumentStore = new EmbeddableDocumentStore()
 			{
 				Url = "http://localhost:8079"
-			};
-			embeddableDocumentStore.Initialize();
-			Assert.Null(embeddableDocumentStore.DocumentDatabase);
+			})
+			{
+				embeddableDocumentStore.Initialize();
+				Assert.Null(embeddableDocumentStore.DocumentDatabase);
+			}
 		}
 
 		[Fact]
 		public void WontCreateDirectoryWhenSettingStorage()
 		{
-			var embeddableDocumentStore = new EmbeddableDocumentStore()
+			using (var embeddableDocumentStore = new EmbeddableDocumentStore()
 			{
 				Configuration =
 					{
 						DefaultStorageTypeName = "munin"
 					},
 				Url = "http://localhost:8079"
-			};
-			embeddableDocumentStore.Initialize();
-			Assert.Null(embeddableDocumentStore.DocumentDatabase);
+			})
+			{
+				embeddableDocumentStore.Initialize();
+				Assert.Null(embeddableDocumentStore.DocumentDatabase);
+			}
 		}
 	}
 }

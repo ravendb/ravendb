@@ -6,6 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
@@ -40,20 +42,33 @@ namespace Raven.Database.Server.Responders
 
 		private HashSet<string> LoadedIds { get; set; }
 
+		private readonly static Regex IncludePrefixRegex = new Regex(@"(\([^\)]+\))$", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
 		public void Execute(RavenJObject document)
 		{
 			foreach (var include in Includes)
 			{
-				if(string.IsNullOrEmpty(include))
+				if (string.IsNullOrEmpty(include))
 					continue;
-				foreach (var token in document.SelectTokenWithRavenSyntaxReturningFlatStructure(include))
+
+				var path = include;
+				string prefix = null;
+				var match = IncludePrefixRegex.Match(path);
+				if (match.Success && match.Groups.Count >= 2)
 				{
-					ExecuteInternal(token.Item1);
+					prefix = match.Groups[1].Value;
+					path = path.Replace(prefix, "");
+					prefix = prefix.Substring(1, prefix.Length - 2);
+				}
+
+				foreach (var token in document.SelectTokenWithRavenSyntaxReturningFlatStructure(path))
+				{
+					ExecuteInternal(token.Item1, prefix);
 				}
 			}
 		}
 
-		private void ExecuteInternal(RavenJToken token)
+		private void ExecuteInternal(RavenJToken token, string prefix)
 		{
 			if (token == null)
 				return; // nothing to do
@@ -63,25 +78,34 @@ namespace Raven.Database.Server.Responders
 				case JTokenType.Array:
 					foreach (var item in (RavenJArray)token)
 					{
-						ExecuteInternal(item);
+						ExecuteInternal(item, prefix);
 					}
 					break;
 				case JTokenType.String:
-					var value = token.Value<string>();
-					if (LoadedIds.Add(value) == false)
-						return;
-					var includedDoc = Database.Get(value, TransactionInformation);
-					if (includedDoc != null)
-					{
-						Debug.Assert(includedDoc.Etag != null);
-						Add(includedDoc.Etag.Value,includedDoc.ToJson());
-					}
+					LoadId(token.Value<string>(), prefix);
+					break;
+				case JTokenType.Integer:
+					LoadId(token.Value<int>().ToString(CultureInfo.InvariantCulture), prefix);
 					break;
 				default:
 					// here we ignore everything else
 					// if it ain't a string or array, it is invalid
 					// as an id
 					break;
+			}
+		}
+
+		private void LoadId(string value, string prefix)
+		{
+			value = (prefix ?? string.Empty) + value;
+			if (LoadedIds.Add(value) == false)
+				return;
+
+			var includedDoc = Database.Get(value, TransactionInformation);
+			if (includedDoc != null)
+			{
+				Debug.Assert(includedDoc.Etag != null);
+				Add(includedDoc.Etag.Value, includedDoc.ToJson());
 			}
 		}
 	}

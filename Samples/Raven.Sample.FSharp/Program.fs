@@ -8,6 +8,7 @@ type Movie =
          Summary:string
     }
 
+
 let create() = 
     let store = new Raven.Client.Document.DocumentStore()
     store.Url <- "http://localhost:8080/"
@@ -26,6 +27,8 @@ let read() =
     use session = store.OpenSession()
     let m = session.Load<Movie>("movies/1")
     System.Console.WriteLine("{0} {1} {2}", m.Id, m.Title, m.Summary)
+
+
 
 
 create()

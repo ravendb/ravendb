@@ -9,23 +9,25 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void can_deserialize_id_with_private_setter()
 		{
-			var documentStore = new EmbeddableDocumentStore
+			using (var documentStore = new EmbeddableDocumentStore
 			{
 				RunInMemory = true
-			};
-
-			documentStore.Initialize();
-
-			using (var session = documentStore.OpenSession())
+			})
 			{
-				var testObj = new TestObj(1000, 123);
-				session.Store(testObj);
-				session.SaveChanges();
-				session.Advanced.Clear();
-				var load = session.Load<TestObj>(1000);
 
-				Assert.Equal(123, load.AnotherLong);
-				Assert.Equal(1000, load.Id);
+				documentStore.Initialize();
+
+				using (var session = documentStore.OpenSession())
+				{
+					var testObj = new TestObj(1000, 123);
+					session.Store(testObj);
+					session.SaveChanges();
+					session.Advanced.Clear();
+					var load = session.Load<TestObj>(1000);
+
+					Assert.Equal(123, load.AnotherLong);
+					Assert.Equal(1000, load.Id);
+				}
 			}
 		}
 

@@ -24,7 +24,11 @@ namespace Raven.Database.Server.Abstractions
 	       
 		}
 
-	    public NameValueCollection Headers
+		public bool IsLocal
+		{
+			get { return request.IsLocal; }
+		}
+		public NameValueCollection Headers
 		{
 			get { return request.Headers; }
 		}

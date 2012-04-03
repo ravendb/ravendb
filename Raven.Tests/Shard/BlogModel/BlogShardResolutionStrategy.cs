@@ -1,37 +1,61 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Shard.ShardStrategy.ShardResolution;
+using System.Threading;
+using Raven.Client.Shard;
 
 namespace Raven.Tests.Shard.BlogModel
 {
 	public class BlogShardResolutionStrategy : IShardResolutionStrategy
 	{
 		private readonly int numberOfShardsForPosts;
+		private int currentNewShardId;
 
 		public BlogShardResolutionStrategy(int numberOfShardsForPosts)
 		{
 			this.numberOfShardsForPosts = numberOfShardsForPosts;
 		}
 
-		public IList<string> SelectShardIds(ShardResolutionStrategyData srsd)
+		public string GenerateShardIdFor(object entity)
 		{
-			if (srsd.EntityType == typeof(User))
-				return new[] { "Users" };
-			if (srsd.EntityType == typeof(Blog))
-				return new[] { "Blogs" };
-			if (srsd.EntityType == typeof(Post))
-			{
-				if (srsd.Key == null) // general query
-					return Enumerable.Range(0, numberOfShardsForPosts).Select(i => "Posts #" + (i + 1)).ToArray();
-				// we can optimize better, since the key has the shard id
-				// key structure is 'posts' / 'shard id' / 'post id'
-				var parts = srsd.Key.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-				return new[] { "Posts #" + parts[1] };
-			}
+			return GetShardIdFromObjectType(entity);
+		}
 
-			throw new ArgumentException("Cannot get shard id for '" + srsd.EntityType +
-			                            "' because it is not a User, Blog or Post");
+		public string MetadataShardIdFor(object entity)
+		{
+			return GetShardIdFromObjectType(entity, true);
+		}
+
+		private string GetShardIdFromObjectType(object instance, bool requiredMaster = false)
+		{
+			if (instance is User)
+				return "Users";
+			if (instance is Blog)
+				return "Blogs";
+			if (instance is Post)
+			{
+				if (requiredMaster)
+					return "Posts01";
+
+				var nextPostShardId = Interlocked.Increment(ref currentNewShardId) % numberOfShardsForPosts + 1;
+				return "Posts" + nextPostShardId.ToString("D2");
+			}
+			throw new ArgumentException("Cannot get shard id for '" + instance + "' because it is not a User, Blog or Post");
+		}
+
+		public IList<string> PotentialShardsFor(ShardRequestData requestData)
+		{
+			if (requestData.EntityType == typeof(User))
+				return new[] { "Users" };
+			if (requestData.EntityType == typeof(Blog))
+				return new[] { "Blogs" };
+			if (requestData.EntityType == typeof (Post) 
+				|| requestData.EntityType == typeof (TotalVotesUp.ReduceResult)
+				|| requestData.EntityType == typeof (TotalPostsPerDay.ReduceResult)
+				)
+				return Enumerable.Range(0, numberOfShardsForPosts).Select(i => "Posts" + (i + 1).ToString("D2")).ToArray();
+
+			throw new ArgumentException("Cannot get shard id for '" + requestData.EntityType + "' because it is not a User, Blog or Post");
 		}
 	}
 }

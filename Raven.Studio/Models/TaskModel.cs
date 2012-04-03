@@ -24,7 +24,7 @@ namespace Raven.Studio.Models
 		public string Name
 		{
 			get { return name; }
-			set { name = value; OnPropertyChanged(); }
+			set { name = value; OnPropertyChanged(() => Name); }
 		}
 
 		public string Description { get; set; }
@@ -36,7 +36,7 @@ namespace Raven.Studio.Models
 			set
 			{
 				taskStatus = value;
-				OnPropertyChanged();
+				OnPropertyChanged(() => TaskStatus);
 			}
 		}
 
@@ -58,14 +58,18 @@ namespace Raven.Studio.Models
 		public string Name
 		{
 			get { return name; }
-			set { name = value; OnPropertyChanged(); }
+			set
+			{
+				name = value;
+				OnPropertyChanged(() => Name);
+			}
 		}
 
 		private string value;
 		public string Value
 		{
 			get { return value; }
-			set { this.value = value; OnPropertyChanged(); }
+			set { this.value = value; OnPropertyChanged(() => Value); }
 		}
 	}
 }

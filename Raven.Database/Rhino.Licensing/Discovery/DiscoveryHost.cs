@@ -8,7 +8,7 @@ using System.Net.Sockets;
 namespace Rhino.Licensing.Discovery
 {
 	///<summary>
-	/// Listen to precense notifications
+	/// Listen to presence notifications
 	///</summary>
 	public class DiscoveryHost : IDisposable
 	{

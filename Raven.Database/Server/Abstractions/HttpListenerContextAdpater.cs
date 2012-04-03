@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
@@ -26,8 +27,8 @@ namespace Raven.Database.Server.Abstractions
 		{
 			this.ctx = ctx;
 			this.configuration = configuration;
-			Request = new HttpListenerRequestAdapter(ctx.Request);
 			ResponseInternal = new HttpListenerResponseAdapter(ctx.Response);
+			RequestInternal = new HttpListenerRequestAdapter(ctx.Request);
 
 			SetMaxAge();
 		}
@@ -51,7 +52,10 @@ namespace Raven.Database.Server.Abstractions
 
 		public bool RequiresAuthentication
 		{
-			get { return true; }
+			get
+			{
+				return !(configuration.AllowLocalAccessWithoutAuthorization && ctx.Request.IsLocal);
+			}
 		}
 
 		public InMemoryRavenConfiguration Configuration
@@ -61,11 +65,11 @@ namespace Raven.Database.Server.Abstractions
 
 		public IHttpRequest Request
 		{
-			get;
-			set;
+			get { return RequestInternal; }
 		}
 
 		protected HttpListenerResponseAdapter ResponseInternal { get; set; }
+		protected HttpListenerRequestAdapter RequestInternal { get; set; }
 		
 		public IHttpResponse Response
 		{
@@ -95,6 +99,12 @@ namespace Raven.Database.Server.Abstractions
 		public void SetResponseFilter(Func<Stream, Stream> responseFilter)
 		{
 			ResponseInternal.OutputStream = responseFilter(ResponseInternal.OutputStream);
+		}
+
+
+		public void SetRequestFilter(Func<Stream, Stream> requestFilter)
+		{
+			RequestInternal.InputStream = requestFilter(RequestInternal.InputStream);
 		}
 
 		private readonly List<Action<Logger>> loggedMessages = new List<Action<Logger>>();

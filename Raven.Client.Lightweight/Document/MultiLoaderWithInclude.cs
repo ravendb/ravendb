@@ -18,7 +18,7 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class MultiLoaderWithInclude<T> : ILoaderWithInclude<T>
 	{
-		private readonly DocumentSession session;
+		private readonly IDocumentSessionImpl session;
 		private readonly List<string> includes = new List<string>();
 
 		/// <summary>
@@ -81,7 +81,7 @@ namespace Raven.Client.Document
 		/// Initializes a new instance of the <see cref="MultiLoaderWithInclude{T}"/> class.
 		/// </summary>
 		/// <param name="session">The session.</param>
-		public MultiLoaderWithInclude(DocumentSession session)
+		internal MultiLoaderWithInclude(IDocumentSessionImpl session)
 		{
 			this.session = session;
 		}

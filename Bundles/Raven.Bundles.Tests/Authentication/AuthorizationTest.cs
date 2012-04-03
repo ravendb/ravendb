@@ -17,8 +17,8 @@ namespace Raven.Bundles.Tests.Authentication
 	public abstract class AuthenticationTest : IDisposable
 	{
 		protected const string UserId = "Raven/Users/Ayende";
-		protected DocumentStore store;
-		protected EmbeddableDocumentStore embeddedStore;
+		protected readonly DocumentStore store;
+		protected readonly EmbeddableDocumentStore embeddedStore;
 
 		static AuthenticationTest()
 		{

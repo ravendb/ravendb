@@ -11,7 +11,6 @@ using Raven.Client.Linq;
 using Raven.Client.Listeners;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
-
 #endif
 
 namespace Raven.Client.Document
@@ -81,7 +80,9 @@ namespace Raven.Client.Document
 				orderByFields = orderByFields,
 				groupByFields = groupByFields,
 				aggregationOp = aggregationOp,
-				includes = new HashSet<string>(includes)
+				negate = negate,
+				transformResultsFunc = transformResultsFunc,
+				includes = new HashSet<string>(includes),
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
@@ -96,14 +97,6 @@ namespace Raven.Client.Document
 		{
 			WaitForNonStaleResults(waitTimeout);
 			return this;
-		}
-
-		/// <summary>
-		/// Selects the specified fields directly from the index
-		/// </summary>
-		protected override IDocumentQueryCustomization CreateQueryForSelectedFields<TProjection>(string[] fields)
-		{
-			return (IDocumentQueryCustomization) SelectFields<TProjection>(fields);
 		}
 
 		/// <summary>
@@ -187,6 +180,16 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.GroupBy(AggregationOperation aggregationOperation, params string[] fieldsToGroupBy)
 		{
 			GroupBy(aggregationOperation, fieldsToGroupBy);
+			return this;
+		}
+
+		/// <summary>
+		/// Partition the query so we can intersect different parts of the query
+		/// across different index entries.
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Intersect()
+		{
+			Intersect();
 			return this;
 		}
 

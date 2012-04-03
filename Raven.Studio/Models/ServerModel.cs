@@ -26,7 +26,7 @@ namespace Raven.Studio.Models
 		public string BuildNumber
 		{
 			get { return buildNumber; }
-			private set { buildNumber = value; OnPropertyChanged(); }
+			private set { buildNumber = value; OnPropertyChanged(() => BuildNumber); }
 		}
 
 		public ServerModel()
@@ -119,7 +119,7 @@ namespace Raven.Studio.Models
 		{
 			if (HtmlPage.Document.DocumentUri.Scheme == "file")
 			{
-				return "http://ravenhq.com:8080";
+				return "http://localhost:8080";
 			}
 			var localPath = HtmlPage.Document.DocumentUri.LocalPath;
 			var lastIndexOfRaven = localPath.LastIndexOf("/raven/", StringComparison.Ordinal);

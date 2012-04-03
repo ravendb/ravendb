@@ -6,12 +6,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
@@ -30,6 +28,9 @@ namespace Raven.Database.Indexing
 		private readonly ThreadLocal<List<Func<string>>> shouldNotifyOnWork = new ThreadLocal<List<Func<string>>>(() => new List<Func<string>>());
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
+
+		public DateTime LastWorkTime { get; private set; }
+
 		public bool DoWork
 		{
 			get { return doWork; }
@@ -77,7 +78,10 @@ namespace Raven.Database.Indexing
 					return true;
 				}
 				log.Debug("No work was found, workerWorkCounter: {0}, for: {1}, will wait for additional work", workerWorkCounter, name);
-				return Monitor.Wait(waitForWork, timeout);
+				var forWork = Monitor.Wait(waitForWork, timeout);
+				if (forWork)
+					LastWorkTime = DateTime.UtcNow;
+				return forWork;
 			}
 		}
 
@@ -97,6 +101,8 @@ namespace Raven.Database.Indexing
 		{
 			lock (waitForWork)
 			{
+				if (doWork == false)
+					return;
 				var increment = Interlocked.Increment(ref workCounter);
 				if (log.IsDebugEnabled)
 				{
