@@ -94,12 +94,9 @@ task Init -depends Verify40, Clean {
 	
 	$commit = Get-Git-Commit
 	(Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
-		Foreach-Object {
-			$_ = $_ -replace "{build}", $env:buildlabel
-			$_ = $_ -replace "{commit}", $commit
-			{commit}
-		} | 
-		Set-Content "$base_dir\CommonAssemblyInfo.cs"
+		Foreach-Object { $_ -replace "{build}", $env:buildlabel } |
+		Foreach-Object { $_ -replace "{commit}", $commit } |
+		Set-Content "$base_dir\CommonAssemblyInfo.cs" -Encoding UTF8
 	
 	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
