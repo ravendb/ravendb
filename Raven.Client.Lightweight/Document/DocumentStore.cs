@@ -228,8 +228,6 @@ namespace Raven.Client.Document
 		/// <value>The default database name.</value>
 		public string DefaultDatabase { get; set; }
 
-		#region IDisposable Members
-
 		/// <summary>
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
@@ -257,8 +255,6 @@ namespace Raven.Client.Document
 			var stacktraceDebug = string.Format("StackTrace recorded.{0}{1}{0}{0}", Environment.NewLine, buffer);
 			Console.WriteLine(stacktraceDebug);
 		}
-
-		#endregion
 
 #if !SILVERLIGHT
 

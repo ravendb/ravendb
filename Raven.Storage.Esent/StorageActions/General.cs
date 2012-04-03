@@ -75,7 +75,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		#region IDisposable Members
+		
 
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Dispose()
@@ -123,8 +123,6 @@ namespace Raven.Storage.Esent.StorageActions
 				session.Dispose();
 
 		}
-
-		#endregion
 
 		public void Commit(CommitTransactionGrbit txMode)
 		{

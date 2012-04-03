@@ -236,8 +236,6 @@ namespace Raven.Database.Indexing
 			return indexes.ContainsKey(index);
 		}
 
-		#region IDisposable Members
-
 		public void Dispose()
 		{
 			foreach (var index in indexes.Values)
@@ -248,8 +246,6 @@ namespace Raven.Database.Indexing
 			if (crashMarker != null)
 				crashMarker.Dispose();
 		}
-
-		#endregion
 
 		public void DeleteIndex(string name)
 		{

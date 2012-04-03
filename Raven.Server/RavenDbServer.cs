@@ -44,15 +44,10 @@ namespace Raven.Server
 			}
 		}
 
-		#region IDisposable Members
-
 		public void Dispose()
 		{
 			server.Dispose();
 			database.Dispose();
 		}
-
-		#endregion
-
 	}
 }

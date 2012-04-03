@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
 using Raven.Json.Linq;
 using Xunit;
 

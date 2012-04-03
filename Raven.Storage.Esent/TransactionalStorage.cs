@@ -102,7 +102,7 @@ namespace Raven.Storage.Esent
 
 		public Guid Id { get; private set; }
 
-		#region IDisposable Members
+		
 
 		public void Dispose()
 		{
@@ -166,8 +166,6 @@ namespace Raven.Storage.Esent
 			// after the database was already shut down.
 			return e.Error == JET_err.InvalidInstance;
 		}
-
-		#endregion
 
 		public bool Initialize(IUuidGenerator uuidGenerator)
 		{

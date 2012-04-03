@@ -82,7 +82,7 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public abstract bool IsMapReduce { get; }
 
-		#region IDisposable Members
+		
 
 		public void Dispose()
 		{
@@ -132,8 +132,6 @@ namespace Raven.Database.Indexing
 				}
 			}
 		}
-
-		#endregion
 
 		public void Flush(bool optimize)
 		{

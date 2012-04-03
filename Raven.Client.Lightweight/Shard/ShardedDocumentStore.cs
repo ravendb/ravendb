@@ -80,8 +80,6 @@ namespace Raven.Client.Shard
 		/// <value>The identifier.</value>
 		public override string Identifier { get; set; }
 		
-		#region IDisposable Members
-
 		/// <summary>
 		/// Called after dispose is completed
 		/// </summary>
@@ -100,9 +98,6 @@ namespace Raven.Client.Shard
 			if (afterDispose != null)
 				afterDispose(this, EventArgs.Empty);
 		}
-
-		#endregion
-
 
 #if !NET_3_5
 
