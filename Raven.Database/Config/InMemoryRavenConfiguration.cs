@@ -115,9 +115,7 @@ namespace Raven.Database.Config
 			MaxNumberOfParallelIndexTasks = maxNumberOfParallelIndexTasks != null ? int.Parse(maxNumberOfParallelIndexTasks) : Environment.ProcessorCount;
 			MaxNumberOfParallelIndexTasks = Math.Max(1, MaxNumberOfParallelIndexTasks);
 
-			var mergeIndexSegmentsOnIdle = Settings["Raven/MergeIndexSegmentsOnIdle"];
-			if (mergeIndexSegmentsOnIdle != null)
-				MergeIndexSegmentsOnIdle = bool.Parse(mergeIndexSegmentsOnIdle);
+			MergeIndexSegmentsOnIdle = GetConfigurationValue<bool>("Raven/MergeIndexSegmentsOnIdle") ?? false;
 
 			var minimumQueryCount = Settings["Raven/TempIndexPromotionMinimumQueryCount"];
 			TempIndexPromotionMinimumQueryCount = minimumQueryCount != null ? int.Parse(minimumQueryCount) : 100;
