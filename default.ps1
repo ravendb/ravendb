@@ -169,12 +169,12 @@ task MeasurePerformance -depends Compile {
 task TestSilverlight -depends Compile, CopyServer {
 	try
 	{
-		start "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079"
+		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
 		exec { & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml" }
 	}
 	finally
 	{
-		ps "Raven.Server" | kill
+		Stop-Process -InputObject $process
 	}
 }
 
