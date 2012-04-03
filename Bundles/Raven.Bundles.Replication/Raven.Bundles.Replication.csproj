@@ -54,6 +54,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Data\DestinationFailureInformation.cs" />
     <Compile Include="Plugins\AbstractAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Plugins\AbstractDocumentReplicationConflictResolver.cs" />
@@ -61,7 +64,6 @@
     <Compile Include="Triggers\AttachmentAncestryPutTrigger.cs" />
     <Compile Include="Triggers\HideVirtuallyDeletedAttachmentsReadTrigger.cs" />
     <Compile Include="Triggers\HideVirtuallyDeletedDocumentsReadTrigger.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Triggers\AncestryPutTrigger.cs" />
     <Compile Include="Triggers\RemoveConflictOnAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\RemoveConflictOnPutTrigger.cs" />

@@ -59,11 +59,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Backup\BackupOperation.cs" />
     <Compile Include="Backup\EsentBackup.cs" />
     <Compile Include="Backup\RestoreOperation.cs" />
     <Compile Include="EsentExtension.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SchemaCreator.cs" />
     <Compile Include="SchemaUpdates\From35To36.cs" />
     <Compile Include="SchemaUpdates\From34To35.cs" />

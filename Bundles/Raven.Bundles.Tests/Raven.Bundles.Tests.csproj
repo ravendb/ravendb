@@ -55,6 +55,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Authentication\AuthorizationTest.cs" />
     <Compile Include="Authentication\AsyncSimpleLogin.cs" />
     <Compile Include="Authentication\Bugs\Mojo2.cs" />
@@ -101,7 +104,6 @@
     <Compile Include="Versioning\Bugs\MultipleVersions.cs" />
     <Compile Include="Versioning\Bugs\VersioningWithGuidIds.cs" />
     <Compile Include="Versioning\Versioning.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Versioning\VersioningTest.cs" />
   </ItemGroup>
   <ItemGroup>

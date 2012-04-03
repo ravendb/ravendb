@@ -121,6 +121,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Bugs\Account.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AdHocProjections.cs" />
@@ -751,7 +754,6 @@
     <Compile Include="Patching\SimplePatchApplication.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Spatial\SpatialIndexTestHelper.cs" />
     <Compile Include="Spatial\SpatialSearch.cs" />
     <Compile Include="Storage\AbstractDocumentStorageTest.cs" />

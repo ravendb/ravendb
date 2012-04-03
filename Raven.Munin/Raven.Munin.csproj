@@ -53,6 +53,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="AbstractPersistentSource.cs" />
     <Compile Include="Database.cs" />
     <Compile Include="IComparerAndEquality.cs" />
@@ -69,7 +72,6 @@
     <Compile Include="Table.cs" />
     <Compile Include="PersistentDictionaryState.cs" />
     <Compile Include="PositionInFile.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReadOnlyFileBasedPersistentSource.cs" />
     <Compile Include="RecordingComparer.cs" />
     <Compile Include="RemoteManagedStorageState.cs" />
