@@ -348,7 +348,7 @@ namespace Raven.Database.Config
 		public int MaxNumberOfItemsToIndexInSingleBatch { get; set; }
 
 		/// <summary>
-		/// The intial number of items to take when indexing a batch
+		/// The initial number of items to take when indexing a batch
 		/// Default: 5,000
 		/// </summary>
 		public int InitialNumberOfItemsToIndexInSingleBatch { get; set; }
