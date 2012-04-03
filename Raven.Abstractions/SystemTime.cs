@@ -15,9 +15,8 @@ namespace Raven.Abstractions
 		{
 			get
 			{
-				if(UtcDateTime == null)
-					return DateTime.Now;
-				return UtcDateTime().ToLocalTime();
+				var temp = UtcDateTime;
+				return temp == null ? DateTime.Now : temp().ToLocalTime();
 			}
 		}
 
@@ -25,9 +24,8 @@ namespace Raven.Abstractions
 		{
 			get
 			{
-				if (UtcDateTime == null)
-					return DateTime.UtcNow;
-				return UtcDateTime();
+				var temp = UtcDateTime;
+				return temp == null ? DateTime.UtcNow : temp();
 			}
 		}
 	}
