@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Connection;
@@ -233,7 +232,10 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override void Dispose()
 		{
+#if DEBUG
 			GC.SuppressFinalize(this);
+#endif
+			
 			if (jsonRequestFactory != null)
 				jsonRequestFactory.Dispose();
 #if !SILVERLIGHT
@@ -248,13 +250,15 @@ namespace Raven.Client.Document
 				afterDispose(this, EventArgs.Empty);
 		}
 
-		private readonly StackTrace e = new StackTrace();
+#if DEBUG
+		private readonly System.Diagnostics.StackTrace e = new System.Diagnostics.StackTrace();
 		~DocumentStore()
 		{
 			var buffer = e.ToString();
-			var stacktraceDebug = string.Format("StackTrace recorded.{0}{1}{0}{0}", Environment.NewLine, buffer);
+			var stacktraceDebug = string.Format("StackTrace of un-disposed document store recorded. Please make sure to dispose any document store in the tests in order to avoid race conditions in tests.{0}{1}{0}{0}", Environment.NewLine, buffer);
 			Console.WriteLine(stacktraceDebug);
 		}
+#endif
 
 #if !SILVERLIGHT
 
