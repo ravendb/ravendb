@@ -8,6 +8,7 @@ properties {
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
+	$configuration = "Debug"
   
 	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Newtonsoft.Json), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???",
@@ -128,7 +129,8 @@ task Compile -depends Init {
 	
 	try { 
 		ExecuteTask("BeforeCompile")
-		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=Release }
+		Write-Host "Compiling with '$configuration' configuration"
+		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$configuration }
 	} catch {
 		Throw
 	} finally { 
@@ -178,15 +180,13 @@ task TestSilverlight -depends Compile, CopyServer {
 	}
 }
 
-task ReleaseNoTests -depends OpenSource,DoRelease {
-
-}
-
 task Unstable {
+	$configuration = "Release"
 	$global:uploadCategory = "RavenDB-Unstable"
 }
 
 task OpenSource {
+	$configuration = "Release"
 	$global:uploadCategory = "RavenDB"
 }
 
@@ -195,6 +195,8 @@ task RunTests -depends Test,TestSilverlight
 task RunAllTests -depends Test,TestSilverlight,StressTest
 
 task Release -depends RunTests,DoRelease
+
+task ReleaseNoTests -depends OpenSource,DoRelease
 
 task CopySamples {
 	$samples = @("Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `
