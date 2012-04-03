@@ -140,7 +140,7 @@ task Test -depends Compile {
 	Write-Host $test_prjs
 	$test_prjs | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
-		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+		#exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
 	}
 }
 
@@ -221,7 +221,7 @@ task CopySamples {
 }
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
-	New-Item $build_dir\Output -Type -ErrorAction SilentlyContinue directory | Out-Null
+	New-Item $build_dir\Output -Type directory -ErrorAction SilentlyContinue | Out-Null
 	New-Item $build_dir\Output\Server -Type directory | Out-Null
 	New-Item $build_dir\Output\Web -Type directory | Out-Null
 	New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
