@@ -20,14 +20,13 @@ using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Util;
 using Raven.Json.Linq;
-using Raven.Munin;
 using Raven.Server;
 using Raven.Storage.Managed;
 using Raven.Tests.Document;
 
 namespace Raven.Tests
 {
-	public class RavenTest : WithNLog
+	public class RavenTest : WithNLog, IDisposable
 	{
 		protected const string DbDirectory = @".\TestDb\";
 		protected const string DbName = DbDirectory + @"DocDb.esb";
@@ -235,6 +234,12 @@ namespace Raven.Tests
 			var timeTaken = SystemTime.Now.Subtract(startTime);
 			Console.WriteLine("Time take (ms)- " + timeTaken.TotalMilliseconds);
 			return timeTaken.TotalMilliseconds;
+		}
+
+		public void Dispose()
+		{
+			// Delete tenants created using the EnsureDatabaseExists method.
+			IOExtensions.DeleteDirectory("Tenants");
 		}
 	}
 }
