@@ -515,7 +515,6 @@
     <Compile Include="Document\TotalCountServerTest.cs" />
     <Compile Include="Document\WhenUsingMultipleUnshardedServers.cs" />
     <Compile Include="Document\ZoneCountResult.cs" />
-    <Compile Include="IISDeploymentUtil.cs" />
     <Compile Include="IISExpressTestClient.cs" />
     <Compile Include="Bugs\IndexDefinitions.cs" />
     <Compile Include="Indexes\AnalyzerResolution.cs" />
