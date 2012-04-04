@@ -406,32 +406,32 @@ task CreateNugetPackage {
 
 	Remove-Item $base_dir\RavenDB*.nupkg
 	Remove-Item $build_dir\NuPack -Force -Recurse -ErrorAction SilentlyContinue
-	New-Item $build_dir\NuPack -Type directory | Out-Null
-	New-Item $build_dir\NuPack\content -Type directory | Out-Null
-	New-Item $build_dir\NuPack\lib -Type directory | Out-Null
-	New-Item $build_dir\NuPack\lib\net35 -Type directory | Out-Null
-	New-Item $build_dir\NuPack\lib\net40 -Type directory | Out-Null
-	New-Item $build_dir\NuPack\lib\sl40 -Type directory | Out-Null
-	New-Item $build_dir\NuPack\tools -Type directory | Out-Null
-	New-Item $build_dir\NuPack\server -Type directory | Out-Null
+	New-Item $build_dir\NuPack -Type directory -ErrorAction SilentlyContinue | Out-Null
+	New-Item $build_dir\NuPack\content -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack\lib -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack\lib\net35 -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack\lib\net40 -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack\lib\sl40 -Type directory -ErrorAction SilentlyContinue | Out-Null
+	New-Item $build_dir\NuPack\tools -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack\server -Type directory -ErrorAction SilentlyContinue| Out-Null
 
 	Remove-Item $build_dir\NuPack-Client -Force -Recurse -ErrorAction SilentlyContinue
-	New-Item $build_dir\NuPack-Client -Type directory | Out-Null
-	New-Item $build_dir\NuPack-Client\content -Type directory | Out-Null
-	New-Item $build_dir\NuPack-Client\lib -Type directory | Out-Null
-	New-Item $build_dir\NuPack-Client\lib\net35 -Type directory | Out-Null
-	New-Item $build_dir\NuPack-Client\lib\net40 -Type directory | Out-Null
-	New-Item $build_dir\NuPack-Client\lib\sl40 -Type directory | Out-Null
-	New-Item $build_dir\NuPack-Client\lib\sl50 -Type directory | Out-Null
-	New-Item $build_dir\NuPack-Client\tools -Type directory | Out-Null
+	New-Item $build_dir\NuPack-Client -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack-Client\content -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack-Client\lib -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack-Client\lib\net35 -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack-Client\lib\net40 -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack-Client\lib\sl40 -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack-Client\lib\sl50 -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack-Client\tools -Type directory -ErrorAction SilentlyContinue| Out-Null
 	
 	# package for RavenDB embedded is separate and requires .NET 4.0
 	Remove-Item $build_dir\NuPack-Embedded -Force -Recurse -ErrorAction SilentlyContinue
-	New-Item $build_dir\NuPack-Embedded -Type directory | Out-Null
-	New-Item $build_dir\NuPack-Embedded\content -Type directory | Out-Null
-	New-Item $build_dir\NuPack-Embedded\lib -Type directory | Out-Null
-	New-Item $build_dir\NuPack-Embedded\lib\net40 -Type directory | Out-Null
-	New-Item $build_dir\NuPack-Embedded\tools -Type directory | Out-Null
+	New-Item $build_dir\NuPack-Embedded -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack-Embedded\content -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack-Embedded\lib -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack-Embedded\lib\net40 -Type directory -ErrorAction SilentlyContinue| Out-Null
+	New-Item $build_dir\NuPack-Embedded\tools -Type directory -ErrorAction SilentlyContinue| Out-Null
 	
 	$client_dlls_3_5 | ForEach-Object { 
 		Copy-Item "$_" $build_dir\NuPack\lib\net35
