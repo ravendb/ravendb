@@ -133,7 +133,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void Flush(bool optimize)
+		public void Flush()
 		{
 			lock (writeLock)
 			{
@@ -143,9 +143,6 @@ namespace Raven.Database.Indexing
 					return;
 
 				indexWriter.Commit();
-
-				if (optimize && configuration.MergeIndexSegmentsOnIdle)
-					MergeSegments();
 			}
 		}
 
@@ -267,7 +264,7 @@ namespace Raven.Database.Indexing
 					WriteTempIndexToDiskIfNeeded(context);
 
 					if (configuration.TransactionMode == TransactionMode.Safe)
-						Flush(false); // just make sure changes are flushed to disk
+						Flush(); // just make sure changes are flushed to disk
 				}
 				finally
 				{
