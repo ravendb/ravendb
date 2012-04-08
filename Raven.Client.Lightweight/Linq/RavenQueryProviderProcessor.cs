@@ -406,23 +406,25 @@ namespace Raven.Client.Linq
 					case ExpressionType.Call:
 					case ExpressionType.Invoke:
 					case ExpressionType.Add:
+					case ExpressionType.And:
+					case ExpressionType.AndAlso:
+#if !NET_3_5
+					case ExpressionType.AndAssign:
 					case ExpressionType.Decrement:
 					case ExpressionType.Increment:
 					case ExpressionType.PostDecrementAssign:
 					case ExpressionType.PostIncrementAssign:
 					case ExpressionType.PreDecrementAssign:
 					case ExpressionType.PreIncrementAssign:
-					case ExpressionType.And:
-					case ExpressionType.AndAlso:
-					case ExpressionType.AndAssign:
 					case ExpressionType.AddAssign:
 					case ExpressionType.AddAssignChecked:
 					case ExpressionType.AddChecked:
+					case ExpressionType.Index:
 					case ExpressionType.Assign:
 					case ExpressionType.Block:
+#endif
 					case ExpressionType.Conditional:
 					case ExpressionType.ArrayIndex:
-					case ExpressionType.Index:
 
 						throw new ArgumentException("Invalid computation: " + memberExpression +
 						                            ". You cannot use computation (only simple member expression are allowed) in RavenDB queries.");
