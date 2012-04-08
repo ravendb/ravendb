@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+	<metadata>
+		<id>RavenDB.Client.UniqueConstraints</id>
+		<version>1.0</version>
+		<title>RavenDB Client for Unique Constraints bundle</title>
+		<authors>Hibernating Rhinos</authors>
+		<description>RavenDB 'Unique Constraints' bundle client. Allow the user to implement unique constraints in the objects (useful for properties like email or social security number).</description>
+		<language>en-US</language>
+		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
+		<projectUrl>http://www.ravendb.net/</projectUrl>
+		<requireLicenseAcceptance>true</requireLicenseAcceptance>
+		<tags>nosql ravendb raven document database client bundles</tags>
+		<dependencies>
+			<dependency id="RavenDB.Client" version="" />
+		</dependencies>
+		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
+	</metadata>
+</package>

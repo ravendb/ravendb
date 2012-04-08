@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+	<metadata>
+		<id>RavenDB.AspNetHost</id>
+		<version>1.0</version>
+		<title>RavenDB Asp.Net Hosted server</title>
+		<authors>Hibernating Rhinos</authors>
+		<summary>This package let you include RavenDB embedded in your Asp.Net web application.</summary>
+		<description>This package let you include RavenDB embedded in your asp.net application. RavenDB is a document database for the .NET/Windows platform, offering a flexible data model design to fit the needs of real world systems.</description>
+		<language>en-US</language>
+		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
+		<projectUrl>http://www.ravendb.net/</projectUrl>
+		<requireLicenseAcceptance>true</requireLicenseAcceptance>
+		<tags>nosql ravendb raven document database embedded</tags>
+		<dependencies>
+			<dependency id="RavenDB.Database" version=""/>
+		</dependencies>
+		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
+	</metadata>
+</package>
