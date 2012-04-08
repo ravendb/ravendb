@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package>
+	<metadata>
+		<id>RavenDB.Bundles.Expiration</id>
+		<version>1.0</version>
+		<title>RavenDB Expiration Bundle</title>
+		<authors>Hibernating Rhinos</authors>
+		<description>The expiration bundle serves a very simple purpose, it deletes documents whose time have passed. Usage scenarios for the Expiration Bundle include storing user sessions in RavenDB or using RavenDB as a cache.</description>
+		<language>en-US</language>
+		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
+		<projectUrl>http://www.ravendb.net/</projectUrl>
+		<requireLicenseAcceptance>true</requireLicenseAcceptance>
+		<tags>nosql ravendb raven document database bundles</tags>
+		<dependencies>
+			<dependency id="RavenDB.Database" version=""/>
+		</dependencies>
+		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
+	</metadata>
+</package>
