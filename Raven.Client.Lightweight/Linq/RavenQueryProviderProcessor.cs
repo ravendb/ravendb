@@ -386,9 +386,48 @@ namespace Raven.Client.Linq
 			else
 			{
 				var memberExpression = GetMemberExpression(expression);
+
+				AssertNoComputation(memberExpression);
+
 				path = memberExpression.ToString();
 				isNestedPath = memberExpression.Expression is MemberExpression;
 				memberType = memberExpression.Member.GetMemberType();
+			}
+		}
+
+		private void AssertNoComputation(MemberExpression memberExpression)
+		{
+			var cur = memberExpression;
+
+			while (cur != null)
+			{
+				switch (cur.Expression.NodeType)
+				{
+					case ExpressionType.Call:
+					case ExpressionType.Invoke:
+					case ExpressionType.Add:
+					case ExpressionType.Decrement:
+					case ExpressionType.Increment:
+					case ExpressionType.PostDecrementAssign:
+					case ExpressionType.PostIncrementAssign:
+					case ExpressionType.PreDecrementAssign:
+					case ExpressionType.PreIncrementAssign:
+					case ExpressionType.And:
+					case ExpressionType.AndAlso:
+					case ExpressionType.AndAssign:
+					case ExpressionType.AddAssign:
+					case ExpressionType.AddAssignChecked:
+					case ExpressionType.AddChecked:
+					case ExpressionType.Assign:
+					case ExpressionType.Block:
+					case ExpressionType.Conditional:
+					case ExpressionType.ArrayIndex:
+					case ExpressionType.Index:
+
+						throw new ArgumentException("Invalid computation: " + memberExpression +
+						                            ". You cannot use computation (only simple member expression are allowed) in RavenDB queries.");
+				}
+				cur = cur.Expression as MemberExpression;
 			}
 		}
 

@@ -658,6 +658,7 @@
     <Compile Include="MailingList\Victor.cs" />
     <Compile Include="MailingList\Vitaly.cs" />
     <Compile Include="MailingList\Vlad.cs" />
+    <Compile Include="MailingList\Wallace.cs" />
     <Compile Include="MailingList\Weave.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
