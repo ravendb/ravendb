@@ -17,27 +17,33 @@ namespace Raven.Tests.Shard
 {
 	public class RoundRobinSharding : RavenTest
 	{
-		private readonly RavenDbServer[] servers;
+		private readonly Dictionary<string, RavenDbServer> servers;
 		private readonly ShardedDocumentStore store;
+		private Dictionary<string, IDocumentStore> documentStores;
 
 		public RoundRobinSharding()
 		{
-			servers = new[]
+			servers = new Dictionary<string, RavenDbServer>
 			{
-				GetNewServer(8078),
-				GetNewServer(8077),
-				GetNewServer(8076)
+				{"one",GetNewServer(8078)},
+				{"two", GetNewServer(8077)},
+				{"tri", GetNewServer(8076)}
 			};
 
-			var shards = new Dictionary<string, IDocumentStore>
+			documentStores = new Dictionary<string, IDocumentStore>
 			{
 				{"one", new DocumentStore{Url = "http://localhost:8078"}},
 				{"two", new DocumentStore{Url = "http://localhost:8077"}},
 				{"tri", new DocumentStore{Url = "http://localhost:8076"}},
 			};
 
+			foreach (var documentStore in documentStores)
+			{
+				documentStore.Value.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+			}
 
-			var shardStrategy = new ShardStrategy(shards)
+
+			var shardStrategy = new ShardStrategy(documentStores)
 				.ShardingOn<Post>()
 				.ShardingOn<PostComments>(x => x.PostId);
 
@@ -49,7 +55,7 @@ namespace Raven.Tests.Shard
 		{
 			foreach (var ravenDbServer in servers)
 			{
-				ravenDbServer.Dispose();
+				ravenDbServer.Value.Dispose();
 			}
 			store.Dispose();
 			base.Dispose();
@@ -70,6 +76,87 @@ namespace Raven.Tests.Shard
 				Assert.Equal("tri/posts/1", p1.Id);
 				Assert.Equal("two/posts/2", p2.Id);
 			}
+		}
+
+		[Fact]
+		public void WhenQueryingWillGoToTheRightServer()
+		{
+			using (var session = store.OpenSession())
+			{
+				var p1 = new Post();
+				session.Store(p1);
+				var pc1 = new PostComments {PostId = p1.Id};
+				session.Store(pc1);
+				session.SaveChanges();
+			}
+
+			foreach (var ravenDbServer in servers)
+			{
+				ravenDbServer.Value.Server.ResetNumberOfRequests();
+			}
+
+			using (var session = store.OpenSession())
+			{
+				var posts = session.Query<PostComments>().Where(x => x.PostId == "tri/posts/1").ToList();
+				Assert.NotEmpty(posts);
+			}
+			Assert.Equal(0, servers["one"].Server.NumberOfRequests);
+			Assert.Equal(0, servers["two"].Server.NumberOfRequests);
+			Assert.Equal(1, servers["tri"].Server.NumberOfRequests);
+		}
+
+		[Fact]
+		public void WhenQueryingWillGoToTheRightServer_UsingQueryById()
+		{
+			using (var session = store.OpenSession())
+			{
+				var p1 = new Post();
+				session.Store(p1);
+				var pc1 = new PostComments { PostId = p1.Id };
+				session.Store(pc1);
+				session.SaveChanges();
+			}
+
+			foreach (var ravenDbServer in servers)
+			{
+				ravenDbServer.Value.Server.ResetNumberOfRequests();
+			}
+
+			using (var session = store.OpenSession())
+			{
+				var posts = session.Query<Post>().Where(x => x.Id == "tri/posts/1").ToList();
+				Assert.NotEmpty(posts);
+			}
+			Assert.Equal(0, servers["one"].Server.NumberOfRequests);
+			Assert.Equal(0, servers["two"].Server.NumberOfRequests);
+			Assert.Equal(1, servers["tri"].Server.NumberOfRequests);
+		}
+
+		[Fact]
+		public void WhenQueryingWillGoToTheRightServer_Loading()
+		{
+			using (var session = store.OpenSession())
+			{
+				var p1 = new Post();
+				session.Store(p1);
+				var pc1 = new PostComments { PostId = p1.Id };
+				session.Store(pc1);
+				session.SaveChanges();
+			}
+
+			foreach (var ravenDbServer in servers)
+			{
+				ravenDbServer.Value.Server.ResetNumberOfRequests();
+			}
+
+			using (var session = store.OpenSession())
+			{
+				Assert.NotNull(session.Load<Post>("tri/posts/1"));
+				Assert.NotNull(session.Load<PostComments>("tri/PostComments/1"));
+			}
+			Assert.Equal(0, servers["one"].Server.NumberOfRequests);
+			Assert.Equal(0, servers["two"].Server.NumberOfRequests);
+			Assert.Equal(2, servers["tri"].Server.NumberOfRequests);
 		}
 
 		[Fact]

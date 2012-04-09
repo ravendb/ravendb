@@ -9,6 +9,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Shard
@@ -64,6 +65,12 @@ namespace Raven.Client.Shard
 			queryTranslator = queryTranslator ?? (result => valueTranslator((TResult) Convert.ChangeType(result, typeof (TResult))));
 
 			var shardFieldForQuerying = shardingProperty.ToPropertyPath();
+
+			if(shardStrategy.Conventions.FindIdentityProperty(shardingProperty.ToProperty()))
+			{
+				shardFieldForQuerying = Constants.DocumentIdFieldName;
+			}
+
 			var pattern = string.Format(@"
 {0}: \s* (?<Open>"")(?<shardId>[^""]+)(?<Close-Open>"") |
 {0}: \s* (?<shardId>[^""][^\s]*)", Regex.Escape(shardFieldForQuerying));
