@@ -47,6 +47,11 @@ namespace Raven.Client.Shard
 		{
 			valueTranslator = valueTranslator ?? (result =>
 			                                      	{
+														if (ReferenceEquals(result, null))
+															throw new InvalidOperationException("Got null for the shard id in the value translator for " +
+															                                    typeof (TEntity) + " using " + shardingProperty +
+															                                    ", no idea how to get the shard id from null.");
+
 														// by default we assume that if you have a separator in the value we got back
 														// the shard id is the very first value up until the first separator
 			                                      		var str = result.ToString();
