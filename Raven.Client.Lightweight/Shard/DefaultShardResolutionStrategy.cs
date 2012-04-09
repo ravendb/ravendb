@@ -139,21 +139,28 @@ namespace Raven.Client.Shard
 				return potentialShardsFor;
 			}
 
-			if (requestData.Key == null)
-				return null; // we are only optimized for keys
+			if(requestData.Keys.Count == 0) // we are only optimized for keys
+				return null;
+
 
 			// we are looking for search by key, let us see if we can narrow it down by using the 
 			// embedded shard id.
+			var list = new List<string>();
+			foreach (var key in requestData.Keys)
+			{
+				var start = key.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.InvariantCultureIgnoreCase);
+				if (start == -1)
+					return null; // if we couldn't figure it out, select from all
 
-			var start = requestData.Key.IndexOf(shardStrategy.Conventions.IdentityPartsSeparator, StringComparison.InvariantCultureIgnoreCase);
-			if (start == -1)
-				return null;
+				var maybeShardId = key.Substring(0, start);
 
-			var maybeShardId = requestData.Key.Substring(0, start);
-
-			return ShardIds.Any(x => string.Equals(maybeShardId, x, StringComparison.InvariantCultureIgnoreCase)) ? 
-				new[] {maybeShardId} : // we found a matching shard
-				null; // couldn't find a matching shard, let us try all of them
+				if (ShardIds.Any(x => string.Equals(maybeShardId, x, StringComparison.InvariantCultureIgnoreCase)))
+					list.Add(maybeShardId);
+				else
+					return null; // we couldn't find it there, select from all
+		
+			}
+			return list.ToArray();
 		}
 	}
 }
