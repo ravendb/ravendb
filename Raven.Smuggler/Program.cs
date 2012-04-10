@@ -15,11 +15,13 @@ namespace Raven.Smuggler
 		private readonly RavenConnectionStringOptions connectionStringOptions;
 		private readonly SmugglerOptions options;
 		private readonly OptionSet optionSet;
+		bool incremental;
 
 		private Program()
 		{
 			connectionStringOptions = new RavenConnectionStringOptions();
 			options = new SmugglerOptions();
+			
 			optionSet = new OptionSet
 			            	{
 			            		{
@@ -50,6 +52,7 @@ namespace Raven.Smuggler
 			            		{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => Credentials.Password = value},
 			            		{"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
 			            		{"key|api-key:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
+								{"incremental", "States usage of incremental operations", _ => incremental = true },
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};
 		}
@@ -110,7 +113,7 @@ namespace Raven.Smuggler
 						smugglerApi.ImportData(options);
 						break;
 					case SmugglerAction.Export:
-						smugglerApi.ExportData(options);
+						smugglerApi.ExportData(options, incremental);
 						break;
 				}
 			}
