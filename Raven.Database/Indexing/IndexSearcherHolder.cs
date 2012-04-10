@@ -72,7 +72,7 @@ namespace Raven.Database.Indexing
 			{
 				var indexReader = IndexSearcher.GetIndexReader();
 				if (indexReader != null)
- 					indexReader.Close();
+					indexReader.Close();
 				IndexSearcher.Close();
 			}
 		}
