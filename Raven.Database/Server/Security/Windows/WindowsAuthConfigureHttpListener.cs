@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Text.RegularExpressions;
 using Raven.Database.Config;
 using System.Linq;
 
@@ -7,6 +8,8 @@ namespace Raven.Database.Server.Security.Windows
 {
 	public class WindowsAuthConfigureHttpListener : IConfigureHttpListener
 	{
+		public static Regex IsAdminRequest = new Regex(@"(^/admin)|(^/databases/\w+/admin)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
 		public void Configure(HttpListener listener, InMemoryRavenConfiguration config)
 		{
 			if (string.Equals(config.AuthenticationMode, "Windows",StringComparison.InvariantCultureIgnoreCase) == false) 
@@ -28,7 +31,7 @@ namespace Raven.Database.Server.Security.Windows
 				case AnonymousUserAccessMode.All:
 					listener.AuthenticationSchemeSelectorDelegate = request =>
 					{
-						if (request.RawUrl.StartsWith("/admin", StringComparison.InvariantCultureIgnoreCase))
+						if (IsAdminRequest.IsMatch(request.RawUrl))
 							return AuthenticationSchemes.IntegratedWindowsAuthentication;
 
 						return AuthenticationSchemes.Anonymous;

@@ -107,7 +107,12 @@ namespace Raven.Database.Extensions
 		{
 #if NET_4_0
 			defaultEncoder = new Lazy <MonoHttpEncoder> (() => new MonoHttpEncoder ());
-			currentEncoderLazy = new Lazy <MonoHttpEncoder> (new Func <MonoHttpEncoder> (GetCustomEncoderFromConfig));
+			// NOTE: We explicitly removed this line, we use MonoHttpUtility to avoid config issues and App_Start probelms
+			// and we only use this internally for our own stuff, we never want to allow this configuration, and it is
+			// something that we can safely disable
+
+			// new Lazy <MonoHttpEncoder> (new Func <MonoHttpEncoder> (GetCustomEncoderFromConfig));
+			currentEncoderLazy = defaultEncoder;
 #else
 			defaultEncoder = new HttpEncoder ();
 			currentEncoder = defaultEncoder;

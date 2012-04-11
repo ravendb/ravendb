@@ -134,6 +134,51 @@ type ``Given a Initailised Document store execute using computation expression``
         }  
     
     [<Fact>]
+    let ``Should be able to skip results with skip``() = 
+        use ds = test.NewDocumentStore()
+        use session = ds.OpenSession()
+        let actual = 
+                   raven {
+                            do! storeMany (createCustomers 15) >> ignore
+                            let! actual = query (where <@ fun x -> x.Dob < new DateTime(2012,1,7) @> >> skip 3)
+                            return actual
+                         } |> run session |> Seq.toList
+
+        let expected = createCustomers ((new DateTime(2012,1,7)).Subtract(new DateTime(2012,1,1)).Days) |> Seq.skip 3 |> Seq.toList
+
+        Assert.True((expected = actual))
+
+    [<Fact>]
+    let ``Should be able to take n results with take``() = 
+        use ds = test.NewDocumentStore()
+        use session = ds.OpenSession()
+        let actual = 
+                   raven {
+                            do! storeMany (createCustomers 15) >> ignore
+                            let! actual = query (where <@ fun x -> x.Dob < new DateTime(2012,1,7) @> >> take 3)
+                            return actual
+                         } |> run session |> Seq.toList
+
+        let expected = createCustomers ((new DateTime(2012,1,4)).Subtract(new DateTime(2012,1,1)).Days) |> Seq.toList
+
+        Assert.True((expected = actual))
+
+    [<Fact>]
+    let ``Should be able to project a property with select``() = 
+        use ds = test.NewDocumentStore()
+        use session = ds.OpenSession()
+        let actual = 
+                   raven {
+                            do! storeMany (createCustomers 7) >> ignore
+                            let! actual = query (select <@ fun x -> x.Id @>)
+                            return actual
+                         } |> run session |> Seq.toList
+
+        let expected = createCustomers 7 |> Seq.map (fun x -> x.Id) |> Seq.toList
+
+        Assert.True((expected = actual))
+
+    [<Fact>]
     let ``Should implicitly call save changes if runs to completion``() = 
            use ds = test.NewDocumentStore()
            use session = ds.OpenSession()
@@ -142,7 +187,7 @@ type ``Given a Initailised Document store execute using computation expression``
 
            //Humm... Is this the only way I could get it too compile, Assert.Equals cant resolve the correct overload
            Assert.True((expected = actual))
-
+    
     [<Fact>]
     let ``Should be able to save and retrieve an entity``() =
            use ds = test.NewDocumentStore()

@@ -183,7 +183,9 @@
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
-    <EmbeddedResource Include="DefaultLogging.config" />
+    <EmbeddedResource Include="DefaultLogging.config">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
     <None Include="NLog.xsd">
       <SubType>Designer</SubType>
     </None>

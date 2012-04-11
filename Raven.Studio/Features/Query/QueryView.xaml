@@ -287,9 +287,9 @@
 					<TextBlock Text="{Binding Results.TotalResults, StringFormat='#,#'}" />
 					<TextBlock Text="        Status: " />
 					<TextBlock Text="{Binding Results.IsStale, Converter={StaticResource BooleanToStaleStatConverter},StringFormat='\{0\}'}" />
-					<TextBlock Text="        Last update: " />
+					<TextBlock Text="        Last update of document: " />
 					<TextBlock Text="{Binding Results.IndexTimestamp, Converter={StaticResource TimeToLongAgoConverter}}"
-							   ToolTipService.ToolTip="{Binding Results.IndexTimestamp, StringFormat='Indexed at {0}'}" />
+							   ToolTipService.ToolTip="{Binding Results.IndexTimestamp,Converter={StaticResource UtcToLocalConverter}, StringFormat='Last document change was at {0}'}" />
 					<TextBlock Text="        Duration (query+network+parsing): " />
 					<TextBlock Text="{Binding QueryTime.TotalMilliseconds, StringFormat='\{0:#,#\} ms'}" />
 					<TextBlock Text="        Index: " />

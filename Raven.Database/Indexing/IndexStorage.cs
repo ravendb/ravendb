@@ -412,7 +412,7 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values)
 			{
-				value.Flush(false);
+				value.Flush();
 				value.MergeSegments(); // noop if previously merged
 			}
 		}
@@ -421,7 +421,7 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values.Where(value => !value.IsMapReduce))
 			{
-				value.Flush(true);
+				value.Flush();
 			}
 		}
 
@@ -429,7 +429,7 @@ namespace Raven.Database.Indexing
 		{
 			foreach (var value in indexes.Values.Where(value => value.IsMapReduce))
 			{
-				value.Flush(true);
+				value.Flush();
 			}
 		}
 

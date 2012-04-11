@@ -38,7 +38,7 @@ namespace Raven.Tests.Shard
 			using (var shard1 = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			using (var session = shard1.OpenSession())
 			{
-				var results = new ParallelShardAccessStrategy().Apply(new[] { session.Advanced.DatabaseCommands }, (x, i) => (IList<Company>)null);
+				var results = new ParallelShardAccessStrategy().Apply(new[] { session.Advanced.DatabaseCommands }, new ShardRequestData(),  (x, i) => (IList<Company>)null);
 
 				Assert.Equal(1, results.Length);
 				Assert.Null(results[0]);
@@ -53,7 +53,7 @@ namespace Raven.Tests.Shard
 			using (var session = shard1.OpenSession())
 			{
 				var parallelShardAccessStrategy = new ParallelShardAccessStrategy();
-				Assert.Throws<ApplicationException>(() => parallelShardAccessStrategy.Apply<object>(new[] {session.Advanced.DatabaseCommands}, (x, i) => { throw new ApplicationException(); }));
+				Assert.Throws<ApplicationException>(() => parallelShardAccessStrategy.Apply<object>(new[] {session.Advanced.DatabaseCommands}, new ShardRequestData(), (x, i) => { throw new ApplicationException(); }));
 			}
 		}
 	}
