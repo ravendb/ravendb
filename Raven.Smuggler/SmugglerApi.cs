@@ -59,7 +59,7 @@ namespace Raven.Smuggler
 					Directory.CreateDirectory(folder);
 				}
 
-				options.File = Path.Combine(folder, DateTime.Now.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".dump.inc");
+				options.File = Path.Combine(folder, DateTime.Now.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
 				if (File.Exists(options.File))
 				{
 					var counter = 1;
@@ -77,7 +77,7 @@ namespace Raven.Smuggler
 				if (File.Exists(etagFileLocation))
 				{
 					using (var streamReader = new StreamReader(new FileStream(etagFileLocation, FileMode.Open)))
-					using(var jsonReader = new JsonTextReader(streamReader))
+					using (var jsonReader = new JsonTextReader(streamReader))
 					{
 						var ravenJObject = RavenJObject.Load(jsonReader);
 						lastDocsEtag = new Guid(ravenJObject.Value<string>("LastDocEtag"));
@@ -226,42 +226,34 @@ namespace Raven.Smuggler
 				{
 					ImportData(fileStream, options);
 				}
+				return;
 			}
-			else
+
+			var files = Directory.GetFiles(Path.GetFullPath(options.File))
+				.Where(file => ".ravendb-incremental-dump".Equals(Path.GetExtension(file), StringComparison.CurrentCultureIgnoreCase))
+				.OrderBy(File.GetLastWriteTimeUtc)
+				.ToArray();
+
+			if (files.Length == 0)
+				return;
+
+			var optionsWithoutIndexes = new SmugglerOptions
 			{
-				var files = Directory.GetFiles(Path.GetFullPath(options.File)).Where(
-					file => ".inc".Equals(Path.GetExtension(file), StringComparison.CurrentCultureIgnoreCase))
-					.OrderBy(File.GetLastWriteTimeUtc).ToArray();
-				var optionsWithoutIndexes = new SmugglerOptions
-							{
-								File = options.File,
-								Filters = options.Filters,
-							};
-				if(options.OperateOnTypes.HasFlag(ItemType.Attachments))
+				File = options.File,
+				Filters = options.Filters,
+				OperateOnTypes = options.OperateOnTypes & ~ItemType.Indexes
+			};
+			for (var i = 0; i < files.Length - 1; i++)
+			{
+				using (var fileStream = File.OpenRead(Path.Combine(options.File, files[i])))
 				{
-					optionsWithoutIndexes.OperateOnTypes = ItemType.Attachments;
+					ImportData(fileStream, optionsWithoutIndexes);
 				}
-				if(options.OperateOnTypes.HasFlag(ItemType.Documents))
-				{
-					optionsWithoutIndexes.OperateOnTypes = optionsWithoutIndexes.OperateOnTypes | ItemType.Documents;
-				}
-				for (var i = 0; i < files.Length; i++)
-				{
-					if (i == files.Length - 1)
-					{
-						using (var fileStream = File.OpenRead(Path.Combine(options.File, files[i])))
-						{
-							ImportData(fileStream, options);
-						}
-					}
-					else
-					{
-						using (var fileStream = File.OpenRead(Path.Combine(options.File, files[i])))
-						{
-							ImportData(fileStream, optionsWithoutIndexes);
-						}
-					}
-				}
+			}
+
+			using (var fileStream = File.OpenRead(Path.Combine(options.File, files.Last())))
+			{
+				ImportData(fileStream, options);
 			}
 		}
 
