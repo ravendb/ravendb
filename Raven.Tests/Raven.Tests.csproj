@@ -584,6 +584,7 @@
     <Compile Include="MailingList\RecreatingIndexes.cs" />
     <Compile Include="MailingList\RyanD.cs" />
     <Compile Include="MailingList\Scott.cs" />
+    <Compile Include="MailingList\SearchByMapReduceExample.cs" />
     <Compile Include="MailingList\Stacey\Image.cs" />
     <Compile Include="MailingList\Stacey\ImageByName.cs" />
     <Compile Include="MailingList\Stacey\InServerTesting.cs" />
