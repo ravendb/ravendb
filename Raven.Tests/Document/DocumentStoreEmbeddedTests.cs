@@ -25,7 +25,6 @@ namespace Raven.Tests.Document
 {
 	public class DocumentStoreEmbeddedTests : RemoteClientTest, IDisposable
 	{
-		private string path;
 		private readonly EmbeddableDocumentStore documentStore;
 
 		public DocumentStoreEmbeddedTests()
@@ -33,10 +32,10 @@ namespace Raven.Tests.Document
 			documentStore = NewDocumentStore();
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			documentStore.Dispose();
-			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
 
 		[Fact]

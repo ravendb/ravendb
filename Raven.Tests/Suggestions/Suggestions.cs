@@ -24,9 +24,10 @@ namespace Raven.Tests.Suggestions
 			documentStore = NewDocumentStore();
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			documentStore.Dispose();
+			base.Dispose();
 		}
 
 		[Fact]

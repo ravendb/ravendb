@@ -373,11 +373,12 @@ namespace Raven.Tests.Bugs
 
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			documentStore.Dispose();
 			server.Dispose();
 			IOExtensions.DeleteDirectory("HiLoData");
+			base.Dispose();
 		}
 	}
 }

@@ -96,9 +96,10 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			Store.Dispose();
+			base.Dispose();
 		}
 
 		public class PurchaseHistoryIndex : AbstractIndexCreationTask

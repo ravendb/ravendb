@@ -40,9 +40,10 @@ namespace Raven.Tests.Document
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
 	}
 }

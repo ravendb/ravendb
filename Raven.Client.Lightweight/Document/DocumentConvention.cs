@@ -131,6 +131,7 @@ namespace Raven.Client.Document
 			var tag = GetTypeTagName(type);
 			if (tag != null)
 			{
+                tag = TransformTypeTagNameToDocumentKeyPrefix(tag);
 				tag += IdentityPartsSeparator;
 			}
 			if (converter != null)

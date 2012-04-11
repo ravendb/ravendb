@@ -69,7 +69,7 @@ namespace Raven.Tests.Indexes
 				Start = 0,
 			}).IsStale);
 
-			db.StopBackgroundWokers();
+			db.StopBackgroundWorkers();
 
 			db.Put("a", null, new RavenJObject(), new RavenJObject(), null);
 

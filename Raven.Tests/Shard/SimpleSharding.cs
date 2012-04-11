@@ -84,13 +84,14 @@ namespace Raven.Tests.Shard
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			documentStore.Dispose();
 			foreach (var server in servers)
 			{
 				server.Dispose();
 			}
+			base.Dispose();
 		}
 	}
 }
