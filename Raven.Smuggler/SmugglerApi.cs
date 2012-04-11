@@ -51,7 +51,7 @@ namespace Raven.Smuggler
 			var lastDocsEtag = Guid.Empty;
 			var lastAttachmentEtag = Guid.Empty;
 			var folder = options.File;
-			string etagFileLocation = Path.Combine(folder, "IncrementalExport.state.json");
+			var etagFileLocation = Path.Combine(folder, "IncrementalExport.state.json");
 			if (incremental == true)
 			{
 				if (Directory.Exists(folder) == false)
@@ -66,7 +66,7 @@ namespace Raven.Smuggler
 					var found = false;
 					while (found == false)
 					{
-						options.File = Path.Combine(folder, DateTime.Now.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".dump.inc");
+						options.File = Path.Combine(folder, DateTime.Now.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-incremental-dump");
 
 						if (File.Exists(options.File) == false)
 							found = true;
@@ -121,6 +121,8 @@ namespace Raven.Smuggler
 				jsonWriter.WriteEndObject();
 				streamWriter.Flush();
 			}
+			if (incremental != true) 
+				return;
 
 			using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
 			{
@@ -243,6 +245,7 @@ namespace Raven.Smuggler
 				Filters = options.Filters,
 				OperateOnTypes = options.OperateOnTypes & ~ItemType.Indexes
 			};
+
 			for (var i = 0; i < files.Length - 1; i++)
 			{
 				using (var fileStream = File.OpenRead(Path.Combine(options.File, files[i])))
