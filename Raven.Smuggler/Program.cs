@@ -110,7 +110,7 @@ namespace Raven.Smuggler
 				switch (action)
 				{
 					case SmugglerAction.Import:
-						smugglerApi.ImportData(options);
+						smugglerApi.ImportData(options, incremental);
 						break;
 					case SmugglerAction.Export:
 						smugglerApi.ExportData(options, incremental);
