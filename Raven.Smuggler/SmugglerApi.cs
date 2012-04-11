@@ -51,7 +51,7 @@ namespace Raven.Smuggler
 			var lastDocsEtag = Guid.Empty;
 			var lastAttachmentEtag = Guid.Empty;
 			var folder = options.File;
-			string etagFileLocation = Path.Combine(folder, "LastEtags.txt");
+			string etagFileLocation = Path.Combine(folder, "IncrementalExport.state.json");
 			if (incremental == true)
 			{
 				if (Directory.Exists(folder) == false)
@@ -77,12 +77,11 @@ namespace Raven.Smuggler
 				if (File.Exists(etagFileLocation))
 				{
 					using (var streamReader = new StreamReader(new FileStream(etagFileLocation, FileMode.Open)))
+					using(var jsonReader = new JsonTextReader(streamReader))
 					{
-						var jsonReader = new JsonTextReader(streamReader);
-
 						var ravenJObject = RavenJObject.Load(jsonReader);
-						lastDocsEtag = new Guid(ravenJObject["Last Doc"].ToString());
-						lastAttachmentEtag = new Guid(ravenJObject["Last Attachment"].ToString());
+						lastDocsEtag = new Guid(ravenJObject.Value<string>("LastDocEtag"));
+						lastAttachmentEtag = new Guid(ravenJObject.Value<string>("LastAttachmentEtag"));
 					}
 				}
 			}
@@ -126,15 +125,12 @@ namespace Raven.Smuggler
 
 			using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
 			{
-				JsonWriter jsonWriter = new JsonTextWriter(streamWriter);
-				jsonWriter.WriteStartObject();
-				jsonWriter.WritePropertyName("Last Doc");
-				jsonWriter.WriteValue(lastDocsEtag);
-				jsonWriter.WritePropertyName("Last Attachment");
-				jsonWriter.WriteValue(lastAttachmentEtag);
-				jsonWriter.WriteEndObject();
+				new RavenJObject
+				{
+					{"LastDocEtag", lastDocsEtag.ToString()},
+					{"LastAttachmentEtag", lastAttachmentEtag.ToString()}
+				}.WriteTo(new JsonTextWriter(streamWriter));
 				streamWriter.Flush();
-				streamWriter.Dispose();
 			}
 		}
 
