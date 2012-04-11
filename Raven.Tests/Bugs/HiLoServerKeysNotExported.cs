@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -40,12 +41,12 @@ namespace Raven.Tests.Bugs
 		{
 			IOExtensions.DeleteDirectory("HiLoData");
 			server = new RavenDbServer(new RavenConfiguration
-			                           	{
-			                           		Port = 8079,
-			                           		DataDirectory = "HiLoData",
-			                           		RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-			                           		AnonymousUserAccessMode = AnonymousUserAccessMode.All
-			                           	});
+										{
+											Port = 8079,
+											DataDirectory = "HiLoData",
+											RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+											AnonymousUserAccessMode = AnonymousUserAccessMode.All
+										});
 
 		}
 
@@ -54,15 +55,15 @@ namespace Raven.Tests.Bugs
 		{
 			using (var session = documentStore.OpenSession())
 			{
-				var foo = new Foo {Something = "something2"};
+				var foo = new Foo { Something = "something2" };
 				Assert.Null(foo.Id);
 				session.Store(foo);
 				Assert.NotNull(foo.Id);
 				session.SaveChanges();
 			}
 
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = "http://localhost:8079/"});
-			smugglerApi.ExportData(new SmugglerOptions {File = DumpFile});
+			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			smugglerApi.ExportData(new SmugglerOptions { File = DumpFile });
 			Assert.True(File.Exists(DumpFile));
 
 			using (var session = documentStore.OpenSession())
@@ -75,7 +76,7 @@ namespace Raven.Tests.Bugs
 			server.Dispose();
 			CreateServer();
 
-			smugglerApi.ImportData(new SmugglerOptions {File = DumpFile});
+			smugglerApi.ImportData(new SmugglerOptions { File = DumpFile });
 
 			using (var session = documentStore.OpenSession())
 			{
@@ -90,27 +91,27 @@ namespace Raven.Tests.Bugs
 		{
 			using (var session = documentStore.OpenSession())
 			{
-				session.Store(new Foo {Something = "something1"});
-				session.Store(new Foo {Something = "something2"});
+				session.Store(new Foo { Something = "something1" });
+				session.Store(new Foo { Something = "something2" });
 				session.SaveChanges();
 			}
 
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = "http://localhost:8079/"});
+			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
 			smugglerApi.ExportData(new SmugglerOptions
-			                       	{
-			                       		File = DumpFile,
-			                       		Filters =
+									{
+										File = DumpFile,
+										Filters =
 			                       			{
 			                       				{"Something", "something1"}
 			                       			}
-			                       	});
+									});
 			Assert.True(File.Exists(DumpFile));
 
 			server.Dispose();
 			CreateServer();
 
-			smugglerApi.ImportData(new SmugglerOptions {File = DumpFile});
-			
+			smugglerApi.ImportData(new SmugglerOptions { File = DumpFile });
+
 			using (var session = documentStore.OpenSession())
 			{
 				Assert.NotNull(session.Load<Foo>("foos/1"));
@@ -121,25 +122,243 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void Export_And_Import_Retains_Attachment_Metadata()
 		{
-			documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] {1, 2, 3}), new RavenJObject {{"Test", true}});
+			documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Test", true } });
 
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = "http://localhost:8079/"});
+			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
 			smugglerApi.ExportData(new SmugglerOptions
-			                       	{
-			                       		File = DumpFile,
-			                       		OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
-			                       	});
+									{
+										File = DumpFile,
+										OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
+									});
 
 			Assert.True(File.Exists(DumpFile));
 
 			server.Dispose();
 			CreateServer();
 
-			smugglerApi.ImportData(new SmugglerOptions {File = DumpFile});
+			smugglerApi.ImportData(new SmugglerOptions { File = DumpFile });
 
 			var attachment = documentStore.DatabaseCommands.GetAttachment("test");
-			Assert.Equal(new byte[] {1, 2, 3}, attachment.Data().ReadData());
+			Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
 			Assert.True(attachment.Metadata.Value<bool>("Test"));
+		}
+
+		[Fact]
+		public void Export_And_Import_Incremental_Attachments()
+		{
+			IOExtensions.DeleteDirectory("Incremental");
+
+			documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Test", true } });
+
+			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			smugglerApi.ExportData(new SmugglerOptions
+			{
+				File = "Incremental",
+				OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
+			}, incremental: true);
+
+			documentStore.DatabaseCommands.PutAttachment("test2", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Test2", true } });
+
+			smugglerApi.ExportData(new SmugglerOptions
+			{
+				File = "Incremental",
+				OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
+			}, incremental: true);
+
+			server.Dispose();
+			CreateServer();
+
+			smugglerApi.ImportData(new SmugglerOptions { File = "Incremental" }, incremental: true);
+
+			var attachment = documentStore.DatabaseCommands.GetAttachment("test");
+			Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+			Assert.True(attachment.Metadata.Value<bool>("Test"));
+
+			attachment = documentStore.DatabaseCommands.GetAttachment("test2");
+			Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+			Assert.True(attachment.Metadata.Value<bool>("Test2"));
+		}
+
+		[Fact]
+		public void Export_And_Import_Incremental_Indexes()
+		{
+			IOExtensions.DeleteDirectory("Incremental");
+
+			documentStore.DatabaseCommands.PutIndex("Index1", new IndexDefinition
+			{
+				Map = "from x in docs select new { x.Name, Count = 1}",
+			});
+
+			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			smugglerApi.ExportData(new SmugglerOptions
+			{
+				File = "Incremental",
+				OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
+			}, incremental: true);
+
+			documentStore.DatabaseCommands.PutIndex("Index2", new IndexDefinition
+			{
+				Map = "from x in docs select new { x.Title, Count = 1}",
+			});
+
+			smugglerApi.ExportData(new SmugglerOptions
+			{
+				File = "Incremental",
+				OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
+			}, incremental: true);
+
+			server.Dispose();
+			CreateServer();
+
+			smugglerApi.ImportData(new SmugglerOptions { File = "Incremental" }, incremental: true);
+
+			var index = documentStore.DatabaseCommands.GetIndex("Index1");
+			Assert.NotNull(index);
+
+			index = documentStore.DatabaseCommands.GetIndex("Index2");
+			Assert.NotNull(index);
+		}
+
+		[Fact]
+		public void Export_And_Import_Incremental_Indexes_delete()
+		{
+			IOExtensions.DeleteDirectory("Incremental");
+
+			documentStore.DatabaseCommands.PutIndex("Index1", new IndexDefinition
+			{
+				Map = "from x in docs select new { x.Name, Count = 1}",
+			});
+
+			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			smugglerApi.ExportData(new SmugglerOptions
+			{
+				File = "Incremental",
+				OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
+			}, incremental: true);
+
+			documentStore.DatabaseCommands.DeleteIndex("Index1");
+
+			smugglerApi.ExportData(new SmugglerOptions
+			{
+				File = "Incremental",
+				OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
+			}, incremental: true);
+
+			server.Dispose();
+			CreateServer();
+
+			smugglerApi.ImportData(new SmugglerOptions { File = "Incremental" }, incremental: true);
+
+			var index = documentStore.DatabaseCommands.GetIndex("Index1");
+			Assert.Null(index);
+		}
+
+		[Fact]
+		public void Export_Incremental_not_overwrites_Files()
+		{
+			IOExtensions.DeleteDirectory("Incremental");
+		
+			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			for (int i = 0; i < 50; i++)
+			{
+				smugglerApi.ExportData(new SmugglerOptions
+				{
+					File = "Incremental",
+					OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
+				}, incremental: true);
+			}
+
+			Assert.Equal(Directory.GetFiles("Incremental").Length, 51);//50 .dump.inc files and 1 LastEtags.txt
+		}
+
+		[Fact]
+		public void Export_And_Import_Incremental_Changed_Document()
+		{
+			IOExtensions.DeleteDirectory("Incremental");
+
+			using (var session = documentStore.OpenSession())
+			{
+				var foo = new Foo {Something = "Before Change", Id = "Test/1"};
+				session.Store(foo);
+				session.SaveChanges();
+			}
+
+			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = "http://localhost:8079/"});
+			smugglerApi.ExportData(new SmugglerOptions
+			{
+				File = "Incremental",
+				OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
+			}, incremental: true);
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<Foo>("Test/1");
+				doc.Something = "After Change";
+				session.SaveChanges();
+			}
+
+			smugglerApi.ExportData(new SmugglerOptions
+			{
+				File = "Incremental",
+				OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
+			}, incremental: true);
+
+			server.Dispose();
+			CreateServer();
+
+			smugglerApi.ImportData(new SmugglerOptions {File = "Incremental"}, incremental: true);
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<Foo>("Test/1");
+				Assert.Equal(doc.Something, "After Change");
+			}
+		}
+
+		[Fact]
+		public void Export_And_Import_Incremental_Documents()
+		{
+			IOExtensions.DeleteDirectory("Incremental");
+
+			using (var session = documentStore.OpenSession())
+			{
+				var foo = new Foo { Something = "Something1", Id = "Test/1" };
+				session.Store(foo);
+				session.SaveChanges();
+			}
+
+			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			smugglerApi.ExportData(new SmugglerOptions
+			{
+				File = "Incremental",
+				OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
+			}, incremental: true);
+
+			using (var session = documentStore.OpenSession())
+			{
+				var foo = new Foo { Something = "Something2", Id = "Test/2" };
+				session.Store(foo);
+				session.SaveChanges();
+			}
+
+			smugglerApi.ExportData(new SmugglerOptions
+			{
+				File = "Incremental",
+				OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Attachments
+			}, incremental: true);
+
+			server.Dispose();
+			CreateServer();
+
+			smugglerApi.ImportData(new SmugglerOptions { File = "Incremental" }, incremental: true);
+
+			using (var session = documentStore.OpenSession())
+			{
+				var doc = session.Load<Foo>("Test/1");
+				Assert.Equal(doc.Something, "Something1");
+				doc = session.Load<Foo>("Test/2");
+				Assert.Equal(doc.Something, "Something2");
+			}
 		}
 
 		public class Foo
