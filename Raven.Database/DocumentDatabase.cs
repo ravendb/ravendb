@@ -366,7 +366,7 @@ namespace Raven.Database
 			exceptionAggregator.ThrowIfNeeded();
 		}
 
-		public void StopBackgroundWokers()
+		public void StopBackgroundWorkers()
 		{
 			workContext.StopWork();
 			indexingBackgroundTask.Wait();
