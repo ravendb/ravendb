@@ -23,10 +23,31 @@ namespace Raven.Client.Shard
 		/// <param name="commands">The shard sessions.</param>
 		/// <param name="operation">The operation.</param>
 		/// <returns></returns>
-		public T[] Apply<T>(ICollection<IDatabaseCommands> commands, Func<IDatabaseCommands, int, T> operation) 
+		public T[] Apply<T>(IList<IDatabaseCommands> commands, ShardRequestData request, Func<IDatabaseCommands, int, T> operation)
 		{
-			return commands.Select(operation).ToArray();
+			var list = new List<T>();
+			for (int i = 0; i < commands.Count; i++)
+			{
+				try
+				{
+					list.Add(operation(commands[i], i));
+				}
+				catch (Exception e)
+				{
+					var error = OnError;
+					if (error == null)
+						throw;
+					if(error(commands[i], request, e) == false)
+					{
+						throw;
+					}
+				}
+			}
+
+			return list.ToArray();
 		}
+
+		public event ShardingErrorHandle OnError;
 	}
 }
 #endif
