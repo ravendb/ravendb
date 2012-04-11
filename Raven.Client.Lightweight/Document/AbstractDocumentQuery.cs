@@ -377,6 +377,8 @@ namespace Raven.Client.Document
 		public void WaitForNonStaleResults(TimeSpan waitTimeout)
 		{
 			theWaitForNonStaleResults = true;
+		    cutoffEtag = null;
+		    cutoff = null;
 			timeout = waitTimeout;
 		}
 
