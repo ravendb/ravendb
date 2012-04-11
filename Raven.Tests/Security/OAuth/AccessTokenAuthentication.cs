@@ -40,9 +40,10 @@ namespace Raven.Tests.Security.OAuth
 			// Do not create the default index "RavenDocumentsByEntityName".
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
 
 		public string GetAccessToken(RavenDbServer server, string user = "jsmith", string databases = "*", bool valid = true, bool expired = false)

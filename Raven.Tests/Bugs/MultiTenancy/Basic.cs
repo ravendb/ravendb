@@ -208,10 +208,11 @@ namespace Raven.Tests.Bugs.MultiTenancy
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			IOExtensions.DeleteDirectory("Data");
 			IOExtensions.DeleteDirectory("NHibernate");
+			base.Dispose();
 		}
 	}
 }

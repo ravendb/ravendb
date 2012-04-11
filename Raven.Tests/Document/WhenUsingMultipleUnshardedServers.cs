@@ -51,7 +51,7 @@ namespace Raven.Tests.Document
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			Thread.Sleep(100);
 
@@ -63,6 +63,7 @@ namespace Raven.Tests.Document
 				}
 				catch (Exception) { }
 			}
+			base.Dispose();
 		}
 	}
 }

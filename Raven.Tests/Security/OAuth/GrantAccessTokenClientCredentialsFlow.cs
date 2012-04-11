@@ -60,9 +60,10 @@ namespace Raven.Tests.Security.OAuth
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
 
 		public HttpWebRequest GetNewValidTokenRequest()
