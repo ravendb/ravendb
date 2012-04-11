@@ -132,7 +132,6 @@ namespace Raven.Client.Document
 			if (tag != null)
 			{
 				tag += IdentityPartsSeparator;
-				tag = tag.ToLowerInvariant();
 			}
 			if (converter != null)
 			{
