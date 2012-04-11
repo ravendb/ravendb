@@ -43,7 +43,7 @@ namespace Raven.Database.Json
 				switch (patchCmd.Type)
 				{
 					case PatchCommandType.Set:
-						SetProperty(patchCmd, patchCmd.Name, token as RavenJValue);
+						SetProperty(patchCmd, patchCmd.Name, token);
 						break;
 					case PatchCommandType.Unset:
 						RemoveProperty(patchCmd, patchCmd.Name, token, parent);
@@ -242,15 +242,10 @@ namespace Raven.Database.Json
 				o.Remove(propName);
 		}
 
-		private void SetProperty(PatchRequest patchCmd, string propName, RavenJValue property)
+		private void SetProperty(PatchRequest patchCmd, string propName, RavenJToken property)
 		{
 			EnsurePreviousValueMatchCurrentValue(patchCmd, property);
-			if (property == null)
-			{
-				document[propName] = patchCmd.Value;
-				return;
-			}
-			property.Value = ((RavenJValue) patchCmd.Value).Value;
+			document[propName] = patchCmd.Value;
 		}
 
 
