@@ -120,7 +120,6 @@ namespace Raven.Smuggler
 
 				jsonWriter.WriteEndObject();
 				streamWriter.Flush();
-				streamWriter.Dispose();
 			}
 
 			using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
