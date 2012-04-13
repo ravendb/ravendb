@@ -37,10 +37,25 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.StressTests", "Raven.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NuGet", "NuGet", "{081F76C1-F429-4E7D-9402-76B446EE29EA}"
 	ProjectSection(SolutionItems) = preProject
+		NuGet\RavenDB.AspNetHost.nuspec = NuGet\RavenDB.AspNetHost.nuspec
+		NuGet\RavenDB.Bundles.Authentication.nuspec = NuGet\RavenDB.Bundles.Authentication.nuspec
+		NuGet\RavenDB.Bundles.Authorization.nuspec = NuGet\RavenDB.Bundles.Authorization.nuspec
+		NuGet\RavenDB.Bundles.CascadeDelete.nuspec = NuGet\RavenDB.Bundles.CascadeDelete.nuspec
+		NuGet\RavenDB.Bundles.Expiration.nuspec = NuGet\RavenDB.Bundles.Expiration.nuspec
+		NuGet\RavenDB.Bundles.IndexReplication.nuspec = NuGet\RavenDB.Bundles.IndexReplication.nuspec
+		NuGet\RavenDB.Bundles.MoreLikeThis.nuspec = NuGet\RavenDB.Bundles.MoreLikeThis.nuspec
+		NuGet\RavenDB.Bundles.nuspec = NuGet\RavenDB.Bundles.nuspec
+		NuGet\RavenDB.Bundles.Quotas.nuspec = NuGet\RavenDB.Bundles.Quotas.nuspec
+		NuGet\RavenDB.Bundles.Replication.nuspec = NuGet\RavenDB.Bundles.Replication.nuspec
+		NuGet\RavenDB.Bundles.UniqueConstraints.nuspec = NuGet\RavenDB.Bundles.UniqueConstraints.nuspec
+		NuGet\RavenDB.Bundles.Versioning.nuspec = NuGet\RavenDB.Bundles.Versioning.nuspec
 		NuGet\RavenDB.Client.Debug.nuspec = NuGet\RavenDB.Client.Debug.nuspec
 		NuGet\RavenDB.Client.FSharp.nuspec = NuGet\RavenDB.Client.FSharp.nuspec
+		NuGet\RavenDB.Client.MoreLikeThis.nuspec = NuGet\RavenDB.Client.MoreLikeThis.nuspec
 		NuGet\RavenDB.Client.MvcIntegration.nuspec = NuGet\RavenDB.Client.MvcIntegration.nuspec
 		NuGet\RavenDB.Client.nuspec = NuGet\RavenDB.Client.nuspec
+		NuGet\RavenDB.Client.UniqueConstraints.nuspec = NuGet\RavenDB.Client.UniqueConstraints.nuspec
+		NuGet\RavenDB.Client.Versioning.nuspec = NuGet\RavenDB.Client.Versioning.nuspec
 		NuGet\RavenDB.Database.nuspec = NuGet\RavenDB.Database.nuspec
 		NuGet\RavenDB.Embedded.nuspec = NuGet\RavenDB.Embedded.nuspec
 	EndProjectSection
