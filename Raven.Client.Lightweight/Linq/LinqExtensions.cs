@@ -92,9 +92,9 @@ namespace Raven.Client.Linq
 				expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
 			}
 			var queryable =
-				self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof (T)), expression));
+				self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
 			return (IRavenQueryable<T>)queryable;
-	
+
 		}
 
 		/// <summary>
@@ -122,7 +122,7 @@ namespace Raven.Client.Linq
 		/// Suggest alternative values for the queried term
 		/// </summary>
 		public static SuggestionQueryResult Suggest(this IQueryable queryable, SuggestionQuery query)
-		{ 
+		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
 			return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);
@@ -192,13 +192,13 @@ namespace Raven.Client.Linq
 		{
 			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 			Expression expression = self.Expression;
-			if(expression.Type != typeof(IRavenQueryable<T>))
+			if (expression.Type != typeof(IRavenQueryable<T>))
 			{
-				expression = Expression.Convert(expression, typeof (IRavenQueryable<T>));
+				expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
 			}
-			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof (T)), expression,
-			                                                          fieldSelector, 
-																	  Expression.Constant(searchTerms), 
+			var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression,
+																	  fieldSelector,
+																	  Expression.Constant(searchTerms),
 																	  Expression.Constant(boost),
 																	  Expression.Constant(options)));
 			return (IRavenQueryable<T>)queryable;
@@ -234,7 +234,7 @@ namespace Raven.Client.Linq
 		public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> source)
 		{
 			var provider = source.Provider as IRavenQueryProvider;
-			if(provider == null)
+			if (provider == null)
 				throw new ArgumentException("You can only use Raven Queryable with ToListAsync");
 			var documentQuery = provider.ToAsyncLuceneQuery<T>(source.Expression);
 			provider.MoveAfterQueryExecuted(documentQuery);
@@ -250,14 +250,14 @@ namespace Raven.Client.Linq
 			var provider = source.Provider as IRavenQueryProvider;
 			if (provider == null)
 				throw new ArgumentException("You can only use Raven Queryable with CountAsync");
-			
+
 			var documentQuery = provider
 				.ToAsyncLuceneQuery<T>(source.Expression)
 				.Take(0);
 			provider.MoveAfterQueryExecuted(documentQuery);
 			return documentQuery.ToListAsync()
 				.ContinueWith(task => task.Result.Item1.TotalResults);
-		} 
+		}
 #endif
 
 		/// <summary>
@@ -344,7 +344,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Projects each element of a sequence into a new form.
 		/// </summary>
-		public static IRavenQueryable<TResult> Select<TSource, TResult>(this IRavenQueryable<TSource> source, Expression<Func<TSource,int, TResult>> selector)
+		public static IRavenQueryable<TResult> Select<TSource, TResult>(this IRavenQueryable<TSource> source, Expression<Func<TSource, int, TResult>> selector)
 		{
 			return (IRavenQueryable<TResult>)Queryable.Select(source, selector);
 		}
@@ -372,7 +372,7 @@ namespace Raven.Client.Linq
 		/// Summary:
 		public static IRavenQueryable<TSource> Skip<TSource>(this IRavenQueryable<TSource> source, int count)
 		{
-			return (IRavenQueryable<TSource>)Queryable.Skip(source,count);
+			return (IRavenQueryable<TSource>)Queryable.Skip(source, count);
 		}
 	}
 }

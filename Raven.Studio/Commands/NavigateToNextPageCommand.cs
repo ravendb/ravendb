@@ -10,7 +10,11 @@ namespace Raven.Studio.Commands
 		public NavigateToNextPageCommand(PagerModel pager)
 		{
 			this.pager = pager;
-			this.pager.PagerChanged += (sender, args) => RaiseCanExecuteChanged();
+			this.pager.PropertyChanged += (sender, args) =>
+			                              	{
+			                              		if (args.PropertyName == "HasNextPage")
+			                              			RaiseCanExecuteChanged();
+			                              	};
 		}
 
 		public override void Execute(object parameter)

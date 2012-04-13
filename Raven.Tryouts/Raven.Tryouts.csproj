@@ -115,10 +115,6 @@
       <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
       <Name>Raven.Storage.Managed</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.StressTests\Raven.StressTests.csproj">
-      <Project>{005A5143-4E38-424B-A2D1-25EF88DA05CB}</Project>
-      <Name>Raven.StressTests</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
       <Name>Raven.Tests</Name>

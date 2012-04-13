@@ -37,9 +37,9 @@ namespace Raven.Abstractions.Extensions
 
 			MemberExpression me = expression as MemberExpression;
 
-			if(me == null)
+			if (me == null)
 				throw new InvalidOperationException("No idea how to convert " + expr.Body.NodeType + ", " + expr.Body +
-				                                    " to a member expression");
+													" to a member expression");
 
 			var parts = new List<string>();
 			while (me != null)
