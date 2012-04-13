@@ -35,6 +35,8 @@ namespace Raven.Studio.Infrastructure
 			get { return value; }
 			set
 			{
+				if (ReferenceEquals(this.value, value))
+					return;
 				this.value = value;
 				OnPropertyChanged(() => Value);
 				var onActions = actions;

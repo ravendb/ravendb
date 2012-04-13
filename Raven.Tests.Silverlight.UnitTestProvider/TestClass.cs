@@ -47,6 +47,11 @@ namespace Raven.Tests.Silverlight.UnitTestProvider
 			methods[Methods.TestInitialize] = new LazyMethodInfo(type, ProviderAttributes.TestInitialize);
 		}
 
+		public string Namespace
+		{
+			get { return type.Namespace; }
+		}
+
 		public IAssembly Assembly { get; protected set; }
 
 		public Type Type

@@ -28,7 +28,7 @@ namespace Raven.Client.Connection
 	/// <summary>
 	/// Replication and failover management on the client side
 	/// </summary>
-	public class ReplicationInformer
+	public class ReplicationInformer : IDisposable
 	{
 		private readonly ILog log = LogProvider.GetCurrentClassLogger();
 
@@ -113,20 +113,17 @@ namespace Raven.Client.Connection
 			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
 
-			var taskCopy = refreshReplicationInformationTask;
-			if (taskCopy != null)
-				return taskCopy;
-
 			if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 				return new CompletedTask();
+
 			lock (replicationLock)
 			{
-				taskCopy = refreshReplicationInformationTask;
-				if (taskCopy != null)
-					return taskCopy;
-
 				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 					return new CompletedTask();
+
+				var taskCopy = refreshReplicationInformationTask;
+				if (taskCopy != null)
+					return taskCopy;
 
 				return refreshReplicationInformationTask = Task.Factory.StartNew(() => RefreshReplicationInformation(serverClient))
 					.ContinueWith(task =>
@@ -280,7 +277,6 @@ namespace Raven.Client.Connection
 
 			TrySavingReplicationInformationToLocalCache(serverHash, document);
 
-
 			var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
 			replicationDestinations = replicationDocument.Destinations.Select(x => x.Url)
 				// filter out replication destination that don't have the url setup, we don't know how to reach them
@@ -313,7 +309,6 @@ namespace Raven.Client.Connection
 					{
 						return stream.ToJObject().ToJsonDocument();
 					}
-
 				}
 			}
 			catch (Exception e)
@@ -323,15 +318,22 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private static void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
+		private void TrySavingReplicationInformationToLocalCache(string serverHash, JsonDocument document)
 		{
-			using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+			try
 			{
-				var path = "RavenDB Replication Information For - " + serverHash;
-				using (var stream = new IsolatedStorageFileStream(path, FileMode.Create, machineStoreForApplication))
+				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
 				{
-					document.ToJson().WriteTo(stream);
+					var path = "RavenDB Replication Information For - " + serverHash;
+					using (var stream = new IsolatedStorageFileStream(path, FileMode.Create, machineStoreForApplication))
+					{
+						document.ToJson().WriteTo(stream);
+					}
 				}
+			}
+			catch (Exception e)
+			{
+				log.ErrorException("Could not persist the replication information", e);
 			}
 		}
 
@@ -367,6 +369,15 @@ namespace Raven.Client.Connection
 		public int GetReadStripingBase()
 		{
 			return Interlocked.Increment(ref readStripingBase);
+		}
+
+		public void Dispose()
+		{
+#if !NET_3_5
+			var replicationInformationTaskCopy = refreshReplicationInformationTask;
+			if (replicationInformationTaskCopy != null)
+				replicationInformationTaskCopy.Wait();
+#endif
 		}
 	}
 

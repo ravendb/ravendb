@@ -59,6 +59,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.UniqueConstra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.UniqueConstraints", "Raven.Client.UniqueConstraints\Raven.Client.UniqueConstraints.csproj", "{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.StressTests", "..\Raven.StressTests\Raven.StressTests.csproj", "{005A5143-4E38-424B-A2D1-25EF88DA05CB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -329,6 +331,16 @@ Global
 		{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}.Release|x86.ActiveCfg = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{005A5143-4E38-424B-A2D1-25EF88DA05CB}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

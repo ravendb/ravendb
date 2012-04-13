@@ -4,6 +4,7 @@ using System.Windows;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
+using System.Linq;
 
 namespace Raven.Studio.Models
 {
@@ -66,10 +67,11 @@ namespace Raven.Studio.Models
 		}
 		string GetAssemblyVersion()
 		{
-			var assemblyName = new AssemblyName(Application.Current.GetType().Assembly.FullName);
-			var v = assemblyName.Version;
+			var firstOrDefault = (AssemblyFileVersionAttribute)typeof(ApplicationModel).Assembly.GetCustomAttributes(typeof(AssemblyFileVersionAttribute), true).FirstOrDefault();
+			if (firstOrDefault != null)
+				return firstOrDefault.Version;
 
-			return v == null ? string.Empty : v.ToString();
+			return "0.0.unknown.0";
 		}
 	}
 }

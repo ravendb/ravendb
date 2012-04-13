@@ -61,7 +61,7 @@ namespace Raven.Studio.Models
 			if (string.IsNullOrWhiteSpace(name))
 				HandleIndexNotFound(null);
 
-			Header = "Edit Index: " + Name;
+			Header = "Edit Index: " + name;
 			DatabaseCommands.GetIndexAsync(name)
 				.ContinueOnSuccessInTheUIThread(index1 =>
 				                   {

@@ -5,11 +5,14 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Globalization;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Xml;
 using NLog;
 using NLog.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using System.Linq;
 
 namespace Raven.StressTests
 {
@@ -28,7 +31,7 @@ namespace Raven.StressTests
 			var i = 0;
 			try
 			{
-				for (; i < iterations; i++)
+				for (; i < Math.Min(iterations, 1000); i++)
 				{
 					Console.Write("\r"+i);
 					RunTest(action, i);
@@ -67,6 +70,18 @@ namespace Raven.StressTests
 			var disposable = test as IDisposable;
 			if (disposable != null)
 				disposable.Dispose();
+
+			var activeTcpListeners = IPGlobalProperties
+				.GetIPGlobalProperties()
+				.GetActiveTcpListeners();
+
+			for (int j = 8000; j < 8079; j--)
+			{
+				if(activeTcpListeners.Any(x=>x.Port == j))
+				{
+					throw new InvalidOperationException("Port " + j + " is still busy after the test");
+				}
+			}
 		}
 
 		private static void SetupLogging()

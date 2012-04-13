@@ -13,12 +13,14 @@ namespace Raven.Tests.Bugs.Indexing
 		{
 			using(GetNewServer())
 			{
-				var documentStore = new DocumentStore
+				using (var documentStore = new DocumentStore
 				{
 					Url = "http://localhost:8079"
-				}.Initialize();
-				IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(SimpleIndex))), documentStore);
-				IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(SimpleIndex))), documentStore);
+				}.Initialize())
+				{
+					IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof (SimpleIndex))), documentStore);
+					IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof (SimpleIndex))), documentStore);
+				}
 			}
 		}
 

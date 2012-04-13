@@ -9,6 +9,7 @@ extern alias database;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
+using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Replication;
 using Raven.Client;
@@ -136,6 +137,7 @@ namespace Raven.Bundles.Tests.Replication
 
 		protected void SetupReplication(IDatabaseCommands source, params string[] urls)
 		{
+			Assert.NotEmpty(urls);
 			source.Put(replication::Raven.Bundles.Replication.ReplicationConstants.RavenReplicationDestinations,
 			           null, new RavenJObject
 			           {
@@ -174,7 +176,10 @@ namespace Raven.Bundles.Tests.Replication
 					break;
 				Thread.Sleep(100);
 			}
-			Assert.NotNull(commands.Head(expectedId));
+
+			var jsonDocumentMetadata = commands.Head(expectedId);
+			
+			Assert.NotNull(jsonDocumentMetadata);
 		}
 	}
 }
