@@ -78,7 +78,9 @@
     <Compile Include="Expiration\Expiration.cs" />
     <Compile Include="Expiration\WithCascade.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
+    <Compile Include="MoreLikeThis\MLT_can_use_map_reduce.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisTests.cs" />
+    <Compile Include="MoreLikeThis\TestWithInMemoryDatabase.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\Bugs\MultipleWritesInReplicationWindow.cs" />
     <Compile Include="Replication\Bugs\ReplicatingDanish.cs" />
