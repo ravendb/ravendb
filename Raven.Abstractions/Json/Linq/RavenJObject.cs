@@ -75,6 +75,15 @@ namespace Raven.Json.Linq
 			Properties = snapshot;
 		}
 
+		internal override bool DeepEquals(RavenJToken other)
+		{
+			var t = other as RavenJObject;
+			if (t == null)
+				return false;
+
+			return base.DeepEquals(other);
+		}
+
 		/// <summary>
 		/// Gets the <see cref="RavenJToken"/> with the specified key converted to the specified type.
 		/// </summary>

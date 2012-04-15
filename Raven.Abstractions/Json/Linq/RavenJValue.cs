@@ -366,7 +366,7 @@ namespace Raven.Json.Linq
 
 		private static bool ValuesEquals(RavenJValue v1, RavenJValue v2)
 		{
-			if(v1 == v2 )
+			if (v1 == v2)
 				return true;
 
 			// HACK: This prevents ValuesEquals from being commutative, need to find a more elegant fix
@@ -549,7 +549,12 @@ namespace Raven.Json.Linq
 		internal override bool DeepEquals(RavenJToken node)
 		{
 			var other = node as RavenJValue;
-			return other != null && ValuesEquals(this, other);
+			if (other == null)
+				return false;
+			if (other == this)
+				return true;
+
+			return ValuesEquals(this, other);
 		}
 
 		internal override int GetDeepHashCode()

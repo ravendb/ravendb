@@ -210,9 +210,16 @@ namespace Raven.Json.Linq
 			Items.RemoveAt(index);
 		}
 
-		public void Insert(int index, RavenJToken token)
+		/// <summary>
+		/// Inserts an item to the <see cref="T:System.Collections.Generic.IList`1"/> at the specified index.
+		/// </summary>
+		/// <param name="index">The zero-based index at which <paramref name="item"/> should be inserted.</param>
+		/// <param name="item">The object to insert into the <see cref="T:System.Collections.Generic.IList`1"/>.</param>
+		/// <exception cref="T:System.ArgumentOutOfRangeException">
+		/// <paramref name="index"/> is not a valid index in the <see cref="T:System.Collections.Generic.IList`1"/>.</exception>
+		public void Insert(int index, RavenJToken item)
 		{
-			Items.Insert(index, token);
+			Items.Insert(index, item);
 		}
 
 		public override IEnumerable<T> Values<T>()

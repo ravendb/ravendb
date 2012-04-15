@@ -172,6 +172,9 @@
     <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJPath.cs">
       <Link>Imports\Json\Linq\RavenJPath.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJsonConvert.cs">
+      <Link>Imports\Json\Linq\RavenJsonConvert.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJToken.cs">
       <Link>Imports\Json\Linq\RavenJToken.cs</Link>
     </Compile>
