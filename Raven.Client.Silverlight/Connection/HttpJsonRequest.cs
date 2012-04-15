@@ -59,16 +59,19 @@ namespace Raven.Client.Silverlight.Connection
 			else return WriteAsync(postedData);
 		}
 
+		private HttpJsonRequestFactory factory;
+
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
 		/// <value>The response headers.</value>
 		public IDictionary<string, IList<string>> ResponseHeaders { get; set; }
 
-		internal HttpJsonRequest(string url, string method, RavenJObject metadata, DocumentConvention conventions)
+		internal HttpJsonRequest(string url, string method, RavenJObject metadata, DocumentConvention conventions, HttpJsonRequestFactory factory)
 		{
 			this.url = url;
 			this.conventions = conventions;
+			this.factory = factory;
 			webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(url));
 
 			var tcs = new TaskCompletionSource<object>();
@@ -283,7 +286,7 @@ namespace Raven.Client.Silverlight.Connection
 			                                webRequest.GetRequestStreamAsync()
 			                                	.ContinueWith(task =>
 			                                	{
-			                                		var dataStream = new GZipStream(task.Result, CompressionMode.Compress);
+			                                		Stream dataStream = factory.DisableRequestCompress == false ? new GZipStream(task.Result, CompressionMode.Compress) : task.Result;
 			                                		var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
 			                                		return streamWriter.WriteAsync(data)
 			                                			.ContinueWith(writeTask =>
