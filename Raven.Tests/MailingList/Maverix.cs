@@ -27,7 +27,7 @@ namespace Raven.Tests.MailingList
 				{
 					var stored = session.Load<Simple>(1);
 					Assert.NotNull(stored);
-					Assert.Equal(stored.Id, "simples/1");
+					Assert.Equal("simples/1", stored.Id);
 				}
 			}
 		}
@@ -49,7 +49,7 @@ namespace Raven.Tests.MailingList
 				{
 					var stored = session.Load<Simple>("simples/1");
 					Assert.NotNull(stored);
-					Assert.Equal(stored.Id, "simples/1");
+					Assert.Equal("simples/1", stored.Id);
 				}
 			}
 		}
@@ -71,7 +71,7 @@ namespace Raven.Tests.MailingList
 				{
 					var stored = session.Load<ComplexClass>(1);
 					Assert.NotNull(stored);
-					Assert.Equal(stored.Id, "ComplexClasses/1");
+					Assert.Equal("ComplexClasses/1", stored.Id);
 				}
 			}
 		}
@@ -94,7 +94,7 @@ namespace Raven.Tests.MailingList
 					var stored =
 						session.Load<ComplexClass>("ComplexClasses/1");
 					Assert.NotNull(stored);
-					Assert.Equal(stored.Id, "ComplexClasses/1");
+					Assert.Equal("ComplexClasses/1", stored.Id);
 				}
 			}
 		}
