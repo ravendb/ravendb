@@ -104,6 +104,7 @@ namespace Raven.Server
 				}},
 				{"config=", "The config {0:file} to use", path => ravenConfiguration.LoadFrom(path)},
 				{"install", "Installs the RavenDB service", key => actionToTake= () => AdminRequired(InstallAndStart, key)},
+				{"service-name=", "The {0:service name} to use when installing or uninstalling the service, default to RavenDB", name => ProjectInstaller.SERVICE_NAME = name},
 				{"uninstall", "Uninstalls the RavenDB service", key => actionToTake= () => AdminRequired(EnsureStoppedAndUninstall, key)},
 				{"start", "Starts the RavenDB servce", key => actionToTake= () => AdminRequired(StartService, key)},
 				{"restart", "Restarts the RavenDB service", key => actionToTake= () => AdminRequired(RestartService, key)},
