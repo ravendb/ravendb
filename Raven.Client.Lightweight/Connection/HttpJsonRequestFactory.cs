@@ -130,7 +130,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Determine whether to use compression or not 
 		/// </summary>
-		public bool DisableRequestCompress { get; set; }
+		public bool DisableRequestCompression { get; set; }
 
 		/// <summary>
 		/// default ctor

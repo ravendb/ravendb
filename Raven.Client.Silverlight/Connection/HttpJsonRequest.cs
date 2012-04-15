@@ -82,7 +82,8 @@ namespace Raven.Client.Silverlight.Connection
 			webRequest.Method = method;
 			if (method != "GET")
 				webRequest.ContentType = "application/json; charset=utf-8";
-			if( method == "POST" || method == "PUT")
+			if( (method == "POST" || method == "PUT") && 
+				factory.DisableRequestCompression == false)
 				webRequest.Headers["Content-Encoding"] = "gzip";
 		}
 
@@ -286,7 +287,9 @@ namespace Raven.Client.Silverlight.Connection
 			                                webRequest.GetRequestStreamAsync()
 			                                	.ContinueWith(task =>
 			                                	{
-			                                		Stream dataStream = factory.DisableRequestCompress == false ? new GZipStream(task.Result, CompressionMode.Compress) : task.Result;
+			                                		Stream dataStream = factory.DisableRequestCompression == false ? 
+														new GZipStream(task.Result, CompressionMode.Compress) :
+														task.Result;
 			                                		var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
 			                                		return streamWriter.WriteAsync(data)
 			                                			.ContinueWith(writeTask =>
