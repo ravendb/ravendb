@@ -36,23 +36,9 @@ namespace Raven.Bundles.MoreLikeThis
 
 		public override void Respond(IHttpContext context)
 		{
-			var match = urlMatcher.Match(context.GetRequestUrl());
-			var indexName = match.Groups[1].Value;
+			string indexName;
+			MoreLikeThisQueryParameters parameters = MoreLikeThisQueryParameters.GetParametersFromUrl(out indexName, context.GetRequestUrl(), context.Request.QueryString, this.urlMatcher);
 
-			var parameters = new MoreLikeThisQueryParameters
-								 {
-									 DocumentId = match.Groups[2].Value,
-									 Fields = context.Request.QueryString.GetValues("fields"),
-                                     Boost = context.Request.QueryString.Get("boost").ToNullableBool(),
-                                     MaximumNumberOfTokensParsed = context.Request.QueryString.Get("maxNumTokens").ToNullableInt(),
-                                     MaximumQueryTerms = context.Request.QueryString.Get("maxQueryTerms").ToNullableInt(),
-									 MaximumWordLength = context.Request.QueryString.Get("maxWordLen").ToNullableInt(),
-									 MinimumDocumentFrequency = context.Request.QueryString.Get("minDocFreq").ToNullableInt(),
-									 MinimumTermFrequency = context.Request.QueryString.Get("minTermFreq").ToNullableInt(),
-									 MinimumWordLength = context.Request.QueryString.Get("minWordLen").ToNullableInt(),
-                                     StopWordsDocumentId = context.Request.QueryString.Get("stopWords"),
-		                         };
-            
 			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
 			if (indexDefinition == null)
 			{

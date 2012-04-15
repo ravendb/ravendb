@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Collections.Specialized;
+using System.Text;
+using System.Text.RegularExpressions;
+
 #if CLIENT
 namespace Raven.Client.MoreLikeThis
 #else
@@ -58,11 +62,70 @@ namespace Raven.Bundles.MoreLikeThis
 		/// <summary>
 		/// The fields to compare
 		/// </summary>
-    	public string[] Fields { get; set; }
+		public string[] Fields { get; set; }
 
 		/// <summary>
 		/// The document id to use as the base for comparison
 		/// </summary>
-    	public string DocumentId { get; set; }
-    }
+		public string DocumentId { get; set; }
+
+		public string GetRequestUri(string index)
+		{
+			var uri = new StringBuilder();
+			uri.AppendFormat("/morelikethis/{0}/{1}?", Uri.EscapeUriString(index), Uri.EscapeUriString(DocumentId));
+			if (Fields != null)
+			{
+				foreach (var field in Fields)
+				{
+					uri.AppendFormat("fields={0}&", field);
+				}
+			}
+			if (Boost != null && Boost != DefaultBoost)
+				uri.Append("boost=true&");
+			if (MaximumQueryTerms != null &&
+				MaximumQueryTerms != DefaultMaximumQueryTerms)
+				uri.AppendFormat("maxQueryTerms={0}&", MaximumQueryTerms);
+			if (MaximumNumberOfTokensParsed != null &&
+				MaximumNumberOfTokensParsed != DefaultMaximumNumberOfTokensParsed)
+				uri.AppendFormat("maxNumTokens={0}&", MaximumNumberOfTokensParsed);
+			if (MaximumWordLength != null &&
+				MaximumWordLength != DefaultMaximumWordLength)
+				uri.AppendFormat("maxWordLen={0}&", MaximumWordLength);
+			if (MinimumDocumentFrequency != null &&
+				MinimumDocumentFrequency != DefaltMinimumDocumentFrequency)
+				uri.AppendFormat("minDocFreq={0}&", MinimumDocumentFrequency);
+			if (MinimumTermFrequency != null &&
+				MinimumTermFrequency != DefaultMinimumTermFrequency)
+				uri.AppendFormat("minTermFreq={0}&", MinimumTermFrequency);
+			if (MinimumWordLength != null &&
+				MinimumWordLength != DefaultMinimumWordLength)
+				uri.AppendFormat("minWordLen={0}&", MinimumWordLength);
+			if (StopWordsDocumentId != null)
+				uri.AppendFormat("stopWords={0}&", StopWordsDocumentId);
+			return uri.ToString();
+		}
+		
+#if !CLIENT
+		public static MoreLikeThisQueryParameters GetParametersFromUrl(out string indexName, string requestUrl, NameValueCollection querystringParameters, Regex urlMatcher)
+		{
+			var match = urlMatcher.Match(requestUrl);
+
+			indexName = match.Groups[1].Value;
+
+			return new MoreLikeThisQueryParameters
+			{
+				DocumentId = match.Groups[2].Value,
+				Fields = querystringParameters.GetValues("fields"),
+				Boost = querystringParameters.Get("boost").ToNullableBool(),
+				MaximumNumberOfTokensParsed = querystringParameters.Get("maxNumTokens").ToNullableInt(),
+				MaximumQueryTerms = querystringParameters.Get("maxQueryTerms").ToNullableInt(),
+				MaximumWordLength = querystringParameters.Get("maxWordLen").ToNullableInt(),
+				MinimumDocumentFrequency = querystringParameters.Get("minDocFreq").ToNullableInt(),
+				MinimumTermFrequency = querystringParameters.Get("minTermFreq").ToNullableInt(),
+				MinimumWordLength = querystringParameters.Get("minWordLen").ToNullableInt(),
+				StopWordsDocumentId = querystringParameters.Get("stopWords"),
+			};
+		}
+#endif
+	}
 }
