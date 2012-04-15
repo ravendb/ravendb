@@ -632,7 +632,6 @@ namespace Raven.Client.Connection
 			}
 		}
 
-
 		public RavenJToken ReadResponseJson()
 		{
 			return RavenJToken.Parse(ReadResponseString());
