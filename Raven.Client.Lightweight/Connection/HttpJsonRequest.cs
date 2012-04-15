@@ -73,7 +73,7 @@ namespace Raven.Client.Connection
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
 			webRequest.Method = method;
-			if (method == "POST" || method == "PUT" || method == "PATCH")
+			if ((method == "POST" || method == "PUT" || method == "PATCH") && this.factory.DisableRequestCompress == false)
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
 			WriteMetadata(metadata);
@@ -258,7 +258,7 @@ namespace Raven.Client.Connection
 			{
 				HttpRequestHelper.WriteDataToRequest(newWebRequest, postedData);
 			}
-			if (postedStream != null)
+			if (postedStream != null && factory.DisableRequestCompress == false)
 			{
 				postedStream.Position = 0;
 				using (var stream = newWebRequest.GetRequestStream())
