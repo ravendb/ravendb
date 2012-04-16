@@ -141,29 +141,34 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekLE) == false)
 				return Enumerable.Empty<MappedResultInfo>();
 
-	    	var optimizer = new OptimizedIndexReader(Session, MappedResults, take);
+			var results = new Dictionary<string, MappedResultInfo>();
 	        while (
-				optimizer.Count < take && 
+				results.Count < take && 
 				Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex) == indexName)
 	        {
-				
-				optimizer.Add();
+	        	var mappedResultInfo = new MappedResultInfo
+	        	{
+	        		ReduceKey =
+	        			Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]),
+	        		Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
+	        		Timestamp =
+	        			Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).
+	        			Value,
+	        		Data = loadData
+	        		       	? Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]).
+	        		       	  	ToJObject()
+	        		       	: null,
+	        	};
 
-				// the index is view ascending and etag descending
+	        	results[mappedResultInfo.ReduceKey] = mappedResultInfo;
+
+	        	// the index is view ascending and etag descending
 				// that means that we are going backward to go up
 				if (Api.TryMovePrevious(session, MappedResults) == false)
 					break;
 	        }
 
-	    	return optimizer.Select(() => new MappedResultInfo
-	    	{
-	    		ReduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]),
-	    		Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
-	    		Timestamp = Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).Value,
-	    		Data = loadData
-					? Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]).ToJObject()
-					: null,
-	    	});
+	    	return results.Values;
 	    }
 	}
 }
