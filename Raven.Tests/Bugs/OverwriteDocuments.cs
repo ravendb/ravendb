@@ -92,7 +92,6 @@ namespace Raven.Tests.Bugs
 		{
 			if (documentStore != null)
 				documentStore.Dispose();
-			Thread.Sleep(100);
 			IOExtensions.DeleteDirectory("HiLoData");
 		}
 	}
