@@ -40,16 +40,30 @@ namespace Raven.Database.Indexing
 				try
 				{
 					foundWork = ExecuteIndexing();
-					while(context.DoWork) // we want to drain all of the pending tasks before the next run
+					while (context.DoWork) // we want to drain all of the pending tasks before the next run
 					{
 						if (ExecuteTasks() == false)
 							break;
 						foundWork = true;
 					}
-					
+
+				}
+				catch (OutOfMemoryException oome)
+				{
+					foundWork = true; // otherwise, we wouldn't be getting OOME
+					log.WarnException(
+						@"Failed to execute indexing because of an out of memory exception. Will force a full GC cycle and then become more conservative with regards to memory",
+						oome);
+
+					// On the face of it, this is stupid, because OOME will not be thrown if the GC could release
+					// memory, but we are actually aware that during indexing, the GC couldn't find garbage to clean,
+					// but in here, we are AFTER the index was done, so there is likely to be a lot of garbage.
+					GC.Collect(GC.MaxGeneration);
+					autoTuner.OutOfMemoryExceptionHappened();
 				}
 				catch (Exception e)
 				{
+					foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
 					log.ErrorException("Failed to execute indexing", e);
 				}
 				if (foundWork == false)
@@ -127,7 +141,7 @@ namespace Raven.Database.Indexing
 				return false;
 
 			ExecuteIndxingWork(indexesToWorkOn);
-			
+
 			return true;
 		}
 
