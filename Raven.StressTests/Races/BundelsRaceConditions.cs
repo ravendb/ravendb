@@ -46,7 +46,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void SimpleReplication()
 		{
-			Run<SimpleReplication>(x => x.Can_replicate_between_two_instances(), 10000);
+			Run<SimpleReplication>(x => x.Can_replicate_between_two_instances(), 1100);
 		}
 	}
 }
