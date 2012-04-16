@@ -8,6 +8,7 @@ using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Tests.Bugs;
 using Xunit;
+using Raven.Abstractions;
 
 namespace Raven.Tests.MultiGet
 {
@@ -38,7 +39,7 @@ namespace Raven.Tests.MultiGet
 				var profilingInformation = store.GetProfilingInformationFor(id);
 				Assert.Equal(1, profilingInformation.Requests.Count);
 
-				var responses = JsonConvert.DeserializeObject<GetResponse[]>(profilingInformation.Requests[0].Result);
+				var responses = JsonConvert.DeserializeObject<GetResponse[]>(profilingInformation.Requests[0].Result, Default.Converters);
 				Assert.Equal(3, responses.Length);
 				foreach (var response in responses)
 				{
@@ -66,11 +67,11 @@ namespace Raven.Tests.MultiGet
 				using (var session = store.OpenSession())
 				{
 					session.Query<User>().Where(x => x.Name == "oren")
-						.Customize(x=>x.WaitForNonStaleResults())
+						.Customize(x => x.WaitForNonStaleResults())
 						.ToArray();
 				}
 				Guid id;
-				
+
 				using (var session = store.OpenSession())
 				{
 					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
@@ -82,12 +83,12 @@ namespace Raven.Tests.MultiGet
 				var profilingInformation = store.GetProfilingInformationFor(id);
 				Assert.Equal(1, profilingInformation.Requests.Count);
 
-				var responses = JsonConvert.DeserializeObject<GetResponse[]>(profilingInformation.Requests[0].Result);
+				var responses = JsonConvert.DeserializeObject<GetResponse[]>(profilingInformation.Requests[0].Result, Default.Converters);
 				Assert.Equal(304, responses[0].Status);
-				Assert.Contains("oren", responses[0].Result);
+				Assert.Contains("oren", responses[0].Result.ToString());
 
 				Assert.Equal(200, responses[1].Status);
-				Assert.Contains("ayende", responses[1].Result);
+				Assert.Contains("ayende", responses[1].Result.ToString());
 			}
 		}
 
@@ -124,12 +125,12 @@ namespace Raven.Tests.MultiGet
 				var profilingInformation = store.GetProfilingInformationFor(id);
 				Assert.Equal(1, profilingInformation.Requests.Count);
 
-				var responses = JsonConvert.DeserializeObject<GetResponse[]>(profilingInformation.Requests[0].Result);
+				var responses = JsonConvert.DeserializeObject<GetResponse[]>(profilingInformation.Requests[0].Result, Default.Converters);
 				Assert.Equal(304, responses[0].Status);
-				Assert.Contains("oren", responses[0].Result);
+				Assert.Contains("oren", responses[0].Result.ToString());
 
 				Assert.Equal(304, responses[1].Status);
-				Assert.Contains("ayende", responses[1].Result);
+				Assert.Contains("ayende", responses[1].Result.ToString());
 			}
 		}
 
@@ -173,12 +174,12 @@ namespace Raven.Tests.MultiGet
 				var profilingInformation = store.GetProfilingInformationFor(id);
 				Assert.Equal(1, profilingInformation.Requests.Count);
 
-				var responses = JsonConvert.DeserializeObject<GetResponse[]>(profilingInformation.Requests[0].Result);
+				var responses = JsonConvert.DeserializeObject<GetResponse[]>(profilingInformation.Requests[0].Result, Default.Converters);
 				Assert.Equal(0, responses[0].Status);
-				Assert.Contains("oren", responses[0].Result);
+				Assert.Contains("oren", responses[0].Result.ToString());
 
 				Assert.Equal(200, responses[1].Status);
-				Assert.Contains("ayende", responses[1].Result);
+				Assert.Contains("ayende", responses[1].Result.ToString());
 			}
 		}
 
@@ -222,12 +223,12 @@ namespace Raven.Tests.MultiGet
 				var profilingInformation = store.GetProfilingInformationFor(id);
 				Assert.Equal(1, profilingInformation.Requests.Count);
 
-				var responses = JsonConvert.DeserializeObject<GetResponse[]>(profilingInformation.Requests[0].Result);
+				var responses = JsonConvert.DeserializeObject<GetResponse[]>(profilingInformation.Requests[0].Result, Default.Converters);
 				Assert.Equal(0, responses[0].Status);
-				Assert.Contains("oren", responses[0].Result);
+				Assert.Contains("oren", responses[0].Result.ToString());
 
 				Assert.Equal(0, responses[1].Status);
-				Assert.Contains("ayende", responses[1].Result);
+				Assert.Contains("ayende", responses[1].Result.ToString());
 			}
 		}
 
@@ -258,9 +259,9 @@ namespace Raven.Tests.MultiGet
 				var profilingInformation = store.GetProfilingInformationFor(id);
 				Assert.Equal(1, profilingInformation.Requests.Count);
 
-				var responses = JsonConvert.DeserializeObject<GetResponse[]>(profilingInformation.Requests[0].Result);
+				var responses = JsonConvert.DeserializeObject<GetResponse[]>(profilingInformation.Requests[0].Result, Default.Converters);
 				Assert.Equal(500, responses[0].Status);
-				Assert.Contains("The field 'Not' is not indexed, cannot query on fields that are not indexed", responses[0].Result);
+				Assert.Contains("The field 'Not' is not indexed, cannot query on fields that are not indexed", responses[0].Result.ToString());
 			}
 		}
 	}

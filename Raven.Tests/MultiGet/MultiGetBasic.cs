@@ -7,6 +7,7 @@ using Raven.Client.Document;
 using Raven.Tests.Bugs;
 using Xunit;
 using System.Linq;
+using Raven.Abstractions;
 
 namespace Raven.Tests.MultiGet
 {
@@ -147,7 +148,7 @@ namespace Raven.Tests.MultiGet
 				using (var stream = resp.GetResponseStream())
 				{
 					var result = new StreamReader(stream).ReadToEnd();
-					results = JsonConvert.DeserializeObject<GetResponse[]>(result);
+					results = JsonConvert.DeserializeObject<GetResponse[]>(result, Default.Converters);
 					Assert.True(results[0].Headers.ContainsKey("ETag"));
 					Assert.True(results[1].Headers.ContainsKey("ETag"));
 				}
@@ -184,7 +185,7 @@ namespace Raven.Tests.MultiGet
 				using (var stream = resp.GetResponseStream())
 				{
 					var result = new StreamReader(stream).ReadToEnd();
-					results = JsonConvert.DeserializeObject<GetResponse[]>(result);
+					results = JsonConvert.DeserializeObject<GetResponse[]>(result, Default.Converters);
 					Assert.Equal(304, results[0].Status);
 					Assert.Equal(304, results[1].Status);
 				}

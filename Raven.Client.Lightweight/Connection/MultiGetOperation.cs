@@ -99,7 +99,7 @@ namespace Raven.Client.Connection
 					{
 						responses[i].Headers[header] = cachedData[i].Headers[header];
 					}
-					responses[i].Result = cachedData[i].Data;
+					responses[i].Result = cachedData[i].Data.CloneToken();
 					jsonRequestFactory.IncrementCachedRequests();
 				}
 				else

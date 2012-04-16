@@ -10,8 +10,8 @@ namespace Raven.Abstractions.Json
 	{
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
-			if (value is RavenJObject)
-				((RavenJObject)value).WriteTo(writer);
+			if (value is RavenJToken)
+				((RavenJToken)value).WriteTo(writer);
 #if !NET_3_5
 			else if(value is DynamicNullObject)
 				writer.WriteNull();
@@ -32,7 +32,7 @@ namespace Raven.Abstractions.Json
 
 		public override bool CanConvert(Type objectType)
 		{
-			return objectType == typeof(RavenJObject)
+			return objectType == typeof(RavenJToken) || objectType.IsSubclassOf(typeof(RavenJToken))
 #if !NET_3_5
 				|| objectType == typeof(DynamicJsonObject) || objectType == typeof(DynamicNullObject)
 #endif

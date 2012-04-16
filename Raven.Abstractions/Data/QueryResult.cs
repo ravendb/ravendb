@@ -102,8 +102,8 @@ namespace Raven.Abstractions.Data
 		{
 			return new QueryResult
 			{
-				Results = new List<RavenJObject>(Results.Select(x => x.CreateSnapshot())),
-				Includes = new List<RavenJObject>(Includes.Select(x => x.CreateSnapshot())),
+				Results = new List<RavenJObject>(Results.Select(x => (RavenJObject)x.CreateSnapshot())),
+				Includes = new List<RavenJObject>(Includes.Select(x => (RavenJObject)x.CreateSnapshot())),
 				IndexEtag = IndexEtag,
 				IndexName = IndexName,
 				IndexTimestamp = IndexTimestamp,
