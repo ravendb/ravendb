@@ -57,16 +57,17 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
             using (var session = documentStore.OpenSession())
             {
-                var person = new Thing()
-                {
-                    Name = "Cousin of Dolan"
-                };
+                var person = new Thing() { Name = "Cousin of Dolan" };
+
                 session.Store(person);
+                session.Store(new Thing() { Name = "Gooby, Pls" });
+                session.Store(new Thing() { Name = "Dafi" });
+
                 session.SaveChanges();
 
                 var results = session.Query<IndexDocument, MapReduceIndex>().Customize(x => x.WaitForNonStaleResults()).Count();
 
-                Assert.Equal(results, 2);
+                Assert.Equal(4, results);
 
                 Assert.Empty(documentStore.DatabaseCommands.GetStatistics().Errors);
             }
@@ -80,7 +81,8 @@ namespace Raven.Bundles.Tests.MoreLikeThis
                         {
                             {"TargetId", DolanId}
                         },
-                        MinimumDocumentFrequency = 1
+                        MinimumTermFrequency = 1,
+                        MinimumDocumentFrequency = 1,
                     });
 
                 Assert.Equal(1, list.Count());
@@ -136,7 +138,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
                                            select new IndexDocument()
                                            {
                                                TargetId = g.Key,
-                                               Text = string.Join(" ", g.Select(d => d.Text).ToArray<string>())
+                                               Text = string.Join(" ", g.Select(d => (string)d.Text).ToArray<string>())
                                            };
 
 
