@@ -28,7 +28,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void SimpleLogin()
 		{
-			Run<SimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists());
+			Run<SimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 500);
 		}
 
 		[Fact]
