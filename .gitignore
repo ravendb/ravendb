@@ -38,3 +38,5 @@ ClientBin/
 StyleCop.Cache
 *.dotCover
 RavenDB*.nupkg
+*.*crunch*
+Testresults
