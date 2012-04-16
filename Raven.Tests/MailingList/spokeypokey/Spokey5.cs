@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Xunit;
@@ -129,6 +130,18 @@ namespace Raven.Tests.MailingList.spokeypokey
 					var result = session.Query<ProviderAndTaxonomyCodeIndex1.ProviderTestDto, ProviderAndTaxonomyCodeIndex1>()
 						.Customize(x => x.WaitForNonStaleResults())
 						.FirstOrDefault(p => p.Name == provider1.Name);
+
+					var serverErrors = store.DatabaseCommands.GetStatistics().Errors;
+					try
+					{
+						Assert.Empty(serverErrors);
+						serverErrors.ForEach(error => Console.WriteLine(error.Error));
+					}
+					catch (Exception)
+					{
+						Console.WriteLine(serverErrors);
+						throw;
+					}
 
 					Assert.NotNull(result);
 					Assert.Equal(provider1.Name, result.Name);
