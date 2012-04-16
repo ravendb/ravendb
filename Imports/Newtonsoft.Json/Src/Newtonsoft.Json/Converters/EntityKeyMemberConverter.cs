@@ -25,11 +25,11 @@
 
 #if !PocketPC && !SILVERLIGHT && !NET20 && !NETFX_CORE
 using System;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 using System.Globalization;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Newtonsoft.Json.Converters
+namespace Raven.Imports.Newtonsoft.Json.Converters
 {
   internal interface IEntityKeyMember
   {

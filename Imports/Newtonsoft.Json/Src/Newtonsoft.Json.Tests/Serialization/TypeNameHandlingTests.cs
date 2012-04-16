@@ -28,9 +28,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.Serialization.Formatters;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using Newtonsoft.Json.Tests.TestObjects;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -38,12 +38,12 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Net;
 using System.Runtime.Serialization;
 using System.IO;
 
-namespace Newtonsoft.Json.Tests.Serialization
+namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
 {
   [TestFixture]
   public class TypeNameHandlingTests : TestFixtureBase
@@ -521,7 +521,7 @@ namespace Newtonsoft.Json.Tests.Serialization
     [Test]
     public void SerializeUsingCustomBinder()
     {
-      TypeNameSerializationBinder binder = new TypeNameSerializationBinder("Newtonsoft.Json.Tests.Serialization.{0}, Newtonsoft.Json.Tests");
+      TypeNameSerializationBinder binder = new TypeNameSerializationBinder("Newtonsoft.Json.Tests.Serialization.{0}, Raven.Imports.Newtonsoft.Json.Tests");
 
       IList<object> values = new List<object>
         {
@@ -573,7 +573,7 @@ namespace Newtonsoft.Json.Tests.Serialization
       IList<object> newValues = JsonConvert.DeserializeObject<IList<object>>(json, new JsonSerializerSettings
         {
           TypeNameHandling = TypeNameHandling.Auto,
-          Binder = new TypeNameSerializationBinder("Newtonsoft.Json.Tests.Serialization.{0}, Newtonsoft.Json.Tests")
+          Binder = new TypeNameSerializationBinder("Newtonsoft.Json.Tests.Serialization.{0}, Raven.Imports.Newtonsoft.Json.Tests")
         });
 
       CustomAssert.IsInstanceOfType(typeof(Customer), newValues[0]);
@@ -702,7 +702,7 @@ namespace Newtonsoft.Json.Tests.Serialization
       // {
       //   "Address": "http://www.google.com",
       //   "Body": {
-      //     "$type": "Newtonsoft.Json.Tests.Serialization.SearchDetails, Newtonsoft.Json.Tests",
+      //     "$type": "Newtonsoft.Json.Tests.Serialization.SearchDetails, Raven.Imports.Newtonsoft.Json.Tests",
       //     "Query": "Json.NET",
       //     "Language": "en-us"
       //   }

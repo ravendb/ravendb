@@ -26,15 +26,15 @@
 using System;
 using System.Collections.Generic;
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 using System.Globalization;
-using Newtonsoft.Json.Utilities;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
-namespace Newtonsoft.Json.Schema
+namespace Raven.Imports.Newtonsoft.Json.Schema
 {
   internal class JsonSchemaBuilder
   {

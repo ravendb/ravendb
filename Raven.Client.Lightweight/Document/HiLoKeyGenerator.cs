@@ -10,7 +10,7 @@ using System.Transactions;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 #endif
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;

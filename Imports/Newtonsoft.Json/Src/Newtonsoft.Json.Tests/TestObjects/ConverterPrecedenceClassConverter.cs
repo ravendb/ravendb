@@ -25,10 +25,10 @@
 
 using System;
 using System.Globalization;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Newtonsoft.Json.Tests.TestObjects
+namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
   public abstract class ConverterPrecedenceClassConverter : JsonConverter
   {

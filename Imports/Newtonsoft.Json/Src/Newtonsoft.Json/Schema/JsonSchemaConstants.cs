@@ -25,7 +25,7 @@
 
 using System.Collections.Generic;
 
-namespace Newtonsoft.Json.Schema
+namespace Raven.Imports.Newtonsoft.Json.Schema
 {
   internal static class JsonSchemaConstants
   {

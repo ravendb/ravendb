@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;

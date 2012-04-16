@@ -33,18 +33,18 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Newtonsoft.Json.Bson;
+using Raven.Imports.Newtonsoft.Json.Bson;
 using System.IO;
-using Newtonsoft.Json.Utilities;
-using Newtonsoft.Json.Tests.TestObjects;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
 using System.Globalization;
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 
-namespace Newtonsoft.Json.Tests.Bson
+namespace Raven.Imports.Newtonsoft.Json.Tests.Bson
 {
   [TestFixture]
   public class BsonWriterTests : TestFixtureBase

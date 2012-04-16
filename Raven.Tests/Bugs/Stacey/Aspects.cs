@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Client.Linq.Indexing;
+using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Stacey
@@ -169,8 +170,8 @@ namespace Raven.Tests.Bugs.Stacey
 
 			                    			session.SaveChanges();
 
-			                    			Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(results.Path.Steps[0].Requirements[0]));
-			                    			Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(results.Path.Steps[0].Requirements[1]));
+			                    			Console.WriteLine(JsonConvert.SerializeObject(results.Path.Steps[0].Requirements[0]));
+			                    			Console.WriteLine(JsonConvert.SerializeObject(results.Path.Steps[0].Requirements[1]));
 			                    		}
 			                    	});
 		}
@@ -251,7 +252,7 @@ namespace Raven.Tests.Bugs.Stacey
 			                    				.Where(n => n.Name == "Strength")
 			                    				.ToList();
 
-			                    			Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(results));
+			                    			Console.WriteLine(JsonConvert.SerializeObject(results));
 			                    		}
 			                    	});
 		}

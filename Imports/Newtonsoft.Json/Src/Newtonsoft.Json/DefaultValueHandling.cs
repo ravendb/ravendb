@@ -25,7 +25,7 @@
 
 using System;
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Specifies default value handling options for the <see cref="JsonSerializer"/>.

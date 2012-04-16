@@ -26,18 +26,18 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Globalization;
 #if NETFX_CORE
-using IConvertible = Newtonsoft.Json.Utilities.Convertible;
+using IConvertible = Raven.Imports.Newtonsoft.Json.Utilities.Convertible;
 #endif
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Represents a writer that provides a fast, non-cached, forward-only way of generating Json data.

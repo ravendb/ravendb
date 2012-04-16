@@ -1,6 +1,6 @@
 using System;
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Specifies how to treat the time value when converting between string and <see cref="DateTime"/>.

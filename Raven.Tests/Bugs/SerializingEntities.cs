@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Database.Config;

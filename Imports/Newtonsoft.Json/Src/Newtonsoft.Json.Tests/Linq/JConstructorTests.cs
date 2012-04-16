@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -10,12 +10,12 @@ using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 using System.IO;
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 
-namespace Newtonsoft.Json.Tests.Linq
+namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
 {
   [TestFixture]
   public class JConstructorTests : TestFixtureBase

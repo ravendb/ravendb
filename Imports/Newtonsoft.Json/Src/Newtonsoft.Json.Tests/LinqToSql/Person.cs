@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 
-namespace Newtonsoft.Json.Tests.LinqToSql
+namespace Raven.Imports.Newtonsoft.Json.Tests.LinqToSql
 {
   [MetadataType(typeof(PersonMetadata))]
   public partial class Person

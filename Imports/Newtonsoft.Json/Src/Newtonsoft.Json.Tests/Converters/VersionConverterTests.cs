@@ -24,7 +24,7 @@
 #endregion
 
 using System;
-using Newtonsoft.Json.Converters;
+using Raven.Imports.Newtonsoft.Json.Converters;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -33,7 +33,7 @@ using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttrib
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 
-namespace Newtonsoft.Json.Tests.Converters
+namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
 {
   public class VersionClass
   {

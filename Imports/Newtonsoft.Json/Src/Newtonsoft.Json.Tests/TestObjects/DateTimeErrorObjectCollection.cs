@@ -26,9 +26,9 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Runtime.Serialization;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 
-namespace Newtonsoft.Json.Tests.TestObjects
+namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
   public class DateTimeErrorObjectCollection : Collection<DateTime>
   {

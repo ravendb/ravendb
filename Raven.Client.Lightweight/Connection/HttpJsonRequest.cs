@@ -16,8 +16,8 @@ using System.Threading;
 #if !NET_3_5
 using System.Threading.Tasks;
 #endif
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;

@@ -23,7 +23,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-namespace Newtonsoft.Json.Utilities
+namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
   internal class EnumValue<T> where T : struct
   {

@@ -30,10 +30,10 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Newtonsoft.Json.Serialization;
-using Newtonsoft.Json.Tests.TestObjects;
+using Raven.Imports.Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
 
-namespace Newtonsoft.Json.Tests.Serialization
+namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
 {
   [TestFixture]
   public class JsonPropertyCollectionTests : TestFixtureBase

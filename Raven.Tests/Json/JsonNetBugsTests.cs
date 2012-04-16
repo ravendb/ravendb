@@ -1,6 +1,6 @@
 ﻿
 using System.Reflection;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Client.Document;
 
 namespace Raven.Tests.Json
@@ -22,7 +22,7 @@ namespace Raven.Tests.Json
 			using (var store = NewDocumentStore())
 			{
 				// this is an edge case since it does not make a lot of sense for users to set this.
-				store.Conventions.CustomizeJsonSerializer = x => x.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.All;
+				store.Conventions.CustomizeJsonSerializer = x => x.TypeNameHandling = Raven.Imports.Newtonsoft.Json.TypeNameHandling.All;
 
 				using (var session = store.OpenSession())
 				{

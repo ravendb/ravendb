@@ -44,23 +44,23 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using System.IO;
 using System.Collections;
 using System.Xml;
 using System.Xml.Serialization;
 using System.Collections.ObjectModel;
-using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Converters;
+using Raven.Imports.Newtonsoft.Json.Bson;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Converters;
 #if !PocketPC && !NET20 && !WINDOWS_PHONE
 using System.Runtime.Serialization.Json;
 #endif
-using Newtonsoft.Json.Serialization;
-using Newtonsoft.Json.Tests.TestObjects;
+using Raven.Imports.Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
 using System.Runtime.Serialization;
 using System.Globalization;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Reflection;
 #if !NET20 && !SILVERLIGHT
 using System.Xml.Linq;
@@ -73,7 +73,7 @@ using System.Dynamic;
 using System.ComponentModel;
 #endif
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
@@ -81,7 +81,7 @@ using System.Linq;
 using System.Drawing;
 #endif
 
-namespace Newtonsoft.Json.Tests.Serialization
+namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
 {
   [TestFixture]
   public class JsonSerializerTest : TestFixtureBase
@@ -975,7 +975,7 @@ keyword such as type of business.""
     public void IncompatibleJsonAttributeShouldThrow()
     {
       ExceptionAssert.Throws<JsonSerializationException>(
-        "JsonConverter IsoDateTimeConverter on Newtonsoft.Json.Tests.TestObjects.IncompatibleJsonAttributeClass is not compatible with member type IncompatibleJsonAttributeClass.",
+        "JsonConverter IsoDateTimeConverter on Raven.Imports.Newtonsoft.Json.Tests.TestObjects.IncompatibleJsonAttributeClass is not compatible with member type IncompatibleJsonAttributeClass.",
         () =>
         {
           IncompatibleJsonAttributeClass c = new IncompatibleJsonAttributeClass();
@@ -1262,7 +1262,7 @@ keyword such as type of business.""
     [Test]
     [ExpectedException(typeof (JsonSerializationException)
 #if !NETFX_CORE
-      , ExpectedMessage = @"Could not create an instance of type Newtonsoft.Json.Tests.TestObjects.ICo. Type is an interface or abstract class and cannot be instantated. Line 1, position 14."
+      , ExpectedMessage = @"Could not create an instance of type Raven.Imports.Newtonsoft.Json.Tests.TestObjects.ICo. Type is an interface or abstract class and cannot be instantated. Line 1, position 14."
 #endif
       )]
     public void DeserializeInterfaceProperty()
@@ -1918,7 +1918,7 @@ keyword such as type of business.""
     [Test]
     [ExpectedException(typeof (JsonSerializationException)
 #if !NETFX_CORE
-      , ExpectedMessage = @"Unable to find a constructor to use for type Newtonsoft.Json.Tests.TestObjects.Event. A class should either have a default constructor, one constructor with arguments or a constructor marked with the JsonConstructor attribute. Line 1, position 15."
+      , ExpectedMessage = @"Unable to find a constructor to use for type Raven.Imports.Newtonsoft.Json.Tests.TestObjects.Event. A class should either have a default constructor, one constructor with arguments or a constructor marked with the JsonConstructor attribute. Line 1, position 15."
 #endif
       )]
     public void FailWhenClassWithNoDefaultConstructorHasMultipleConstructorsWithArguments()
@@ -2479,7 +2479,7 @@ To force JSON objects to deserialize add the JsonObjectAttribute to the type. Li
     [Test]
     [ExpectedException(typeof (JsonSerializationException)
 #if !NETFX_CORE
-      , ExpectedMessage = "Unable to find a default constructor to use for type Newtonsoft.Json.Tests.Serialization.JsonSerializerTest+DictionaryWithNoDefaultConstructor. Line 1, position 6."
+      , ExpectedMessage = "Unable to find a default constructor to use for type Raven.Imports.Newtonsoft.Json.Tests.Serialization.JsonSerializerTest+DictionaryWithNoDefaultConstructor. Line 1, position 6."
 #endif
       )]
     public void DeserializeDictionaryWithNoDefaultConstructor()

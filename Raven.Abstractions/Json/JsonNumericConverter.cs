@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Globalization;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Json
 {

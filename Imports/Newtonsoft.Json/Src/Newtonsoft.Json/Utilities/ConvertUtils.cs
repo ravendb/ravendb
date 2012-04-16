@@ -26,20 +26,20 @@
 using System;
 using System.Globalization;
 using System.ComponentModel;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 using System.Reflection;
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #endif
 
 #if !(SILVERLIGHT || NETFX_CORE)
 using System.Data.SqlTypes;
 #endif
 #if NETFX_CORE
-using IConvertible = Newtonsoft.Json.Utilities.Convertible;
+using IConvertible = Raven.Imports.Newtonsoft.Json.Utilities.Convertible;
 #endif
 
-namespace Newtonsoft.Json.Utilities
+namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
   internal class Convertible
   {

@@ -8,7 +8,7 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using System;
 using Raven.Json.Linq;
 

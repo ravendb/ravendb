@@ -1,6 +1,6 @@
 ﻿#if !(SILVERLIGHT || NETFX_CORE)
 using System;
-using Newtonsoft.Json.Converters;
+using Raven.Imports.Newtonsoft.Json.Converters;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -8,11 +8,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Newtonsoft.Json.Serialization;
-using Newtonsoft.Json.Tests.TestObjects;
+using Raven.Imports.Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
 using System.Data;
 
-namespace Newtonsoft.Json.Tests.Converters
+namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
 {
   public class DataSetConverterTests : TestFixtureBase
   {

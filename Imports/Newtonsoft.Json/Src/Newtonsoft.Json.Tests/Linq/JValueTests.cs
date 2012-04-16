@@ -33,15 +33,15 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using System.Globalization;
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 
-namespace Newtonsoft.Json.Tests.Linq
+namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
 {
   [TestFixture]
   public class JValueTests : TestFixtureBase
@@ -155,7 +155,7 @@ namespace Newtonsoft.Json.Tests.Linq
     [Test]
     public void Last()
     {
-      ExceptionAssert.Throws<InvalidOperationException>("Cannot access child value on Newtonsoft.Json.Linq.JValue.",
+      ExceptionAssert.Throws<InvalidOperationException>("Cannot access child value on Raven.Imports.Newtonsoft.Json.Linq.JValue.",
       () =>
       {
         JValue v = new JValue(true);
@@ -174,7 +174,7 @@ namespace Newtonsoft.Json.Tests.Linq
     [Test]
     public void First()
     {
-      ExceptionAssert.Throws<InvalidOperationException>("Cannot access child value on Newtonsoft.Json.Linq.JValue.",
+      ExceptionAssert.Throws<InvalidOperationException>("Cannot access child value on Raven.Imports.Newtonsoft.Json.Linq.JValue.",
       () =>
       {
         JValue v = new JValue(true);
@@ -185,7 +185,7 @@ namespace Newtonsoft.Json.Tests.Linq
     [Test]
     public void Item()
     {
-      ExceptionAssert.Throws<InvalidOperationException>("Cannot access child value on Newtonsoft.Json.Linq.JValue.",
+      ExceptionAssert.Throws<InvalidOperationException>("Cannot access child value on Raven.Imports.Newtonsoft.Json.Linq.JValue.",
       () =>
       {
         JValue v = new JValue(true);
@@ -196,7 +196,7 @@ namespace Newtonsoft.Json.Tests.Linq
     [Test]
     public void Values()
     {
-      ExceptionAssert.Throws<InvalidOperationException>("Cannot access child value on Newtonsoft.Json.Linq.JValue.",
+      ExceptionAssert.Throws<InvalidOperationException>("Cannot access child value on Raven.Imports.Newtonsoft.Json.Linq.JValue.",
       () =>
       {
         JValue v = new JValue(true);
@@ -253,7 +253,7 @@ namespace Newtonsoft.Json.Tests.Linq
     [Test]
     public void SetValue()
     {
-      ExceptionAssert.Throws<InvalidOperationException>("Cannot set child value on Newtonsoft.Json.Linq.JValue.",
+      ExceptionAssert.Throws<InvalidOperationException>("Cannot set child value on Raven.Imports.Newtonsoft.Json.Linq.JValue.",
       () =>
       {
         JToken t = new JValue(5L);

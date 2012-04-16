@@ -40,20 +40,20 @@ using System.Runtime.Serialization;
 using System.Security.Permissions;
 #endif
 using System.Xml.Serialization;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Utilities;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Converters;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using System.Runtime.CompilerServices;
 #if NETFX_CORE
-using ICustomAttributeProvider = Newtonsoft.Json.Utilities.CustomAttributeProvider;
+using ICustomAttributeProvider = Raven.Imports.Newtonsoft.Json.Utilities.CustomAttributeProvider;
 #endif
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 
-namespace Newtonsoft.Json.Serialization
+namespace Raven.Imports.Newtonsoft.Json.Serialization
 {
   internal struct ResolverContractKey : IEquatable<ResolverContractKey>
   {

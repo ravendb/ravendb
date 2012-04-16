@@ -23,7 +23,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-namespace Newtonsoft.Json.Tests.TestObjects
+namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
   [JsonObject(IsReference = true)]
   public class EmployeeReference

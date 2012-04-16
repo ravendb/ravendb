@@ -27,7 +27,7 @@
 using System.Collections.ObjectModel;
 using System.Runtime.Serialization;
 
-namespace Newtonsoft.Json.Tests.TestObjects
+namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
   public class SerializationEventTestList : Collection<decimal>
   {

@@ -24,9 +24,9 @@
 #endregion
 
 using System;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Newtonsoft.Json.Schema
+namespace Raven.Imports.Newtonsoft.Json.Schema
 {
   /// <summary>
   /// Returns detailed information related to the <see cref="ValidationEventHandler"/>.

@@ -23,7 +23,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-namespace Newtonsoft.Json.Linq
+namespace Raven.Imports.Newtonsoft.Json.Linq
 {
   /// <summary>
   /// Specifies the type of token.

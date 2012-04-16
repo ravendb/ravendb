@@ -33,13 +33,13 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using System.IO;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Tests.Serialization;
-using Newtonsoft.Json.Tests.TestObjects;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Tests.Serialization;
+using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
 
-namespace Newtonsoft.Json.Tests.Linq
+namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
 {
   [TestFixture]
   public class JTokenReaderTest : TestFixtureBase

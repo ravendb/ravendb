@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Munin.Tests
 {

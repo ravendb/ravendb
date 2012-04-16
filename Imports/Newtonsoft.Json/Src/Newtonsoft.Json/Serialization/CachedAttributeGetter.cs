@@ -25,12 +25,12 @@
 
 using System;
 using System.Reflection;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 #if NETFX_CORE
-using ICustomAttributeProvider = Newtonsoft.Json.Utilities.CustomAttributeProvider;
+using ICustomAttributeProvider = Raven.Imports.Newtonsoft.Json.Utilities.CustomAttributeProvider;
 #endif
 
-namespace Newtonsoft.Json.Serialization
+namespace Raven.Imports.Newtonsoft.Json.Serialization
 {
   internal static class CachedAttributeGetter<T> where T : Attribute
   {

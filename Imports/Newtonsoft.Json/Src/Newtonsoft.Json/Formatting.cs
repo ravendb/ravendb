@@ -1,4 +1,4 @@
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Specifies formatting options for the <see cref="JsonTextWriter"/>.

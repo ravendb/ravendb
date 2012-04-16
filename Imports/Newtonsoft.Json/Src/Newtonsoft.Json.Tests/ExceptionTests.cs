@@ -24,7 +24,7 @@
 #endregion
 
 using System;
-using Newtonsoft.Json.Schema;
+using Raven.Imports.Newtonsoft.Json.Schema;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -33,7 +33,7 @@ using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttrib
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 
-namespace Newtonsoft.Json.Tests
+namespace Raven.Imports.Newtonsoft.Json.Tests
 {
   [TestFixture]
   public class ExceptionTests : TestFixtureBase

@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Xunit;
 

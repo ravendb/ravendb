@@ -1,9 +1,9 @@
 ﻿using System;
-using Newtonsoft.Json.Bson;
+using Raven.Imports.Newtonsoft.Json.Bson;
 using System.Globalization;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Newtonsoft.Json.Converters
+namespace Raven.Imports.Newtonsoft.Json.Converters
 {
   /// <summary>
   /// Converts a <see cref="BsonObjectId"/> to and from JSON and BSON.

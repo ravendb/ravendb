@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.IO;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;

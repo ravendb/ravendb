@@ -1,4 +1,4 @@
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Specifies how dates are formatted when writing JSON text.

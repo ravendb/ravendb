@@ -23,7 +23,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-namespace Newtonsoft.Json.Schema
+namespace Raven.Imports.Newtonsoft.Json.Schema
 {
   /// <summary>
   /// Represents the callback method that will handle JSON schema validation events and the <see cref="ValidationEventArgs"/>.

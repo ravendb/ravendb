@@ -8,9 +8,9 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Bson;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Extensions

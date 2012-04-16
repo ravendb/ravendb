@@ -1,7 +1,7 @@
 ﻿using System;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Newtonsoft.Json.Linq
+namespace Raven.Imports.Newtonsoft.Json.Linq
 {
   /// <summary>
   /// Represents a reader that provides fast, non-cached, forward-only access to serialized Json data.

@@ -28,10 +28,10 @@ using System;
 using System.Data.SqlTypes;
 #endif
 using System.Globalization;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Collections.Generic;
 
-namespace Newtonsoft.Json.Converters
+namespace Raven.Imports.Newtonsoft.Json.Converters
 {
 #if !SILVERLIGHT && !PocketPC && !NET20
   internal interface IBinary

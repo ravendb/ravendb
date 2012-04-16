@@ -25,7 +25,7 @@
 
 using System;
 
-namespace Newtonsoft.Json.Schema
+namespace Raven.Imports.Newtonsoft.Json.Schema
 {
   /// <summary>
   /// The value types allowed by the <see cref="JsonSchema"/>.

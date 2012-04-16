@@ -9,16 +9,16 @@ using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Linq;
 using System.Xml.Serialization;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using NUnit.Framework;
 using System.Runtime.Serialization.Json;
 using System.Text;
-using Newtonsoft.Json.Bson;
+using Raven.Imports.Newtonsoft.Json.Bson;
 using System.Runtime.Serialization.Formatters.Binary;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Converters;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Converters;
 
-namespace Newtonsoft.Json.Tests
+namespace Raven.Imports.Newtonsoft.Json.Tests
 {
   [Serializable]
   [DataContract]
@@ -407,17 +407,17 @@ namespace Newtonsoft.Json.Tests
     {
       Type type = value.GetType();
 
-      Newtonsoft.Json.JsonSerializer json = new Newtonsoft.Json.JsonSerializer();
+      Raven.Imports.Newtonsoft.Json.JsonSerializer json = new Raven.Imports.Newtonsoft.Json.JsonSerializer();
 
       json.NullValueHandling = NullValueHandling.Ignore;
 
-      json.ObjectCreationHandling = Newtonsoft.Json.ObjectCreationHandling.Replace;
-      json.MissingMemberHandling = Newtonsoft.Json.MissingMemberHandling.Ignore;
+      json.ObjectCreationHandling = Raven.Imports.Newtonsoft.Json.ObjectCreationHandling.Replace;
+      json.MissingMemberHandling = Raven.Imports.Newtonsoft.Json.MissingMemberHandling.Ignore;
       json.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
 
 
       StringWriter sw = new StringWriter();
-      Newtonsoft.Json.JsonTextWriter writer = new JsonTextWriter(sw);
+      Raven.Imports.Newtonsoft.Json.JsonTextWriter writer = new JsonTextWriter(sw);
 
       writer.Formatting = Formatting.None;
 
@@ -553,8 +553,8 @@ namespace Newtonsoft.Json.Tests
       Type type = typeof (T);
 
       JsonSerializer serializer = new JsonSerializer();
-      serializer.ObjectCreationHandling = Newtonsoft.Json.ObjectCreationHandling.Replace;
-      serializer.MissingMemberHandling = Newtonsoft.Json.MissingMemberHandling.Ignore;
+      serializer.ObjectCreationHandling = Raven.Imports.Newtonsoft.Json.ObjectCreationHandling.Replace;
+      serializer.MissingMemberHandling = Raven.Imports.Newtonsoft.Json.MissingMemberHandling.Ignore;
       serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
       if (isoDateTimeConverter)
         serializer.Converters.Add(new IsoDateTimeConverter());
@@ -574,8 +574,8 @@ namespace Newtonsoft.Json.Tests
       Type type = typeof (T);
 
       JsonSerializer serializer = new JsonSerializer();
-      serializer.ObjectCreationHandling = Newtonsoft.Json.ObjectCreationHandling.Replace;
-      serializer.MissingMemberHandling = Newtonsoft.Json.MissingMemberHandling.Ignore;
+      serializer.ObjectCreationHandling = Raven.Imports.Newtonsoft.Json.ObjectCreationHandling.Replace;
+      serializer.MissingMemberHandling = Raven.Imports.Newtonsoft.Json.MissingMemberHandling.Ignore;
       serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
 
       return (T) serializer.Deserialize(new BsonReader(new MemoryStream(bson)), type);

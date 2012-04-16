@@ -5,8 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Tasks

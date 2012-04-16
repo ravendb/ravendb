@@ -28,8 +28,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 #if NET20
-using Newtonsoft.Json.Serialization;
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #endif
 using System.Text;
 using System.Threading;
@@ -40,15 +40,15 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using TestMethod = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Collections;
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 
-namespace Newtonsoft.Json.Tests
+namespace Raven.Imports.Newtonsoft.Json.Tests
 {
   [TestFixture]
   public abstract class TestFixtureBase

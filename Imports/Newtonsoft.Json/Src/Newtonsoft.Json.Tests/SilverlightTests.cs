@@ -8,7 +8,7 @@ using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttrib
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 
-namespace Newtonsoft.Json.Tests
+namespace Raven.Imports.Newtonsoft.Json.Tests
 {
   // todo: need to fix this to get WP unit tests running off right dlls
 #if SILVERLIGHT

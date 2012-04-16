@@ -32,11 +32,11 @@ using System.Text;
 using System.Threading.Tasks;
 #endif
 using System.Xml;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Tests.Serialization;
-using Newtonsoft.Json.Tests.TestObjects;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Converters;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Tests.Serialization;
+using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -45,7 +45,7 @@ using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttrib
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 
-namespace Newtonsoft.Json.Tests
+namespace Raven.Imports.Newtonsoft.Json.Tests
 {
   [TestFixture]
   public class JsonConvertTest : TestFixtureBase

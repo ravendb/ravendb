@@ -29,18 +29,18 @@ using System.Globalization;
 #if !(NET20 || NET35 || SILVERLIGHT)
 using System.Threading.Tasks;
 #endif
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using System.Xml;
-using Newtonsoft.Json.Converters;
+using Raven.Imports.Newtonsoft.Json.Converters;
 using System.Text;
 #if !NET20 && (!SILVERLIGHT || WINDOWS_PHONE)
 using System.Xml.Linq;
 #endif
 #if NETFX_CORE
-using IConvertible = Newtonsoft.Json.Utilities.Convertible;
+using IConvertible = Raven.Imports.Newtonsoft.Json.Utilities.Convertible;
 #endif
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Provides methods for converting between common language runtime types and JSON types.

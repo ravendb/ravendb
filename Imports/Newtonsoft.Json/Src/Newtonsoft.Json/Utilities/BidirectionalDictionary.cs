@@ -26,7 +26,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Newtonsoft.Json.Utilities
+namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
   internal class BidirectionalDictionary<TFirst, TSecond>
   {

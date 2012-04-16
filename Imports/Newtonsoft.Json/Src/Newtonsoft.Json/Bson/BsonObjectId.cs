@@ -24,9 +24,9 @@
 #endregion
 
 using System;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Newtonsoft.Json.Bson
+namespace Raven.Imports.Newtonsoft.Json.Bson
 {
   /// <summary>
   /// Represents a BSON Oid (object id).

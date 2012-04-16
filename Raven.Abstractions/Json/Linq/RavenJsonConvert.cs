@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Json.Linq
 {

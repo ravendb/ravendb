@@ -1,6 +1,6 @@
 ﻿using System.IO;
-using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Bson;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -9,7 +9,7 @@ using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttrib
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 
-namespace Newtonsoft.Json.Tests.Converters
+namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
 {
   [TestFixture]
   public class ObjectIdConverterTests : TestFixtureBase

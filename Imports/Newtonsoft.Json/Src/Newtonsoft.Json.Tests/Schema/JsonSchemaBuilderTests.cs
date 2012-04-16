@@ -31,11 +31,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Newtonsoft.Json.Schema;
+using Raven.Imports.Newtonsoft.Json.Schema;
 using System.IO;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
-namespace Newtonsoft.Json.Tests.Schema
+namespace Raven.Imports.Newtonsoft.Json.Tests.Schema
 {
   [TestFixture]
   public class JsonSchemaBuilderTests : TestFixtureBase

@@ -31,9 +31,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 
-namespace Newtonsoft.Json.Utilities.LinqBridge
+namespace Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge
 {
   /// <summary>
   /// Provides a set of static (Shared in Visual Basic) methods for 
@@ -2971,7 +2971,7 @@ namespace Newtonsoft.Json.Utilities.LinqBridge
   }
 }
 
-namespace Newtonsoft.Json.Serialization
+namespace Raven.Imports.Newtonsoft.Json.Serialization
 {
   public delegate TResult Func<TResult>();
 

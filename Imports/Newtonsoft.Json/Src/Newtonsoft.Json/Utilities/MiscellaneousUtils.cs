@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Globalization;
 
-namespace Newtonsoft.Json.Utilities
+namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
   internal delegate T Creator<T>();
 

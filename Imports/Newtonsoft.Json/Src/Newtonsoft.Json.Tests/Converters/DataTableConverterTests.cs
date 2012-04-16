@@ -11,7 +11,7 @@ using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 using System.Data;
 #endif
 
-namespace Newtonsoft.Json.Tests.Converters
+namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
 {
   public class DataTableConverterTests : TestFixtureBase
   {

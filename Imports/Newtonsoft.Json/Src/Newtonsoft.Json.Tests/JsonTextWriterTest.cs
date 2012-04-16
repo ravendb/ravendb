@@ -36,12 +36,12 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using System.IO;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Converters;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Newtonsoft.Json.Tests
+namespace Raven.Imports.Newtonsoft.Json.Tests
 {
   [TestFixture]
   public class JsonTextWriterTest : TestFixtureBase

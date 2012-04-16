@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Instructs the <see cref="JsonSerializer"/> to use the specified constructor when deserializing that object.

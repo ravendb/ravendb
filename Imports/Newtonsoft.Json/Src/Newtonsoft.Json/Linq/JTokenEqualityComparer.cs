@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Newtonsoft.Json.Linq
+namespace Raven.Imports.Newtonsoft.Json.Linq
 {
   /// <summary>
   /// Compares tokens to determine whether they are equal.

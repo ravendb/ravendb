@@ -30,18 +30,18 @@ using System.Reflection;
 #if !NETFX_CORE
 using System.Security.Permissions;
 #endif
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 #if NETFX_CORE
-using ICustomAttributeProvider = Newtonsoft.Json.Utilities.CustomAttributeProvider;
+using ICustomAttributeProvider = Raven.Imports.Newtonsoft.Json.Utilities.CustomAttributeProvider;
 #endif
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 using System.Runtime.Serialization;
 
-namespace Newtonsoft.Json.Serialization
+namespace Raven.Imports.Newtonsoft.Json.Serialization
 {
 #if !SILVERLIGHT && !PocketPC && !NET20 && !NETFX_CORE
   internal interface IMetadataTypeAttribute

@@ -1,6 +1,6 @@
 using System;
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Instructs the <see cref="JsonSerializer"/> to always serialize the member with the specified name.

@@ -10,7 +10,7 @@ using System.ComponentModel.Composition;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lucene.Net.Documents;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using System.Linq;

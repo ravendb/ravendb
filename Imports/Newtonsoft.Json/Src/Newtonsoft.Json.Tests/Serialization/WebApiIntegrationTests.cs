@@ -15,9 +15,9 @@ using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #if !(SILVERLIGHT || NETFX_CORE || NET20)
 using System.Runtime.Serialization.Json;
 #endif
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 
-namespace Newtonsoft.Json.Tests.Serialization
+namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
 {
   [TestFixture]
   public class WebApiIntegrationTests : TestFixtureBase

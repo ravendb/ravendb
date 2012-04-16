@@ -26,8 +26,8 @@
 #if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Tests.Serialization;
-using Newtonsoft.Json.Tests.TestObjects;
+using Raven.Imports.Newtonsoft.Json.Tests.Serialization;
+using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -35,17 +35,17 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using System.IO;
 using System.Xml;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Utilities;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Converters;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Linq;
 #if !NET20
 using System.Xml.Linq;
 #endif
 
-namespace Newtonsoft.Json.Tests.Converters
+namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
 {
   [TestFixture]
   public class XmlNodeConverterTest : TestFixtureBase
@@ -1294,10 +1294,10 @@ namespace Newtonsoft.Json.Tests.Converters
 
     private static void JsonBodyToSoapXml(Stream json, Stream xml)
     {
-      Newtonsoft.Json.JsonSerializerSettings settings = new Newtonsoft.Json.JsonSerializerSettings();
-      settings.Converters.Add(new Newtonsoft.Json.Converters.XmlNodeConverter());
-      Newtonsoft.Json.JsonSerializer serializer = Newtonsoft.Json.JsonSerializer.Create(settings);
-      using (Newtonsoft.Json.JsonTextReader reader = new Newtonsoft.Json.JsonTextReader(new System.IO.StreamReader(json)))
+      Raven.Imports.Newtonsoft.Json.JsonSerializerSettings settings = new Raven.Imports.Newtonsoft.Json.JsonSerializerSettings();
+      settings.Converters.Add(new Raven.Imports.Newtonsoft.Json.Converters.XmlNodeConverter());
+      Raven.Imports.Newtonsoft.Json.JsonSerializer serializer = Raven.Imports.Newtonsoft.Json.JsonSerializer.Create(settings);
+      using (Newtonsoft.Json.JsonTextReader reader = new Raven.Imports.Newtonsoft.Json.JsonTextReader(new System.IO.StreamReader(json)))
       {
         XmlDocument doc = (XmlDocument)serializer.Deserialize(reader, typeof(XmlDocument));
         if (reader.Read() && reader.TokenType != JsonToken.Comment)

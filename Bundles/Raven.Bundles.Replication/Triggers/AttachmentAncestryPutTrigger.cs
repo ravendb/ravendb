@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
 using System.IO;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 

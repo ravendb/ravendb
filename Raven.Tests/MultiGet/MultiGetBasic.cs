@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Net;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;

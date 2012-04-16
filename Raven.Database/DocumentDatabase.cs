@@ -16,7 +16,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;

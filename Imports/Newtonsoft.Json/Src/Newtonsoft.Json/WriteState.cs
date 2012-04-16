@@ -1,6 +1,6 @@
 using System;
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Specifies the state of the <see cref="JsonWriter"/>.

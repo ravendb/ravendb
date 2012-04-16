@@ -12,7 +12,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Lucene.Net.Analysis.Standard;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;

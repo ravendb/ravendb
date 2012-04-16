@@ -25,9 +25,9 @@
 
 #if !SILVERLIGHT && !NETFX_CORE
 using NUnit.Framework;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
-namespace Newtonsoft.Json.Tests.Linq.ComponentModel
+namespace Raven.Imports.Newtonsoft.Json.Tests.Linq.ComponentModel
 {
   [TestFixture]
   public class JPropertyDescriptorTests : TestFixtureBase

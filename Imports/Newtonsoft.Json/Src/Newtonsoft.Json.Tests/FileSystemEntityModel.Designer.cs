@@ -23,7 +23,7 @@ using System.Runtime.Serialization;
 
 #endregion
 
-namespace Newtonsoft.Json.Tests
+namespace Raven.Imports.Newtonsoft.Json.Tests
 {
     #region Contexts
     

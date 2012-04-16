@@ -30,9 +30,9 @@ using System.Text;
 using System.IO;
 using System.Xml;
 using System.Globalization;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   internal enum ReadType
   {

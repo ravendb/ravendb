@@ -25,7 +25,7 @@
 
 using System.Collections;
 
-namespace Newtonsoft.Json.Tests.TestObjects
+namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
 {
 #if !SILVERLIGHT && !NETFX_CORE
   public class TypedSubHashtable

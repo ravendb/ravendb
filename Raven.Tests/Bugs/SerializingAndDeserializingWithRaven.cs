@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Client.Embedded;
 using Xunit;
 

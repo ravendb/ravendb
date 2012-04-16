@@ -26,9 +26,9 @@
 #if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.ComponentModel;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Newtonsoft.Json.Linq
+namespace Raven.Imports.Newtonsoft.Json.Linq
 {
   /// <summary>
   /// Represents a view of a <see cref="JProperty"/>.

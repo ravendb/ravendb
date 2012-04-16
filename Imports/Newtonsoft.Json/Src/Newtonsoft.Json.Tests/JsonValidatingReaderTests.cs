@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #endif
 using System.Text;
 #if !NETFX_CORE
@@ -14,11 +14,11 @@ using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 using System.Xml;
 using System.Xml.Schema;
-using Newtonsoft.Json.Schema;
-using Newtonsoft.Json.Utilities;
-using ValidationEventArgs = Newtonsoft.Json.Schema.ValidationEventArgs;
+using Raven.Imports.Newtonsoft.Json.Schema;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+using ValidationEventArgs = Raven.Imports.Newtonsoft.Json.Schema.ValidationEventArgs;
 
-namespace Newtonsoft.Json.Tests
+namespace Raven.Imports.Newtonsoft.Json.Tests
 {
   [TestFixture]
   public class JsonValidatingReaderTests : TestFixtureBase

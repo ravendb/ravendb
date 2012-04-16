@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Newtonsoft.Json
+namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Specifies type name handling options for the <see cref="JsonSerializer"/>.

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using Newtonsoft.Json.Tests.TestObjects;
+using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -10,19 +10,19 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using System.IO;
 using System.Collections;
 #if !PocketPC && !SILVERLIGHT && !NETFX_CORE
 using System.Web.UI;
 #endif
 #if NET20
-using Newtonsoft.Json.Utilities.LinqBridge;
+using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 
-namespace Newtonsoft.Json.Tests.Linq
+namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
 {
   [TestFixture]
   public class JObjectTests : TestFixtureBase
@@ -115,7 +115,7 @@ namespace Newtonsoft.Json.Tests.Linq
     [Test]
     [ExpectedException(typeof(ArgumentException)
 #if !NETFX_CORE
-      , ExpectedMessage = "Can not add property PropertyNameValue to Newtonsoft.Json.Linq.JObject. Property with the same name already exists on object."
+      , ExpectedMessage = "Can not add property PropertyNameValue to Raven.Imports.Newtonsoft.Json.Linq.JObject. Property with the same name already exists on object."
 #endif
       )]
     public void DuplicatePropertyNameShouldThrow()
@@ -817,7 +817,7 @@ Parameter name: arrayIndex"
     public void IListAddBadToken()
     {
       ExceptionAssert.Throws<ArgumentException>(
-      "Can not add Newtonsoft.Json.Linq.JValue to Newtonsoft.Json.Linq.JObject.",
+      "Can not add Raven.Imports.Newtonsoft.Json.Linq.JValue to Raven.Imports.Newtonsoft.Json.Linq.JObject.",
       () =>
       {
         JProperty p1 = new JProperty("Test1", 1);
@@ -847,7 +847,7 @@ Parameter name: arrayIndex"
     public void IListAddPropertyWithExistingName()
     {
       ExceptionAssert.Throws<ArgumentException>(
-      "Can not add property Test2 to Newtonsoft.Json.Linq.JObject. Property with the same name already exists on object.",
+      "Can not add property Test2 to Raven.Imports.Newtonsoft.Json.Linq.JObject. Property with the same name already exists on object.",
       () =>
       {
         JProperty p1 = new JProperty("Test1", 1);
@@ -951,7 +951,7 @@ Parameter name: arrayIndex"
     public void IListSetItemAlreadyExists()
     {
       ExceptionAssert.Throws<ArgumentException>(
-      "Can not add property Test3 to Newtonsoft.Json.Linq.JObject. Property with the same name already exists on object.",
+      "Can not add property Test3 to Raven.Imports.Newtonsoft.Json.Linq.JObject. Property with the same name already exists on object.",
       () =>
       {
         JProperty p1 = new JProperty("Test1", 1);
@@ -969,7 +969,7 @@ Parameter name: arrayIndex"
     public void IListSetItemInvalid()
     {
       ExceptionAssert.Throws<ArgumentException>(
-      @"Can not add Newtonsoft.Json.Linq.JValue to Newtonsoft.Json.Linq.JObject.",
+      @"Can not add Raven.Imports.Newtonsoft.Json.Linq.JValue to Raven.Imports.Newtonsoft.Json.Linq.JObject.",
       () =>
       {
         JProperty p1 = new JProperty("Test1", 1);
@@ -1066,7 +1066,7 @@ Parameter name: arrayIndex"
     [Test]
     public void GenericListJTokenAddBadToken()
     {
-      ExceptionAssert.Throws<ArgumentException>("Can not add Newtonsoft.Json.Linq.JValue to Newtonsoft.Json.Linq.JObject.",
+      ExceptionAssert.Throws<ArgumentException>("Can not add Raven.Imports.Newtonsoft.Json.Linq.JValue to Raven.Imports.Newtonsoft.Json.Linq.JObject.",
       () =>
       {
         JProperty p1 = new JProperty("Test1", 1);
@@ -1080,7 +1080,7 @@ Parameter name: arrayIndex"
     [Test]
     public void GenericListJTokenAddBadValue()
     {
-      ExceptionAssert.Throws<ArgumentException>("Can not add Newtonsoft.Json.Linq.JValue to Newtonsoft.Json.Linq.JObject.",
+      ExceptionAssert.Throws<ArgumentException>("Can not add Raven.Imports.Newtonsoft.Json.Linq.JValue to Raven.Imports.Newtonsoft.Json.Linq.JObject.",
         () =>
         {
           JProperty p1 = new JProperty("Test1", 1);
@@ -1095,7 +1095,7 @@ Parameter name: arrayIndex"
     [Test]
     public void GenericListJTokenAddPropertyWithExistingName()
     {
-      ExceptionAssert.Throws<ArgumentException>("Can not add property Test2 to Newtonsoft.Json.Linq.JObject. Property with the same name already exists on object.",
+      ExceptionAssert.Throws<ArgumentException>("Can not add property Test2 to Raven.Imports.Newtonsoft.Json.Linq.JObject. Property with the same name already exists on object.",
         () =>
         {
           JProperty p1 = new JProperty("Test1", 1);
@@ -1191,7 +1191,7 @@ Parameter name: arrayIndex"
     [Test]
     public void GenericListJTokenSetItemAlreadyExists()
     {
-      ExceptionAssert.Throws<ArgumentException>("Can not add property Test3 to Newtonsoft.Json.Linq.JObject. Property with the same name already exists on object.",
+      ExceptionAssert.Throws<ArgumentException>("Can not add property Test3 to Raven.Imports.Newtonsoft.Json.Linq.JObject. Property with the same name already exists on object.",
       () =>
       {
         JProperty p1 = new JProperty("Test1", 1);

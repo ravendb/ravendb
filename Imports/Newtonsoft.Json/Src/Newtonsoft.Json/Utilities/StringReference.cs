@@ -1,4 +1,4 @@
-﻿namespace Newtonsoft.Json.Utilities
+﻿namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
   internal struct StringReference
   {

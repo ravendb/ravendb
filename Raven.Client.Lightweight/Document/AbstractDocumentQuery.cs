@@ -25,7 +25,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;

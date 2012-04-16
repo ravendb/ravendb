@@ -25,7 +25,7 @@
 
 using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json.Schema;
+using Raven.Imports.Newtonsoft.Json.Schema;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -34,7 +34,7 @@ using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttrib
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 
-namespace Newtonsoft.Json.Tests.Schema
+namespace Raven.Imports.Newtonsoft.Json.Tests.Schema
 {
   [TestFixture]
   public class JsonSchemaTests : TestFixtureBase

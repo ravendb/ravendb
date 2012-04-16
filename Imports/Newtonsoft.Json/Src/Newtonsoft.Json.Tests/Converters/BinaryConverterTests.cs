@@ -7,7 +7,7 @@ using System.Data.Linq;
 using System.Data.SqlTypes;
 #endif
 using System.Text;
-using Newtonsoft.Json.Converters;
+using Raven.Imports.Newtonsoft.Json.Converters;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -16,7 +16,7 @@ using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttrib
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 
-namespace Newtonsoft.Json.Tests.Converters
+namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
 {
   [TestFixture]
   public class BinaryConverterTests : TestFixtureBase

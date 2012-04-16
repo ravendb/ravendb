@@ -25,8 +25,8 @@
 
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Tests.TestObjects;
+using Raven.Imports.Newtonsoft.Json.Converters;
+using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -35,9 +35,9 @@ using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttrib
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 using System.IO;
-using ErrorEventArgs=Newtonsoft.Json.Serialization.ErrorEventArgs;
+using ErrorEventArgs=Raven.Imports.Newtonsoft.Json.Serialization.ErrorEventArgs;
 
-namespace Newtonsoft.Json.Tests.Serialization
+namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
 {
   [TestFixture]
   public class SerializationErrorHandlingTests : TestFixtureBase

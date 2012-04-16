@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Newtonsoft.Json.Bson
+namespace Raven.Imports.Newtonsoft.Json.Bson
 {
   internal abstract class BsonToken
   {

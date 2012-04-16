@@ -15,7 +15,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;

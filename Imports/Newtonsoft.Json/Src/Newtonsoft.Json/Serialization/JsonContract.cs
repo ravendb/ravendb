@@ -26,12 +26,12 @@
 using System;
 using System.Reflection;
 using System.Runtime.Serialization;
-using Newtonsoft.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 #if NETFX_CORE
-using IConvertible = Newtonsoft.Json.Utilities.Convertible;
+using IConvertible = Raven.Imports.Newtonsoft.Json.Utilities.Convertible;
 #endif
 
-namespace Newtonsoft.Json.Serialization
+namespace Raven.Imports.Newtonsoft.Json.Serialization
 {
   internal enum JsonContractType
   {

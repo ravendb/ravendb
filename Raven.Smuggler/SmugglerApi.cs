@@ -12,7 +12,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Text;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;

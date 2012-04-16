@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -12,7 +12,7 @@ using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 using System.IO;
 
-namespace Newtonsoft.Json.Tests.Linq
+namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
 {
   [TestFixture]
   public class JPropertyTests : TestFixtureBase
@@ -66,7 +66,7 @@ namespace Newtonsoft.Json.Tests.Linq
     [Test]
     [ExpectedException(typeof(Exception)
 #if !NETFX_CORE
-      , ExpectedMessage = "Cannot add or remove items from Newtonsoft.Json.Linq.JProperty."
+      , ExpectedMessage = "Cannot add or remove items from Raven.Imports.Newtonsoft.Json.Linq.JProperty."
 #endif
       )]
     public void IListClear()
@@ -94,7 +94,7 @@ namespace Newtonsoft.Json.Tests.Linq
     [Test]
     [ExpectedException(typeof(Exception)
 #if !NETFX_CORE
-      , ExpectedMessage = "Cannot add or remove items from Newtonsoft.Json.Linq.JProperty."
+      , ExpectedMessage = "Cannot add or remove items from Raven.Imports.Newtonsoft.Json.Linq.JProperty."
 #endif
       )]
     public void IListRemove()
