@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Linq.Expressions;
@@ -74,10 +75,13 @@ namespace Raven.Bundles.Tests.MoreLikeThis
             {
                 var list = session.Advanced.MoreLikeThis<IndexDocument, MapReduceIndex>(
                     new MoreLikeThisQueryParameters
-                {
-//                    ReduceKey = DolanId,
-                    MinimumDocumentFrequency = 1
-                });
+                    {
+                        MapGroupFields = new NameValueCollection()
+                        {
+                            {"TargetId", DolanId}
+                        },
+                        MinimumDocumentFrequency = 1
+                    });
 
                 Assert.Equal(1, list.Count());
             }

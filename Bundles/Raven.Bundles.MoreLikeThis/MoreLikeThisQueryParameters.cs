@@ -13,7 +13,7 @@ namespace Raven.Bundles.MoreLikeThis
 	{
 		public MoreLikeThisQueryParameters()
 		{
-			MapGroupFields = new StringDictionary();
+			MapGroupFields = new NameValueCollection();
 		}
 
 		public const int DefaultMaximumNumberOfTokensParsed = 5000;
@@ -77,7 +77,7 @@ namespace Raven.Bundles.MoreLikeThis
 		/// <summary>
 		/// Values for the the mapping group fields to use as the basis for comparison
 		/// </summary>
-		public StringDictionary MapGroupFields { get; set; }
+		public NameValueCollection MapGroupFields { get; set; }
 
 		public string GetRequestUri(string index)
 		{

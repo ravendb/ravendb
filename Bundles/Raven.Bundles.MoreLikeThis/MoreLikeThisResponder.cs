@@ -47,10 +47,10 @@ namespace Raven.Bundles.MoreLikeThis
 				return;
 			}
 
-			if (string.IsNullOrEmpty(parameters.DocumentId))
+			if (string.IsNullOrEmpty(parameters.DocumentId) && parameters.MapGroupFields.Count == 0)
 			{
 				context.SetStatusToBadRequest();
-				context.WriteJson(new { Error = "The document id is mandatory" });
+				context.WriteJson(new { Error = "The document id or map group fields are mandatory" });
 				return;
 			}
 
@@ -62,7 +62,20 @@ namespace Raven.Bundles.MoreLikeThis
 			IndexSearcher searcher;
 			using (Database.IndexStorage.GetCurrentIndexSearcher(indexName, out searcher))
 			{
-				var td = searcher.Search(new TermQuery(new Term(Constants.DocumentIdFieldName, parameters.DocumentId)), 1);
+				var documentQuery = new BooleanQuery();
+
+				if (!string.IsNullOrEmpty(parameters.DocumentId))
+				{
+					documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, parameters.DocumentId)), Lucene.Net.Search.BooleanClause.Occur.MUST);
+				}
+
+				foreach(string key in parameters.MapGroupFields.Keys)
+				{
+					documentQuery.Add(new TermQuery(new Term(key, parameters.MapGroupFields[key])), Lucene.Net.Search.BooleanClause.Occur.MUST);
+				}
+
+				var td = searcher.Search(documentQuery, 1);
+
 				// get the current Lucene docid for the given RavenDB doc ID
 				if (td.ScoreDocs.Length == 0)
 				{
