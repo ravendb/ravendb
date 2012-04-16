@@ -36,9 +36,10 @@ namespace Raven.Tests.Bugs
 			};
 			documentStore.Initialize();
 
-			documentStore.DatabaseCommands.PutIndex("Foo/Something", new IndexDefinitionBuilder<Foo> {
-																								  Map = docs => from doc in docs select new { doc.Something }
-																							  });
+			documentStore.DatabaseCommands.PutIndex("Foo/Something", new IndexDefinitionBuilder<Foo>
+			{
+				Map = docs => from doc in docs select new {doc.Something}
+			});
 		}
 
 		[Fact]
