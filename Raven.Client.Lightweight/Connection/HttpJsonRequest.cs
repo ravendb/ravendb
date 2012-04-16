@@ -73,7 +73,8 @@ namespace Raven.Client.Connection
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
 			webRequest.Method = method;
-			if ((method == "POST" || method == "PUT" || method == "PATCH") && this.factory.DisableRequestCompress == false)
+			if (factory.DisableRequestCompression == false && 
+				(method == "POST" || method == "PUT" || method == "PATCH"))
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
 			WriteMetadata(metadata);
@@ -256,15 +257,18 @@ namespace Raven.Client.Connection
 
 			if (postedData != null)
 			{
-				HttpRequestHelper.WriteDataToRequest(newWebRequest, postedData);
+				HttpRequestHelper.WriteDataToRequest(newWebRequest, postedData, factory.DisableRequestCompression);
 			}
-			if (postedStream != null && factory.DisableRequestCompress == false)
+			if (postedStream != null)
 			{
 				postedStream.Position = 0;
 				using (var stream = newWebRequest.GetRequestStream())
 				using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
 				{
-					postedStream.CopyTo(commpressedData);
+					if (factory.DisableRequestCompression == false)
+						postedStream.CopyTo(commpressedData);
+					else
+						postedStream.CopyTo(stream);
 
 					commpressedData.Flush();
 					stream.Flush();
@@ -521,7 +525,7 @@ namespace Raven.Client.Connection
 			writeCalled = true;
 			postedData = data;
 
-			HttpRequestHelper.WriteDataToRequest(webRequest, data);
+			HttpRequestHelper.WriteDataToRequest(webRequest, data, factory.DisableRequestCompression);
 		}
 
 
@@ -631,7 +635,6 @@ namespace Raven.Client.Connection
 					manualResetEvent.Close();
 			}
 		}
-
 
 		public RavenJToken ReadResponseJson()
 		{

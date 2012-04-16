@@ -361,24 +361,14 @@ namespace Raven.Studio.Models
 		{
 			if (Seperator != null)
 			{
-				var newData = jsonData;
-
-				var dates = Regex.Matches(newData, @"\d{4}" + Seperator + @"\d{2}" + Seperator + @"\d{2}T\d{2}:\d{2}:\d{2}.\d{7}" + Seperator + @"\d{2}:\d{2}");
-				if (dates.Count != 0)
-				{
-					newData = dates.Cast<Match>().Aggregate(newData, (current, date) => current.Remove(date.Index, 33));
-				}
-
-				var guids = Regex.Matches(newData, @"\x{8}" + Seperator + @"\x{4}" + Seperator + @"\x{4}" + Seperator + @"\x{4}" + Seperator + @"\x{12}");
-				if (guids.Count != 0)
-				{
-					newData = guids.Cast<Match>().Aggregate(newData, (current, guid) => current.Remove(guid.Index, 36));
-				}
-
-				var referencesIds = Regex.Matches(newData, @"""(\w+" + Seperator + @"\w+)");
+				var referencesIds = Regex.Matches(jsonData, @"""(\w+" + Seperator + @"\w+)");
 				References.Clear();
 				foreach (var source in referencesIds.Cast<Match>().Select(x => x.Groups[1].Value).Distinct())
 				{
+					DateTime time;
+					if(DateTime.TryParse(source, out time))
+						continue;
+					
 					References.Add(new LinkModel
 					{
 						Title = source,

@@ -69,7 +69,7 @@ namespace Raven.Client.Silverlight.Connection
 		/// <returns></returns>
 		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention)
 		{
-			var request = new HttpJsonRequest(url, method, metadata, convention, new HttpJsonRequestFactory());
+			var request = new HttpJsonRequest(url, method, metadata, convention, this);
 			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest, JsonRequest = request });
 			return request;
 		}
@@ -77,7 +77,7 @@ namespace Raven.Client.Silverlight.Connection
 		/// <summary>
 		/// Determine whether to use compression or not 
 		/// </summary>
-		public bool DisableRequestCompress { get; set; }
+		public bool DisableRequestCompression { get; set; }
 
 		public void Dispose()
 		{
