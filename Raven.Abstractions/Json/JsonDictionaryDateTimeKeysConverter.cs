@@ -8,15 +8,8 @@ namespace Raven.Abstractions.Json
 {
 	public class JsonDictionaryDateTimeKeysConverter : RavenJsonConverter
 	{
-		readonly HashSet<Type> types;
-
 		private readonly MethodInfo genericWriteJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod("GenericWriteJson");
 		private readonly MethodInfo genericReadJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod("GenericReadJson");
-
-		public JsonDictionaryDateTimeKeysConverter(params Type[] types)
-		{
-			this.types = new HashSet<Type>(types);
-		}
 
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
@@ -122,7 +115,10 @@ namespace Raven.Abstractions.Json
 				return false;
 
 			var keyType = objectType.GetGenericArguments()[0];
-			return types.Contains(keyType);
+			return typeof(DateTime) == keyType ||
+				typeof(DateTimeOffset) == keyType ||
+				typeof(DateTimeOffset?) == keyType ||
+				typeof(DateTime?) == keyType;
 		}
 	}
 }
