@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net.NetworkInformation;
 using System.Xml;
@@ -32,7 +33,9 @@ namespace Raven.StressTests
 			{
 				for (; i < iterations; i++)
 				{
-					Console.Write("\r" + i);
+					Console.WriteLine("run #" + 1);
+					Debug.WriteLine("run #" + 1);
+					Console.Out.Flush();
 					RunTest(action, i);
 				}
 			}

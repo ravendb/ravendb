@@ -79,5 +79,17 @@ namespace Raven.StressTests.Races
 		{
 			Run<AggressiveCaching>(x => x.CanAggressivelyCacheLoads(), 10000);
 		}
+		
+		[Fact]
+		public void WillOverwriteDocWhenOptimisticConcurrencyIsOff()
+		{
+			Run<OverwriteDocuments>(x => x.WillOverwriteDocWhenOptimisticConcurrencyIsOff());
+		}
+		
+		[Fact]
+		public void WillThrowWhenOptimisticConcurrencyIsOn()
+		{
+			Run<OverwriteDocuments>(x => x.WillThrowWhenOptimisticConcurrencyIsOn());
+		}
 	}
 }
