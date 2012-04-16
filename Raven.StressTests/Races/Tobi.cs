@@ -15,7 +15,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void GetDocumentAfterAnEtagWhileAddingDocsFromMultipleThreadsEnumeratesAllDocs()
 		{
-			Run<GeneralStorage>(x => x.GetDocumentAfterAnEtagWhileAddingDocsFromMultipleThreadsEnumeratesAllDocs());
+			Run<GeneralStorage>(x => x.GetDocumentAfterAnEtagWhileAddingDocsFromMultipleThreadsEnumeratesAllDocs(), 250);
 		}
 	}
 }
