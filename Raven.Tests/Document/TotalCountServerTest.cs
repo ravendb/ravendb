@@ -24,27 +24,22 @@ namespace Raven.Tests.Document
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
-		#region IDisposable Members
-
-		public void Dispose()
+		public override void Dispose()
 		{
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
-
-		#endregion
 
 		[Fact]
 		public void TotalResultIsIncludedInQueryResult()
 		{
 			using (var server = GetNewServer(port, path))
 			{
-				using (var store = new DocumentStore { Url = "http://localhost:" + port })
+				using (var store = new DocumentStore { Url = "http://localhost:" + port }.Initialize())
 				{
-					store.Initialize();
-
 					using (var session = store.OpenSession())
 					{
-						Company company1 = new Company()
+						var company1 = new Company()
 						{
 							Name = "Company1",
 							Address1 = "",
@@ -53,7 +48,7 @@ namespace Raven.Tests.Document
 							Contacts = new List<Contact>(),
 							Phone = 2
 						};
-						Company company2 = new Company()
+						var company2 = new Company()
 						{
 							Name = "Company2",
 							Address1 = "",
@@ -75,9 +70,6 @@ namespace Raven.Tests.Document
 					}
 				}
 			}
-			  
-		   
-
 		}
 	}
 }

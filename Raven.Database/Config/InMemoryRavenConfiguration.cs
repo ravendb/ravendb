@@ -181,6 +181,8 @@ namespace Raven.Database.Config
 
 			// OAuth
 			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? AuthenticationMode ?? "windows";
+
+			AllowLocalAccessWithoutAuthorization = GetConfigurationValue<bool>("Raven/AllowLocalAccessWithoutAuthorization") ?? false;
 			PostInit();
 		}
 
@@ -344,7 +346,7 @@ namespace Raven.Database.Config
 		public int MaxNumberOfItemsToIndexInSingleBatch { get; set; }
 
 		/// <summary>
-		/// The intial number of items to take when indexing a batch
+		/// The initial number of items to take when indexing a batch
 		/// Default: 5,000
 		/// </summary>
 		public int InitialNumberOfItemsToIndexInSingleBatch { get; set; }
@@ -476,6 +478,13 @@ namespace Raven.Database.Config
 		/// Default: Windows
 		/// </summary>
 		public string AuthenticationMode { get; set; }
+
+		/// <summary>
+		/// If set local request don't require authentication
+		/// Allowed values: true/false
+		/// Default: false
+		/// </summary>
+		public bool AllowLocalAccessWithoutAuthorization { get; set; }
 
 		/// <summary>
 		/// The certificate to use when verifying access token signatures for OAuth

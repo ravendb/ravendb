@@ -82,7 +82,7 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public abstract bool IsMapReduce { get; }
 
-		#region IDisposable Members
+		
 
 		public void Dispose()
 		{
@@ -133,8 +133,6 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		#endregion
-
 		public void Flush()
 		{
 			lock (writeLock)
@@ -143,12 +141,18 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter == null) 
 					return;
-				if (docCountSinceLastOptimization > 2048)
-				{
-					indexWriter.Optimize();
-					docCountSinceLastOptimization = 0;
-				}
+
 				indexWriter.Commit();
+			}
+		}
+
+		public void MergeSegments()
+		{
+			if (docCountSinceLastOptimization <= 2048) return;
+			lock (writeLock)
+			{
+				indexWriter.Optimize();
+				docCountSinceLastOptimization = 0;
 			}
 		}
 
@@ -258,6 +262,9 @@ namespace Raven.Database.Indexing
 					UpdateIndexingStats(context, stats);
 
 					WriteTempIndexToDiskIfNeeded(context);
+
+					if (configuration.TransactionMode == TransactionMode.Safe)
+						Flush(); // just make sure changes are flushed to disk
 				}
 				finally
 				{

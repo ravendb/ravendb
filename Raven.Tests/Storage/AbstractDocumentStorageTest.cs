@@ -5,20 +5,63 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Linq;
+using System.Threading;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Database;
 using Raven.Database.Extensions;
+using Xunit;
 
 namespace Raven.Tests.Storage
 {
-	public class AbstractDocumentStorageTest : IDisposable
+	public abstract class AbstractDocumentStorageTest : IDisposable
 	{
-		public AbstractDocumentStorageTest()
+		protected const string DataDir = "raven.db.test.esent";
+		protected const string BackupDir = "raven.db.test.backup";
+
+		protected AbstractDocumentStorageTest()
 		{
-			IOExtensions.DeleteDirectory("raven.db.test.esent");
+			IOExtensions.DeleteDirectory(DataDir);
+			DeleteIfExists(BackupDir); // for full backups, we can't have anything in the target dir
 		}
 
 		public virtual void Dispose()
 		{
-			IOExtensions.DeleteDirectory("raven.db.test.esent");
+			IOExtensions.DeleteDirectory(DataDir);
+			IOExtensions.DeleteDirectory(BackupDir);
+		}
+
+		protected static void DeleteIfExists(string directoryName)
+		{
+			string directoryFullName = Path.IsPathRooted(directoryName)
+										? directoryName
+										: Path.Combine(AppDomain.CurrentDomain.BaseDirectory, directoryName);
+
+			IOExtensions.DeleteDirectory(directoryFullName);
+		}
+
+		protected void WaitForBackup(DocumentDatabase db, bool checkError)
+		{
+			while (true)
+			{
+				var jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
+				if (jsonDocument == null)
+					break;
+				var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
+				if (backupStatus.IsRunning == false)
+				{
+					if (checkError)
+					{
+						var firstOrDefault = backupStatus.Messages.FirstOrDefault(x => x.Severity == BackupStatus.BackupMessageSeverity.Error);
+						if (firstOrDefault != null)
+							Assert.False(true, firstOrDefault.Message);
+					}
+
+					return;
+				}
+				Thread.Sleep(50);
+			}
 		}
 	}
 }

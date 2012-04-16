@@ -3,20 +3,16 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Threading;
-using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Tests.Storage;
 using Xunit;
-using Raven.Database.Json;
 
 namespace Raven.Tests.Indexes
 {
@@ -28,22 +24,18 @@ namespace Raven.Tests.Indexes
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = "raven.db.test.esent",
+				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 				Catalog = { Catalogs = { new TypeCatalog(typeof(ShoppingCartEventsToShopingCart), typeof(MapOnlyView)) } }
 			});
 			db.SpinBackgroundWorkers();
 		}
 
-		#region IDisposable Members
-
 		public override void Dispose()
 		{
 			db.Dispose();
 			base.Dispose();
 		}
-
-		#endregion
 
 		[Fact]
 		public void CanGetDataFromCompiledIndex()

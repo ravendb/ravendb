@@ -3,8 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
-using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using Raven.Abstractions.Data;
@@ -26,7 +24,7 @@ namespace Raven.Tests.Triggers
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = "raven.db.test.esent",
+				DataDirectory = DataDir,
 				Container = new CompositionContainer(new TypeCatalog(
 					typeof(HideAttachmentByCaseReadTrigger)))
 			});

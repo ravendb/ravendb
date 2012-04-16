@@ -236,8 +236,6 @@ namespace Raven.Database.Indexing
 			return indexes.ContainsKey(index);
 		}
 
-		#region IDisposable Members
-
 		public void Dispose()
 		{
 			foreach (var index in indexes.Values)
@@ -248,8 +246,6 @@ namespace Raven.Database.Indexing
 			if (crashMarker != null)
 				crashMarker.Dispose();
 		}
-
-		#endregion
 
 		public void DeleteIndex(string name)
 		{
@@ -404,7 +400,7 @@ namespace Raven.Database.Indexing
 
 		private Index GetIndexByName(string indexName)
 		{
-			var result = indexes.Where(index => string.Compare(index.Key, indexName, true) == 0)
+			var result = indexes.Where(index => System.String.Compare(index.Key, indexName, System.StringComparison.OrdinalIgnoreCase) == 0)
 				.Select(x => x.Value)
 				.FirstOrDefault();
 			if (result == null)
@@ -412,22 +408,27 @@ namespace Raven.Database.Indexing
 			return result;
 		}
 
-		public void FlushMapIndexes(bool optimize = false)
+		public void RunIdleOperations()
 		{
 			foreach (var value in indexes.Values)
 			{
-				if (value.IsMapReduce)
-					continue;
+				value.Flush();
+				value.MergeSegments(); // noop if previously merged
+			}
+		}
+
+		public void FlushMapIndexes()
+		{
+			foreach (var value in indexes.Values.Where(value => !value.IsMapReduce))
+			{
 				value.Flush();
 			}
 		}
 
-		public void FlushReduceIndexes(bool optimize = false)
+		public void FlushReduceIndexes()
 		{
-			foreach (var value in indexes.Values)
+			foreach (var value in indexes.Values.Where(value => value.IsMapReduce))
 			{
-				if (value.IsMapReduce == false)
-					continue;
 				value.Flush();
 			}
 		}

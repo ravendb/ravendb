@@ -52,6 +52,9 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Commands\DeleteCommandData.cs" />
     <Compile Include="Commands\PatchCommandData.cs" />
     <Compile Include="Commands\PutCommandData.cs" />
@@ -151,10 +154,6 @@
     <Compile Include="Linq\DateTools.cs" />
     <Compile Include="Linq\DynamicJsonObject.cs" />
     <Compile Include="MEF\PartMetadata.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs">
-      <SubType>
-      </SubType>
-    </Compile>
     <Compile Include="Data\QueryResult.cs" />
     <Compile Include="Indexing\SortOptions.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />

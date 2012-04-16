@@ -22,14 +22,11 @@ namespace Raven.Tests.Triggers.Bugs
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
-		#region IDisposable Members
-
-		public void Dispose()
+		public override void Dispose()
 		{
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
-
-		#endregion
 
 		[Fact]
 		public void WillNotCorruptData()

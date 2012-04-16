@@ -566,7 +566,15 @@ namespace Raven.Client.Connection
 		{
 			foreach (string header in operationsHeaders)
 			{
-				webRequest.Headers[header] = operationsHeaders[header];
+				try
+				{
+					webRequest.Headers[header] = operationsHeaders[header];
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException(
+						"Failed to set header '" + header + "' to the value: " + operationsHeaders[header], e);
+				}
 			}
 		}
 

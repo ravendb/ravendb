@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 
 namespace Raven.Client.Shard
@@ -18,7 +19,7 @@ namespace Raven.Client.Shard
 		/// Gets or sets the key.
 		/// </summary>
 		/// <value>The key.</value>
-		public string Key { get; set; }
+		public List<string> Keys { get; set; }
 
 		/// <summary>
 		/// Gets or sets the type of the entity.
@@ -30,5 +31,10 @@ namespace Raven.Client.Shard
 		/// Gets or sets the query being executed
 		/// </summary>
 		public IndexQuery Query { get; set; }
+
+		public ShardRequestData()
+		{
+			Keys = new List<string>();
+		}
 	}
 }

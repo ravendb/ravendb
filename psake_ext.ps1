@@ -19,7 +19,6 @@ function Get-Git-Commit
 	}
 }
 
-
 function Delete-Sample-Data-For-Release
 {
   param([string]$sample_dir)
@@ -37,56 +36,12 @@ function Delete-Sample-Data-For-Release
   del "$sample_dir\Servers\Shard2\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue
 }
 
-
-function Generate-Assembly-Info
-{
-param(
-	[string]$clsCompliant = "true",
-	[string]$title, 
-	[string]$description, 
-	[string]$company, 
-	[string]$product, 
-	[string]$copyright, 
-	[string]$version,
-	[string]$fileVersion,
-	[string]$file = $(throw "file is a required parameter.")
-)
-	$commit = Get-Git-Commit
-	$asmInfo = "using System;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-
-#if !SILVERLIGHT
-[assembly: SuppressIldasmAttribute()]
-[assembly: CLSCompliantAttribute($clsCompliant)]
-#endif
-[assembly: ComVisibleAttribute(false)]
-[assembly: AssemblyTitleAttribute(""$title"")]
-[assembly: AssemblyDescriptionAttribute(""$description"")]
-[assembly: AssemblyCompanyAttribute(""$company"")]
-[assembly: AssemblyProductAttribute(""$product"")]
-[assembly: AssemblyCopyrightAttribute(""$copyright"")]
-[assembly: AssemblyVersionAttribute(""$version"")]
-[assembly: AssemblyInformationalVersionAttribute(""$version / $commit"")]
-[assembly: AssemblyFileVersionAttribute(""$fileVersion"")]
-[assembly: AssemblyDelaySignAttribute(false)]
-"
-
-	$dir = [System.IO.Path]::GetDirectoryName($file)
-	if ([System.IO.Directory]::Exists($dir) -eq $false)
-	{
-		Write-Host "Creating directory $dir"
-		[System.IO.Directory]::CreateDirectory($dir)
-	}
-	Write-Host "Generating assembly info file: $file"
-	Write-Output $asmInfo > $file
-}
-
 function Get-DependencyPackageFiles
 {
 	param([string]$packageName, [string]$frameworkVersion = "net40")
 	
-	$fullPackageName = Get-ChildItem "$base_dir\packages\$packageName.*" | Sort-Object Name -Descending | Select-Object -First 1
+	$fullPackageName = Get-ChildItem "$base_dir\packages\$packageName.*" | 
+								Sort-Object Name -Descending | 
+								Select-Object -First 1
 	Return "$fullPackageName\lib\$frameworkVersion\*"
 }

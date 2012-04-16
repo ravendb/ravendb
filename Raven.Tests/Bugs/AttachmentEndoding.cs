@@ -26,14 +26,11 @@ namespace Raven.Tests.Bugs
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
-		#region IDisposable Members
-
-		public void Dispose()
+		public override void Dispose()
 		{
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
-
-		#endregion
 
 		[Fact]
 		public void Can_get_proper_attachment_names()
@@ -56,7 +53,5 @@ namespace Raven.Tests.Bugs
 				}
 			}
 		}
-
-			
 	}
 }

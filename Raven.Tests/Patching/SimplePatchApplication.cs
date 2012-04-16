@@ -136,6 +136,85 @@ namespace Raven.Tests.Patching
 			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""blog_id"":2}",
 				patchedDoc.ToString(Formatting.None));
 		}
+
+
+		[Fact]
+		public void ExistingPropertySetToObject()
+		{
+			var patchedDoc = new JsonPatcher(doc).Apply(
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "title",
+						Value = new RavenJObject
+						{
+							{"a", "b"}
+						}
+					},
+				});
+
+			Assert.Equal(@"{""title"":{""a"":""b""},""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}]}",
+				patchedDoc.ToString(Formatting.None));
+		}
+
+		[Fact]
+		public void ExistingPropertySetToArray()
+		{
+			var patchedDoc = new JsonPatcher(doc).Apply(
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "title",
+						Value = new RavenJArray()
+					},
+				});
+
+			Assert.Equal(@"{""title"":[],""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}]}",
+				patchedDoc.ToString(Formatting.None));
+		}
+
+		[Fact]
+		public void NewPropertySetToObject()
+		{
+			var patchedDoc = new JsonPatcher(doc).Apply(
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "blog_id",
+						Value = new RavenJObject
+						{
+							{"a", "b"}
+						}
+					},
+				});
+
+			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""blog_id"":{""a"":""b""}}",
+				patchedDoc.ToString(Formatting.None));
+		}
+
+		[Fact]
+		public void NewPropertySetToArray()
+		{
+			var patchedDoc = new JsonPatcher(doc).Apply(
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "blog_id",
+						Value = new RavenJArray()
+					},
+				});
+
+			Assert.Equal(@"{""title"":""A Blog Post"",""body"":""html markup"",""comments"":[{""author"":""ayende"",""text"":""good post""}],""blog_id"":[]}",
+				patchedDoc.ToString(Formatting.None));
+		}
 		
 		[Fact]
 		public void PropertyIncrementOnNonExistingProperty()

@@ -122,11 +122,16 @@ namespace Raven.Client.Document
 			while (true)
 			{
 				var currentCopy = results;
-				results = shardStrategy.ShardAccessStrategy.Apply(ShardDatabaseCommands, (dbCmd, i) =>
+				results = shardStrategy.ShardAccessStrategy.Apply(ShardDatabaseCommands,
+					new ShardRequestData
+					{
+						EntityType = typeof(T),
+						Query = IndexQuery
+					}, (dbCmd, i) =>
 				{
 					if (currentCopy[i]) // if we already got a good result here, do nothing
 						return true;
-					
+
 					var queryOp = shardQueryOperations[i];
 
 					using (queryOp.EnterQueryContext())

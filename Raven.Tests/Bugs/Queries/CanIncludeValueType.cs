@@ -55,10 +55,12 @@ namespace Raven.Tests.Bugs.Queries
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			store.Dispose();
 			ravenDbServer.Dispose();
+
+			base.Dispose();
 		}
 
 		[Fact]

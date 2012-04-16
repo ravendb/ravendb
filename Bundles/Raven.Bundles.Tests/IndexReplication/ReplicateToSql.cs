@@ -9,6 +9,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.Configuration;
 using System.Data.Common;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Xml;
 using Raven.Abstractions.Indexing;
@@ -18,7 +19,6 @@ using Raven.Bundles.IndexReplication.Data;
 using Raven.Client.Document;
 using Raven.Server;
 using Xunit;
-using System.Linq;
 using Xunit.Sdk;
 
 namespace Raven.Bundles.Tests.IndexReplication
@@ -113,16 +113,12 @@ CREATE TABLE [dbo].[QuestionSummaries]
 			}
 		}
 
-		#region IDisposable Members
-
 		public void Dispose()
 		{
 			documentStore.Dispose();
 			ravenDbServer.Dispose();
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 		}
-
-		#endregion
 
 		[FactIfSqlServerIsAvailable]
 		public void Can_replicate_to_sql()
@@ -403,5 +399,4 @@ CREATE TABLE [dbo].[QuestionSummaries]
 			return null;
 		}
 	}
-
 }

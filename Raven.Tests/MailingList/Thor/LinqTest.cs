@@ -24,10 +24,11 @@ namespace Raven.Tests.MailingList.Thor
 			           	}.Initialize();
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			documentStore.Dispose();
 			ravenDbServer.Dispose();
+			base.Dispose();
 		}
 
 		[Fact]

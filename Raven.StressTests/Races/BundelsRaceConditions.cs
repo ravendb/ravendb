@@ -42,5 +42,11 @@ namespace Raven.StressTests.Races
 		{
 			Run<CanQueryOnlyPosts>(x => x.CanMergeResultFromAllPostsShards(), 10000);
 		}
+		
+		[Fact]
+		public void SimpleReplication()
+		{
+			Run<SimpleReplication>(x => x.Can_replicate_between_two_instances(), 10000);
+		}
 	}
 }

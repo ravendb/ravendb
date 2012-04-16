@@ -23,19 +23,15 @@ namespace Raven.Tests.Indexes
 
 		public DocumentsToIndex()
 		{
-			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true});
+			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true});
 			db.SpinBackgroundWorkers();
 		}
-
-		#region IDisposable Members
 
 		public override void Dispose()
 		{
 			db.Dispose();
 			base.Dispose();
 		}
-
-		#endregion
 
 		[Fact]
 		public void Can_Read_values_from_index()

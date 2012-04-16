@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -11,7 +10,6 @@ using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -23,21 +21,17 @@ namespace Raven.Tests.Indexes
 
 		public QueryingOnStaleIndexes()
 		{
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true });
+			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true });
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		
 
 		}
-
-		#region IDisposable Members
 
 		public override void Dispose()
 		{
 			db.Dispose();
 			base.Dispose();
 		}
-
-		#endregion
 
 		[Fact]
 		public void WillGetStaleResultWhenThereArePendingTasks()
@@ -75,7 +69,7 @@ namespace Raven.Tests.Indexes
 				Start = 0,
 			}).IsStale);
 
-			db.StopBackgroundWokers();
+			db.StopBackgroundWorkers();
 
 			db.Put("a", null, new RavenJObject(), new RavenJObject(), null);
 

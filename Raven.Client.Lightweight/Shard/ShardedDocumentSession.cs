@@ -89,13 +89,14 @@ namespace Raven.Client.Shard
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
-			var dbCommands = GetCommandsToOperateOn(new ShardRequestData
+			var shardRequestData = new ShardRequestData
 			{
-				EntityType = typeof(object),
-				Key = documentKey
-			});
+				EntityType = typeof (object), Keys = {documentKey}
+			};
+			var dbCommands = GetCommandsToOperateOn(shardRequestData);
 
 			var documents = shardStrategy.ShardAccessStrategy.Apply(dbCommands, 
+				shardRequestData, 
 				(commands, i) => commands.Get(documentKey));
 
 			var document = documents.FirstOrDefault(x => x != null);
@@ -171,9 +172,10 @@ namespace Raven.Client.Shard
 		public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
 		{
 			var cmds = GetCommandsToOperateOn(new ShardRequestData
-			                                                 	{
-			                                                 		Key = id, EntityType = typeof (TResult)
-			                                                 	});
+			{
+				Keys = {id},
+				EntityType = typeof (TResult)
+			});
 
 			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, () =>
 			                                                                                   	{
@@ -269,8 +271,8 @@ namespace Raven.Client.Shard
 				id,
 				shards = GetCommandsToOperateOn(new ShardRequestData
 				{
-					Key = id,
-					EntityType = typeof(T),
+					Keys = {id},
+					EntityType = typeof (T),
 				})
 			})
 				.GroupBy(x => x.shards, new DbCmdsListComparer());
@@ -322,7 +324,7 @@ namespace Raven.Client.Shard
 				{
 					var lazyOperations = operationPerShard.Select(x => x.Item1).ToArray();
 					var requests = lazyOperations.Select(x => x.CraeteRequest()).ToArray();
-					var multiResponses = shardStrategy.ShardAccessStrategy.Apply(operationPerShard.Key, (commands, i) => commands.MultiGet(requests));
+					var multiResponses = shardStrategy.ShardAccessStrategy.Apply(operationPerShard.Key, new ShardRequestData(), (commands, i) => commands.MultiGet(requests));
 
 					var sb = new StringBuilder();
 					foreach (var response in from shardReponses in multiResponses
@@ -361,12 +363,12 @@ namespace Raven.Client.Shard
 			}
 
 			IncrementRequestCount();
-			var dbCommands = GetCommandsToOperateOn(new ShardRequestData
-			                                      	{
-			                                      		EntityType = typeof (T),
-			                                      		Key = id
-			                                      	});
-			var results = shardStrategy.ShardAccessStrategy.Apply(dbCommands, (commands, i) =>
+			var shardRequestData = new ShardRequestData
+			{
+				EntityType = typeof (T), Keys = {id}
+			};
+			var dbCommands = GetCommandsToOperateOn(shardRequestData);
+			var results = shardStrategy.ShardAccessStrategy.Apply(dbCommands, shardRequestData, (commands, i) =>
 			                                                                  	{
 			                                                                  		var loadOperation = new LoadOperation(this, commands.DisableAllCaching, id);
 			                                                                  		bool retry;
@@ -474,7 +476,7 @@ namespace Raven.Client.Shard
 			{
 				var shardsToOperateOn = GetShardsToOperateOn(new ShardRequestData
 				{
-					Key = cmd.Key
+					Keys = {cmd.Key}
 				}).Select(x => x.Item1).ToList();
 
 				if (shardsToOperateOn.Count == 0)
@@ -579,32 +581,34 @@ namespace Raven.Client.Shard
 			IncrementRequestCount();
 
 
-			var dbCommands = GetCommandsToOperateOn(new ShardRequestData
+			var shardRequestData = new ShardRequestData
 			{
-				EntityType = typeof(T),
-				Key = value.Key
-			});
-			//TODO: shard access
-			foreach (var dbCmd in dbCommands)
+				EntityType = typeof (T), Keys = {value.Key}
+			};
+			var dbCommands = GetCommandsToOperateOn(shardRequestData);
+
+			var results = shardStrategy.ShardAccessStrategy.Apply(dbCommands, shardRequestData, (dbCmd, i) =>
 			{
 				var jsonDocument = dbCmd.Get(value.Key);
 				if (jsonDocument == null)
-					continue;
+					return false;
 
 				value.Metadata = jsonDocument.Metadata;
-				value.OriginalMetadata = (RavenJObject)jsonDocument.Metadata.CloneToken();
+				value.OriginalMetadata = (RavenJObject) jsonDocument.Metadata.CloneToken();
 				value.ETag = jsonDocument.Etag;
 				value.OriginalValue = jsonDocument.DataAsJson;
 				var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
-				foreach (var property in entity.GetType().GetProperties())
+				foreach (var property in entity.GetType().GetProperties().Where(property => property.CanWrite && property.CanRead && property.GetIndexParameters().Length == 0))
 				{
-					if (!property.CanWrite || !property.CanRead || property.GetIndexParameters().Length != 0)
-						continue;
 					property.SetValue(entity, property.GetValue(newEntity, null), null);
 				}
-			}
+				return true;
+			});
 
-			throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
+			if (results.All(x => x == false))
+			{
+				throw new InvalidOperationException("Document '" + value.Key + "' no longer exists and was probably deleted");
+			}
 		}
 
 		IDatabaseCommands ISyncAdvancedSessionOperation.DatabaseCommands
@@ -690,7 +694,7 @@ namespace Raven.Client.Shard
 														shards = GetCommandsToOperateOn(new ShardRequestData
 			                                    		                              	{
 			                                    		                              		EntityType = typeof (T),
-			                                    		                              		Key = id
+			                                    		                              		Keys = {id}
 			                                    		                              	})
 			                                    	})
 				.GroupBy(x => x.shards, new DbCmdsListComparer());
@@ -699,7 +703,11 @@ namespace Raven.Client.Shard
 			foreach (var shard in idsAndShards)
 			{
 				var currentShardIds = shard.Select(x => x.id).ToArray();
-				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, (dbCmd, i) =>
+				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, new ShardRequestData
+				{
+					EntityType = typeof(T),
+					Keys = currentShardIds.ToList()
+				}, (dbCmd, i) =>
 				{
 					var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
 					MultiLoadResult multiLoadResult;
@@ -753,7 +761,7 @@ namespace Raven.Client.Shard
 					shards = GetCommandsToOperateOn(new ShardRequestData
 					{
 						EntityType = typeof(T),
-						Key = id
+						Keys = {id}
 					})
 				})
 					.GroupBy(x => x.shards, new DbCmdsListComparer());
@@ -761,7 +769,11 @@ namespace Raven.Client.Shard
 				foreach (var shard in idsAndShards)
 				{
 					var currentShardIds = shard.Select(x => x.id).ToArray();
-					var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, (dbCmd, i) =>
+					var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, new ShardRequestData
+					{
+						EntityType = typeof(T),
+						Keys = currentShardIds.ToList()
+					}, (dbCmd, i) =>
 					{
 						var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
 						MultiLoadResult multiLoadResult;

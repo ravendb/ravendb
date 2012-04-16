@@ -145,7 +145,7 @@ namespace Raven.Database.Server
 			CleanupDatabase(@event.Name);
 		}
 
-		#region IDisposable Members
+		
 
 		public void Dispose()
 		{
@@ -190,8 +190,6 @@ namespace Raven.Database.Server
 				disposerLock.ExitWriteLock();
 			}
 		}
-
-		#endregion
 
 		public void StartListening()
 		{

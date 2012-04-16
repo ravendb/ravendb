@@ -7,7 +7,7 @@ using Raven.Tests.Bugs.Identifiers;
 
 namespace Raven.Tests.Bugs
 {
-	public class ConflictsWithIIS : IISExpressTestClient
+	public class ConflictsWithIIS : IisExpressTestClient
 	{
 		public class DeviceStatusRecord
 		{
