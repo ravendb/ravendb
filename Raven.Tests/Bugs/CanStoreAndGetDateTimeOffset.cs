@@ -11,7 +11,7 @@ namespace Raven.Tests.Bugs
 		public void WithEmbedded()
 		{
 			using (var store = NewDocumentStore())
-				RunTest(store);
+				ExecuteTest(store);
 		}
 
 		[Fact]
@@ -19,12 +19,12 @@ namespace Raven.Tests.Bugs
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
-				RunTest(store);
+				ExecuteTest(store);
 		}
 
-		private void RunTest(IDocumentStore store)
+		private void ExecuteTest(IDocumentStore store)
 		{
-			var expected = new DateTimeOffset(2010, 11, 10, 19, 13, 18, 26, TimeSpan.FromHours(2));
+			var expected = new DateTimeOffset(2010, 11, 10, 19, 13, 26, 509, TimeSpan.FromHours(2));
 			using (var session = store.OpenSession())
 			{
 				session.Store(new FooBar {Foo = expected});
