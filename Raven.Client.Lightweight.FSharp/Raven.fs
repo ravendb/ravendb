@@ -12,7 +12,7 @@ open Raven.Client.Document
 open Raven.Abstractions.Extensions
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Linq
-open Newtonsoft.Json
+open Raven.Imports.Newtonsoft.Json
 
  [<AutoOpen>]
  module Operators = 

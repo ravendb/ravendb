@@ -1,7 +1,7 @@
 ﻿namespace Raven.Client
 
 open System
-open Newtonsoft.Json
+open Raven.Imports.Newtonsoft.Json
 open System.Configuration
 open Raven.Client.Document
 

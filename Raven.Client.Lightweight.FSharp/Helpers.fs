@@ -3,7 +3,7 @@
 open System
 open System.Linq
 open System.Linq.Expressions
-open Newtonsoft.Json
+open Raven.Imports.Newtonsoft.Json
 open Microsoft.FSharp.Reflection
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Linq
