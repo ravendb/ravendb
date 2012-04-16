@@ -1,5 +1,7 @@
 using System;
+using System.Globalization;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -63,7 +65,7 @@ namespace Raven.Tests.Bugs
 		{
 			using (IDocumentStore store = NewDocumentStore())
 			{
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					session.Store(new MyDocument
 					{
@@ -83,7 +85,7 @@ namespace Raven.Tests.Bugs
 				}
 
 				new MyIndex().Execute(store);
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					RavenQueryStatistics stats;
 					var result = session.Advanced
@@ -107,7 +109,7 @@ namespace Raven.Tests.Bugs
 		{
 			using (IDocumentStore store = NewDocumentStore())
 			{
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					session.Store(new MyDocument
 					{
@@ -127,7 +129,7 @@ namespace Raven.Tests.Bugs
 				}
 
 				new MyIndex().Execute(store);
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					RavenQueryStatistics stats;
 					var result = session.Advanced
@@ -160,7 +162,6 @@ namespace Raven.Tests.Bugs
 
 		public class MySpatialDocument
 		{
-
 			public double Latitude { get; set; }
 			public double Longitude { get; set; }
 		}
@@ -170,7 +171,7 @@ namespace Raven.Tests.Bugs
 		{
 			using (IDocumentStore store = NewDocumentStore())
 			{
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					session.Store(new MySpatialDocument
 					{
@@ -183,7 +184,7 @@ namespace Raven.Tests.Bugs
 				new MySpatialIndex().Execute(store);
 
 
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					RavenQueryStatistics stats;
 					var result = session.Advanced
@@ -196,6 +197,49 @@ namespace Raven.Tests.Bugs
 
 					Assert.Equal(1, stats.TotalResults); // Assert.AreEqual failed. Expected:<1>. Actual:<0>.
 					Assert.Equal(1, result.Length);
+				}
+			}
+		}
+
+		[Fact]
+		public void SpatialSearchWithSwedishCulture()
+		{
+			using (IDocumentStore store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new MySpatialDocument
+					{
+						Latitude = 12.3456789f,
+						Longitude = 12.3456789f
+					});
+					session.SaveChanges();
+				}
+
+				new MySpatialIndex().Execute(store);
+
+				var oldCulture = Thread.CurrentThread.CurrentCulture;
+				try
+				{
+					Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture("sv-SE");
+					using (var session = store.OpenSession())
+					{
+						Assert.Equal("1,5", (1.5f).ToString()); // Check that the culture change is affecting the current thread. Swedish decimal delimiter is comma.
+
+						var result = session.Advanced
+							.LuceneQuery<MySpatialDocument, MySpatialIndex>()
+							.WaitForNonStaleResults()
+							.WithinRadiusOf(radius: 10, latitude: Convert.ToDouble(12.3456789f), longitude: Convert.ToDouble(12.3456789f))
+							.SortByDistance()
+							.Take(10).ToList()
+							.FirstOrDefault();
+
+						Assert.NotNull(result);
+					}
+				}
+				finally
+				{
+					Thread.CurrentThread.CurrentCulture = oldCulture;
 				}
 			}
 		}
