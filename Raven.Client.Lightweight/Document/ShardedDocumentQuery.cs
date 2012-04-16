@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using Raven.Abstractions.Data;
 using System.Threading;
-#if !NET_3_5
+#if !NET35
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Batches;
@@ -61,7 +61,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			, null
 #endif
-#if !NET_3_5
+#if !NET35
 			, null
 #endif
 			, indexName, projectionFields, queryListeners)
@@ -190,7 +190,7 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		///   Grant access to the async database commands
 		/// </summary>
@@ -200,7 +200,7 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET_3_5 && !SILVERLIGHT
+#if !NET35 && !SILVERLIGHT
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -228,7 +228,7 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET_3_5
+#if !NET35
 		protected override Task<QueryOperation> ExecuteActualQueryAsync()
 		{
 			throw new NotSupportedException();

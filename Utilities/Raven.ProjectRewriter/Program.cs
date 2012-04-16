@@ -90,7 +90,7 @@ namespace Raven.ProjectRewriter
 			{
 				if (element.Value.EndsWith(";") == false)
 					element.Value += ";";
-				element.Value += "NET_3_5";
+				element.Value += "NET35";
 			}
 
 			foreach (var element in database.Root.Descendants(xmlns + "ProjectReference").ToArray())

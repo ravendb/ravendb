@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Linq;
-#if !NET_3_5
+#if !NET35
 using System.Threading.Tasks;
 #endif
 using Raven.Abstractions.Data;
@@ -39,7 +39,7 @@ namespace Raven.Client.Linq
 
 #endif
 
-#if !NET_3_5 && !SILVERLIGHT
+#if !NET35 && !SILVERLIGHT
 		public static Lazy<IDictionary<string, IEnumerable<FacetValue>>> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
@@ -52,7 +52,7 @@ namespace Raven.Client.Linq
 		}
 #endif
 
-#if !NET_3_5
+#if !NET35
 
 
 
@@ -127,7 +127,7 @@ namespace Raven.Client.Linq
 			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
 			return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);
 		}
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Lazy Suggest alternative values for the queried term
 		/// </summary>
@@ -162,7 +162,7 @@ namespace Raven.Client.Linq
 			query.Field = lastEqualityTerm.Key;
 			query.Term = lastEqualityTerm.Value;
 		}
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Suggest alternative values for the queried term
 		/// </summary>
@@ -204,7 +204,7 @@ namespace Raven.Client.Linq
 			return (IRavenQueryable<T>)queryable;
 		}
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed

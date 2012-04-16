@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace Raven.Abstractions.MEF
 {
-#if !NET_3_5
+#if !NET35
 	public class OrderedPartCollection<T> : ICollection<Lazy<T, IPartMetadata>>, INotifyCollectionChanged
 	{
 		private readonly ObservableCollection<Lazy<T, IPartMetadata>> inner = new ObservableCollection<Lazy<T, IPartMetadata>>();

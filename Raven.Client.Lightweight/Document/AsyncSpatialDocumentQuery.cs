@@ -1,4 +1,4 @@
-﻿#if !NET_3_5
+﻿#if !NET35
 
 using System.Linq;
 using Raven.Abstractions.Data;
@@ -23,7 +23,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			IDatabaseCommands databaseCommands, 
 #endif
-#if !NET_3_5
+#if !NET35
 			IAsyncDatabaseCommands asyncDatabaseCommands,
 #endif
 			string indexName, 
@@ -33,7 +33,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 				   databaseCommands, 
 #endif
-#if !NET_3_5
+#if !NET35
 				   asyncDatabaseCommands,
 #endif
 				   indexName, 

@@ -12,7 +12,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Extensions
 {
-#if !NET_3_5
+#if !NET35
 	using Raven.Client.Connection.Async;
 	using System.Threading.Tasks;
 
@@ -55,7 +55,7 @@ namespace Raven.Client.Extensions
 		}
 #endif
 
-#if !NET_3_5
+#if !NET35
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>

@@ -11,7 +11,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using Raven.Abstractions.Extensions;
-#if !NET_3_5
+#if !NET35
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
@@ -99,7 +99,7 @@ namespace Raven.Client.Shard
 				afterDispose(this, EventArgs.Empty);
 		}
 
-#if !NET_3_5
+#if !NET35
 
 		/// <summary>
 		/// Gets the async database commands.

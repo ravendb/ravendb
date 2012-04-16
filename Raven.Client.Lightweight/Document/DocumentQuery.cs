@@ -9,7 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Linq;
 using Raven.Client.Listeners;
-#if !NET_3_5
+#if !NET35
 using Raven.Client.Connection.Async;
 #endif
 
@@ -27,7 +27,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
 #endif 
-#if !NET_3_5
+#if !NET35
 			, IAsyncDatabaseCommands asyncDatabaseCommands
 #endif
 			, string indexName, string[] projectionFields, IDocumentQueryListener[] queryListeners)
@@ -35,7 +35,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			, databaseCommands
 #endif
-#if !NET_3_5
+#if !NET35
 			, asyncDatabaseCommands
 #endif
 			, indexName, projectionFields, queryListeners)
@@ -63,7 +63,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			                                                   theDatabaseCommands,
 #endif
-#if !NET_3_5
+#if !NET35
 			                                                   theAsyncDatabaseCommands,
 #endif
 			                                                   indexName, fields,

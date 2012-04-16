@@ -1,4 +1,4 @@
-#if !NET_3_5
+#if !NET35
 //-----------------------------------------------------------------------
 // <copyright file="MultiLoaderWithInclude.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.

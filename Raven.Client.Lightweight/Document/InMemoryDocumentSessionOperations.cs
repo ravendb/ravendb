@@ -24,7 +24,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 
-#if !NET_3_5
+#if !NET35
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
 
@@ -193,7 +193,7 @@ namespace Raven.Client.Document
 			{
 				string id;
 				if (TryGetIdFromInstance(instance, out id)
-#if !NET_3_5
+#if !NET35
 				 || (instance is IDynamicMetaObjectProvider &&
 					   TryGetIdFromDynamic(instance, out id))
 #endif
@@ -418,7 +418,7 @@ more responsive application.
 			if (Equals(entity, default(T)))
 			{
 				entity = documentFound.Deserialize<T>(Conventions);
-#if !NET_3_5
+#if !NET35
 				var document = entity as RavenJObject;
 				if (document != null)
 				{
@@ -448,7 +448,7 @@ more responsive application.
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
 			if (identityProperty == null)
 			{
-#if !NET_3_5
+#if !NET35
 				if (entity is IDynamicMetaObjectProvider)
 				{
 					TrySetIdOnynamic(entity, id);
@@ -548,7 +548,7 @@ more responsive application.
 
 			if (id == null)
 			{
-#if !NET_3_5
+#if !NET35
 				if (entity is IDynamicMetaObjectProvider)
 				{
 					if (TryGetIdFromDynamic(entity, out id) == false)
@@ -653,7 +653,7 @@ more responsive application.
 			return false;
 		}
 
-#if !NET_3_5
+#if !NET35
 		private static bool TryGetIdFromDynamic(dynamic entity, out string id)
 		{
 			try
@@ -949,7 +949,7 @@ more responsive application.
 		private void SetClrType(Type entityType, RavenJObject metadata)
 		{
 			if (
-#if !NET_3_5
+#if !NET35
 			entityType == typeof(DynamicJsonObject) ||
 #endif
 			 entityType == typeof(RavenJObject)) // dynamic types

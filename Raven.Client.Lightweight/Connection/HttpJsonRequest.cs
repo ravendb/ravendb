@@ -13,7 +13,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
-#if !NET_3_5
+#if !NET35
 using System.Threading.Tasks;
 #endif
 using Raven.Imports.Newtonsoft.Json;
@@ -80,7 +80,7 @@ namespace Raven.Client.Connection
 			WriteMetadata(metadata);
 		}
 
-#if !NET_3_5
+#if !NET35
 		public Task<RavenJToken> ReadResponseJsonAsync()
 		{
 			return ReadResponseStringAsync()
@@ -230,7 +230,7 @@ namespace Raven.Client.Connection
 			RecreateWebRequest(handleUnauthorizedResponse);
 			return true;
 		}
-#if !NET_3_5
+#if !NET35
 		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
 		{
 			if (conventions.HandleUnauthorizedResponseAsync == null)
@@ -295,7 +295,7 @@ namespace Raven.Client.Connection
 					throw;
 				return result;
 			}
-#if !NET_3_5
+#if !NET35
 			catch (AggregateException e)
 			{
 				sp.Stop();

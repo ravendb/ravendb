@@ -6,7 +6,7 @@
 using System.Linq;
 using System.Reflection;
 using Raven.Client.Document;
-#if !NET_3_5
+#if !NET35
 using System.ComponentModel.Composition.Hosting;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -20,7 +20,7 @@ namespace Raven.Client.Indexes
 	/// </summary>
 	public static class IndexCreation
 	{
-#if !NET_3_5
+#if !NET35
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -93,7 +93,7 @@ namespace Raven.Client.Indexes
 			return indexesAsync;
 		}
 
-#else //NET_3_5
+#else //NET35
 
 		/// <summary>
 		/// Creates the indexes found in the specified assembly.

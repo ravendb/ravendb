@@ -189,7 +189,7 @@ namespace Raven.Tests.Indexes
 		}
 
 
-#if !NET_3_5        
+#if !NET35        
 		public void Convert_map_reduce_query_with_map_(Expression<Func<IEnumerable<User>, IEnumerable>> mapExpression, string expectedIndexString)
 		{
 			IndexDefinition generated = new IndexDefinitionBuilder<User, LocationCount>

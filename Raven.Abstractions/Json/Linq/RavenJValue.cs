@@ -496,7 +496,7 @@ namespace Raven.Json.Linq
 				case JTokenType.Guid:
 					if (!(objB is Guid))
 					{
-#if !NET_3_5
+#if !NET35
 						Guid guid;
 						if(Guid.TryParse((string) objB, out guid) == false)
 							throw new ArgumentException("Object must be of type Guid.");

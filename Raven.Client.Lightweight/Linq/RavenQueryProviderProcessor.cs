@@ -408,7 +408,7 @@ namespace Raven.Client.Linq
 					case ExpressionType.Add:
 					case ExpressionType.And:
 					case ExpressionType.AndAlso:
-#if !NET_3_5
+#if !NET35
 					case ExpressionType.AndAssign:
 					case ExpressionType.Decrement:
 					case ExpressionType.Increment:
@@ -1193,7 +1193,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			return q;
 		}
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Gets the lucene query.
 		/// </summary>

@@ -1,4 +1,4 @@
-﻿#if !NET_3_5
+﻿#if !NET35
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -461,7 +461,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			                                                             theDatabaseCommands,
 #endif
-#if !NET_3_5
+#if !NET35
 			                                                             theAsyncDatabaseCommands,
 #endif
 			                                                             indexName, fields, queryListeners)

@@ -18,7 +18,7 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public static class RavenTransactionAccessor
 	{
-#if !NET_3_5
+#if !NET35
 		[ThreadStatic]
 		private static Stack<TransactionInformation> currentRavenTransactions;
 
@@ -62,7 +62,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public static TransactionInformation GetTransactionInformation()
 		{
-			#if !NET_3_5
+			#if !NET35
 			if (CurrentRavenTransactions.Count >0)
 				return CurrentRavenTransactions.Peek();
 			#endif

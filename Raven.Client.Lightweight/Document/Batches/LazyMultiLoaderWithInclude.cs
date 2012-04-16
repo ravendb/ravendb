@@ -1,4 +1,4 @@
-﻿#if !SILVERLIGHT && !NET_3_5
+﻿#if !SILVERLIGHT && !NET35
 using System;
 using System.Collections.Generic;
 using System.Linq;

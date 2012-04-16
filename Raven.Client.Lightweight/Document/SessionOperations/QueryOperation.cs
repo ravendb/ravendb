@@ -135,7 +135,7 @@ namespace Raven.Client.Document.SessionOperations
 			if (typeof(T) == typeof(RavenJObject))
 				return (T)(object)result;
 
-#if !NET_3_5
+#if !NET35
 			if (typeof(T) == typeof(object) && string.IsNullOrEmpty(result.Value<string>("$type")))
 			{
 				return (T)(object)new DynamicJsonObject(result);

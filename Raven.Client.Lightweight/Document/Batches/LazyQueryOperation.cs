@@ -7,7 +7,7 @@ using Raven.Client.Shard;
 using Raven.Json.Linq;
 using System.Linq;
 
-#if !NET_3_5
+#if !NET35
 
 namespace Raven.Client.Document.Batches
 {

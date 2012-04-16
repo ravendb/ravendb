@@ -13,7 +13,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-#if !NET_3_5
+#if !NET35
 using System.Threading.Tasks;
 #endif
 using NLog;
@@ -69,14 +69,14 @@ namespace Raven.Client.Connection
 			this.conventions = conventions;
 		}
 
-#if !NET_3_5
+#if !NET35
 		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder>();
 		private Task refreshReplicationInformationTask;
 #else
 		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
 #endif
 
-#if NET_3_5
+#if NET35
 		/// <summary>
 		/// Updates the replication information if needed.
 		/// </summary>
@@ -200,7 +200,7 @@ namespace Raven.Client.Connection
 
 		private IntHolder GetHolder(string operationUrl)
 		{
-#if !NET_3_5
+#if !NET35
 			return failureCounts.GetOrAdd(operationUrl, new IntHolder());
 #else
 	// need to compensate for 3.5 not having concnurrent dic.
@@ -373,7 +373,7 @@ namespace Raven.Client.Connection
 
 		public void Dispose()
 		{
-#if !NET_3_5
+#if !NET35
 			var replicationInformationTaskCopy = refreshReplicationInformationTask;
 			if (replicationInformationTaskCopy != null)
 				replicationInformationTaskCopy.Wait();

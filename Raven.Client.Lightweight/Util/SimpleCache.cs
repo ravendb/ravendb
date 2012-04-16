@@ -1,5 +1,5 @@
 using System;
-#if !NET_3_5
+#if !NET35
 using System.Collections.Concurrent;
 #endif
 using Raven.Client.Connection.Profiling;

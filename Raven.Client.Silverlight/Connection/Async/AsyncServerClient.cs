@@ -28,7 +28,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
 
-#if !NET_3_5
+#if !NET35
 
 namespace Raven.Client.Silverlight.Connection.Async
 {

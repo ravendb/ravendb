@@ -10,7 +10,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
 {
-#if !NET_3_5
+#if !NET35
 
 	public class LazySuggestOperation : ILazyOperation
 	{

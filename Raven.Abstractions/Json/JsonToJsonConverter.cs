@@ -12,7 +12,7 @@ namespace Raven.Abstractions.Json
 		{
 			if (value is RavenJObject)
 				((RavenJObject)value).WriteTo(writer);
-#if !NET_3_5
+#if !NET35
 			else if(value is DynamicNullObject)
 				writer.WriteNull();
 			else
@@ -33,7 +33,7 @@ namespace Raven.Abstractions.Json
 		public override bool CanConvert(Type objectType)
 		{
 			return objectType == typeof(RavenJObject)
-#if !NET_3_5
+#if !NET35
 				|| objectType == typeof(DynamicJsonObject) || objectType == typeof(DynamicNullObject)
 #endif
 				;

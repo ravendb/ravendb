@@ -12,7 +12,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Connection.Profiling;
-#if !NET_3_5
+#if !NET35
 using System.Collections.Concurrent;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
@@ -92,7 +92,7 @@ namespace Raven.Client.Document
 
 #endif
 
-#if !NET_3_5
+#if !NET35
 		private Func<IAsyncDatabaseCommands> asyncDatabaseCommandsGenerator;
 		/// <summary>
 		/// Gets the async database commands.
@@ -296,7 +296,7 @@ namespace Raven.Client.Document
 			{
 				var session = new DocumentSession(this, listeners, sessionId,
 					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options)
-#if !NET_3_5
+#if !NET35
 , SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials)
 #endif
 );
@@ -320,7 +320,7 @@ namespace Raven.Client.Document
 			return databaseCommands;
 		}
 
-#if !NET_3_5
+#if !NET35
 		private static IAsyncDatabaseCommands SetupCommandsAsync(IAsyncDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession)
 		{
 			if (database != null)
@@ -350,7 +350,7 @@ namespace Raven.Client.Document
 #endif
 			try
 			{
-#if !NET_3_5
+#if !NET35
 				if (Conventions.DisableProfiling == false)
 				{
 					jsonRequestFactory.LogRequest += profilingContext.RecordAction;
@@ -428,7 +428,7 @@ namespace Raven.Client.Document
 				}
 			};
 #endif
-#if !NET_3_5
+#if !NET35
 			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
 			{
 				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
@@ -515,7 +515,7 @@ namespace Raven.Client.Document
 				return new ServerClient(databaseUrl, Conventions, credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId);
 			};
 #endif
-#if !NET_3_5
+#if !NET35
 #if SILVERLIGHT
 			// required to ensure just a single auth dialog
 			var task = jsonRequestFactory.CreateHttpJsonRequest(this, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions)
@@ -596,7 +596,7 @@ namespace Raven.Client.Document
 #endif
 		}
 
-#if !NET_3_5
+#if !NET35
 
 		private IAsyncDocumentSession OpenAsyncSessionInternal(IAsyncDatabaseCommands asyncDatabaseCommands)
 		{

@@ -55,7 +55,7 @@ namespace Raven.Abstractions.Connection
 						case "Expect":
 							// explicitly ignoring this
 							break;
-#if !NET_3_5
+#if !NET35
 						case "Host":
 							dest.Host = src.Host;
 							break;

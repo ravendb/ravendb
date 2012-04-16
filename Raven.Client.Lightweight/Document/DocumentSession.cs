@@ -14,7 +14,7 @@ using System.Text;
 using System.Threading;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
-#if !NET_3_5
+#if !NET35
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Batches;
 #endif
@@ -34,7 +34,7 @@ namespace Raven.Client.Document
 	public class DocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
 		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 	{
-#if !NET_3_5
+#if !NET35
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly List<ILazyOperation> pendingLazyOperations = new List<ILazyOperation>();
 		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
@@ -45,7 +45,7 @@ namespace Raven.Client.Document
 		/// <value>The database commands.</value>
 		public IDatabaseCommands DatabaseCommands { get; private set; }
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>
@@ -79,13 +79,13 @@ namespace Raven.Client.Document
 			DocumentSessionListeners listeners,
 			Guid id,
 			IDatabaseCommands databaseCommands
-#if !NET_3_5
+#if !NET35
 , IAsyncDatabaseCommands asyncDatabaseCommands
 #endif
 )
 			: base(documentStore, listeners, id)
 		{
-#if !NET_3_5
+#if !NET35
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 #endif
 			DatabaseCommands = databaseCommands;
@@ -103,7 +103,7 @@ namespace Raven.Client.Document
 			get { return this; }
 		}
 
-#if !NET_3_5
+#if !NET35
 
 		/// <summary>
 		/// Begin a load while including the specified path 
@@ -329,11 +329,11 @@ namespace Raven.Client.Document
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
-#if !NET_3_5
+#if !NET35
 , AsyncDatabaseCommands
 #endif
 ), ravenQueryStatistics, indexName, null, this, Advanced.DatabaseCommands
-#if !NET_3_5
+#if !NET35
 , AsyncDatabaseCommands
 #endif
 );
@@ -464,7 +464,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
 		{
-#if !NET_3_5
+#if !NET35
 			return new DocumentQuery<T>(this, DatabaseCommands, null, indexName, null, listeners.QueryListeners);
 #else
 			return new DocumentQuery<T>(this, DatabaseCommands, indexName, null, listeners.QueryListeners);
@@ -551,7 +551,7 @@ namespace Raven.Client.Document
 			return Advanced.LuceneQuery<T>(indexName);
 		}
 
-#if !NET_3_5
+#if !NET35
 
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>

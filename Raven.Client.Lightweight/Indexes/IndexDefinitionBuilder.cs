@@ -135,7 +135,7 @@ namespace Raven.Client.Indexes
 			return indexDefinition;
 		}
 
-#if !NET_3_5
+#if !NET35
 		private static bool ContainsWhereEntityIs(Expression body)
 		{
 			var whereEntityIsVisitor = new WhereEntityIsVisitor();

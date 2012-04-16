@@ -6,7 +6,7 @@
 using System;
 using System.Threading;
 using System.Transactions;
-#if !NET_3_5
+#if !NET35
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 #endif

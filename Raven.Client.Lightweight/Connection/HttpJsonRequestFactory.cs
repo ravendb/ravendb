@@ -142,7 +142,7 @@ namespace Raven.Client.Connection
 			ResetCache();
 		}
 
-#if !NET_3_5
+#if !NET35
 		///<summary>
 		/// The aggressive cache duration
 		///</summary>
@@ -228,7 +228,7 @@ namespace Raven.Client.Connection
 				return;
 		    disposed = true;
 			cache.Dispose();
-#if !NET_3_5
+#if !NET35
 			aggressiveCacheDuration.Dispose();
 			disableHttpCaching.Dispose();
 #endif
