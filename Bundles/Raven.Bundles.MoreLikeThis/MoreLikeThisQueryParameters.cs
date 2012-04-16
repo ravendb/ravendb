@@ -106,25 +106,44 @@ namespace Raven.Bundles.MoreLikeThis
 		}
 		
 #if !CLIENT
-		public static MoreLikeThisQueryParameters GetParametersFromUrl(out string indexName, string requestUrl, NameValueCollection querystringParameters, Regex urlMatcher)
+		public static MoreLikeThisQueryParameters GetParametersFromPath(Regex urlMatcher, string path, NameValueCollection query, out string indexName)
 		{
-			var match = urlMatcher.Match(requestUrl);
+			var match = urlMatcher.Match(path);
 
 			indexName = match.Groups[1].Value;
 
 			return new MoreLikeThisQueryParameters
 			{
 				DocumentId = match.Groups[2].Value,
-				Fields = querystringParameters.GetValues("fields"),
-				Boost = querystringParameters.Get("boost").ToNullableBool(),
-				MaximumNumberOfTokensParsed = querystringParameters.Get("maxNumTokens").ToNullableInt(),
-				MaximumQueryTerms = querystringParameters.Get("maxQueryTerms").ToNullableInt(),
-				MaximumWordLength = querystringParameters.Get("maxWordLen").ToNullableInt(),
-				MinimumDocumentFrequency = querystringParameters.Get("minDocFreq").ToNullableInt(),
-				MinimumTermFrequency = querystringParameters.Get("minTermFreq").ToNullableInt(),
-				MinimumWordLength = querystringParameters.Get("minWordLen").ToNullableInt(),
-				StopWordsDocumentId = querystringParameters.Get("stopWords"),
+				Fields = query.GetValues("fields"),
+				Boost = query.Get("boost").ToNullableBool(),
+				MaximumNumberOfTokensParsed = query.Get("maxNumTokens").ToNullableInt(),
+				MaximumQueryTerms = query.Get("maxQueryTerms").ToNullableInt(),
+				MaximumWordLength = query.Get("maxWordLen").ToNullableInt(),
+				MinimumDocumentFrequency = query.Get("minDocFreq").ToNullableInt(),
+				MinimumTermFrequency = query.Get("minTermFreq").ToNullableInt(),
+				MinimumWordLength = query.Get("minWordLen").ToNullableInt(),
+				StopWordsDocumentId = query.Get("stopWords"),
 			};
+		}
+
+		public static MoreLikeThisQueryParameters GetParametersFromPath(string pathAndQuery, out string indexName)
+		{
+			var path = pathAndQuery;
+			var query = "";
+
+			var split = pathAndQuery.IndexOf('?');
+			if (split >= 0)
+			{
+				path = pathAndQuery.Substring(0, split);
+				query = pathAndQuery.Substring(split);
+			}
+
+			return GetParametersFromPath(
+				new Regex(new MoreLikeThisResponder().UrlPattern), 
+				path, 
+				System.Web.HttpUtility.ParseQueryString(query), 
+				out indexName);
 		}
 #endif
 	}

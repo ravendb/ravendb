@@ -37,7 +37,7 @@ namespace Raven.Bundles.MoreLikeThis
 		public override void Respond(IHttpContext context)
 		{
 			string indexName;
-			MoreLikeThisQueryParameters parameters = MoreLikeThisQueryParameters.GetParametersFromUrl(out indexName, context.GetRequestUrl(), context.Request.QueryString, this.urlMatcher);
+			MoreLikeThisQueryParameters parameters = MoreLikeThisQueryParameters.GetParametersFromPath(this.urlMatcher, context.GetRequestUrl(), context.Request.QueryString, out indexName);
 
 			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
 			if (indexDefinition == null)
@@ -164,9 +164,9 @@ namespace Raven.Bundles.MoreLikeThis
 		}
 
 		private static string[] GetFieldNames(IndexReader indexReader)
-	    {
-            var fields = indexReader.GetFieldNames(IndexReader.FieldOption.INDEXED);
-            return fields.Where(x => x != Constants.DocumentIdFieldName).ToArray();
-	    }
+		{
+			var fields = indexReader.GetFieldNames(IndexReader.FieldOption.INDEXED);
+			return fields.Where(x => x != Constants.DocumentIdFieldName).ToArray();
+		}
 	}
 }
