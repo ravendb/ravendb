@@ -80,17 +80,17 @@ namespace Raven.Client.Document
 			MaxNumberOfRequestsPerSession = 30;
 			ApplyReduceFunction = DefaultApplyReduceFunction;
 			CustomizeJsonSerializer = serializer => { };
-			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] {IdentityPartsSeparator}, StringSplitOptions.RemoveEmptyEntries) .Last();
+			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
-			Type indexType, 
-			Type resultType, 
-			IEnumerable<object> results, 
+			Type indexType,
+			Type resultType,
+			IEnumerable<object> results,
 			Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults)
 		{
 			Func<IEnumerable<object>, IEnumerable> compile;
-			if(compiledReduceCache.TryGetValue(indexType, out compile) == false)
+			if (compiledReduceCache.TryGetValue(indexType, out compile) == false)
 			{
 				compile = generateTransformResults();
 				compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>(compiledReduceCache)
@@ -112,7 +112,7 @@ namespace Raven.Client.Document
 		public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
 		{
 			var count = typeTagName.Count(char.IsUpper);
-			
+
 			if (count <= 1) // simple name, just lower case it
 				return typeTagName.ToLowerInvariant();
 
@@ -127,11 +127,11 @@ namespace Raven.Client.Document
 		///<returns></returns>
 		public string DefaultFindFullDocumentKeyFromNonStringIdentifier(object id, Type type, bool allowNull)
 		{
-			var converter = IdentityTypeConvertors.FirstOrDefault(x=>x.CanConvertFrom(id.GetType()));
+			var converter = IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(id.GetType()));
 			var tag = GetTypeTagName(type);
 			if (tag != null)
 			{
-                tag = TransformTypeTagNameToDocumentKeyPrefix(tag);
+				tag = TransformTypeTagNameToDocumentKeyPrefix(tag);
 				tag += IdentityPartsSeparator;
 			}
 			if (converter != null)
@@ -200,16 +200,16 @@ namespace Raven.Client.Document
 		/// </summary>
 		public static string DefaultTypeTagName(Type t)
 		{
-		    string result;
+			string result;
 			if (cachedDefaultTypeTagNames.TryGetValue(t, out result))
 				return result;
 
 			if (t.Name.Contains("<>"))
 				return null;
-			if(t.IsGenericType)
+			if (t.IsGenericType)
 			{
 				var name = t.GetGenericTypeDefinition().Name;
-				if(name.Contains('`'))
+				if (name.Contains('`'))
 				{
 					name = name.Substring(0, name.IndexOf('`'));
 				}
@@ -219,16 +219,16 @@ namespace Raven.Client.Document
 					sb.Append("Of")
 						.Append(DefaultTypeTagName(argument));
 				}
-			    result = sb.ToString();
+				result = sb.ToString();
 			}
 			else
 			{
-			    result = Inflector.Pluralize(t.Name);
+				result = Inflector.Pluralize(t.Name);
 			}
-		    var temp = new Dictionary<Type, string>(cachedDefaultTypeTagNames);
-		    temp[t] = result;
-		    cachedDefaultTypeTagNames = temp;
-		    return result;
+			var temp = new Dictionary<Type, string>(cachedDefaultTypeTagNames);
+			temp[t] = result;
+			cachedDefaultTypeTagNames = temp;
+			return result;
 		}
 
 		/// <summary>
@@ -265,7 +265,7 @@ namespace Raven.Client.Document
 
 			var identityProperty = GetPropertiesForType(type).FirstOrDefault(FindIdentityProperty);
 
-			if (identityProperty!= null && identityProperty.DeclaringType != type)
+			if (identityProperty != null && identityProperty.DeclaringType != type)
 			{
 				var propertyInfo = identityProperty.DeclaringType.GetProperty(identityProperty.Name);
 				identityProperty = propertyInfo ?? identityProperty;
@@ -392,12 +392,12 @@ namespace Raven.Client.Document
 					}
 			};
 
-			for (var i = Default.Converters.Length -1; i >= 0; i--)
+			for (var i = Default.Converters.Length - 1; i >= 0; i--)
 			{
 				jsonSerializer.Converters.Insert(0, Default.Converters[i]);
 			}
 
-			if(SaveEnumsAsIntegers)
+			if (SaveEnumsAsIntegers)
 			{
 				var converter = jsonSerializer.Converters.FirstOrDefault(x => x is JsonEnumConverter);
 				if (converter != null)
