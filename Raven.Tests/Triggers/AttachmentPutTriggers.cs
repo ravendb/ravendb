@@ -43,7 +43,8 @@ namespace Raven.Tests.Triggers
 		{
 			db.PutStatic("ayende", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
 
-			Assert.Equal(new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc), db.GetStatic("ayende").Metadata.Value<DateTime>("created_at"));
+			var attachment = db.GetStatic("ayende");
+			Assert.Equal(new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc), attachment.Metadata.Value<DateTime>("created_at"));
 		}
 
 
