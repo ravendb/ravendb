@@ -79,11 +79,6 @@
       <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Json\Raven.Json.csproj">
-      <Name>Raven.Json</Name>
-      <Project>{b9dd0239-3476-48cb-a541-1b3ec6679bb6}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
       <Name>Raven.Storage.Esent</Name>
       <Project>{9dee8674-d0cd-430d-bd9b-6cd95f3cab22}</Project>
