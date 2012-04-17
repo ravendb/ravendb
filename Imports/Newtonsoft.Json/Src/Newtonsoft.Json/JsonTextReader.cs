@@ -147,11 +147,11 @@ namespace Raven.Imports.Newtonsoft.Json
               return;
             }
           }
-          else if (char.IsDigit(text[0]) && text.Length >= 19 && text.Length <= 40)
+          /*else if (char.IsDigit(text[0]) && text.Length >= 19 && text.Length <= 40)
           {
             if (ParseDateIso(text))
               return;
-          }
+          }*/
         }
 
         SetToken(JsonToken.String, text);
