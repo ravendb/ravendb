@@ -192,6 +192,16 @@ namespace Raven.Json.Linq
 			}
 		}
 
+		public static RavenJToken TryLoad(Stream stream)
+		{
+			var jsonTextReader = new JsonTextReader(new StreamReader(stream));
+			if (jsonTextReader.Read() == false || jsonTextReader.TokenType == JsonToken.None)
+			{
+				return null;
+			}
+			return Load(jsonTextReader);
+		}
+
 		/// <summary>
 		/// Creates a <see cref="RavenJToken"/> from a <see cref="JsonReader"/>.
 		/// </summary>

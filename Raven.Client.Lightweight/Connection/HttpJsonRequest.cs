@@ -302,9 +302,7 @@ namespace Raven.Client.Connection
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
-				RavenJToken data = responseStream.Length == 0 ? 
-					null : 
-					RavenJToken.Load(new JsonTextReader(new StreamReader(responseStream)));
+				var data = RavenJToken.TryLoad(responseStream);
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
@@ -315,9 +313,9 @@ namespace Raven.Client.Connection
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
-					HttpResult = (int)ResponseStatusCode,
+					HttpResult = (int) ResponseStatusCode,
 					Status = RequestStatus.SentToServer,
-					Result = (data ?? "") .ToString(),
+					Result = (data ?? "").ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});

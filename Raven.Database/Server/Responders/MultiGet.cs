@@ -109,9 +109,7 @@ namespace Raven.Database.Server.Responders
 					return getResponse;
 
 				Response.OutputStream.Position = 0;
-				getResponse.Result = Response.OutputStream.Length == 0 ? 
-					null : 
-					RavenJToken.Load(new JsonTextReader(new StreamReader(Response.OutputStream)));
+				getResponse.Result = RavenJToken.TryLoad(Response.OutputStream);
 				getResponse.Status = Response.StatusCode != 0 ? Response.StatusCode : 200;
 				return getResponse;
 			}
