@@ -47,7 +47,7 @@ namespace Raven.Client.Document.Batches
 			}
 
 			var list = (from response in responses 
-						let json = RavenJObject.Parse(response.Result) 
+						let json = (RavenJObject)response.Result
 						select SerializationHelper.ToQueryResult(json, response.Headers["ETag"]))
 						.ToList();
 
@@ -66,7 +66,7 @@ namespace Raven.Client.Document.Batches
 		{
 			if (response.Status == 404)
 				throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + Environment.NewLine + response.Result);
-			var json = RavenJObject.Parse(response.Result);
+			var json = (RavenJObject)response.Result;
 			var queryResult = SerializationHelper.ToQueryResult(json, response.Headers["ETag"]);
 			RequiresRetry = queryOperation.IsAcceptable(queryResult) == false;
 			if (RequiresRetry) 

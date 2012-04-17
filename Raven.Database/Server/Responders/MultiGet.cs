@@ -12,6 +12,7 @@ using System.Linq;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
@@ -40,7 +41,7 @@ namespace Raven.Database.Server.Responders
 				var results = new GetResponse[requests.Length];
 
 				ExecuteRequests(context, Settings, results, requests);
-				
+
 				context.WriteJson(results);
 			}
 			finally
@@ -51,7 +52,7 @@ namespace Raven.Database.Server.Responders
 
 		private void ExecuteRequests(
 			IHttpContext context,
-			InMemoryRavenConfiguration ravenHttpConfiguration, 
+			InMemoryRavenConfiguration ravenHttpConfiguration,
 			GetResponse[] results,
 			GetRequest[] requests)
 		{
@@ -103,11 +104,12 @@ namespace Raven.Database.Server.Responders
 
 			public GetResponse Complete()
 			{
-				if(getResponse.Result!=null)
+				if (getResponse.Result != null)
 					return getResponse;
 
 				Response.OutputStream.Position = 0;
-				getResponse.Result = new StreamReader(Response.OutputStream).ReadToEnd();
+				string result = new StreamReader(Response.OutputStream).ReadToEnd();
+				getResponse.Result = RavenJToken.Parse(result, returnNullForEmptyString: true);
 				if (Response.StatusCode != 0)
 					getResponse.Status = Response.StatusCode;
 				else
@@ -184,7 +186,7 @@ namespace Raven.Database.Server.Responders
 				foreach (string key in tempQueryString)
 				{
 					var values = tempQueryString.GetValues(key);
-					if(values == null)
+					if (values == null)
 						continue;
 					foreach (var value in values)
 					{

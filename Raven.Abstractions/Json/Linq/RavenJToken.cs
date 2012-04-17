@@ -26,11 +26,15 @@ namespace Raven.Json.Linq
 		/// <returns>A cloned RavenJToken</returns>
 		public abstract RavenJToken CloneToken();
 
+		public abstract void EnsureSnapshot();
+
+		public abstract RavenJToken CreateSnapshot();
+
 		protected RavenJToken CloneTokenImpl(RavenJToken newObject)
 		{
 			var readingStack = new Stack<IEnumerable<KeyValuePair<string, RavenJToken>>>();
 			var writingStack = new Stack<RavenJToken>();
-			
+
 			writingStack.Push(newObject);
 			readingStack.Push(GetCloningEnumerator());
 
@@ -47,7 +51,7 @@ namespace Raven.Json.Linq
 					}
 
 					var newVal = current.Value is RavenJArray ? (RavenJToken)new RavenJArray() : new RavenJObject();
-					
+
 					curObject.AddForCloning(current.Key, newVal);
 
 					writingStack.Push(newVal);
@@ -172,9 +176,13 @@ namespace Raven.Json.Linq
 		/// Load a <see cref="RavenJToken"/> from a string that contains JSON.
 		/// </summary>
 		/// <param name="json">A <see cref="String"/> that contains JSON.</param>
+		/// <param name="returnNullForEmptyString">If this parameter is true, and json is null or empty, RavenJValue.Null is returned.</param>
 		/// <returns>A <see cref="RavenJToken"/> populated from the string that contains JSON.</returns>
-		public static RavenJToken Parse(string json)
+		public static RavenJToken Parse(string json, bool returnNullForEmptyString = false)
 		{
+			if (returnNullForEmptyString && string.IsNullOrEmpty(json))
+				return RavenJValue.Null;
+
 			try
 			{
 				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
@@ -183,7 +191,7 @@ namespace Raven.Json.Linq
 			}
 			catch (Exception e)
 			{
-				throw new JsonSerializationException("Could not parse: [" + json +"]", e);
+				throw new JsonSerializationException("Could not parse: [" + json + "]", e);
 			}
 		}
 
@@ -252,8 +260,8 @@ namespace Raven.Json.Linq
 					switch (curOtherReader.Type)
 					{
 						case JTokenType.Array:
-							var selfArray = (RavenJArray) curThisReader;
-							var otherArray = (RavenJArray) curOtherReader;
+							var selfArray = (RavenJArray)curThisReader;
+							var otherArray = (RavenJArray)curOtherReader;
 							if (selfArray.Length != otherArray.Length)
 								return false;
 
@@ -264,8 +272,8 @@ namespace Raven.Json.Linq
 							}
 							break;
 						case JTokenType.Object:
-							var selfObj = (RavenJObject) curThisReader;
-							var otherObj = (RavenJObject) curOtherReader;
+							var selfObj = (RavenJObject)curThisReader;
+							var otherObj = (RavenJObject)curOtherReader;
 							if (selfObj.Count != otherObj.Count)
 								return false;
 
@@ -284,8 +292,8 @@ namespace Raven.Json.Linq
 									case JTokenType.Bytes:
 										var bytes = kvp.Value.Value<byte[]>();
 										byte[] tokenBytes = token.Type == JTokenType.String
-										                    	? Convert.FromBase64String(token.Value<string>())
-										                    	: token.Value<byte[]>();
+																? Convert.FromBase64String(token.Value<string>())
+																: token.Value<byte[]>();
 										if (bytes.Length != tokenBytes.Length)
 											return false;
 
@@ -341,23 +349,23 @@ namespace Raven.Json.Linq
 
 				if (cur.Item2.Type == JTokenType.Array)
 				{
-					var arr = (RavenJArray) cur.Item2;
+					var arr = (RavenJArray)cur.Item2;
 					for (int i = 0; i < arr.Length; i++)
 					{
-						stack.Push(Tuple.Create(cur.Item1 ^ (i*397), arr[i]));
+						stack.Push(Tuple.Create(cur.Item1 ^ (i * 397), arr[i]));
 					}
 				}
 				else if (cur.Item2.Type == JTokenType.Object)
 				{
-					var selfObj = (RavenJObject) cur.Item2;
+					var selfObj = (RavenJObject)cur.Item2;
 					foreach (var kvp in selfObj.Properties)
 					{
-						stack.Push(Tuple.Create(cur.Item1 ^ (397*kvp.Key.GetHashCode()), kvp.Value));
+						stack.Push(Tuple.Create(cur.Item1 ^ (397 * kvp.Key.GetHashCode()), kvp.Value));
 					}
 				}
 				else // value
 				{
-					ret ^= cur.Item1 ^ (cur.Item2.GetDeepHashCode()*397);
+					ret ^= cur.Item1 ^ (cur.Item2.GetDeepHashCode() * 397);
 				}
 			}
 

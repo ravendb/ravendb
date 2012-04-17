@@ -48,8 +48,8 @@ namespace Raven.Database.Impl
 				return null;
 			return new CachedDocument
 			{
-				Document = cachedDocument.Document.CreateSnapshot(),
-				Metadata = cachedDocument.Metadata.CreateSnapshot(),
+				Document = (RavenJObject)cachedDocument.Document.CreateSnapshot(),
+				Metadata = (RavenJObject)cachedDocument.Metadata.CreateSnapshot(),
 				Size = cachedDocument.Size
 			};
 		}
