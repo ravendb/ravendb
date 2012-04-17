@@ -7,6 +7,7 @@ using System.Linq.Expressions;
 using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
+using Raven.Abstractions.Indexing;
 using Raven.Bundles.MoreLikeThis;
 using Raven.Client.Indexes;
 using Raven.Client.MoreLikeThis;
@@ -84,7 +85,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
                     });
 
                 Assert.Equal(1, list.Count());
-                Assert.Contains("Cousin of Dolan", list.Single().TargetId);
+                Assert.Contains("Cousin of Dolan", list.Single().Text);
             }
         }
 
@@ -182,15 +183,12 @@ namespace Raven.Bundles.Tests.MoreLikeThis
                                            select new IndexDocument()
                                            {
                                                TargetId = g.Key,
-                                               Text = string.Join(" ", g.Select(d => (string)d.Text).ToArray<string>())
+                                               Text = string.Join(" ", g.Select(d => d.Text))
                                            };
 
 
-                Analyzers = new Dictionary<Expression<Func<IndexDocument, object>>, string>
-				{
-					{ x => x.Text, typeof (StandardAnalyzer).FullName }, 
-                    { x => x.TargetId, typeof(KeywordAnalyzer).FullName }
-				};
+            	Index(x => x.Text, FieldIndexing.Analyzed);
+            	Index(x => x.TargetId, FieldIndexing.NotAnalyzed);
             }
         }
     }

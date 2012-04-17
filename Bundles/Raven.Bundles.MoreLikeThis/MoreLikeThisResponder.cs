@@ -10,15 +10,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using Lucene.Net.Analysis;
+using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing;
+using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 using Constants = Raven.Abstractions.Data.Constants;
+using Index = Raven.Database.Indexing.Index;
 
 namespace Raven.Bundles.MoreLikeThis
 {
@@ -39,8 +43,8 @@ namespace Raven.Bundles.MoreLikeThis
 			string indexName;
 			MoreLikeThisQueryParameters parameters = MoreLikeThisQueryParameters.GetParametersFromPath(this.urlMatcher, context.GetRequestUrl(), context.Request.QueryString, out indexName);
 
-			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
-			if (indexDefinition == null)
+			var index = Database.IndexStorage.GetIndexInstance(indexName);
+			if (index == null)
 			{
 				context.SetStatusToNotFound();
 				context.WriteJson(new { Error = "The index " + indexName + " cannot be found" });
@@ -54,10 +58,10 @@ namespace Raven.Bundles.MoreLikeThis
 				return;
 			}
 
-			PerformSearch(context, indexName, indexDefinition, parameters);
+			PerformSearch(context, indexName, index, parameters);
 		}
 
-		private void PerformSearch(IHttpContext context, string indexName, IndexDefinition indexDefinition, MoreLikeThisQueryParameters parameters)
+		private void PerformSearch(IHttpContext context, string indexName, Index index, MoreLikeThisQueryParameters parameters)
 		{
 			IndexSearcher searcher;
 			using (Database.IndexStorage.GetCurrentIndexSearcher(indexName, out searcher))
@@ -66,12 +70,14 @@ namespace Raven.Bundles.MoreLikeThis
 
 				if (!string.IsNullOrEmpty(parameters.DocumentId))
 				{
-					documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, parameters.DocumentId)), Lucene.Net.Search.BooleanClause.Occur.MUST);
+					documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, parameters.DocumentId)),
+					                  Lucene.Net.Search.BooleanClause.Occur.MUST);
 				}
 
-				foreach(string key in parameters.MapGroupFields.Keys)
+				foreach (string key in parameters.MapGroupFields.Keys)
 				{
-					documentQuery.Add(new TermQuery(new Term(key, parameters.MapGroupFields[key])), Lucene.Net.Search.BooleanClause.Occur.MUST);
+					documentQuery.Add(new TermQuery(new Term(key, parameters.MapGroupFields[key])),
+					                  Lucene.Net.Search.BooleanClause.Occur.MUST);
 				}
 
 				var td = searcher.Search(documentQuery, 1);
@@ -80,9 +86,10 @@ namespace Raven.Bundles.MoreLikeThis
 				if (td.ScoreDocs.Length == 0)
 				{
 					context.SetStatusToNotFound();
-					context.WriteJson(new { Error = "Document " + parameters.DocumentId + " could not be found" });
+					context.WriteJson(new {Error = "Document " + parameters.DocumentId + " could not be found"});
 					return;
 				}
+
 				var ir = searcher.GetIndexReader();
 				var mlt = new RavenMoreLikeThis(ir);
 
@@ -96,9 +103,9 @@ namespace Raven.Bundles.MoreLikeThis
 						context.SetStatusToNotFound();
 						context.WriteJson(
 							new
-								{
-									Error = "Stop words document " + parameters.StopWordsDocumentId + " could not be found"
-								});
+							{
+								Error = "Stop words document " + parameters.StopWordsDocumentId + " could not be found"
+							});
 						return;
 					}
 					var stopWords = stopWordsDoc.DataAsJson.JsonDeserialization<StopWordsSetup>().StopWords;
@@ -108,54 +115,91 @@ namespace Raven.Bundles.MoreLikeThis
 				var fieldNames = parameters.Fields ?? GetFieldNames(ir);
 				mlt.SetFieldNames(fieldNames);
 
-				mlt.Analyzers = GetAnalyzers(indexDefinition, fieldNames);
-
-				var mltQuery = mlt.Like(td.ScoreDocs[0].doc);
-				var tsdc = TopScoreDocCollector.create(context.GetPageSize(Database.Configuration.MaxPageSize), true);
-				searcher.Search(mltQuery, tsdc);
-				var hits = tsdc.TopDocs().ScoreDocs;
-				var documentIds = hits.Select(hit => searcher.Doc(hit.doc).Get(Constants.DocumentIdFieldName)).Distinct();
-
-				var jsonDocuments =
-					documentIds
-						.Where(docId => string.Equals(docId, parameters.DocumentId, StringComparison.InvariantCultureIgnoreCase) == false)
-						.Select(docId => Database.Get(docId, null))
-						.Where(it => it != null)
-						.ToArray();
-
-				var result = new MultiLoadResult();
-
-				var includedEtags = new List<byte>(jsonDocuments.SelectMany(x => x.Etag.Value.ToByteArray()));
-				includedEtags.AddRange(Database.GetIndexEtag(indexName, null).ToByteArray());
-				var loadedIds = new HashSet<string>(jsonDocuments.Select(x => x.Key));
-				var addIncludesCommand = new AddIncludesCommand(Database, GetRequestTransaction(context), (etag, includedDoc) =>
+				var toDispose = new List<Action>();
+				PerFieldAnalyzerWrapper perFieldAnalyzerWrapper = null;
+				try
 				{
-					includedEtags.AddRange(etag.ToByteArray());
-					result.Includes.Add(includedDoc);
-				}, context.Request.QueryString.GetValues("include") ?? new string[0], loadedIds);
+					perFieldAnalyzerWrapper = index.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
+					mlt.SetAnalyzer(perFieldAnalyzerWrapper);
 
-				foreach (var jsonDocumet in jsonDocuments)
-				{
-					result.Results.Add(jsonDocumet.ToJson());
-					addIncludesCommand.Execute(jsonDocumet.DataAsJson);
+					var mltQuery = mlt.Like(td.ScoreDocs[0].doc);
+					var tsdc = TopScoreDocCollector.create(context.GetPageSize(Database.Configuration.MaxPageSize), true);
+					searcher.Search(mltQuery, tsdc);
+					var hits = tsdc.TopDocs().ScoreDocs;
+					var jsonDocuments = GetJsonDocuments(parameters, searcher, indexName, hits, td.ScoreDocs[0].doc);
+
+					var result = new MultiLoadResult();
+
+					var includedEtags = new List<byte>(jsonDocuments.SelectMany(x => x.Etag.Value.ToByteArray()));
+					includedEtags.AddRange(Database.GetIndexEtag(indexName, null).ToByteArray());
+					var loadedIds = new HashSet<string>(jsonDocuments.Select(x => x.Key));
+					var addIncludesCommand = new AddIncludesCommand(Database, GetRequestTransaction(context), (etag, includedDoc) =>
+					{
+						includedEtags.AddRange(etag.ToByteArray());
+						result.Includes.Add(includedDoc);
+					}, context.Request.QueryString.GetValues("include") ?? new string[0], loadedIds);
+
+					foreach (var jsonDocumet in jsonDocuments)
+					{
+						result.Results.Add(jsonDocumet.ToJson());
+						addIncludesCommand.Execute(jsonDocumet.DataAsJson);
+					}
+
+					Guid computedEtag;
+					using (var md5 = MD5.Create())
+					{
+						var computeHash = md5.ComputeHash(includedEtags.ToArray());
+						computedEtag = new Guid(computeHash);
+					}
+
+					if (context.MatchEtag(computedEtag))
+					{
+						context.SetStatusToNotModified();
+						return;
+					}
+
+					context.Response.AddHeader("ETag", computedEtag.ToString());
+					context.WriteJson(result);
 				}
-
-				Guid computedEtag;
-				using (var md5 = MD5.Create())
+				finally
 				{
-					var computeHash = md5.ComputeHash(includedEtags.ToArray());
-					computedEtag = new Guid(computeHash);
+					if (perFieldAnalyzerWrapper != null)
+						perFieldAnalyzerWrapper.Close();
+					foreach (var action in toDispose)
+					{
+						action();
+					}
 				}
-
-				if (context.MatchEtag(computedEtag))
-				{
-					context.SetStatusToNotModified();
-					return;
-				}
-
-				context.Response.AddHeader("ETag", computedEtag.ToString());
-				context.WriteJson(result);
 			}
+		}
+
+		private IEnumerable<JsonDocument> GetJsonDocuments(MoreLikeThisQueryParameters parameters, IndexSearcher searcher, string index, ScoreDoc[] hits, int baseDocId)
+		{
+			if (string.IsNullOrEmpty(parameters.DocumentId) == false)
+			{
+				var documentIds = hits
+					.Where(hit => hit.doc != baseDocId)
+					.Select(hit => searcher.Doc(hit.doc).Get(Constants.DocumentIdFieldName))
+					.Where(x => x != null)
+					.Distinct();
+
+				return documentIds
+					.Select(docId => Database.Get(docId, null))
+					.Where(it => it != null)
+					.ToArray();
+			}
+
+			var fields = searcher.Doc(baseDocId).GetFields().Cast<AbstractField>().Select(x=>x.Name()).Distinct().ToArray();
+			var etag = Database.GetIndexEtag(index, null);
+			return hits
+				.Where(hit => hit.doc != baseDocId)
+				.Select(hit => new JsonDocument
+				{
+					DataAsJson = Index.CreateDocumentFromFields(searcher.Doc(hit.doc), fields),
+					Etag = etag
+				})
+				.ToArray();
+
 		}
 
 		private static void AssignParameters(Similarity.Net.MoreLikeThis mlt, MoreLikeThisQueryParameters parameters)
@@ -171,15 +215,12 @@ namespace Raven.Bundles.MoreLikeThis
 			if (parameters.MinimumWordLength != null) mlt.SetMinWordLen(parameters.MinimumWordLength.Value);
 		}
 
-		private static Dictionary<string, Analyzer> GetAnalyzers(IndexDefinition indexDefinition, IEnumerable<string> fieldNames)
-		{
-			return fieldNames.ToDictionary(fieldName => fieldName, fieldName => indexDefinition.GetAnalyzer(fieldName));
-		}
-
 		private static string[] GetFieldNames(IndexReader indexReader)
 		{
 			var fields = indexReader.GetFieldNames(IndexReader.FieldOption.INDEXED);
-			return fields.Where(x => x != Constants.DocumentIdFieldName).ToArray();
+			return fields
+				.Where(x => x != Constants.DocumentIdFieldName && x != Constants.ReduceKeyFieldName)
+				.ToArray();
 		}
 	}
 }
