@@ -457,7 +457,7 @@ namespace Raven.Json.Linq
 					string s1 = Convert.ToString(objA, CultureInfo.InvariantCulture);
 					string s2 = Convert.ToString(objB, CultureInfo.InvariantCulture);
 
-					return s1.CompareTo(s2);
+					return string.CompareOrdinal(s1, s2);
 				case JTokenType.Boolean:
 					bool b1 = Convert.ToBoolean(objA, CultureInfo.InvariantCulture);
 					bool b2 = Convert.ToBoolean(objB, CultureInfo.InvariantCulture);
