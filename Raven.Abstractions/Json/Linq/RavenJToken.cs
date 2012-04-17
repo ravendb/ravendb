@@ -178,11 +178,8 @@ namespace Raven.Json.Linq
 		/// <param name="json">A <see cref="String"/> that contains JSON.</param>
 		/// <param name="returnNullForEmptyString">If this parameter is true, and json is null or empty, RavenJValue.Null is returned.</param>
 		/// <returns>A <see cref="RavenJToken"/> populated from the string that contains JSON.</returns>
-		public static RavenJToken Parse(string json, bool returnNullForEmptyString = false)
+		public static RavenJToken Parse(string json)
 		{
-			if (returnNullForEmptyString && string.IsNullOrEmpty(json))
-				return RavenJValue.Null;
-
 			try
 			{
 				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
