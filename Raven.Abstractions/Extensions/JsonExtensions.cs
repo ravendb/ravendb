@@ -40,7 +40,7 @@ namespace Raven.Abstractions.Extensions
 		{
 			return RavenJObject.Load(new BsonReader(new MemoryStream(self))
 			{
-				DateTimeKindHandling = DateTimeKind.Unspecified,
+				DateTimeKindHandling = DateTimeKind.Utc,
 			});
 		}
 
@@ -51,7 +51,7 @@ namespace Raven.Abstractions.Extensions
 		{
 			return RavenJObject.Load(new BsonReader(self)
 			{
-				DateTimeKindHandling = DateTimeKind.Unspecified,
+				DateTimeKindHandling = DateTimeKind.Utc,
 			});
 		}
 
@@ -62,9 +62,10 @@ namespace Raven.Abstractions.Extensions
 		{
 			self.WriteTo(new BsonWriter(stream)
 			{
-				DateTimeKindHandling = DateTimeKind.Unspecified,
+				DateTimeKindHandling = DateTimeKind.Unspecified
 			});
 		}
+
 
 	    /// <summary>
 		/// Deserialize a <param name="self"/> to an instance of <typeparam name="T"/>
