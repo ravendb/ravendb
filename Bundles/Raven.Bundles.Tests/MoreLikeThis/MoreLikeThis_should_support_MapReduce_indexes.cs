@@ -89,6 +89,51 @@ namespace Raven.Bundles.Tests.MoreLikeThis
         }
 
 
+        [Fact]
+        public void Can_find_document_related_by_external_document()
+        {
+            new MapReduceIndex().Execute(documentStore);
+
+            using (var session = documentStore.OpenSession())
+            {
+                var similarThing = new Thing() {Name = "Miki"};
+                session.Store(similarThing);
+                session.Store(new Thing() { Name = "Gooby, Pls" });
+                session.Store(new Thing() { Name = "Dafi" });
+
+                session.SaveChanges();
+
+                session.Store(new Opinion()
+                {
+                    TargetId = similarThing.Id,
+                    Value = "Cannot be released"
+                });
+
+                var results = session.Query<IndexDocument, MapReduceIndex>().Customize(x => x.WaitForNonStaleResults()).Count();
+
+                Assert.Equal(4, results);
+
+                Assert.Empty(documentStore.DatabaseCommands.GetStatistics().Errors);
+            }
+
+            using (var session = documentStore.OpenSession())
+            {
+                var list = session.Advanced.MoreLikeThis<IndexDocument, MapReduceIndex>(
+                    new MoreLikeThisQueryParameters
+                    {
+                        MapGroupFields = new NameValueCollection()
+                        {
+                            {"TargetId", DolanId}
+                        },
+                        MinimumTermFrequency = 1,
+                        MinimumDocumentFrequency = 1
+                    });
+
+                Assert.Equal(1, list.Count());
+                Assert.Contains("Miki", list.Single().TargetId);
+            }
+        }
+
         public class Thing
         {
             public string Id { get; set; }
