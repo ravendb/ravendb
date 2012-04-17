@@ -561,12 +561,21 @@ task CreateNugetPackageFineGrained {
 	Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
 	@("Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 			  "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???",
-			  "Lucene.Net.Contrib.SpellChecker.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "Raven.Studio.xap"  ) |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Database\lib\net40
-		}
+			  "Lucene.Net.Contrib.SpellChecker.???", "Raven.Backup.???", "Raven.Smuggler.???", "Raven.Storage.Esent.???",
+			  "Raven.Storage.Managed.???", "Raven.Munin.???" ) |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Database\lib\net40 }
+	
+	New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
+	Copy-Item $base_dir\NuGet\RavenDB.Server.nuspec $nuget_dir\RavenDB.Server\RavenDB.Server.nuspec
+	@("BouncyCastle.Crypto.???", "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???",
+		"Lucene.Net.Contrib.SpellChecker.???", "NewtonSoft.Json.???", "NLog.???", "Raven.Abstractions.???", "Raven.Database.???",
+		"Raven.Munin.???", "Raven.Server.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???",
+		"Raven.Studio.xap") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Server }	
 
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
-	@("Raven.Client.Embedded.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Embedded\lib\net40	}
+	@("Raven.Client.Embedded.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Embedded\lib\net40 }
+	New-Item $nuget_dir\RavenDB.Embedded\content -Type directory | Out-Null
+	Copy-Item "$build_dir\Raven.Studio.xap" $nuget_dir\RavenDB.Embedded\content
 	
 	New-Item $nuget_dir\RavenDB.Client.MoreLikeThis\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.MoreLikeThis.nuspec $nuget_dir\RavenDB.Client.MoreLikeThis\RavenDB.Client.MoreLikeThis.nuspec
