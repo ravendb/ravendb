@@ -2,52 +2,30 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Raven.Abstractions.Indexing;
 using Raven.Bundles.MoreLikeThis;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.MoreLikeThis;
-using Raven.Server;
 using Xunit;
 using MoreLikeThisQueryParameters = Raven.Client.MoreLikeThis.MoreLikeThisQueryParameters;
 using StopWordsSetup = Raven.Client.MoreLikeThis.StopWordsSetup;
 
 namespace Raven.Bundles.Tests.MoreLikeThis
 {
-	public class MoreLikeThisTests : IDisposable
+	public class MoreLikeThisTests : TestWithInMemoryDatabase, IDisposable
 	{
 		#region Test Setup
 
-		private readonly DocumentStore documentStore;
-		private readonly string path;
-		private readonly RavenDbServer ravenDbServer;
-
-		public MoreLikeThisTests()
-		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(MoreLikeThisTests)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
-			ravenDbServer = new RavenDbServer(
-				new database::Raven.Database.Config.RavenConfiguration
-				{
-					Port = 8079,
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					DataDirectory = path,
-					Catalog = { Catalogs = { new AssemblyCatalog(typeof(MoreLikeThisResponder).Assembly) } },
-				});
-
-			documentStore = new DocumentStore
+		public MoreLikeThisTests() : base(config =>
 			{
-				Url = "http://localhost:8079"
-			};
-			documentStore.Initialize();
+				config.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(MoreLikeThisResponder).Assembly));
+			})
+		{
 		}
 
 		private static string GetLorem(int numWords)
@@ -66,19 +44,18 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 		#endregion
 
-		public void Dispose()
-		{
-			documentStore.Dispose();
-			ravenDbServer.Dispose();
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-		}
-
 		#region Test Facts
 
 		[Fact]
 		public void Can_Get_Results()
 		{
 			const string key = "datas/1";
+
+			using(var session = documentStore.OpenSession())
+			{
+				session.Store(new KeyValuePair<string,string>("hi", "there"));
+				session.SaveChanges();
+			}
 
 			using (var session = documentStore.OpenSession())
 			{

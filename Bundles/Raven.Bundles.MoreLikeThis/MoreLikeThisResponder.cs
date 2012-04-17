@@ -36,23 +36,9 @@ namespace Raven.Bundles.MoreLikeThis
 
 		public override void Respond(IHttpContext context)
 		{
-			var match = urlMatcher.Match(context.GetRequestUrl());
-			var indexName = match.Groups[1].Value;
+			string indexName;
+			MoreLikeThisQueryParameters parameters = MoreLikeThisQueryParameters.GetParametersFromPath(this.urlMatcher, context.GetRequestUrl(), context.Request.QueryString, out indexName);
 
-			var parameters = new MoreLikeThisQueryParameters
-								 {
-									 DocumentId = match.Groups[2].Value,
-									 Fields = context.Request.QueryString.GetValues("fields"),
-                                     Boost = context.Request.QueryString.Get("boost").ToNullableBool(),
-                                     MaximumNumberOfTokensParsed = context.Request.QueryString.Get("maxNumTokens").ToNullableInt(),
-                                     MaximumQueryTerms = context.Request.QueryString.Get("maxQueryTerms").ToNullableInt(),
-									 MaximumWordLength = context.Request.QueryString.Get("maxWordLen").ToNullableInt(),
-									 MinimumDocumentFrequency = context.Request.QueryString.Get("minDocFreq").ToNullableInt(),
-									 MinimumTermFrequency = context.Request.QueryString.Get("minTermFreq").ToNullableInt(),
-									 MinimumWordLength = context.Request.QueryString.Get("minWordLen").ToNullableInt(),
-                                     StopWordsDocumentId = context.Request.QueryString.Get("stopWords"),
-		                         };
-            
 			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
 			if (indexDefinition == null)
 			{
@@ -61,10 +47,10 @@ namespace Raven.Bundles.MoreLikeThis
 				return;
 			}
 
-			if (string.IsNullOrEmpty(parameters.DocumentId))
+			if (string.IsNullOrEmpty(parameters.DocumentId) && parameters.MapGroupFields.Count == 0)
 			{
 				context.SetStatusToBadRequest();
-				context.WriteJson(new { Error = "The document id is mandatory" });
+				context.WriteJson(new { Error = "The document id or map group fields are mandatory" });
 				return;
 			}
 
@@ -76,7 +62,20 @@ namespace Raven.Bundles.MoreLikeThis
 			IndexSearcher searcher;
 			using (Database.IndexStorage.GetCurrentIndexSearcher(indexName, out searcher))
 			{
-				var td = searcher.Search(new TermQuery(new Term(Constants.DocumentIdFieldName, parameters.DocumentId)), 1);
+				var documentQuery = new BooleanQuery();
+
+				if (!string.IsNullOrEmpty(parameters.DocumentId))
+				{
+					documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, parameters.DocumentId)), Lucene.Net.Search.BooleanClause.Occur.MUST);
+				}
+
+				foreach(string key in parameters.MapGroupFields.Keys)
+				{
+					documentQuery.Add(new TermQuery(new Term(key, parameters.MapGroupFields[key])), Lucene.Net.Search.BooleanClause.Occur.MUST);
+				}
+
+				var td = searcher.Search(documentQuery, 1);
+
 				// get the current Lucene docid for the given RavenDB doc ID
 				if (td.ScoreDocs.Length == 0)
 				{
@@ -178,9 +177,9 @@ namespace Raven.Bundles.MoreLikeThis
 		}
 
 		private static string[] GetFieldNames(IndexReader indexReader)
-	    {
-            var fields = indexReader.GetFieldNames(IndexReader.FieldOption.INDEXED);
-            return fields.Where(x => x != Constants.DocumentIdFieldName).ToArray();
-	    }
+		{
+			var fields = indexReader.GetFieldNames(IndexReader.FieldOption.INDEXED);
+			return fields.Where(x => x != Constants.DocumentIdFieldName).ToArray();
+		}
 	}
 }

@@ -55,9 +55,7 @@ namespace Raven.Client.MoreLikeThis
 				multiLoadOperation.LogOperation();
 				using (multiLoadOperation.EnterMultiLoadContext())
 				{
-					var requestUri = GetRequestUri(index, parameters);
-
-					var result = cmd.ExecuteGetRequest(requestUri);
+					var result = cmd.ExecuteGetRequest(parameters.GetRequestUri(index));
 
 					multiLoadResult = ((RavenJObject)result).Deserialize<MultiLoadResult>(inMemoryDocumentSessionOperations.Conventions);
 				}
@@ -70,42 +68,6 @@ namespace Raven.Client.MoreLikeThis
 		{
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentException("Key cannot be null or empty", argName);
-		}
-
-		private static string GetRequestUri(string index, MoreLikeThisQueryParameters parameters)
-		{
-			var uri = new StringBuilder();
-			uri.AppendFormat("/morelikethis/{0}/{1}?", Uri.EscapeUriString(index), Uri.EscapeUriString(parameters.DocumentId));
-			if (parameters.Fields != null)
-			{
-				foreach (var field in parameters.Fields)
-				{
-					uri.AppendFormat("fields={0}&", field);
-				}
-			}
-			if (parameters.Boost != null && parameters.Boost != MoreLikeThisQueryParameters.DefaultBoost)
-				uri.Append("boost=true&");
-			if (parameters.MaximumQueryTerms != null &&
-			    parameters.MaximumQueryTerms != MoreLikeThisQueryParameters.DefaultMaximumQueryTerms)
-				uri.AppendFormat("maxQueryTerms={0}&", parameters.MaximumQueryTerms);
-			if (parameters.MaximumNumberOfTokensParsed != null &&
-			    parameters.MaximumNumberOfTokensParsed != MoreLikeThisQueryParameters.DefaultMaximumNumberOfTokensParsed)
-				uri.AppendFormat("maxNumTokens={0}&", parameters.MaximumNumberOfTokensParsed);
-			if (parameters.MaximumWordLength != null &&
-			    parameters.MaximumWordLength != MoreLikeThisQueryParameters.DefaultMaximumWordLength)
-				uri.AppendFormat("maxWordLen={0}&", parameters.MaximumWordLength);
-			if (parameters.MinimumDocumentFrequency != null &&
-			    parameters.MinimumDocumentFrequency != MoreLikeThisQueryParameters.DefaltMinimumDocumentFrequency)
-				uri.AppendFormat("minDocFreq={0}&", parameters.MinimumDocumentFrequency);
-			if (parameters.MinimumTermFrequency != null &&
-			    parameters.MinimumTermFrequency != MoreLikeThisQueryParameters.DefaultMinimumTermFrequency)
-				uri.AppendFormat("minTermFreq={0}&", parameters.MinimumTermFrequency);
-			if (parameters.MinimumWordLength != null &&
-			    parameters.MinimumWordLength != MoreLikeThisQueryParameters.DefaultMinimumWordLength)
-				uri.AppendFormat("minWordLen={0}&", parameters.MinimumWordLength);
-			if (parameters.StopWordsDocumentId != null)
-				uri.AppendFormat("stopWords={0}&", parameters.StopWordsDocumentId);
-			return uri.ToString();
 		}
 	}
 }
