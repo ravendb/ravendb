@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Transactions;
-using Raven.Abstractions.Logging;
+using NLog;
 
 namespace Raven.Client.Document
 {
@@ -16,7 +16,7 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class RavenClientEnlistment : IEnlistmentNotification
 	{
-		private static ILog logger = LogProvider.GetCurrentClassLogger();
+		private static Logger logger = LogManager.GetCurrentClassLogger();
 
 		private readonly ITransactionalDocumentSession session;
 		private readonly Action onTxComplete;

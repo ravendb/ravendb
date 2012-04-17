@@ -16,10 +16,10 @@ using System.Threading;
 #if !NET_3_5
 using System.Threading.Tasks;
 #endif
+using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 
@@ -30,7 +30,7 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public class ReplicationInformer : IDisposable
 	{
-		private readonly ILog log = LogProvider.GetCurrentClassLogger();
+		private readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		private readonly DocumentConvention conventions;
 		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
