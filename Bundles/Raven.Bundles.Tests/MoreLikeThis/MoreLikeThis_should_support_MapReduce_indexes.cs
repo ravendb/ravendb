@@ -57,9 +57,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
             using (var session = documentStore.OpenSession())
             {
-                var person = new Thing() { Name = "Cousin of Dolan" };
-
-                session.Store(person);
+                session.Store(new Thing() { Name = "Cousin of Dolan" });
                 session.Store(new Thing() { Name = "Gooby, Pls" });
                 session.Store(new Thing() { Name = "Dafi" });
 
@@ -82,10 +80,11 @@ namespace Raven.Bundles.Tests.MoreLikeThis
                             {"TargetId", DolanId}
                         },
                         MinimumTermFrequency = 1,
-                        MinimumDocumentFrequency = 1,
+                        MinimumDocumentFrequency = 1
                     });
 
                 Assert.Equal(1, list.Count());
+                Assert.Contains("Cousin of Dolan", list.Single().TargetId);
             }
         }
 
