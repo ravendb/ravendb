@@ -6,6 +6,7 @@ using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions.Data;
 using System.Linq;
@@ -108,12 +109,10 @@ namespace Raven.Database.Server.Responders
 					return getResponse;
 
 				Response.OutputStream.Position = 0;
-				string result = new StreamReader(Response.OutputStream).ReadToEnd();
-				getResponse.Result = RavenJToken.Parse(result, returnNullForEmptyString: true);
-				if (Response.StatusCode != 0)
-					getResponse.Status = Response.StatusCode;
-				else
-					getResponse.Status = 200;
+				getResponse.Result = Response.OutputStream.Length == 0 ? 
+					null : 
+					RavenJToken.Load(new JsonTextReader(new StreamReader(Response.OutputStream)));
+				getResponse.Status = Response.StatusCode != 0 ? Response.StatusCode : 200;
 				return getResponse;
 			}
 
