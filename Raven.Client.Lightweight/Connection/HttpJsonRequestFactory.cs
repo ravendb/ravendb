@@ -38,11 +38,11 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Invoke the LogRequest event
 		/// </summary>
-		internal void InvokeLogRequest(IHoldProfilingInformation sender, RequestResultArgs e)
+		internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequentResult)
 		{
 			var handler = LogRequest;
 			if (handler != null)
-				handler(sender, e);
+				handler(sender, generateRequentResult());
 		}
 
 		private readonly int maxNumberOfCachedRequests;

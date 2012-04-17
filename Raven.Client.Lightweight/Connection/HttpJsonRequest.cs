@@ -96,7 +96,7 @@ namespace Raven.Client.Connection
 			{
 				var tcs = new TaskCompletionSource<RavenJToken>();
 				var cachedResponse = factory.GetCachedResponse(this);
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, ()=> new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
@@ -169,7 +169,7 @@ namespace Raven.Client.Connection
 			if (SkipServerCheck)
 			{
 				var result = factory.GetCachedResponse(this);
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
@@ -302,24 +302,22 @@ namespace Raven.Client.Connection
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
-				var reader = new StreamReader(responseStream);
-				var text = reader.ReadToEnd();
-				reader.Close();
-
-				RavenJToken data = RavenJToken.Parse(text, returnNullForEmptyString: true);
+				RavenJToken data = responseStream.Length == 0 ? 
+					null : 
+					RavenJToken.Load(new JsonTextReader(new StreamReader(responseStream)));
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
 					factory.CacheResponse(Url, data, ResponseHeaders);
 				}
 
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
 					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.SentToServer,
-					Result = text,
+					Result = (data ?? "") .ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
@@ -340,7 +338,7 @@ namespace Raven.Client.Connection
 				if (httpWebResponse != null)
 					httpResult = (int)httpWebResponse.StatusCode;
 
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
@@ -360,7 +358,7 @@ namespace Raven.Client.Connection
 				factory.UpdateCacheTime(this);
 				var result = factory.GetCachedResponse(this);
 
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
@@ -378,7 +376,7 @@ namespace Raven.Client.Connection
 			{
 				var readToEnd = sr.ReadToEnd();
 
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,

@@ -67,7 +67,7 @@ namespace Raven.Client.Connection
 		{
 			if (allRequestsCanBeServedFromAggressiveCache) // can be fully served from aggressive cache
 			{
-				jsonRequestFactory.InvokeLogRequest(holdProfilingInformation, new RequestResultArgs
+				jsonRequestFactory.InvokeLogRequest(holdProfilingInformation, () => new RequestResultArgs
 				{
 					DurationMilliseconds = httpJsonRequest.CalculateDuration(),
 					Method = httpJsonRequest.webRequest.Method,
