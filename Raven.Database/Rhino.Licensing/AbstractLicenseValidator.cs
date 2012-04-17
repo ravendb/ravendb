@@ -22,6 +22,8 @@ namespace Rhino.Licensing
 		/// </summary>
 		protected readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+		private bool licenseInfoLogged;
+
 		/// <summary>
 		/// Standard Time servers
 		/// </summary>
@@ -281,7 +283,11 @@ namespace Rhino.Licensing
 					Logger.Warn("Failed validating license:\r\n{0}", License);
 					return false;
 				}
-				Logger.Info("License expiration date is {0}", ExpirationDate);
+				if (licenseInfoLogged == false)
+				{
+					Logger.Info("License expiration date is {0}", ExpirationDate);
+					licenseInfoLogged = true;
+				}
 
 				bool result;
 				if (LicenseType == LicenseType.Subscription)

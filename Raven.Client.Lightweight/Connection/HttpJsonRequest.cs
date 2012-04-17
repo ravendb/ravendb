@@ -81,39 +81,28 @@ namespace Raven.Client.Connection
 		}
 
 #if !NET35
-		public Task<RavenJToken> ReadResponseJsonAsync()
-		{
-			return ReadResponseStringAsync()
-				.ContinueWith(x =>
-				{
-					var result = x.Result;
-
-					return RavenJToken.Parse(result);
-
-				});
-		}
 
 		public Task ExecuteRequestAsync()
 		{
-			return ReadResponseStringAsync();
+			return ReadResponseJsonAsync();
 		}
 
 		/// <summary>
 		/// Begins the read response string.
 		/// </summary>
-		private Task<string> ReadResponseStringAsync()
+		public Task<RavenJToken> ReadResponseJsonAsync()
 		{
 			if (SkipServerCheck)
 			{
-				var tcs = new TaskCompletionSource<string>();
+				var tcs = new TaskCompletionSource<RavenJToken>();
 				var cachedResponse = factory.GetCachedResponse(this);
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, ()=> new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
 					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.AggresivelyCached,
-					Result = cachedResponse,
+					Result = cachedResponse.ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
@@ -124,10 +113,10 @@ namespace Raven.Client.Connection
 			return InternalReadResponseStringAsync(retries: 0);
 		}
 
-		private Task<string> InternalReadResponseStringAsync(int retries)
+		private Task<RavenJToken> InternalReadResponseStringAsync(int retries)
 		{
 			return Task.Factory.FromAsync<WebResponse>(webRequest.BeginGetResponse, webRequest.EndGetResponse, null)
-				.ContinueWith(task => ReadStringInternal(() => task.Result))
+				.ContinueWith(task => ReadJsonInternal(() => task.Result))
 				.ContinueWith(task =>
 				{
 					var webException = task.Exception.ExtractSingleInnerException() as WebException;
@@ -156,7 +145,7 @@ namespace Raven.Client.Connection
 #endif
 		public void ExecuteRequest()
 		{
-			ReadResponseString();
+			ReadResponseJson();
 		}
 
 		public byte[] ReadResponseBytes()
@@ -175,18 +164,18 @@ namespace Raven.Client.Connection
 		/// Reads the response string.
 		/// </summary>
 		/// <returns></returns>
-		public string ReadResponseString()
+		public RavenJToken ReadResponseJson()
 		{
 			if (SkipServerCheck)
 			{
 				var result = factory.GetCachedResponse(this);
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
 					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.AggresivelyCached,
-					Result = result,
+					Result = result.ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
@@ -198,9 +187,9 @@ namespace Raven.Client.Connection
 			{
 				try
 				{
-					if(writeCalled == false)
+					if (writeCalled == false)
 						webRequest.ContentLength = 0;
-					return ReadStringInternal(webRequest.GetResponse);
+					return ReadJsonInternal(webRequest.GetResponse);
 				}
 				catch (WebException e)
 				{
@@ -279,7 +268,7 @@ namespace Raven.Client.Connection
 
 
 
-		private string ReadStringInternal(Func<WebResponse> getResponse)
+		private RavenJToken ReadJsonInternal(Func<WebResponse> getResponse)
 		{
 			WebResponse response;
 			try
@@ -290,7 +279,7 @@ namespace Raven.Client.Connection
 			catch (WebException e)
 			{
 				sp.Stop();
-				var result = HanldeErrors(e);
+				var result = HandleErrors(e);
 				if (result == null)
 					throw;
 				return result;
@@ -302,7 +291,7 @@ namespace Raven.Client.Connection
 				var we = e.ExtractSingleInnerException() as WebException;
 				if (we == null)
 					throw;
-				var result = HanldeErrors(we);
+				var result = HandleErrors(we);
 				if (result == null)
 					throw;
 				return result;
@@ -313,43 +302,41 @@ namespace Raven.Client.Connection
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
-				var reader = new StreamReader(responseStream);
-				var text = reader.ReadToEnd();
-				reader.Close();
+				var data = RavenJToken.TryLoad(responseStream);
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
-					factory.CacheResponse(Url, text, ResponseHeaders);
+					factory.CacheResponse(Url, data, ResponseHeaders);
 				}
 
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
-					HttpResult = (int)ResponseStatusCode,
+					HttpResult = (int) ResponseStatusCode,
 					Status = RequestStatus.SentToServer,
-					Result = text,
+					Result = (data ?? "").ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
 
-				return text;
+				return data;
 			}
 		}
 
-		private string HanldeErrors(WebException e)
+		private RavenJToken HandleErrors(WebException e)
 		{
 			var httpWebResponse = e.Response as HttpWebResponse;
 			if (httpWebResponse == null ||
-			    httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
-			    httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
-			    httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+				httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
+				httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
+				httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 			{
 				int httpResult = -1;
 				if (httpWebResponse != null)
 					httpResult = (int)httpWebResponse.StatusCode;
 
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
@@ -359,22 +346,23 @@ namespace Raven.Client.Connection
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
+
 				return null;//throws
 			}
 
 			if (httpWebResponse.StatusCode == HttpStatusCode.NotModified
-			    && CachedRequestDetails != null)
+				&& CachedRequestDetails != null)
 			{
 				factory.UpdateCacheTime(this);
 				var result = factory.GetCachedResponse(this);
 
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
 					HttpResult = (int)httpWebResponse.StatusCode,
 					Status = RequestStatus.Cached,
-					Result = result,
+					Result = result.ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
@@ -386,7 +374,7 @@ namespace Raven.Client.Connection
 			{
 				var readToEnd = sr.ReadToEnd();
 
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
@@ -540,7 +528,7 @@ namespace Raven.Client.Connection
 		{
 			writeCalled = true;
 			postedData = dataToWrite;
-			
+
 			return webRequest.BeginGetRequestStream(callback, state);
 		}
 
@@ -634,11 +622,6 @@ namespace Raven.Client.Connection
 				if (manualResetEvent != null)
 					manualResetEvent.Close();
 			}
-		}
-
-		public RavenJToken ReadResponseJson()
-		{
-			return RavenJToken.Parse(ReadResponseString());
 		}
 
 		public void Write(Stream streamToWrite)

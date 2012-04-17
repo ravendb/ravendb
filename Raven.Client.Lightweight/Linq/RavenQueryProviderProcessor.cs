@@ -1258,7 +1258,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			for (int index = 0; index < queryResult.Results.Count; index++)
 			{
 				var result = queryResult.Results[index];
-				var safeToModify = result.CreateSnapshot();
+				var safeToModify = (RavenJObject)result.CreateSnapshot();
 				bool changed = false;
 				foreach (var rename in FieldsToRename)
 				{

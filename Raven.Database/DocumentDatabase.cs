@@ -1280,14 +1280,8 @@ namespace Raven.Database
 			var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
 			if (indexDefinition == null)
 				throw new InvalidOperationException("There is no index named: " + index);
-			IndexStorage.DeleteIndex(index);
-			IndexStorage.CreateIndexImplementation(indexDefinition);
-			TransactionalStorage.Batch(actions =>
-			{
-				actions.Indexing.DeleteIndex(index);
-				actions.Indexing.AddIndex(index, indexDefinition.IsMapReduce);
-				workContext.ShouldNotifyAboutWork(() => "RESET INDEX " + index);
-			});
+			DeleteIndex(index);
+			PutIndex(index, indexDefinition);
 		}
 
 		public IndexDefinition GetIndexDefinition(string index)

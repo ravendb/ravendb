@@ -14,6 +14,7 @@ namespace Raven.Json.Linq
 	{
 		private JTokenType _valueType;
 		private object _value;
+		private bool isSnapshot;
 
 		/// <summary>
 		/// Gets the node type for this <see cref="RavenJToken"/>.
@@ -33,6 +34,9 @@ namespace Raven.Json.Linq
 			get { return _value; }
 			set
 			{
+				if (isSnapshot)
+					throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
+
 				Type currentType = (_value != null) ? _value.GetType() : null;
 				Type newType = (value != null) ? value.GetType() : null;
 
@@ -125,7 +129,7 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public RavenJValue(Guid value)
-		  : this(value, JTokenType.String)
+			: this(value, JTokenType.String)
 		{
 		}
 
@@ -134,7 +138,7 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public RavenJValue(Uri value)
-		  : this(value, JTokenType.String)
+			: this(value, JTokenType.String)
 		{
 		}
 
@@ -143,7 +147,7 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="value">The value.</param>
 		public RavenJValue(TimeSpan value)
-		  : this(value, JTokenType.String)
+			: this(value, JTokenType.String)
 		{
 		}
 
@@ -307,7 +311,7 @@ namespace Raven.Json.Linq
 						writer.WriteValue(Convert.ToDateTime(_value, CultureInfo.InvariantCulture));
 					return;
 				case JTokenType.Bytes:
-					writer.WriteValue((byte[]) _value);
+					writer.WriteValue((byte[])_value);
 					return;
 				case JTokenType.Guid:
 				case JTokenType.Uri:
@@ -498,7 +502,7 @@ namespace Raven.Json.Linq
 					{
 #if !NET35
 						Guid guid;
-						if(Guid.TryParse((string) objB, out guid) == false)
+						if (Guid.TryParse((string)objB, out guid) == false)
 							throw new ArgumentException("Object must be of type Guid.");
 						objB = guid;
 #else
@@ -512,7 +516,7 @@ namespace Raven.Json.Linq
 					return guid1.CompareTo(guid2);
 				case JTokenType.Uri:
 					if (objB is string)
-						objB = new Uri((string) objB);
+						objB = new Uri((string)objB);
 
 					if (!(objB is Uri))
 						throw new ArgumentException("Object must be of type Uri.");
@@ -618,8 +622,21 @@ namespace Raven.Json.Linq
 			var formattable = _value as IFormattable;
 			if (formattable != null)
 				return formattable.ToString(format, formatProvider);
-			
+
 			return _value.ToString();
+		}
+
+		public override void EnsureSnapshot()
+		{
+			isSnapshot = true;
+		}
+
+		public override RavenJToken CreateSnapshot()
+		{
+			if (!isSnapshot)
+				throw new InvalidOperationException("Cannot create snapshot without previously calling EnsureSnapShot");
+
+			return new RavenJValue(Value);
 		}
 
 		public static RavenJValue Null

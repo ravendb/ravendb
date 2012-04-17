@@ -83,7 +83,7 @@ namespace Raven.Tests.Storage
 				DataDirectory = "Test"
 			}, () => { }))
 			{
-				when_there_are_multiple_map_results_and_we_ask_for_results(transactionalStorage);
+				when_there_are_multiple_map_results_and_we_ask_for_results_will_get_latest(transactionalStorage);
 			}
 
 		}
@@ -97,11 +97,11 @@ namespace Raven.Tests.Storage
 				DataDirectory = "Test"
 			}, () => { }))
 			{
-				when_there_are_multiple_map_results_and_we_ask_for_results(transactionalStorage);
+				when_there_are_multiple_map_results_and_we_ask_for_results_will_get_latest(transactionalStorage);
 			}
 		}
 
-		private static void when_there_are_multiple_map_results_and_we_ask_for_results(ITransactionalStorage transactionalStorage)
+		private static void when_there_are_multiple_map_results_and_we_ask_for_results_will_get_latest(ITransactionalStorage transactionalStorage)
 		{
 			transactionalStorage.Initialize(new DummyUuidGenerator());
 

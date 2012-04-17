@@ -15,6 +15,8 @@ namespace Raven.Json.Linq
 	/// </summary>
 	public class RavenJArray : RavenJToken, IEnumerable<RavenJToken>
 	{
+		private bool isSnapshot;
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RavenJArray"/> class.
 		/// </summary>
@@ -77,7 +79,13 @@ namespace Raven.Json.Linq
 		public RavenJToken this[int index]
 		{
 			get { return Items[index]; }
-			set { Items[index] = value; }
+			set
+			{
+				if (isSnapshot)
+					throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
+
+				Items[index] = value;
+			}
 		}
 
 		public override RavenJToken CloneToken()
@@ -137,7 +145,7 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="json">A <see cref="String"/> that contains JSON.</param>
 		/// <returns>A <see cref="RavenJArray"/> populated from the string that contains JSON.</returns>
-		public static new RavenJArray Parse(string json)
+		public static RavenJArray Parse(string json)
 		{
 			try
 			{
@@ -197,16 +205,25 @@ namespace Raven.Json.Linq
 
 		public void Add(RavenJToken token)
 		{
+			if (isSnapshot)
+				throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
+
 			Items.Add(token);
 		}
 
 		public bool Remove(RavenJToken token)
 		{
+			if (isSnapshot)
+				throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
+
 			return Items.Remove(token);
 		}
 
 		public void RemoveAt(int index)
 		{
+			if (isSnapshot)
+				throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
+
 			Items.RemoveAt(index);
 		}
 
@@ -219,6 +236,9 @@ namespace Raven.Json.Linq
 		/// <paramref name="index"/> is not a valid index in the <see cref="T:System.Collections.Generic.IList`1"/>.</exception>
 		public void Insert(int index, RavenJToken item)
 		{
+			if (isSnapshot)
+				throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
+
 			Items.Insert(index, item);
 		}
 
@@ -235,6 +255,19 @@ namespace Raven.Json.Linq
 		internal override void AddForCloning(string key, RavenJToken token)
 		{
 			Add(token);
+		}
+
+		public override void EnsureSnapshot()
+		{
+			isSnapshot = true;
+		}
+
+		public override RavenJToken CreateSnapshot()
+		{
+			if (isSnapshot == false)
+				throw new InvalidOperationException("Cannot create snapshot without previously calling EnsureSnapShot");
+
+			return new RavenJArray(Items);
 		}
 	}
 }

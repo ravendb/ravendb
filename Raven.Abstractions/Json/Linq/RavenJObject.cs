@@ -233,7 +233,7 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="json">A <see cref="String"/> that contains JSON.</param>
 		/// <returns>A <see cref="RavenJObject"/> populated from the string that contains JSON.</returns>
-		public static new RavenJObject Parse(string json)
+		public static RavenJObject Parse(string json)
 		{
 			try
 			{
@@ -313,12 +313,12 @@ namespace Raven.Json.Linq
 			return Properties.TryGetValue(name, out value);	
 		}
 
-		public RavenJObject CreateSnapshot()
+		public override RavenJToken CreateSnapshot()
 		{
 			return new RavenJObject(Properties.CreateSnapshot());
 		}
 
-		public void EnsureSnapshot()
+		public override void EnsureSnapshot()
 		{
 			Properties.EnsureSnapshot();
 		}

@@ -41,12 +41,12 @@ namespace Raven.Tests.MailingList
 		public void GivenAListOfLogEntriesAndAFullClientName_Search_Returns1Player()
 		{
 			// Act.
-            using (EmbeddableDocumentStore documentStore = CreateDocumentStore())
+			using (EmbeddableDocumentStore documentStore = CreateDocumentStore())
 			{
 				// Arrange.
 				IList<LogEntries_Search.ReduceResult> result = Search(documentStore, "Jus");
 
-                // Assert.
+				// Assert.
 				Assert.NotNull(result);
 				Assert.Equal(1, result.Count);
 				Assert.True(result.First().ClientNames.Contains("[WD] Jussy"));
@@ -98,33 +98,33 @@ namespace Raven.Tests.MailingList
 									{
 										logEntry.ClientGuid,
 										ClientNames = new[] { logEntry.ClientName },
-                                        Query = new object[0]
+										Query = new object[0]
 									};
 
-			    Reduce = results => from result in results
-			                        group result by result.ClientGuid
-			                        into g
-			                        select new
-			                                   {
-			                                       ClientGuid = g.Key,
-			                                       ClientNames = g.SelectMany(x => x.ClientNames),
-			                                       Query = new object[]
+				Reduce = results => from result in results
+									group result by result.ClientGuid
+										into g
+										select new
+												   {
+													   ClientGuid = g.Key,
+													   ClientNames = g.SelectMany(x => x.ClientNames),
+													   Query = new object[]
 			                                                   {
 			                                                       g.Key,
 			                                                       g.Key.ToString().Split('-'),
 			                                                       g.SelectMany(x => x.ClientNames)
 			                                                   }
-			                                   };
+												   };
 
-			    Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
-			    Store(x => x.Query, FieldStorage.No);
+				Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
+				Store(x => x.Query, FieldStorage.No);
 			}
 
 			public class ReduceResult
 			{
 				public Guid ClientGuid { get; set; }
 				public string[] ClientNames { get; set; }
-                public string Query { get; set; }
+				public string Query { get; set; }
 			}
 		}
 
@@ -152,16 +152,16 @@ namespace Raven.Tests.MailingList
 
 			using (IDocumentSession documentSession = documentStore.OpenSession())
 			{
-			    RavenQueryStatistics stats;
-			    List<LogEntries_Search.ReduceResult> reduceResults = documentSession.Query<LogEntries_Search.ReduceResult, LogEntries_Search>()
-                    .Statistics(out stats)
-                    .Where(x => x.Query.StartsWith(query))
-                    .ToList();
-			    return reduceResults;
+				RavenQueryStatistics stats;
+				List<LogEntries_Search.ReduceResult> reduceResults = documentSession.Query<LogEntries_Search.ReduceResult, LogEntries_Search>()
+					.Statistics(out stats)
+					.Where(x => x.Query.StartsWith(query))
+					.ToList();
+				return reduceResults;
 			}
 		}
 
-        private static EmbeddableDocumentStore CreateDocumentStore()
+		private static EmbeddableDocumentStore CreateDocumentStore()
 		{
 			var documentStore = new EmbeddableDocumentStore
 			{

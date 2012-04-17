@@ -100,7 +100,7 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// The fields that are queryable in the index
 		/// </summary>
-		public IList<string> Fields {get;set;}
+		public IList<string> Fields { get; set; }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinition"/> class.
@@ -122,28 +122,30 @@ namespace Raven.Abstractions.Indexing
 		/// <returns></returns>
 		public bool Equals(IndexDefinition other)
 		{
-			if (ReferenceEquals(null, other)) return false;
-			if (ReferenceEquals(this, other)) return true;
+			if (ReferenceEquals(null, other))
+				return false;
+			if (ReferenceEquals(this, other))
+				return true;
 			return Maps.SequenceEqual(other.Maps) &&
 				Equals(other.Name, Name) &&
-				Equals(other.Reduce, Reduce) && 
-				Equals(other.TransformResults, TransformResults) && 
+				Equals(other.Reduce, Reduce) &&
+				Equals(other.TransformResults, TransformResults) &&
 				DictionaryEquals(other.Stores, Stores) &&
 				DictionaryEquals(other.Indexes, Indexes) &&
 				DictionaryEquals(other.Analyzers, Analyzers) &&
 				DictionaryEquals(other.SortOptions, SortOptions);
 		}
 
-		private static bool DictionaryEquals<TKey,TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
+		private static bool DictionaryEquals<TKey, TValue>(IDictionary<TKey, TValue> x, IDictionary<TKey, TValue> y)
 		{
-			if(x.Count!=y.Count)
+			if (x.Count != y.Count)
 				return false;
 			foreach (var v in x)
 			{
 				TValue value;
-				if(y.TryGetValue(v.Key, out value) == false)
+				if (y.TryGetValue(v.Key, out value) == false)
 					return false;
-				if(Equals(value,v.Value)==false)
+				if (Equals(value, v.Value) == false)
 					return false;
 			}
 			return true;
@@ -155,7 +157,7 @@ namespace Raven.Abstractions.Indexing
 			foreach (var kvp in x)
 			{
 				result = (result * 397) ^ kvp.Key.GetHashCode();
-				result = (result*397) ^ (!Equals(kvp.Value, default(TValue)) ? kvp.Value.GetHashCode() : 0);
+				result = (result * 397) ^ (!Equals(kvp.Value, default(TValue)) ? kvp.Value.GetHashCode() : 0);
 			}
 			return result;
 		}
@@ -169,13 +171,15 @@ namespace Raven.Abstractions.Indexing
 		/// </returns>
 		public override bool Equals(object obj)
 		{
-			if (ReferenceEquals(null, obj)) return false;
-			if (ReferenceEquals(this, obj)) return true;
+			if (ReferenceEquals(null, obj))
+				return false;
+			if (ReferenceEquals(this, obj))
+				return true;
 			return Equals(obj as IndexDefinition);
 		}
 
 		private byte[] cachedHashCodeAsBytes;
-		
+
 		/// <summary>
 		/// Provide a cached version of the index hash code, which is used when generating
 		/// the index etag. 
@@ -202,14 +206,14 @@ namespace Raven.Abstractions.Indexing
 		{
 			unchecked
 			{
-				int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc*397 ^ val.GetHashCode());
-				result = (result*397) ^ Maps.Count;
-				result = (result*397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
+				int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc * 397 ^ val.GetHashCode());
+				result = (result * 397) ^ Maps.Count;
+				result = (result * 397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
 				result = (result * 397) ^ (TransformResults != null ? TransformResults.GetHashCode() : 0);
-				result = (result*397) ^ DictionaryHashCode(Stores);
-				result = (result*397) ^ DictionaryHashCode(Indexes);
-				result = (result*397) ^ DictionaryHashCode(Analyzers);
-				result = (result*397) ^ DictionaryHashCode(SortOptions);
+				result = (result * 397) ^ DictionaryHashCode(Stores);
+				result = (result * 397) ^ DictionaryHashCode(Indexes);
+				result = (result * 397) ^ DictionaryHashCode(Analyzers);
+				result = (result * 397) ^ DictionaryHashCode(SortOptions);
 				return result;
 			}
 		}
@@ -219,10 +223,14 @@ namespace Raven.Abstractions.Indexing
 			get
 			{
 				var name = Name ?? string.Empty;
-				if (name.StartsWith("Temp")) return "Temp";
-				if (name.StartsWith("Auto")) return "Auto";
-				if (IsCompiled) return "Compiled";
-				if (IsMapReduce) return "MapReduce";
+				if (name.StartsWith("Temp"))
+					return "Temp";
+				if (name.StartsWith("Auto"))
+					return "Auto";
+				if (IsCompiled)
+					return "Compiled";
+				if (IsMapReduce)
+					return "MapReduce";
 				return "Map";
 			}
 		}
@@ -232,16 +240,16 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public void RemoveDefaultValues()
 		{
-            var defaultStorage = IsMapReduce ? FieldStorage.Yes : FieldStorage.No;
-		    foreach (var toRemove in Stores.Where(x=>x.Value == defaultStorage).ToArray())
+			var defaultStorage = IsMapReduce ? FieldStorage.Yes : FieldStorage.No;
+			foreach (var toRemove in Stores.Where(x => x.Value == defaultStorage).ToArray())
 			{
 				Stores.Remove(toRemove);
 			}
-			foreach (var toRemove in Indexes.Where(x=>x.Value == FieldIndexing.Default).ToArray())
+			foreach (var toRemove in Indexes.Where(x => x.Value == FieldIndexing.Default).ToArray())
 			{
 				Indexes.Remove(toRemove);
 			}
-			foreach (var toRemove in SortOptions.Where(x=>x.Value == Indexing.SortOptions.None).ToArray())
+			foreach (var toRemove in SortOptions.Where(x => x.Value == Indexing.SortOptions.None).ToArray())
 			{
 				SortOptions.Remove(toRemove);
 			}

@@ -6,30 +6,30 @@ using Raven.Client.Connection.Profiling;
 
 namespace Raven.Client.Util
 {
-	public class SimpleCache : IDisposable
+	public class SimpleCache<T> : IDisposable
 	{
 		readonly ConcurrentLruLSet<string> lruKeys;
-		readonly ConcurrentDictionary<string, object> actualCache;
+		readonly ConcurrentDictionary<string, T> actualCache;
 
 		public SimpleCache(int maxNumberOfCacheEntries)
 		{
-			actualCache = new ConcurrentDictionary<string, object>();
+			actualCache = new ConcurrentDictionary<string, T>();
 			lruKeys = new ConcurrentLruLSet<string>(maxNumberOfCacheEntries, key =>
 			{
-				object _;
+				T _;
 				actualCache.TryRemove(key, out _);
 			});
 		}
 
-		public void Set(string key, object val)
+		public void Set(string key, T val)
 		{
 			actualCache.AddOrUpdate(key, val, (s, o) => val);
 			lruKeys.Push(key);
 		}
 
-		public object Get(string key)
+		public T Get(string key)
 		{
-			object value;
+			T value;
 			if(actualCache.TryGetValue(key, out value))
 				lruKeys.Push(key);
 			return value;

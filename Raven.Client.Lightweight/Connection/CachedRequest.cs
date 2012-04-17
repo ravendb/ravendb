@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Specialized;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
 	internal class CachedRequest
 	{
-		public string Data;
+		public RavenJToken Data;
 		public DateTimeOffset Time;
 		public NameValueCollection Headers;
 	}
