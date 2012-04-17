@@ -714,6 +714,7 @@
     <Compile Include="Munin\SimpleFileTest.cs" />
     <Compile Include="Munin\ToDo.cs" />
     <Compile Include="Munin\ToDoRepository.cs" />
+    <Compile Include="NotModified\DocumentNotModified.cs" />
     <Compile Include="Patching\MetadataPatching.cs" />
     <Compile Include="MailingList\Phil-Updated.cs" />
     <Compile Include="Queries\Includes.cs" />
