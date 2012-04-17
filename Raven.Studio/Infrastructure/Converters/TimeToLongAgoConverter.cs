@@ -19,9 +19,9 @@ namespace Raven.Studio.Infrastructure.Converters
 				if (timeAgo.TotalMinutes >= 1)
 					return string.Format("{0:#,#} minutes ago", timeAgo.TotalMinutes);
 				if (timeAgo.TotalSeconds >= 1)
-					return string.Format("{0:#,#} secounds ago", timeAgo.TotalSeconds);
+					return string.Format("{0:#,#} seconds ago", timeAgo.TotalSeconds);
 
-				return string.Format("{0:#,#} milli-secounds ago", timeAgo.TotalMilliseconds);
+				return string.Format("{0:#,#} milli-seconds ago", timeAgo.TotalMilliseconds);
 			}
 			return null;
 
