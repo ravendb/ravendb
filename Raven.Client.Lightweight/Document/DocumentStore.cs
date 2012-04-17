@@ -58,7 +58,11 @@ namespace Raven.Client.Document
 		///</summary>
 		public override HttpJsonRequestFactory JsonRequestFactory
 		{
-			get { return jsonRequestFactory; }
+			get
+			{
+				AssertInitialized();
+				return jsonRequestFactory;
+			}
 		}
 
 #if !SILVERLIGHT

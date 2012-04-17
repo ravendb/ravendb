@@ -6,6 +6,7 @@
 	<Converters:BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
 	<Converters:BooleanToOppositeVisibilityConverter x:Key="BooleanToOppositeVisibility" />
 	<Converters:BooleanToStaleStatConverter x:Key="BooleanToStaleStatConverter" />
+	<Converters:UtcToLocalConverter x:Key="UtcToLocalConverter" />
 	<Converters:RedIfError x:Key="RedIfError" />
 	<Converters:TimeToLongAgoConverter x:Key="TimeToLongAgoConverter" />
 	<Converters:TaskStatusConverter x:Key="TaskStatusConverter" />

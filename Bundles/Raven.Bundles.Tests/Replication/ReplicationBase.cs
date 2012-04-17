@@ -73,16 +73,34 @@ namespace Raven.Bundles.Tests.Replication
 
 		public void Dispose()
 		{
+			var err = new List<Exception>();
 			foreach (var documentStore in stores)
 			{
-				documentStore.Dispose();
+				try
+				{
+					documentStore.Dispose();
+				}
+				catch (Exception e)
+				{
+					err.Add(e);	
+				}
 			}
 
 			foreach (var ravenDbServer in servers)
 			{
-				ravenDbServer.Dispose();
-				IOExtensions.DeleteDirectory(ravenDbServer.Database.Configuration.DataDirectory);
+				try
+				{
+					ravenDbServer.Dispose();
+					IOExtensions.DeleteDirectory(ravenDbServer.Database.Configuration.DataDirectory);
+				}
+				catch (Exception e)
+				{
+					err.Add(e);
+				}
 			}
+
+			if (err.Count > 0)
+				throw new AggregateException(err);
 		}
 
 		public IDocumentStore ResetDatabase(int index)
