@@ -23,6 +23,12 @@ namespace Raven.Client.Exceptions
 		/// <value>The conflicted version ids.</value>
 		public string[] ConflictedVersionIds { get; set; }
 
+
+        /// <summary>
+        /// Gets or sets the conflicted document etag
+        /// </summary>
+        public Guid Etag { get; set; }
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.
 		/// </summary>
