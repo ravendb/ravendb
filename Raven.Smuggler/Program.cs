@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Net;
 using NDesk.Options;
 using Raven.Abstractions.Data;
@@ -99,6 +100,11 @@ namespace Raven.Smuggler
 			{
 				PrintUsageAndExit(e);
 			}
+
+            if(options.File != null && Directory.Exists(options.File))
+            {
+                incremental = true;
+            }
 
 			var smugglerApi = new SmugglerApi(connectionStringOptions);
 
