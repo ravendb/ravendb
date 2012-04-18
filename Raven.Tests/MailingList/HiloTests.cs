@@ -41,10 +41,6 @@ namespace Raven.Tests.MailingList
 
                 for (int i = 0; i < 128; i++)
                 {
-                    if(i == 30)
-                    {
-                        
-                    }
                     Assert.True(ids.Add(hiLoKeyGenerator.NextId()), "Failed at " + i);
                 }
 
