@@ -8,7 +8,8 @@ properties {
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
-  
+	$configuration = "Debug"
+	
 	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Newtonsoft.Json), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???",
 				"ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", 
@@ -42,15 +43,13 @@ properties {
 			return "$build_dir\$_"
 		}
   
-	$silverlight4_dlls = @( "Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???", 
-						(Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) |
+	$silverlight4_dlls = @("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 		
-	$silverlight_dlls = @( "Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???", 
-						(Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) |
+	$silverlight_dlls = @("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
@@ -79,8 +78,8 @@ task Verify40 {
 
 
 task Clean {
-  remove-item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
-  remove-item -force -recurse $release_dir -ErrorAction SilentlyContinue
+	Remove-Item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
+	Remove-Item -force -recurse $release_dir -ErrorAction SilentlyContinue
 }
 
 task Init -depends Verify40, Clean {
@@ -92,35 +91,12 @@ task Init -depends Verify40, Clean {
 		$env:buildlabel = "13"
 	}
 	
-	if($env:buildlabel -ne 13) {
-		$projectFiles = Get-ChildItem -Path $base_dir -Filter "*.csproj" -Recurse | 
-							Where-Object { $_.Directory -notmatch [regex]::Escape($lib_dir) } | 
-							Where-Object { $_.Directory -notmatch [regex]::Escape($tools_dir) }
-		
-		$notclsCompliant = @("Raven.Silverlight.Client", "Raven.Studio", "Raven.Tests.Silverlight")
-		
-		foreach($projectFile in $projectFiles) {
-			
-			$projectName = [System.IO.Path]::GetFileName($projectFile.Directory)
-			$asmInfo = [System.IO.Path]::Combine($projectFile.Directory, [System.IO.Path]::Combine("Properties", "AssemblyInfo.cs"))
-			
-			$clsComliant = "true"
-			if([System.Array]::IndexOf($notclsCompliant, $projectFile.Name) -ne -1) {
-				$clsComliant = "false"
-			}
-			
-			Generate-Assembly-Info `
-				-file $asmInfo `
-				-title "$projectName $version.0.0" `
-				-description "A linq enabled document database for .NET" `
-				-company "Hibernating Rhinos" `
-				-product "RavenDB $version.0.0" `
-				-version "$version.0" `
-				-fileversion "$version.$env:buildlabel.0" `
-				-copyright "Copyright © Hibernating Rhinos 2004 - $((Get-Date).Year)" `
-				-clsCompliant $clsComliant
-		}
-	}
+	exec { git.exe update-index --assume-unchanged "$base_dir\CommonAssemblyInfo.cs" }
+	$commit = Get-Git-Commit
+	(Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
+		Foreach-Object { $_ -replace ".13.", ".$($env:buildlabel)." } |
+		Foreach-Object { $_ -replace "{commit}", $commit } |
+		Set-Content "$base_dir\CommonAssemblyInfo.cs" -Encoding UTF8
 	
 	
 	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
@@ -154,7 +130,8 @@ task Compile -depends Init {
 	
 	try { 
 		ExecuteTask("BeforeCompile")
-		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" }
+		Write-Host "Compiling with '$configuration' configuration"
+		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$configuration }
 	} catch {
 		Throw
 	} finally { 
@@ -195,12 +172,12 @@ task MeasurePerformance -depends Compile {
 task TestSilverlight -depends Compile, CopyServer {
 	try
 	{
-		start "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079"
+		$process = Start-Process "$build_dir\Output\Server\Raven.Server.exe" "--ram --set=Raven/Port==8079" -PassThru
 		exec { & ".\Tools\StatLight\StatLight.exe" "-x=.\build\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml" }
 	}
 	finally
 	{
-		ps "Raven.Server" | kill
+		Stop-Process -InputObject $process
 	}
 }
 
@@ -209,10 +186,12 @@ task ReleaseNoTests -depends OpenSource,DoRelease {
 }
 
 task Unstable {
+	$configuration = "Release"
 	$global:uploadCategory = "RavenDB-Unstable"
 }
 
 task OpenSource {
+	$configuration = "Release"
 	$global:uploadCategory = "RavenDB"
 }
 
@@ -247,7 +226,8 @@ task CopySamples {
 }
 
 task CreateOutpuDirectories -depends CleanOutputDirectory {
-	New-Item $build_dir\Output -Type directory | Out-Null
+	New-Item $build_dir\Output -Type directory -ErrorAction SilentlyContinue | Out-Null
+	New-Item $build_dir\Output\Server -Type directory | Out-Null
 	New-Item $build_dir\Output\Web -Type directory | Out-Null
 	New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
 	New-Item $build_dir\Output\EmbeddedClient -Type directory | Out-Null
@@ -262,7 +242,7 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 }
 
 task CleanOutputDirectory { 
-	Remove-Item $build_dir\Output -Recurse -Force  -ErrorAction SilentlyContinue
+	Remove-Item $build_dir\Output -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 task CopyEmbeddedClient { 
@@ -270,11 +250,13 @@ task CopyEmbeddedClient {
 }
 
 task CopySilverlight { 
-	$silverlight_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight }
+	$silverlight_dlls + @((Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) | 
+		ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight }
 }
 
 task CopySilverlight-4 { 
-	$silverlight4_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight-4 }
+	$silverlight4_dlls + @((Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) | 
+		ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight-4 }
 }
 
 task CopySmuggler {
@@ -307,8 +289,7 @@ task CopyBundles {
 	Copy-Item $items $build_dir\Output\Bundles
 }
 
-task CopyServer {
-	New-Item $build_dir\Output\Server -Type directory | Out-Null
+task CopyServer -depends CreateOutpuDirectories {
 	$server_files | ForEach-Object { Copy-Item "$_" $build_dir\Output\Server }
 	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\Output\Server\Raven.Server.exe.config
 }
