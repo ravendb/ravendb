@@ -464,10 +464,19 @@ namespace Raven.Client.Connection
 					headerName = "If-None-Match";
 				var value = prop.Value.Value<object>().ToString();
 
+                bool isRestricted;
+			    try
+			    {
+			        isRestricted = WebHeaderCollection.IsRestricted(headerName);
+			    }
+			    catch (Exception e)
+			    {
+			        throw new InvalidOperationException("Could not figure out how to treat header: " + headerName, e);
+			    }
 				// Restricted headers require their own special treatment, otherwise an exception will
 				// be thrown.
 				// See http://msdn.microsoft.com/en-us/library/78h415ay.aspx
-				if (WebHeaderCollection.IsRestricted(headerName))
+			    if (isRestricted)
 				{
 					switch (headerName)
 					{
