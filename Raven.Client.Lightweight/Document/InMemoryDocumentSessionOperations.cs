@@ -99,7 +99,7 @@ namespace Raven.Client.Document
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
 		/// </summary>
 		protected InMemoryDocumentSessionOperations(
-			DocumentStoreBase documentStore, 
+			DocumentStoreBase documentStore,
 			DocumentSessionListeners listeners,
 			Guid id)
 		{
@@ -194,7 +194,7 @@ namespace Raven.Client.Document
 				string id;
 				if (TryGetIdFromInstance(instance, out id)
 #if !NET_3_5
-				 || (instance is IDynamicMetaObjectProvider &&
+					|| (instance is IDynamicMetaObjectProvider &&
 					   TryGetIdFromDynamic(instance, out id))
 #endif
 )
@@ -511,7 +511,7 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity)
 		{
-		    StoreInternal(entity, null, null, forceConcurrencyCheck: true);
+			StoreInternal(entity, null, null, forceConcurrencyCheck: true);
 		}
 
 		/// <summary>
@@ -519,7 +519,7 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity, Guid etag)
 		{
-			StoreInternal(entity, etag, null, forceConcurrencyCheck:true);
+			StoreInternal(entity, etag, null, forceConcurrencyCheck: true);
 		}
 
 		/// <summary>
@@ -535,7 +535,7 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity, Guid etag, string id)
 		{
-		    StoreInternal(entity, etag, id, forceConcurrencyCheck: true);
+			StoreInternal(entity, etag, id, forceConcurrencyCheck: true);
 		}
 
 		private void StoreInternal(object entity, Guid? etag, string id, bool forceConcurrencyCheck)
@@ -543,12 +543,12 @@ more responsive application.
 			if (null == entity)
 				throw new ArgumentNullException("entity");
 
-		    DocumentMetadata value;
-		    if (entitiesAndMetadata.TryGetValue(entity, out value))
-		    {
-		        value.ForceConcurrencyCheck = forceConcurrencyCheck;
-		        return;
-		    }
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value))
+			{
+				value.ForceConcurrencyCheck = forceConcurrencyCheck;
+				return;
+			}
 
 			if (id == null)
 			{
@@ -595,14 +595,14 @@ more responsive application.
 		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
-			                                	{
-			                                		Key = id,
-			                                		Metadata = metadata,
-			                                		OriginalMetadata = new RavenJObject(),
-			                                		ETag = etag,
-			                                		OriginalValue = new RavenJObject(),
-                                                    ForceConcurrencyCheck = forceConcurrencyCheck
-			                                	});
+			{
+				Key = id,
+				Metadata = metadata,
+				OriginalMetadata = new RavenJObject(),
+				ETag = etag,
+				OriginalValue = new RavenJObject(),
+				ForceConcurrencyCheck = forceConcurrencyCheck
+			});
 			if (id != null)
 				entitiesByKey[id] = entity;
 		}
@@ -706,9 +706,9 @@ more responsive application.
 
 			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
-		    var etag = UseOptimisticConcurrency || documentMetadata.ForceConcurrencyCheck
-		                   ? (documentMetadata.ETag ?? Guid.Empty)
-		                   : (Guid?) null;
+			var etag = UseOptimisticConcurrency || documentMetadata.ForceConcurrencyCheck
+						   ? (documentMetadata.ETag ?? Guid.Empty)
+						   : (Guid?)null;
 
 			return new PutCommandData
 			{
@@ -916,7 +916,7 @@ more responsive application.
 				return true;
 
 			string id;
-			if (TryGetIdFromInstance(entity, out id) && 
+			if (TryGetIdFromInstance(entity, out id) &&
 				string.Equals(documentMetadata.Key, id, StringComparison.InvariantCultureIgnoreCase) == false)
 				return true;
 
@@ -957,9 +957,9 @@ more responsive application.
 		{
 			if (
 #if !NET_3_5
-			entityType == typeof(DynamicJsonObject) ||
+				entityType == typeof(DynamicJsonObject) ||
 #endif
-			 entityType == typeof(RavenJObject)) // dynamic types
+				entityType == typeof(RavenJObject)) // dynamic types
 			{
 				if (metadata.ContainsKey(Constants.RavenClrType))
 					return;// do not overwrite the value
@@ -1182,11 +1182,11 @@ more responsive application.
 			/// <value>The original metadata.</value>
 			public RavenJObject OriginalMetadata { get; set; }
 
-            /// <summary>
-            /// A concurrency check will be forced on this entity 
-            /// even if UseOptimisticConcurrency is set to false
-            /// </summary>
-		    public bool ForceConcurrencyCheck { get; set; }
+			/// <summary>
+			/// A concurrency check will be forced on this entity 
+			/// even if UseOptimisticConcurrency is set to false
+			/// </summary>
+			public bool ForceConcurrencyCheck { get; set; }
 		}
 
 		/// <summary>
@@ -1217,7 +1217,7 @@ more responsive application.
 
 		protected void LogBatch(SaveChangesData data)
 		{
-			log.Debug(()=>
+			log.Debug(() =>
 			{
 				var sb = new StringBuilder()
 					.AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)

@@ -107,7 +107,7 @@ namespace Raven.Tests.Document
 				}
 				using (new TransactionScope())
 				{
-                    session.Load<Company>(company.Id).Name = "Another Name";
+					session.Load<Company>(company.Id).Name = "Another Name";
 					session.SaveChanges();
 
 					using (new TransactionScope(TransactionScopeOption.Suppress))

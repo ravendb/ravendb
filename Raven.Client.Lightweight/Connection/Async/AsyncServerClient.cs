@@ -338,7 +338,7 @@ namespace Raven.Client.Connection.Async
 														", conflict must be resolved before the document will be accessible")
 							{
 								ConflictedVersionIds = conflictIds,
-                                Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
+								Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
 							};
 						}
 						throw;

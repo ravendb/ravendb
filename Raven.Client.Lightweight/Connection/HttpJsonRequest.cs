@@ -73,7 +73,7 @@ namespace Raven.Client.Connection
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
 			webRequest.Method = method;
-			if (factory.DisableRequestCompression == false && 
+			if (factory.DisableRequestCompression == false &&
 				(method == "POST" || method == "PUT" || method == "PATCH"))
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
@@ -198,7 +198,7 @@ namespace Raven.Client.Connection
 			{
 				try
 				{
-					if(writeCalled == false)
+					if (writeCalled == false)
 						webRequest.ContentLength = 0;
 					return ReadStringInternal(webRequest.GetResponse);
 				}
@@ -341,9 +341,9 @@ namespace Raven.Client.Connection
 		{
 			var httpWebResponse = e.Response as HttpWebResponse;
 			if (httpWebResponse == null ||
-			    httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
-			    httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
-			    httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+				httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
+				httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
+				httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 			{
 				int httpResult = -1;
 				if (httpWebResponse != null)
@@ -363,7 +363,7 @@ namespace Raven.Client.Connection
 			}
 
 			if (httpWebResponse.StatusCode == HttpStatusCode.NotModified
-			    && CachedRequestDetails != null)
+				&& CachedRequestDetails != null)
 			{
 				factory.UpdateCacheTime(this);
 				var result = factory.GetCachedResponse(this);
@@ -476,19 +476,19 @@ namespace Raven.Client.Connection
 					headerName = "If-None-Match";
 				var value = prop.Value.Value<object>().ToString();
 
-                bool isRestricted;
-			    try
-			    {
-			        isRestricted = WebHeaderCollection.IsRestricted(headerName);
-			    }
-			    catch (Exception e)
-			    {
-			        throw new InvalidOperationException("Could not figure out how to treat header: " + headerName, e);
-			    }
+				bool isRestricted;
+				try
+				{
+					isRestricted = WebHeaderCollection.IsRestricted(headerName);
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Could not figure out how to treat header: " + headerName, e);
+				}
 				// Restricted headers require their own special treatment, otherwise an exception will
 				// be thrown.
 				// See http://msdn.microsoft.com/en-us/library/78h415ay.aspx
-			    if (isRestricted)
+				if (isRestricted)
 				{
 					switch (headerName)
 					{
@@ -549,7 +549,7 @@ namespace Raven.Client.Connection
 		{
 			writeCalled = true;
 			postedData = dataToWrite;
-			
+
 			return webRequest.BeginGetRequestStream(callback, state);
 		}
 
