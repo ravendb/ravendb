@@ -10,7 +10,7 @@ properties {
 	$uploader = "..\Uploader\S3Uploader.exe"
 	$configuration = "Debug"
   
-	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Newtonsoft.Json), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
+	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???",
 				"ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", 
 				"Raven.Storage.Managed.???", "Raven.Munin.???" ) |
@@ -21,7 +21,7 @@ properties {
 	
 	$web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" )
 	
-	$server_files = @( "Raven.Server.exe", "Raven.Studio.xap", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Newtonsoft.Json), "Lucene.Net.???",
+	$server_files = @( "Raven.Server.exe", "Raven.Studio.xap", (Get-DependencyPackageFiles 'NLog.2'), "Lucene.Net.???",
 					 "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???",
 					"Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Storage.Esent.???",
 					"Raven.Storage.Managed.???", "Raven.Munin.???" ) |
@@ -30,13 +30,13 @@ properties {
 			return "$build_dir\$_"
 		}
 		
-	$client_dlls_3_5 = @( (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion net35), (Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion net35), "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???") |
+	$client_dlls_3_5 = @( (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion net35), "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
 			return "$build_dir\$_"
 		}
 	 
-	$client_dlls = @( (Get-DependencyPackageFiles 'NLog.2'), "Raven.Client.MvcIntegration.???", (Get-DependencyPackageFiles Newtonsoft.Json),
+	$client_dlls = @( (Get-DependencyPackageFiles 'NLog.2'), "Raven.Client.MvcIntegration.???", 
 					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Lightweight.FSharp.???", "Raven.Client.Debug.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
@@ -57,7 +57,7 @@ properties {
  
 	$all_client_dlls = @( "Raven.Client.MvcIntegration.???", "Raven.Client.Lightweight.???", "Raven.Client.Lightweight.FSharp.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 						  "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???",
-						  "Lucene.Net.Contrib.SpellChecker.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Newtonsoft.Json),
+						  "Lucene.Net.Contrib.SpellChecker.???", (Get-DependencyPackageFiles 'NLog.2'),
 						  "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap"  ) |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
@@ -148,7 +148,6 @@ task Test -depends Compile {
 
 task StressTest -depends Compile {
 	Copy-Item (Get-DependencyPackageFiles 'NLog.2') $build_dir -force
-	Copy-Item (Get-DependencyPackageFiles Newtonsoft.Json) $build_dir -force
 	
 	@("Raven.StressTests.dll") | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
@@ -247,24 +246,23 @@ task CopyEmbeddedClient {
 }
 
 task CopySilverlight { 
-	$silverlight_dlls + @((Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) | 
+	$silverlight_dlls + @((Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) | 
 		ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight }
 }
 
 task CopySilverlight-4 { 
-	$silverlight4_dlls + @((Get-DependencyPackageFiles Newtonsoft.Json -FrameworkVersion sl4), (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) | 
+	$silverlight4_dlls + @((Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion sl4)) | 
 		ForEach-Object { Copy-Item "$_" $build_dir\Output\Silverlight-4 }
 }
 
 task CopySmuggler {
 	Copy-Item $build_dir\Raven.Abstractions.??? $build_dir\Output\Smuggler
-	Copy-Item (Get-DependencyPackageFiles Newtonsoft.Json) $build_dir\Output\Smuggler
 	Copy-Item $build_dir\Raven.Smuggler.??? $build_dir\Output\Smuggler
 }
 
 task CopyBackup {
+	Copy-Item $build_dir\Raven.Abstractions.??? $build_dir\Output\Smuggler
 	Copy-Item $build_dir\Raven.Backup.??? $build_dir\Output\Backup
-	Copy-Item (Get-DependencyPackageFiles Newtonsoft.Json) $build_dir\Output\Backup
 }
 
 task CopyClient {
@@ -459,11 +457,8 @@ task CreateNugetPackage {
 	}
 
 	# Remove files that are obtained as dependencies
-	Remove-Item $build_dir\NuPack\lib\*\Newtonsoft.Json.* -Recurse
 	Remove-Item $build_dir\NuPack\lib\*\NLog.* -Recurse
-	Remove-Item $build_dir\NuPack-Client\lib\*\Newtonsoft.Json.* -Recurse
 	Remove-Item $build_dir\NuPack-Client\lib\*\NLog.* -Recurse
-	Remove-Item $build_dir\NuPack-Embedded\lib\*\Newtonsoft.Json.* -Recurse
 	Remove-Item $build_dir\NuPack-Embedded\lib\*\NLog.* -Recurse
 
 	# The Server folder is used as a tool, and therefore needs the dependency DLLs in it (can't depend on Nuget for that)

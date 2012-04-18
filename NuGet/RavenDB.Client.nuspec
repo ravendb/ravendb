@@ -13,7 +13,6 @@
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
 		<tags>nosql ravendb raven document database client</tags>
 		<dependencies>
-			<dependency id="Newtonsoft.Json" version="[4.5.3]"/>
 			<dependency id="NLog" version="[2.0.0.2000]" />
 		</dependencies>
 		<frameworkAssemblies>
