@@ -10,20 +10,34 @@ using Xunit;
 
 namespace Raven.Tests.Triggers.Bugs
 {
-	public class ModifyingMetadataFromTrigger : RemoteClientTest, IDisposable
+	public class ModifyingMetadataFromTrigger : RemoteClientTest
 	{
 		private readonly string path;
-		private readonly int port;
+		private readonly RavenDbServer ravenDbServer;
+		private readonly IDocumentStore store;
 
 		public ModifyingMetadataFromTrigger()
 		{
-			port = 8079;
 			path = GetPath("TestDb");
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
+
+			ravenDbServer = new RavenDbServer(new RavenConfiguration
+			                                  	{
+			                                  		Port = 8079,
+			                                  		DataDirectory = path,
+			                                  		AnonymousUserAccessMode = AnonymousUserAccessMode.All,
+			                                  		Catalog =
+			                                  			{
+			                                  				Catalogs = {new TypeCatalog(typeof (AuditTrigger))}
+			                                  			}
+			                                  	});
+			store = new DocumentStore {Url = "http://localhost:8079"}.Initialize();
 		}
 
 		public override void Dispose()
 		{
+			store.Dispose();
+			ravenDbServer.Dispose();
 			IOExtensions.DeleteDirectory(path);
 			base.Dispose();
 		}
@@ -31,62 +45,47 @@ namespace Raven.Tests.Triggers.Bugs
 		[Fact]
 		public void WillNotCorruptData()
 		{
-			using ( new RavenDbServer(new RavenConfiguration
+			using (var session = store.OpenSession())
 			{
-				Port = port, 
-				DataDirectory = path, 
-				AnonymousUserAccessMode = AnonymousUserAccessMode.All,
-				Catalog =
-					{
-						Catalogs = {new TypeCatalog(typeof(AuditTrigger))}
-					}
-			}))
-			using (var store = new DocumentStore {Url = "http://localhost:8079"})
+				session.Advanced.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1085");
+
+				var person = new Person
+				             	{
+				             		Id = "person/1",
+				             		FirstName = "Nabil",
+				             		LastName = "Shuhaiber",
+				             		Age = 31,
+				             		Title = "Vice President"
+				             	};
+
+				session.Store(person);
+				session.SaveChanges();
+
+				Assert.Equal(AuditTrigger.CreatedAtDateTime, session.Advanced.GetMetadataFor(person).Value<DateTime>("CreatedDate"));
+			}
+
+			using (var session = store.OpenSession())
 			{
-				store.Initialize();
+				session.Advanced.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1081");
 
-				using (IDocumentSession session = store.OpenSession())
-				{
-					session.Advanced.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1085");
+				var person = session.Load<Person>("person/1");
+				person.Age = 25;
+				session.SaveChanges();
 
-					var person = new Person
-					{
-						Id = "person/1",
-						FirstName = "Nabil",
-						LastName = "Shuhaiber",
-						Age = 31,
-						Title = "Vice President"
-					};
+				Assert.Equal(AuditTrigger.CreatedAtDateTime, session.Advanced.GetMetadataFor(person).Value<DateTime>("CreatedDate"));
+			}
 
-					session.Store(person);
-					session.SaveChanges();
+			using (var session = store.OpenSession())
+			{
+				session.Advanced.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1022");
 
-					Assert.Equal(new DateTime(2011, 02, 19, 15, 00, 00), session.Advanced.GetMetadataFor(person).Value<DateTime>("CreatedDate"));
-				}
+				var person = session.Load<Person>("person/1");
 
-				using (IDocumentSession session = store.OpenSession())
-				{
-					session.Advanced.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1081");
+				person.FirstName = "Steve";
+				person.LastName = "Richmond";
+				session.SaveChanges();
 
-					var person = session.Load<Person>("person/1");
-					person.Age = 25;
-					session.SaveChanges();
-
-					Assert.Equal(new DateTime(2011, 02, 19, 15, 00, 00), session.Advanced.GetMetadataFor(person).Value<DateTime>("CreatedDate"));
-				}
-
-				using (IDocumentSession session = store.OpenSession())
-				{
-					session.Advanced.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1022");
-
-					var person = session.Load<Person>("person/1");
-
-					person.FirstName = "Steve";
-					person.LastName = "Richmond";
-					session.SaveChanges();
-
-					Assert.Equal(new DateTime(2011, 02, 19, 15, 00, 00), session.Advanced.GetMetadataFor(person).Value<DateTime>("CreatedDate"));
-				}
+				Assert.Equal(AuditTrigger.CreatedAtDateTime, session.Advanced.GetMetadataFor(person).Value<DateTime>("CreatedDate"));
 			}
 		}
 	}
