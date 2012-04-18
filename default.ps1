@@ -9,7 +9,7 @@ properties {
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
 	$configuration = "Debug"
-  
+	
 	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Newtonsoft.Json), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???",
 				"ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", 
@@ -78,7 +78,7 @@ task Verify40 {
 
 
 task Clean {
-	#Remove-Item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
+	Remove-Item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
 	Remove-Item -force -recurse $release_dir -ErrorAction SilentlyContinue
 }
 
@@ -97,6 +97,7 @@ task Init -depends Verify40, Clean {
 		Foreach-Object { $_ -replace ".13.", ".$($env:buildlabel)." } |
 		Foreach-Object { $_ -replace "{commit}", $commit } |
 		Set-Content "$base_dir\CommonAssemblyInfo.cs" -Encoding UTF8
+	
 	
 	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
@@ -180,6 +181,10 @@ task TestSilverlight -depends Compile, CopyServer {
 	}
 }
 
+task ReleaseNoTests -depends OpenSource,DoRelease {
+
+}
+
 task Unstable {
 	$configuration = "Release"
 	$global:uploadCategory = "RavenDB-Unstable"
@@ -195,8 +200,6 @@ task RunTests -depends Test,TestSilverlight
 task RunAllTests -depends Test,TestSilverlight,StressTest
 
 task Release -depends RunTests,DoRelease
-
-task ReleaseNoTests -depends OpenSource,DoRelease
 
 task CopySamples {
 	$samples = @("Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `
@@ -365,7 +368,6 @@ task DoRelease -depends Compile, `
 	CopyRootFiles, `
 	CopySamples, `
 	ZipOutput, `
-	CreateNugetPackage, `
 	CreateNugetPackageFineGrained, `
 	ResetBuildArtifcats {	
 	Write-Host "Done building RavenDB"
@@ -402,131 +404,6 @@ task UploadOpenSource -depends OpenSource, DoRelease, Upload
 
 task UploadUnstable -depends Unstable, DoRelease, Upload
 
-task CreateNugetPackage {
-
-	Remove-Item $base_dir\RavenDB*.nupkg
-	Remove-Item $build_dir\NuPack -Force -Recurse -ErrorAction SilentlyContinue
-	New-Item $build_dir\NuPack -Type directory -ErrorAction SilentlyContinue | Out-Null
-	New-Item $build_dir\NuPack\content -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack\lib -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack\lib\net35 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack\lib\net40 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack\lib\sl40 -Type directory -ErrorAction SilentlyContinue | Out-Null
-	New-Item $build_dir\NuPack\tools -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack\server -Type directory -ErrorAction SilentlyContinue| Out-Null
-
-	Remove-Item $build_dir\NuPack-Client -Force -Recurse -ErrorAction SilentlyContinue
-	New-Item $build_dir\NuPack-Client -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\content -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\lib -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\lib\net35 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\lib\net40 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\lib\sl40 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\lib\sl50 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\tools -Type directory -ErrorAction SilentlyContinue| Out-Null
-	
-	# package for RavenDB embedded is separate and requires .NET 4.0
-	Remove-Item $build_dir\NuPack-Embedded -Force -Recurse -ErrorAction SilentlyContinue
-	New-Item $build_dir\NuPack-Embedded -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Embedded\content -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Embedded\lib -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Embedded\lib\net40 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Embedded\tools -Type directory -ErrorAction SilentlyContinue| Out-Null
-	
-	$client_dlls_3_5 | ForEach-Object { 
-		Copy-Item "$_" $build_dir\NuPack\lib\net35
-		Copy-Item "$_" $build_dir\NuPack-Client\lib\net35
-	}
-	$client_dlls | ForEach-Object { 
-		Copy-Item "$_" $build_dir\NuPack\lib\net40
-		Copy-Item "$_" $build_dir\NuPack-Client\lib\net40
-	}
-	
-	@("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |
-		ForEach-Object {
-			Copy-Item "$build_dir\$_" $build_dir\NuPack\lib\sl50
-			Copy-Item "$build_dir\$_" $build_dir\NuPack-Client\lib\sl50
-		}
-		
-	@("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |
-		ForEach-Object {
-			Copy-Item "$build_dir\$_" $build_dir\NuPack\lib\sl40
-			Copy-Item "$build_dir\$_" $build_dir\NuPack-Client\lib\sl40
-		}
-	
-	$all_client_dlls | ForEach-Object { 
-		Copy-Item "$_" $build_dir\NuPack-Embedded\lib\net40
-	}
-
-	# Remove files that are obtained as dependencies
-	Remove-Item $build_dir\NuPack\lib\*\Newtonsoft.Json.* -Recurse
-	Remove-Item $build_dir\NuPack\lib\*\NLog.* -Recurse
-	Remove-Item $build_dir\NuPack-Client\lib\*\Newtonsoft.Json.* -Recurse
-	Remove-Item $build_dir\NuPack-Client\lib\*\NLog.* -Recurse
-	Remove-Item $build_dir\NuPack-Embedded\lib\*\Newtonsoft.Json.* -Recurse
-	Remove-Item $build_dir\NuPack-Embedded\lib\*\NLog.* -Recurse
-
-	# The Server folder is used as a tool, and therefore needs the dependency DLLs in it (can't depend on Nuget for that)
-	$server_files | ForEach-Object { Copy-Item "$_" $build_dir\NuPack\server }
-	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\NuPack\server\Raven.Server.exe.config
-
-	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack\content\Web.config.transform
-	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack-Client\content\Web.config.transform
-	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack-Embedded\content\Web.config.transform
-
-	Copy-Item $build_dir\Raven.Smuggler.??? $build_dir\NuPack\Tools
-	Copy-Item $build_dir\Raven.Smuggler.??? $build_dir\NuPack-Client\Tools
-	Copy-Item $build_dir\Raven.Smuggler.??? $build_dir\NuPack-Embedded\Tools
-
-	Copy-Item $build_dir\Raven.Backup.??? $build_dir\NuPack\Tools
-	Copy-Item $build_dir\Raven.Backup.??? $build_dir\NuPack-Client\Tools
-	Copy-Item $build_dir\Raven.Backup.??? $build_dir\NuPack-Embedded\Tools
-
-	# Generate the .nupkg files
-	$nupack = [xml](Get-Content $base_dir\RavenDB.nuspec)
-	
-	$nugetVersion = "$version.$env:buildlabel"
-	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
-		$nugetVersion += "-Unstable"
-	}
-	$nupack.package.metadata.version = $nugetVersion
-
-	$writerSettings = new-object System.Xml.XmlWriterSettings
-	$writerSettings.Indent = $true
-	
-	$nupack.Save("$build_dir\Nupack\RavenDB.nuspec");
-	&"$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB.nuspec
-
-	$tags = $nupack.package.metadata.tags
-	
-	$nupack.package.metadata.id = "RavenDB-Client"
-	$nupack.package.metadata.title = "RavenDB (Client)"
-	$nupack.package.metadata.tags = "$tags client"
-	$nupack.Save("$build_dir\Nupack-Client\RavenDB-Client.nuspec");
-	&"$tools_dir\nuget.exe" pack $build_dir\NuPack-Client\RavenDB-Client.nuspec
-	
-	$nupack.package.metadata.id = "RavenDB-Embedded"
-	$nupack.package.metadata.title = "RavenDB (Embedded)"
-	$nupack.package.metadata.tags = "$tags embedded"
-	$nupack.Save("$build_dir\Nupack-Embedded\RavenDB-Embedded.nuspec");
-	&"$tools_dir\nuget.exe" pack $build_dir\NuPack-Embedded\RavenDB-Embedded.nuspec
-
-	# Upload packages
-	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
-	if ( (Test-Path $accessPath) ) {
-		$accessKey = Get-Content $accessPath
-		$accessKey = $accessKey.Trim()
-		
-		# Push to nuget repository
-		&"$tools_dir\NuGet.exe" push "RavenDB.$nugetVersion.nupkg" $accessKey
-		&"$tools_dir\NuGet.exe" push "RavenDB-Client.$nugetVersion.nupkg" $accessKey
-		&"$tools_dir\NuGet.exe" push "RavenDB-Embedded.$nugetVersion.nupkg" $accessKey
-	}
-	else {
-		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
-	}
-}
-
 task CreateNugetPackageFineGrained {
 
 	Remove-Item $base_dir\RavenDB*.nupkg
@@ -535,94 +412,76 @@ task CreateNugetPackageFineGrained {
 	Remove-Item $nuget_dir -Force -Recurse -ErrorAction SilentlyContinue
 	New-Item $nuget_dir -Type directory | Out-Null
 	
+	New-Item $nuget_dir\RavenDB.Client -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Client\lib -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\net35 -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\net40 -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\sl40 -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\sl50 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.nuspec $nuget_dir\RavenDB.Client\RavenDB.Client.nuspec
-	@("Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\net35 }
-	@("Raven.Abstractions.???", "Raven.Client.Lightweight.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\net40 }
-	@("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\sl40 }
-	@("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\sl50	}
+	@("Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???") |
+		ForEach-Object {
+			Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\net35
+		}
+	@("Raven.Abstractions.???", "Raven.Client.Lightweight.???") |
+		ForEach-Object {
+			Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\net40
+		}
+	@("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |
+		ForEach-Object {
+			Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\sl40
+		}
+	@("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |
+		ForEach-Object {
+			Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\sl50
+		}
 		
+	New-Item $nuget_dir\RavenDB.Client.FSharp -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Client.FSharp\lib -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client.FSharp\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.FSharp.nuspec $nuget_dir\RavenDB.Client.FSharp\RavenDB.Client.FSharp.nuspec
-	@("Raven.Client.Lightweight.FSharp.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.FSharp\lib\net40 }
+	@("Raven.Client.Lightweight.FSharp.???") |
+		ForEach-Object {
+			Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.FSharp\lib\net40
+		}
 	
+	New-Item $nuget_dir\RavenDB.Client.Debug -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Client.Debug\lib -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client.Debug\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.Debug.nuspec $nuget_dir\RavenDB.Client.Debug\RavenDB.Client.Debug.nuspec
-	@("Raven.Client.Debug.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.Debug\lib\net40 }
+	@("Raven.Client.Debug.???") |
+		ForEach-Object {
+			Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.Debug\lib\net40
+		}
 	
+	New-Item $nuget_dir\RavenDB.Client.MvcIntegration -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client.MvcIntegration\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.MvcIntegration.nuspec $nuget_dir\RavenDB.Client.MvcIntegration\RavenDB.Client.MvcIntegration.nuspec
-	@("Raven.Client.MvcIntegration.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.MvcIntegration\lib\net40 }
+	@("Raven.Client.MvcIntegration.???") |
+		ForEach-Object {
+			Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.MvcIntegration\lib\net40
+		}
 		
+	New-Item $nuget_dir\RavenDB.Database -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Database\lib -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Database\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
 	@("Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 			  "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???",
-			  "Lucene.Net.Contrib.SpellChecker.???", "Raven.Backup.???", "Raven.Smuggler.???", "Raven.Storage.Esent.???",
-			  "Raven.Storage.Managed.???", "Raven.Munin.???" ) |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Database\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Server.nuspec $nuget_dir\RavenDB.Server\RavenDB.Server.nuspec
-	@("BouncyCastle.Crypto.???", "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???",
-		"Lucene.Net.Contrib.SpellChecker.???", "NewtonSoft.Json.???", "NLog.???", "Raven.Abstractions.???", "Raven.Database.???",
-		"Raven.Munin.???", "Raven.Server.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???",
-		"Raven.Studio.xap") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Server }	
-
+			  "Lucene.Net.Contrib.SpellChecker.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "Raven.Studio.xap"  ) |
+		ForEach-Object { 
+			Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Database\lib\net40
+		}
+		
+	New-Item $nuget_dir\RavenDB.Embedded -Type directory | Out-Null
+	New-Item $nuget_dir\RavenDB.Embedded\lib -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
-	@("Raven.Client.Embedded.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Embedded\lib\net40 }
-	New-Item $nuget_dir\RavenDB.Embedded\content -Type directory | Out-Null
-	Copy-Item "$build_dir\Raven.Studio.xap" $nuget_dir\RavenDB.Embedded\content
-	
-	New-Item $nuget_dir\RavenDB.Client.MoreLikeThis\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Client.MoreLikeThis.nuspec $nuget_dir\RavenDB.Client.MoreLikeThis\RavenDB.Client.MoreLikeThis.nuspec
-	@("Raven.Client.MoreLikeThis.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.MoreLikeThis\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.Client.UniqueConstraints\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Client.UniqueConstraints.nuspec $nuget_dir\RavenDB.Client.UniqueConstraints\RavenDB.Client.UniqueConstraints.nuspec
-	@("Raven.Client.UniqueConstraints.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.UniqueConstraints\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.Bundles.Authentication\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Authentication.nuspec $nuget_dir\RavenDB.Bundles.Authentication\RavenDB.Bundles.Authentication.nuspec
-	@("Raven.Bundles.Authentication.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Authentication\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.Client.Versioning\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Client.Versioning.nuspec $nuget_dir\RavenDB.Client.Versioning\RavenDB.Client.Versioning.nuspec
-	@("Raven.Client.Versioning.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.Versioning\lib\net40 }
-
-	New-Item $nuget_dir\RavenDB.Bundles.Authorization\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Authorization.nuspec $nuget_dir\RavenDB.Bundles.Authorization\RavenDB.Bundles.Authorization.nuspec
-	@("Raven.Bundles.Authorization.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Authorization\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.Bundles.CascadeDelete\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Bundles.CascadeDelete.nuspec $nuget_dir\RavenDB.Bundles.CascadeDelete\RavenDB.Bundles.CascadeDelete.nuspec
-	@("Raven.Bundles.CascadeDelete.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.CascadeDelete\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.Bundles.Quotas\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Quotas.nuspec $nuget_dir\RavenDB.Bundles.Quotas\RavenDB.Bundles.Quotas.nuspec
-	@("Raven.Bundles.Quotas.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Quotas\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.Bundles.Replication\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Replication.nuspec $nuget_dir\RavenDB.Bundles.Replication\RavenDB.Bundles.Replication.nuspec
-	@("Raven.Bundles.Replication.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Replication\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.Bundles.UniqueConstraints\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Bundles.UniqueConstraints.nuspec $nuget_dir\RavenDB.Bundles.UniqueConstraints\RavenDB.Bundles.UniqueConstraints.nuspec
-	@("Raven.Bundles.Versioning.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.UniqueConstraints\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.Bundles.Versioning\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Versioning.nuspec $nuget_dir\RavenDB.Bundles.Versioning\RavenDB.Bundles.Versioning.nuspec
-	@("Raven.Bundles.Versioning.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Versioning\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.AspNetHost\content -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.AspNetHost\lib\net40 -Type directory | Out-Null
-	@("Raven.Web.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.AspNetHost\lib\net40 }
-	Copy-Item $build_dir\Raven.Studio.xap $nuget_dir\RavenDB.AspNetHost\content
-	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.nuspec $nuget_dir\RavenDB.AspNetHost\RavenDB.AspNetHost.nuspec
-	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $nuget_dir\RavenDB.AspNetHost\content\Web.config.transform
+	@("Raven.Client.Embedded.???") |
+		ForEach-Object { 
+			Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Embedded\lib\net40
+		}
 	
 	$nugetVersion = "$version.$env:buildlabel"
 	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
@@ -631,10 +490,10 @@ task CreateNugetPackageFineGrained {
 	
 	# Sets the package version in all the nuspec as well as any RavenDB package dependency versions
 	$packages = Get-ChildItem $nuget_dir *.nuspec -recurse
-	$packages |% { 
+	$packages | ForEach-Object { 
 		$nuspec = [xml](Get-Content $_.FullName)
 		$nuspec.package.metadata.version = $nugetVersion
-		$nuspec | Select-Xml '//dependency' |% {
+		$nuspec | Select-Xml '//dependency' | ForEach-Object {
 			if($_.Node.Id.StartsWith('RavenDB')){
 				$_.Node.Version = "[$nugetVersion]"
 			}
