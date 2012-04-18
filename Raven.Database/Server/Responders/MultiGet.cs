@@ -155,14 +155,18 @@ namespace Raven.Database.Server.Responders
 				// nothing here
 			}
 
+			private readonly List<Action<Logger>> loggedMessages = new List<Action<Logger>>();
 			public void OutputSavedLogItems(Logger logger)
 			{
-				realContext.OutputSavedLogItems(logger);
+				foreach (var loggedMessage in loggedMessages)
+				{
+					loggedMessage(logger);
+				}
 			}
 
 			public void Log(Action<Logger> loggingAction)
 			{
-				realContext.Log(loggingAction);
+				loggedMessages.Add(loggingAction);
 			}
 
 			public void SetRequestFilter(Func<Stream, Stream> requestFilter)

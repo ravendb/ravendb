@@ -33,11 +33,12 @@ namespace Raven.Tests.Bugs
 			}.Initialize();
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			server.Dispose();
 			store.Dispose();
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
 
 		protected override void ModifyConfiguration(Database.Config.RavenConfiguration ravenConfiguration)

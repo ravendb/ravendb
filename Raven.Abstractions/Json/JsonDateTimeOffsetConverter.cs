@@ -36,7 +36,7 @@ namespace Raven.Abstractions.Json
 			var jObject = RavenJObject.Load(reader);
 			var dateTime = jObject.Value<DateTime>("DateTime");
 			return new DateTimeOffset(
-				dateTime.Year,dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Millisecond, dateTime.Second, dateTime.Millisecond,
+				dateTime.Year,dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second, dateTime.Millisecond,
 				TimeSpan.FromMilliseconds(jObject.Value<double>("Offset"))
 				);
 		}

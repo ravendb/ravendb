@@ -24,9 +24,10 @@ namespace Raven.Tests.Document
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
 
 		[Fact]

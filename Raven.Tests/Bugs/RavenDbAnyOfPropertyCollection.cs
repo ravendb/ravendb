@@ -82,9 +82,10 @@ namespace Raven.Tests.Bugs
 				Assert.Equal(1, array.Count());
 			}
 		}
-		public void Dispose()
+		public override void Dispose()
 		{
 			if (store != null) store.Dispose();
+			base.Dispose();
 		}
 
 	}

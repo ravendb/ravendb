@@ -16,9 +16,10 @@ namespace Raven.Tests.Bugs
 	{
 		private readonly string path;
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
 
 		public WillNotFailSystemIfServerIsNotAvailableOnStartup()
