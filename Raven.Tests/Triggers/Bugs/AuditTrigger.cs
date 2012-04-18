@@ -8,7 +8,8 @@ namespace Raven.Tests.Triggers.Bugs
 {
 	public class AuditTrigger : AbstractPutTrigger
 	{
-		public static DateTime CreatedAtDateTime = new DateTime(2011, 02, 19, 4, 8, 14, 503);
+		// Metadata delivered over http as http header, so the datetime format used over the http header is 'r' which doesn't support milliseconds. 
+		public static DateTime CreatedAtDateTime = new DateTime(2011, 02, 19, 4, 8, 14, millisecond: 0);
 
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
