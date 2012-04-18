@@ -523,7 +523,7 @@ namespace Raven.Client.Document
 #if SILVERLIGHT
 				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, task);
 #else
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null);
 #endif
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;

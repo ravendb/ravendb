@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using Newtonsoft.Json;
@@ -43,20 +44,31 @@ namespace Raven.Client.Connection.Async
 		private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
 		internal readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? sessionId;
+		private readonly Func<string, ReplicationInformer> replicationInformerGetter;
+		private readonly string databaseName;
+		private readonly ReplicationInformer replicationInformer;
+		private int requestCount;
+		private int readStripingBase;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
 		/// </summary>
-		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId)
+		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials,
+								 HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId,
+								 Func<string, ReplicationInformer> replicationInformerGetter, string databaseName)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
 			this.url = url;
 			if (this.url.EndsWith("/"))
-				this.url = this.url.Substring(0, this.url.Length-1);
+				this.url = this.url.Substring(0, this.url.Length - 1);
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
 			this.convention = convention;
 			this.credentials = credentials;
+			this.databaseName = databaseName;
+			this.replicationInformerGetter = replicationInformerGetter;
+			this.replicationInformer = replicationInformerGetter(databaseName);
+			this.readStripingBase = replicationInformer.GetReadStripingBase();
 		}
 
 		/// <summary>
@@ -73,7 +85,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory, sessionId);
+			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory, sessionId, replicationInformerGetter, databaseName);
 		}
 
 		/// <summary>
@@ -762,6 +774,174 @@ namespace Raven.Client.Connection.Async
 		public ProfilingInformation ProfilingInformation
 		{
 			get { return profilingInformation; }
+		}
+
+		/// <summary>
+		/// Notify when the failover status changed
+		/// </summary>
+		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
+		{
+			add { replicationInformer.FailoverStatusChanged += value; }
+			remove { replicationInformer.FailoverStatusChanged -= value; }
+		}
+
+		private Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
+		{
+			return ExecuteWithReplication(new ExecuteWithReplicationState<T>(method, operation));
+		}
+
+		private Task<T> ExecuteWithReplication<T>(ExecuteWithReplicationState<T> state)
+		{
+			switch (state.State)
+			{
+				case ExecuteWithReplicationStates.Start:
+					state.CurrentRequest = Interlocked.Increment(ref requestCount);
+					state.ReplicationDestinations = replicationInformer.ReplicationDestinations;
+
+					var shouldReadFromAllServers = ((convention.FailoverBehavior & FailoverBehavior.ReadFromAllServers) ==
+													FailoverBehavior.ReadFromAllServers);
+					if (shouldReadFromAllServers && state.Method == "GET")
+					{
+						var replicationIndex = readStripingBase % (state.ReplicationDestinations.Count + 1);
+						// if replicationIndex == destinations count, then we want to use the master
+						// if replicationIndex < 0, then we were explicitly instructed to use the master
+						if (replicationIndex < state.ReplicationDestinations.Count && replicationIndex >= 0)
+						{
+							// if it is failing, ignore that, and move to the master or any of the replicas
+							if (replicationInformer.ShouldExecuteUsing(state.ReplicationDestinations[replicationIndex], state.CurrentRequest, state.Method, false))
+							{
+								return AttemptOperationAndOnFailureCallExecuteWithReplication(state.ReplicationDestinations[replicationIndex],
+																							  state.With(ExecuteWithReplicationStates.AfterTryingWithStripedServer));
+							}
+						}
+					}
+
+					goto case ExecuteWithReplicationStates.AfterTryingWithStripedServer;
+				case ExecuteWithReplicationStates.AfterTryingWithStripedServer:
+
+					if (!replicationInformer.ShouldExecuteUsing(url, state.CurrentRequest, state.Method, true))
+						goto case ExecuteWithReplicationStates.TryAllServers; // skips both checks
+
+					return AttemptOperationAndOnFailureCallExecuteWithReplication(url,
+																					state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrl));
+
+				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrl:
+					if (replicationInformer.IsFirstFailure(url))
+						return AttemptOperationAndOnFailureCallExecuteWithReplication(url,
+																					  state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice));
+					else
+						goto case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice;
+
+				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice:
+
+					replicationInformer.IncrementFailureCount(url);
+
+					goto case ExecuteWithReplicationStates.TryAllServers;
+				case ExecuteWithReplicationStates.TryAllServers:
+
+					// The following part (cases ExecuteWithReplicationStates.TryAllServers, and ExecuteWithReplicationStates.TryAllServersSecondAttempt)
+					// is a for loop, rolled out using goto and nested calls of the method in continuations
+					state.LastAttempt++;
+					if (state.LastAttempt >= state.ReplicationDestinations.Count)
+						goto case ExecuteWithReplicationStates.AfterTryingAllServers;
+
+					var destination = state.ReplicationDestinations[state.LastAttempt];
+					if (!replicationInformer.ShouldExecuteUsing(destination, state.CurrentRequest, state.Method, false))
+					{
+						// continue the next iteration of the loop
+						goto case ExecuteWithReplicationStates.TryAllServers;
+					}
+
+					return AttemptOperationAndOnFailureCallExecuteWithReplication(destination,
+																				  state.With(ExecuteWithReplicationStates.TryAllServersSecondAttempt));
+				case ExecuteWithReplicationStates.TryAllServersSecondAttempt:
+					destination = state.ReplicationDestinations[state.LastAttempt];
+					if (replicationInformer.IsFirstFailure(destination))
+						return AttemptOperationAndOnFailureCallExecuteWithReplication(destination,
+																					  state.With(ExecuteWithReplicationStates.TryAllServersFailedTwice));
+					else
+						goto case ExecuteWithReplicationStates.TryAllServersFailedTwice;
+
+				case ExecuteWithReplicationStates.TryAllServersFailedTwice:
+					replicationInformer.IncrementFailureCount(state.ReplicationDestinations[state.LastAttempt]);
+
+					// continue the next iteration of the loop
+					goto case ExecuteWithReplicationStates.TryAllServers;
+
+				case ExecuteWithReplicationStates.AfterTryingAllServers:
+					throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
+There is a high probability of a network problem preventing access to all the replicas.
+Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Count) + " Raven instances.");
+
+				default:
+					throw new InvalidOperationException("Invalid ExecuteWithReplicationState " + state);
+			}
+		}
+
+		private Task<T> AttemptOperationAndOnFailureCallExecuteWithReplication<T>(string url, ExecuteWithReplicationState<T> state)
+		{
+			Task<Task<T>> finalTask = state.Operation(url).ContinueWith(task =>
+				{
+					switch (task.Status)
+					{
+						case TaskStatus.RanToCompletion:
+							var tcs = new TaskCompletionSource<T>();
+							tcs.SetResult(task.Result);
+							return tcs.Task;
+
+						case TaskStatus.Canceled:
+							tcs = new TaskCompletionSource<T>();
+							tcs.SetCanceled();
+							return tcs.Task;
+
+						case TaskStatus.Faulted:
+							if (ServerClient.IsServerDown(task.Exception))
+								return ExecuteWithReplication(state);
+							else
+								throw task.Exception;
+
+						default:
+							throw new InvalidOperationException("Unknown task status in AttemptOperationAndOnFailureCallExecuteWithReplication");
+					}
+				});
+			return finalTask.Unwrap();
+		}
+
+		private class ExecuteWithReplicationState<T>
+		{
+			public ExecuteWithReplicationState(string method, Func<string, Task<T>> operation)
+			{
+				this.Method = method;
+				this.Operation = operation;
+
+				this.State = ExecuteWithReplicationStates.Start;
+			}
+
+			public readonly string Method;
+			public readonly Func<string, Task<T>> Operation;
+
+			public ExecuteWithReplicationStates State = ExecuteWithReplicationStates.Start;
+			public int LastAttempt = -1;
+			public List<string> ReplicationDestinations;
+			public int CurrentRequest;
+
+			public ExecuteWithReplicationState<T> With(ExecuteWithReplicationStates state)
+			{
+				this.State = state;
+				return this;
+			}
+		}
+
+		private enum ExecuteWithReplicationStates
+		{
+			Start,
+			AfterTryingWithStripedServer,
+			AfterTryingWithDefaultUrl,
+			TryAllServers,
+			AfterTryingAllServers,
+			TryAllServersSecondAttempt,
+			TryAllServersFailedTwice,
+			AfterTryingWithDefaultUrlTwice
 		}
 	}
 }
