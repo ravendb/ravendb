@@ -5,6 +5,7 @@ using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
 
@@ -61,7 +62,7 @@ namespace Raven.Tests.Triggers.Bugs
 				session.Store(person);
 				session.SaveChanges();
 
-				Assert.Equal(AuditTrigger.CreatedAtDateTime, session.Advanced.GetMetadataFor(person).Value<DateTime>("CreatedDate"));
+				TestCreatedDate(session.Advanced.GetMetadataFor(person));
 			}
 
 			using (var session = store.OpenSession())
@@ -72,7 +73,7 @@ namespace Raven.Tests.Triggers.Bugs
 				person.Age = 25;
 				session.SaveChanges();
 
-				Assert.Equal(AuditTrigger.CreatedAtDateTime, session.Advanced.GetMetadataFor(person).Value<DateTime>("CreatedDate"));
+				TestCreatedDate(session.Advanced.GetMetadataFor(person));
 			}
 
 			using (var session = store.OpenSession())
@@ -85,8 +86,42 @@ namespace Raven.Tests.Triggers.Bugs
 				person.LastName = "Richmond";
 				session.SaveChanges();
 
-				Assert.Equal(AuditTrigger.CreatedAtDateTime, session.Advanced.GetMetadataFor(person).Value<DateTime>("CreatedDate"));
+				TestCreatedDate(session.Advanced.GetMetadataFor(person));
 			}
+		}
+
+		[Fact]
+		public void WillLoadTheSameDateThatWeStored()
+		{
+			using (var session = store.OpenSession())
+			{
+				var person = new Person
+				{
+					Id = "person/1",
+					FirstName = "Nabil",
+					LastName = "Shuhaiber",
+					Age = 31,
+					Title = "Vice President"
+				};
+
+				session.Store(person);
+				session.SaveChanges();
+
+				TestCreatedDate(session.Advanced.GetMetadataFor(person));
+			}
+
+			using (var session = store.OpenSession())
+			{
+				var person = session.Load<Person>("person/1");
+				TestCreatedDate(session.Advanced.GetMetadataFor(person));
+			}
+		}
+
+		private void TestCreatedDate(RavenJObject metadata)
+		{
+			var createdDate = metadata.Value<DateTime>("CreatedDate");
+			Assert.Equal(DateTimeKind.Unspecified, createdDate.Kind);
+			Assert.Equal(AuditTrigger.CreatedAtDateTime, createdDate);
 		}
 	}
 }
