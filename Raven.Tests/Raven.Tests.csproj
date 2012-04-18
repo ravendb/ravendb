@@ -558,6 +558,7 @@
     <Compile Include="MailingList\AttachmentContentType.cs" />
     <Compile Include="MailingList\BooleanCollection.cs" />
     <Compile Include="MailingList\CanUpdateInsideDtcWithOptimisticConcurrency.cs" />
+    <Compile Include="MailingList\EtagUsage.cs" />
     <Compile Include="MailingList\HiloTests.cs" />
     <Compile Include="MailingList\DeserialisationToObjectTests.cs" />
     <Compile Include="MailingList\DtcIssue.cs" />

@@ -505,7 +505,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata)
+		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
 			var shardId = shardStrategy.ShardResolutionStrategy.GenerateShardIdFor(entity);
 			if (string.IsNullOrEmpty(shardId))
@@ -514,7 +514,7 @@ namespace Raven.Client.Shard
 			var modifyDocumentId = shardStrategy.ModifyDocumentId(Conventions, shardId, id);
 			if(modifyDocumentId != id)
 				TrySetIdentity(entity, modifyDocumentId);
-			base.StoreEntityInUnitOfWork(modifyDocumentId, entity, etag, metadata);
+			base.StoreEntityInUnitOfWork(modifyDocumentId, entity, etag, metadata, forceConcurrencyCheck);
 		}
 
 		/// <summary>
