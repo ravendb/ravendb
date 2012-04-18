@@ -4,6 +4,7 @@ extern alias database;
 using System;
 using System.Linq;
 using System.Net;
+using Raven.Abstractions.Extensions;
 using Raven.Bundles.Authentication;
 using Xunit;
 using Raven.Client.Extensions;
@@ -50,9 +51,8 @@ namespace Raven.Bundles.Tests.Authentication
 				session.Store(new AuthenticationUser
 				{
 					Name = "Ayende",
-					Id = "Raven/Users/Ayende",
-					AllowedDatabases = new[] { "*" }
-				}.SetPassword("abc"));
+					AllowedDatabases = new[] {"*"}
+				}.SetPassword("abc"), "Raven/Users/Ayende");
 				session.SaveChanges();
 			}
 
@@ -60,7 +60,7 @@ namespace Raven.Bundles.Tests.Authentication
 			{
 				using (var session = store.OpenAsyncSession())
 				{
-					session.Store(new { Id = "Hal2001", Name = "Sprite", Age = 321 });
+					session.Store(new { Id = "Hal2001", Name = "Sprite", Age = 321 }, "Hal2001");
 					session.SaveChangesAsync().Wait();
 				}
 			}

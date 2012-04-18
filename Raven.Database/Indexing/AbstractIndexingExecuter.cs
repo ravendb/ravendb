@@ -7,6 +7,7 @@ using Raven.Database.Storage;
 using System.Linq;
 using Raven.Database.Tasks;
 using Task = Raven.Database.Tasks.Task;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Indexing
 {
@@ -50,16 +51,21 @@ namespace Raven.Database.Indexing
 				}
 				catch (OutOfMemoryException oome)
 				{
-					foundWork = true; // otherwise, we wouldn't be getting OOME
-					log.WarnException(
-						@"Failed to execute indexing because of an out of memory exception. Will force a full GC cycle and then become more conservative with regards to memory",
-						oome);
-
-					// On the face of it, this is stupid, because OOME will not be thrown if the GC could release
-					// memory, but we are actually aware that during indexing, the GC couldn't find garbage to clean,
-					// but in here, we are AFTER the index was done, so there is likely to be a lot of garbage.
-					GC.Collect(GC.MaxGeneration);
-					autoTuner.OutOfMemoryExceptionHappened();
+					foundWork = true;
+					HandleOutOfMemoryException(oome);
+				}
+				catch (AggregateException ae)
+				{
+					foundWork = true;
+					var oome = ae.ExtractSingleInnerException() as OutOfMemoryException;
+					if (oome == null)
+					{
+						log.ErrorException("Failed to execute indexing", ae);
+					}
+					else
+					{
+						HandleOutOfMemoryException(oome);
+					}
 				}
 				catch (Exception e)
 				{
@@ -76,6 +82,19 @@ namespace Raven.Database.Indexing
 					context.NotifyAboutWork();
 				}
 			}
+		}
+
+		private void HandleOutOfMemoryException(OutOfMemoryException oome)
+		{
+			log.WarnException(
+				@"Failed to execute indexing because of an out of memory exception. Will force a full GC cycle and then become more conservative with regards to memory",
+				oome);
+
+			// On the face of it, this is stupid, because OOME will not be thrown if the GC could release
+			// memory, but we are actually aware that during indexing, the GC couldn't find garbage to clean,
+			// but in here, we are AFTER the index was done, so there is likely to be a lot of garbage.
+			GC.Collect(GC.MaxGeneration);
+			autoTuner.OutOfMemoryExceptionHappened();
 		}
 
 		private bool ExecuteTasks()

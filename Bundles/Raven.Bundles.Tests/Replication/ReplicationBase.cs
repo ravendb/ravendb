@@ -143,7 +143,7 @@ namespace Raven.Bundles.Tests.Replication
 				session.Store(new ReplicationDocument
 				{
 					Destinations = {replicationDestination}
-				});
+				}, "Raven/Replication/Destinations");
 				session.SaveChanges();
 			}
 		}

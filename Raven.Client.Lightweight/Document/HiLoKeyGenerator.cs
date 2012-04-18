@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Linq;
 using System.Threading;
 using System.Transactions;
 #if !NET_3_5
@@ -15,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
+using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -96,58 +98,87 @@ namespace Raven.Client.Document
 		{
 			using (new TransactionScope(TransactionScopeOption.Suppress))
 			{
-			var span = DateTime.UtcNow - lastRequestedUtc;
-			if (span.TotalSeconds < 1)
-			{
-				capacity *= 2;
-			}
-
-			lastRequestedUtc = DateTime.UtcNow;
-			while (true)
-			{
-				try
+				var span = DateTime.UtcNow - lastRequestedUtc;
+				if (span.TotalSeconds < 1)
 				{
-					var document = GetDocument();
-					if (document == null)
-					{
-						PutDocument(new JsonDocument
-						{
-							Etag = Guid.Empty,
-							// sending empty guid means - ensure the that the document does NOT exists
-							Metadata = new RavenJObject(),
-							DataAsJson = RavenJObject.FromObject(new {Max = capacity}),
-							Key = RavenKeyGeneratorsHilo + tag
-						});
-						return capacity;
-					}
-					long max;
-					if (document.DataAsJson.ContainsKey("ServerHi")) // convert from hi to max
-					{
-						var hi = document.DataAsJson.Value<long>("ServerHi");
-						max = ((hi - 1)*capacity);
-						document.DataAsJson.Remove("ServerHi");
-						document.DataAsJson["Max"] = max;
-					}
-					max = document.DataAsJson.Value<long>("Max");
-					document.DataAsJson["Max"] = max + capacity;
-					PutDocument(document);
-
-					current = max + 1;
-					return max + capacity;
+					capacity *= 2;
 				}
-				catch (ConcurrencyException)
+
+				lastRequestedUtc = DateTime.UtcNow;
+				while (true)
 				{
-					// expected, we need to retry
+					try
+					{
+						var minNextMax = currentMax.Value;
+						JsonDocument document;
+
+						try
+						{
+							document = GetDocument();
+						}
+						catch (ConflictException e)
+						{
+							// resolving the conflict by selecting the highest number
+							var highestMax = e.ConflictedVersionIds
+								.Select(conflictedVersionId => GetMaxFromDocument(databaseCommands.Get(conflictedVersionId), minNextMax))
+								.Max();
+
+							PutDocument(new JsonDocument
+							{
+								Etag = e.Etag,
+								Metadata = new RavenJObject(),
+								DataAsJson = RavenJObject.FromObject(new { Max = highestMax }),
+								Key = RavenKeyGeneratorsHilo + tag
+							});
+
+							continue;
+						}
+						if (document == null)
+						{
+							PutDocument(new JsonDocument
+							{
+								Etag = Guid.Empty,
+								// sending empty guid means - ensure the that the document does NOT exists
+								Metadata = new RavenJObject(),
+								DataAsJson = RavenJObject.FromObject(new { Max = minNextMax + capacity }),
+								Key = RavenKeyGeneratorsHilo + tag
+							});
+							return minNextMax + capacity;
+						}
+						var max = GetMaxFromDocument(document, minNextMax);
+						document.DataAsJson["Max"] = max + capacity;
+						PutDocument(document);
+
+						current = max + 1;
+						return max + capacity;
+					}
+					catch (ConcurrencyException)
+					{
+						// expected, we need to retry
+					}
 				}
 			}
 		}
+
+		private long GetMaxFromDocument(JsonDocument document, long minMax)
+		{
+			long max;
+			if (document.DataAsJson.ContainsKey("ServerHi")) // convert from hi to max
+			{
+				var hi = document.DataAsJson.Value<long>("ServerHi");
+				max = ((hi - 1) * capacity);
+				document.DataAsJson.Remove("ServerHi");
+				document.DataAsJson["Max"] = max;
+			}
+			max = document.DataAsJson.Value<long>("Max");
+			return Math.Max(max, minMax);
 		}
 
 		private void PutDocument(JsonDocument document)
 		{
 			databaseCommands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
-			                     document.DataAsJson,
-			                     document.Metadata);
+								 document.DataAsJson,
+								 document.Metadata);
 		}
 
 		private JsonDocument GetDocument()
