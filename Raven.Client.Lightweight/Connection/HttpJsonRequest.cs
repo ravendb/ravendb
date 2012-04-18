@@ -73,7 +73,7 @@ namespace Raven.Client.Connection
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
 			webRequest.Method = method;
-			if (factory.DisableRequestCompression == false && 
+			if (factory.DisableRequestCompression == false &&
 				(method == "POST" || method == "PUT" || method == "PATCH"))
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
@@ -464,19 +464,19 @@ namespace Raven.Client.Connection
 					headerName = "If-None-Match";
 				var value = prop.Value.Value<object>().ToString();
 
-                bool isRestricted;
-			    try
-			    {
-			        isRestricted = WebHeaderCollection.IsRestricted(headerName);
-			    }
-			    catch (Exception e)
-			    {
-			        throw new InvalidOperationException("Could not figure out how to treat header: " + headerName, e);
-			    }
+				bool isRestricted;
+				try
+				{
+					isRestricted = WebHeaderCollection.IsRestricted(headerName);
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Could not figure out how to treat header: " + headerName, e);
+				}
 				// Restricted headers require their own special treatment, otherwise an exception will
 				// be thrown.
 				// See http://msdn.microsoft.com/en-us/library/78h415ay.aspx
-			    if (isRestricted)
+				if (isRestricted)
 				{
 					switch (headerName)
 					{
