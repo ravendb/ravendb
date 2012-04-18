@@ -274,7 +274,8 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 					throw new ConflictException("Conflict detected on " + key +
 												", conflict must be resolved before the document will be accessible")
 					{
-						ConflictedVersionIds = conflictIds
+						ConflictedVersionIds = conflictIds,
+                        Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
 					};
 				}
 				throw;
@@ -482,7 +483,8 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 					throw new ConflictException("Conflict detected on " + key +
 					                            ", conflict must be resolved before the attachment will be accessible")
 					{
-						ConflictedVersionIds = conflictIds
+                        ConflictedVersionIds = conflictIds,
+                        Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
 					};
 				}
 				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
@@ -1190,7 +1192,8 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 					throw new ConflictException("Conflict detected on " + key +
 												", conflict must be resolved before the document will be accessible")
 					{
-						ConflictedVersionIds = conflictIds
+                        ConflictedVersionIds = conflictIds,
+                        Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
 					};
 				}
 				throw;
