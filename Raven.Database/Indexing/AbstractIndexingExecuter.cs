@@ -140,7 +140,8 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 
-			ExecuteIndxingWork(indexesToWorkOn);
+			using(context.IndexDefinitionStorage.CurrentlyIndexing())
+				ExecuteIndxingWork(indexesToWorkOn);
 
 			return true;
 		}
