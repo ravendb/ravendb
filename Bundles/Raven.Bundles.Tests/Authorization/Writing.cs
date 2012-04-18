@@ -84,8 +84,7 @@ namespace Raven.Bundles.Tests.Authorization
 			using (var s = store.OpenSession())
 			{
 				s.SecureFor(UserId, "Company/Rename");
-				company.Name = "Stampading Rhinos";
-				s.Store(company);
+				s.Load<Company>(company.Id).Name = "Stampading Rhinos";
 
 				Assert.DoesNotThrow(s.SaveChanges);
 			}
@@ -127,8 +126,7 @@ namespace Raven.Bundles.Tests.Authorization
 			using (var s = store.OpenSession())
 			{
 				s.SecureFor(UserId.ToLower(), "Company/Rename");
-				company.Name = "Stampading Rhinos";
-				s.Store(company);
+				s.Load<Company>(company.Id).Name = "Stampading Rhinos";
 
 				Assert.DoesNotThrow(s.SaveChanges);
 			}
