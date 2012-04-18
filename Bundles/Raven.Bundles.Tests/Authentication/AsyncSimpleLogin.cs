@@ -4,6 +4,7 @@ extern alias database;
 using System;
 using System.Linq;
 using System.Net;
+using Raven.Abstractions.Extensions;
 using Raven.Bundles.Authentication;
 using Xunit;
 using Raven.Client.Extensions;
