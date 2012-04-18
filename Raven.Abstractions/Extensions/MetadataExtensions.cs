@@ -214,7 +214,7 @@ namespace Raven.Abstractions.Extensions
 				if (val.StartsWith("["))
 					return RavenJArray.Parse(val);
 				DateTime result;
-				if (DateTime.TryParseExact(val, new[]{"r","o"}, CultureInfo.InvariantCulture, DateTimeStyles.None, out result))
+				if (DateTime.TryParseExact(val, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
 					return new RavenJValue(result);
 				return new RavenJValue(val);
 
