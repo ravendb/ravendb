@@ -560,6 +560,7 @@
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
     <Compile Include="MailingList\AttachmentContentType.cs" />
+    <Compile Include="MailingList\bhiku.cs" />
     <Compile Include="MailingList\BooleanCollection.cs" />
     <Compile Include="MailingList\CanUpdateInsideDtcWithOptimisticConcurrency.cs" />
     <Compile Include="MailingList\EtagUsage.cs" />
