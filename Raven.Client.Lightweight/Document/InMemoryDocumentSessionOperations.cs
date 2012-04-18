@@ -52,11 +52,11 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 		private bool hasEnlisted;
 		[ThreadStatic]
-		private static Dictionary<string, HashSet<string>> registeredStoresInTransaction;
+		private static Dictionary<string, HashSet<string>> _registeredStoresInTransaction;
 
 		private static Dictionary<string, HashSet<string>> RegisteredStoresInTransaction
 		{
-			get { return (registeredStoresInTransaction ?? (registeredStoresInTransaction = new Dictionary<string, HashSet<string>>())); }
+			get { return (_registeredStoresInTransaction ?? (_registeredStoresInTransaction = new Dictionary<string, HashSet<string>>())); }
 		}
 #endif
 
@@ -511,7 +511,7 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity)
 		{
-			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?)null, null);
+		    StoreInternal(entity, null, null, forceConcurrencyCheck: true);
 		}
 
 		/// <summary>
@@ -519,7 +519,7 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity, Guid etag)
 		{
-			StoreInternal(entity, etag, null);
+			StoreInternal(entity, etag, null, forceConcurrencyCheck:true);
 		}
 
 		/// <summary>
@@ -527,7 +527,7 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity, string id)
 		{
-			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?)null, id);
+			StoreInternal(entity, null, id, forceConcurrencyCheck: false);
 		}
 
 		/// <summary>
@@ -535,16 +535,20 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity, Guid etag, string id)
 		{
-			StoreInternal(entity, etag, id);
+		    StoreInternal(entity, etag, id, forceConcurrencyCheck: true);
 		}
 
-		private void StoreInternal(object entity, Guid? etag, string id)
+		private void StoreInternal(object entity, Guid? etag, string id, bool forceConcurrencyCheck)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
 
-			if (entitiesAndMetadata.ContainsKey(entity))
-				return;
+		    DocumentMetadata value;
+		    if (entitiesAndMetadata.TryGetValue(entity, out value))
+		    {
+		        value.ForceConcurrencyCheck = forceConcurrencyCheck;
+		        return;
+		    }
 
 			if (id == null)
 			{
@@ -585,10 +589,10 @@ more responsive application.
 			var metadata = new RavenJObject();
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
-			StoreEntityInUnitOfWork(id, entity, etag, metadata);
+			StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
 		}
 
-		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata)
+		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
 			                                	{
@@ -596,7 +600,8 @@ more responsive application.
 			                                		Metadata = metadata,
 			                                		OriginalMetadata = new RavenJObject(),
 			                                		ETag = etag,
-			                                		OriginalValue = new RavenJObject()
+			                                		OriginalValue = new RavenJObject(),
+                                                    ForceConcurrencyCheck = forceConcurrencyCheck
 			                                	});
 			if (id != null)
 				entitiesByKey[id] = entity;
@@ -701,7 +706,9 @@ more responsive application.
 
 			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
-			var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
+		    var etag = UseOptimisticConcurrency || documentMetadata.ForceConcurrencyCheck
+		                   ? (documentMetadata.ETag ?? Guid.Empty)
+		                   : (Guid?) null;
 
 			return new PutCommandData
 			{
@@ -1174,6 +1181,12 @@ more responsive application.
 			/// </summary>
 			/// <value>The original metadata.</value>
 			public RavenJObject OriginalMetadata { get; set; }
+
+            /// <summary>
+            /// A concurrency check will be forced on this entity 
+            /// even if UseOptimisticConcurrency is set to false
+            /// </summary>
+		    public bool ForceConcurrencyCheck { get; set; }
 		}
 
 		/// <summary>
