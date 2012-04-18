@@ -1,9 +1,8 @@
 ﻿#if !NET35
-namespace Raven.Client.Extensions
-{
-	using System;
-	using System.Linq;
 
+#if !NET_3_5
+namespace Raven.Abstractions.Extensions
+{
 	///<summary>
 	/// Extension methods to handle common scenarios
 	///</summary>
@@ -40,11 +39,11 @@ namespace Raven.Client.Extensions
 		/// <returns>The primary portion of the exception message.</returns>
 		public static string SimplifyError(this Exception e)
 		{
-			var parts = e.Message.Split(new[] {  "\r\n   " }, StringSplitOptions.None);
+			var parts = e.Message.Split(new[] { "\r\n   " }, StringSplitOptions.None);
 			var firstLine = parts.First();
 			var index = firstLine.IndexOf(':');
 			return index > 0
-				? firstLine.Remove(0,index + 2)
+				? firstLine.Remove(0, index + 2)
 				: firstLine;
 		}
 	}

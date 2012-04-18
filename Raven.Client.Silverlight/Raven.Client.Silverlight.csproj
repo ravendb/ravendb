@@ -614,6 +614,9 @@
     <Compile Include="..\Raven.Abstractions\Extensions\Buffers.cs">
       <Link>Imports\Extensions\Buffers.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\ExceptionExtensions.cs">
+      <Link>Imports\Extensions\ExceptionExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\ListExtensions.cs">
       <Link>Imports\Extensions\ListExtensions.cs</Link>
     </Compile>
@@ -787,9 +790,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryBase.cs">
       <Link>Imports\IDocumentQueryBase.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Extensions\ExceptionExtensions.cs">
-      <Link>Imports\Extensions\ExceptionExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractGenericIndexCreationTask.cs">
       <Link>Imports\Indexes\AbstractGenericIndexCreationTask.cs</Link>
