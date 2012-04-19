@@ -380,7 +380,7 @@ namespace Raven.Studio.Controls
 
         private void ScaleScrollOffsetToCompensateForItemHeightChange(double newItemHeight)
         {
-            if (RenderSize.Height < 1 || _extentSize.Height < 1)
+            if (_viewportSize.Height < 1 || _extentSize.Height < 1)
             {
                 return;
             }
@@ -392,7 +392,7 @@ namespace Raven.Studio.Controls
                 return;
             }
 
-            var newLayoutInfo = GetLayoutInfo(RenderSize, newItemHeight);
+            var newLayoutInfo = GetLayoutInfo(_viewportSize, newItemHeight);
             var newExtentHeight = newLayoutInfo.TotalLines*newItemHeight;
             var newMaxOffset = newExtentHeight - _viewportSize.Height;
             if (newMaxOffset < 1)
