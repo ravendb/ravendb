@@ -23,7 +23,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-#if !PocketPC && !SILVERLIGHT && !NET20 && !NETFX_CORE
+#if !(SILVERLIGHT || NET20 || NETFX_CORE || PORTABLE)
 using System;
 using Raven.Imports.Newtonsoft.Json.Serialization;
 using System.Globalization;

@@ -302,7 +302,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     {
       base.WriteValue(value);
       string s = null;
-#if !NETFX_CORE
+#if !(NETFX_CORE || PORTABLE)
       s = value.ToString(CultureInfo.InvariantCulture);
 #else
       s = value.ToString();
@@ -348,6 +348,7 @@ namespace Raven.Imports.Newtonsoft.Json.Linq
     public override void WriteValue(DateTime value)
     {
       base.WriteValue(value);
+      value = JsonConvert.EnsureDateTime(value, DateTimeZoneHandling);
       AddValue(value, JsonToken.Date);
     }
 

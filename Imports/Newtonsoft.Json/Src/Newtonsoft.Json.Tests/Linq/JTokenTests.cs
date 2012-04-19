@@ -80,6 +80,15 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
 
       v = (JValue)JToken.ReadFrom(new JsonTextReader(new StringReader(@"1.1")));
       Assert.AreEqual(1.1, (double)v);
+
+#if !NET20
+      v = (JValue)JToken.ReadFrom(new JsonTextReader(new StringReader(@"""1970-01-01T00:00:00+12:31"""))
+        {
+          DateParseHandling = DateParseHandling.DateTimeOffset
+        });
+      Assert.AreEqual(typeof(DateTimeOffset), v.Value.GetType());
+      Assert.AreEqual(new DateTimeOffset(JsonConvert.InitialJavaScriptDateTicks, new TimeSpan(12, 31, 0)), v.Value);
+#endif
     }
 
     [Test]
@@ -708,7 +717,7 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
       Assert.IsTrue(a.DeepEquals(a2));
     }
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
     [Test]
     public void Clone()
     {

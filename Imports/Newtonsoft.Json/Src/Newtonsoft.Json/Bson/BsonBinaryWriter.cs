@@ -29,7 +29,7 @@ namespace Raven.Imports.Newtonsoft.Json.Bson
 
     public void Close()
     {
-#if !NETFX_CORE
+#if !(NETFX_CORE || PORTABLE)
       _writer.Close();
 #else
       _writer.Dispose();

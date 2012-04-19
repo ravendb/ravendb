@@ -137,21 +137,24 @@ namespace Raven.Imports.Newtonsoft.Json
       {
         string text = _stringReference.ToString();
 
-        if (text.Length > 0)
+        if (_dateParseHandling != DateParseHandling.None)
         {
-          if (text[0] == '/')
+          if (text.Length > 0)
           {
-            if (text.StartsWith("/Date(", StringComparison.Ordinal) && text.EndsWith(")/", StringComparison.Ordinal))
+            if (text[0] == '/')
             {
-              ParseDateMicrosoft(text);
-              return;
+              if (text.StartsWith("/Date(", StringComparison.Ordinal) && text.EndsWith(")/", StringComparison.Ordinal))
+              {
+                ParseDateMicrosoft(text);
+                return;
+              }
+            }
+            else if (char.IsDigit(text[0]) && text.Length >= 19 && text.Length <= 40)
+            {
+              if (ParseDateIso(text))
+                return;
             }
           }
-          /*else if (char.IsDigit(text[0]) && text.Length >= 19 && text.Length <= 40)
-          {
-            if (ParseDateIso(text))
-              return;
-          }*/
         }
 
         SetToken(JsonToken.String, text);
@@ -164,7 +167,7 @@ namespace Raven.Imports.Newtonsoft.Json
       const string isoDateFormat = "yyyy-MM-ddTHH:mm:ss.FFFFFFFK";
 
 #if !NET20
-      if (_readType == ReadType.ReadAsDateTimeOffset)
+      if (_readType == ReadType.ReadAsDateTimeOffset || (_readType == ReadType.Read && _dateParseHandling == DateParseHandling.DateTimeOffset))
       {
         DateTimeOffset dateTimeOffset;
         if (DateTimeOffset.TryParseExact(text, isoDateFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
@@ -213,7 +216,7 @@ namespace Raven.Imports.Newtonsoft.Json
       DateTime utcDateTime = JsonConvert.ConvertJavaScriptTicksToDateTime(javaScriptTicks);
 
 #if !NET20
-      if (_readType == ReadType.ReadAsDateTimeOffset)
+      if (_readType == ReadType.ReadAsDateTimeOffset || (_readType == ReadType.Read && _dateParseHandling == DateParseHandling.DateTimeOffset))
       {
         SetToken(JsonToken.Date, new DateTimeOffset(utcDateTime.Add(offset).Ticks, offset));
       }
@@ -1579,7 +1582,7 @@ namespace Raven.Imports.Newtonsoft.Json
       base.Close();
 
       if (CloseInput && _reader != null)
-#if !NETFX_CORE
+#if !(NETFX_CORE || PORTABLE)
         _reader.Close();
 #else
         _reader.Dispose();

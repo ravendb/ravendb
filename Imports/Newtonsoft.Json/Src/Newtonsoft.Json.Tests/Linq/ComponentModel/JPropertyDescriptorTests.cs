@@ -23,7 +23,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-#if !SILVERLIGHT && !NETFX_CORE
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
 using NUnit.Framework;
 using Raven.Imports.Newtonsoft.Json.Linq;
 

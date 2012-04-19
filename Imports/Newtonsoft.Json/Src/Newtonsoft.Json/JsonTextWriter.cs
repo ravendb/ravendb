@@ -136,7 +136,7 @@ namespace Raven.Imports.Newtonsoft.Json
       base.Close();
 
       if (CloseOutput && _writer != null)
-#if !NETFX_CORE
+#if !(NETFX_CORE || PORTABLE)
         _writer.Close();
 #else
         _writer.Dispose();
@@ -436,9 +436,8 @@ namespace Raven.Imports.Newtonsoft.Json
     /// <param name="value">The <see cref="DateTime"/> value to write.</param>
     public override void WriteValue(DateTime value)
     {
-      
-
       base.WriteValue(value);
+      value = JsonConvert.EnsureDateTime(value, DateTimeZoneHandling);
       JsonConvert.WriteDateTimeString(_writer, value, DateFormatHandling);
     }
 
