@@ -14,6 +14,33 @@ namespace Raven.Tests.MailingList
 	public class HiloTests : RavenTest
 	{
 		[Fact]
+		public void CanUseServerPrefix()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.Put(
+					"Raven/Hilo/Users", null,
+					new RavenJObject
+					{
+						{"Max", 32}
+					},
+					new RavenJObject());
+
+				store.DatabaseCommands.Put(
+					"Raven/ServerPrefixForHilo", null,
+					new RavenJObject
+					{
+						{"ServerPrefix", "2,"}
+					},
+					new RavenJObject());
+
+				var hiLoKeyGenerator = new HiLoKeyGenerator(store.DatabaseCommands, "Users", 32);
+
+				var generateDocumentKey = hiLoKeyGenerator.GenerateDocumentKey(new DocumentConvention(), new User());
+				Assert.Equal("Users/2,33", generateDocumentKey);
+			}
+		}
+		[Fact]
 		public void HiloCannotGoDown()
 		{
 			using (var store = NewDocumentStore())
