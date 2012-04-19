@@ -128,6 +128,9 @@
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\DateFormatHandling.cs">
       <Link>Imports\Newtonsoft.Json\DateFormatHandling.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\DateParseHandling.cs">
+      <Link>Imports\Newtonsoft.Json\DateParseHandling.cs</Link>
+    </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\DateTimeZoneHandling.cs">
       <Link>Imports\Newtonsoft.Json\DateTimeZoneHandling.cs</Link>
     </Compile>
