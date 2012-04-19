@@ -331,7 +331,7 @@ namespace Raven.Client.Connection.Async
 						if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 						{
 							var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-							var conflictsDoc = RavenJObject.Load(new JsonTextReader(conflicts));
+							var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
 							var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 							throw new ConflictException("Conflict detected on " + key +

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
@@ -237,7 +238,7 @@ namespace Raven.Json.Linq
 		{
 			try
 			{
-				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+				JsonReader jsonReader = new RavenJsonTextReader(new StringReader(json));
 				return Load(jsonReader);
 			}
 			catch (Exception e)

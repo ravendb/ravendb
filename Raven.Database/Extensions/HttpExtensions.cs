@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -46,7 +47,7 @@ namespace Raven.Database.Extensions
 		public static RavenJObject ReadJson(this IHttpContext context)
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
-			using (var jsonReader = new JsonTextReader(streamReader))
+			using (var jsonReader = new RavenJsonTextReader(streamReader))
 				return RavenJObject.Load(jsonReader);
 		}
 
@@ -55,7 +56,7 @@ namespace Raven.Database.Extensions
 			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
 			{
 				var readToEnd = streamReader.ReadToEnd();
-				using (var jsonReader = new JsonTextReader(new StringReader(readToEnd)))
+				using (var jsonReader = new RavenJsonTextReader(new StringReader(readToEnd)))
 				{
 					var result = JsonExtensions.CreateDefaultJsonSerializer();
 
@@ -67,7 +68,7 @@ namespace Raven.Database.Extensions
 		public static RavenJArray ReadJsonArray(this IHttpContext context)
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
-			using (var jsonReader = new JsonTextReader(streamReader))
+			using (var jsonReader = new RavenJsonTextReader(streamReader))
 				return RavenJArray.Load(jsonReader);
 		}
 

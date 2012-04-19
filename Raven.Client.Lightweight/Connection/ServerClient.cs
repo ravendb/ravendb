@@ -14,6 +14,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Abstractions;
@@ -267,7 +268,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
 					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-					var conflictsDoc = RavenJObject.Load(new JsonTextReader(conflicts));
+					var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
 					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 					throw new ConflictException("Conflict detected on " + key +
@@ -1183,7 +1184,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
 					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-					var conflictsDoc = RavenJObject.Load(new JsonTextReader(conflicts));
+					var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
 					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 					throw new ConflictException("Conflict detected on " + key +

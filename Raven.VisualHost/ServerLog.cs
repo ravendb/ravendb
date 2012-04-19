@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Web;
 using System.Windows.Forms;
+using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Server;
@@ -108,7 +109,7 @@ namespace Raven.VisualHost
 
 			if(headers["Content-Type"] == "application/json; charset=utf-8" && stream.Length > 0)
 			{
-				var t = RavenJToken.Load(new JsonTextReader(new StreamReader(stream)));
+				var t = RavenJToken.Load(new RavenJsonTextReader(new StreamReader(stream)));
 				requestStringBuilder.Append(t.ToString(Formatting.Indented));
 			}
 			else

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
@@ -183,7 +184,7 @@ namespace Raven.Json.Linq
 		{
 			try
 			{
-				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+				JsonReader jsonReader = new RavenJsonTextReader(new StringReader(json));
 
 				return Load(jsonReader);
 			}
@@ -195,7 +196,7 @@ namespace Raven.Json.Linq
 
 		public static RavenJToken TryLoad(Stream stream)
 		{
-			var jsonTextReader = new JsonTextReader(new StreamReader(stream));
+			var jsonTextReader = new RavenJsonTextReader(new StreamReader(stream));
 			if (jsonTextReader.Read() == false || jsonTextReader.TokenType == JsonToken.None)
 			{
 				return null;

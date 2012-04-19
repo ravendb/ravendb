@@ -12,6 +12,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Text;
+using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
@@ -77,7 +78,7 @@ namespace Raven.Smuggler
 				if (File.Exists(etagFileLocation))
 				{
 					using (var streamReader = new StreamReader(new FileStream(etagFileLocation, FileMode.Open)))
-					using (var jsonReader = new JsonTextReader(streamReader))
+					using (var jsonReader = new RavenJsonTextReader(streamReader))
 					{
 						var ravenJObject = RavenJObject.Load(jsonReader);
 						lastDocsEtag = new Guid(ravenJObject.Value<string>("LastDocEtag"));
@@ -142,7 +143,7 @@ namespace Raven.Smuggler
 			{
 				RavenJArray indexes = null;
 				var request = CreateRequest("/indexes?pageSize=128&start=" + totalCount);
-				request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)));
+				request.ExecuteRequest(reader => indexes = RavenJArray.Load(new RavenJsonTextReader(reader)));
 
 				if (indexes.Length == 0)
 				{
@@ -165,7 +166,7 @@ namespace Raven.Smuggler
 			{
 				RavenJArray documents = null;
 				var request = CreateRequest("/docs?pageSize=128&etag=" + lastEtag);
-				request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
+				request.ExecuteRequest(reader => documents = RavenJArray.Load(new RavenJsonTextReader(reader)));
 
 				if (documents.Length == 0)
 				{
@@ -189,7 +190,7 @@ namespace Raven.Smuggler
 			{
 				RavenJArray attachmentInfo = null;
 				var request = CreateRequest("/static/?pageSize=128&etag=" + lastEtag);
-				request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)));
+				request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new RavenJsonTextReader(reader)));
 
 				if (attachmentInfo.Length == 0)
 				{
@@ -266,12 +267,12 @@ namespace Raven.Smuggler
 
 			var sw = Stopwatch.StartNew();
 			// Try to read the stream compressed, otherwise continue uncompressed.
-			JsonTextReader jsonReader;
+			RavenJsonTextReader jsonReader;
 			try
 			{
 				var streamReader = new StreamReader(new GZipStream(stream, CompressionMode.Decompress));
 
-				jsonReader = new JsonTextReader(streamReader);
+				jsonReader = new RavenJsonTextReader(streamReader);
 
 				if (jsonReader.Read() == false)
 					return;
@@ -282,7 +283,7 @@ namespace Raven.Smuggler
 
 				var streamReader = new StreamReader(stream);
 
-				jsonReader = new JsonTextReader(streamReader);
+				jsonReader = new RavenJsonTextReader(streamReader);
 
 				if (jsonReader.Read() == false)
 					return;

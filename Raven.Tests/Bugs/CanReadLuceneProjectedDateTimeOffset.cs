@@ -16,10 +16,9 @@ namespace Raven.Tests.Bugs
 			Assert.Equal(2009, deserialize.Item.Year);
 		}
 
-		public class Test
+		private class Test
 		{
 			public DateTimeOffset Item { get; set; }
-			public int A { get; set; }
 		}
 	}
 }
