@@ -511,7 +511,9 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity)
 		{
-			StoreInternal(entity, null, null, forceConcurrencyCheck: true);
+			string id;
+			var hasId = TryGetIdFromInstance(entity, out id);
+			StoreInternal(entity, null, null, forceConcurrencyCheck: hasId == false);
 		}
 
 		/// <summary>
