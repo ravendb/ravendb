@@ -63,7 +63,7 @@ namespace Raven.Bundles.Tests.Authentication
 		{
 			using (var tx = new TransactionScope())
 			{
-				System.Transactions.Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id, new DummyEnlistmentNotification(), EnlistmentOptions.None);
+				Transaction.Current.EnlistDurable(DummyEnlistmentNotification.Id, new DummyEnlistmentNotification(), EnlistmentOptions.None);
 				
 				using (var session = store.OpenSession())
 				{
