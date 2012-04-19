@@ -1925,18 +1925,9 @@
 								</VisualState>
 							</VisualStateGroup>
 						</VisualStateManager.VisualStateGroups>
-						<Border x:Name="OuterBorder" BorderThickness="1" BorderBrush="#CBCBCB">
-							<Border.Effect>
-								<DropShadowEffect Opacity="0.28"
-														  BlurRadius="7"
-														  ShadowDepth="1"
-														  Direction="0" />
-							</Border.Effect>
-							<Border.CacheMode>
-								<BitmapCache/>
-							</Border.CacheMode>
-						</Border>
-						<Border x:Name="InnerMargin" Background="White" Margin="1">
+                        <Rectangle Margin="-4" Fill="#03000000"/>
+						<Border x:Name="OuterBorder" BorderThickness="1" BorderBrush="#CBCBCB" />
+					  <Border x:Name="InnerMargin" Background="White" Margin="1">
 						<Border x:Name="border" BorderBrush="Black" Margin="3" Padding="4,0,0,0">
 						  <Border.Background>
 							<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">

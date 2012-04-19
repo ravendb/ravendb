@@ -5,9 +5,9 @@
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-			 mc:Ignorable="d"
+             xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" mc:Ignorable="d"
 			 d:DesignHeight="300"
-			 d:DesignWidth="400">
+			 d:DesignWidth="400" d:DataContext="{d:DesignInstance Documents:ViewableDocument}">
 
 	<Grid Background="Transparent"
 		  Width="{Binding Path=Current.Width, Source={StaticResource DocumentSize}}"
@@ -30,6 +30,14 @@
 				<ColumnDefinition Width="*" />
 			</Grid.ColumnDefinitions>
 
+            <Rectangle Margin="-5,-3,0,-3"
+                       HorizontalAlignment="Left"
+                       Fill="#06000000"
+                       Width="7"
+                       RadiusX="1"
+					   RadiusY="1"
+                       Grid.RowSpan="3"/>
+            
 			<Rectangle HorizontalAlignment="Left"
 					   Width="3"
 					   Fill="{Binding Path=Fill}"
@@ -37,11 +45,6 @@
 					   RadiusX="1"
 					   RadiusY="1"
 					   Grid.RowSpan="3">
-				<Rectangle.Effect>
-					<DropShadowEffect ShadowDepth="0"
-									  BlurRadius="5"
-									  Opacity="0.6" />
-				</Rectangle.Effect>
 			</Rectangle>
 			
 			<TextBlock Text="{Binding CollectionType}"
