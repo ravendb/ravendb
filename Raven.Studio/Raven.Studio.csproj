@@ -147,10 +147,14 @@
     <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
+    <Compile Include="Controls\VirtualizingWrapPanel.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
+    <Compile Include="Features\Documents\StealthPagingDocumentsView.xaml.cs">
+      <DependentUpon>StealthPagingDocumentsView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Query\QueryIndexAutoComplete.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
@@ -160,16 +164,31 @@
     <Compile Include="Features\Terms\TermsView.xaml.cs">
       <DependentUpon>TermsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Impl\VirtualizingWrapPanel\VirtualizingWrapPanel.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
     <Compile Include="Infrastructure\Converters\TaskStatusConverter.cs" />
     <Compile Include="Infrastructure\Converters\RedIfError.cs" />
     <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
+    <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
+    <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
+    <Compile Include="Infrastructure\INotifyOnDataFetchErrors.cs" />
+    <Compile Include="Infrastructure\IVirtualCollectionSource.cs" />
+    <Compile Include="Infrastructure\SparseList.cs" />
+    <Compile Include="Infrastructure\VirtualCollection.cs" />
+    <Compile Include="Infrastructure\VirtualCollectionChangedEventArgs.cs" />
+    <Compile Include="Infrastructure\VirtualCollectionSource.cs" />
+    <Compile Include="Infrastructure\VirtualItem.cs" />
     <Compile Include="Infrastructure\WeakEventListener.cs" />
     <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />
+    <Compile Include="Models\DocumentsCollectionSource.cs" />
     <Compile Include="Models\DocumentSize.cs" />
     <Compile Include="Models\IHasPageTitle.cs" />
+    <Compile Include="Models\StealthPagingDocumentsModel.cs" />
     <Compile Include="Models\TermsModel.cs" />
+    <Compile Include="Views\StealthPagingDocuments.xaml.cs">
+      <DependentUpon>StealthPagingDocuments.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Terms.xaml.cs">
       <DependentUpon>Terms.xaml</DependentUpon>
     </Compile>
@@ -420,11 +439,19 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Documents\StealthPagingDocumentsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Tasks\TaskView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Terms\TermsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\StealthPagingDocuments.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

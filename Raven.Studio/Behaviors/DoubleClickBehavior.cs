@@ -32,7 +32,13 @@ namespace Raven.Studio.Behaviors
 		protected override void OnDetaching()
 		{
 			base.OnDetaching();
-			AssociatedObject.MouseLeftButtonDown -= UIElement_MouseLeftButtonDown;
+            
+            if (AssociatedObject == null)
+            {
+                return;
+            }
+			
+            AssociatedObject.MouseLeftButtonDown -= UIElement_MouseLeftButtonDown;
 		}
 
 		private void UIElement_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

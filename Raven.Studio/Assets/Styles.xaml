@@ -10,7 +10,8 @@
 					xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 					xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
 					xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-					mc:Ignorable="d">
+                    xmlns:VirtualizingWrapPanel="clr-namespace:Raven.Studio.Impl.VirtualizingWrapPanel"
+                    mc:Ignorable="d">
 
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Brushes.xaml" />
@@ -1048,7 +1049,11 @@
 		</toolkit:WrapPanel>
 	</ItemsPanelTemplate>
 
-	<ItemsPanelTemplate x:Key="VerticalFluidWrapPanel">
+    <ItemsPanelTemplate x:Key="VirtualizingWrapPanel">
+        <VirtualizingWrapPanel:VirtualizingWrapPanel/>
+    </ItemsPanelTemplate>
+    
+    <ItemsPanelTemplate x:Key="VerticalFluidWrapPanel">
 		<toolkit:WrapPanel Orientation="Vertical">
 			<i:Interaction.Behaviors>
 				
@@ -2018,8 +2023,25 @@
 		<Setter Property="ItemContainerStyle"
 				Value="{StaticResource Style_ListBoxItem_Document}"/>
 	</Style>
-	
-	<Style x:Key="Style_ListBox_MainTabs" TargetType="ListBox">
+
+    <Style x:Name="StealthPagingDocumentList"
+		   TargetType="ListBox">
+        <Setter Property="ItemsPanel"
+				Value="{StaticResource VirtualizingWrapPanel}" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility"
+				Value="Auto" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility"
+				Value="Disabled" />
+        <Setter Property="SelectionMode"
+				Value="Extended" />
+        <Setter Property="BorderThickness"
+				Value="0" />
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="ItemContainerStyle"
+				Value="{StaticResource Style_ListBoxItem_Document}"/>
+    </Style>
+
+    <Style x:Key="Style_ListBox_MainTabs" TargetType="ListBox">
 		<Setter Property="Template" Value="{StaticResource ControlTemplate_ListBox_MainPageTabs}"/>
 		<Setter Property="ItemContainerStyle" Value="{StaticResource Style_ListBoxItem_MainPageTab}"/>
 	</Style>
