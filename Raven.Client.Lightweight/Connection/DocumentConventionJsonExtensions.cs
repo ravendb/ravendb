@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="JsonExtensions.cs" company="Hibernating Rhinos LTD">
+// <copyright file="DocumentConventionJsonExtensions.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -12,7 +12,7 @@ namespace Raven.Client.Connection
 	/// <summary>
 	/// Extension to json objects
 	/// </summary>
-	public static class JsonExtensions
+	public static class DocumentConventionJsonExtensions
 	{
 		/// <summary>
 		/// Deserializes the specified instance <param name="self"/> to an instance of <typeparam name="T"/> using the specified <param name="convention"/>

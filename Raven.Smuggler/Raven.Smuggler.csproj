@@ -66,7 +66,6 @@
     <Compile Include="SmugglerAction.cs" />
     <Compile Include="SmugglerApi.cs" />
     <Compile Include="SmugglerOptions.cs" />
-    <Compile Include="TrivialJsonToJsonJsonConverter.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\Raven.Server\favicon.ico">

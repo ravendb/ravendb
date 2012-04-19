@@ -501,7 +501,7 @@ namespace Raven.Database.Server
 		protected static void SerializeError(IHttpContext ctx, object error)
 		{
 			var sw = new StreamWriter(ctx.Response.OutputStream);
-			new JsonSerializer().Serialize(new JsonTextWriter(sw)
+			JsonExtensions.CreateDefaultJsonSerializer().Serialize(new JsonTextWriter(sw)
 			{
 				Formatting = Formatting.Indented,
 			}, error);

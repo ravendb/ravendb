@@ -671,6 +671,9 @@
     <Compile Include="..\Raven.Abstractions\Json\RavenJsonConverter.cs">
       <Link>Imports\Json\RavenJsonConverter.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\RavenJsonTextReader.cs">
+      <Link>Imports\Json\RavenJsonTextReader.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Json\Utilities\MathUtils.cs">
       <Link>Imports\Json\Utilities\MathUtils.cs</Link>
     </Compile>
@@ -691,6 +694,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
       <Link>Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\DocumentConventionJsonExtensions.cs">
+      <Link>Imports\Connection\DocumentConventionJsonExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\ConcurrentBoundedList.cs">
       <Link>Imports\Connection\Profiling\ConcurrentBoundedList.cs</Link>
@@ -1015,9 +1021,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\IDatabaseCommands.cs">
       <Link>Imports\Connection\IDatabaseCommands.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\JsonExtensions.cs">
-      <Link>Imports\Connection\JsonExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\JsonLuceneDateTimeConverter.cs">
       <Link>Imports\Connection\JsonLuceneDateTimeConverter.cs</Link>

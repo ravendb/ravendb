@@ -160,7 +160,7 @@ namespace Raven.Database.Indexing
 		{
 			if (doc is IDynamicJsonObject)
 				return ((IDynamicJsonObject)doc).Inner;
-			return RavenJObject.FromObject(doc, JsonExtensions.CreateDefaultJsonSerializer());
+			return RavenJObject.FromObject(doc);
 		}
 
 		private static readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache = new ConcurrentDictionary<Type, Func<object, object>>();

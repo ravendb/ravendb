@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
@@ -84,7 +85,7 @@ namespace Raven.Json.Linq
 		/// <returns>A <see cref="RavenJToken"/> with the value of the specified object</returns>
 		public static RavenJToken FromObject(object o)
 		{
-			return FromObjectInternal(o, new JsonSerializer());
+			return FromObjectInternal(o, JsonExtensions.CreateDefaultJsonSerializer());
 		}
 
 		/// <summary>

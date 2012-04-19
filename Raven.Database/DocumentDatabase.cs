@@ -1091,13 +1091,7 @@ namespace Raven.Database
 						indexName => new RavenJObject
 							{
 								{"name", new RavenJValue(indexName) },
-								{"definition", RavenJObject.FromObject(IndexDefinitionStorage.GetIndexDefinition(indexName), new JsonSerializer
-								{
-									Converters =
-										{
-											new JsonEnumConverter(),
-										}
-								})}
+								{"definition", RavenJObject.FromObject(IndexDefinitionStorage.GetIndexDefinition(indexName))}
 							}));
 		}
 

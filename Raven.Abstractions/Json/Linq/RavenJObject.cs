@@ -127,7 +127,7 @@ namespace Raven.Json.Linq
 		/// <returns>A <see cref="RavenJObject"/> with the values of the specified object</returns>
 		public static new RavenJObject FromObject(object o)
 		{
-			return FromObject(o, new JsonSerializer());
+			return FromObject(o);
 		}
 
 		/// <summary>

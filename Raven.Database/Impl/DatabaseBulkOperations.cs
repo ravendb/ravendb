@@ -78,7 +78,7 @@ namespace Raven.Database.Impl
 						{
 							batchCount++;
 							var result = batchOperation(enumerator.Current, transactionInformation);
-							array.Add(RavenJObject.FromObject(result, JsonExtensions.CreateDefaultJsonSerializer()));
+							array.Add(RavenJObject.FromObject(result));
 						}
 					});
 					if (batchCount < batchSize) break;

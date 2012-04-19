@@ -64,7 +64,7 @@
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\IDatabaseCommands.cs" />
     <Compile Include="Connection\IRavenQueryInspector.cs" />
-    <Compile Include="Connection\JsonExtensions.cs" />
+    <Compile Include="Connection\DocumentConventionJsonExtensions.cs" />
     <Compile Include="Connection\JsonLuceneDateTimeConverter.cs" />
     <Compile Include="Connection\MultiGetOperation.cs" />
     <Compile Include="Connection\Profiling\ConcurrentBoundedList.cs" />

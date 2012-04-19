@@ -88,7 +88,7 @@ namespace Raven.Database.Extensions
 
 		public static void WriteJson(this IHttpContext context, object obj)
 		{
-			WriteJson(context, RavenJToken.FromObject(obj, JsonExtensions.CreateDefaultJsonSerializer()));
+			WriteJson(context, RavenJToken.FromObject(obj));
 		}
 
 		public static void WriteJson(this IHttpContext context, RavenJToken obj)

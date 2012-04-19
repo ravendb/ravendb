@@ -112,9 +112,6 @@
     <Compile Include="..\Raven.Smuggler\SmugglerOptions.cs">
       <Link>Smuggler\SmugglerOptions.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Smuggler\TrivialJsonToJsonJsonConverter.cs">
-      <Link>Smuggler\TrivialJsonToJsonJsonConverter.cs</Link>
-    </Compile>
     <Compile Include="FromMono\Options.cs" />
     <Compile Include="RavenDbServer.cs" />
     <Compile Include="Program.cs" />

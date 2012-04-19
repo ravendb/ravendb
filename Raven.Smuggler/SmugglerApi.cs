@@ -364,10 +364,7 @@ namespace Raven.Smuggler
 				if (options.OperateOnTypes.HasFlag(ItemType.Attachments) == false)
 					continue;
 				var attachmentExportInfo =
-					new JsonSerializer
-					{
-						Converters = { new TrivialJsonToJsonJsonConverter() }
-					}.Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
+					JsonExtensions.CreateDefaultJsonSerializer().Deserialize<AttachmentExportInfo>(new RavenJTokenReader(item));
 				Console.WriteLine("Importing attachment {0}", attachmentExportInfo.Key);
 
 				var request = CreateRequest("/static/" + attachmentExportInfo.Key, "PUT");

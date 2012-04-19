@@ -30,7 +30,7 @@ namespace Raven.Abstractions.Extensions
 			if (result is string || result is ValueType)
 				return new RavenJObject { { "Value", new RavenJValue(result) } };
 
-			return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
+			return RavenJObject.FromObject(result);
 		}
 
 		/// <summary>
@@ -134,6 +134,7 @@ namespace Raven.Abstractions.Extensions
 		{
 			var jsonSerializer = new JsonSerializer
 			{
+				DateParseHandling = DateParseHandling.None,
 				ContractResolver = contractResolver
 			};
 			foreach (var defaultJsonConverter in Default.Converters)
