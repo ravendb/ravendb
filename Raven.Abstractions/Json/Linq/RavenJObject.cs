@@ -3,10 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
-using System.Linq;
 
 namespace Raven.Json.Linq
 {
@@ -127,7 +127,7 @@ namespace Raven.Json.Linq
 		/// <returns>A <see cref="RavenJObject"/> with the values of the specified object</returns>
 		public static new RavenJObject FromObject(object o)
 		{
-			return FromObject(o);
+			return FromObject(o, JsonExtensions.CreateDefaultJsonSerializer());
 		}
 
 		/// <summary>
