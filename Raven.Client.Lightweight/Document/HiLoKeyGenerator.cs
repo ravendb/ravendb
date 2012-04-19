@@ -27,6 +27,7 @@ namespace Raven.Client.Document
 	public class HiLoKeyGenerator
 	{
 		private const string RavenKeyGeneratorsHilo = "Raven/Hilo/";
+		private const string RavenKeyServerPrefix = "Raven/ServerPrefixForHilo";
 		private readonly string tag;
 		private long capacity;
 		private readonly object generatorLock = new object();
@@ -34,6 +35,7 @@ namespace Raven.Client.Document
 		private volatile Hodler currentMax = new Hodler(0);
 		private DateTime lastRequestedUtc;
 		private IDatabaseCommands databaseCommands;
+		private string lastServerPrefix;
 
 		private class Hodler
 		{
@@ -64,10 +66,12 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public string GenerateDocumentKey(DocumentConvention convention, object entity)
 		{
-			return string.Format("{0}{1}{2}",
+			var nextId = NextId();
+			return string.Format("{0}{1}{2}{3}",
 								 tag,
 								 convention.IdentityPartsSeparator,
-								 NextId());
+								 lastServerPrefix,
+								 nextId);
 		}
 
 		///<summary>
@@ -183,7 +187,23 @@ namespace Raven.Client.Document
 
 		private JsonDocument GetDocument()
 		{
-			return databaseCommands.Get(RavenKeyGeneratorsHilo + tag);
+			var documents = databaseCommands.Get(new[] {RavenKeyGeneratorsHilo + tag, RavenKeyServerPrefix}, new string[0]);
+			if(documents.Results.Count == 2 && documents.Results[1] != null)
+			{
+				lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
+			}
+			else
+			{
+				lastServerPrefix = string.Empty;
+			}
+			if (documents.Results.Count == 0 || documents.Results[0] == null)
+				return null;
+			var jsonDocument = documents.Results[0].ToJsonDocument();
+			foreach (var key in jsonDocument.Metadata.Keys.Where(x => x.StartsWith("@")).ToArray())
+			{
+				jsonDocument.Metadata.Remove(key);
+			}
+			return jsonDocument;
 		}
 	}
 }
