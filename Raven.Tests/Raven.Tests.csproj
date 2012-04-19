@@ -580,6 +580,7 @@
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
     <Compile Include="MailingList\Nick.cs" />
     <Compile Include="MailingList\NSB.cs" />
+    <Compile Include="MailingList\OrderByValueTypeCast.cs" />
     <Compile Include="MailingList\Phil.cs" />
     <Compile Include="MailingList\JoelAsync.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />

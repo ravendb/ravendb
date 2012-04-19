@@ -905,8 +905,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
-			var propertyInfo = ((MemberExpression)expression.Body).Member as PropertyInfo;
-			var fieldInfo = ((MemberExpression)expression.Body).Member as FieldInfo;
+			var memberExpression = GetMemberExpression(expression.Body);
+			var propertyInfo = memberExpression.Member as PropertyInfo;
+			var fieldInfo = memberExpression.Member as FieldInfo;
 			var expressionMemberInfo = GetMember(expression.Body);
 			var type = propertyInfo != null
 						? propertyInfo.PropertyType
