@@ -166,11 +166,12 @@ type ``Given a Initailised Document store execute using computation expression``
     [<Fact>]
     let ``Should be able to project a property with select``() = 
         use ds = test.NewDocumentStore()
+        ds.Conventions.DefaultQueryingConsistency <- Raven.Client.Document.ConsistencyOptions.QueryYourWrites
         use session = ds.OpenSession()
         let actual = 
                    raven {
                             do! storeMany (createCustomers 7) >> ignore
-                            let! actual = query (select <@ fun x -> x.Id @>)
+                            let! actual = query (select <@ fun x -> x.Id @>)  
                             return actual
                          } |> run session |> Seq.toList
 
