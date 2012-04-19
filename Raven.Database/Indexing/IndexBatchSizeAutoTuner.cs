@@ -1,5 +1,6 @@
 using System;
 using Raven.Database.Config;
+using System.Linq;
 
 namespace Raven.Database.Indexing
 {
@@ -35,7 +36,7 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
-				context.Configuration.IndexingScheduler.LastAmountOfItemsToIndex = amountOfItemsToIndex;
+				context.Configuration.IndexingScheduler.RecordAmountOfItemsToIndex(amountOfItemsToIndex);
 			}
 		}
 
@@ -46,7 +47,7 @@ namespace Raven.Database.Indexing
 				return;
 			}
 
-			if (context.Configuration.IndexingScheduler.LastAmountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch)
+			if (context.Configuration.IndexingScheduler.GetLastAmountOfItemsToIndex().Any(x => x < NumberOfItemsToIndexInSingleBatch))
 			{
 				// this is the first time we hit the limit, we will give another go before we increase
 				// the batch size
@@ -130,8 +131,8 @@ namespace Raven.Database.Indexing
 			if (NumberOfItemsToIndexInSingleBatch == context.Configuration.InitialNumberOfItemsToIndexInSingleBatch)
 				return true;
 
-			// we were above the max the last time, we can't reduce the work load now
-			if (context.Configuration.IndexingScheduler.LastAmountOfItemsToIndex > NumberOfItemsToIndexInSingleBatch)
+			// we were above the max the last times, we can't reduce the work load now
+			if (context.Configuration.IndexingScheduler.GetLastAmountOfItemsToIndex().Any(x=>x > NumberOfItemsToIndexInSingleBatch))
 				return true;
 
 			var old = NumberOfItemsToIndexInSingleBatch;
@@ -154,6 +155,21 @@ namespace Raven.Database.Indexing
 			}
 
 			return true;
+		}
+
+		/// <summary>
+		/// This let us know that an OOME has happened, and we need to be much more
+		/// conservative with regards to how fast we can grow memory.
+		/// </summary>
+		public void OutOfMemoryExceptionHappened()
+		{
+			// first thing to do, reset the number of items per batch
+			NumberOfItemsToIndexInSingleBatch = context.Configuration.InitialNumberOfItemsToIndexInSingleBatch;
+			
+			// now, we need to be more conservative about how we are increasing memory usage, so instead of increasing
+			// every time we hit the limit twice, we will increase every time we hit it three times, then 5, 9, etc
+
+			context.Configuration.IndexingScheduler.LastAmountOfItemsToIndexToRemember *= 2;
 		}
 	}
 }

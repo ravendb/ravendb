@@ -14,7 +14,14 @@ namespace Raven.Database.Indexing
 		private int current;
 		private int currentRepeated;
 		private bool activeFiltering;
-		private int lastAmountOfItemsToIndex;
+		private List<int> lastAmountOfItemsToIndex = new List<int>();
+
+		public FairIndexingSchedulerWithNewIndexesBias()
+		{
+			LastAmountOfItemsToIndexToRemember = 1;
+		}
+
+		public int LastAmountOfItemsToIndexToRemember { get; set; }
 
 		public IList<IndexToWorkOn> FilterMapIndexes(IList<IndexToWorkOn> indexes)
 		{
@@ -55,18 +62,31 @@ namespace Raven.Database.Indexing
 			return indexToWorkOns.ToList();
 		}
 
-		public int LastAmountOfItemsToIndex
+		public void RecordAmountOfItemsToIndex(int value)
 		{
-			get { return lastAmountOfItemsToIndex; }
-			set
+			var currentLastAmountOfItemsToIndex = lastAmountOfItemsToIndex;
+			var amountOfItemsToIndex = activeFiltering
+			                           	? // if we are actively filtering, we have multiple levels, so we have to assume 
+			                           // that the max amount is still the current one, this prevent the different levels of indexing batch
+			                           // size from "fighting" over the batch size.
+			                           Math.Max(currentLastAmountOfItemsToIndex.Max(), value)
+			                           	: value;
+
+			var amountToTake = currentLastAmountOfItemsToIndex.Count;
+			if (amountToTake + 1 >= LastAmountOfItemsToIndexToRemember)
 			{
-				lastAmountOfItemsToIndex = activeFiltering
-				                           	? // if we are actively filtering, we have multiple levels, so we have to assume 
-				                           // that the max amount is still the current one, this prevent the different levels of indexing batch
-				                           // size from "fighting" over the batch size.
-				                           Math.Max(lastAmountOfItemsToIndex, value)
-				                           	: value;
+				amountToTake = currentLastAmountOfItemsToIndex.Count-1;
 			}
+			lastAmountOfItemsToIndex = new List<int>(currentLastAmountOfItemsToIndex.Take(amountToTake))
+				{
+					amountOfItemsToIndex
+				};
+
+		}
+
+		public IEnumerable<int> GetLastAmountOfItemsToIndex()
+		{
+			return lastAmountOfItemsToIndex;
 		}
 
 		// here we compare, but only up to the last 116 bits, not the full 128 bits

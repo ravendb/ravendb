@@ -1130,7 +1130,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if (boost <= 0m)
 			{
-				throw new ArgumentOutOfRangeException("Boost factor must be a positive number");
+				throw new ArgumentOutOfRangeException("boost","Boost factor must be a positive number");
 			}
 
 			if (boost != 1m)
@@ -1490,7 +1490,7 @@ If you really want to do in memory filtering on the data returned from the query
 			
 			if(type == typeof(decimal))
 			{
-				return ((double) ((decimal) whereParams.Value)).ToString(CultureInfo.InvariantCulture);
+				return RavenQuery.Escape(((double)((decimal)whereParams.Value)).ToString(CultureInfo.InvariantCulture), false, false);
 			}
 
 			if (type == typeof(DateTimeOffset))

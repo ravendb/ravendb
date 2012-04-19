@@ -23,6 +23,12 @@ namespace Raven.Client.Exceptions
 		/// <value>The conflicted version ids.</value>
 		public string[] ConflictedVersionIds { get; set; }
 
+
+		/// <summary>
+		/// Gets or sets the conflicted document etag
+		/// </summary>
+		public Guid Etag { get; set; }
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.
 		/// </summary>
@@ -34,7 +40,8 @@ namespace Raven.Client.Exceptions
 		/// Initializes a new instance of the <see cref="ConflictException"/> class.
 		/// </summary>
 		/// <param name="message">The message.</param>
-		public ConflictException(string message) : base(message)
+		public ConflictException(string message)
+			: base(message)
 		{
 		}
 
@@ -43,7 +50,8 @@ namespace Raven.Client.Exceptions
 		/// </summary>
 		/// <param name="message">The message.</param>
 		/// <param name="inner">The inner.</param>
-		public ConflictException(string message, Exception inner) : base(message, inner)
+		public ConflictException(string message, Exception inner)
+			: base(message, inner)
 		{
 		}
 
@@ -57,7 +65,8 @@ namespace Raven.Client.Exceptions
 		/// <exception cref="T:System.Runtime.Serialization.SerializationException">The class name is null or <see cref="P:System.Exception.HResult"/> is zero (0). </exception>
 		protected ConflictException(
 			SerializationInfo info,
-			StreamingContext context) : base(info, context)
+			StreamingContext context)
+			: base(info, context)
 		{
 		}
 #endif

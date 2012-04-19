@@ -8,17 +8,22 @@ namespace Raven.Abstractions.Connection
 {
 	public class HttpRequestHelper
 	{
-		public static void WriteDataToRequest(HttpWebRequest req, string data)
+		public static void WriteDataToRequest(HttpWebRequest req, string data, bool disableCompression)
 		{
 			req.SendChunked = true;
 			using (var requestStream = req.GetRequestStream())
 			using (var dataStream = new GZipStream(requestStream, CompressionMode.Compress))
-			using (var writer = new StreamWriter(dataStream, Encoding.UTF8))
+			using (var writer = disableCompression == false ?
+					new StreamWriter(dataStream, Encoding.UTF8) :
+					new StreamWriter(requestStream, Encoding.UTF8))
 			{
+
 				writer.Write(data);
 
 				writer.Flush();
-				dataStream.Flush();
+
+				if (disableCompression == false)
+					dataStream.Flush();
 				requestStream.Flush();
 			}
 		}
