@@ -766,7 +766,12 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				}
 				throw;
 			}
-			return SerializationHelper.ToQueryResult(json, request.ResponseHeaders["ETag"]);
+			var directQuery = SerializationHelper.ToQueryResult(json, request.ResponseHeaders["ETag"]);
+			foreach (var docResult in directQuery.Results.Concat(directQuery.Includes))
+			{
+				AssertNonConflictedDocument(docResult);
+			}
+			return directQuery;
 		}
 
 		/// <summary>
@@ -837,17 +842,22 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			};
 			foreach (var docResult in multiLoadResult.Results.Concat(multiLoadResult.Includes))
 			{
-				if (docResult == null)
-					continue;
-
-				var metadata = docResult[Constants.Metadata];
-				if(metadata == null)
-					continue;
-
-				if (metadata.Value<int>("@Http-Status-Code") == 409)
-					throw CreateConcurrencyException(metadata.Value<string>("@id"), docResult, metadata.Value<string>("@etag"));
+				
+				AssertNonConflictedDocument(docResult);
 			}
 			return multiLoadResult;
+		}
+
+		private static void AssertNonConflictedDocument(RavenJObject docResult)
+		{
+			if (docResult == null)
+				return;
+			var metadata = docResult[Constants.Metadata];
+			if(metadata == null)
+				return;
+
+			if (metadata.Value<int>("@Http-Status-Code") == 409)
+				throw CreateConcurrencyException(metadata.Value<string>("@id"), docResult, metadata.Value<string>("@etag"));
 		}
 
 		/// <summary>
