@@ -45,6 +45,7 @@ namespace Raven.Tests.MailingList
 			public object Event { get; set; }
 		}
 
+		[System.CLSCompliant(isCompliant:false)]
 		public class OrderItemAdded
 		{
 			public string AggregateId { get; set; }

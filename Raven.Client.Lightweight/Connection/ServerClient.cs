@@ -173,7 +173,7 @@ namespace Raven.Client.Connection
 			var shouldReadFromAllServers = ((convention.FailoverBehavior & FailoverBehavior.ReadFromAllServers) == FailoverBehavior.ReadFromAllServers);
 			if (shouldReadFromAllServers && method == "GET")
 			{
-				var replicationIndex = readStripingBase%(threadSafeCopy.Count + 1);
+				var replicationIndex = readStripingBase % (threadSafeCopy.Count + 1);
 				// if replicationIndex == destinations count, then we want to use the master
 				// if replicationIndex < 0, then we were explicitly instructed to use the master
 				if (replicationIndex < threadSafeCopy.Count && replicationIndex >= 0)
@@ -236,7 +236,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		private static bool IsServerDown(WebException e)
 		{
-			return e.InnerException is SocketException || 
+			return e.InnerException is SocketException ||
 				e.InnerException is IOException;
 		}
 
@@ -268,16 +268,24 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				{
 					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
 					var conflictsDoc = RavenJObject.Load(new JsonTextReader(conflicts));
-					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+					var etag = httpWebResponse.GetResponseHeader("ETag");
 
-					throw new ConflictException("Conflict detected on " + key +
-												", conflict must be resolved before the document will be accessible")
-					{
-						ConflictedVersionIds = conflictIds
-					};
+					throw CreateConcurrencyException(key, conflictsDoc, etag);
 				}
 				throw;
 			}
+		}
+
+		private static ConflictException CreateConcurrencyException(string key, RavenJObject conflictsDoc, string etag)
+		{
+			var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+			return new ConflictException("Conflict detected on " + key +
+			                            ", conflict must be resolved before the document will be accessible")
+			{
+				ConflictedVersionIds = conflictIds,
+				Etag = new Guid(etag)
+			};
 		}
 
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -394,12 +402,12 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		private void DirectPutAttachment(string key, RavenJObject metadata, Guid? etag, Stream data, string operationUrl)
 		{
-			if(etag != null)
+			if (etag != null)
 			{
 				metadata["ETag"] = etag.Value.ToString();
 			}
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/static/" + key, "PUT", metadata, credentials, convention);
-			
+
 			webRequest.Write(data);
 			try
 			{
@@ -436,12 +444,12 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <returns></returns>
 		public Attachment HeadAttachment(string key)
 		{
-			return ExecuteWithReplication("HEAD", operationUrl => DirectGetAttachment("HEAD",key, operationUrl));
+			return ExecuteWithReplication("HEAD", operationUrl => DirectGetAttachment("HEAD", key, operationUrl));
 		}
 
 		private Attachment DirectGetAttachment(string method, string key, string operationUrl)
 		{
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,operationUrl + "/static/" + key,method, credentials, convention);
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/static/" + key, method, credentials, convention);
 			Func<Stream> data;
 			try
 			{
@@ -479,9 +487,10 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 					throw new ConflictException("Conflict detected on " + key +
-					                            ", conflict must be resolved before the attachment will be accessible")
+												", conflict must be resolved before the attachment will be accessible")
 					{
-						ConflictedVersionIds = conflictIds
+						ConflictedVersionIds = conflictIds,
+						Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
 					};
 				}
 				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
@@ -504,8 +513,8 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			var result = ExecuteGetRequest("".Databases(pageSize).NoCache());
 
-			var json = (RavenJArray) result;
-		
+			var json = (RavenJArray)result;
+
 			return json
 				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
 				.ToArray();
@@ -514,11 +523,11 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		private void DirectDeleteAttachment(string key, Guid? etag, string operationUrl)
 		{
 			var metadata = new RavenJObject();
-			if(etag != null)
+			if (etag != null)
 			{
 				metadata["ETag"] = etag.Value.ToString();
 			}
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/static/" + key, "DELETE", metadata,credentials, convention);
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/static/" + key, "DELETE", metadata, credentials, convention);
 			webRequest.ExecuteRequest();
 		}
 
@@ -756,7 +765,12 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				}
 				throw;
 			}
-			return SerializationHelper.ToQueryResult(json, request.ResponseHeaders["ETag"]);
+			var directQuery = SerializationHelper.ToQueryResult(json, request.ResponseHeaders["ETag"]);
+			foreach (var docResult in directQuery.Results.Concat(directQuery.Includes))
+			{
+				AssertNonConflictedDocument(docResult);
+			}
+			return directQuery;
 		}
 
 		/// <summary>
@@ -805,7 +819,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
 			// we are fine with that, requests to load that many items are probably going to be rare
 			HttpJsonRequest request;
-			if (uniqueIds.Sum(x=>x.Length) < 1024)
+			if (uniqueIds.Sum(x => x.Length) < 1024)
 			{
 				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + x).ToArray());
 				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
@@ -817,14 +831,32 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			}
 
 			request.AddOperationHeaders(OperationsHeaders);
-			var result = (RavenJObject) request.ReadResponseJson();
+			var result = (RavenJObject)request.ReadResponseJson();
 
 			var results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList();
-			return new MultiLoadResult
+			var multiLoadResult = new MultiLoadResult
 			{
 				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-				Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id,StringComparison.InvariantCultureIgnoreCase))).ToList()
+				Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.InvariantCultureIgnoreCase))).ToList()
 			};
+			foreach (var docResult in multiLoadResult.Results.Concat(multiLoadResult.Includes))
+			{
+				
+				AssertNonConflictedDocument(docResult);
+			}
+			return multiLoadResult;
+		}
+
+		private static void AssertNonConflictedDocument(RavenJObject docResult)
+		{
+			if (docResult == null)
+				return;
+			var metadata = docResult[Constants.Metadata];
+			if(metadata == null)
+				return;
+
+			if (metadata.Value<int>("@Http-Status-Code") == 409)
+				throw CreateConcurrencyException(metadata.Value<string>("@id"), docResult, metadata.Value<string>("@etag"));
 		}
 
 		/// <summary>
@@ -849,7 +881,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			RavenJArray response;
 			try
 			{
-				response = (RavenJArray) req.ReadResponseJson();
+				response = (RavenJArray)req.ReadResponseJson();
 			}
 			catch (WebException e)
 			{
@@ -932,8 +964,8 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		private byte[] DirectPromoteTransaction(Guid fromTxId, string operationUrl)
 		{
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,
-			                                                          operationUrl + "/transaction/promote?fromTxId=" + fromTxId,
-			                                                          "POST", credentials, convention);
+																	  operationUrl + "/transaction/promote?fromTxId=" + fromTxId,
+																	  "POST", credentials, convention);
 
 			return webRequest.ReadResponseBytes();
 		}
@@ -974,9 +1006,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			if (databaseUrl == Url)
 				return this;
 			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId)
-			       {
-			       	OperationsHeaders = OperationsHeaders
-			       };
+				   {
+					   OperationsHeaders = OperationsHeaders
+				   };
 		}
 
 		public IDatabaseCommands ForDefaultDatabase()
@@ -990,7 +1022,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			};
 		}
 
-		
+
 
 		/// <summary>
 		/// Gets a value indicating whether [supports promotable transactions].
@@ -1110,21 +1142,21 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
 				var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}",
-				                                     Uri.EscapeUriString(index),
-				                                     Uri.EscapeDataString(suggestionQuery.Term),
-				                                     Uri.EscapeDataString(suggestionQuery.Field),
-				                                     Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString()),
-				                                     Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
-				                                     Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
+													 Uri.EscapeUriString(index),
+													 Uri.EscapeDataString(suggestionQuery.Term),
+													 Uri.EscapeDataString(suggestionQuery.Field),
+													 Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString()),
+													 Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
+													 Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
 
-				RavenJObject json = (RavenJObject) request.ReadResponseJson();
+				RavenJObject json = (RavenJObject)request.ReadResponseJson();
 
 				return new SuggestionQueryResult
 				{
-					Suggestions = ((RavenJArray) json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
+					Suggestions = ((RavenJArray)json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
 				};
 			});
 		}
@@ -1134,9 +1166,9 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// </summary>
 		public DatabaseStatistics GetStatistics()
 		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this,url +"/stats", "GET", credentials, convention);
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/stats", "GET", credentials, convention);
 
-			var jo = (RavenJObject) httpJsonRequest.ReadResponseJson();
+			var jo = (RavenJObject)httpJsonRequest.ReadResponseJson();
 			return jo.Deserialize<DatabaseStatistics>(convention);
 		}
 
@@ -1189,7 +1221,8 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 					throw new ConflictException("Conflict detected on " + key +
 												", conflict must be resolved before the document will be accessible")
 					{
-						ConflictedVersionIds = conflictIds
+						ConflictedVersionIds = conflictIds,
+						Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
 					};
 				}
 				throw;
@@ -1202,33 +1235,33 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
 			return ExecuteWithReplication("GET", // this is a logical GET, physical POST
-			                              operationUrl =>
-			                              {
-			                              	var multiGetOperation = new MultiGetOperation(this, convention, operationUrl, requests);
+										  operationUrl =>
+										  {
+											  var multiGetOperation = new MultiGetOperation(this, convention, operationUrl, requests);
 
-			                              	var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this,
-			                              	                                                               multiGetOperation.
-			                              	                                                               	RequestUri, "POST",
-			                              	                                                               credentials, convention);
+											  var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this,
+																											 multiGetOperation.
+																											  RequestUri, "POST",
+																											 credentials, convention);
 
-			                              	var requestsForServer =
-			                              		multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
+											  var requestsForServer =
+												  multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
 
-			                              	var postedData = JsonConvert.SerializeObject(requestsForServer);
+											  var postedData = JsonConvert.SerializeObject(requestsForServer);
 
-			                              	if (multiGetOperation.CanFullyCache(jsonRequestFactory, httpJsonRequest, postedData))
-			                              	{
-			                              		return multiGetOperation.HandleCachingResponse(new GetResponse[requests.Length],
-			                              		                                               jsonRequestFactory);
-			                              	}
+											  if (multiGetOperation.CanFullyCache(jsonRequestFactory, httpJsonRequest, postedData))
+											  {
+												  return multiGetOperation.HandleCachingResponse(new GetResponse[requests.Length],
+																								 jsonRequestFactory);
+											  }
 
-			                              	httpJsonRequest.Write(postedData);
-			                              	var results = (RavenJArray) httpJsonRequest.ReadResponseJson();
-			                              	var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(
-																				new RavenJTokenReader(results));
+											  httpJsonRequest.Write(postedData);
+											  var results = (RavenJArray)httpJsonRequest.ReadResponseJson();
+											  var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(
+																				  new RavenJTokenReader(results));
 
-			                              	return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
-			                              });
+											  return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
+										  });
 		}
 
 		///<summary>
@@ -1242,10 +1275,10 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
 				var requestUri = operationUrl + string.Format("/terms/{0}?field={1}&pageSize={2}&fromValue={3}",
-				                                     Uri.EscapeUriString(index),
-				                                     Uri.EscapeDataString(field),
-				                                     pageSize,
-				                                     Uri.EscapeDataString(fromValue ?? ""));
+													 Uri.EscapeUriString(index),
+													 Uri.EscapeDataString(field),
+													 pageSize,
+													 Uri.EscapeDataString(fromValue ?? ""));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
@@ -1266,13 +1299,13 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
 				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
-				                                              Uri.EscapeUriString(index),
-				                                              Uri.EscapeDataString(facetSetupDoc),
-				                                              Uri.EscapeDataString(query.Query));
+															  Uri.EscapeUriString(index),
+															  Uri.EscapeDataString(facetSetupDoc),
+															  Uri.EscapeUriString(Uri.EscapeDataString(query.Query)));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
-				var json = (RavenJObject) request.ReadResponseJson();
+				var json = (RavenJObject)request.ReadResponseJson();
 				return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
 			});
 		}

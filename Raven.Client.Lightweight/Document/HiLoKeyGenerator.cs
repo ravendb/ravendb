@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Linq;
 using System.Threading;
 using System.Transactions;
 #if !NET_3_5
@@ -15,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
+using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document
@@ -25,6 +27,7 @@ namespace Raven.Client.Document
 	public class HiLoKeyGenerator
 	{
 		private const string RavenKeyGeneratorsHilo = "Raven/Hilo/";
+		private const string RavenKeyServerPrefix = "Raven/ServerPrefixForHilo";
 		private readonly string tag;
 		private long capacity;
 		private readonly object generatorLock = new object();
@@ -32,6 +35,7 @@ namespace Raven.Client.Document
 		private volatile Hodler currentMax = new Hodler(0);
 		private DateTime lastRequestedUtc;
 		private IDatabaseCommands databaseCommands;
+		private string lastServerPrefix;
 
 		private class Hodler
 		{
@@ -62,10 +66,12 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public string GenerateDocumentKey(DocumentConvention convention, object entity)
 		{
-			return string.Format("{0}{1}{2}",
+			var nextId = NextId();
+			return string.Format("{0}{1}{2}{3}",
 								 tag,
 								 convention.IdentityPartsSeparator,
-								 NextId());
+								 lastServerPrefix,
+								 nextId);
 		}
 
 		///<summary>
@@ -96,63 +102,108 @@ namespace Raven.Client.Document
 		{
 			using (new TransactionScope(TransactionScopeOption.Suppress))
 			{
-			var span = DateTime.UtcNow - lastRequestedUtc;
-			if (span.TotalSeconds < 1)
-			{
-				capacity *= 2;
-			}
-
-			lastRequestedUtc = DateTime.UtcNow;
-			while (true)
-			{
-				try
+				var span = DateTime.UtcNow - lastRequestedUtc;
+				if (span.TotalSeconds < 1)
 				{
-					var document = GetDocument();
-					if (document == null)
-					{
-						PutDocument(new JsonDocument
-						{
-							Etag = Guid.Empty,
-							// sending empty guid means - ensure the that the document does NOT exists
-							Metadata = new RavenJObject(),
-							DataAsJson = RavenJObject.FromObject(new {Max = capacity}),
-							Key = RavenKeyGeneratorsHilo + tag
-						});
-						return capacity;
-					}
-					long max;
-					if (document.DataAsJson.ContainsKey("ServerHi")) // convert from hi to max
-					{
-						var hi = document.DataAsJson.Value<long>("ServerHi");
-						max = ((hi - 1)*capacity);
-						document.DataAsJson.Remove("ServerHi");
-						document.DataAsJson["Max"] = max;
-					}
-					max = document.DataAsJson.Value<long>("Max");
-					document.DataAsJson["Max"] = max + capacity;
-					PutDocument(document);
-
-					current = max + 1;
-					return max + capacity;
+					capacity *= 2;
 				}
-				catch (ConcurrencyException)
+
+				lastRequestedUtc = DateTime.UtcNow;
+				while (true)
 				{
-					// expected, we need to retry
+					try
+					{
+						var minNextMax = currentMax.Value;
+						JsonDocument document;
+
+						try
+						{
+							document = GetDocument();
+						}
+						catch (ConflictException e)
+						{
+							// resolving the conflict by selecting the highest number
+							var highestMax = e.ConflictedVersionIds
+								.Select(conflictedVersionId => GetMaxFromDocument(databaseCommands.Get(conflictedVersionId), minNextMax))
+								.Max();
+
+							PutDocument(new JsonDocument
+							{
+								Etag = e.Etag,
+								Metadata = new RavenJObject(),
+								DataAsJson = RavenJObject.FromObject(new { Max = highestMax }),
+								Key = RavenKeyGeneratorsHilo + tag
+							});
+
+							continue;
+						}
+						if (document == null)
+						{
+							PutDocument(new JsonDocument
+							{
+								Etag = Guid.Empty,
+								// sending empty guid means - ensure the that the document does NOT exists
+								Metadata = new RavenJObject(),
+								DataAsJson = RavenJObject.FromObject(new { Max = minNextMax + capacity }),
+								Key = RavenKeyGeneratorsHilo + tag
+							});
+							return minNextMax + capacity;
+						}
+						var max = GetMaxFromDocument(document, minNextMax);
+						document.DataAsJson["Max"] = max + capacity;
+						PutDocument(document);
+
+						current = max + 1;
+						return max + capacity;
+					}
+					catch (ConcurrencyException)
+					{
+						// expected, we need to retry
+					}
 				}
 			}
 		}
+
+		private long GetMaxFromDocument(JsonDocument document, long minMax)
+		{
+			long max;
+			if (document.DataAsJson.ContainsKey("ServerHi")) // convert from hi to max
+			{
+				var hi = document.DataAsJson.Value<long>("ServerHi");
+				max = ((hi - 1) * capacity);
+				document.DataAsJson.Remove("ServerHi");
+				document.DataAsJson["Max"] = max;
+			}
+			max = document.DataAsJson.Value<long>("Max");
+			return Math.Max(max, minMax);
 		}
 
 		private void PutDocument(JsonDocument document)
 		{
 			databaseCommands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
-			                     document.DataAsJson,
-			                     document.Metadata);
+								 document.DataAsJson,
+								 document.Metadata);
 		}
 
 		private JsonDocument GetDocument()
 		{
-			return databaseCommands.Get(RavenKeyGeneratorsHilo + tag);
+			var documents = databaseCommands.Get(new[] {RavenKeyGeneratorsHilo + tag, RavenKeyServerPrefix}, new string[0]);
+			if(documents.Results.Count == 2 && documents.Results[1] != null)
+			{
+				lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
+			}
+			else
+			{
+				lastServerPrefix = string.Empty;
+			}
+			if (documents.Results.Count == 0 || documents.Results[0] == null)
+				return null;
+			var jsonDocument = documents.Results[0].ToJsonDocument();
+			foreach (var key in jsonDocument.Metadata.Keys.Where(x => x.StartsWith("@")).ToArray())
+			{
+				jsonDocument.Metadata.Remove(key);
+			}
+			return jsonDocument;
 		}
 	}
 }

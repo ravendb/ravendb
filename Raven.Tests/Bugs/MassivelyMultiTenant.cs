@@ -29,17 +29,18 @@ namespace Raven.Tests.Bugs
 			for (int i = 0; i < 20; i++)
 			{
 				var databaseName = "Tenants" + i;
-				using (var documentStore = new DocumentStore {Url = "http://localhost:8079", DefaultDatabase = databaseName}.Initialize())
+				using (var documentStore = new DocumentStore { Url = "http://localhost:8079", DefaultDatabase = databaseName }.Initialize())
 				{
 					documentStore.DatabaseCommands.EnsureDatabaseExists(databaseName);
 				}
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			ravenDbServer.Dispose();
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
 	}
 }

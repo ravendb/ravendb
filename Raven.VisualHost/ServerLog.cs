@@ -9,6 +9,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Web;
 using System.Windows.Forms;
 using Newtonsoft.Json;
@@ -151,6 +152,11 @@ namespace Raven.VisualHost
 			{
 				control.BackColor =Color.DarkRed;
 			}
+		}
+
+		public int IncrementRequest()
+		{
+			return Interlocked.Increment(ref NumOfRequests);
 		}
 	}
 }

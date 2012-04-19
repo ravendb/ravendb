@@ -3,6 +3,7 @@ using System;
 using System.Net;
 using System.Security;
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Extensions
 {

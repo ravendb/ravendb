@@ -68,7 +68,7 @@ namespace Raven.Tests.Bugs
 						Id = "AYENDE",
 						Email = "Ayende@ayende.com",
 						Name = "Ayende Rahien"
-					});
+					}, "AYENDE");
 
 					session.SaveChanges();
 				}

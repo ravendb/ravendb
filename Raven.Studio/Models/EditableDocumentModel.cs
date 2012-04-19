@@ -365,6 +365,10 @@ namespace Raven.Studio.Models
 				References.Clear();
 				foreach (var source in referencesIds.Cast<Match>().Select(x => x.Groups[1].Value).Distinct())
 				{
+					DateTime time;
+					if(DateTime.TryParse(source, out time))
+						continue;
+					
 					References.Add(new LinkModel
 					{
 						Title = source,
@@ -405,9 +409,11 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
+				if (document.Value.Key != null && document.Value.Key.Contains("/"))
+					return "/";
 				if (document.Value.Key != null && document.Value.Key.Contains("-"))
 					return "-";
-				return "/";
+				return null;
 			}
 		}
 

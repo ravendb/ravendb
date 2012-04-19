@@ -80,6 +80,10 @@ namespace Raven.Storage.Esent.Backup
 					directoryBackup.Execute();
 				}
 
+				// Make sure we have an Indexes folder in the backup location
+				if (!Directory.Exists(Path.Combine(to, "Indexes")))
+					Directory.CreateDirectory(Path.Combine(to, "Indexes"));
+
 				var esentBackup = new EsentBackup(instance, to, incrementalBackup ? BackupGrbit.Incremental : BackupGrbit.Atomic);
 				esentBackup.Notify += UpdateBackupStatus;
 				esentBackup.Execute();

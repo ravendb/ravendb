@@ -73,7 +73,8 @@ namespace Raven.Client.Connection
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
 			webRequest.Method = method;
-			if (method == "POST" || method == "PUT" || method == "PATCH")
+			if (factory.DisableRequestCompression == false &&
+				(method == "POST" || method == "PUT" || method == "PATCH"))
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
 			WriteMetadata(metadata);
@@ -197,7 +198,7 @@ namespace Raven.Client.Connection
 			{
 				try
 				{
-					if(writeCalled == false)
+					if (writeCalled == false)
 						webRequest.ContentLength = 0;
 					return ReadStringInternal(webRequest.GetResponse);
 				}
@@ -256,7 +257,7 @@ namespace Raven.Client.Connection
 
 			if (postedData != null)
 			{
-				HttpRequestHelper.WriteDataToRequest(newWebRequest, postedData);
+				HttpRequestHelper.WriteDataToRequest(newWebRequest, postedData, factory.DisableRequestCompression);
 			}
 			if (postedStream != null)
 			{
@@ -264,7 +265,10 @@ namespace Raven.Client.Connection
 				using (var stream = newWebRequest.GetRequestStream())
 				using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
 				{
-					postedStream.CopyTo(commpressedData);
+					if (factory.DisableRequestCompression == false)
+						postedStream.CopyTo(commpressedData);
+					else
+						postedStream.CopyTo(stream);
 
 					commpressedData.Flush();
 					stream.Flush();
@@ -337,9 +341,9 @@ namespace Raven.Client.Connection
 		{
 			var httpWebResponse = e.Response as HttpWebResponse;
 			if (httpWebResponse == null ||
-			    httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
-			    httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
-			    httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+				httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
+				httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
+				httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 			{
 				int httpResult = -1;
 				if (httpWebResponse != null)
@@ -359,7 +363,7 @@ namespace Raven.Client.Connection
 			}
 
 			if (httpWebResponse.StatusCode == HttpStatusCode.NotModified
-			    && CachedRequestDetails != null)
+				&& CachedRequestDetails != null)
 			{
 				factory.UpdateCacheTime(this);
 				var result = factory.GetCachedResponse(this);
@@ -472,10 +476,19 @@ namespace Raven.Client.Connection
 					headerName = "If-None-Match";
 				var value = prop.Value.Value<object>().ToString();
 
+				bool isRestricted;
+				try
+				{
+					isRestricted = WebHeaderCollection.IsRestricted(headerName);
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Could not figure out how to treat header: " + headerName, e);
+				}
 				// Restricted headers require their own special treatment, otherwise an exception will
 				// be thrown.
 				// See http://msdn.microsoft.com/en-us/library/78h415ay.aspx
-				if (WebHeaderCollection.IsRestricted(headerName))
+				if (isRestricted)
 				{
 					switch (headerName)
 					{
@@ -521,7 +534,7 @@ namespace Raven.Client.Connection
 			writeCalled = true;
 			postedData = data;
 
-			HttpRequestHelper.WriteDataToRequest(webRequest, data);
+			HttpRequestHelper.WriteDataToRequest(webRequest, data, factory.DisableRequestCompression);
 		}
 
 
@@ -536,7 +549,7 @@ namespace Raven.Client.Connection
 		{
 			writeCalled = true;
 			postedData = dataToWrite;
-			
+
 			return webRequest.BeginGetRequestStream(callback, state);
 		}
 
@@ -566,7 +579,15 @@ namespace Raven.Client.Connection
 		{
 			foreach (string header in operationsHeaders)
 			{
-				webRequest.Headers[header] = operationsHeaders[header];
+				try
+				{
+					webRequest.Headers[header] = operationsHeaders[header];
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException(
+						"Failed to set header '" + header + "' to the value: " + operationsHeaders[header], e);
+				}
 			}
 		}
 
@@ -623,7 +644,6 @@ namespace Raven.Client.Connection
 					manualResetEvent.Close();
 			}
 		}
-
 
 		public RavenJToken ReadResponseJson()
 		{

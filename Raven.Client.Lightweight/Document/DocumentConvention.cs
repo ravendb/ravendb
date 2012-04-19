@@ -131,8 +131,8 @@ namespace Raven.Client.Document
 			var tag = GetTypeTagName(type);
 			if (tag != null)
 			{
+				tag = TransformTypeTagNameToDocumentKeyPrefix(tag);
 				tag += IdentityPartsSeparator;
-				tag = tag.ToLowerInvariant();
 			}
 			if (converter != null)
 			{
@@ -200,7 +200,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public static string DefaultTypeTagName(Type t)
 		{
-		    string result;
+			string result;
 			if (cachedDefaultTypeTagNames.TryGetValue(t, out result))
 				return result;
 
@@ -219,16 +219,16 @@ namespace Raven.Client.Document
 					sb.Append("Of")
 						.Append(DefaultTypeTagName(argument));
 				}
-			    result = sb.ToString();
+				result = sb.ToString();
 			}
 			else
 			{
-			    result = Inflector.Pluralize(t.Name);
+				result = Inflector.Pluralize(t.Name);
 			}
-		    var temp = new Dictionary<Type, string>(cachedDefaultTypeTagNames);
-		    temp[t] = result;
-		    cachedDefaultTypeTagNames = temp;
-		    return result;
+			var temp = new Dictionary<Type, string>(cachedDefaultTypeTagNames);
+			temp[t] = result;
+			cachedDefaultTypeTagNames = temp;
+			return result;
 		}
 
 		/// <summary>

@@ -32,7 +32,7 @@ namespace Raven.Tests.Bugs
 
 				Assert.Equal(baseLineIndexCount+1, store.DocumentDatabase.GetIndexNames(0, int.MaxValue).Length);
 				
-				store.DocumentDatabase.StopBackgroundWokers();
+				store.DocumentDatabase.StopBackgroundWorkers();
 
 				store.Configuration.TempIndexCleanupThreshold = TimeSpan.Zero;
 
