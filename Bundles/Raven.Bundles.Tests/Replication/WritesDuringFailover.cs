@@ -40,35 +40,6 @@ namespace Raven.Bundles.Tests.Replication
 		}
 
 		[Fact]
-		public void Can_disallow_failover()
-		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-
-			store1.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
-
-			TellFirstInstanceToReplicateToSecondInstance();
-
-			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
-
-			using (var session = store1.OpenSession())
-			{
-				session.Store(new Company { Name = "Hibernating Rhinos" });
-				session.SaveChanges();
-			}
-
-			WaitForReplication(store2);
-
-			servers[0].Dispose();
-
-			using (var session = store1.OpenSession())
-			{
-				Assert.Throws<WebException>(() => session.Load<Company>("companies/1"));
-			}
-		}
-
-		[Fact]
 		public void Cannot_failover_writes_by_default()
 		{
 			var store1 = CreateStore();
@@ -133,7 +104,7 @@ namespace Raven.Bundles.Tests.Replication
 			}
 		}
 
-		private void WaitForReplication(IDocumentStore store2)
+		protected void WaitForReplication(IDocumentStore store2)
 		{
 			for (int i = 0; i < RetriesCount; i++)
 			{
@@ -144,6 +115,41 @@ namespace Raven.Bundles.Tests.Replication
 						break;
 					Thread.Sleep(100);
 				}
+			}
+		}
+	}
+
+	public class WritesDuringFailover2 : WritesDuringFailover
+	{
+		protected override void ConfigureStore(DocumentStore documentStore)
+		{
+			documentStore.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+		}
+
+		[Fact]
+		public void Can_disallow_failover()
+		{
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+
+			TellFirstInstanceToReplicateToSecondInstance();
+
+			var serverClient = ((ServerClient)store1.DatabaseCommands);
+			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+
+			using (var session = store1.OpenSession())
+			{
+				session.Store(new Company { Name = "Hibernating Rhinos" });
+				session.SaveChanges();
+			}
+
+			WaitForReplication(store2);
+
+			servers[0].Dispose();
+
+			using (var session = store1.OpenSession())
+			{
+				Assert.Throws<WebException>(() => session.Load<Company>("companies/1"));
 			}
 		}
 	}
