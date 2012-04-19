@@ -371,6 +371,7 @@ namespace Raven.Client.Document
 		{
 			var jsonSerializer = new JsonSerializer
 			{
+				DateParseHandling = DateParseHandling.None,
 				ObjectCreationHandling = ObjectCreationHandling.Replace,
 				ContractResolver = JsonContractResolver,
 				TypeNameHandling = TypeNameHandling.Auto,
