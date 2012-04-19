@@ -1302,7 +1302,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
 															  Uri.EscapeUriString(index),
 															  Uri.EscapeDataString(facetSetupDoc),
-															  Uri.EscapeDataString(query.Query));
+															  Uri.EscapeUriString(Uri.EscapeDataString(query.Query)));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
