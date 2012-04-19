@@ -10,7 +10,7 @@ namespace Raven.StressTests.Storage.MultiThreadedStress
 {
 	public class BatchOperationStress : StressTest
 	{
-		private const int Iterations = 100;
+		private const int Iterations = 10;
 
 		[Fact]
 		public void WhenUsingEsentInUnreliableMode()

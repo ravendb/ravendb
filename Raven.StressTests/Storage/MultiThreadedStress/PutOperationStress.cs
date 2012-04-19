@@ -10,7 +10,7 @@ namespace Raven.StressTests.Storage.MultiThreadedStress
 {
 	public class PutOperationStress : StressTest
 	{
-		private const int Iterations = 100;
+		private const int Iterations = 10;
 
 		[Fact]
 		public void WhenUsingEsentInUnreliableMode()
@@ -39,7 +39,7 @@ namespace Raven.StressTests.Storage.MultiThreadedStress
 
 	public class BigPutOperationStress : StressTest
 	{
-		private const int Iterations = 100;
+		private const int Iterations = 10;
 
 		[Fact]
 		public void WhenUsingEsentInUnreliableMode()
@@ -68,7 +68,7 @@ namespace Raven.StressTests.Storage.MultiThreadedStress
 
 	public class MediumPutOperationStress : StressTest
 	{
-		private const int Iterations = 100;
+		private const int Iterations = 10;
 
 		[Fact]
 		public void WhenUsingEsentInUnreliableMode()

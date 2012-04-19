@@ -10,7 +10,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void FailoverBetweenTwoMultiTenantDatabases_CanReplicateBetweenTwoMultiTenantDatabases()
 		{
-			Run<FailoverBetweenTwoMultiTenantDatabases>(x => x.CanReplicateBetweenTwoMultiTenantDatabases(), 2000);
+			Run<FailoverBetweenTwoMultiTenantDatabases>(x => x.CanReplicateBetweenTwoMultiTenantDatabases(), 10);
 		}
 		
 		[Fact]
@@ -28,13 +28,13 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void SimpleLogin()
 		{
-			Run<SimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 500);
+			Run<SimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 10);
 		}
 
 		[Fact]
 		public void AsyncSimpleLogin()
 		{
-			Run<AsyncSimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 200);
+			Run<AsyncSimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 10);
 		}
 		
 		[Fact]
@@ -46,7 +46,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void SimpleReplication()
 		{
-			Run<SimpleReplication>(x => x.Can_replicate_between_two_instances(), 1100);
+			Run<SimpleReplication>(x => x.Can_replicate_between_two_instances(), 10);
 		}
 	}
 }

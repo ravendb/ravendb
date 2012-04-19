@@ -17,19 +17,25 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void  SupportLazyOperations_LazyOperationsAreBatched()
 		{
-			Run<SupportLazyOperations>(x => x.LazyOperationsAreBatched());
+			Run<SupportLazyOperations>(x => x.LazyOperationsAreBatched(), 10);
 		}
 
 		[Fact]
 		public void CanQueryOnlyUsers_WhenQueryingForUserById()
 		{
-			Run<CanQueryOnlyUsers>(x=>x.WhenQueryingForUserById());
+			Run<CanQueryOnlyUsers>(x=>x.WhenQueryingForUserById(), 10);
+		}
+
+		[Fact]
+		public void CanQueryOnlyUsers_WhenStoringUser()
+		{
+			Run<CanQueryOnlyUsers>(x => x.WhenStoringUser(), 10);
 		}
 
 		[Fact]
 		public void IndexingEachFieldInEachDocumentSeparetedly()
 		{
-			Run<IndexingEachFieldInEachDocumentSeparetedly>(x=>x.ForIndexing(), 100000);
+			Run<IndexingEachFieldInEachDocumentSeparetedly>(x=>x.ForIndexing());
 		}
 
 		[Fact]
@@ -41,37 +47,37 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void CachingOfDocumentInclude()
 		{
-			Run<CachingOfDocumentInclude>(x => x.New_query_returns_correct_value_when_cache_is_enabled_and_data_changes());
+			Run<CachingOfDocumentInclude>(x => x.New_query_returns_correct_value_when_cache_is_enabled_and_data_changes(), 20);
 		}
 
 		[Fact]
 		public void CanPageThroughReduceResults()
 		{
-			Run<CanPageThroughReduceResults>(x => x.Test());
+			Run<CanPageThroughReduceResults>(x => x.Test(), 10);
 		}
 
 		[Fact]
 		public void MapReduce()
 		{
-			Run<MapReduce>(x => x.CanUpdateReduceValue_WhenChangingReduceKey());
+			Run<MapReduce>(x => x.CanUpdateReduceValue_WhenChangingReduceKey(), 10);
 		}
 
 		[Fact]
 		public void MultiGetNonStaleRequslts()
 		{
-			Run<MultiGetNonStaleRequslts>(x => x.ShouldBeAbleToGetNonStaleResults());
+			Run<MultiGetNonStaleRequslts>(x => x.ShouldBeAbleToGetNonStaleResults(), 15);
 		}
 		
 		[Fact]
 		public void AfterCommitWillNotRetainSameEtag()
 		{
-			Run<Etags>(x => x.AfterCommitWillNotRetainSameEtag());
+			Run<Etags>(x => x.AfterCommitWillNotRetainSameEtag(), 250);
 		}
 		
 		[Fact]
 		public void CanAddAndReadFileAfterReopen()
 		{
-			Run<Documents>(x => x.CanAddAndReadFileAfterReopen(), 10000);
+			Run<Documents>(x => x.CanAddAndReadFileAfterReopen(), 100);
 		}
 		
 		[Fact]
@@ -83,13 +89,13 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void WillOverwriteDocWhenOptimisticConcurrencyIsOff()
 		{
-			Run<OverwriteDocuments>(x => x.WillOverwriteDocWhenOptimisticConcurrencyIsOff());
+			Run<OverwriteDocuments>(x => x.WillOverwriteDocWhenOptimisticConcurrencyIsOff(), 10);
 		}
 		
 		[Fact]
 		public void WillThrowWhenOptimisticConcurrencyIsOn()
 		{
-			Run<OverwriteDocuments>(x => x.WillThrowWhenOptimisticConcurrencyIsOn());
+			Run<OverwriteDocuments>(x => x.WillThrowWhenOptimisticConcurrencyIsOn(), 10);
 		}
 	}
 }
