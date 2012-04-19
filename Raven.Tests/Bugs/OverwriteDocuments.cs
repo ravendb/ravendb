@@ -77,7 +77,7 @@ namespace Raven.Tests.Bugs
 			using (var session = documentStore.OpenSession())
 			{
 				var foo = new Foo() { Id = "foos/1", Something = "something1" };
-				session.Store(foo, "foos/1");
+				session.Store(foo);
 				session.SaveChanges();
 			}
 		}
