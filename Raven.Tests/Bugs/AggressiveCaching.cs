@@ -1,7 +1,5 @@
 using System;
-using System.Threading;
 using Raven.Client.Document;
-using Raven.Server;
 using Xunit;
 using System.Linq;
 
@@ -15,7 +13,7 @@ namespace Raven.Tests.Bugs
 			using(var server = GetNewServer())
 			using(var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
-				store.Conventions.FailoverBehavior=FailoverBehavior.FailImmediately;
+				store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 				using(var session = store.OpenSession())
 				{
 					session.Store(new User());
@@ -25,7 +23,7 @@ namespace Raven.Tests.Bugs
 				WaitForAllRequestsToComplete(server);
 				server.Server.ResetNumberOfRequests();
 
-				for (int i = 0; i < 5; i++)
+				for (var i = 0; i < 5; i++)
 				{
 					using (var session = store.OpenSession())
 					{
@@ -34,7 +32,6 @@ namespace Raven.Tests.Bugs
 							session.Load<User>("users/1");
 						}
 					}
-
 				}
 			
 				WaitForAllRequestsToComplete(server);
