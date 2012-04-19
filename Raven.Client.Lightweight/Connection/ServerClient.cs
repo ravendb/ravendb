@@ -269,17 +269,24 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				{
 					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
 					var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
-					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+					var etag = httpWebResponse.GetResponseHeader("ETag");
 
-					throw new ConflictException("Conflict detected on " + key +
-												", conflict must be resolved before the document will be accessible")
-					{
-						ConflictedVersionIds = conflictIds,
-						Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
-					};
+					throw CreateConcurrencyException(key, conflictsDoc, etag);
 				}
 				throw;
 			}
+		}
+
+		private static ConflictException CreateConcurrencyException(string key, RavenJObject conflictsDoc, string etag)
+		{
+			var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+			return new ConflictException("Conflict detected on " + key +
+			                            ", conflict must be resolved before the document will be accessible")
+			{
+				ConflictedVersionIds = conflictIds,
+				Etag = new Guid(etag)
+			};
 		}
 
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
@@ -823,11 +830,24 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			var result = (RavenJObject)request.ReadResponseJson();
 
 			var results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList();
-			return new MultiLoadResult
+			var multiLoadResult = new MultiLoadResult
 			{
 				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
 				Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.InvariantCultureIgnoreCase))).ToList()
 			};
+			foreach (var docResult in multiLoadResult.Results.Concat(multiLoadResult.Includes))
+			{
+				if (docResult == null)
+					continue;
+
+				var metadata = docResult[Constants.Metadata];
+				if(metadata == null)
+					continue;
+
+				if (metadata.Value<int>("@Http-Status-Code") == 409)
+					throw CreateConcurrencyException(metadata.Value<string>("@id"), docResult, metadata.Value<string>("@etag"));
+			}
+			return multiLoadResult;
 		}
 
 		/// <summary>
