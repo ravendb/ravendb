@@ -225,6 +225,9 @@ namespace Raven.Tests
 		{
 			IOExtensions.DeleteDirectory(DbName);
 			IOExtensions.DeleteDirectory(DbDirectory);
+
+			// Delete tenants created using the EnsureDatabaseExists method.
+			IOExtensions.DeleteDirectory("Tenants");
 		}
 
 		public double Timer(Action action)
@@ -238,8 +241,7 @@ namespace Raven.Tests
 
 		public virtual void Dispose()
 		{
-			// Delete tenants created using the EnsureDatabaseExists method.
-			IOExtensions.DeleteDirectory("Tenants");
+			ClearDatabaseDirectory();
 		}
 	}
 }
