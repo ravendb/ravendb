@@ -11,9 +11,15 @@ namespace Raven.Tests.Bugs
 		public void CanAggressivelyCacheLoads()
 		{
 			using(var server = GetNewServer())
-			using(var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
+			using (var store = new DocumentStore
+								{
+									Url = "http://localhost:8079",
+									Conventions =
+										{
+											FailoverBehavior = FailoverBehavior.FailImmediately
+										}
+								}.Initialize())
 			{
-				store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 				using(var session = store.OpenSession())
 				{
 					session.Store(new User());
