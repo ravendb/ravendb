@@ -672,7 +672,7 @@ namespace Raven.Database.Indexing
 									sb.AppendLine("- pageSize: " + pageSize);
 									sb.AppendLine("- indexQuery.SkippedResults" + indexQuery.SkippedResults);
 									sb.AppendLine("- usedSkippedResultsInc: " + usedSkippedResultsInc);
-									throw new IndexOutOfRangeException(sb.ToString());
+									logQuerying.Debug(sb.ToString());
 								}
 
 								Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
