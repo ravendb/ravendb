@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -43,7 +44,9 @@ namespace Raven.Database.Linq
 				typeof (int).Namespace,
 				typeof (LinqOnDynamic).Namespace,
 				typeof(Field).Namespace,
+				typeof(CultureInfo).Namespace,
 			};
+			
 			foreach (var extension in extensions)
 			{
 				foreach (var ns in extension.Value.GetNamespacesToImport())
