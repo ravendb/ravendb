@@ -19,7 +19,9 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 {
     public class MoreLikeThis_should_support_MapReduce_indexes : TestWithInMemoryDatabase
     {
-        public string DolanId;
+        public string JavascriptBookId;
+        public string PhpBookId;
+        public string EclipseBookId;
 
         public MoreLikeThis_should_support_MapReduce_indexes() : 
             base(config =>
@@ -29,48 +31,38 @@ namespace Raven.Bundles.Tests.MoreLikeThis
         {
             using(var session = documentStore.OpenSession())
             {
-                var dolan = new Thing()
-                {
-                    Name = "Dolan"
-                };
-                session.Store(dolan);
-
+                var javascriptBook = new Book() { Title = "Javascript: The Good Parts" };
+                var phpBook = new Book() { Title = "PHP: The Good Parts" };
+                var eclipseBook = new Book() { Title = "Zend Studio for Eclipse Developer's Guide" };
+                
+                session.Store(javascriptBook);
+                session.Store(phpBook);
+                session.Store(eclipseBook);
                 session.SaveChanges();
 
-                DolanId = dolan.Id;
+                JavascriptBookId = javascriptBook.Id;
+                PhpBookId = phpBook.Id;
+                EclipseBookId = eclipseBook.Id;
 
-                Assert.NotNull(DolanId);
-
-                session.Store(new Opinion()
-                {
-                    TargetId = DolanId,
-                    Value = "cannot be trusted"
-                });
-
+                session.Store(new Author() { BookId = javascriptBook.Id, Name = "Douglas Crockford" });
+                session.Store(new Author() { BookId = phpBook.Id, Name = "Peter MacIntyre" });
+                session.Store(new Author() { BookId = eclipseBook.Id, Name = "Peter MacIntyre" });
+                session.Store(new Book() { Title = "Unrelated" });
                 session.SaveChanges();
-            }
-        }
 
-        [Fact]
-        public void Can_find_document_related_by_name()
-        {
-            new MapReduceIndex().Execute(documentStore);
-
-            using (var session = documentStore.OpenSession())
-            {
-                session.Store(new Thing() { Name = "Cousin of Dolan" });
-                session.Store(new Thing() { Name = "Gooby, Pls" });
-                session.Store(new Thing() { Name = "Dafi" });
-
-                session.SaveChanges();
+                new MapReduceIndex().Execute(documentStore);
 
                 var results = session.Query<IndexDocument, MapReduceIndex>().Customize(x => x.WaitForNonStaleResults()).Count();
 
                 Assert.Equal(4, results);
 
-                Assert.Empty(documentStore.DatabaseCommands.GetStatistics().Errors);
+                Assert.Empty(documentStore.DatabaseCommands.GetStatistics().Errors);            
             }
+        }
 
+        [Fact]
+        public void Can_find_book_with_similar_name()
+        {
             using (var session = documentStore.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<IndexDocument, MapReduceIndex>(
@@ -78,45 +70,21 @@ namespace Raven.Bundles.Tests.MoreLikeThis
                     {
                         MapGroupFields = new NameValueCollection()
                         {
-                            {"TargetId", DolanId}
+                            {"BookId", JavascriptBookId}
                         },
                         MinimumTermFrequency = 1,
                         MinimumDocumentFrequency = 1
                     });
 
                 Assert.Equal(1, list.Count());
-                Assert.Contains("Cousin of Dolan", list.Single().Text);
+                Assert.Contains("PHP: The Good Parts", list.Single().Text);
             }
         }
 
 
         [Fact]
-        public void Can_find_document_related_by_external_document()
+        public void Can_find_book_with_similar_author()
         {
-            new MapReduceIndex().Execute(documentStore);
-
-            using (var session = documentStore.OpenSession())
-            {
-                var similarThing = new Thing() {Name = "Miki"};
-                session.Store(similarThing);
-                session.Store(new Thing() { Name = "Gooby, Pls" });
-                session.Store(new Thing() { Name = "Dafi" });
-
-                session.SaveChanges();
-
-                session.Store(new Opinion()
-                {
-                    TargetId = similarThing.Id,
-                    Value = "Cannot be released"
-                });
-
-                var results = session.Query<IndexDocument, MapReduceIndex>().Customize(x => x.WaitForNonStaleResults()).Count();
-
-                Assert.Equal(4, results);
-
-                Assert.Empty(documentStore.DatabaseCommands.GetStatistics().Errors);
-            }
-
             using (var session = documentStore.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<IndexDocument, MapReduceIndex>(
@@ -124,32 +92,32 @@ namespace Raven.Bundles.Tests.MoreLikeThis
                     {
                         MapGroupFields = new NameValueCollection()
                         {
-                            {"TargetId", DolanId}
+                            {"BookId", EclipseBookId}
                         },
                         MinimumTermFrequency = 1,
                         MinimumDocumentFrequency = 1
                     });
 
                 Assert.Equal(1, list.Count());
-                Assert.Contains("Miki", list.Single().TargetId);
+                Assert.Contains("PHP: The Good Parts", list.Single().Text);
             }
         }
 
-        public class Thing
+        public class Book
         {
             public string Id { get; set; }
-            public string Name;
+            public string Title;
         }
 
-        public class Opinion
+        public class Author
         {
-            public string TargetId;
-            public string Value;
+            public string BookId;
+            public string Name;
         }
 
         public class IndexDocument
         {
-            public string TargetId;
+            public string BookId;
             public string Text;
         }
 
@@ -166,29 +134,29 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
             public MapReduceIndex()
             {
-                this.AddMap<Thing>(things => from thing in things select new IndexDocument()
+                this.AddMap<Book>(things => from thing in things select new IndexDocument()
                 {
-                    TargetId = thing.Id,
-                    Text = thing.Name
+                    BookId = thing.Id,
+                    Text = thing.Title
                 });
 
-                this.AddMap<Opinion>(opinions => from opinion in opinions select new IndexDocument()
+                this.AddMap<Author>(opinions => from opinion in opinions select new IndexDocument()
                 {
-                    TargetId = opinion.TargetId,
-                    Text = opinion.Value
+                    BookId = opinion.BookId,
+                    Text = opinion.Name
                 });
 
                 this.Reduce = documents => from doc in documents
-                                           group doc by doc.TargetId into g
+                                           group doc by doc.BookId into g
                                            select new IndexDocument()
                                            {
-                                               TargetId = g.Key,
+                                               BookId = g.Key,
                                                Text = string.Join(" ", g.Select(d => d.Text))
                                            };
 
 
             	Index(x => x.Text, FieldIndexing.Analyzed);
-            	Index(x => x.TargetId, FieldIndexing.NotAnalyzed);
+            	Index(x => x.BookId, FieldIndexing.NotAnalyzed);
             }
         }
     }

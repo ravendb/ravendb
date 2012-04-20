@@ -28,7 +28,8 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 			ravenConfiguration.DataDirectory = path;
 
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
+			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+
 			ravenDbServer = new RavenDbServer(ravenConfiguration);
 
 			documentStore = new DocumentStore
