@@ -91,6 +91,11 @@ namespace Raven.Client.Linq
 			get { return queryGenerator; }
 		}
 
+		public Action<IDocumentQueryCustomization> CustomizeQuery
+		{
+			get { return customizeQuery; }
+		}
+
 		/// <summary>
 		/// Set the fields to fetch
 		/// </summary>
