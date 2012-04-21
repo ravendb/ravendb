@@ -37,6 +37,9 @@ namespace Raven.Client.Document
 	/// </summary>
 	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
 	{
+		protected bool isSpatialQuery;
+		protected double lat, lng, radius;
+
 		/// <summary>
 		/// Whatever to negate the next operation
 		/// </summary>
@@ -1438,6 +1441,25 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		protected virtual IndexQuery GenerateIndexQuery(string query)
 		{
+			if(isSpatialQuery)
+			{
+				return new SpatialIndexQuery
+				{
+					GroupBy = groupByFields,
+					AggregationOperation = aggregationOp,
+					Query = query,
+					PageSize = pageSize ?? 128,
+					Start = start,
+					Cutoff = cutoff,
+					CutoffEtag = cutoffEtag,
+					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+					FieldsToFetch = projectionFields,
+					Latitude = lat,
+					Longitude = lng,
+					Radius = radius,
+				};
+			}
+
 			return new IndexQuery
 			{
 				GroupBy = groupByFields,

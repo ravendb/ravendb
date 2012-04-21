@@ -339,14 +339,22 @@ namespace Raven.Client.Document
 			return (IAsyncDocumentQuery<T>)GenerateQueryWithinRadiusOf(radius, latitude, longitude);
 		}
 
+		protected override object GenerateQueryWithinRadiusOf(double radius, double latitude, double longitude)
+		{
+			isSpatialQuery = true;
+			this.radius = radius;
+			lat = latitude;
+			lng = longitude;
+			return this;
+		}
+
 		/// <summary>
 		/// Sorts the query results by distance.
 		/// </summary>
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SortByDistance()
 		{
-			var asyncSpatialDocumentQuery = new AsyncSpatialDocumentQuery<T>(this);
-			asyncSpatialDocumentQuery.OrderBy(Constants.DistanceFieldName);
-			return asyncSpatialDocumentQuery;
+			OrderBy(Constants.DistanceFieldName);
+			return this;
 		}
 
 		/// <summary>
@@ -588,24 +596,6 @@ namespace Raven.Client.Document
 			Statistics(out stats);
 			return this;
 		}
-
-		/// <summary>
-		/// Filter matches to be inside the specified radius
-		/// </summary>
-		/// <param name="radius">The radius.</param>
-		/// <param name="latitude">The latitude.</param>
-		/// <param name="longitude">The longitude.</param>
-		protected override object GenerateQueryWithinRadiusOf(double radius, double latitude, double longitude)
-		{
-			var spatialDocumentQuery = new AsyncSpatialDocumentQuery<T>(this, radius, latitude, longitude);
-			if (negate)
-			{
-				negate = false;
-				spatialDocumentQuery.NegateNext();
-			}
-			return spatialDocumentQuery;
-		}
-
 	}
 }
 #endif
