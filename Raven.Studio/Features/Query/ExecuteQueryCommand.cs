@@ -80,13 +80,14 @@ namespace Raven.Studio.Features.Query
 				q.SortedFields = sortedFields.ToArray();
 			}
 
-			if (model.IsSpatialQuerySupported)
+			if (model.IsSpatialQuerySupported && 
+				model.Latitude.HasValue && model.Longitude.HasValue)
 			{
 				q = new SpatialIndexQuery(q)
 					{
-						Latitude = model.Latitude.HasValue ? model.Latitude.Value : 0,
-						Longitude = model.Longitude.HasValue ? model.Longitude.Value : 0,
-						Radius = model.Radius.HasValue ? model.Radius.Value : 0,
+						Latitude = model.Latitude.Value,
+						Longitude = model.Longitude.Value,
+						Radius = model.Radius.HasValue ? model.Radius.Value : 1,
 					};
 			}
 
