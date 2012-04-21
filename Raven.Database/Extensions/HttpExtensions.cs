@@ -254,7 +254,7 @@ namespace Raven.Database.Extensions
 		{
 			int start;
 			int.TryParse(context.Request.QueryString["start"], out start);
-			return start;
+			return Math.Max(0, start);
 		}
 
 		public static bool GetAllowStale(this IHttpContext context)
