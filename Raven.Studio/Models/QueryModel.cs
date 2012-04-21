@@ -239,7 +239,12 @@ namespace Raven.Studio.Models
 					}
 					var fields = definition.Fields;
 					QueryIndexAutoComplete = new QueryIndexAutoComplete(IndexName, Query, fields);
-					IsSpatialQuerySupported = definition.Map.Contains("SpatialIndex.Generate");
+					
+					const string spatialindexGenerate = "SpatialIndex.Generate";
+					IsSpatialQuerySupported =
+						definition.Maps.Any(x => x.Contains(spatialindexGenerate)) ||
+						(definition.Reduce != null && definition.Reduce.Contains(spatialindexGenerate));
+
 					SetSortByOptions(fields);
 					Execute.Execute(string.Empty);
 				}).Catch();
