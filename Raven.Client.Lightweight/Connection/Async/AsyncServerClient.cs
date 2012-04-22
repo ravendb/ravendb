@@ -828,7 +828,7 @@ namespace Raven.Client.Connection.Async
 		private Task ExecuteWithReplication(string method, Func<string, Task> operation)
 		{
 			// Convert the Func<string, Task> to a Func<string, Task<object>>
-			return ExecuteWithReplication(method, url => operation(url).ContinueWith<object>(t => null));
+			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t => null));
 		}
 
 		private Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
