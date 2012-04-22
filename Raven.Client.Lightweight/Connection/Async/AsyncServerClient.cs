@@ -868,18 +868,14 @@ namespace Raven.Client.Connection.Async
 					if (!replicationInformer.ShouldExecuteUsing(url, state.CurrentRequest, state.Method, true))
 						goto case ExecuteWithReplicationStates.TryAllServers; // skips both checks
 
-					return AttemptOperationAndOnFailureCallExecuteWithReplication(url,
-																					state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrl));
+					return AttemptOperationAndOnFailureCallExecuteWithReplication(url,state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrl));
 
 				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrl:
 					if (replicationInformer.IsFirstFailure(url))
-						return AttemptOperationAndOnFailureCallExecuteWithReplication(url,
-																					  state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice));
-					else
-						goto case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice;
+						return AttemptOperationAndOnFailureCallExecuteWithReplication(url,state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice));
+					goto case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice;
 
 				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice:
-
 					replicationInformer.IncrementFailureCount(url);
 
 					goto case ExecuteWithReplicationStates.TryAllServers;
@@ -905,8 +901,7 @@ namespace Raven.Client.Connection.Async
 					if (replicationInformer.IsFirstFailure(destination))
 						return AttemptOperationAndOnFailureCallExecuteWithReplication(destination,
 																					  state.With(ExecuteWithReplicationStates.TryAllServersFailedTwice));
-					else
-						goto case ExecuteWithReplicationStates.TryAllServersFailedTwice;
+					goto case ExecuteWithReplicationStates.TryAllServersFailedTwice;
 
 				case ExecuteWithReplicationStates.TryAllServersFailedTwice:
 					replicationInformer.IncrementFailureCount(state.ReplicationDestinations[state.LastAttempt]);
@@ -943,8 +938,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 						case TaskStatus.Faulted:
 							if (ServerClient.IsServerDown(task.Exception))
 								return ExecuteWithReplication(state);
-							else
-								throw task.Exception;
+							throw task.Exception;
 
 						default:
 							throw new InvalidOperationException("Unknown task status in AttemptOperationAndOnFailureCallExecuteWithReplication");
