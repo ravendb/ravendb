@@ -816,6 +816,14 @@ namespace Raven.Client.Connection.Async
 			remove { replicationInformer.FailoverStatusChanged -= value; }
 		}
 
+		/// <summary>
+		/// Force the database commands to read directly from the master, unless there has been a failover.
+		/// </summary>
+		public void ForceReadFromMaster()
+		{
+			readStripingBase = -1;// this means that will have to use the master url first
+		}
+
 		private Task ExecuteWithReplication(string method, Func<string, Task> operation)
 		{
 			// Convert the Func<string, Task> to a Func<string, Task<object>>

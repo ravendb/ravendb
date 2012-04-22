@@ -293,7 +293,7 @@ namespace Raven.Client.Document
 				var session = new DocumentSession(this, listeners, sessionId,
 					SetupCommands(DatabaseCommands, options.Database, options.Credentials, options)
 #if !NET_3_5
-, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials)
+, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options)
 #endif
 );
 				AfterSessionCreated(session);
@@ -316,17 +316,19 @@ namespace Raven.Client.Document
 			return databaseCommands;
 		}
 
+#endif
+
 #if !NET_3_5
-		private static IAsyncDatabaseCommands SetupCommandsAsync(IAsyncDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession)
+		private static IAsyncDatabaseCommands SetupCommandsAsync(IAsyncDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession, OpenSessionOptions options)
 		{
 			if (database != null)
 				databaseCommands = databaseCommands.ForDatabase(database);
 			if (credentialsForSession != null)
 				databaseCommands = databaseCommands.With(credentialsForSession);
+			if (options.ForceReadFromMaster)
+				databaseCommands.ForceReadFromMaster();
 			return databaseCommands;
 		}
-#endif
-
 #endif
 
 		/// <summary>
@@ -621,7 +623,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public override IAsyncDocumentSession OpenAsyncSession()
 		{
-			return OpenAsyncSessionInternal(AsyncDatabaseCommands);
+			return OpenAsyncSession(new OpenSessionOptions());
 		}
 
 		/// <summary>
@@ -630,7 +632,15 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public override IAsyncDocumentSession OpenAsyncSession(string databaseName)
 		{
-			return OpenAsyncSessionInternal(AsyncDatabaseCommands.ForDatabase(databaseName));
+			return OpenAsyncSession(new OpenSessionOptions
+			{
+				Database = databaseName
+			});
+		}
+
+		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
+		{
+			return OpenAsyncSessionInternal(SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
 
 #endif

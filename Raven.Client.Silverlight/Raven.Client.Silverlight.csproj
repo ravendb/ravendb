@@ -271,6 +271,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\IAsyncLoaderWithInclude.cs">
       <Link>Imports\Document\IAsyncLoaderWithInclude.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\OpenSessionOptions.cs">
+      <Link>Document\OpenSessionOptions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\LoadOperation.cs">
       <Link>Imports\Document\SessionOperations\LoadOperation.cs</Link>
     </Compile>
