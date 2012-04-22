@@ -984,6 +984,11 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 			get { return profilingInformation; }
 		}
+
+		public void ForceReadFromMaster()
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
 

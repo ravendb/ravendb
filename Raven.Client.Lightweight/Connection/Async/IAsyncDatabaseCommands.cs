@@ -237,6 +237,11 @@ namespace Raven.Client.Connection.Async
 		Task<BuildNumber> GetBuildNumber();
 
 		Task StartBackupAsync(string backupLocation);
+
+		/// <summary>
+		/// Force the database commands to read directly from the master, unless there has been a failover.
+		/// </summary>
+		void ForceReadFromMaster();
 	}
 }
 #endif
