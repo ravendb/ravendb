@@ -82,6 +82,15 @@
     <Compile Include="Expiration\WithCascade.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisTests.cs" />
+    <Compile Include="Replication\Async\AttachmentReplication.cs" />
+    <Compile Include="Replication\Async\ConflictWhenReplicating.cs" />
+    <Compile Include="Replication\Async\FailoverBetweenTwoMultiTenantDatabases.cs" />
+    <Compile Include="Replication\Async\FailureHandling.cs" />
+    <Compile Include="Replication\Async\MultihopReplication.cs" />
+    <Compile Include="Replication\Async\ReadStriping.cs" />
+    <Compile Include="Replication\Async\ReplicationWithOAuth.cs" />
+    <Compile Include="Replication\Async\SimpleReplication.cs" />
+    <Compile Include="Replication\Async\WritesDuringFailover.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\Bugs\MultipleWritesInReplicationWindow.cs" />
     <Compile Include="Replication\Bugs\ReplicatingDanish.cs" />
@@ -196,6 +205,7 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\..\Tools\StyleCop\StyleCop.Targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
