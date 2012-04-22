@@ -319,11 +319,8 @@ namespace Raven.Client.Document
 				databaseCommands.ForceReadFromMaster();
 			return databaseCommands;
 		}
-
-#if !NET_3_5
 #endif
 
-#if !NET_3_5
 #if !NET35
 		private static IAsyncDatabaseCommands SetupCommandsAsync(IAsyncDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession, OpenSessionOptions options)
 		{

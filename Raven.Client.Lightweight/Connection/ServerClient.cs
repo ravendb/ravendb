@@ -237,10 +237,11 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 
 		internal static bool IsServerDown(Exception e)
 		{
-#if !NET_3_5
-			if (e is AggregateException)
+#if !NET35
+			var aggregateException = e as AggregateException;
+			if (aggregateException != null)
 			{
-				e = ((AggregateException)e).ExtractSingleInnerException();
+				e = aggregateException.ExtractSingleInnerException();
 			}
 #endif
 
