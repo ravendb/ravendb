@@ -660,21 +660,6 @@ namespace Raven.Database.Indexing
 
 							for (var i = start; (i - start) < pageSize && i < search.TotalHits; i++)
 							{
-								if (i >= search.ScoreDocs.Length)
-								{
-									var sb = new StringBuilder();
-									sb.AppendLine("DEBUG INFO");
-									sb.AppendLine("- Index name: " + parent.name);
-									sb.AppendLine("- Query: " + indexQuery.Query);
-									sb.AppendLine("- Start: " + start);
-									sb.AppendLine("- i: " + i);
-									sb.AppendLine("- IndexQuery.PageSize: " + indexQuery.PageSize);
-									sb.AppendLine("- pageSize: " + pageSize);
-									sb.AppendLine("- indexQuery.SkippedResults" + indexQuery.SkippedResults);
-									sb.AppendLine("- usedSkippedResultsInc: " + usedSkippedResultsInc);
-									logQuerying.Debug(sb.ToString());
-								}
-
 								Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
 								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);
 								if (ShouldIncludeInResults(indexQueryResult) == false)
