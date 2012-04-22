@@ -641,12 +641,10 @@ namespace Raven.Database.Indexing
 						int pageSize = indexQuery.PageSize;
 						int returnedResults = 0;
 						int skippedResultsInCurrentLoop = 0;
-						var usedSkippedResultsInc = false; // DEBUG
 						do
 						{
 							if (skippedResultsInCurrentLoop > 0)
 							{
-								usedSkippedResultsInc = true;
 								start = start + pageSize;
 								// trying to guesstimate how many results we will need to read from the index
 								// to get enough unique documents to match the page size
@@ -657,8 +655,8 @@ namespace Raven.Database.Indexing
 							indexQuery.TotalSize.Value = search.TotalHits;
 
 							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
-
-							for (var i = start; (i - start) < pageSize && i < search.TotalHits; i++)
+							
+							for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
 							{
 								Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
 								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);

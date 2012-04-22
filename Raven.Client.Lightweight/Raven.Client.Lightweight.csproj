@@ -90,7 +90,6 @@
     <Compile Include="Converters\ITypeConverter.cs" />
     <Compile Include="DocumentStoreBase.cs" />
     <Compile Include="Document\AsyncDocumentQuery.cs" />
-    <Compile Include="Document\AsyncSpatialDocumentQuery.cs" />
     <Compile Include="Document\Async\AsyncDocumentSession.cs" />
     <Compile Include="Document\AsyncMultiLoaderWithInclude.cs" />
     <Compile Include="Document\Batches\ILazyLoaderWithInclude.cs" />
@@ -125,7 +124,6 @@
     <Compile Include="Document\SessionOperations\QueryOperation.cs" />
     <Compile Include="Document\OpenSessionOptions.cs" />
     <Compile Include="Document\ShardedDocumentQuery.cs" />
-    <Compile Include="Document\SpatialDocumentQuery.cs" />
     <Compile Include="EntityStored.cs" />
     <Compile Include="EntityToDocument.cs" />
     <Compile Include="Exceptions\ConflictException.cs" />

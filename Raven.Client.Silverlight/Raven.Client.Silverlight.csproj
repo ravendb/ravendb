@@ -244,9 +244,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\AsyncMultiLoaderWithInclude.cs">
       <Link>Imports\Document\AsyncMultiLoaderWithInclude.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncSpatialDocumentQuery.cs">
-      <Link>Imports\Document\AsyncSpatialDocumentQuery.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyLoaderWithInclude.cs">
       <Link>Imports\Document\Batches\ILazyLoaderWithInclude.cs</Link>
     </Compile>
@@ -609,9 +606,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\ShardedDocumentQuery.cs">
       <Link>Imports\Document\ShardedDocumentQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\SpatialDocumentQuery.cs">
-      <Link>Imports\Document\SpatialDocumentQuery.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\EntityStored.cs">
       <Link>Imports\EntityStored.cs</Link>

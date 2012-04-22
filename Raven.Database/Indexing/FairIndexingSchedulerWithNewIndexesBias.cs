@@ -65,7 +65,7 @@ namespace Raven.Database.Indexing
 		public void RecordAmountOfItemsToIndex(int value)
 		{
 			var currentLastAmountOfItemsToIndex = lastAmountOfItemsToIndex;
-			var amountOfItemsToIndex = activeFiltering
+			var amountOfItemsToIndex = activeFiltering && currentLastAmountOfItemsToIndex.Count > 0
 			                           	? // if we are actively filtering, we have multiple levels, so we have to assume 
 			                           // that the max amount is still the current one, this prevent the different levels of indexing batch
 			                           // size from "fighting" over the batch size.
