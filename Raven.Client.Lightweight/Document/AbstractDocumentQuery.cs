@@ -11,6 +11,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -1474,16 +1475,37 @@ If you really want to do in memory filtering on the data returned from the query
 			};
 		}
 
+		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)", RegexOptions.Compiled);
+
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		public void Search(string fieldName, string searchTerms)
+		public void Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
 		{
 			lastEquality = new KeyValuePair<string, string>(fieldName, "<<"+searchTerms+">>");
 			theQueryText.Append(' ');
 			
 			NegateIfNeeded();
+			switch (escapeQueryOptions)
+			{
+				case EscapeQueryOptions.EscapeAll:
+					searchTerms = RavenQuery.Escape(searchTerms, false, false);
+					break;
+				case EscapeQueryOptions.AllowPostfixWildcard:
+					searchTerms = RavenQuery.Escape(searchTerms, false, false);
+					searchTerms = espacePostfixWildcard.Replace(searchTerms, "*");
+					break;
+				case EscapeQueryOptions.AllowAllWildcards:
+					searchTerms = RavenQuery.Escape(searchTerms, false, false);
+					searchTerms = searchTerms.Replace("\\*", "*");
+					break;
+				case EscapeQueryOptions.RawQuery:
+					break;
+				default:
+					throw new ArgumentOutOfRangeException("escapeQueryOptions", "Value: "  + escapeQueryOptions);
+			}
+
 			theQueryText.Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">>");
 		}
 

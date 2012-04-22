@@ -188,7 +188,7 @@ namespace Raven.Client.Linq
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms, decimal boost = 1, SearchOptions options = SearchOptions.Or)
+		public static IRavenQueryable<T> Search<T>(this IRavenQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms, decimal boost = 1, SearchOptions options = SearchOptions.Or, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.EscapeAll)
 		{
 			var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 			Expression expression = self.Expression;
@@ -200,7 +200,8 @@ namespace Raven.Client.Linq
 																	  fieldSelector,
 																	  Expression.Constant(searchTerms),
 																	  Expression.Constant(boost),
-																	  Expression.Constant(options)));
+																	  Expression.Constant(options),
+																	  Expression.Constant(escapeQueryOptions)));
 			return (IRavenQueryable<T>)queryable;
 		}
 

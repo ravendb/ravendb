@@ -692,7 +692,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					{
 						luceneQuery.NegateNext();
 					}
-					luceneQuery.Search(expressionInfo.Path, RavenQuery.Escape(searchTerms, false, false));
+
+					if (GetValueFromExpressionWithoutConversion(expression.Arguments[5], out value) == false)
+					{
+						throw new InvalidOperationException("Could not extract value from " + expression);
+					}
+					var queryOptions = (EscapeQueryOptions) value;
+					luceneQuery.Search(expressionInfo.Path, searchTerms, queryOptions);
 					luceneQuery.Boost(boost);
 
 					if ((options & SearchOptions.And) == SearchOptions.And)
