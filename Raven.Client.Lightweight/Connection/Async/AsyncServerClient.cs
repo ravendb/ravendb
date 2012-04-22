@@ -938,7 +938,9 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 						case TaskStatus.Faulted:
 							if (ServerClient.IsServerDown(task.Exception))
 								return ExecuteWithReplication(state);
-							throw task.Exception;
+							tcs = new TaskCompletionSource<T>();
+							tcs.SetException(task.Exception);
+							return tcs.Task;
 
 						default:
 							throw new InvalidOperationException("Unknown task status in AttemptOperationAndOnFailureCallExecuteWithReplication");
