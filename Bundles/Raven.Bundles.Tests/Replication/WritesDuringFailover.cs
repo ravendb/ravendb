@@ -1,5 +1,4 @@
 using System;
-using System.Net;
 using System.Threading;
 using Raven.Bundles.Tests.Versioning;
 using Raven.Client;
@@ -28,7 +27,7 @@ namespace Raven.Bundles.Tests.Replication
 				session.SaveChanges();
 			}
 
-			WaitForReplication(store2);
+			WaitForReplication(store2, "companies/1");
 
 			servers[0].Dispose();
 
@@ -57,7 +56,7 @@ namespace Raven.Bundles.Tests.Replication
 				session.SaveChanges();
 			}
 
-			WaitForReplication(store2);
+			WaitForReplication(store2, "companies/1");
 
 			servers[0].Dispose();
 
@@ -91,7 +90,7 @@ namespace Raven.Bundles.Tests.Replication
 				session.SaveChanges();
 			}
 
-			WaitForReplication(store2);
+			WaitForReplication(store2, "companies/1");
 
 			servers[0].Dispose();
 
@@ -104,53 +103,6 @@ namespace Raven.Bundles.Tests.Replication
 			}
 		}
 
-		protected void WaitForReplication(IDocumentStore store2)
-		{
-			for (int i = 0; i < RetriesCount; i++)
-			{
-				using (var session = store2.OpenSession())
-				{
-					var company = session.Load<Company>("companies/1");
-					if (company != null)
-						break;
-					Thread.Sleep(100);
-				}
-			}
-		}
-	}
-
-	public class WritesDuringFailover2 : WritesDuringFailover
-	{
-		protected override void ConfigureStore(DocumentStore documentStore)
-		{
-			documentStore.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
-		}
-
-		[Fact]
-		public void Can_disallow_failover()
-		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-
-			TellFirstInstanceToReplicateToSecondInstance();
-
-			var serverClient = ((ServerClient)store1.DatabaseCommands);
-			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
-
-			using (var session = store1.OpenSession())
-			{
-				session.Store(new Company { Name = "Hibernating Rhinos" });
-				session.SaveChanges();
-			}
-
-			WaitForReplication(store2);
-
-			servers[0].Dispose();
-
-			using (var session = store1.OpenSession())
-			{
-				Assert.Throws<WebException>(() => session.Load<Company>("companies/1"));
-			}
-		}
+		
 	}
 }
