@@ -363,6 +363,7 @@ task DoRelease -depends Compile, `
 	CopyRootFiles, `
 	CopySamples, `
 	ZipOutput, `
+	CreateNugetPackage, `
 	CreateNugetPackageFineGrained, `
 	ResetBuildArtifcats {	
 	Write-Host "Done building RavenDB"
@@ -399,6 +400,10 @@ task UploadOpenSource -depends OpenSource, DoRelease, Upload
 
 task UploadUnstable -depends Unstable, DoRelease, Upload
 
+task CreateNugetPackage {
+
+	Remove-Item $base_dir\RavenDB*.nupkg
+	Remove-Item $build_dir\NuPack -Force -Recurse -ErrorAction SilentlyContinue
 	New-Item $build_dir\NuPack -Type directory -ErrorAction SilentlyContinue | Out-Null
 	New-Item $build_dir\NuPack\content -Type directory -ErrorAction SilentlyContinue| Out-Null
 	New-Item $build_dir\NuPack\lib -Type directory -ErrorAction SilentlyContinue| Out-Null
@@ -452,6 +457,71 @@ task UploadUnstable -depends Unstable, DoRelease, Upload
 	}
 
 	# Remove files that are obtained as dependencies
+	Remove-Item $build_dir\NuPack\lib\*\NLog.* -Recurse
+	Remove-Item $build_dir\NuPack-Client\lib\*\NLog.* -Recurse
+	Remove-Item $build_dir\NuPack-Embedded\lib\*\NLog.* -Recurse
+
+	# The Server folder is used as a tool, and therefore needs the dependency DLLs in it (can't depend on Nuget for that)
+	$server_files | ForEach-Object { Copy-Item "$_" $build_dir\NuPack\server }
+	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\NuPack\server\Raven.Server.exe.config
+
+	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack\content\Web.config.transform
+	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack-Client\content\Web.config.transform
+	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack-Embedded\content\Web.config.transform
+
+	Copy-Item $build_dir\Raven.Smuggler.??? $build_dir\NuPack\Tools
+	Copy-Item $build_dir\Raven.Smuggler.??? $build_dir\NuPack-Client\Tools
+	Copy-Item $build_dir\Raven.Smuggler.??? $build_dir\NuPack-Embedded\Tools
+
+	Copy-Item $build_dir\Raven.Backup.??? $build_dir\NuPack\Tools
+	Copy-Item $build_dir\Raven.Backup.??? $build_dir\NuPack-Client\Tools
+	Copy-Item $build_dir\Raven.Backup.??? $build_dir\NuPack-Embedded\Tools
+
+	# Generate the .nupkg files
+	$nupack = [xml](Get-Content $base_dir\RavenDB.nuspec)
+	
+	$nugetVersion = "$version.$env:buildlabel"
+	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
+		$nugetVersion += "-Unstable"
+	}
+	$nupack.package.metadata.version = $nugetVersion
+
+	$writerSettings = new-object System.Xml.XmlWriterSettings
+	$writerSettings.Indent = $true
+	
+	$nupack.Save("$build_dir\Nupack\RavenDB.nuspec");
+	&"$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB.nuspec
+
+	$tags = $nupack.package.metadata.tags
+	
+	$nupack.package.metadata.id = "RavenDB-Client"
+	$nupack.package.metadata.title = "RavenDB (Client)"
+	$nupack.package.metadata.tags = "$tags client"
+	$nupack.Save("$build_dir\Nupack-Client\RavenDB-Client.nuspec");
+	&"$tools_dir\nuget.exe" pack $build_dir\NuPack-Client\RavenDB-Client.nuspec
+	
+	$nupack.package.metadata.id = "RavenDB-Embedded"
+	$nupack.package.metadata.title = "RavenDB (Embedded)"
+	$nupack.package.metadata.tags = "$tags embedded"
+	$nupack.Save("$build_dir\Nupack-Embedded\RavenDB-Embedded.nuspec");
+	&"$tools_dir\nuget.exe" pack $build_dir\NuPack-Embedded\RavenDB-Embedded.nuspec
+
+	# Upload packages
+	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
+	if ( (Test-Path $accessPath) ) {
+		$accessKey = Get-Content $accessPath
+		$accessKey = $accessKey.Trim()
+		
+		# Push to nuget repository
+		&"$tools_dir\NuGet.exe" push "RavenDB.$nugetVersion.nupkg" $accessKey
+		&"$tools_dir\NuGet.exe" push "RavenDB-Client.$nugetVersion.nupkg" $accessKey
+		&"$tools_dir\NuGet.exe" push "RavenDB-Embedded.$nugetVersion.nupkg" $accessKey
+	}
+	else {
+		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
+	}
+}
+
 task CreateNugetPackageFineGrained {
 
 	Remove-Item $base_dir\RavenDB*.nupkg
@@ -486,21 +556,12 @@ task CreateNugetPackageFineGrained {
 	Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
 	@("Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
 			  "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???",
-			  "Lucene.Net.Contrib.SpellChecker.???", "Raven.Backup.???", "Raven.Smuggler.???", "Raven.Storage.Esent.???",
-			  "Raven.Storage.Managed.???", "Raven.Munin.???" ) |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Database\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.Server -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Server.nuspec $nuget_dir\RavenDB.Server\RavenDB.Server.nuspec
-	@("BouncyCastle.Crypto.???", "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???",
-		"Lucene.Net.Contrib.SpellChecker.???", "NewtonSoft.Json.???", "NLog.???", "Raven.Abstractions.???", "Raven.Database.???",
-		"Raven.Munin.???", "Raven.Server.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???",
-		"Raven.Studio.xap") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Server }	
+			  "Lucene.Net.Contrib.SpellChecker.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "Raven.Studio.xap"  ) |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Database\lib\net40
+		}
 
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
-	@("Raven.Client.Embedded.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Embedded\lib\net40 }
-	New-Item $nuget_dir\RavenDB.Embedded\content -Type directory | Out-Null
-	Copy-Item "$build_dir\Raven.Studio.xap" $nuget_dir\RavenDB.Embedded\content
+	@("Raven.Client.Embedded.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Embedded\lib\net40	}
 	
 	New-Item $nuget_dir\RavenDB.Client.MoreLikeThis\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.MoreLikeThis.nuspec $nuget_dir\RavenDB.Client.MoreLikeThis\RavenDB.Client.MoreLikeThis.nuspec
