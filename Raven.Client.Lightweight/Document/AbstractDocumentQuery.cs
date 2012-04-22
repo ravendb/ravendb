@@ -1475,7 +1475,14 @@ If you really want to do in memory filtering on the data returned from the query
 			};
 		}
 
-		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)", RegexOptions.Compiled);
+		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)", 
+#if !SILVERLIGHT
+			RegexOptions.Compiled
+#else
+			RegexOptions.None
+#endif
+
+			);
 
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
