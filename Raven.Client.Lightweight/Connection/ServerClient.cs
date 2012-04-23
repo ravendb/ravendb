@@ -146,6 +146,7 @@ namespace Raven.Client.Connection
 				return request.ReadResponseJson();
 			});
 		}
+
 		private void ExecuteWithReplication(string method, Action<string> operation)
 		{
 			ExecuteWithReplication<object>(method, operationUrl =>
@@ -155,6 +156,12 @@ namespace Raven.Client.Connection
 			});
 		}
 
+		private T ExecuteWithReplication<T>(string method, Func<string, T> operation)
+		{
+			int currentRequest = Interlocked.Increment(ref requestCount);
+			return replicationInformer.ExecuteWithReplication(method, url, currentRequest, readStripingBase, operation);
+		}
+
 		/// <summary>
 		/// Allow to query whatever we are in failover mode or not
 		/// </summary>
@@ -162,89 +169,6 @@ namespace Raven.Client.Connection
 		public bool InFailoverMode()
 		{
 			return replicationInformer.GetFailureCount(url) > 0;
-		}
-
-		private T ExecuteWithReplication<T>(string method, Func<string, T> operation)
-		{
-			var currentRequest = Interlocked.Increment(ref requestCount);
-			T result;
-			var threadSafeCopy = replicationInformer.ReplicationDestinations;
-
-			var shouldReadFromAllServers = ((convention.FailoverBehavior & FailoverBehavior.ReadFromAllServers) == FailoverBehavior.ReadFromAllServers);
-			if (shouldReadFromAllServers && method == "GET")
-			{
-				var replicationIndex = readStripingBase%(threadSafeCopy.Count + 1);
-				// if replicationIndex == destinations count, then we want to use the master
-				// if replicationIndex < 0, then we were explicitly instructed to use the master
-				if (replicationIndex < threadSafeCopy.Count && replicationIndex >= 0)
-				{
-					// if it is failing, ignore that, and move to the master or any of the replicas
-					if (replicationInformer.ShouldExecuteUsing(threadSafeCopy[replicationIndex], currentRequest, method, false))
-					{
-						if (TryOperation(operation, threadSafeCopy[replicationIndex], true, out result))
-							return result;
-					}
-				}
-			}
-
-			if (replicationInformer.ShouldExecuteUsing(url, currentRequest, method, true))
-			{
-				if (TryOperation(operation, url, true, out result))
-					return result;
-				if (replicationInformer.IsFirstFailure(url) && TryOperation(operation, url, threadSafeCopy.Count > 0, out result))
-					return result;
-				replicationInformer.IncrementFailureCount(url);
-			}
-
-			for (var i = 0; i < threadSafeCopy.Count; i++)
-			{
-				var replicationDestination = threadSafeCopy[i];
-				if (replicationInformer.ShouldExecuteUsing(replicationDestination, currentRequest, method, false) == false)
-					continue;
-				if (TryOperation(operation, replicationDestination, true, out result))
-					return result;
-				if (replicationInformer.IsFirstFailure(replicationDestination) && TryOperation(operation, replicationDestination, threadSafeCopy.Count > i + 1, out result))
-					return result;
-				replicationInformer.IncrementFailureCount(replicationDestination);
-			}
-			// this should not be thrown, but since I know the value of should...
-			throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
-There is a high probability of a network problem preventing access to all the replicas.
-Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven instances.");
-		}
-
-
-
-		private bool TryOperation<T>(Func<string, T> operation, string operationUrl, bool avoidThrowing, out T result)
-		{
-			try
-			{
-				result = operation(operationUrl);
-				replicationInformer.ResetFailureCount(operationUrl);
-				return true;
-			}
-			catch (WebException e)
-			{
-				if (avoidThrowing == false)
-					throw;
-				result = default(T);
-				if (IsServerDown(e))
-					return false;
-				throw;
-			}
-		}
-
-		internal static bool IsServerDown(Exception e)
-		{
-#if !NET_3_5
-			if (e is AggregateException)
-			{
-				e = ((AggregateException)e).ExtractSingleInnerException();
-			}
-#endif
-
-			return e.InnerException is SocketException || 
-				e.InnerException is IOException;
 		}
 
 		/// <summary>

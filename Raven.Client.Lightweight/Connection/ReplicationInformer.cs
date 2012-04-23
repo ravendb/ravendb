@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading;
 #if !NET_3_5
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 #endif
 using NLog;
 using Raven.Abstractions;
@@ -22,6 +23,8 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
+using System.Net;
+using System.Net.Sockets;
 
 namespace Raven.Client.Connection
 {
@@ -369,6 +372,258 @@ namespace Raven.Client.Connection
 		public int GetReadStripingBase()
 		{
 			return Interlocked.Increment(ref readStripingBase);
+		}
+
+		#region ExecuteWithReplication
+
+		public T ExecuteWithReplication<T>(string method, string primaryUrl, int currentRequest, int readStripingBase, Func<string, T> operation)
+		{
+			T result;
+			var replicationDestinations = ReplicationDestinations; // thread safe copy
+
+			var shouldReadFromAllServers = ((conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) == FailoverBehavior.ReadFromAllServers);
+			if (shouldReadFromAllServers && method == "GET")
+			{
+				var replicationIndex = readStripingBase % (replicationDestinations.Count + 1);
+				// if replicationIndex == destinations count, then we want to use the master
+				// if replicationIndex < 0, then we were explicitly instructed to use the master
+				if (replicationIndex < replicationDestinations.Count && replicationIndex >= 0)
+				{
+					// if it is failing, ignore that, and move to the master or any of the replicas
+					if (ShouldExecuteUsing(replicationDestinations[replicationIndex], currentRequest, method, false))
+					{
+						if (TryOperation(operation, replicationDestinations[replicationIndex], true, out result))
+							return result;
+					}
+				}
+			}
+
+			if (ShouldExecuteUsing(primaryUrl, currentRequest, method, true))
+			{
+				if (TryOperation(operation, primaryUrl, true, out result))
+					return result;
+				if (IsFirstFailure(primaryUrl) && TryOperation(operation, primaryUrl, replicationDestinations.Count > 0, out result))
+					return result;
+				IncrementFailureCount(primaryUrl);
+			}
+
+			for (var i = 0; i < replicationDestinations.Count; i++)
+			{
+				var replicationDestination = replicationDestinations[i];
+				if (ShouldExecuteUsing(replicationDestination, currentRequest, method, false) == false)
+					continue;
+				if (TryOperation(operation, replicationDestination, true, out result))
+					return result;
+				if (IsFirstFailure(replicationDestination) && TryOperation(operation, replicationDestination, replicationDestinations.Count > i + 1, out result))
+					return result;
+				IncrementFailureCount(replicationDestination);
+			}
+			// this should not be thrown, but since I know the value of should...
+			throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
+There is a high probability of a network problem preventing access to all the replicas.
+Failed to get in touch with any of the " + (1 + replicationDestinations.Count) + " Raven instances.");
+		}
+
+		private bool TryOperation<T>(Func<string, T> operation, string operationUrl, bool avoidThrowing, out T result)
+		{
+			try
+			{
+				result = operation(operationUrl);
+				ResetFailureCount(operationUrl);
+				return true;
+			}
+			catch (WebException e)
+			{
+				if (avoidThrowing == false)
+					throw;
+				result = default(T);
+				if (IsServerDown(e))
+					return false;
+				throw;
+			}
+		}
+		#endregion
+
+#if !NET_3_5
+		#region ExecuteWithReplicationAsync
+
+		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, int currentRequest, int readStripingBase, Func<string, Task<T>> operation)
+		{
+			return ExecuteWithReplicationAsync(new ExecuteWithReplicationState<T>(method, primaryUrl, currentRequest, readStripingBase, operation));
+		}
+
+		private Task<T> ExecuteWithReplicationAsync<T>(ExecuteWithReplicationState<T> state)
+		{
+			switch (state.State)
+			{
+				case ExecuteWithReplicationStates.Start:
+					state.ReplicationDestinations = ReplicationDestinations;
+
+					var shouldReadFromAllServers = ((conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) ==
+													FailoverBehavior.ReadFromAllServers);
+					if (shouldReadFromAllServers && state.Method == "GET")
+					{
+						var replicationIndex = readStripingBase % (state.ReplicationDestinations.Count + 1);
+						// if replicationIndex == destinations count, then we want to use the master
+						// if replicationIndex < 0, then we were explicitly instructed to use the master
+						if (replicationIndex < state.ReplicationDestinations.Count && replicationIndex >= 0)
+						{
+							// if it is failing, ignore that, and move to the master or any of the replicas
+							if (ShouldExecuteUsing(state.ReplicationDestinations[replicationIndex], state.CurrentRequest, state.Method, false))
+							{
+								return AttemptOperationAndOnFailureCallExecuteWithReplication(state.ReplicationDestinations[replicationIndex],
+																							  state.With(ExecuteWithReplicationStates.AfterTryingWithStripedServer));
+							}
+						}
+					}
+
+					goto case ExecuteWithReplicationStates.AfterTryingWithStripedServer;
+				case ExecuteWithReplicationStates.AfterTryingWithStripedServer:
+
+					if (!ShouldExecuteUsing(state.PrimaryUrl, state.CurrentRequest, state.Method, true))
+						goto case ExecuteWithReplicationStates.TryAllServers; // skips both checks
+
+					return AttemptOperationAndOnFailureCallExecuteWithReplication(state.PrimaryUrl,
+																					state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrl));
+
+				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrl:
+					if (IsFirstFailure(state.PrimaryUrl))
+						return AttemptOperationAndOnFailureCallExecuteWithReplication(state.PrimaryUrl,
+																					  state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice));
+					else
+						goto case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice;
+
+				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice:
+
+					IncrementFailureCount(state.PrimaryUrl);
+
+					goto case ExecuteWithReplicationStates.TryAllServers;
+				case ExecuteWithReplicationStates.TryAllServers:
+
+					// The following part (cases ExecuteWithReplicationStates.TryAllServers, and ExecuteWithReplicationStates.TryAllServersSecondAttempt)
+					// is a for loop, rolled out using goto and nested calls of the method in continuations
+					state.LastAttempt++;
+					if (state.LastAttempt >= state.ReplicationDestinations.Count)
+						goto case ExecuteWithReplicationStates.AfterTryingAllServers;
+
+					var destination = state.ReplicationDestinations[state.LastAttempt];
+					if (!ShouldExecuteUsing(destination, state.CurrentRequest, state.Method, false))
+					{
+						// continue the next iteration of the loop
+						goto case ExecuteWithReplicationStates.TryAllServers;
+					}
+
+					return AttemptOperationAndOnFailureCallExecuteWithReplication(destination,
+																				  state.With(ExecuteWithReplicationStates.TryAllServersSecondAttempt));
+				case ExecuteWithReplicationStates.TryAllServersSecondAttempt:
+					destination = state.ReplicationDestinations[state.LastAttempt];
+					if (IsFirstFailure(destination))
+						return AttemptOperationAndOnFailureCallExecuteWithReplication(destination,
+																					  state.With(ExecuteWithReplicationStates.TryAllServersFailedTwice));
+					else
+						goto case ExecuteWithReplicationStates.TryAllServersFailedTwice;
+
+				case ExecuteWithReplicationStates.TryAllServersFailedTwice:
+					IncrementFailureCount(state.ReplicationDestinations[state.LastAttempt]);
+
+					// continue the next iteration of the loop
+					goto case ExecuteWithReplicationStates.TryAllServers;
+
+				case ExecuteWithReplicationStates.AfterTryingAllServers:
+					throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
+There is a high probability of a network problem preventing access to all the replicas.
+Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Count) + " Raven instances.");
+
+				default:
+					throw new InvalidOperationException("Invalid ExecuteWithReplicationState " + state);
+			}
+		}
+
+		private Task<T> AttemptOperationAndOnFailureCallExecuteWithReplication<T>(string url, ExecuteWithReplicationState<T> state)
+		{
+			Task<Task<T>> finalTask = state.Operation(url).ContinueWith(task =>
+			{
+				switch (task.Status)
+				{
+					case TaskStatus.RanToCompletion:
+						var tcs = new TaskCompletionSource<T>();
+						tcs.SetResult(task.Result);
+						return tcs.Task;
+
+					case TaskStatus.Canceled:
+						tcs = new TaskCompletionSource<T>();
+						tcs.SetCanceled();
+						return tcs.Task;
+
+					case TaskStatus.Faulted:
+						if (IsServerDown(task.Exception))
+							return ExecuteWithReplicationAsync(state);
+						else
+							throw task.Exception;
+
+					default:
+						throw new InvalidOperationException("Unknown task status in AttemptOperationAndOnFailureCallExecuteWithReplication");
+				}
+			});
+			return finalTask.Unwrap();
+		}
+
+		private class ExecuteWithReplicationState<T>
+		{
+			public ExecuteWithReplicationState(string method, string primaryUrl, int currentRequest, int readStripingBase, Func<string, Task<T>> operation)
+			{
+				this.Method = method;
+				this.PrimaryUrl = primaryUrl;
+				this.CurrentRequest = currentRequest;
+				this.ReadStripingBase = readStripingBase;
+				this.Operation = operation;
+
+				this.State = ExecuteWithReplicationStates.Start;
+			}
+
+			public readonly string Method;
+			public readonly Func<string, Task<T>> Operation;
+			public readonly string PrimaryUrl;
+			public readonly int CurrentRequest;
+			public readonly int ReadStripingBase;
+
+			public ExecuteWithReplicationStates State = ExecuteWithReplicationStates.Start;
+			public int LastAttempt = -1;
+			public List<string> ReplicationDestinations;
+
+			public ExecuteWithReplicationState<T> With(ExecuteWithReplicationStates state)
+			{
+				this.State = state;
+				return this;
+			}
+		}
+
+		private enum ExecuteWithReplicationStates
+		{
+			Start,
+			AfterTryingWithStripedServer,
+			AfterTryingWithDefaultUrl,
+			TryAllServers,
+			AfterTryingAllServers,
+			TryAllServersSecondAttempt,
+			TryAllServersFailedTwice,
+			AfterTryingWithDefaultUrlTwice
+		}
+
+		#endregion
+#endif
+
+		private static bool IsServerDown(Exception e)
+		{
+#if !NET_3_5
+			if (e is AggregateException)
+			{
+				e = ((AggregateException)e).ExtractSingleInnerException();
+			}
+#endif
+
+			return e.InnerException is SocketException ||
+				e.InnerException is IOException;
 		}
 
 		public void Dispose()
