@@ -463,7 +463,7 @@ Failed to get in touch with any of the " + (1 + replicationDestinations.Count) +
 													FailoverBehavior.ReadFromAllServers);
 					if (shouldReadFromAllServers && state.Method == "GET")
 					{
-						var replicationIndex = readStripingBase % (state.ReplicationDestinations.Count + 1);
+						var replicationIndex = state.ReadStripingBase % (state.ReplicationDestinations.Count + 1);
 						// if replicationIndex == destinations count, then we want to use the master
 						// if replicationIndex < 0, then we were explicitly instructed to use the master
 						if (replicationIndex < state.ReplicationDestinations.Count && replicationIndex >= 0)
