@@ -203,9 +203,9 @@ namespace Raven.Client.Connection
 					continue;
 				if (TryOperation(operation, replicationDestination, true, out result))
 					return result;
-				if (replicationInformer.IsFirstFailure(url) && TryOperation(operation, replicationDestination, threadSafeCopy.Count > i + 1, out result))
+				if (replicationInformer.IsFirstFailure(replicationDestination) && TryOperation(operation, replicationDestination, threadSafeCopy.Count > i + 1, out result))
 					return result;
-				replicationInformer.IncrementFailureCount(url);
+				replicationInformer.IncrementFailureCount(replicationDestination);
 			}
 			// this should not be thrown, but since I know the value of should...
 			throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
