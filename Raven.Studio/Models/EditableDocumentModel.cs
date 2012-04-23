@@ -6,8 +6,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
@@ -69,15 +69,15 @@ namespace Raven.Studio.Models
 				SetCurrentDocumentKey(docId);
 				DatabaseCommands.GetAsync(docId)
 					.ContinueOnSuccessInTheUIThread(newdoc =>
-					                                	{
-					                                		if (newdoc == null)
-					                                		{
-					                                			HandleDocumentNotFound();
-					                                			return;
-					                                		}
-					                                		document.Value = newdoc;
-					                                		isLoaded = true;
-					                                	})
+														{
+															if (newdoc == null)
+															{
+																HandleDocumentNotFound();
+																return;
+															}
+															document.Value = newdoc;
+															isLoaded = true;
+														})
 					.Catch();
 				return;
 			}
@@ -365,6 +365,10 @@ namespace Raven.Studio.Models
 				References.Clear();
 				foreach (var source in referencesIds.Cast<Match>().Select(x => x.Groups[1].Value).Distinct())
 				{
+					DateTime time;
+					if (DateTime.TryParse(source, out time))
+						continue;
+
 					References.Add(new LinkModel
 					{
 						Title = source,
@@ -405,9 +409,11 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
+				if (document.Value.Key != null && document.Value.Key.Contains("/"))
+					return "/";
 				if (document.Value.Key != null && document.Value.Key.Contains("-"))
 					return "-";
-				return "/";
+				return null;
 			}
 		}
 
@@ -479,7 +485,7 @@ namespace Raven.Studio.Models
 
 		public ICommand ToggleSearch
 		{
-			get{return new ChangeFieldValueCommand<EditableDocumentModel>(this, x => x.SearchEnabled = !x.searchEnabled); }
+			get { return new ChangeFieldValueCommand<EditableDocumentModel>(this, x => x.SearchEnabled = !x.searchEnabled); }
 		}
 
 		private class RefreshDocumentCommand : Command
@@ -555,13 +561,11 @@ namespace Raven.Studio.Models
 				{
 					doc = RavenJObject.Parse(document.JsonData);
 					metadata = RavenJObject.Parse(document.JsonMetadata);
-					//if (document.Key != null && document.Key.Contains("/") &&
-					//	metadata.Value<string>(Constants.RavenEntityName) == null)
-					if(document.Key != null && Seperator != null)
+					if (document.Key != null && Seperator != null && metadata.Value<string>(Constants.RavenEntityName) == null)
 					{
 						var entityName = document.Key.Split(new[] { Seperator }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-					
-					if (entityName != null && entityName.Length > 1)
+
+						if (entityName != null && entityName.Length > 1)
 						{
 							metadata[Constants.RavenEntityName] = char.ToUpper(entityName[0]) + entityName.Substring(1);
 						}

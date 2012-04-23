@@ -3,10 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
-using System.Linq;
 
 namespace Raven.Json.Linq
 {
@@ -75,6 +76,15 @@ namespace Raven.Json.Linq
 			Properties = snapshot;
 		}
 
+		internal override bool DeepEquals(RavenJToken other)
+		{
+			var t = other as RavenJObject;
+			if (t == null)
+				return false;
+
+			return base.DeepEquals(other);
+		}
+
 		/// <summary>
 		/// Gets the <see cref="RavenJToken"/> with the specified key converted to the specified type.
 		/// </summary>
@@ -118,7 +128,7 @@ namespace Raven.Json.Linq
 		/// <returns>A <see cref="RavenJObject"/> with the values of the specified object</returns>
 		public static new RavenJObject FromObject(object o)
 		{
-			return FromObject(o, new JsonSerializer());
+			return FromObject(o, JsonExtensions.CreateDefaultJsonSerializer());
 		}
 
 		/// <summary>
@@ -228,7 +238,7 @@ namespace Raven.Json.Linq
 		{
 			try
 			{
-				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+				JsonReader jsonReader = new RavenJsonTextReader(new StringReader(json));
 				return Load(jsonReader);
 			}
 			catch (Exception e)

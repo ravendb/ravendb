@@ -9,7 +9,7 @@ namespace Raven.Client.Extensions
 	///<summary>
 	/// Methods to create mutli tenants databases
 	///</summary>
-	public static class MultiDatabase
+	internal static class MultiDatabase
 	{
 		public static RavenJObject CreateDatabaseDocument(string name)
 		{

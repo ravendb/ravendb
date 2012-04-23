@@ -9,7 +9,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Abstractions.Data;
-#if !NET_3_5
+#if !NET35
 using Raven.Client.Connection.Async;
 #endif
 #if !Silverlight
@@ -33,7 +33,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
 #endif
-#if !NET_3_5
+#if !NET35
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 #endif
 
@@ -47,7 +47,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 , IDatabaseCommands databaseCommands
 #endif
-#if !NET_3_5
+#if !NET35
 , IAsyncDatabaseCommands asyncDatabaseCommands
 #endif
 )
@@ -61,7 +61,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
-#if !NET_3_5
+#if !NET35
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 #endif
 		}
@@ -91,6 +91,11 @@ namespace Raven.Client.Linq
 			get { return queryGenerator; }
 		}
 
+		public Action<IDocumentQueryCustomization> CustomizeQuery
+		{
+			get { return customizeQuery; }
+		}
+
 		/// <summary>
 		/// Set the fields to fetch
 		/// </summary>
@@ -113,7 +118,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 				, databaseCommands
 #endif
-#if !NET_3_5
+#if !NET35
 				, asyncDatabaseCommands
 #endif
 			);
@@ -139,7 +144,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 				, databaseCommands
 #endif
-#if !NET_3_5
+#if !NET35
 				, asyncDatabaseCommands
 #endif
 			);
@@ -155,7 +160,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 				                                      ,databaseCommands
 #endif
-#if !NET_3_5
+#if !NET35
 				                                      ,asyncDatabaseCommands
 #endif
 				                                    };
@@ -209,7 +214,7 @@ namespace Raven.Client.Linq
 			customizeQuery += action;
 		}
 
-#if !NET_3_5
+#if !NET35
 
 		/// <summary>
 		/// Move the registered after query actions

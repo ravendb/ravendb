@@ -4,7 +4,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET_3_5
+#if !NET35
 using Raven.Client.Document.Batches;
 using Raven.Client.Connection.Async;
 #endif
@@ -30,7 +30,7 @@ namespace Raven.Client
 		/// <value>The database commands.</value>
 		IDatabaseCommands DatabaseCommands { get; }
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>

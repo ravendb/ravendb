@@ -24,7 +24,7 @@ namespace Raven.Client.Indexes
 				return null;
 			var expression = expr.Body;
 
-#if !NET_3_5
+#if !NET35
 			string queryRootName = null;
 #endif
 			switch (expression.NodeType)
@@ -33,7 +33,7 @@ namespace Raven.Client.Indexes
 				case ExpressionType.Convert:
 					expression = ((UnaryExpression)expression).Operand;
 					break;
-#if !NET_3_5
+#if !NET35
 				case ExpressionType.Call:
 					var methodCallExpression = ((MethodCallExpression)expression);
 					switch (methodCallExpression.Method.Name)
@@ -49,7 +49,7 @@ namespace Raven.Client.Indexes
 #endif
 			}
 
-#if !NET_3_5
+#if !NET35
 			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, translateIdentityProperty, typeof(TQueryRoot), queryRootName, expression);
 #else
 			var linqQuery =expression.ToString();

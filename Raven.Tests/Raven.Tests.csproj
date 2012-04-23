@@ -86,10 +86,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE\ReferenceAssemblies\v2.0\Microsoft.VisualStudio.DebuggerVisualizers.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=4.0.8.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.4.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
-    </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
     </Reference>
@@ -159,6 +155,7 @@
     <Compile Include="Bugs\HiLoToMaxTests.cs" />
     <Compile Include="Bugs\IndexesWithDateTimeMin.cs" />
     <Compile Include="Bugs\Indexing\CanHaveAnIndexNameThatStartsWithDynamic.cs" />
+    <Compile Include="Bugs\Indexing\CannotCreateIndexWithoutReduce.cs" />
     <Compile Include="Bugs\Indexing\WithStringReverse.cs" />
     <Compile Include="Bugs\Indexing\InvalidIndexes.cs" />
     <Compile Include="Bugs\InitializeConfiguration.cs" />
@@ -490,8 +487,7 @@
     <Compile Include="Bugs\WhereEntityIs.cs" />
     <Compile Include="Bugs\WillNotFailSystemIfServerIsNotAvailableOnStartup.cs" />
     <Compile Include="Bugs\WillThrowIfQueryingForUnindexedField.cs" />
-    <Compile Include="Bugs\WithDateTimeOffset.cs" />
-    <Compile Include="Bugs\WithDateTimeOffsetRemote.cs" />
+    <Compile Include="Bugs\CanStoreAndGetDateTimeOffset.cs" />
     <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
     <Compile Include="Bugs\Zhang\UseMaxForDateTimeTypeInReduce.cs" />
     <Compile Include="Bugs\Zhang\UseMaxForLongTypeInReduce.cs" />
@@ -559,9 +555,13 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\Asger2.cs" />
     <Compile Include="MailingList\AttachmentContentType.cs" />
+    <Compile Include="MailingList\bhiku.cs" />
     <Compile Include="MailingList\BooleanCollection.cs" />
     <Compile Include="MailingList\CanUpdateInsideDtcWithOptimisticConcurrency.cs" />
+    <Compile Include="MailingList\EtagUsage.cs" />
+    <Compile Include="MailingList\HiloTests.cs" />
     <Compile Include="MailingList\DeserialisationToObjectTests.cs" />
     <Compile Include="MailingList\DtcIssue.cs" />
     <Compile Include="MailingList\Everett\CanReadBytes.cs" />
@@ -579,6 +579,8 @@
     <Compile Include="MailingList\Maverix.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
     <Compile Include="MailingList\Nick.cs" />
+    <Compile Include="MailingList\NSB.cs" />
+    <Compile Include="MailingList\OrderByValueTypeCast.cs" />
     <Compile Include="MailingList\Phil.cs" />
     <Compile Include="MailingList\JoelAsync.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />
@@ -587,6 +589,7 @@
     <Compile Include="MailingList\RyanD.cs" />
     <Compile Include="MailingList\Scott.cs" />
     <Compile Include="MailingList\SearchByMapReduceExample.cs" />
+    <Compile Include="MailingList\SpecialChars.cs" />
     <Compile Include="MailingList\Stacey\Image.cs" />
     <Compile Include="MailingList\Stacey\ImageByName.cs" />
     <Compile Include="MailingList\Stacey\InServerTesting.cs" />

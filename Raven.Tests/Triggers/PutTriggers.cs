@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -50,14 +50,13 @@ namespace Raven.Tests.Triggers
 			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 
 			var actualString = db.Get("abc", null).DataAsJson.ToString(Formatting.None);
-			Assert.Contains(@"946684800000", actualString);
+			Assert.Contains("2010-02-13T18:26:48.506Z", actualString);
 		}
 
 		[Fact]
 		public void CannotPutDocumentWithUpperCaseNames()
 		{
-			Assert.Throws<OperationVetoedException>(
-				() => db.Put("abc", null, RavenJObject.Parse("{'name': 'ABC'}"), new RavenJObject(), null));
+			Assert.Throws<OperationVetoedException>(() => db.Put("abc", null, RavenJObject.Parse("{'name': 'ABC'}"), new RavenJObject(), null));
 		}
 	}
 }

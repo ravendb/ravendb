@@ -116,7 +116,7 @@ namespace Raven.Client
 		/// </summary>
 		void Store(object entity, Guid etag, string id);
 
-#if !NET_3_5        
+#if !NET35        
 		/// <summary>
 		/// Stores the specified dynamic entity.
 		/// </summary>

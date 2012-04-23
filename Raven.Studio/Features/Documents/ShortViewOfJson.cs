@@ -6,7 +6,7 @@
 
 using System;
 using System.IO;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using Raven.Studio.Extensions;
 

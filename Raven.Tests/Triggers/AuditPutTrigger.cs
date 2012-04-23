@@ -19,7 +19,7 @@ namespace Raven.Tests.Triggers
 
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			document["created_at"] = new RavenJValue(new DateTime(2000, 1, 1,0,0,0,DateTimeKind.Utc));
+			document["created_at"] = new RavenJValue(new DateTime(2010, 2, 13, 18, 26, 48, 506, DateTimeKind.Utc));
 		}
 	}
 }

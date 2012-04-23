@@ -11,7 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
-using Newtonsoft.Json.Bson;
+using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 

@@ -40,11 +40,16 @@ namespace Raven.Client.Linq
 		IDocumentQueryGenerator QueryGenerator { get; }
 
 		/// <summary>
+		/// The action to execute on the customize query
+		/// </summary>
+		Action<IDocumentQueryCustomization> CustomizeQuery { get; }
+
+		/// <summary>
 		/// Change the result type for the query provider
 		/// </summary>
 		IRavenQueryProvider For<S>();
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Convert the Linq query to a Lucene query
 		/// </summary>

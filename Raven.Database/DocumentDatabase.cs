@@ -16,7 +16,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -866,27 +866,30 @@ namespace Raven.Database
 
 		public void DeleteIndex(string name)
 		{
-			name = IndexDefinitionStorage.FixupIndexName(name);
-			IndexDefinitionStorage.RemoveIndex(name);
-			IndexStorage.DeleteIndex(name);
-			//we may run into a conflict when trying to delete if the index is currently
-			//busy indexing documents, worst case scenario, we will have an orphaned index
-			//row which will get cleaned up on next db restart.
-			for (var i = 0; i < 10; i++)
+			using(IndexDefinitionStorage.TryRemoveIndexContext())
 			{
-				try
+				name = IndexDefinitionStorage.FixupIndexName(name);
+				IndexDefinitionStorage.RemoveIndex(name);
+				IndexStorage.DeleteIndex(name);
+				//we may run into a conflict when trying to delete if the index is currently
+				//busy indexing documents, worst case scenario, we will have an orphaned index
+				//row which will get cleaned up on next db restart.
+				for (var i = 0; i < 10; i++)
 				{
-					TransactionalStorage.Batch(action =>
+					try
 					{
-						action.Indexing.DeleteIndex(name);
+						TransactionalStorage.Batch(action =>
+						{
+							action.Indexing.DeleteIndex(name);
 
-						workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
-					});
-					return;
-				}
-				catch (ConcurrencyException)
-				{
-					Thread.Sleep(100);
+							workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
+						});
+						return;
+					}
+					catch (ConcurrencyException)
+					{
+						Thread.Sleep(100);
+					}
 				}
 			}
 		}
@@ -1091,13 +1094,7 @@ namespace Raven.Database
 						indexName => new RavenJObject
 							{
 								{"name", new RavenJValue(indexName) },
-								{"definition", RavenJObject.FromObject(IndexDefinitionStorage.GetIndexDefinition(indexName), new JsonSerializer
-								{
-									Converters =
-										{
-											new JsonEnumConverter(),
-										}
-								})}
+								{"definition", RavenJObject.FromObject(IndexDefinitionStorage.GetIndexDefinition(indexName))}
 							}));
 		}
 
@@ -1280,14 +1277,8 @@ namespace Raven.Database
 			var indexDefinition = IndexDefinitionStorage.GetIndexDefinition(index);
 			if (indexDefinition == null)
 				throw new InvalidOperationException("There is no index named: " + index);
-			IndexStorage.DeleteIndex(index);
-			IndexStorage.CreateIndexImplementation(indexDefinition);
-			TransactionalStorage.Batch(actions =>
-			{
-				actions.Indexing.DeleteIndex(index);
-				actions.Indexing.AddIndex(index, indexDefinition.IsMapReduce);
-				workContext.ShouldNotifyAboutWork(() => "RESET INDEX " + index);
-			});
+			DeleteIndex(index);
+			PutIndex(index, indexDefinition);
 		}
 
 		public IndexDefinition GetIndexDefinition(string index)

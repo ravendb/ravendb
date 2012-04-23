@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Raven.Abstractions;
+using Raven.Abstractions.Json;
 using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
@@ -160,6 +162,15 @@ namespace Raven.Json.Linq
 				if (value.Value == null)
 					return default(U);
 				return (U)(object)value.Value.ToString();
+			}
+			if (targetType == typeof(DateTime) && value.Value is string)
+			{
+				DateTime dateTime;
+				if (DateTime.TryParseExact((string)value.Value, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
+					return (U)(object)dateTime;
+				
+				dateTime = RavenJsonTextReader.ParseDateMicrosoft((string)value.Value);
+				return (U)(object)dateTime;
 			}
 			return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
 		}

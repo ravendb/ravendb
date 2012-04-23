@@ -35,11 +35,12 @@ namespace Raven.Bundles.Tests.Authorization
 		protected AuthorizationTest()
 		{
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
+			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Testing");
+			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Tenants");
 			server = new RavenDbServer(new database::Raven.Database.Config.RavenConfiguration
 			{
 				AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.All,
 				Catalog = { Catalogs = { new AssemblyCatalog(typeof(AuthorizationDecisions).Assembly) } },
-				DataDirectory = "Data",
 				Port = 8079,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 			});

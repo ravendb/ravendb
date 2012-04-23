@@ -1,7 +1,8 @@
 using System;
 using System.IO;
 using System.Net;
-using Newtonsoft.Json;
+using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;
@@ -31,7 +32,7 @@ namespace Raven.Tests.MultiGet
 				using(var stream = request.GetRequestStream())
 				{
 					var streamWriter = new StreamWriter(stream);
-					new JsonSerializer().Serialize(streamWriter, new[]
+					JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, new[]
 					{
 						new GetRequest
 						{
@@ -83,7 +84,7 @@ namespace Raven.Tests.MultiGet
 				using (var stream = request.GetRequestStream())
 				{
 					var streamWriter = new StreamWriter(stream);
-					new JsonSerializer().Serialize(streamWriter, new[]
+					JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, new[]
 					{
 						new GetRequest
 						{
@@ -128,7 +129,7 @@ namespace Raven.Tests.MultiGet
 				using (var stream = request.GetRequestStream())
 				{
 					var streamWriter = new StreamWriter(stream);
-					new JsonSerializer().Serialize(streamWriter, new[]
+					JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, new[]
 					{
 						new GetRequest
 						{
@@ -158,7 +159,7 @@ namespace Raven.Tests.MultiGet
 				using (var stream = request.GetRequestStream())
 				{
 					var streamWriter = new StreamWriter(stream);
-					new JsonSerializer().Serialize(streamWriter, new[]
+					JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, new[]
 					{
 						new GetRequest
 						{

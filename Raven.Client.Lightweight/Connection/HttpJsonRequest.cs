@@ -13,11 +13,11 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
-#if !NET_3_5
+#if !NET35
 using System.Threading.Tasks;
 #endif
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
@@ -73,13 +73,14 @@ namespace Raven.Client.Connection
 			webRequest = (HttpWebRequest)WebRequest.Create(url);
 			webRequest.Credentials = credentials;
 			webRequest.Method = method;
-			if (method == "POST" || method == "PUT" || method == "PATCH")
+			if (factory.DisableRequestCompression == false &&
+				(method == "POST" || method == "PUT" || method == "PATCH"))
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
 			WriteMetadata(metadata);
 		}
 
-#if !NET_3_5
+#if !NET35
 
 		public Task ExecuteRequestAsync()
 		{
@@ -95,7 +96,7 @@ namespace Raven.Client.Connection
 			{
 				var tcs = new TaskCompletionSource<RavenJToken>();
 				var cachedResponse = factory.GetCachedResponse(this);
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, ()=> new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
@@ -168,7 +169,7 @@ namespace Raven.Client.Connection
 			if (SkipServerCheck)
 			{
 				var result = factory.GetCachedResponse(this);
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
@@ -218,7 +219,7 @@ namespace Raven.Client.Connection
 			RecreateWebRequest(handleUnauthorizedResponse);
 			return true;
 		}
-#if !NET_3_5
+#if !NET35
 		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
 		{
 			if (conventions.HandleUnauthorizedResponseAsync == null)
@@ -245,7 +246,7 @@ namespace Raven.Client.Connection
 
 			if (postedData != null)
 			{
-				HttpRequestHelper.WriteDataToRequest(newWebRequest, postedData);
+				HttpRequestHelper.WriteDataToRequest(newWebRequest, postedData, factory.DisableRequestCompression);
 			}
 			if (postedStream != null)
 			{
@@ -253,7 +254,10 @@ namespace Raven.Client.Connection
 				using (var stream = newWebRequest.GetRequestStream())
 				using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
 				{
-					postedStream.CopyTo(commpressedData);
+					if (factory.DisableRequestCompression == false)
+						postedStream.CopyTo(commpressedData);
+					else
+						postedStream.CopyTo(stream);
 
 					commpressedData.Flush();
 					stream.Flush();
@@ -280,7 +284,7 @@ namespace Raven.Client.Connection
 					throw;
 				return result;
 			}
-#if !NET_3_5
+#if !NET35
 			catch (AggregateException e)
 			{
 				sp.Stop();
@@ -298,24 +302,20 @@ namespace Raven.Client.Connection
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
-				var reader = new StreamReader(responseStream);
-				var text = reader.ReadToEnd();
-				reader.Close();
-
-				RavenJToken data = RavenJToken.Parse(text, returnNullForEmptyString: true);
+				var data = RavenJToken.TryLoad(responseStream);
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
 					factory.CacheResponse(Url, data, ResponseHeaders);
 				}
 
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
-					HttpResult = (int)ResponseStatusCode,
+					HttpResult = (int) ResponseStatusCode,
 					Status = RequestStatus.SentToServer,
-					Result = text,
+					Result = (data ?? "").ToString(),
 					Url = webRequest.RequestUri.PathAndQuery,
 					PostedData = postedData
 				});
@@ -336,7 +336,7 @@ namespace Raven.Client.Connection
 				if (httpWebResponse != null)
 					httpResult = (int)httpWebResponse.StatusCode;
 
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
@@ -356,7 +356,7 @@ namespace Raven.Client.Connection
 				factory.UpdateCacheTime(this);
 				var result = factory.GetCachedResponse(this);
 
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
@@ -374,7 +374,7 @@ namespace Raven.Client.Connection
 			{
 				var readToEnd = sr.ReadToEnd();
 
-				factory.InvokeLogRequest(owner, new RequestResultArgs
+				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
 					Method = webRequest.Method,
@@ -464,10 +464,19 @@ namespace Raven.Client.Connection
 					headerName = "If-None-Match";
 				var value = prop.Value.Value<object>().ToString();
 
+				bool isRestricted;
+				try
+				{
+					isRestricted = WebHeaderCollection.IsRestricted(headerName);
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Could not figure out how to treat header: " + headerName, e);
+				}
 				// Restricted headers require their own special treatment, otherwise an exception will
 				// be thrown.
 				// See http://msdn.microsoft.com/en-us/library/78h415ay.aspx
-				if (WebHeaderCollection.IsRestricted(headerName))
+				if (isRestricted)
 				{
 					switch (headerName)
 					{
@@ -513,7 +522,7 @@ namespace Raven.Client.Connection
 			writeCalled = true;
 			postedData = data;
 
-			HttpRequestHelper.WriteDataToRequest(webRequest, data);
+			HttpRequestHelper.WriteDataToRequest(webRequest, data, factory.DisableRequestCompression);
 		}
 
 

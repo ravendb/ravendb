@@ -38,11 +38,11 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Invoke the LogRequest event
 		/// </summary>
-		internal void InvokeLogRequest(IHoldProfilingInformation sender, RequestResultArgs e)
+		internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequentResult)
 		{
 			var handler = LogRequest;
 			if (handler != null)
-				handler(sender, e);
+				handler(sender, generateRequentResult());
 		}
 
 		private readonly int maxNumberOfCachedRequests;
@@ -128,6 +128,11 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
+		/// Determine whether to use compression or not 
+		/// </summary>
+		public bool DisableRequestCompression { get; set; }
+
+		/// <summary>
 		/// default ctor
 		/// </summary>
 		/// <param name="maxNumberOfCachedRequests"></param>
@@ -137,7 +142,7 @@ namespace Raven.Client.Connection
 			ResetCache();
 		}
 
-#if !NET_3_5
+#if !NET35
 		///<summary>
 		/// The aggressive cache duration
 		///</summary>
@@ -225,7 +230,7 @@ namespace Raven.Client.Connection
 				return;
 			disposed = true;
 			cache.Dispose();
-#if !NET_3_5
+#if !NET35
 			aggressiveCacheDuration.Dispose();
 			disableHttpCaching.Dispose();
 #endif

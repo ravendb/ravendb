@@ -14,8 +14,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
+using Raven.Abstractions.Json;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
@@ -198,18 +199,26 @@ namespace Raven.Client.Connection
 				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
 					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-					var conflictsDoc = RavenJObject.Load(new JsonTextReader(conflicts));
-					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+					var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
+					var etag = httpWebResponse.GetResponseHeader("ETag");
 
-					throw new ConflictException("Conflict detected on " + key +
-												", conflict must be resolved before the document will be accessible")
-					{
-						ConflictedVersionIds = conflictIds
-					};
+					throw CreateConcurrencyException(key, conflictsDoc, etag);
 				}
 				throw;
 			}
 		}
+
+		private static ConflictException CreateConcurrencyException(string key, RavenJObject conflictsDoc, string etag)
+		{
+					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+			return new ConflictException("Conflict detected on " + key +
+												", conflict must be resolved before the document will be accessible")
+					{
+				ConflictedVersionIds = conflictIds,
+				Etag = new Guid(etag)
+					};
+				}
 
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
 		{
@@ -325,7 +334,7 @@ namespace Raven.Client.Connection
 
 		private void DirectPutAttachment(string key, RavenJObject metadata, Guid? etag, Stream data, string operationUrl)
 		{
-			if(etag != null)
+			if (etag != null)
 			{
 				metadata["ETag"] = etag.Value.ToString();
 			}
@@ -367,12 +376,12 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public Attachment HeadAttachment(string key)
 		{
-			return ExecuteWithReplication("HEAD", operationUrl => DirectGetAttachment("HEAD",key, operationUrl));
+			return ExecuteWithReplication("HEAD", operationUrl => DirectGetAttachment("HEAD", key, operationUrl));
 		}
 
 		private Attachment DirectGetAttachment(string method, string key, string operationUrl)
 		{
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,operationUrl + "/static/" + key,method, credentials, convention);
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/static/" + key, method, credentials, convention);
 			Func<Stream> data;
 			try
 			{
@@ -412,7 +421,8 @@ namespace Raven.Client.Connection
 					throw new ConflictException("Conflict detected on " + key +
 					                            ", conflict must be resolved before the attachment will be accessible")
 					{
-						ConflictedVersionIds = conflictIds
+						ConflictedVersionIds = conflictIds,
+						Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
 					};
 				}
 				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
@@ -435,7 +445,7 @@ namespace Raven.Client.Connection
 		{
 			var result = ExecuteGetRequest("".Databases(pageSize).NoCache());
 
-			var json = (RavenJArray) result;
+			var json = (RavenJArray)result;
 		
 			return json
 				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
@@ -445,11 +455,11 @@ namespace Raven.Client.Connection
 		private void DirectDeleteAttachment(string key, Guid? etag, string operationUrl)
 		{
 			var metadata = new RavenJObject();
-			if(etag != null)
+			if (etag != null)
 			{
 				metadata["ETag"] = etag.Value.ToString();
 			}
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/static/" + key, "DELETE", metadata,credentials, convention);
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/static/" + key, "DELETE", metadata, credentials, convention);
 			webRequest.ExecuteRequest();
 		}
 
@@ -687,7 +697,12 @@ namespace Raven.Client.Connection
 				}
 				throw;
 			}
-			return SerializationHelper.ToQueryResult(json, request.ResponseHeaders["ETag"]);
+			var directQuery = SerializationHelper.ToQueryResult(json, request.ResponseHeaders["ETag"]);
+			foreach (var docResult in directQuery.Results.Concat(directQuery.Includes))
+			{
+				AssertNonConflictedDocument(docResult);
+			}
+			return directQuery;
 		}
 
 		/// <summary>
@@ -736,7 +751,7 @@ namespace Raven.Client.Connection
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
 			// we are fine with that, requests to load that many items are probably going to be rare
 			HttpJsonRequest request;
-			if (uniqueIds.Sum(x=>x.Length) < 1024)
+			if (uniqueIds.Sum(x => x.Length) < 1024)
 			{
 				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + x).ToArray());
 				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
@@ -748,14 +763,32 @@ namespace Raven.Client.Connection
 			}
 
 			request.AddOperationHeaders(OperationsHeaders);
-			var result = (RavenJObject) request.ReadResponseJson();
+			var result = (RavenJObject)request.ReadResponseJson();
 
 			var results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList();
-			return new MultiLoadResult
+			var multiLoadResult = new MultiLoadResult
 			{
 				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-				Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id,StringComparison.InvariantCultureIgnoreCase))).ToList()
+				Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.InvariantCultureIgnoreCase))).ToList()
 			};
+			foreach (var docResult in multiLoadResult.Results.Concat(multiLoadResult.Includes))
+			{
+				
+				AssertNonConflictedDocument(docResult);
+			}
+			return multiLoadResult;
+		}
+
+		private static void AssertNonConflictedDocument(RavenJObject docResult)
+		{
+			if (docResult == null)
+				return;
+			var metadata = docResult[Constants.Metadata];
+			if(metadata == null)
+				return;
+
+			if (metadata.Value<int>("@Http-Status-Code") == 409)
+				throw CreateConcurrencyException(metadata.Value<string>("@id"), docResult, metadata.Value<string>("@etag"));
 		}
 
 		/// <summary>
@@ -780,7 +813,7 @@ namespace Raven.Client.Connection
 			RavenJArray response;
 			try
 			{
-				response = (RavenJArray) req.ReadResponseJson();
+				response = (RavenJArray)req.ReadResponseJson();
 			}
 			catch (WebException e)
 			{
@@ -1051,11 +1084,11 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
 
-				RavenJObject json = (RavenJObject) request.ReadResponseJson();
+				RavenJObject json = (RavenJObject)request.ReadResponseJson();
 
 				return new SuggestionQueryResult
 				{
-					Suggestions = ((RavenJArray) json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
+					Suggestions = ((RavenJArray)json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
 				};
 			});
 		}
@@ -1065,9 +1098,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public DatabaseStatistics GetStatistics()
 		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this,url +"/stats", "GET", credentials, convention);
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/stats", "GET", credentials, convention);
 
-			var jo = (RavenJObject) httpJsonRequest.ReadResponseJson();
+			var jo = (RavenJObject)httpJsonRequest.ReadResponseJson();
 			return jo.Deserialize<DatabaseStatistics>(convention);
 		}
 
@@ -1114,13 +1147,14 @@ namespace Raven.Client.Connection
 				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 				{
 					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-					var conflictsDoc = RavenJObject.Load(new JsonTextReader(conflicts));
+					var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
 					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 					throw new ConflictException("Conflict detected on " + key +
 												", conflict must be resolved before the document will be accessible")
 					{
-						ConflictedVersionIds = conflictIds
+						ConflictedVersionIds = conflictIds,
+						Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
 					};
 				}
 				throw;
@@ -1154,7 +1188,7 @@ namespace Raven.Client.Connection
 			                              	}
 
 			                              	httpJsonRequest.Write(postedData);
-			                              	var results = (RavenJArray) httpJsonRequest.ReadResponseJson();
+											  var results = (RavenJArray)httpJsonRequest.ReadResponseJson();
 			                              	var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(
 																				new RavenJTokenReader(results));
 
@@ -1199,11 +1233,11 @@ namespace Raven.Client.Connection
 				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
 				                                              Uri.EscapeUriString(index),
 				                                              Uri.EscapeDataString(facetSetupDoc),
-				                                              Uri.EscapeDataString(query.Query));
+															  Uri.EscapeUriString(Uri.EscapeDataString(query.Query)));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
-				var json = (RavenJObject) request.ReadResponseJson();
+				var json = (RavenJObject)request.ReadResponseJson();
 				return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
 			});
 		}

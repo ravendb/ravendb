@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
@@ -284,7 +285,7 @@ namespace Raven.Json.Linq
 			JsonConverter matchingConverter;
 			if (_value != null && ((matchingConverter = GetMatchingConverter(converters, _value.GetType())) != null))
 			{
-				matchingConverter.WriteJson(writer, _value, new JsonSerializer());
+				matchingConverter.WriteJson(writer, _value, JsonExtensions.CreateDefaultJsonSerializer());
 				return;
 			}
 
@@ -461,7 +462,7 @@ namespace Raven.Json.Linq
 					string s1 = Convert.ToString(objA, CultureInfo.InvariantCulture);
 					string s2 = Convert.ToString(objB, CultureInfo.InvariantCulture);
 
-					return s1.CompareTo(s2);
+					return string.CompareOrdinal(s1, s2);
 				case JTokenType.Boolean:
 					bool b1 = Convert.ToBoolean(objA, CultureInfo.InvariantCulture);
 					bool b2 = Convert.ToBoolean(objB, CultureInfo.InvariantCulture);
@@ -500,7 +501,7 @@ namespace Raven.Json.Linq
 				case JTokenType.Guid:
 					if (!(objB is Guid))
 					{
-#if !NET_3_5
+#if !NET35
 						Guid guid;
 						if (Guid.TryParse((string)objB, out guid) == false)
 							throw new ArgumentException("Object must be of type Guid.");
@@ -553,7 +554,12 @@ namespace Raven.Json.Linq
 		internal override bool DeepEquals(RavenJToken node)
 		{
 			var other = node as RavenJValue;
-			return other != null && ValuesEquals(this, other);
+			if (other == null)
+				return false;
+			if (other == this)
+				return true;
+
+			return ValuesEquals(this, other);
 		}
 
 		internal override int GetDeepHashCode()

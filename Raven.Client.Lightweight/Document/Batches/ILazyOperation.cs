@@ -1,4 +1,4 @@
-#if !NET_3_5
+#if !NET35
 using System;
 using Raven.Abstractions.Data;
 #if !SILVERLIGHT

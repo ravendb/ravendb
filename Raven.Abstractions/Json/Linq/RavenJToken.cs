@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Json;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
@@ -84,7 +86,7 @@ namespace Raven.Json.Linq
 		/// <returns>A <see cref="RavenJToken"/> with the value of the specified object</returns>
 		public static RavenJToken FromObject(object o)
 		{
-			return FromObjectInternal(o, new JsonSerializer());
+			return FromObjectInternal(o, JsonExtensions.CreateDefaultJsonSerializer());
 		}
 
 		/// <summary>
@@ -178,14 +180,11 @@ namespace Raven.Json.Linq
 		/// <param name="json">A <see cref="String"/> that contains JSON.</param>
 		/// <param name="returnNullForEmptyString">If this parameter is true, and json is null or empty, RavenJValue.Null is returned.</param>
 		/// <returns>A <see cref="RavenJToken"/> populated from the string that contains JSON.</returns>
-		public static RavenJToken Parse(string json, bool returnNullForEmptyString = false)
+		public static RavenJToken Parse(string json)
 		{
-			if (returnNullForEmptyString && string.IsNullOrEmpty(json))
-				return RavenJValue.Null;
-
 			try
 			{
-				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+				JsonReader jsonReader = new RavenJsonTextReader(new StringReader(json));
 
 				return Load(jsonReader);
 			}
@@ -193,6 +192,16 @@ namespace Raven.Json.Linq
 			{
 				throw new JsonSerializationException("Could not parse: [" + json + "]", e);
 			}
+		}
+
+		public static RavenJToken TryLoad(Stream stream)
+		{
+			var jsonTextReader = new RavenJsonTextReader(new StreamReader(stream));
+			if (jsonTextReader.Read() == false || jsonTextReader.TokenType == JsonToken.None)
+			{
+				return null;
+			}
+			return Load(jsonTextReader);
 		}
 
 		/// <summary>

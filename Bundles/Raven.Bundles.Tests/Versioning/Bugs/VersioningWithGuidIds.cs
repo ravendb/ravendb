@@ -1,5 +1,5 @@
 using System;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Client.Versioning;
 using Xunit;
 

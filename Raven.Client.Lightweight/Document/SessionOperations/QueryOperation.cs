@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using NLog;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -135,7 +135,7 @@ namespace Raven.Client.Document.SessionOperations
 			if (typeof(T) == typeof(RavenJObject))
 				return (T)(object)result;
 
-#if !NET_3_5
+#if !NET35
 			if (typeof(T) == typeof(object) && string.IsNullOrEmpty(result.Value<string>("$type")))
 			{
 				return (T)(object)new DynamicJsonObject(result);

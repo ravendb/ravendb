@@ -10,12 +10,12 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
-#if !NET_3_5
+#if !NET35
 using System.Threading.Tasks;
 #endif
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
@@ -371,6 +371,7 @@ namespace Raven.Client.Document
 		{
 			var jsonSerializer = new JsonSerializer
 			{
+				DateParseHandling = DateParseHandling.None,
 				ObjectCreationHandling = ObjectCreationHandling.Replace,
 				ContractResolver = JsonContractResolver,
 				TypeNameHandling = TypeNameHandling.Auto,
@@ -386,7 +387,7 @@ namespace Raven.Client.Document
 						new JsonNumericConverter<double>(double.TryParse),
 						new JsonNumericConverter<short>(short.TryParse),
 						new JsonMultiDimensionalArrayConverter(),
-#if !NET_3_5 && !SILVERLIGHT
+#if !NET35 && !SILVERLIGHT
 						new JsonDynamicConverter()
 #endif
 					}
@@ -429,7 +430,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleUnauthorizedResponse { get; set; }
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
 		/// in async manner

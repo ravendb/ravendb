@@ -12,7 +12,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
-#if !NET_3_5
+#if !NET35
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Batches;
@@ -25,7 +25,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Linq;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -37,6 +37,9 @@ namespace Raven.Client.Document
 	/// </summary>
 	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
 	{
+		protected bool isSpatialQuery;
+		protected double lat, lng, radius;
+
 		/// <summary>
 		/// Whatever to negate the next operation
 		/// </summary>
@@ -47,7 +50,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected readonly IDatabaseCommands theDatabaseCommands;
 #endif
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Async database commands to use
 		/// </summary>
@@ -155,7 +158,7 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		///   Grant access to the async database commands
 		/// </summary>
@@ -209,7 +212,7 @@ namespace Raven.Client.Document
 			}
 		}
 
-#if !SILVERLIGHT && !NET_3_5
+#if !SILVERLIGHT && !NET35
 		/// <summary>
 		///   Initializes a new instance of the <see cref = "DocumentQuery{T}" /> class.
 		/// </summary>
@@ -230,7 +233,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 									 IDatabaseCommands databaseCommands,
 #endif
-#if !NET_3_5
+#if !NET35
 									 IAsyncDatabaseCommands asyncDatabaseCommands,
 #endif
 									 string indexName,
@@ -244,7 +247,7 @@ namespace Raven.Client.Document
 			this.queryListeners = queryListeners;
 			this.indexName = indexName;
 			this.theSession = theSession;
-#if !NET_3_5
+#if !NET35
 			this.theAsyncDatabaseCommands = asyncDatabaseCommands;
 #endif
 			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
@@ -263,7 +266,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			theDatabaseCommands = other.theDatabaseCommands;
 #endif
-#if !NET_3_5
+#if !NET35
 			theAsyncDatabaseCommands = other.theAsyncDatabaseCommands;
 #endif
 			indexName = other.indexName;
@@ -453,7 +456,7 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET_3_5 && !SILVERLIGHT
+#if !NET35 && !SILVERLIGHT
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -487,7 +490,7 @@ namespace Raven.Client.Document
 
 #endif
 
-#if !NET_3_5
+#if !NET35
 
 		/// <summary>
 		///   Gets the query result
@@ -609,7 +612,7 @@ namespace Raven.Client.Document
 		}
 #endif
 
-#if !NET_3_5
+#if !NET35
 	 
 		private Task<Tuple<QueryOperation,IList<T>>> ProcessEnumerator(Task<QueryOperation> task)
 		{
@@ -1130,7 +1133,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if (boost <= 0m)
 			{
-				throw new ArgumentOutOfRangeException("Boost factor must be a positive number");
+				throw new ArgumentOutOfRangeException("boost","Boost factor must be a positive number");
 			}
 
 			if (boost != 1m)
@@ -1388,7 +1391,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 		#endregion
 
-#if !NET_3_5
+#if !NET35
 		protected virtual Task<QueryOperation> ExecuteActualQueryAsync()
 		{
 			using(queryOperation.EnterQueryContext())
@@ -1438,6 +1441,25 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		protected virtual IndexQuery GenerateIndexQuery(string query)
 		{
+			if(isSpatialQuery)
+			{
+				return new SpatialIndexQuery
+				{
+					GroupBy = groupByFields,
+					AggregationOperation = aggregationOp,
+					Query = query,
+					PageSize = pageSize ?? 128,
+					Start = start,
+					Cutoff = cutoff,
+					CutoffEtag = cutoffEtag,
+					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+					FieldsToFetch = projectionFields,
+					Latitude = lat,
+					Longitude = lng,
+					Radius = radius,
+				};
+			}
+
 			return new IndexQuery
 			{
 				GroupBy = groupByFields,
@@ -1592,7 +1614,7 @@ If you really want to do in memory filtering on the data returned from the query
 			return this;
 		}
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>

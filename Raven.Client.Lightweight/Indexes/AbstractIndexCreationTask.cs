@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Abstractions.Data;
-#if !NET_3_5
+#if !NET35
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 #endif
@@ -28,7 +28,7 @@ namespace Raven.Client.Indexes
 	/// The naming convention is that underscores in the inherited class names are replaced by slashed
 	/// For example: Posts_ByName will be saved to Posts/ByName
 	/// </remarks>
-#if !NET_3_5
+#if !NET35
 	[System.ComponentModel.Composition.InheritedExport]
 #endif
 	public abstract class AbstractIndexCreationTask
@@ -72,7 +72,7 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Allows to use lambdas recursively
 		/// </summary>
@@ -122,7 +122,7 @@ namespace Raven.Client.Indexes
 		}
 #endif
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>

@@ -4,8 +4,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Json;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
 
 namespace Raven.Json.Linq
@@ -149,7 +150,7 @@ namespace Raven.Json.Linq
 		{
 			try
 			{
-				JsonReader jsonReader = new JsonTextReader(new StringReader(json));
+				JsonReader jsonReader = new RavenJsonTextReader(new StringReader(json));
 
 				return Load(jsonReader);
 			}
@@ -227,12 +228,19 @@ namespace Raven.Json.Linq
 			Items.RemoveAt(index);
 		}
 
-		public void Insert(int index, RavenJToken token)
+		/// <summary>
+		/// Inserts an item to the <see cref="T:System.Collections.Generic.IList`1"/> at the specified index.
+		/// </summary>
+		/// <param name="index">The zero-based index at which <paramref name="item"/> should be inserted.</param>
+		/// <param name="item">The object to insert into the <see cref="T:System.Collections.Generic.IList`1"/>.</param>
+		/// <exception cref="T:System.ArgumentOutOfRangeException">
+		/// <paramref name="index"/> is not a valid index in the <see cref="T:System.Collections.Generic.IList`1"/>.</exception>
+		public void Insert(int index, RavenJToken item)
 		{
 			if (isSnapshot)
 				throw new InvalidOperationException("Cannot modify a snapshot, this is probably a bug");
 
-			Items.Insert(index, token);
+			Items.Insert(index, item);
 		}
 
 		public override IEnumerable<T> Values<T>()

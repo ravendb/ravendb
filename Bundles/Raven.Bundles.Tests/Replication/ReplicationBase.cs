@@ -12,6 +12,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
 using System.Threading;
 using Raven.Abstractions.Replication;
+using Raven.Bundles.Tests.Versioning;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -73,16 +74,34 @@ namespace Raven.Bundles.Tests.Replication
 
 		public void Dispose()
 		{
+			var err = new List<Exception>();
 			foreach (var documentStore in stores)
 			{
-				documentStore.Dispose();
+				try
+				{
+					documentStore.Dispose();
+				}
+				catch (Exception e)
+				{
+					err.Add(e);	
+				}
 			}
 
 			foreach (var ravenDbServer in servers)
 			{
-				ravenDbServer.Dispose();
-				IOExtensions.DeleteDirectory(ravenDbServer.Database.Configuration.DataDirectory);
+				try
+				{
+					ravenDbServer.Dispose();
+					IOExtensions.DeleteDirectory(ravenDbServer.Database.Configuration.DataDirectory);
+				}
+				catch (Exception e)
+				{
+					err.Add(e);
+				}
 			}
+
+			if (err.Count > 0)
+				throw new AggregateException(err);
 		}
 
 		public IDocumentStore ResetDatabase(int index)
@@ -125,7 +144,7 @@ namespace Raven.Bundles.Tests.Replication
 				session.Store(new ReplicationDocument
 				{
 					Destinations = {replicationDestination}
-				});
+				}, "Raven/Replication/Destinations");
 				session.SaveChanges();
 			}
 		}
@@ -180,6 +199,20 @@ namespace Raven.Bundles.Tests.Replication
 			var jsonDocumentMetadata = commands.Head(expectedId);
 			
 			Assert.NotNull(jsonDocumentMetadata);
+		}
+
+		protected void WaitForReplication(IDocumentStore store2, string id)
+		{
+			for (int i = 0; i < RetriesCount; i++)
+			{
+				using (var session = store2.OpenSession())
+				{
+					var company = session.Load<object>(id);
+					if (company != null)
+						break;
+					Thread.Sleep(100);
+				}
+			}
 		}
 	}
 }

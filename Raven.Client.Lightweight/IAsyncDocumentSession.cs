@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET_3_5
+#if !NET35
 
 using System;
 using System.Linq.Expressions;
@@ -53,6 +53,18 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		void Store(object entity);
+
+		/// <summary>
+		/// Stores the specified entity with the specified etag, under the specified id
+		/// </summary>
+		void Store(object entity, Guid etag, string id);
+
+		/// <summary>
+		/// Stores the specified dynamic entity, under the specified id
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		/// <param name="id">The id to store this entity under. If other entity exists with the same id it will be overridden.</param>
+		void Store(object entity, string id);
 
 		/// <summary>
 		/// Marks the specified entity for deletion. The entity will be deleted when <see cref="SaveChangesAsync"/> is called.

@@ -13,7 +13,7 @@
    <tags>nosql ravendb raven document database</tags>
    <dependencies>
       <dependency id="NLog" version="[2.0.0.2000]" />
-      <dependency id="Newtonsoft.Json" version="[4.0.8]" />
+      <dependency id="Newtonsoft.Json" version="[4.5.3]" />
    </dependencies>
    <frameworkAssemblies>
       <frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />

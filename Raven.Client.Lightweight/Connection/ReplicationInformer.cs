@@ -13,7 +13,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-#if !NET_3_5
+#if !NET35
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 #endif
@@ -72,14 +72,14 @@ namespace Raven.Client.Connection
 			this.conventions = conventions;
 		}
 
-#if !NET_3_5
+#if !NET35
 		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder>();
 		private Task refreshReplicationInformationTask;
 #else
 		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
 #endif
 
-#if NET_3_5
+#if NET35
 		/// <summary>
 		/// Updates the replication information if needed.
 		/// </summary>
@@ -191,7 +191,7 @@ namespace Raven.Client.Connection
 					return;
 				case FailoverBehavior.FailImmediately:
 					var allowReadFromAllServers = (conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) ==
-					                              FailoverBehavior.ReadFromAllServers;
+												  FailoverBehavior.ReadFromAllServers;
 					if (allowReadFromAllServers && method == "GET")
 						return;
 					break;
@@ -203,7 +203,7 @@ namespace Raven.Client.Connection
 
 		private IntHolder GetHolder(string operationUrl)
 		{
-#if !NET_3_5
+#if !NET35
 			return failureCounts.GetOrAdd(operationUrl, new IntHolder());
 #else
 	// need to compensate for 3.5 not having concnurrent dic.
@@ -242,7 +242,7 @@ namespace Raven.Client.Connection
 		{
 			IntHolder value = GetHolder(operationUrl);
 			var current = Interlocked.Increment(ref value.Value);
-			if(current == 1)// first failure
+			if (current == 1)// first failure
 			{
 				FailoverStatusChanged(this, new FailoverStatusChangedEventArgs
 				{
@@ -358,7 +358,7 @@ namespace Raven.Client.Connection
 			IntHolder value = GetHolder(operationUrl);
 			var oldVal = value.Value;
 			Thread.VolatileWrite(ref value.Value, 0);
-			if(oldVal != 0)
+			if (oldVal != 0)
 			{
 				FailoverStatusChanged(this,
 					new FailoverStatusChangedEventArgs
@@ -444,7 +444,7 @@ Failed to get in touch with any of the " + (1 + replicationDestinations.Count) +
 		}
 		#endregion
 
-#if !NET_3_5
+#if !NET35
 		#region ExecuteWithReplicationAsync
 
 		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, int currentRequest, int readStripingBase, Func<string, Task<T>> operation)
@@ -490,9 +490,8 @@ Failed to get in touch with any of the " + (1 + replicationDestinations.Count) +
 					if (IsFirstFailure(state.PrimaryUrl))
 						return AttemptOperationAndOnFailureCallExecuteWithReplication(state.PrimaryUrl,
 																					  state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice));
-					else
-						goto case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice;
 
+					goto case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice;
 				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice:
 
 					IncrementFailureCount(state.PrimaryUrl);
@@ -520,9 +519,8 @@ Failed to get in touch with any of the " + (1 + replicationDestinations.Count) +
 					if (IsFirstFailure(destination))
 						return AttemptOperationAndOnFailureCallExecuteWithReplication(destination,
 																					  state.With(ExecuteWithReplicationStates.TryAllServersFailedTwice));
-					else
-						goto case ExecuteWithReplicationStates.TryAllServersFailedTwice;
 
+					goto case ExecuteWithReplicationStates.TryAllServersFailedTwice;
 				case ExecuteWithReplicationStates.TryAllServersFailedTwice:
 					IncrementFailureCount(state.ReplicationDestinations[state.LastAttempt]);
 
@@ -558,8 +556,10 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 					case TaskStatus.Faulted:
 						if (IsServerDown(task.Exception))
 							return ExecuteWithReplicationAsync(state);
-						else
-							throw task.Exception;
+
+						tcs = new TaskCompletionSource<T>();
+						tcs.SetException(task.Exception);
+						return tcs.Task;
 
 					default:
 						throw new InvalidOperationException("Unknown task status in AttemptOperationAndOnFailureCallExecuteWithReplication");
@@ -615,10 +615,11 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 		private static bool IsServerDown(Exception e)
 		{
-#if !NET_3_5
-			if (e is AggregateException)
+#if !NET35
+			AggregateException aggregateException = e as AggregateException;
+			if (aggregateException != null)
 			{
-				e = ((AggregateException)e).ExtractSingleInnerException();
+				e = aggregateException.ExtractSingleInnerException();
 			}
 #endif
 
@@ -628,7 +629,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 		public void Dispose()
 		{
-#if !NET_3_5
+#if !NET35
 			var replicationInformationTaskCopy = refreshReplicationInformationTask;
 			if (replicationInformationTaskCopy != null)
 				replicationInformationTaskCopy.Wait();

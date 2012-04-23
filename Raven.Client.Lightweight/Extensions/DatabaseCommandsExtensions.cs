@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Extensions
 {
-#if !NET_3_5
+#if !NET35
 	using Raven.Client.Connection.Async;
 	using System.Threading.Tasks;
 	using Indexes;

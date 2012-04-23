@@ -14,7 +14,7 @@ using System.Text;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -160,7 +160,7 @@ namespace Raven.Database.Indexing
 		{
 			if (doc is IDynamicJsonObject)
 				return ((IDynamicJsonObject)doc).Inner;
-			return RavenJObject.FromObject(doc, JsonExtensions.CreateDefaultJsonSerializer());
+			return RavenJObject.FromObject(doc);
 		}
 
 		private static readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache = new ConcurrentDictionary<Type, Func<object, object>>();

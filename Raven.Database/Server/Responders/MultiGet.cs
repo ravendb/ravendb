@@ -108,12 +108,8 @@ namespace Raven.Database.Server.Responders
 					return getResponse;
 
 				Response.OutputStream.Position = 0;
-				string result = new StreamReader(Response.OutputStream).ReadToEnd();
-				getResponse.Result = RavenJToken.Parse(result, returnNullForEmptyString: true);
-				if (Response.StatusCode != 0)
-					getResponse.Status = Response.StatusCode;
-				else
-					getResponse.Status = 200;
+				getResponse.Result = RavenJToken.TryLoad(Response.OutputStream);
+				getResponse.Status = Response.StatusCode != 0 ? Response.StatusCode : 200;
 				return getResponse;
 			}
 

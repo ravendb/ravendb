@@ -11,9 +11,9 @@ using System.Reflection;
 using System.Transactions;
 #endif
 using System.Text;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Serialization;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -24,7 +24,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 
-#if !NET_3_5
+#if !NET35
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
 
@@ -52,11 +52,11 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 		private bool hasEnlisted;
 		[ThreadStatic]
-		private static Dictionary<string, HashSet<string>> registeredStoresInTransaction;
+		private static Dictionary<string, HashSet<string>> _registeredStoresInTransaction;
 
 		private static Dictionary<string, HashSet<string>> RegisteredStoresInTransaction
 		{
-			get { return (registeredStoresInTransaction ?? (registeredStoresInTransaction = new Dictionary<string, HashSet<string>>())); }
+			get { return (_registeredStoresInTransaction ?? (_registeredStoresInTransaction = new Dictionary<string, HashSet<string>>())); }
 		}
 #endif
 
@@ -99,7 +99,7 @@ namespace Raven.Client.Document
 		/// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
 		/// </summary>
 		protected InMemoryDocumentSessionOperations(
-			DocumentStoreBase documentStore, 
+			DocumentStoreBase documentStore,
 			DocumentSessionListeners listeners,
 			Guid id)
 		{
@@ -193,8 +193,8 @@ namespace Raven.Client.Document
 			{
 				string id;
 				if (TryGetIdFromInstance(instance, out id)
-#if !NET_3_5
-				 || (instance is IDynamicMetaObjectProvider &&
+#if !NET35
+					|| (instance is IDynamicMetaObjectProvider &&
 					   TryGetIdFromDynamic(instance, out id))
 #endif
 )
@@ -418,7 +418,7 @@ more responsive application.
 			if (Equals(entity, default(T)))
 			{
 				entity = documentFound.Deserialize<T>(Conventions);
-#if !NET_3_5
+#if !NET35
 				var document = entity as RavenJObject;
 				if (document != null)
 				{
@@ -448,7 +448,7 @@ more responsive application.
 			var identityProperty = documentStore.Conventions.GetIdentityProperty(entityType);
 			if (identityProperty == null)
 			{
-#if !NET_3_5
+#if !NET35
 				if (entity is IDynamicMetaObjectProvider)
 				{
 					TrySetIdOnynamic(entity, id);
@@ -511,7 +511,9 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity)
 		{
-			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?)null, null);
+			string id;
+			var hasId = TryGetIdFromInstance(entity, out id);
+			StoreInternal(entity, null, null, forceConcurrencyCheck: hasId == false);
 		}
 
 		/// <summary>
@@ -519,7 +521,7 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity, Guid etag)
 		{
-			StoreInternal(entity, etag, null);
+			StoreInternal(entity, etag, null, forceConcurrencyCheck: true);
 		}
 
 		/// <summary>
@@ -527,7 +529,7 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity, string id)
 		{
-			StoreInternal(entity, UseOptimisticConcurrency ? Guid.Empty : (Guid?)null, id);
+			StoreInternal(entity, null, id, forceConcurrencyCheck: false);
 		}
 
 		/// <summary>
@@ -535,20 +537,24 @@ more responsive application.
 		/// </summary>
 		public void Store(object entity, Guid etag, string id)
 		{
-			StoreInternal(entity, etag, id);
+			StoreInternal(entity, etag, id, forceConcurrencyCheck: true);
 		}
 
-		private void StoreInternal(object entity, Guid? etag, string id)
+		private void StoreInternal(object entity, Guid? etag, string id, bool forceConcurrencyCheck)
 		{
 			if (null == entity)
 				throw new ArgumentNullException("entity");
 
-			if (entitiesAndMetadata.ContainsKey(entity))
+			DocumentMetadata value;
+			if (entitiesAndMetadata.TryGetValue(entity, out value))
+			{
+				value.ForceConcurrencyCheck = forceConcurrencyCheck;
 				return;
+			}
 
 			if (id == null)
 			{
-#if !NET_3_5
+#if !NET35
 				if (entity is IDynamicMetaObjectProvider)
 				{
 					if (TryGetIdFromDynamic(entity, out id) == false)
@@ -585,19 +591,20 @@ more responsive application.
 			var metadata = new RavenJObject();
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
-			StoreEntityInUnitOfWork(id, entity, etag, metadata);
+			StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
 		}
 
-		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata)
+		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
 			entitiesAndMetadata.Add(entity, new DocumentMetadata
-			                                	{
-			                                		Key = id,
-			                                		Metadata = metadata,
-			                                		OriginalMetadata = new RavenJObject(),
-			                                		ETag = etag,
-			                                		OriginalValue = new RavenJObject()
-			                                	});
+			{
+				Key = id,
+				Metadata = metadata,
+				OriginalMetadata = new RavenJObject(),
+				ETag = etag,
+				OriginalValue = new RavenJObject(),
+				ForceConcurrencyCheck = forceConcurrencyCheck
+			});
 			if (id != null)
 				entitiesByKey[id] = entity;
 		}
@@ -653,7 +660,7 @@ more responsive application.
 			return false;
 		}
 
-#if !NET_3_5
+#if !NET35
 		private static bool TryGetIdFromDynamic(dynamic entity, out string id)
 		{
 			try
@@ -701,7 +708,9 @@ more responsive application.
 
 			var json = ConvertEntityToJson(entity, documentMetadata.Metadata);
 
-			var etag = UseOptimisticConcurrency ? documentMetadata.ETag : null;
+			var etag = UseOptimisticConcurrency || documentMetadata.ForceConcurrencyCheck
+						   ? (documentMetadata.ETag ?? Guid.Empty)
+						   : (Guid?)null;
 
 			return new PutCommandData
 			{
@@ -909,7 +918,7 @@ more responsive application.
 				return true;
 
 			string id;
-			if (TryGetIdFromInstance(entity, out id) && 
+			if (TryGetIdFromInstance(entity, out id) &&
 				string.Equals(documentMetadata.Key, id, StringComparison.InvariantCultureIgnoreCase) == false)
 				return true;
 
@@ -949,10 +958,10 @@ more responsive application.
 		private void SetClrType(Type entityType, RavenJObject metadata)
 		{
 			if (
-#if !NET_3_5
-			entityType == typeof(DynamicJsonObject) ||
+#if !NET35
+				entityType == typeof(DynamicJsonObject) ||
 #endif
-			 entityType == typeof(RavenJObject)) // dynamic types
+				entityType == typeof(RavenJObject)) // dynamic types
 			{
 				if (metadata.ContainsKey(Constants.RavenClrType))
 					return;// do not overwrite the value
@@ -1174,6 +1183,12 @@ more responsive application.
 			/// </summary>
 			/// <value>The original metadata.</value>
 			public RavenJObject OriginalMetadata { get; set; }
+
+			/// <summary>
+			/// A concurrency check will be forced on this entity 
+			/// even if UseOptimisticConcurrency is set to false
+			/// </summary>
+			public bool ForceConcurrencyCheck { get; set; }
 		}
 
 		/// <summary>
@@ -1204,7 +1219,7 @@ more responsive application.
 
 		protected void LogBatch(SaveChangesData data)
 		{
-			log.Debug(()=>
+			log.Debug(() =>
 			{
 				var sb = new StringBuilder()
 					.AppendFormat("Saving {0} changes to {1}", data.Commands.Count, StoreIdentifier)

@@ -1,8 +1,9 @@
-﻿#if !NET_3_5
+﻿#if !NET35
 using System;
 using System.Net;
 using System.Security;
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Extensions
 {

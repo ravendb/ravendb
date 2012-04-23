@@ -1,9 +1,7 @@
+[Bb]in
+[Oo]bj
 *resharper.user
-[Dd]ebug/
-[Rr]elease/
 build/
-[Bb]in/
-[Oo]bj/
 [Hh]elp/
 *.suo
 *.sln.cache

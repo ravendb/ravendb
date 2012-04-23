@@ -118,7 +118,7 @@ namespace Raven.Bundles.Tests.Replication.Async
 			{
 				for (int i = 0; i < RetriesCount; i++)
 				{
-					store2.DatabaseCommands.GetAttachment("ayende");
+					store2.AsyncDatabaseCommands.GetAttachmentAsync("ayende").Wait();
 				}
 			});
 			var conflictException = Assert.IsType<ConflictException>(aggregateException.Flatten().InnerException);
@@ -144,7 +144,7 @@ namespace Raven.Bundles.Tests.Replication.Async
 			{
 				for (int i = 0; i < RetriesCount; i++)
 				{
-					store2.DatabaseCommands.GetAttachment("ayende");
+					store2.AsyncDatabaseCommands.GetAttachmentAsync("ayende").Wait();
 
 				}
 			});

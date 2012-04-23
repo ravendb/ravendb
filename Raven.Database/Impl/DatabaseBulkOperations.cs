@@ -4,8 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
@@ -78,7 +78,7 @@ namespace Raven.Database.Impl
 						{
 							batchCount++;
 							var result = batchOperation(enumerator.Current, transactionInformation);
-							array.Add(RavenJObject.FromObject(result, JsonExtensions.CreateDefaultJsonSerializer()));
+							array.Add(RavenJObject.FromObject(result));
 						}
 					});
 					if (batchCount < batchSize) break;

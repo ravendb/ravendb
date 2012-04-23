@@ -41,7 +41,7 @@ namespace Raven.Bundles.Tests.Replication.Bugs
 			{
 				using (var session1 = store1.OpenSession())
 				{
-					session1.Store(new User { Id = "users/ayende", Name = "Ayende #" + i });
+					session1.Load<User>("users/ayende").Name += "Ayende #" + i;
 					session1.SaveChanges();
 				}
 			}

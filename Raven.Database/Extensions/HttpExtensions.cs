@@ -10,9 +10,10 @@ using System.Reflection;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
-using Newtonsoft.Json.Linq;
+using Raven.Abstractions.Json;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Bson;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -46,7 +47,7 @@ namespace Raven.Database.Extensions
 		public static RavenJObject ReadJson(this IHttpContext context)
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
-			using (var jsonReader = new JsonTextReader(streamReader))
+			using (var jsonReader = new RavenJsonTextReader(streamReader))
 				return RavenJObject.Load(jsonReader);
 		}
 
@@ -55,7 +56,7 @@ namespace Raven.Database.Extensions
 			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
 			{
 				var readToEnd = streamReader.ReadToEnd();
-				using (var jsonReader = new JsonTextReader(new StringReader(readToEnd)))
+				using (var jsonReader = new RavenJsonTextReader(new StringReader(readToEnd)))
 				{
 					var result = JsonExtensions.CreateDefaultJsonSerializer();
 
@@ -67,7 +68,7 @@ namespace Raven.Database.Extensions
 		public static RavenJArray ReadJsonArray(this IHttpContext context)
 		{
 			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
-			using (var jsonReader = new JsonTextReader(streamReader))
+			using (var jsonReader = new RavenJsonTextReader(streamReader))
 				return RavenJArray.Load(jsonReader);
 		}
 
@@ -88,7 +89,7 @@ namespace Raven.Database.Extensions
 
 		public static void WriteJson(this IHttpContext context, object obj)
 		{
-			WriteJson(context, RavenJToken.FromObject(obj, JsonExtensions.CreateDefaultJsonSerializer()));
+			WriteJson(context, RavenJToken.FromObject(obj));
 		}
 
 		public static void WriteJson(this IHttpContext context, RavenJToken obj)
@@ -253,7 +254,7 @@ namespace Raven.Database.Extensions
 		{
 			int start;
 			int.TryParse(context.Request.QueryString["start"], out start);
-			return start;
+			return Math.Max(0, start);
 		}
 
 		public static bool GetAllowStale(this IHttpContext context)

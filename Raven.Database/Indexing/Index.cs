@@ -655,8 +655,8 @@ namespace Raven.Database.Indexing
 							indexQuery.TotalSize.Value = search.TotalHits;
 
 							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
-
-							for (int i = start; i < search.TotalHits && (i - start) < pageSize; i++)
+							
+							for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
 							{
 								Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
 								IndexQueryResult indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i].score);

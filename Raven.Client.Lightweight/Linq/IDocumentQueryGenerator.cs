@@ -17,7 +17,7 @@ namespace Raven.Client.Linq
 		/// </summary>
 		IDocumentQuery<T> Query<T>(string indexName);
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Create a new query for <typeparam name="T"/>
 		/// </summary>

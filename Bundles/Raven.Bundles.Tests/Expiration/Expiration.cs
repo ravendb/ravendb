@@ -22,15 +22,15 @@ namespace Raven.Bundles.Tests.Expiration
 {
 	public class Expiration : IDisposable
 	{
-		private readonly DocumentStore documentStore;
 		private readonly string path;
+		private readonly DocumentStore documentStore;
 		private readonly RavenDbServer ravenDbServer;
 
 		public Expiration()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory("Data");
+			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 			ravenDbServer = new RavenDbServer(
 				new database::Raven.Database.Config.RavenConfiguration
 				{
@@ -81,7 +81,9 @@ namespace Raven.Bundles.Tests.Expiration
 				var company2 = session.Load<Company>(company.Id);
 				Assert.NotNull(company2);
 				var metadata = session.Advanced.GetMetadataFor(company2);
-				Assert.Equal(expiry.ToString(), metadata.Value<DateTime>("Raven-Expiration-Date").ToString());
+				var expirationDate = metadata.Value<DateTime>("Raven-Expiration-Date");
+				Assert.Equal(DateTimeKind.Utc, expirationDate.Kind);
+				Assert.Equal(expiry.ToString(), expirationDate.ToString());
 			}
 		}
 

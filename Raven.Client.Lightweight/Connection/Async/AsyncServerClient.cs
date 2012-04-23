@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !NET_3_5
+#if !NET35
 
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
@@ -354,13 +354,14 @@ namespace Raven.Client.Connection.Async
 							if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 							{
 								var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-								var conflictsDoc = RavenJObject.Load(new JsonTextReader(conflicts));
+							var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
 								var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 								throw new ConflictException("Conflict detected on " + key +
 															", conflict must be resolved before the document will be accessible")
 								{
-									ConflictedVersionIds = conflictIds
+								ConflictedVersionIds = conflictIds,
+								Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
 								};
 							}
 							throw;
@@ -827,7 +828,7 @@ namespace Raven.Client.Connection.Async
 		private Task ExecuteWithReplication(string method, Func<string, Task> operation)
 		{
 			// Convert the Func<string, Task> to a Func<string, Task<object>>
-			return ExecuteWithReplication(method, url => operation(url).ContinueWith<object>(t => null));
+			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t => null));
 		}
 
 		private Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Xunit;
@@ -82,12 +83,11 @@ namespace Raven.Tests.MailingList.spokeypokey
 
 
 		[Fact]
-		public void Can_reference_child_documents_in_index()
+		public void CanReferenceChildDocumentsInIndex()
 		{
 			using(GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" })
+			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
-				store.Initialize();
 				store.Conventions.FindIdentityProperty = (x => x.Name == "InternalId");
 				new ProviderAndTaxonomyCodeIndex1().Execute(store);
 
@@ -127,20 +127,30 @@ namespace Raven.Tests.MailingList.spokeypokey
 
 				using (var session = store.OpenSession())
 				{
-					var result =
-						(from p in session.Query<ProviderAndTaxonomyCodeIndex1.ProviderTestDto, ProviderAndTaxonomyCodeIndex1>()
-						 .Customize(x=>x.WaitForNonStaleResults())
-						 where p.Name == provider1.Name
-						 select p).FirstOrDefault();
+					var result = session.Query<ProviderAndTaxonomyCodeIndex1.ProviderTestDto, ProviderAndTaxonomyCodeIndex1>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.FirstOrDefault(p => p.Name == provider1.Name);
+
+					var serverErrors = store.DatabaseCommands.GetStatistics().Errors;
+					try
+					{
+						Assert.Empty(serverErrors);
+						serverErrors.ForEach(error => Console.WriteLine(error.Error));
+					}
+					catch (Exception)
+					{
+						Console.WriteLine(serverErrors);
+						throw;
+					}
+
 					Assert.NotNull(result);
 					Assert.Equal(provider1.Name, result.Name);
 				}
+
 				using (var session = store.OpenSession())
 				{
-					var result =
-						(from p in session.Query<ProviderAndTaxonomyCodeIndex1.ProviderTestDto, ProviderAndTaxonomyCodeIndex1>()
-						 where p.TaxonomyCode_EffectiveFrom == taxonomyCode1.EffectiveFrom
-						 select p).FirstOrDefault();
+					var result = session.Query<ProviderAndTaxonomyCodeIndex1.ProviderTestDto, ProviderAndTaxonomyCodeIndex1>()
+						.FirstOrDefault(p => p.TaxonomyCode_EffectiveFrom == taxonomyCode1.EffectiveFrom);
 					Assert.NotNull(result);
 					Assert.Equal(taxonomyCode1.EffectiveFrom, result.TaxonomyCode_EffectiveFrom);
 				}

@@ -17,7 +17,7 @@ using Raven.Client.Silverlight.Connection;
 #else
 using Raven.Client.Indexes;
 #endif
-#if !NET_3_5
+#if !NET35
 using Raven.Client.Connection.Async;
 #endif
 
@@ -77,7 +77,7 @@ namespace Raven.Client
 		IDocumentStore Initialize();
 
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>

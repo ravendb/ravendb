@@ -11,7 +11,7 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-#if !NET_3_5
+#if !NET35
 using Raven.Client.Connection.Async;
 #endif
 
@@ -29,7 +29,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 		private readonly IDatabaseCommands databaseCommands;
 #endif
-#if !NET_3_5
+#if !NET35
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 #endif
 		private InMemoryDocumentSessionOperations session;
@@ -46,7 +46,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 			, IDatabaseCommands databaseCommands
 #endif
-#if !NET_3_5
+#if !NET35
 			, IAsyncDatabaseCommands asyncDatabaseCommands
 #endif
 			)
@@ -62,7 +62,7 @@ namespace Raven.Client.Linq
 #if !SILVERLIGHT
 			this.databaseCommands = databaseCommands;
 #endif
-#if !NET_3_5
+#if !NET35
 			this.asyncDatabaseCommands = asyncDatabaseCommands;
 #endif
 			this.provider.AfterQueryExecuted(queryStats.UpdateQueryStats);
@@ -143,7 +143,7 @@ namespace Raven.Client.Linq
 
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
-			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
+			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
 		}
 
 		/// <summary>
@@ -176,7 +176,7 @@ namespace Raven.Client.Linq
 		
 #endif
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Grant access to the async database commands
 		/// </summary>

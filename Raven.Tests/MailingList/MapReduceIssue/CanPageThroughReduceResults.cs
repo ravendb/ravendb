@@ -13,10 +13,7 @@ namespace Raven.Tests.MailingList.MapReduceIssue
 		public void Test()
 		{
 			using(GetNewServer())
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079/"
-			}.Initialize())
+			using (var store = new DocumentStore{Url = "http://localhost:8079/"}.Initialize())
 			{
 				using (var stream = typeof(CanPageThroughReduceResults).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.MapReduceIssue.MvcMusicStore_Dump.json"))
 				{
@@ -56,7 +53,7 @@ namespace Raven.Tests.MailingList.MapReduceIssue
 			}
 		}
 
-		public class Artist
+		private class Artist
 		{
 			public string Name { get; set; }
 			public string Id { get; set; }

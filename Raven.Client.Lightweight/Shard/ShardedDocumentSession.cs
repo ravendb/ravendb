@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
-#if !NET_3_5
+#if !NET35
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Batches;
 #endif
@@ -33,7 +33,7 @@ namespace Raven.Client.Shard
 	public class ShardedDocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
 		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
 	{
-#if !NET_3_5
+#if !NET35
 		private readonly List<Tuple<ILazyOperation, IList<IDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<IDatabaseCommands>>>();
 		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
 #endif
@@ -148,7 +148,7 @@ namespace Raven.Client.Shard
 			get { return this; }
 		}
 
-#if !NET_3_5
+#if !NET35
 
 		/// <summary>
 		/// Loads the specified ids and a function to call when it is evaluated
@@ -418,12 +418,12 @@ namespace Raven.Client.Shard
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, null
-#if !NET_3_5
+#if !NET35
 			                                         , null
 #endif
 				);
 			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, indexName, null, this, null
-#if !NET_3_5
+#if !NET35
 			                                  , null
 #endif
 				);
@@ -505,7 +505,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata)
+		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
 			var shardId = shardStrategy.ShardResolutionStrategy.GenerateShardIdFor(entity);
 			if (string.IsNullOrEmpty(shardId))
@@ -514,7 +514,7 @@ namespace Raven.Client.Shard
 			var modifyDocumentId = shardStrategy.ModifyDocumentId(Conventions, shardId, id);
 			if(modifyDocumentId != id)
 				TrySetIdentity(entity, modifyDocumentId);
-			base.StoreEntityInUnitOfWork(modifyDocumentId, entity, etag, metadata);
+			base.StoreEntityInUnitOfWork(modifyDocumentId, entity, etag, metadata, forceConcurrencyCheck);
 		}
 
 		/// <summary>
@@ -616,7 +616,7 @@ namespace Raven.Client.Shard
 			get { throw new NotSupportedException("Not supported in a sharded session"); }
 		}
 
-#if !NET_3_5
+#if !NET35
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>
