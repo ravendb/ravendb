@@ -160,6 +160,21 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		public Task<byte[]> ReadResponseBytesAsync()
+		{
+			if (!writeCalled)
+				webRequest.ContentLength = 0;
+			return Task.Factory.FromAsync<WebResponse>(webRequest.BeginGetResponse, webRequest.EndGetResponse, null)
+				.ContinueWith(task =>
+				{
+					using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
+					{
+						ResponseHeaders = new NameValueCollection(task.Result.Headers);
+						return stream.ReadData();
+					}
+				});
+		}
+
 		/// <summary>
 		/// Reads the response string.
 		/// </summary>

@@ -29,6 +29,7 @@ using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Bson;
 
 namespace Raven.Client.Connection.Async
 {
@@ -306,8 +307,8 @@ namespace Raven.Client.Connection.Async
 			};
 		}
 
-		
-		
+
+
 
 		/// <summary>
 		/// Gets or sets the operations headers.
@@ -325,10 +326,10 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public Task<JsonDocument> GetAsync(string key)
 		{
+			EnsureIsNotNullOrEmpty(key, "key");
+
 			return ExecuteWithReplication("GET", url =>
 			{
-				EnsureIsNotNullOrEmpty(key, "key");
-
 				var metadata = new RavenJObject();
 				AddTransactionInformation(metadata);
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, "GET", metadata, credentials, convention);
@@ -354,14 +355,14 @@ namespace Raven.Client.Connection.Async
 							if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 							{
 								var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-							var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
+								var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
 								var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 								throw new ConflictException("Conflict detected on " + key +
 															", conflict must be resolved before the document will be accessible")
 								{
-								ConflictedVersionIds = conflictIds,
-								Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
+									ConflictedVersionIds = conflictIds,
+									Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
 								};
 							}
 							throw;
@@ -419,7 +420,7 @@ namespace Raven.Client.Connection.Async
 					throw;
 				var httpWebResponse = we.Response as HttpWebResponse;
 				if (httpWebResponse == null ||
-				    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 					throw;
 				throw ThrowConcurrencyException(we);
 			}
@@ -609,7 +610,8 @@ namespace Raven.Client.Connection.Async
 		/// <param name="suggestionQuery">The suggestion query.</param>
 		public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery suggestionQuery)
 		{
-			if (suggestionQuery == null) throw new ArgumentNullException("suggestionQuery");
+			if (suggestionQuery == null)
+				throw new ArgumentNullException("suggestionQuery");
 
 			return ExecuteWithReplication("GET", url =>
 			{
@@ -738,7 +740,7 @@ namespace Raven.Client.Connection.Async
 						.ToArray();
 				});
 		}
-		
+
 		/// <summary>
 		/// Puts the attachment with the specified key asynchronously
 		/// </summary>
@@ -758,7 +760,65 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public Task<Attachment> GetAttachmentAsync(string key)
 		{
-			throw new NotImplementedException();
+			EnsureIsNotNullOrEmpty(key, "key");
+
+			return ExecuteWithReplication("GET", url =>
+			{
+				var metadata = new RavenJObject();
+				AddTransactionInformation(metadata);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/static/" + key, "GET", metadata, credentials, convention);
+
+				return request
+					.ReadResponseBytesAsync()
+					.ContinueWith(task =>
+					{
+						switch (task.Status)
+						{
+							case TaskStatus.RanToCompletion:
+								var memoryStream = new MemoryStream(task.Result);
+								return new Attachment
+								{
+									Data = () => memoryStream,
+									Size = task.Result.Length,
+									Etag = new Guid(request.ResponseHeaders["ETag"]),
+									Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
+								};
+
+							case TaskStatus.Faulted:
+								var webException = task.Exception.ExtractSingleInnerException() as WebException;
+								if (webException != null)
+								{
+									var response = webException.Response as HttpWebResponse;
+									if (response != null)
+									{
+										switch (response.StatusCode)
+										{
+											case HttpStatusCode.NotFound:
+												return null;
+
+											case HttpStatusCode.Conflict:
+												var conflictsDoc = RavenJObject.Load(new BsonReader(response.GetResponseStreamWithHttpDecompression()));
+												var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+												throw new ConflictException("Conflict detected on " + key +
+																			", conflict must be resolved before the attachment will be accessible")
+												{
+													ConflictedVersionIds = conflictIds,
+													Etag = new Guid(response.GetResponseHeader("ETag"))
+												};
+										}
+									}
+								}
+								throw task.Exception;
+
+							case TaskStatus.Canceled:
+								throw new TaskCanceledException();
+
+							default:
+								throw new InvalidOperationException("Invalid task status");
+						}
+					});
+			});
 		}
 
 		/// <summary>
