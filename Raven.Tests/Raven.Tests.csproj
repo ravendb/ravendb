@@ -565,6 +565,7 @@
     <Compile Include="MailingList\bhiku.cs" />
     <Compile Include="MailingList\BooleanCollection.cs" />
     <Compile Include="MailingList\CanUpdateInsideDtcWithOptimisticConcurrency.cs" />
+    <Compile Include="CriticalCulturesAttribute.cs" />
     <Compile Include="MailingList\EtagUsage.cs" />
     <Compile Include="MailingList\HiloTests.cs" />
     <Compile Include="MailingList\DeserialisationToObjectTests.cs" />
@@ -600,6 +601,7 @@
     <Compile Include="MailingList\Stacey\ImageByName.cs" />
     <Compile Include="MailingList\Stacey\InServerTesting.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
+    <Compile Include="TemporaryCulture.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />
     <Compile Include="MailingList\Thor\LinqTest.cs" />
