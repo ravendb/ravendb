@@ -23,8 +23,6 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Escapes Lucene operators and quotes phrases
 		/// </summary>
-		/// <param name="term"></param>
-		/// <param name="allowWildcards"></param>
 		/// <returns>escaped term</returns>
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters

@@ -249,11 +249,12 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			store.Dispose();
 			server.Dispose();
 			ClearDatabaseDirectory();
+			base.Dispose();
 		}
 
 		public class Order

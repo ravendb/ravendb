@@ -28,7 +28,7 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
-			Database.StopBackgroundWokers();
+			Database.StopBackgroundWorkers();
 		}
 	}
 }

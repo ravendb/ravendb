@@ -236,7 +236,7 @@ namespace Raven.Tests
 			return timeTaken.TotalMilliseconds;
 		}
 
-		public void Dispose()
+		public virtual void Dispose()
 		{
 			// Delete tenants created using the EnsureDatabaseExists method.
 			IOExtensions.DeleteDirectory("Tenants");

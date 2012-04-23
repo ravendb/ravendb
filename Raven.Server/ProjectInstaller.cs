@@ -13,7 +13,7 @@ namespace Raven.Server
 	[RunInstaller(true)]
 	public partial class ProjectInstaller : Installer
 	{
-		internal const string SERVICE_NAME = "RavenDB";
+		internal static string SERVICE_NAME = "RavenDB";
 
 		public ProjectInstaller()
 		{

@@ -35,7 +35,7 @@ namespace Raven.Tests.Bugs
 
 				Assert.Equal(1, store.DocumentDatabase.Statistics.Indexes.First(x=>x.Name == "test").IndexingAttempts);
 
-				store.DocumentDatabase.StopBackgroundWokers();
+				store.DocumentDatabase.StopBackgroundWorkers();
 
 				store.DatabaseCommands.PutIndex("test1", new IndexDefinition
 				{

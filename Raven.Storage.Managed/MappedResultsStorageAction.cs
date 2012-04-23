@@ -92,7 +92,7 @@ namespace Raven.Storage.Managed
 
 		public IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take)
 		{
-			return storage.MappedResults["ByViewAndEtagDesc"]
+			var mappedResultInfos = storage.MappedResults["ByViewAndEtagDesc"]
 				// the index is sorted view ascending and then etag descending
 				// we index before this index, then backward toward the last one.
 				.SkipBefore(new RavenJObject { { "view", indexName }, {"etag", lastReducedEtag.ToByteArray()}})
@@ -112,7 +112,18 @@ namespace Raven.Storage.Managed
 							mappedResultInfo.Data = readResult.Data().ToJObject();
 					}
 					return mappedResultInfo;
-				}).Take(take);
+				});
+
+			var results = new Dictionary<string, MappedResultInfo>();
+
+			foreach (var mappedResultInfo in mappedResultInfos)
+			{
+				results[mappedResultInfo.ReduceKey] = mappedResultInfo;
+				if (results.Count == take)
+					break;
+			}
+
+			return results.Values;
 		}
 	}
 }

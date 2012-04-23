@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -14,10 +15,35 @@ namespace Raven.Abstractions.Extensions
 	///</summary>
 	public static class ExpressionExtensions
 	{
+		public static PropertyInfo ToProperty<T, TProperty>(this Expression<Func<T, TProperty>> expr)
+		{
+			var expression = expr.Body;
+
+			var unaryExpression = expression as UnaryExpression;
+			if (unaryExpression != null)
+			{
+				switch (unaryExpression.NodeType)
+				{
+					case ExpressionType.Convert:
+					case ExpressionType.ConvertChecked:
+						expression = unaryExpression.Operand;
+						break;
+				}
+
+			}
+
+			var me = expression as MemberExpression;
+
+			if (me == null)
+				throw new InvalidOperationException("No idea how to convert " + expr.Body.NodeType + ", " + expr.Body +
+													" to a member expression");
+
+			return me.Member as PropertyInfo;
+		}
+
 		///<summary>
 		/// Turn an expression like x=&lt; x.User.Name to "User.Name"
 		///</summary>
-		///<param name="expr">Expression for member access</param>
 		public static string ToPropertyPath<T, TProperty>(this Expression<Func<T, TProperty>> expr, string separator = ".")
 		{
 			var expression = expr.Body;
@@ -35,7 +61,7 @@ namespace Raven.Abstractions.Extensions
 
 			}
 
-			MemberExpression me = expression as MemberExpression;
+			var me = expression as MemberExpression;
 
 			if (me == null)
 				throw new InvalidOperationException("No idea how to convert " + expr.Body.NodeType + ", " + expr.Body +

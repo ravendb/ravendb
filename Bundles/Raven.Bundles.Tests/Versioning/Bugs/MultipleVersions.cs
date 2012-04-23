@@ -17,7 +17,7 @@ namespace Raven.Bundles.Tests.Versioning.Bugs
 					Exclude = false,
 					Id = "Raven/Versioning/DefaultConfiguration",
 					MaxRevisions = 50
-				});
+				}, "Raven/Versioning/DefaultConfiguration");
 				s.SaveChanges();
 			}
 		
@@ -29,7 +29,7 @@ namespace Raven.Bundles.Tests.Versioning.Bugs
 					{
 						Name = "Company " + i,
 						Id = "companies/1"
-					});
+					}, "companies/1");
 					session.SaveChanges();
 				}
 			}

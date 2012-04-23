@@ -128,6 +128,11 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
+		/// Determine whether to use compression or not 
+		/// </summary>
+		public bool DisableRequestCompression { get; set; }
+
+		/// <summary>
 		/// default ctor
 		/// </summary>
 		/// <param name="maxNumberOfCachedRequests"></param>

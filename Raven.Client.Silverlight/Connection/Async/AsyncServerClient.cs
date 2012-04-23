@@ -204,7 +204,8 @@ namespace Raven.Client.Silverlight.Connection.Async
 				throw new ConflictException("Conflict detected on " + key +
 											", conflict must be resolved before the document will be accessible")
 				{
-					ConflictedVersionIds = conflictIds
+					ConflictedVersionIds = conflictIds,
+					Etag = new Guid(httpWebResponse.Headers["ETag"])
 				};
 			}
 			return false;
@@ -341,7 +342,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
 				{
-					var json = (RavenJObject) task.Result;
+					var json = (RavenJObject)task.Result;
 					return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
 				});
 		}
@@ -454,7 +455,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path.NoCache(), "GET", credentials, convention);
 
 			return request.ReadResponseJsonAsync()
-				.ContinueWith(task => AttemptToProcessResponse(() => SerializationHelper.ToQueryResult((RavenJObject) task.Result, request.ResponseHeaders["ETag"].First())));
+				.ContinueWith(task => AttemptToProcessResponse(() => SerializationHelper.ToQueryResult((RavenJObject)task.Result, request.ResponseHeaders["ETag"].First())));
 		}
 
 		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
@@ -568,7 +569,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="overwrite">Should overwrite index</param>
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
-			string requestUri = url + "/indexes/" + Uri.EscapeUriString(name) +"?definition=yes";
+			string requestUri = url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
 			var webRequest = requestUri
 				.ToJsonRequest(this, credentials, convention, OperationsHeaders, "GET");
 
@@ -711,10 +712,10 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
 				{
-					var json = (RavenJObject) task.Result;
+					var json = (RavenJObject)task.Result;
 					return new SuggestionQueryResult
 					{
-						Suggestions = ((RavenJArray) json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
+						Suggestions = ((RavenJArray)json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
 					};
 				});
 		}

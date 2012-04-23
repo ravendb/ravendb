@@ -9,4 +9,12 @@ namespace Raven.Client.Linq
 		And = 1,
 		Not = 4
 	}
+
+	public enum EscapeQueryOptions
+	{
+		EscapeAll,
+		AllowPostfixWildcard,
+		AllowAllWildcards,
+		RawQuery
+	}
 }

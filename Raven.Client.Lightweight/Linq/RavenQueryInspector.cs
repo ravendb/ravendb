@@ -143,7 +143,7 @@ namespace Raven.Client.Linq
 
 		private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
 		{
-			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, null, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
+			return new RavenQueryProviderProcessor<T>(provider.QueryGenerator, provider.CustomizeQuery, null, indexName, new HashSet<string>(), new Dictionary<string, string>());
 		}
 
 		/// <summary>

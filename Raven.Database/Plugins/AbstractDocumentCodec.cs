@@ -11,7 +11,7 @@ namespace Raven.Database.Plugins
 {
 	[InheritedExport]
 	public abstract class AbstractDocumentCodec
-	{
+{	
 		public abstract Stream Encode(string key, RavenJObject data, RavenJObject metadata, Stream dataStream);
 
 		public abstract Stream Decode(string key, RavenJObject metadata, Stream dataStream);

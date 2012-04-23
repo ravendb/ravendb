@@ -50,10 +50,8 @@ namespace Raven.Tests.Bugs.DTC
 				// 1. First insert the first object
 				using (var session = documentStore.OpenSession())
 				{
-					dummy = new Foo();
-					dummy.Name = "This is the object content";
-					dummy.Id = id1;
-					session.Store(dummy);
+				    dummy = new Foo {Name = "This is the object content", Id = id1};
+				    session.Store(dummy);
 					session.SaveChanges();
 				}
 
@@ -62,17 +60,15 @@ namespace Raven.Tests.Bugs.DTC
 				{
 					using (var session = documentStore.OpenSession())
 					{
-						dummy2 = new Foo();
-						dummy2.Name = "This is the object 2 content";
-						dummy2.Id = Guid.NewGuid();
-						session.Store(dummy2);
+					    dummy2 = new Foo {Name = "This is the object 2 content", Id = Guid.NewGuid()};
+					    session.Store(dummy2);
 						session.SaveChanges();
 					}
 
 					using (var session = documentStore.OpenSession())
 					{
-						dummy.Name = "Some other value";
-						session.Store(dummy);
+					    var x = session.Load<Foo>(dummy.Id);
+						x.Name = "Some other value";
 						session.SaveChanges();
 					}
 					trnx.Complete();

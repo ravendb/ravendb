@@ -324,7 +324,7 @@ namespace Raven.Studio.Models
 				index.UpdateIndex();
 				if (index.Reduce == "")
 					index.Reduce = null;
-				if (index.TransformResults == "")
+				if (index.TransformResults == "" || index.ShowTransformResults == false)
 					index.TransformResults = null;
 
 				var mapIndexes = (from mapItem in index.Maps where mapItem.Text == "" select index.Maps.IndexOf(mapItem)).ToList();

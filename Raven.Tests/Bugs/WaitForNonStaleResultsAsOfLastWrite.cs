@@ -89,7 +89,7 @@ namespace Raven.Tests.Bugs
 					while(store.DocumentDatabase.Statistics.StaleIndexes.Length > 0)
 						Thread.Sleep(100);
 
-					store.DocumentDatabase.StopBackgroundWokers();
+					store.DocumentDatabase.StopBackgroundWorkers();
 
 					session.Store(new User());
 					session.SaveChanges();

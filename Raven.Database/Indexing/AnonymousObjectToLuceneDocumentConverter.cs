@@ -139,7 +139,7 @@ namespace Raven.Database.Indexing
 			var itemsToIndex = value as IEnumerable;
 			if( itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
 			{
-				if (nestedArray	 == false)
+				if (nestedArray	 == false &&storage != Field.Store.NO)
 				{
 					yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 				}

@@ -9,7 +9,7 @@ properties {
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
 	$configuration = "Debug"
-  
+	
 	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Newtonsoft.Json), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???",
 				"ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", 
@@ -78,7 +78,7 @@ task Verify40 {
 
 
 task Clean {
-	#Remove-Item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
+	Remove-Item -force -recurse $buildartifacts_dir -ErrorAction SilentlyContinue
 	Remove-Item -force -recurse $release_dir -ErrorAction SilentlyContinue
 }
 
@@ -94,9 +94,10 @@ task Init -depends Verify40, Clean {
 	exec { git.exe update-index --assume-unchanged "$base_dir\CommonAssemblyInfo.cs" }
 	$commit = Get-Git-Commit
 	(Get-Content "$base_dir\CommonAssemblyInfo.cs") | 
-		Foreach-Object { $_ -replace "{build}", $env:buildlabel } |
+		Foreach-Object { $_ -replace ".13.", ".$($env:buildlabel)." } |
 		Foreach-Object { $_ -replace "{commit}", $commit } |
 		Set-Content "$base_dir\CommonAssemblyInfo.cs" -Encoding UTF8
+	
 	
 	New-Item $release_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
 	New-Item $build_dir -itemType directory -ErrorAction SilentlyContinue | Out-Null
@@ -180,6 +181,10 @@ task TestSilverlight -depends Compile, CopyServer {
 	}
 }
 
+task ReleaseNoTests -depends OpenSource,DoRelease {
+
+}
+
 task Unstable {
 	$configuration = "Release"
 	$global:uploadCategory = "RavenDB-Unstable"
@@ -195,8 +200,6 @@ task RunTests -depends Test,TestSilverlight
 task RunAllTests -depends Test,TestSilverlight,StressTest
 
 task Release -depends RunTests,DoRelease
-
-task ReleaseNoTests -depends OpenSource,DoRelease
 
 task CopySamples {
 	$samples = @("Raven.Sample.ShardClient", "Raven.Sample.Failover", "Raven.Sample.Replication", `
@@ -365,7 +368,6 @@ task DoRelease -depends Compile, `
 	CopyRootFiles, `
 	CopySamples, `
 	ZipOutput, `
-	CreateNugetPackage, `
 	CreateNugetPackageFineGrained, `
 	ResetBuildArtifcats {	
 	Write-Host "Done building RavenDB"
@@ -401,131 +403,6 @@ task Upload -depends DoRelease {
 task UploadOpenSource -depends OpenSource, DoRelease, Upload	
 
 task UploadUnstable -depends Unstable, DoRelease, Upload
-
-task CreateNugetPackage {
-
-	Remove-Item $base_dir\RavenDB*.nupkg
-	Remove-Item $build_dir\NuPack -Force -Recurse -ErrorAction SilentlyContinue
-	New-Item $build_dir\NuPack -Type directory -ErrorAction SilentlyContinue | Out-Null
-	New-Item $build_dir\NuPack\content -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack\lib -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack\lib\net35 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack\lib\net40 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack\lib\sl40 -Type directory -ErrorAction SilentlyContinue | Out-Null
-	New-Item $build_dir\NuPack\tools -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack\server -Type directory -ErrorAction SilentlyContinue| Out-Null
-
-	Remove-Item $build_dir\NuPack-Client -Force -Recurse -ErrorAction SilentlyContinue
-	New-Item $build_dir\NuPack-Client -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\content -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\lib -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\lib\net35 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\lib\net40 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\lib\sl40 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\lib\sl50 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Client\tools -Type directory -ErrorAction SilentlyContinue| Out-Null
-	
-	# package for RavenDB embedded is separate and requires .NET 4.0
-	Remove-Item $build_dir\NuPack-Embedded -Force -Recurse -ErrorAction SilentlyContinue
-	New-Item $build_dir\NuPack-Embedded -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Embedded\content -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Embedded\lib -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Embedded\lib\net40 -Type directory -ErrorAction SilentlyContinue| Out-Null
-	New-Item $build_dir\NuPack-Embedded\tools -Type directory -ErrorAction SilentlyContinue| Out-Null
-	
-	$client_dlls_3_5 | ForEach-Object { 
-		Copy-Item "$_" $build_dir\NuPack\lib\net35
-		Copy-Item "$_" $build_dir\NuPack-Client\lib\net35
-	}
-	$client_dlls | ForEach-Object { 
-		Copy-Item "$_" $build_dir\NuPack\lib\net40
-		Copy-Item "$_" $build_dir\NuPack-Client\lib\net40
-	}
-	
-	@("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |
-		ForEach-Object {
-			Copy-Item "$build_dir\$_" $build_dir\NuPack\lib\sl50
-			Copy-Item "$build_dir\$_" $build_dir\NuPack-Client\lib\sl50
-		}
-		
-	@("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |
-		ForEach-Object {
-			Copy-Item "$build_dir\$_" $build_dir\NuPack\lib\sl40
-			Copy-Item "$build_dir\$_" $build_dir\NuPack-Client\lib\sl40
-		}
-	
-	$all_client_dlls | ForEach-Object { 
-		Copy-Item "$_" $build_dir\NuPack-Embedded\lib\net40
-	}
-
-	# Remove files that are obtained as dependencies
-	Remove-Item $build_dir\NuPack\lib\*\Newtonsoft.Json.* -Recurse
-	Remove-Item $build_dir\NuPack\lib\*\NLog.* -Recurse
-	Remove-Item $build_dir\NuPack-Client\lib\*\Newtonsoft.Json.* -Recurse
-	Remove-Item $build_dir\NuPack-Client\lib\*\NLog.* -Recurse
-	Remove-Item $build_dir\NuPack-Embedded\lib\*\Newtonsoft.Json.* -Recurse
-	Remove-Item $build_dir\NuPack-Embedded\lib\*\NLog.* -Recurse
-
-	# The Server folder is used as a tool, and therefore needs the dependency DLLs in it (can't depend on Nuget for that)
-	$server_files | ForEach-Object { Copy-Item "$_" $build_dir\NuPack\server }
-	Copy-Item $base_dir\DefaultConfigs\RavenDb.exe.config $build_dir\NuPack\server\Raven.Server.exe.config
-
-	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack\content\Web.config.transform
-	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack-Client\content\Web.config.transform
-	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $build_dir\NuPack-Embedded\content\Web.config.transform
-
-	Copy-Item $build_dir\Raven.Smuggler.??? $build_dir\NuPack\Tools
-	Copy-Item $build_dir\Raven.Smuggler.??? $build_dir\NuPack-Client\Tools
-	Copy-Item $build_dir\Raven.Smuggler.??? $build_dir\NuPack-Embedded\Tools
-
-	Copy-Item $build_dir\Raven.Backup.??? $build_dir\NuPack\Tools
-	Copy-Item $build_dir\Raven.Backup.??? $build_dir\NuPack-Client\Tools
-	Copy-Item $build_dir\Raven.Backup.??? $build_dir\NuPack-Embedded\Tools
-
-	# Generate the .nupkg files
-	$nupack = [xml](Get-Content $base_dir\RavenDB.nuspec)
-	
-	$nugetVersion = "$version.$env:buildlabel"
-	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
-		$nugetVersion += "-Unstable"
-	}
-	$nupack.package.metadata.version = $nugetVersion
-
-	$writerSettings = new-object System.Xml.XmlWriterSettings
-	$writerSettings.Indent = $true
-	
-	$nupack.Save("$build_dir\Nupack\RavenDB.nuspec");
-	&"$tools_dir\nuget.exe" pack $build_dir\NuPack\RavenDB.nuspec
-
-	$tags = $nupack.package.metadata.tags
-	
-	$nupack.package.metadata.id = "RavenDB-Client"
-	$nupack.package.metadata.title = "RavenDB (Client)"
-	$nupack.package.metadata.tags = "$tags client"
-	$nupack.Save("$build_dir\Nupack-Client\RavenDB-Client.nuspec");
-	&"$tools_dir\nuget.exe" pack $build_dir\NuPack-Client\RavenDB-Client.nuspec
-	
-	$nupack.package.metadata.id = "RavenDB-Embedded"
-	$nupack.package.metadata.title = "RavenDB (Embedded)"
-	$nupack.package.metadata.tags = "$tags embedded"
-	$nupack.Save("$build_dir\Nupack-Embedded\RavenDB-Embedded.nuspec");
-	&"$tools_dir\nuget.exe" pack $build_dir\NuPack-Embedded\RavenDB-Embedded.nuspec
-
-	# Upload packages
-	$accessPath = "$base_dir\..\Nuget-Access-Key.txt"
-	if ( (Test-Path $accessPath) ) {
-		$accessKey = Get-Content $accessPath
-		$accessKey = $accessKey.Trim()
-		
-		# Push to nuget repository
-		&"$tools_dir\NuGet.exe" push "RavenDB.$nugetVersion.nupkg" $accessKey
-		&"$tools_dir\NuGet.exe" push "RavenDB-Client.$nugetVersion.nupkg" $accessKey
-		&"$tools_dir\NuGet.exe" push "RavenDB-Embedded.$nugetVersion.nupkg" $accessKey
-	}
-	else {
-		Write-Host "Nuget-Access-Key.txt does not exit. Cannot publish the nuget package." -ForegroundColor Yellow
-	}
-}
 
 task CreateNugetPackageFineGrained {
 

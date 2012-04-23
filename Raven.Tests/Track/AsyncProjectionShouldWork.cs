@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Document;
@@ -35,10 +36,11 @@ namespace Raven.Tests.Track
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			store.Dispose();
 			ravenDbServer.Dispose();
+			base.Dispose();
 		}
 
 		public class TestObj

@@ -1,8 +1,5 @@
 using System;
-using System.Globalization;
 using System.Linq;
-using System.Threading;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Embedded;
 using Raven.Client.Linq;
 using Xunit;
@@ -12,7 +9,7 @@ namespace Raven.Tests.Bugs
 	public class when_querying_cases_by_name_in_danish : IDisposable
 	{
 		private readonly EmbeddableDocumentStore store;
-		private readonly IDisposable cultureReset = SwitchCultures("da");
+		private readonly IDisposable cultureReset = new TemporaryCulture("da");
 
 		public when_querying_cases_by_name_in_danish()
 		{
@@ -51,21 +48,6 @@ namespace Raven.Tests.Bugs
 				Assert.Equal(4, cases.Count);
 				Assert.Equal(new[] { "dacb", "daab", "dacb", "dada" }, cases.Select(x => x.Name).ToArray());
 			}
-		}
-
-		private static IDisposable SwitchCultures(string cultureName)
-		{
-			var oldCurrentCulture = Thread.CurrentThread.CurrentCulture;
-			var oldCurrentUiCulture = Thread.CurrentThread.CurrentUICulture;
-
-			var culture = new CultureInfo(cultureName);
-			Thread.CurrentThread.CurrentCulture = culture;
-			Thread.CurrentThread.CurrentUICulture = culture;
-			return new DisposableAction(() =>
-			{
-				Thread.CurrentThread.CurrentCulture = oldCurrentCulture;
-				Thread.CurrentThread.CurrentUICulture = oldCurrentUiCulture;
-			});
 		}
 
 		[Fact]
