@@ -22,7 +22,7 @@ namespace Raven.Studio.Features.Documents
 		public bool IsProjection { get; set; }
 	}
 
-	public class ViewableDocument : NotifyPropertyChangedBase
+	public class ViewableDocument : ViewModel
 	{
 		private readonly JsonDocument inner;
 		private string id;
@@ -39,10 +39,6 @@ namespace Raven.Studio.Features.Documents
 				LastModified = LastModified.ToLocalTime();
 			ClrType = inner.Metadata.IfPresent<string>(Constants.RavenClrType);
 			CollectionType = DetermineCollectionType(inner.Metadata);
-
-			Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentSize.Current.SizeChanged += e, e => DocumentSize.Current.SizeChanged -= e)
-				.Throttle(TimeSpan.FromSeconds(0.5))
-				.SubscribeWeakly(this, (d,_) => d.CalculateData());
 
 			CalculateData();
 			ToolTipText = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, 10);
@@ -227,5 +223,13 @@ namespace Raven.Studio.Features.Documents
 			var entity = metadata.IfPresent<string>(Constants.RavenEntityName);
 			return entity ?? "Doc";
 		}
+
+        protected override void OnViewLoaded()
+        {
+            Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentSize.Current.SizeChanged += e, e => DocumentSize.Current.SizeChanged -= e)
+                .Throttle(TimeSpan.FromSeconds(0.5))
+                .TakeUntil(Unloaded)
+                .Subscribe(_ => CalculateData());
+        }
 	}
 }

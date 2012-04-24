@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Views.Terms"
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Views.Terms"
                      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -13,4 +13,4 @@
     <Grid DataContext="{Binding Value}">
         <Terms:TermsView />
     </Grid>
-</Infrastructure:View>
+</Infrastructure:PageView>

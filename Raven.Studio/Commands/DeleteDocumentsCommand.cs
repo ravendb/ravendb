@@ -64,7 +64,7 @@ namespace Raven.Studio.Commands
 								: string.Format("Document {0} was deleted", documentIds.First());
 			ApplicationModel.Current.AddNotification(new Notification(notification));
 
-			View.UpdateAllFromServer();
+			PageView.UpdateAllFromServer();
 			((DocumentsModel)Context).ForceTimerTicked();
 		}
 	}

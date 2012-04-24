@@ -175,6 +175,7 @@
     <Compile Include="Infrastructure\INotifyOnDataFetchErrors.cs" />
     <Compile Include="Infrastructure\IVirtualCollectionSource.cs" />
     <Compile Include="Infrastructure\SparseList.cs" />
+    <Compile Include="Infrastructure\ViewModel.cs" />
     <Compile Include="Infrastructure\VirtualCollection.cs" />
     <Compile Include="Infrastructure\VirtualCollectionChangedEventArgs.cs" />
     <Compile Include="Infrastructure\VirtualCollectionSource.cs" />
@@ -378,7 +379,7 @@
     <Compile Include="Infrastructure\Observable.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Infrastructure\View.cs">
+    <Compile Include="Infrastructure\PageView.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Models\ApplicationModel.cs" />

@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Name="this"
+﻿<Infrastructure:PageView x:Name="this"
 					 x:Class="Raven.Studio.Features.Query.QueryView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -300,4 +300,4 @@
 			</Grid>
 		</Grid>
 	</toolkit:DockPanel>
-</Infrastructure:View>
+</Infrastructure:PageView>

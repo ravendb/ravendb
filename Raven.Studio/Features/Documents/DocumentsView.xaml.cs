@@ -4,7 +4,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Documents
 {
-	public partial class DocumentsView : View
+	public partial class DocumentsView : PageView
 	{
 		public DocumentsView()
 		{

@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Views.Collections"
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Views.Collections"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
@@ -15,4 +15,4 @@
 		<Collections:CollectionView Margin="{StaticResource Margin_ContentPage}" 
 								 	Grid.Row="1" />
 	</Grid>
-</Infrastructure:View>
+</Infrastructure:PageView>
