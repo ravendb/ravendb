@@ -23,7 +23,7 @@ namespace Raven.Studio.Models
         
         public StealthPagingDocumentsModel()
         {
-            Documents = new VirtualCollection<ViewableDocument>(new DocumentsCollectionSource(), 25);
+            Documents = new VirtualCollection<ViewableDocument>(new DocumentsCollectionSource(), 25, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified));
         }
 
         public override System.Threading.Tasks.Task TimerTickedAsync()

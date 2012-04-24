@@ -21,6 +21,7 @@ namespace Raven.Studio.Infrastructure
     {
         private readonly IVirtualCollectionSource<T> _source;
         private readonly int _pageSize;
+        private readonly IEqualityComparer<T> _equalityComparer;
         public event NotifyCollectionChangedEventHandler CollectionChanged;
         public event EventHandler<DataFetchErrorEventArgs> DataFetchError;
         public event EventHandler<EventArgs> FetchSucceeded;
@@ -37,17 +38,27 @@ namespace Raven.Studio.Infrastructure
 
         private readonly SortDescriptionCollection _sortDescriptions = new SortDescriptionCollection();
 
-        public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize)
+        public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize) : this(source, pageSize, EqualityComparer<T>.Default)
+        {
+            
+        } 
+
+        public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize, IEqualityComparer<T> equalityComparer)
         {
             if (pageSize < 1)
             {
                 throw new ArgumentException("pageSize must be bigger than 0");
+            }
+            if (equalityComparer == null)
+            {
+                throw new ArgumentNullException("equalityComparer");
             }
 
             _source = source;
             _source.CollectionChanged += HandleSourceCollectionChanged;
             _source.DataFetchError += HandleSourceDataFetchError;
             _pageSize = pageSize;
+            _equalityComparer = equalityComparer;
             _virtualItems = new SparseList<VirtualItem<T>>(DetermineSparseListPageSize(pageSize));
             _currentItem = -1;
             _synchronizationContextScheduler = TaskScheduler.FromCurrentSynchronizationContext();
@@ -155,7 +166,10 @@ namespace Raven.Studio.Infrastructure
             {
                 var index = startIndex + i;
                 var virtualItem = _virtualItems[index] ?? (_virtualItems[index] = new VirtualItem<T>(this, index));
-                virtualItem.Item = results[i];
+                if (virtualItem.Item == null || results[i] == null || !_equalityComparer.Equals(virtualItem.Item, results[i]))
+                {
+                    virtualItem.Item = results[i];
+                }
             }
         }
 
@@ -213,8 +227,6 @@ namespace Raven.Studio.Infrastructure
             _requestedPages.Clear();
 
             UpdateCount();
-
-            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
         private void ClearExistingData()
@@ -251,6 +263,7 @@ namespace Raven.Studio.Infrastructure
             }
 
             OnPropertyChanged(new PropertyChangedEventArgs("Count"));
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
         public int IndexOf(VirtualItem<T> item)
