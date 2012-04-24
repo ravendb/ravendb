@@ -208,8 +208,14 @@ namespace Raven.Client.Document.Async
 			return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
 				.ContinueWith(task =>
 				{
-					UpdateBatchResults(task.Result, data);
-					cachingScope.Dispose();
+					try
+					{
+						UpdateBatchResults(task.Result, data);
+					}
+					finally
+					{
+						cachingScope.Dispose();
+					}
 				});
 		}
 
