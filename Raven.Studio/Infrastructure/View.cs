@@ -13,10 +13,31 @@ namespace Raven.Studio.Infrastructure
 {
     public class View : UserControl
     {
+        private bool isLoaded;
+
         public View()
         {
             Loaded += HandleLoaded;
             Unloaded += HandleUnloaded;
+            DataContextChanged += HandleDataContectChanged;
+        }
+
+        private void HandleDataContectChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            var oldViewModel = e.OldValue as ViewModel;
+            if (oldViewModel != null)
+            {
+                oldViewModel.NotifyViewUnloaded();
+            }
+
+            if (isLoaded)
+            {
+                var newViewModel = e.NewValue as ViewModel;
+                if (newViewModel != null)
+                {
+                    newViewModel.NotifyViewLoaded();
+                }
+            }
         }
 
         private void HandleLoaded(object sender, RoutedEventArgs e)
@@ -25,6 +46,8 @@ namespace Raven.Studio.Infrastructure
             {
                 (DataContext as ViewModel).NotifyViewLoaded();
             }
+
+            isLoaded = true;
         }
 
         private void HandleUnloaded(object sender, RoutedEventArgs e)
@@ -33,6 +56,8 @@ namespace Raven.Studio.Infrastructure
             {
                 (DataContext as ViewModel).NotifyViewUnloaded();
             }
+
+            isLoaded = false;
         }
     }
 }
