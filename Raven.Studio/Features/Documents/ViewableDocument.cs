@@ -39,8 +39,6 @@ namespace Raven.Studio.Features.Documents
 				LastModified = LastModified.ToLocalTime();
 			ClrType = inner.Metadata.IfPresent<string>(Constants.RavenClrType);
 			CollectionType = DetermineCollectionType(inner.Metadata);
-
-			CalculateData();
 			ToolTipText = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, 10);
 		}
 
@@ -230,6 +228,8 @@ namespace Raven.Studio.Features.Documents
                 .Throttle(TimeSpan.FromSeconds(0.5))
                 .TakeUntil(Unloaded)
                 .Subscribe(_ => CalculateData());
+
+            CalculateData();
         }
 	}
 }
