@@ -25,6 +25,7 @@ using System.Net.Browser;
 using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
+using System.Collections.Generic;
 #else
 using Raven.Client.Listeners;
 #endif
@@ -42,7 +43,10 @@ namespace Raven.Client.Document
 		[ThreadStatic]
 		protected static Guid? currentSessionId;
 
-#if !SILVERLIGHT
+#if SILVERLIGHT
+		private readonly Dictionary<string, ReplicationInformer> replicationInformers = new Dictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly object replicationInformersLocker = new object();
+#else
 		/// <summary>
 		/// Generate new instance of database commands
 		/// </summary>
@@ -242,12 +246,12 @@ namespace Raven.Client.Document
 			
 			if (jsonRequestFactory != null)
 				jsonRequestFactory.Dispose();
-#if !SILVERLIGHT
+			
 			foreach (var replicationInformer in replicationInformers)
 			{
 				replicationInformer.Value.Dispose();
 			}
-#endif
+
 			WasDisposed = true;
 			var afterDispose = AfterDispose;
 			if (afterDispose != null)
@@ -526,7 +530,7 @@ namespace Raven.Client.Document
 			{
 
 #if SILVERLIGHT
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, task);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, task, GetReplicationInformerForDatabase, null);
 #else
 				var asyncServerClient = new AsyncServerClient(Url, Conventions, credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null);
 #endif
@@ -537,7 +541,6 @@ namespace Raven.Client.Document
 #endif
 		}
 
-#if !SILVERLIGHT
 		public ReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
 		{
 			var key = Url;
@@ -546,9 +549,21 @@ namespace Raven.Client.Document
 			{
 				key = MultiDatabase.GetRootDatabaseUrl(Url) + "/databases/" + dbName;
 			}
+#if SILVERLIGHT
+			lock (replicationInformersLocker)
+			{
+				ReplicationInformer result;
+				if (!replicationInformers.TryGetValue(key, out result))
+				{
+					result = new ReplicationInformer(Conventions);
+					replicationInformers.Add(key, result);
+				}
+				return result;
+			}
+#else
 			return replicationInformers.GetOrAddAtomically(key, s => new ReplicationInformer(Conventions));
-		}
 #endif
+		}
 
 		/// <summary>
 		/// Setup the context for no aggressive caching

@@ -27,6 +27,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Client.Extensions;
+using System.Threading;
 
 #if !NET35
 
@@ -44,6 +45,11 @@ namespace Raven.Client.Silverlight.Connection.Async
 		private readonly Task veryFirstRequest;
 		private readonly DocumentConvention convention;
 		private readonly ProfilingInformation profilingInformation;
+		private readonly Func<string, Raven.Client.Connection.ReplicationInformer> replicationInformerGetter;
+		private readonly string databaseName;
+		private readonly ReplicationInformer replicationInformer;
+		private int readStripingBase;
+		private int requestCount;
 
 		/// <summary>
 		/// Get the current json request factory
@@ -56,7 +62,9 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
 		/// </summary>
-		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId, Task veryFirstRequest)
+		public AsyncServerClient(string url, DocumentConvention convention, ICredentials credentials,
+								 HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId, Task veryFirstRequest,
+								 Func<string, ReplicationInformer> replicationInformerGetter, string databaseName)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(sessionId);
 			this.url = url.EndsWith("/") ? url.Substring(0, url.Length - 1) : url;
@@ -65,6 +73,10 @@ namespace Raven.Client.Silverlight.Connection.Async
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
 			this.veryFirstRequest = veryFirstRequest;
+			this.databaseName = databaseName;
+			this.replicationInformerGetter = replicationInformerGetter;
+			this.replicationInformer = replicationInformerGetter(databaseName);
+			this.readStripingBase = replicationInformer.GetReadStripingBase();
 
 			jsonRequestFactory.ConfigureRequest += (sender, args) =>
 			{
@@ -92,7 +104,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			databaseUrl = databaseUrl + "/databases/" + database + "/";
-			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId, veryFirstRequest)
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId, veryFirstRequest, replicationInformerGetter, database)
 			{
 				operationsHeaders = operationsHeaders
 			};
@@ -107,7 +119,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (rootDatabaseUrl == url)
 				return this;
-			return new AsyncServerClient(rootDatabaseUrl, convention, credentials, jsonRequestFactory, sessionId, veryFirstRequest)
+			return new AsyncServerClient(rootDatabaseUrl, convention, credentials, jsonRequestFactory, sessionId, veryFirstRequest, replicationInformerGetter, databaseName)
 			{
 				operationsHeaders = operationsHeaders
 			};
@@ -119,7 +131,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory, sessionId, veryFirstRequest);
+			return new AsyncServerClient(url, convention, credentialsForSession, jsonRequestFactory, sessionId, veryFirstRequest, replicationInformerGetter, databaseName);
 		}
 
 		private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
@@ -139,6 +151,11 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
 		public Task<JsonDocument> GetAsync(string key)
+		{
+			return ExecuteWithReplication("GET", url => DirectGetAsync(url, key));
+		}
+
+		public Task<JsonDocument> DirectGetAsync(string url, string key)
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 
@@ -220,15 +237,18 @@ namespace Raven.Client.Silverlight.Connection.Async
 			catch (AggregateException e)
 			{
 				var webException = e.ExtractSingleInnerException() as WebException;
-				if (webException == null) throw;
+				if (webException == null)
+					throw;
 
-				if (HandleException(webException)) return null;
+				if (HandleException(webException))
+					return null;
 
 				throw;
 			}
 			catch (WebException e)
 			{
-				if (HandleException(e)) return null;
+				if (HandleException(e))
+					return null;
 
 				throw;
 			}
@@ -523,12 +543,14 @@ namespace Raven.Client.Silverlight.Connection.Async
 							catch (AggregateException e)
 							{
 								var webexception = e.ExtractSingleInnerException() as WebException;
-								if (ShouldThrowForPutAsync(webexception)) throw;
+								if (ShouldThrowForPutAsync(webexception))
+									throw;
 								throw ThrowConcurrencyException(webexception);
 							}
 							catch (WebException e)
 							{
-								if (ShouldThrowForPutAsync(e)) throw;
+								if (ShouldThrowForPutAsync(e))
+									throw;
 								throw ThrowConcurrencyException(e);
 							}
 						});
@@ -538,7 +560,8 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		static bool ShouldThrowForPutAsync(WebException e)
 		{
-			if (e == null) return true;
+			if (e == null)
+				return true;
 			var httpWebResponse = e.Response as HttpWebResponse;
 			return (httpWebResponse == null ||
 				httpWebResponse.StatusCode != HttpStatusCode.Conflict);
@@ -633,7 +656,8 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		private static bool ShouldThrowForPutIndexAsync(WebException e)
 		{
-			if (e == null) return true;
+			if (e == null)
+				return true;
 			var response = e.Response as HttpWebResponse;
 			return (response == null || response.StatusCode != HttpStatusCode.NotFound);
 		}
@@ -696,7 +720,8 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="suggestionQuery">The suggestion query.</param>
 		public Task<SuggestionQueryResult> SuggestAsync(string index, SuggestionQuery suggestionQuery)
 		{
-			if (suggestionQuery == null) throw new ArgumentNullException("suggestionQuery");
+			if (suggestionQuery == null)
+				throw new ArgumentNullException("suggestionQuery");
 
 			var requestUri = url + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}",
 				Uri.EscapeUriString(index),
@@ -985,9 +1010,29 @@ namespace Raven.Client.Silverlight.Connection.Async
 			get { return profilingInformation; }
 		}
 
+		public string Url
+		{
+			get { return url; }
+		}
+
+		/// <summary>
+		/// Force the database commands to read directly from the master, unless there has been a failover.
+		/// </summary>
 		public void ForceReadFromMaster()
 		{
-			throw new NotImplementedException();
+			readStripingBase = -1;// this means that will have to use the master url first
+		}
+
+		private Task ExecuteWithReplication(string method, Func<string, Task> operation)
+		{
+			// Convert the Func<string, Task> to a Func<string, Task<object>>
+			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t => null));
+		}
+
+		private Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
+		{
+			var currentRequest = Interlocked.Increment(ref requestCount);
+			return replicationInformer.ExecuteWithReplicationAsync(method, url, currentRequest, readStripingBase, operation);
 		}
 	}
 }

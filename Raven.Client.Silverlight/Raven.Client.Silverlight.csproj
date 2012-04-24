@@ -698,6 +698,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
       <Link>Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\CompletedTask.cs">
+      <Link>Connection\CompletedTask.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\DocumentConventionJsonExtensions.cs">
       <Link>Imports\Connection\DocumentConventionJsonExtensions.cs</Link>
     </Compile>
