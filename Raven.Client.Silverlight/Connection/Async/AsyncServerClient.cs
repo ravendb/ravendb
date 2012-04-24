@@ -192,12 +192,6 @@ namespace Raven.Client.Silverlight.Connection.Async
 						}
 						throw;
 					}
-					catch (WebException e)
-					{
-						if (HandleWebExceptionForGetAsync(key, e))
-							return null;
-						throw;
-					}
 				});
 		}
 
@@ -241,13 +235,6 @@ namespace Raven.Client.Silverlight.Connection.Async
 					throw;
 
 				if (HandleException(webException))
-					return null;
-
-				throw;
-			}
-			catch (WebException e)
-			{
-				if (HandleException(e))
 					return null;
 
 				throw;
@@ -411,13 +398,17 @@ namespace Raven.Client.Silverlight.Connection.Async
 					Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
 				};
 			}
-			catch (WebException e)
+			catch (AggregateException e)
 			{
-				var httpWebResponse = e.Response as HttpWebResponse;
+				var webException = e.ExtractSingleInnerException() as WebException;
+				if (webException == null)
+					throw;
+
+				var httpWebResponse = webException.Response as HttpWebResponse;
 				if (httpWebResponse == null ||
 					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 					throw;
-				throw ThrowConcurrencyException(e);
+				throw ThrowConcurrencyException(webException);
 			}
 		}
 
@@ -569,12 +560,6 @@ namespace Raven.Client.Silverlight.Connection.Async
 										throw;
 									throw ThrowConcurrencyException(webexception);
 								}
-								catch (WebException e)
-								{
-									if (ShouldThrowForPutAsync(e))
-										throw;
-									throw ThrowConcurrencyException(e);
-								}
 							});
 					})
 					.Unwrap();
@@ -637,11 +622,6 @@ namespace Raven.Client.Silverlight.Connection.Async
 						{
 							var webException = e.ExtractSingleInnerException() as WebException;
 							if (ShouldThrowForPutIndexAsync(webException))
-								throw;
-						}
-						catch (WebException e)
-						{
-							if (ShouldThrowForPutIndexAsync(e))
 								throw;
 						}
 
@@ -813,13 +793,17 @@ namespace Raven.Client.Silverlight.Connection.Async
 						{
 							response = task.Result;
 						}
-						catch (WebException e)
+						catch (AggregateException e)
 						{
-							var httpWebResponse = e.Response as HttpWebResponse;
+							var webException = e.ExtractSingleInnerException() as WebException;
+							if (webException == null)
+								throw;
+
+							var httpWebResponse = webException.Response as HttpWebResponse;
 							if (httpWebResponse == null ||
 								httpWebResponse.StatusCode != HttpStatusCode.Conflict)
 								throw;
-							throw ThrowConcurrencyException(e);
+							throw ThrowConcurrencyException(webException);
 						}
 						return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 					});
@@ -988,12 +972,6 @@ namespace Raven.Client.Silverlight.Connection.Async
 								if (HandleWebExceptionForGetAsync(key, webException))
 									return null;
 							}
-							throw;
-						}
-						catch (WebException e)
-						{
-							if (HandleWebExceptionForGetAsync(key, e))
-								return null;
 							throw;
 						}
 					});
