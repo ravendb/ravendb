@@ -1,4 +1,3 @@
-#if !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="ReplicationInformer.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -25,6 +24,10 @@ using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using System.Net;
 using System.Net.Sockets;
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection.Async;
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#endif
 
 namespace Raven.Client.Connection
 {
@@ -72,11 +75,14 @@ namespace Raven.Client.Connection
 			this.conventions = conventions;
 		}
 
-#if !NET35
+#if !NET35 && !SILVERLIGHT
 		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder>();
-		private Task refreshReplicationInformationTask;
 #else
 		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
+#endif
+
+#if !NET35
+		private Task refreshReplicationInformationTask;
 #endif
 
 #if NET35
@@ -111,7 +117,11 @@ namespace Raven.Client.Connection
 		/// Updates the replication information if needed.
 		/// </summary>
 		/// <param name="serverClient">The server client.</param>
+#if SILVERLIGHT
+		public Task UpdateReplicationInformationIfNeeded(AsyncServerClient serverClient)
+#else
 		public Task UpdateReplicationInformationIfNeeded(ServerClient serverClient)
+#endif
 		{
 			if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 				return new CompletedTask();
@@ -203,17 +213,17 @@ namespace Raven.Client.Connection
 
 		private IntHolder GetHolder(string operationUrl)
 		{
-#if !NET35
+#if !NET35 && !SILVERLIGHT
 			return failureCounts.GetOrAdd(operationUrl, new IntHolder());
 #else
-	// need to compensate for 3.5 not having concnurrent dic.
+			// need to compensate for 3.5 not having concnurrent dic.
 
 			IntHolder value;
-			if(failureCounts.TryGetValue(operationUrl, out value) == false)
+			if (failureCounts.TryGetValue(operationUrl, out value) == false)
 			{
-				lock(replicationLock)
+				lock (replicationLock)
 				{
-					if(failureCounts.TryGetValue(operationUrl, out value) == false)
+					if (failureCounts.TryGetValue(operationUrl, out value) == false)
 					{
 						failureCounts[operationUrl] = value = new IntHolder();
 					}
@@ -231,7 +241,7 @@ namespace Raven.Client.Connection
 		public bool IsFirstFailure(string operationUrl)
 		{
 			IntHolder value = GetHolder(operationUrl);
-			return Thread.VolatileRead(ref value.Value) == 0;
+			return value.Value == 0;
 		}
 
 		/// <summary>
@@ -257,6 +267,51 @@ namespace Raven.Client.Connection
 		/// Expert use only.
 		/// </summary>
 		[MethodImpl(MethodImplOptions.Synchronized)]
+#if SILVERLIGHT
+		public Task RefreshReplicationInformation(AsyncServerClient commands)
+		{
+			var serverHash = GetServerHash(commands);
+			return commands.DirectGetAsync(commands.Url, RavenReplicationDestinations).ContinueWith((Task<JsonDocument> getTask) =>
+			{
+				JsonDocument document;
+				if (getTask.Status == TaskStatus.RanToCompletion)
+				{
+					document = getTask.Result;
+					failureCounts[commands.Url] = new IntHolder(); // we just hit the master, so we can reset its failure count
+				}
+				else
+				{
+					log.ErrorException("Could not contact master for new replication information", getTask.Exception);
+					document = TryLoadReplicationInformationFromLocalCache(serverHash);
+				}
+
+
+				if (document == null)
+				{
+					lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
+					return;
+				}
+
+				TrySavingReplicationInformationToLocalCache(serverHash, document);
+
+				var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
+				replicationDestinations = replicationDocument.Destinations.Select(x => x.Url)
+					// filter out replication destination that don't have the url setup, we don't know how to reach them
+					// so we might as well ignore them. Probably private replication destination (using connection string names only)
+					.Where(x => x != null)
+					.ToList();
+				foreach (var replicationDestination in replicationDestinations)
+				{
+					IntHolder value;
+					if (failureCounts.TryGetValue(replicationDestination, out value))
+						continue;
+					failureCounts[replicationDestination] = new IntHolder();
+				}
+
+				lastReplicationUpdate = SystemTime.UtcNow;
+			});
+		}
+#else
 		public void RefreshReplicationInformation(ServerClient commands)
 		{
 			var serverHash = GetServerHash(commands);
@@ -296,12 +351,22 @@ namespace Raven.Client.Connection
 
 			lastReplicationUpdate = SystemTime.UtcNow;
 		}
+#endif
+
+		private IsolatedStorageFile GetIsolatedStorageFileForReplicationInformation()
+		{
+#if SILVERLIGHT
+			return IsolatedStorageFile.GetUserStoreForSite();
+#else
+			return IsolatedStorageFile.GetMachineStoreForDomain();
+#endif
+		}
 
 		private JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)
 		{
 			try
 			{
-				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				using (var machineStoreForApplication = GetIsolatedStorageFileForReplicationInformation())
 				{
 					var path = "RavenDB Replication Information For - " + serverHash;
 
@@ -325,7 +390,7 @@ namespace Raven.Client.Connection
 		{
 			try
 			{
-				using (var machineStoreForApplication = IsolatedStorageFile.GetMachineStoreForDomain())
+				using (var machineStoreForApplication = GetIsolatedStorageFileForReplicationInformation())
 				{
 					var path = "RavenDB Replication Information For - " + serverHash;
 					using (var stream = new IsolatedStorageFileStream(path, FileMode.Create, machineStoreForApplication))
@@ -340,6 +405,12 @@ namespace Raven.Client.Connection
 			}
 		}
 
+#if SILVERLIGHT
+		private static string GetServerHash(AsyncServerClient commands)
+		{
+			return BitConverter.ToString(MD5Core.GetHash(Encoding.UTF8.GetBytes(commands.Url)));
+		}
+#else
 		private static string GetServerHash(ServerClient commands)
 		{
 			using (var md5 = MD5.Create())
@@ -347,7 +418,7 @@ namespace Raven.Client.Connection
 				return BitConverter.ToString(md5.ComputeHash(Encoding.UTF8.GetBytes(commands.Url)));
 			}
 		}
-
+#endif
 
 		/// <summary>
 		/// Resets the failure count for the specified URL
@@ -356,8 +427,7 @@ namespace Raven.Client.Connection
 		public void ResetFailureCount(string operationUrl)
 		{
 			IntHolder value = GetHolder(operationUrl);
-			var oldVal = value.Value;
-			Thread.VolatileWrite(ref value.Value, 0);
+			var oldVal = Interlocked.Exchange(ref value.Value, 0);
 			if (oldVal != 0)
 			{
 				FailoverStatusChanged(this,
@@ -652,4 +722,3 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		public string Url { get; set; }
 	}
 }
-#endif
