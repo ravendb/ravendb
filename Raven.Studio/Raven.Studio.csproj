@@ -175,6 +175,7 @@
     <Compile Include="Infrastructure\INotifyOnDataFetchErrors.cs" />
     <Compile Include="Infrastructure\IVirtualCollectionSource.cs" />
     <Compile Include="Infrastructure\SparseList.cs" />
+    <Compile Include="Infrastructure\View.cs" />
     <Compile Include="Infrastructure\ViewModel.cs" />
     <Compile Include="Infrastructure\VirtualCollection.cs" />
     <Compile Include="Infrastructure\VirtualCollectionChangedEventArgs.cs" />
