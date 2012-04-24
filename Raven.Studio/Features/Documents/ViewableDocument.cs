@@ -11,6 +11,7 @@ using Raven.Studio.Framework;
 using Raven.Studio.Infrastructure;
 using System.Linq;
 using Raven.Studio.Models;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -21,13 +22,12 @@ namespace Raven.Studio.Features.Documents
 		public bool IsProjection { get; set; }
 	}
 
-	public class ViewableDocument : NotifyPropertyChangedBase, IDisposable
+	public class ViewableDocument : NotifyPropertyChangedBase
 	{
 		private readonly JsonDocument inner;
 		private string id;
 		private string clrType;
 		private string collectionType;
-		private IDisposable disposable;
 
 		public ViewableDocument(JsonDocument inner)
 		{
@@ -40,9 +40,9 @@ namespace Raven.Studio.Features.Documents
 			ClrType = inner.Metadata.IfPresent<string>(Constants.RavenClrType);
 			CollectionType = DetermineCollectionType(inner.Metadata);
 
-			disposable = Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentSize.Current.SizeChanged += e, e => DocumentSize.Current.SizeChanged -= e)
+			Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentSize.Current.SizeChanged += e, e => DocumentSize.Current.SizeChanged -= e)
 				.Throttle(TimeSpan.FromSeconds(0.5))
-				.Subscribe(_ => CalculateData());
+				.SubscribeWeakly(this, (d,_) => d.CalculateData());
 
 			CalculateData();
 			ToolTipText = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, 10);
@@ -212,12 +212,6 @@ namespace Raven.Studio.Features.Documents
 		public override string ToString()
 		{
 			return inner.DataAsJson.ToString();
-		}
-
-		public void Dispose()
-		{
-			if (disposable != null)
-				disposable.Dispose();
 		}
 
 		public static string DetermineCollectionType(RavenJObject metadata)
