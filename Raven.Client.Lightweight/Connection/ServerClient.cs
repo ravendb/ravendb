@@ -210,15 +210,6 @@ namespace Raven.Client.Connection
 
 		private static ConflictException CreateConcurrencyException(string key, RavenJObject conflictsDoc, string etag)
 		{
-
-					throw CreateConcurrencyException(key, conflictsDoc, etag);
-			return new ConflictException("Conflict detected on " + key +
-				ConflictedVersionIds = conflictIds,
-				Etag = new Guid(etag)
-				}
-
-		private static ConflictException CreateConcurrencyException(string key, RavenJObject conflictsDoc, string etag)
-		{
 			var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 			return new ConflictException("Conflict detected on " + key +
