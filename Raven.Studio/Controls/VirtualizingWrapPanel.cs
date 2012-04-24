@@ -31,6 +31,7 @@ namespace Raven.Studio.Controls
 
         private static readonly DependencyProperty VirtualItemIndexProperty =
             DependencyProperty.RegisterAttached("VirtualItemIndex", typeof(int), typeof(VirtualizingWrapPanel), new PropertyMetadata(-1));
+        private IRecyclingItemContainerGenerator _itemsGenerator;
 
         private static int GetVirtualItemIndex(DependencyObject obj)
         {
@@ -62,6 +63,7 @@ namespace Raven.Studio.Controls
         private void Initialize()
         {
             _itemsControl = ItemsControl.GetItemsOwner(this);
+            _itemsGenerator = (IRecyclingItemContainerGenerator) ItemContainerGenerator;
         }
 
         protected override void OnItemsChanged(object sender, ItemsChangedEventArgs args)
@@ -85,7 +87,7 @@ namespace Raven.Studio.Controls
             RecycleItems(layoutInfo);
 
             // Determine where the first item is in relation to previously realized items
-            var generatorStartPosition = ItemContainerGenerator.GeneratorPositionFromIndex(layoutInfo.FirstRealizedItemIndex);
+            var generatorStartPosition = _itemsGenerator.GeneratorPositionFromIndex(layoutInfo.FirstRealizedItemIndex);
 
             // Determine where we should be inserting new items in our children collection
             // .Index refers to the last realized item
@@ -98,17 +100,16 @@ namespace Raven.Studio.Controls
             var itemIndex = layoutInfo.FirstRealizedItemIndex;
 
             var currentX = layoutInfo.FirstRealizedItemLeft;
-            var currentY = layoutInfo.FirstRealizedItemTop;
+            var currentY = layoutInfo.FirstRealizedLineTop;
 
-            var viewportBottom = _offset.Y + availableSize.Height;
 
-            using (ItemContainerGenerator.StartAt(generatorStartPosition, GeneratorDirection.Forward, true))
+            using (_itemsGenerator.StartAt(generatorStartPosition, GeneratorDirection.Forward, true))
             {
-                while (itemIndex < itemCount && currentY < viewportBottom)
+                while (itemIndex < itemCount && currentY <= layoutInfo.LastRealizedLineBottom)
                 {
                     bool newlyRealized;
 
-                    var child = (UIElement)ItemContainerGenerator.GenerateNext(out newlyRealized);
+                    var child = (UIElement)_itemsGenerator.GenerateNext(out newlyRealized);
                     SetVirtualItemIndex(child, itemIndex);
 
                     if (newlyRealized || visualIndex >= Children.Count)
@@ -132,7 +133,7 @@ namespace Raven.Studio.Controls
                     }
 
                     // only prepare the item once it has been added to the visual tree
-                    ItemContainerGenerator.PrepareItemContainer(child);
+                    _itemsGenerator.PrepareItemContainer(child);
 
                     child.Measure(new Size(ItemWidth, ItemHeight));
                  
@@ -168,8 +169,8 @@ namespace Raven.Studio.Controls
                 
                 if (virtualItemIndex < layoutInfo.FirstRealizedItemIndex || virtualItemIndex > layoutInfo.LastRealizedItemIndex)
                 {
-                    var generatorPosition = ItemContainerGenerator.GeneratorPositionFromIndex(virtualItemIndex);
-                    ((IRecyclingItemContainerGenerator)ItemContainerGenerator).Recycle(generatorPosition, 1);
+                    var generatorPosition = _itemsGenerator.GeneratorPositionFromIndex(virtualItemIndex);
+                    _itemsGenerator.Recycle(generatorPosition, 1);
                     SetVirtualItemIndex(child, -1);
                 }
             }
@@ -215,7 +216,7 @@ namespace Raven.Studio.Controls
         private ItemLayoutInfo GetLayoutInfo(Size availableSize, double itemHeight)
         {
             var itemsPerLine = Math.Max((int)Math.Floor(availableSize.Width/ItemWidth),1);
-            var precedingLines = (int) Math.Floor(HorizontalOffset/itemHeight);
+            var precedingLines = (int) Math.Floor(VerticalOffset/itemHeight);
             var firstRealizedIndex = itemsPerLine*precedingLines;
             var realizedLines = (int) Math.Ceiling(availableSize.Height/itemHeight);
             var lastRealizedIndex = firstRealizedIndex + realizedLines*itemsPerLine - 1;
@@ -227,7 +228,8 @@ namespace Raven.Studio.Controls
                            TotalLines = totalLines,
                            FirstRealizedItemIndex = firstRealizedIndex,
                            FirstRealizedItemLeft = -HorizontalOffset,
-                           FirstRealizedItemTop = precedingLines*itemHeight - VerticalOffset,
+                           FirstRealizedLineTop = precedingLines*itemHeight - VerticalOffset,
+                           LastRealizedLineBottom = (precedingLines + realizedLines) * itemHeight - VerticalOffset,
                            LastRealizedItemIndex = lastRealizedIndex,
                        };
         }
@@ -415,11 +417,12 @@ namespace Raven.Studio.Controls
         private class ItemLayoutInfo
         {
             public int FirstRealizedItemIndex;
-            public double FirstRealizedItemTop;
+            public double FirstRealizedLineTop;
             public double FirstRealizedItemLeft;
             public int ItemsPerLine;
             public int TotalLines;
             public int LastRealizedItemIndex;
+            public double LastRealizedLineBottom;
         }
     }
 }

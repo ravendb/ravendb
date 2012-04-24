@@ -25,5 +25,11 @@ namespace Raven.Studio.Models
         {
             Documents = new VirtualCollection<ViewableDocument>(new DocumentsCollectionSource(), 25);
         }
+
+        public override System.Threading.Tasks.Task TimerTickedAsync()
+        {
+            Documents.Refresh();
+            return base.TimerTickedAsync();
+        }
     }
 }
