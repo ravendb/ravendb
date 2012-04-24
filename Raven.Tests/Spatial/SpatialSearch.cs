@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Spatial
 {
@@ -49,6 +51,28 @@ namespace Raven.Tests.Spatial
 						.ToList();
 
 					Assert.NotEqual(0, stats.TotalResults);
+				}
+			}
+		}
+
+		[Theory]
+		[CriticalCultures]
+		public void Can_do_spatial_search_with_client_api2(CultureInfo cultureInfo)
+		{
+			using(new TemporaryCulture(cultureInfo))
+			using (var store = NewDocumentStore())
+			{
+				new SpatialIdx().Execute(store);
+
+				using (var session = store.OpenSession())
+				{
+					var matchingVenues = session.Query<Event, SpatialIdx>()
+						.Customize(x => x
+						                	.WithinRadiusOf(5, 38.9103000, -77.3942)
+						                	.WaitForNonStaleResultsAsOfNow()
+						);
+
+					Assert.Equal(" Lat: 38.9103 Lng: -77.3942 Radius: 5", matchingVenues.ToString());
 				}
 			}
 		}
