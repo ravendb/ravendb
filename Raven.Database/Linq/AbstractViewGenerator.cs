@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Text;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Lucene.Net.Documents;
 using Newtonsoft.Json.Linq;

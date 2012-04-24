@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -83,6 +84,10 @@ namespace Raven.Client.Document
 				negate = negate,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
+				isSpatialQuery = isSpatialQuery,
+				lat = lat,
+				lng = lng,
+				radius = radius,
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
@@ -510,13 +515,11 @@ namespace Raven.Client.Document
 		/// <param name = "longitude">The longitude.</param>
 		protected override object GenerateQueryWithinRadiusOf(double radius, double latitude, double longitude)
 		{
-			var spatialDocumentQuery = new SpatialDocumentQuery<T>(this, radius, latitude, longitude);
-			if (negate)
-			{
-				negate = false;
-				spatialDocumentQuery.NegateNext();
-			}
-			return spatialDocumentQuery;
+			isSpatialQuery = true;
+			this.radius = radius;
+			lat = latitude;
+			lng = longitude;
+			return this;
 		}
 
 		/// <summary>
@@ -524,9 +527,8 @@ namespace Raven.Client.Document
 		/// </summary>
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance()
 		{
-			var spatialDocumentQuery = new SpatialDocumentQuery<T>(this);
-			spatialDocumentQuery.OrderBy(Constants.DistanceFieldName);
-			return spatialDocumentQuery;
+			OrderBy(Constants.DistanceFieldName);
+			return this;
 		}
 
 		/// <summary>
@@ -638,7 +640,10 @@ namespace Raven.Client.Document
 		/// </returns>
 		public override string ToString()
 		{
-			return QueryText.ToString().Trim();
+			var trim = QueryText.ToString().Trim();
+			if(isSpatialQuery)
+				return string.Format(CultureInfo.InvariantCulture, "{0} Lat: {1} Lng: {2} Radius: {3}", trim, lat, lng, radius);
+			return trim;
 		}
 	}
 }
