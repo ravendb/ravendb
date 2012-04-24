@@ -57,7 +57,7 @@ namespace Raven.Tests.Spatial
 
 		[Theory]
 		[CriticalCultures]
-		public void Can_do_spatial_search_with_client_api2(CultureInfo cultureInfo)
+		public void Can_do_spatial_search_with_client_api3(CultureInfo cultureInfo)
 		{
 			using(new TemporaryCulture(cultureInfo))
 			using (var store = NewDocumentStore())
