@@ -77,8 +77,7 @@ namespace Raven.Bundles.Tests.Authentication
 			using (var session = store.OpenAsyncSession())
 			{
 				session.Store(new { Name = "Sprite", Age = 321 });
-				var saveChangesAsync = session.SaveChangesAsync();
-				var webException = (WebException)Assert.Throws<AggregateException>(() => saveChangesAsync.Wait()).ExtractSingleInnerException();
+				var webException = (WebException)Assert.Throws<AggregateException>(() => session.SaveChangesAsync().Wait()).ExtractSingleInnerException();
 				Assert.Equal(HttpStatusCode.Unauthorized, ((HttpWebResponse) webException.Response).StatusCode);
 			}
 		}
