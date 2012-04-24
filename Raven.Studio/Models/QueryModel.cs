@@ -9,7 +9,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class QueryModel : ViewModel, IHasPageTitle
+	public class QueryModel : PageViewModel, IHasPageTitle
 	{
 		private QueryIndexAutoComplete queryIndexAutoComplete;
 		public QueryIndexAutoComplete QueryIndexAutoComplete

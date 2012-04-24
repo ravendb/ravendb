@@ -4,7 +4,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class AllDocumentsModel : ViewModel
+	public class AllDocumentsModel : PageViewModel
 	{
 		private static void SetTotalResults()
 		{

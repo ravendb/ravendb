@@ -20,7 +20,7 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class EditableDocumentModel : ViewModel
+	public class EditableDocumentModel : PageViewModel
 	{
 		private readonly Observable<JsonDocument> document;
 		private string jsonData;

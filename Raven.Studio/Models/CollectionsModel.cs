@@ -11,7 +11,7 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class CollectionsModel : ViewModel, IHasPageTitle
+	public class CollectionsModel : PageViewModel, IHasPageTitle
 	{
 		private static string initialSelectedDatabaseName;
 		public static BindableCollection<CollectionModel> Collections { get; set; }

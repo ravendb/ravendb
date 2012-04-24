@@ -4,7 +4,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class DatabasesListModel : ViewModel
+	public class DatabasesListModel : PageViewModel
 	{
 		private readonly ChangeDatabaseCommand changeDatabase;
 

@@ -149,6 +149,7 @@
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
     <Compile Include="Controls\VirtualizingWrapPanel.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
+    <Compile Include="Extensions\IObservableExtensions.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
@@ -320,7 +321,7 @@
     <Compile Include="Infrastructure\RxExtensions.cs" />
     <Compile Include="Infrastructure\UrlParser.cs" />
     <Compile Include="Infrastructure\UrlUtil.cs" />
-    <Compile Include="Infrastructure\ViewModel.cs" />
+    <Compile Include="Infrastructure\PageViewModel.cs" />
     <Compile Include="Models\AllDocumentsModel.cs" />
     <Compile Include="Models\DatabasesListModel.cs" />
     <Compile Include="Models\DocumentsModel.cs" />

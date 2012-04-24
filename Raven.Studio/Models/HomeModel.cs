@@ -14,7 +14,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class HomeModel : ViewModel
+	public class HomeModel : PageViewModel
 	{
 		private static WeakReference<Observable<DocumentsModel>> recentDocuments;
 		public static Observable<DocumentsModel> RecentDocuments
