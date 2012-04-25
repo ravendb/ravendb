@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !SILVERLIGHT
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -10,28 +12,27 @@ using System.Text;
 using System.Threading;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
-#if !NET35
-using Raven.Client.Connection.Async;
-using Raven.Client.Document.Batches;
-#endif
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using System;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+#if !NET35
+using Raven.Client.Connection.Async;
+using Raven.Client.Document.Batches;
+#endif
+
 
 namespace Raven.Client.Shard
 {
-#if !SILVERLIGHT
 	/// <summary>
 	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
 	/// </summary>
-	public class ShardedDocumentSession : InMemoryDocumentSessionOperations, IDocumentSessionImpl, ITransactionalDocumentSession,
-		ISyncAdvancedSessionOperation, IDocumentQueryGenerator
+	public class ShardedDocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ITransactionalDocumentSession,
+		IDocumentSessionImpl, ISyncAdvancedSessionOperation
 	{
 #if !NET35
 		private readonly List<Tuple<ILazyOperation, IList<IDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<IDatabaseCommands>>>();
@@ -40,6 +41,7 @@ namespace Raven.Client.Shard
 		private readonly ShardStrategy shardStrategy;
 		private readonly IDictionary<string, IDatabaseCommands> shardDbCommands;
 		private readonly IDictionary<string, List<ICommandData>> deferredCommandsByShard = new Dictionary<string, List<ICommandData>>();
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ShardedDocumentSession"/> class.
 		/// </summary>
@@ -49,16 +51,16 @@ namespace Raven.Client.Shard
 		/// <param name="documentStore"></param>
 		/// <param name="listeners"></param>
 		public ShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
-			ShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands
-
-			)
+			ShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands)
 			: base(documentStore, listeners, id)
 		{
 			this.shardStrategy = shardStrategy;
 			this.shardDbCommands = shardDbCommands;
 		}
 
-		private IList<Tuple<string,IDatabaseCommands>> GetShardsToOperateOn(ShardRequestData resultionData)
+		#region Sharding support methods
+
+		private IList<Tuple<string, IDatabaseCommands>> GetShardsToOperateOn(ShardRequestData resultionData)
 		{
 			var shardIds = shardStrategy.ShardResolutionStrategy.PotentialShardsFor(resultionData);
 
@@ -87,16 +89,21 @@ namespace Raven.Client.Shard
 			return GetShardsToOperateOn(resultionData).Select(x => x.Item2).ToList();
 		}
 
+		#endregion
+
+		#region InMemoryDocumentSessionOperations implementation
+
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
 			var shardRequestData = new ShardRequestData
 			{
-				EntityType = typeof (object), Keys = {documentKey}
+				EntityType = typeof(object),
+				Keys = { documentKey }
 			};
 			var dbCommands = GetCommandsToOperateOn(shardRequestData);
 
-			var documents = shardStrategy.ShardAccessStrategy.Apply(dbCommands, 
-				shardRequestData, 
+			var documents = shardStrategy.ShardAccessStrategy.Apply(dbCommands,
+				shardRequestData,
 				(commands, i) => commands.Get(documentKey));
 
 			var document = documents.FirstOrDefault(x => x != null);
@@ -105,6 +112,57 @@ namespace Raven.Client.Shard
 
 			throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
 		}
+
+		public override void Defer(params ICommandData[] commands)
+		{
+			var cmdsByShard = commands.Select(cmd =>
+			{
+				var shardsToOperateOn = GetShardsToOperateOn(new ShardRequestData
+				{
+					Keys = { cmd.Key }
+				}).Select(x => x.Item1).ToList();
+
+				if (shardsToOperateOn.Count == 0)
+				{
+					throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Key +
+														" because it matched no shards");
+				}
+
+				if (shardsToOperateOn.Count > 1)
+				{
+					throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Key +
+														" because it matched multiple shards");
+
+				}
+
+				return new
+				{
+					shard = shardsToOperateOn[0],
+					cmd
+				};
+			}).GroupBy(x => x.shard);
+
+			foreach (var cmdByShard in cmdsByShard)
+			{
+				deferredCommandsByShard.GetOrAdd(cmdByShard.Key).AddRange(cmdByShard.Select(x => x.cmd));
+			}
+		}
+
+		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
+		{
+			var shardId = shardStrategy.ShardResolutionStrategy.GenerateShardIdFor(entity);
+			if (string.IsNullOrEmpty(shardId))
+				throw new InvalidOperationException("Could not find shard id for " + entity + " because " + shardStrategy.ShardAccessStrategy + " returned null or empty string for the document shard id.");
+			metadata[Constants.RavenShardId] = shardId;
+			var modifyDocumentId = shardStrategy.ModifyDocumentId(Conventions, shardId, id);
+			if (modifyDocumentId != id)
+				TrySetIdentity(entity, modifyDocumentId);
+			base.StoreEntityInUnitOfWork(modifyDocumentId, entity, etag, metadata, forceConcurrencyCheck);
+		}
+
+		#endregion
+
+		#region Transaction methods (not supported)
 
 		public override void Commit(Guid txId)
 		{
@@ -143,10 +201,231 @@ namespace Raven.Client.Shard
 			// turns out to be pretty much the same thing
 		}
 
-		public ISyncAdvancedSessionOperation Advanced
+		#endregion
+
+		#region Properties to access different interfacess
+
+		ISyncAdvancedSessionOperation IDocumentSession.Advanced
 		{
 			get { return this; }
 		}
+
+#if !NET35
+		/// <summary>
+		/// Access the lazy operations
+		/// </summary>
+		public ILazySessionOperations Lazily
+		{
+			get { return this; }
+		}
+
+		/// <summary>
+		/// Access the eager operations
+		/// </summary>
+		IEagerSessionOperations ISyncAdvancedSessionOperation.Eagerly
+		{
+			get { return this; }
+		}
+#endif
+
+		#endregion
+
+		#region Load and Include
+		#region Synchronous
+
+		public T Load<T>(string id)
+		{
+			object existingEntity;
+			if (entitiesByKey.TryGetValue(id, out existingEntity))
+			{
+				return (T)existingEntity;
+			}
+
+			IncrementRequestCount();
+			var shardRequestData = new ShardRequestData
+			{
+				EntityType = typeof(T),
+				Keys = { id }
+			};
+			var dbCommands = GetCommandsToOperateOn(shardRequestData);
+			var results = shardStrategy.ShardAccessStrategy.Apply(dbCommands, shardRequestData, (commands, i) =>
+																				{
+																					var loadOperation = new LoadOperation(this, commands.DisableAllCaching, id);
+																					bool retry;
+																					do
+																					{
+																						loadOperation.LogOperation();
+																						using (loadOperation.EnterLoadContext())
+																						{
+																							retry = loadOperation.SetResult(commands.Get(id));
+																						}
+																					} while (retry);
+																					return loadOperation.Complete<T>();
+																				});
+
+			var shardsContainThisDocument = results.Where(x => !Equals(x, default(T))).ToArray();
+			if (shardsContainThisDocument.Count() > 1)
+			{
+				throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+			}
+
+			return shardsContainThisDocument.FirstOrDefault();
+		}
+
+		public T[] Load<T>(params string[] ids)
+		{
+			return LoadInternal<T>(ids);
+		}
+
+		public T[] Load<T>(IEnumerable<string> ids)
+		{
+			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray());
+		}
+
+		public T Load<T>(ValueType id)
+		{
+			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+			return Load<T>(documentKey);
+		}
+
+		public T[] LoadInternal<T>(string[] ids, string[] includes)
+		{
+			if (ids.Length == 0)
+				return new T[0];
+
+			IncrementRequestCount();
+			var idsAndShards = ids.Select(id => new
+			{
+				id,
+				shards = GetCommandsToOperateOn(new ShardRequestData
+				{
+					EntityType = typeof(T),
+					Keys = { id }
+				})
+			})
+				.GroupBy(x => x.shards, new DbCmdsListComparer());
+
+			var results = new T[ids.Length];
+			foreach (var shard in idsAndShards)
+			{
+				var currentShardIds = shard.Select(x => x.id).ToArray();
+				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, new ShardRequestData
+				{
+					EntityType = typeof(T),
+					Keys = currentShardIds.ToList()
+				}, (dbCmd, i) =>
+				{
+					var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
+					MultiLoadResult multiLoadResult;
+					do
+					{
+						multiLoadOperation.LogOperation();
+						using (multiLoadOperation.EnterMultiLoadContext())
+						{
+							multiLoadResult = dbCmd.Get(currentShardIds, includes);
+						}
+					} while (multiLoadOperation.SetResult(multiLoadResult));
+					return multiLoadOperation;
+				});
+				foreach (var multiLoadOperation in multiLoadOperations)
+				{
+					var loadResults = multiLoadOperation.Complete<T>();
+					for (int i = 0; i < loadResults.Length; i++)
+					{
+						if (ReferenceEquals(loadResults[i], null))
+							continue;
+						var id = currentShardIds[i];
+						var itemPosition = Array.IndexOf(ids, id);
+						if (ReferenceEquals(results[itemPosition], default(T)) == false)
+						{
+							throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+						}
+						results[itemPosition] = loadResults[i];
+					}
+				}
+			}
+			return results;
+		}
+
+		public T[] LoadInternal<T>(string[] ids)
+		{
+			if (ids.Length == 0)
+				return new T[0];
+
+			// only load documents that aren't already cached
+			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false)
+				.Distinct(StringComparer.InvariantCultureIgnoreCase)
+				.ToArray();
+
+			var results = new T[ids.Length];
+			if (idsOfNotExistingObjects.Length > 0)
+			{
+				IncrementRequestCount();
+				var idsAndShards = ids.Select(id => new
+				{
+					id,
+					shards = GetCommandsToOperateOn(new ShardRequestData
+					{
+						EntityType = typeof(T),
+						Keys = { id }
+					})
+				})
+					.GroupBy(x => x.shards, new DbCmdsListComparer());
+
+				foreach (var shard in idsAndShards)
+				{
+					var currentShardIds = shard.Select(x => x.id).ToArray();
+					var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, new ShardRequestData
+					{
+						EntityType = typeof(T),
+						Keys = currentShardIds.ToList()
+					}, (dbCmd, i) =>
+					{
+						var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
+						MultiLoadResult multiLoadResult;
+						do
+						{
+							multiLoadOperation.LogOperation();
+							using (multiLoadOperation.EnterMultiLoadContext())
+							{
+								multiLoadResult = dbCmd.Get(currentShardIds, null);
+							}
+						} while (multiLoadOperation.SetResult(multiLoadResult));
+						return multiLoadOperation;
+					});
+					foreach (var multiLoadOperation in multiLoadOperations)
+					{
+						var loadResults = multiLoadOperation.Complete<T>();
+						for (int i = 0; i < loadResults.Length; i++)
+						{
+							if (ReferenceEquals(loadResults[i], null))
+								continue;
+							var id = currentShardIds[i];
+							var itemPosition = Array.IndexOf(ids, id);
+							if (ReferenceEquals(results[itemPosition], default(T)) == false)
+							{
+								throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
+							}
+							results[itemPosition] = loadResults[i];
+						}
+					}
+				}
+			}
+			return results;
+		}
+
+		public ILoaderWithInclude<object> Include(string path)
+		{
+			return new MultiLoaderWithInclude<object>(this).Include(path);
+		}
+
+		public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
+		{
+			return new MultiLoaderWithInclude<T>(this).Include(path);
+		}
+
+		#endregion
+		#region Lazy loads
 
 #if !NET35
 
@@ -173,15 +452,15 @@ namespace Raven.Client.Shard
 		{
 			var cmds = GetCommandsToOperateOn(new ShardRequestData
 			{
-				Keys = {id},
-				EntityType = typeof (TResult)
+				Keys = { id },
+				EntityType = typeof(TResult)
 			});
 
 			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, () =>
-			                                                                                   	{
-			                                                                                   		var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
-			                                                                                   		return new DisposableAction(() => list.ForEach(x => x.Dispose()));
-			                                                                                   	}, id));
+																								{
+																									var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
+																									return new DisposableAction(() => list.ForEach(x => x.Dispose()));
+																								}, id));
 			return AddLazyOperation(lazyLoadOperation, onEval, cmds);
 		}
 
@@ -189,12 +468,12 @@ namespace Raven.Client.Shard
 		{
 			pendingLazyOperations.Add(Tuple.Create(operation, cmds));
 			var lazyValue = new Lazy<T>(() =>
-			                            	{
-			                            		ExecuteAllPendingLazyOperations();
-			                            		return (T) operation.Result;
-			                            	});
+											{
+												ExecuteAllPendingLazyOperations();
+												return (T)operation.Result;
+											});
 			if (onEval != null)
-				onEvaluateLazy[operation] = result => onEval((T) result);
+				onEvaluateLazy[operation] = result => onEval((T)result);
 
 			return lazyValue;
 		}
@@ -271,8 +550,8 @@ namespace Raven.Client.Shard
 				id,
 				shards = GetCommandsToOperateOn(new ShardRequestData
 				{
-					Keys = {id},
-					EntityType = typeof (T),
+					Keys = { id },
+					EntityType = typeof(T),
 				})
 			})
 				.GroupBy(x => x.shards, new DbCmdsListComparer());
@@ -354,59 +633,12 @@ namespace Raven.Client.Shard
 		}
 
 #endif
-		public T Load<T>(string id)
-		{
-			object existingEntity;
-			if (entitiesByKey.TryGetValue(id, out existingEntity))
-			{
-				return (T)existingEntity;
-			}
 
-			IncrementRequestCount();
-			var shardRequestData = new ShardRequestData
-			{
-				EntityType = typeof (T), Keys = {id}
-			};
-			var dbCommands = GetCommandsToOperateOn(shardRequestData);
-			var results = shardStrategy.ShardAccessStrategy.Apply(dbCommands, shardRequestData, (commands, i) =>
-			                                                                  	{
-			                                                                  		var loadOperation = new LoadOperation(this, commands.DisableAllCaching, id);
-			                                                                  		bool retry;
-			                                                                  		do
-			                                                                  		{
-			                                                                  			loadOperation.LogOperation();
-			                                                                  			using (loadOperation.EnterLoadContext())
-			                                                                  			{
-			                                                                  				retry = loadOperation.SetResult(commands.Get(id));
-			                                                                  			}
-			                                                                  		} while (retry);
-																					return loadOperation.Complete<T>();
-			                                                                  	});
+		#endregion
+		#endregion
 
-			var shardsContainThisDocument = results.Where(x => !Equals(x, default(T))).ToArray();
-			if(shardsContainThisDocument.Count() > 1)
-			{
-				throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
-			}
-
-			return shardsContainThisDocument.FirstOrDefault();
-		}
-
-		public T[] Load<T>(params string[] ids)
-		{
-			return LoadInternal<T>(ids);
-		}
-
-		public T[] Load<T>(IEnumerable<string> ids)
-		{
-			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray());
-		}
-
-		public T Load<T>(ValueType id)
-		{
-			var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-			return Load<T>(documentKey);
-		}
+		#region Queries
+		#region Synchronous Query
 
 		/// <summary>
 		/// Queries the specified index using Linq.
@@ -419,14 +651,14 @@ namespace Raven.Client.Shard
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, null
 #if !NET35
-			                                         , null
+, null
 #endif
-				);
+);
 			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, indexName, null, this, null
 #if !NET35
-			                                  , null
+, null
 #endif
-				);
+);
 		}
 
 		/// <summary>
@@ -457,70 +689,55 @@ namespace Raven.Client.Shard
 				Conventions = Conventions
 			};
 			return Query<T>(indexCreator.IndexName)
-				.Customize(x=>x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
+				.Customize(x => x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
 		}
 
-		public ILoaderWithInclude<object> Include(string path)
+		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
 		{
-			return new MultiLoaderWithInclude<object>(this).Include(path);
+			return LuceneQuery<T>(indexName);
 		}
 
-		public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
+		#endregion
+		#region AsyncQuery
+#if !NET35
+
+		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
 		{
-			return new MultiLoaderWithInclude<T>(this).Include(path);
+			throw new NotSupportedException("Sharded document store doesn't support async operations");
 		}
 
-		public override void Defer(params ICommandData[] commands)
+#endif
+		#endregion
+		#region LuceneQuery
+
+		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
-			var cmdsByShard = commands.Select(cmd =>
+			var indexName = new TIndexCreator().IndexName;
+			return LuceneQuery<T>(indexName);
+		}
+
+		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
+		{
+			return new ShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, listeners.QueryListeners);
+		}
+
+		public IDocumentQuery<T> LuceneQuery<T>()
+		{
+			string indexName = "dynamic";
+			if (typeof(T).IsEntityType())
 			{
-				var shardsToOperateOn = GetShardsToOperateOn(new ShardRequestData
-				{
-					Keys = {cmd.Key}
-				}).Select(x => x.Item1).ToList();
-
-				if (shardsToOperateOn.Count == 0)
-				{
-					throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Key +
-					                                    " because it matched no shards");
-				}
-
-				if (shardsToOperateOn.Count > 1)
-				{
-					throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Key +
-					                                    " because it matched multiple shards");
-
-				}
-
-				return new
-				{
-					shard = shardsToOperateOn[0],
-					cmd
-				};
-			}).GroupBy(x => x.shard);
-
-			foreach (var cmdByShard in cmdsByShard)
-			{
-				deferredCommandsByShard.GetOrAdd(cmdByShard.Key).AddRange(cmdByShard.Select(x => x.cmd));
+				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
+			return LuceneQuery<T>(indexName);
 		}
 
-		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
-		{
-			var shardId = shardStrategy.ShardResolutionStrategy.GenerateShardIdFor(entity);
-			if (string.IsNullOrEmpty(shardId))
-				throw new InvalidOperationException("Could not find shard id for " + entity + " because " + shardStrategy.ShardAccessStrategy + " returned null or empty string for the document shard id.");
-			metadata[Constants.RavenShardId] = shardId;
-			var modifyDocumentId = shardStrategy.ModifyDocumentId(Conventions, shardId, id);
-			if(modifyDocumentId != id)
-				TrySetIdentity(entity, modifyDocumentId);
-			base.StoreEntityInUnitOfWork(modifyDocumentId, entity, etag, metadata, forceConcurrencyCheck);
-		}
+		#endregion
+		#endregion
 
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
-		public void SaveChanges()
+		void IDocumentSession.SaveChanges()
 		{
 			using (EntitiesToJsonCachingScope())
 			{
@@ -547,7 +764,7 @@ namespace Raven.Client.Shard
 					var entity = data.Entities[index];
 					var metadata = GetMetadataFor(entity);
 					var shardId = metadata.Value<string>(Constants.RavenShardId);
-					
+
 					var shardSaveChangesData = saveChangesPerShard.GetOrAdd(shardId);
 					shardSaveChangesData.Entities.Add(entity);
 					shardSaveChangesData.Commands.Add(data.Commands[index]);
@@ -568,12 +785,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
-		{
-			return Advanced.LuceneQuery<T>(indexName);
-		}
-
-		public void Refresh<T>(T entity)
+		void ISyncAdvancedSessionOperation.Refresh<T>(T entity)
 		{
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
@@ -583,7 +795,8 @@ namespace Raven.Client.Shard
 
 			var shardRequestData = new ShardRequestData
 			{
-				EntityType = typeof (T), Keys = {value.Key}
+				EntityType = typeof(T),
+				Keys = { value.Key }
 			};
 			var dbCommands = GetCommandsToOperateOn(shardRequestData);
 
@@ -594,7 +807,7 @@ namespace Raven.Client.Shard
 					return false;
 
 				value.Metadata = jsonDocument.Metadata;
-				value.OriginalMetadata = (RavenJObject) jsonDocument.Metadata.CloneToken();
+				value.OriginalMetadata = (RavenJObject)jsonDocument.Metadata.CloneToken();
 				value.ETag = jsonDocument.Etag;
 				value.OriginalValue = jsonDocument.DataAsJson;
 				var newEntity = ConvertToEntity<T>(value.Key, jsonDocument.DataAsJson, jsonDocument.Metadata);
@@ -611,6 +824,8 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		#region DatabaseCommands
+
 		IDatabaseCommands ISyncAdvancedSessionOperation.DatabaseCommands
 		{
 			get { throw new NotSupportedException("Not supported in a sharded session"); }
@@ -621,191 +836,25 @@ namespace Raven.Client.Shard
 		/// Gets the async database commands.
 		/// </summary>
 		/// <value>The async database commands.</value>
-		public IAsyncDatabaseCommands AsyncDatabaseCommands
+		IAsyncDatabaseCommands ISyncAdvancedSessionOperation.AsyncDatabaseCommands
 		{
 			get { throw new NotSupportedException("Not supported in a sharded session"); }
 		}
-
-		/// <summary>
-		/// Access the lazy operations
-		/// </summary>
-		public ILazySessionOperations Lazily
-		{
-			get { return this; }
-		}
-
-		/// <summary>
-		/// Access the eager operations
-		/// </summary>
-		public IEagerSessionOperations Eagerly
-		{
-			get { return this; }
-		}
-
-		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
-		{
-			throw new NotSupportedException("Sharded document store doesn't support async operations");
-		}
 #endif
 
-		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
-		{
-			var indexName = new TIndexCreator().IndexName;
-			return LuceneQuery<T>(indexName);
-		}
+		#endregion
 
-		public IDocumentQuery<T> LuceneQuery<T>(string indexName)
-		{
-			return new ShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, listeners.QueryListeners);
-		}
-
-		public IDocumentQuery<T> LuceneQuery<T>()
-		{
-			string indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
-			return Advanced.LuceneQuery<T>(indexName);
-		}
-
-		public string GetDocumentUrl(object entity)
+		string ISyncAdvancedSessionOperation.GetDocumentUrl(object entity)
 		{
 			DocumentMetadata value;
-			if(entitiesAndMetadata.TryGetValue(entity, out value) == false)
+			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
 				throw new ArgumentException("The entity is not part of the session");
 
 			var shardId = value.Metadata.Value<string>(Constants.RavenShardId);
 			IDatabaseCommands commands;
-			if(shardDbCommands.TryGetValue(shardId, out commands) == false)
+			if (shardDbCommands.TryGetValue(shardId, out commands) == false)
 				throw new InvalidOperationException("Could not find matching shard for shard id: " + shardId);
 			return commands.UrlFor(value.Key);
-		}
-
-		public T[] LoadInternal<T>(string[] ids, string[] includes)
-		{
-			if (ids.Length == 0)
-				return new T[0];
-
-			IncrementRequestCount();
-			var idsAndShards = ids.Select(id => new
-			                                    	{
-			                                    		id,
-														shards = GetCommandsToOperateOn(new ShardRequestData
-			                                    		                              	{
-			                                    		                              		EntityType = typeof (T),
-			                                    		                              		Keys = {id}
-			                                    		                              	})
-			                                    	})
-				.GroupBy(x => x.shards, new DbCmdsListComparer());
-
-			var results = new T[ids.Length];
-			foreach (var shard in idsAndShards)
-			{
-				var currentShardIds = shard.Select(x => x.id).ToArray();
-				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, new ShardRequestData
-				{
-					EntityType = typeof(T),
-					Keys = currentShardIds.ToList()
-				}, (dbCmd, i) =>
-				{
-					var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
-					MultiLoadResult multiLoadResult;
-					do
-					{
-						multiLoadOperation.LogOperation();
-						using (multiLoadOperation.EnterMultiLoadContext())
-						{
-							multiLoadResult = dbCmd.Get(currentShardIds, includes);
-						}
-					} while (multiLoadOperation.SetResult(multiLoadResult));
-					return multiLoadOperation;
-				});
-				foreach (var multiLoadOperation in multiLoadOperations)
-				{
-					var loadResults = multiLoadOperation.Complete<T>();
-					for (int i = 0; i < loadResults.Length; i++)
-					{
-						if (ReferenceEquals(loadResults[i], null))
-							continue;
-						var id = currentShardIds[i];
-						var itemPosition = Array.IndexOf(ids, id);
-						if (ReferenceEquals(results[itemPosition], default(T)) == false)
-						{
-							throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
-						}
-						results[itemPosition] = loadResults[i];
-					}
-				}
-			}
-			return results;
-		}
-
-		public T[] LoadInternal<T>(string[] ids)
-		{
-			if (ids.Length == 0)
-				return new T[0];
-
-			// only load documents that aren't already cached
-			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false)
-				.Distinct(StringComparer.InvariantCultureIgnoreCase)
-				.ToArray();
-
-			var results = new T[ids.Length];
-			if (idsOfNotExistingObjects.Length > 0)
-			{
-				IncrementRequestCount();
-				var idsAndShards = ids.Select(id => new
-				{
-					id,
-					shards = GetCommandsToOperateOn(new ShardRequestData
-					{
-						EntityType = typeof(T),
-						Keys = {id}
-					})
-				})
-					.GroupBy(x => x.shards, new DbCmdsListComparer());
-
-				foreach (var shard in idsAndShards)
-				{
-					var currentShardIds = shard.Select(x => x.id).ToArray();
-					var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, new ShardRequestData
-					{
-						EntityType = typeof(T),
-						Keys = currentShardIds.ToList()
-					}, (dbCmd, i) =>
-					{
-						var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
-						MultiLoadResult multiLoadResult;
-						do
-						{
-							multiLoadOperation.LogOperation();
-							using (multiLoadOperation.EnterMultiLoadContext())
-							{
-								multiLoadResult = dbCmd.Get(currentShardIds, null);
-							}
-						} while (multiLoadOperation.SetResult(multiLoadResult));
-						return multiLoadOperation;
-					});
-					foreach (var multiLoadOperation in multiLoadOperations)
-					{
-						var loadResults = multiLoadOperation.Complete<T>();
-						for (int i = 0; i < loadResults.Length; i++)
-						{
-							if (ReferenceEquals(loadResults[i], null))
-								continue;
-							var id = currentShardIds[i];
-							var itemPosition = Array.IndexOf(ids, id);
-							if (ReferenceEquals(results[itemPosition], default(T)) == false)
-							{
-								throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
-							}
-							results[itemPosition] = loadResults[i];
-						}
-					}
-				}
-			}
-			return results;
 		}
 
 		internal class DbCmdsListComparer : IEqualityComparer<IList<IDatabaseCommands>>
@@ -824,8 +873,6 @@ namespace Raven.Client.Shard
 			}
 
 		}
-
 	}
-
-#endif
 }
+#endif
