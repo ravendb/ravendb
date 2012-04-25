@@ -177,7 +177,10 @@ namespace Raven.Studio.Controls
                 if (virtualItemIndex < layoutInfo.FirstRealizedItemIndex || virtualItemIndex > layoutInfo.LastRealizedItemIndex)
                 {
                     var generatorPosition = _itemsGenerator.GeneratorPositionFromIndex(virtualItemIndex);
-                    _itemsGenerator.Recycle(generatorPosition, 1);
+                    if (generatorPosition.Index >= 0)
+                    {
+                        _itemsGenerator.Recycle(generatorPosition, 1);
+                    }
                     SetVirtualItemIndex(child, -1);
                 }
             }

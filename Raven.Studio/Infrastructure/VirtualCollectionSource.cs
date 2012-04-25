@@ -8,7 +8,7 @@ namespace Raven.Studio.Infrastructure
     public abstract class VirtualCollectionSource<T> : IVirtualCollectionSource<T>
     {
         private readonly object lockObject = new object();
-        public event EventHandler<VirtualCollectionChangedEventArgs> CollectionChanged;
+        public event EventHandler<EventArgs> CollectionChanged;
         public event EventHandler<DataFetchErrorEventArgs> DataFetchError;
 
         private int count;
@@ -39,18 +39,18 @@ namespace Raven.Studio.Infrastructure
                 {
                     if (!t.IsFaulted)
                     {
-                        SetCount(t.Result, forceCollectionRefresh: true);
+                        SetCount(t.Result, forceCollectionChangeNotification: true);
                     }
                     else
                     {
-                        SetCount(0, forceCollectionRefresh: true);
+                        SetCount(0, forceCollectionChangeNotification: true);
                         OnDataFetchError(new DataFetchErrorEventArgs(t.Exception));
                     }
                 },
                 TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        protected void OnCollectionChanged(VirtualCollectionChangedEventArgs e)
+        protected void OnCollectionChanged(EventArgs e)
         {
             var handler = CollectionChanged;
             if (handler != null) handler(this, e);
@@ -62,7 +62,7 @@ namespace Raven.Studio.Infrastructure
             if (handler != null) handler(this, e);
         }
 
-        protected void SetCount(int newCount, bool forceCollectionRefresh = false)
+        protected void SetCount(int newCount, bool forceCollectionChangeNotification = false)
         {
             bool fileCountChanged;
 
@@ -72,9 +72,9 @@ namespace Raven.Studio.Infrastructure
                 count = newCount;
             }
 
-            if (fileCountChanged || forceCollectionRefresh)
+            if (fileCountChanged || forceCollectionChangeNotification)
             {
-                OnCollectionChanged(new VirtualCollectionChangedEventArgs(InterimDataMode.ShowStaleData));
+                OnCollectionChanged(EventArgs.Empty);
             }
         }
     }

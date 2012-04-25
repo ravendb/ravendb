@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Reactive.Disposables;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -31,6 +32,7 @@ namespace Raven.Studio.Infrastructure
         private readonly SparseList<VirtualItem<T>> _virtualItems;
         private readonly HashSet<int> _fetchedPages = new HashSet<int>();
         private readonly HashSet<int> _requestedPages = new HashSet<int>();
+        private readonly MostRecentUsedList<int> _mostRecentlyRequestedPages; 
         private int _itemCount;
         private readonly TaskScheduler _synchronizationContextScheduler;
         private bool _isRefreshDeferred;
@@ -62,7 +64,7 @@ namespace Raven.Studio.Infrastructure
             _virtualItems = new SparseList<VirtualItem<T>>(DetermineSparseListPageSize(pageSize));
             _currentItem = -1;
             _synchronizationContextScheduler = TaskScheduler.FromCurrentSynchronizationContext();
-
+            _mostRecentlyRequestedPages = new MostRecentUsedList<int>(10);
             (_sortDescriptions as INotifyCollectionChanged).CollectionChanged += HandleSortDescriptionsChanged;
         }
 
@@ -76,10 +78,10 @@ namespace Raven.Studio.Infrastructure
             Refresh();
         }
 
-        private void HandleSourceCollectionChanged(object sender, VirtualCollectionChangedEventArgs e)
+        private void HandleSourceCollectionChanged(object sender, EventArgs e)
         {
             var stateWhenUpdateRequested = _state;
-            Task.Factory.StartNew(() => UpdateData(e.Mode, stateWhenUpdateRequested), CancellationToken.None, TaskCreationOptions.None, _synchronizationContextScheduler);
+            Task.Factory.StartNew(() => UpdateData(stateWhenUpdateRequested), CancellationToken.None, TaskCreationOptions.None, _synchronizationContextScheduler);
         }
 
         private int DetermineSparseListPageSize(int fetchPageSize)
@@ -117,11 +119,18 @@ namespace Raven.Studio.Infrastructure
             }
         }
 
-        private void BeginGetPage(int page)
+        private void BeginGetPage(int page, bool isInternalRefreshRequest = false)
         {
             if (IsPageAlreadyRequested(page))
             {
                 return;
+            }
+
+            // only add page to the mru list if it was actually requested by the
+            // user of the collection
+            if (!isInternalRefreshRequest)
+            {
+                _mostRecentlyRequestedPages.Add(page);
             }
 
             _requestedPages.Add(page);
@@ -205,7 +214,7 @@ namespace Raven.Studio.Infrastructure
             }
         }
 
-        protected void UpdateData(InterimDataMode mode, uint stateWhenUpdateRequested)
+        protected void UpdateData(uint stateWhenUpdateRequested)
         {
             if (_state != stateWhenUpdateRequested)
             {
@@ -214,19 +223,18 @@ namespace Raven.Studio.Infrastructure
 
             _state++;
 
-            if (mode == InterimDataMode.ShowStaleData)
-            {
-                MarkExistingItemsAsStale();
-            }
-            else
-            {
-                ClearExistingData();
-            }
+            MarkExistingItemsAsStale();
 
             _fetchedPages.Clear();
             _requestedPages.Clear();
 
             UpdateCount();
+
+            var pagesToRefresh = _mostRecentlyRequestedPages.ToArray();
+            foreach (var page in pagesToRefresh)
+            {
+                BeginGetPage(page, isInternalRefreshRequest:true);
+            }
         }
 
         private void ClearExistingData()
@@ -255,6 +263,8 @@ namespace Raven.Studio.Infrastructure
 
             var wasCurrentBeyondLast = IsCurrentAfterLast;
 
+            var originalItemCount = _itemCount;
+            var delta = _source.Count - originalItemCount;
             _itemCount = _source.Count;
 
             if (IsCurrentAfterLast && !wasCurrentBeyondLast)
@@ -263,7 +273,25 @@ namespace Raven.Studio.Infrastructure
             }
 
             OnPropertyChanged(new PropertyChangedEventArgs("Count"));
-            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+
+            if (Math.Abs(delta) > 100)
+            {
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+            }
+            else if (delta > 0)
+            {
+                for (int i = 0; i < delta; i++)
+                {
+                    OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, null, originalItemCount + i));
+                }
+            }
+            else if (delta <0)
+            {
+                for (int i = delta; i < 0; i++)
+                {
+                    OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, _virtualItems[originalItemCount + i], originalItemCount + i));
+                }
+            }
         }
 
         public int IndexOf(VirtualItem<T> item)

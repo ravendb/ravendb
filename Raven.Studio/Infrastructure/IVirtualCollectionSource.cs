@@ -7,7 +7,7 @@ namespace Raven.Studio.Infrastructure
 {
     public interface IVirtualCollectionSource<T>
     {
-        event EventHandler<VirtualCollectionChangedEventArgs> CollectionChanged;
+        event EventHandler<EventArgs> CollectionChanged;
         event EventHandler<DataFetchErrorEventArgs> DataFetchError;
 
         int Count { get; }
