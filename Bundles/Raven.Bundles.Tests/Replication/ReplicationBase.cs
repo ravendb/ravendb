@@ -31,6 +31,16 @@ namespace Raven.Bundles.Tests.Replication
 		private const int PortRangeStart = 8079;
 		protected const int RetriesCount = 300;
 
+		public IDocumentStore UseStore(int port)
+		{
+			var documentStore = new DocumentStore { Url = "http://localhost:" + port };
+			ConfigureStore(documentStore);
+			documentStore.Initialize();
+			documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = true;
+			stores.Add(documentStore);
+			return documentStore;
+		}
+
 		public IDocumentStore CreateStore()
 		{
 			var port = PortRangeStart - servers.Count;
