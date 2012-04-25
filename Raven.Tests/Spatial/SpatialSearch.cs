@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Spatial
 {
@@ -53,9 +55,11 @@ namespace Raven.Tests.Spatial
 			}
 		}
 
-		[Fact]
-		public void Can_do_spatial_search_with_client_api2()
+		[Theory]
+		[CriticalCultures]
+		public void Can_do_spatial_search_with_client_api2(CultureInfo cultureInfo)
 		{
+			using(new TemporaryCulture(cultureInfo))
 			using (var store = NewDocumentStore())
 			{
 				new SpatialIdx().Execute(store);

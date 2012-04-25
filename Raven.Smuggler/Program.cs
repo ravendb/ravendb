@@ -22,7 +22,7 @@ namespace Raven.Smuggler
 		{
 			connectionStringOptions = new RavenConnectionStringOptions();
 			options = new SmugglerOptions();
-			
+
 			optionSet = new OptionSet
 			            	{
 			            		{
@@ -104,10 +104,10 @@ namespace Raven.Smuggler
 				PrintUsageAndExit(e);
 			}
 
-            if(options.File != null && Directory.Exists(options.File))
-            {
-                incremental = true;
-            }
+			if (options.File != null && Directory.Exists(options.File))
+			{
+				incremental = true;
+			}
 
 			var smugglerApi = new SmugglerApi(connectionStringOptions);
 
