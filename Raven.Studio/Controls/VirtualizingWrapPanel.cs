@@ -82,30 +82,25 @@ namespace Raven.Studio.Controls
 
             _childLayouts.Clear();
 
-            var layoutInfo = GetLayoutInfo(availableSize, ItemHeight);
+            var extentInfo = GetExtentInfo(availableSize, ItemHeight);
+
+            EnsureScrollOffsetIsWithinConstrains(extentInfo);
+
+            var layoutInfo = GetLayoutInfo(availableSize, ItemHeight, extentInfo);
 
             RecycleItems(layoutInfo);
 
             // Determine where the first item is in relation to previously realized items
             var generatorStartPosition = _itemsGenerator.GeneratorPositionFromIndex(layoutInfo.FirstRealizedItemIndex);
 
-            // Determine where we should be inserting new items in our children collection
-            // .Index refers to the last realized item
-            // .Offset tells us how far away the new item is from that
-            // But we don't need to leave gaps in our children collection, so 
-            // if the Offset is non-zero we just move to the next index
             var visualIndex = 0;
-
-            var itemCount = _itemsControl.Items.Count;
-            var itemIndex = layoutInfo.FirstRealizedItemIndex;
 
             var currentX = layoutInfo.FirstRealizedItemLeft;
             var currentY = layoutInfo.FirstRealizedLineTop;
 
-
             using (_itemsGenerator.StartAt(generatorStartPosition, GeneratorDirection.Forward, true))
             {
-                while (itemIndex < itemCount && currentY <= layoutInfo.LastRealizedLineBottom)
+                for (var itemIndex = layoutInfo.FirstRealizedItemIndex; itemIndex <= layoutInfo.LastRealizedItemIndex; itemIndex++, visualIndex++)
                 {
                     bool newlyRealized;
 
@@ -136,7 +131,7 @@ namespace Raven.Studio.Controls
                     _itemsGenerator.PrepareItemContainer(child);
 
                     child.Measure(new Size(ItemWidth, ItemHeight));
-                 
+
                     _childLayouts.Add(child, new Rect(currentX, currentY, child.DesiredSize.Width, child.DesiredSize.Height));
 
                     if (currentX + ItemWidth * 2 >= availableSize.Width)
@@ -149,16 +144,18 @@ namespace Raven.Studio.Controls
                     {
                         currentX += ItemWidth;
                     }
-
-                    visualIndex++;
-                    itemIndex++;
                 }
             }
 
             RemoveRedundantChildren();
-            UpdateScrollInfo(availableSize, layoutInfo);
+            UpdateScrollInfo(availableSize, extentInfo);
 
             return availableSize;
+        }
+
+        private void EnsureScrollOffsetIsWithinConstrains(ExtentInfo extentInfo)
+        {
+            _offset.Y = Clamp(_offset.Y, 0, extentInfo.MaxVerticalOffset);
         }
 
         private void RecycleItems(ItemLayoutInfo layoutInfo)
@@ -186,12 +183,10 @@ namespace Raven.Studio.Controls
             return finalSize;
         }
 
-        private void UpdateScrollInfo(Size availableSize, ItemLayoutInfo layoutInfo)
+        private void UpdateScrollInfo(Size availableSize, ExtentInfo extentInfo)
         {
             _viewportSize = availableSize;
-            _extentSize = new Size(availableSize.Width, Math.Max(layoutInfo.TotalLines * ItemHeight, _viewportSize.Height));
-            var verticalOffset = Clamp(_offset.Y, 0, _extentSize.Height - _viewportSize.Height);
-            _offset = new Point(_offset.X, verticalOffset);
+            _extentSize = new Size(availableSize.Width, extentInfo.ExtentHeight);
 
             InvalidateScrollInfo();
         }
@@ -213,24 +208,37 @@ namespace Raven.Studio.Controls
             }
         }
 
-        private ItemLayoutInfo GetLayoutInfo(Size availableSize, double itemHeight)
+        private ItemLayoutInfo GetLayoutInfo(Size availableSize, double itemHeight, ExtentInfo extentInfo)
         {
-            var itemsPerLine = Math.Max((int)Math.Floor(availableSize.Width/ItemWidth),1);
             var precedingLines = (int) Math.Floor(VerticalOffset/itemHeight);
-            var firstRealizedIndex = itemsPerLine*precedingLines;
-            var realizedLines = (int) Math.Ceiling(availableSize.Height/itemHeight);
-            var lastRealizedIndex = firstRealizedIndex + realizedLines*itemsPerLine - 1;
-            var totalLines = (int) Math.Ceiling((double)_itemsControl.Items.Count/itemsPerLine);
             
+            var firstRealizedIndex = extentInfo.ItemsPerLine*precedingLines;
+            var firstRealizedLineTop = precedingLines*itemHeight - VerticalOffset;
+
+            var realizedLines = (int) Math.Ceiling((availableSize.Height - firstRealizedLineTop)/itemHeight);
+            var lastRealizedIndex = Math.Min(firstRealizedIndex + realizedLines*extentInfo.ItemsPerLine - 1, _itemsControl.Items.Count - 1);
+
             return new ItemLayoutInfo
+                       {
+                           FirstRealizedItemIndex = firstRealizedIndex,
+                           FirstRealizedItemLeft = -HorizontalOffset,
+                           FirstRealizedLineTop = firstRealizedLineTop,
+                           LastRealizedItemIndex = lastRealizedIndex,
+                       };
+        }
+
+        private ExtentInfo GetExtentInfo(Size viewPortSize, double itemHeight)
+        {
+            var itemsPerLine = Math.Max((int)Math.Floor(viewPortSize.Width / ItemWidth), 1);
+            var totalLines = (int)Math.Ceiling((double)_itemsControl.Items.Count / itemsPerLine);
+            var extentHeight = Math.Max(totalLines*ItemHeight, viewPortSize.Height);
+
+            return new ExtentInfo()
                        {
                            ItemsPerLine = itemsPerLine,
                            TotalLines = totalLines,
-                           FirstRealizedItemIndex = firstRealizedIndex,
-                           FirstRealizedItemLeft = -HorizontalOffset,
-                           FirstRealizedLineTop = precedingLines*itemHeight - VerticalOffset,
-                           LastRealizedLineBottom = (precedingLines + realizedLines) * itemHeight - VerticalOffset,
-                           LastRealizedItemIndex = lastRealizedIndex,
+                           ExtentHeight = extentHeight,
+                           MaxVerticalOffset = extentHeight - viewPortSize.Height,
                        };
         }
 
@@ -372,42 +380,9 @@ namespace Raven.Studio.Controls
         {
             var wrapPanel = (d as VirtualizingWrapPanel);
 
-            if (e.Property == ItemHeightProperty)
-            {
-                wrapPanel.ScaleScrollOffsetToCompensateForItemHeightChange((double)e.NewValue);
-            }
-
             wrapPanel.InvalidateMeasure();
         }
 
-        private void ScaleScrollOffsetToCompensateForItemHeightChange(double newItemHeight)
-        {
-            if (_viewportSize.Height < 1 || _extentSize.Height < 1)
-            {
-                return;
-            }
-
-            var oldMaxOffset = _extentSize.Height - _viewportSize.Height;
-            if (oldMaxOffset < 1)
-            {
-                _offset.Y = 0;
-                return;
-            }
-
-            var newLayoutInfo = GetLayoutInfo(_viewportSize, newItemHeight);
-            var newExtentHeight = newLayoutInfo.TotalLines*newItemHeight;
-            var newMaxOffset = newExtentHeight - _viewportSize.Height;
-            if (newMaxOffset < 1)
-            {
-                _offset.Y = 0;
-                return;
-            }
-
-            var currentRelativePosition = _offset.Y/oldMaxOffset;
-            var newPosition = newMaxOffset * currentRelativePosition;
-
-            _offset.Y = newPosition;
-        }
 
         private double Clamp(double value, double min, double max)
         {
@@ -419,10 +394,17 @@ namespace Raven.Studio.Controls
             public int FirstRealizedItemIndex;
             public double FirstRealizedLineTop;
             public double FirstRealizedItemLeft;
+            public int LastRealizedItemIndex;
+        }
+
+        internal class ExtentInfo
+        {
             public int ItemsPerLine;
             public int TotalLines;
-            public int LastRealizedItemIndex;
-            public double LastRealizedLineBottom;
+            public double ExtentHeight;
+            public double MaxVerticalOffset;
         }
     }
+
+
 }
