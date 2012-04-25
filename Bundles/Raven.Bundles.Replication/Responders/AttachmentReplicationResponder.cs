@@ -19,7 +19,7 @@ using Raven.Database.Storage;
 using Raven.Json.Linq;
 using System.Linq;
 
-namespace Raven.Bundles.Replication.Reponsders
+namespace Raven.Bundles.Replication.Responders
 {
 	public class AttachmentReplicationResponder : RequestResponder
 	{
@@ -94,6 +94,14 @@ namespace Raven.Bundles.Replication.Reponsders
 				actions.Attachments.AddAttachment(id, Guid.Empty, new MemoryStream(data), metadata);
 				return;
 			}
+
+			// we just got the same version from the same source - request playback again?
+			// at any rate, not an error, moving on
+			if(existingAttachment.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == metadata.Value<string>(ReplicationConstants.RavenReplicationSource)  
+				&& existingAttachment.Metadata.Value<int>(ReplicationConstants.RavenReplicationVersion) == metadata.Value<int>(ReplicationConstants.RavenReplicationVersion))
+			{
+				return;
+			}
 			
 			var existingDocumentIsInConflict = existingAttachment.Metadata[ReplicationConstants.RavenReplicationConflict] != null;
 			if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics
@@ -121,7 +129,11 @@ namespace Raven.Bundles.Replication.Reponsders
 				log.Debug("Conflicted document {0} has a new version from {1}, adding to conflicted documents", id, src);
 				
 				// just update the current doc with the new conflict document
-				existingAttachment.Metadata.Value<RavenJArray>("Conflicts").Add(RavenJToken.FromObject(newDocumentConflictId));
+				var conflictArray = existingAttachment.Metadata.Value<RavenJArray>("Conflicts");
+				if (conflictArray == null)
+					existingAttachment.Metadata["Conflicts"] = conflictArray = new RavenJArray();
+
+				conflictArray.Add(RavenJToken.FromObject(newDocumentConflictId));
 				actions.Attachments.AddAttachment(id, existingAttachment.Etag, existingAttachment.Data(), existingAttachment.Metadata);
 				return;
 			}
