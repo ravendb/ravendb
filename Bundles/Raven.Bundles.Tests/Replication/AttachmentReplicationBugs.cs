@@ -9,7 +9,6 @@ namespace Raven.Bundles.Tests.Replication
 {
 	public class AttachmentReplicationBugs : ReplicationBase
 	{
-		private int count = 0;
 		protected override void ConfigureServer(database::Raven.Database.Config.RavenConfiguration serverConfiguration)
 		{
 			serverConfiguration.RunInMemory = false;
@@ -21,7 +20,7 @@ namespace Raven.Bundles.Tests.Replication
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
-
+			
 			TellFirstInstanceToReplicateToSecondInstance();
 
 			var databaseCommands = store1.DatabaseCommands;

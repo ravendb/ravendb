@@ -31,16 +31,6 @@ namespace Raven.Bundles.Tests.Replication
 		private const int PortRangeStart = 8079;
 		protected const int RetriesCount = 300;
 
-		public IDocumentStore UseStore(int port)
-		{
-			var documentStore = new DocumentStore { Url = "http://localhost:" + port };
-			ConfigureStore(documentStore);
-			documentStore.Initialize();
-			documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = true;
-			stores.Add(documentStore);
-			return documentStore;
-		}
-
 		public IDocumentStore CreateStore()
 		{
 			var port = PortRangeStart - servers.Count;
@@ -61,6 +51,7 @@ namespace Raven.Bundles.Tests.Replication
 			                          	Port = port
 			                          };
 			ConfigureServer(serverConfiguration);
+			IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
 			serverConfiguration.PostInit();
 			var ravenDbServer = new RavenDbServer(serverConfiguration);
 			ravenDbServer.Server.SetupTenantDatabaseConfiguration += configuration => configuration.Catalog.Catalogs.Add(assemblyCatalog);
@@ -146,7 +137,7 @@ namespace Raven.Bundles.Tests.Replication
 			{
 				var replicationDestination = new ReplicationDestination
 				{
-					Url = destination.Url,
+					Url = destination.Url.Replace("localhost", "ipv4.fiddler"),
 					TransitiveReplicationBehavior = transitiveReplicationBehavior,
 				};
 				SetupDestination(replicationDestination);
