@@ -292,6 +292,9 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl();
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
+
+				request.WebRequest.Headers.Add("Attachment-Ids", string.Join(", ", jsonAttachments.Select(x=>x.Value<string>("@id"))));
+
 				request.WriteBson(jsonAttachments);
 				request.ExecuteRequest();
 				log.Info("Replicated {0} attachments to {1}", jsonAttachments.Length, destination);
@@ -403,11 +406,10 @@ namespace Raven.Bundles.Replication.Tasks
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(destinationsReplicationInformationForSource.LastAttachmentEtag)
+					jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(destinationsReplicationInformationForSource.LastAttachmentEtag,100)
 						.Where(destination.FilterAttachments)
 						// we don't replicate stuff that was created there
 						.Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationInstanceId)
-						.Take(100)
 						.Select(x => new RavenJObject
 						{
 							{"@metadata", x.Metadata},
