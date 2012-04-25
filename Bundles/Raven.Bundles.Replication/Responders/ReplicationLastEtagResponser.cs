@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using NLog;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Data;
@@ -10,7 +11,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 
-namespace Raven.Bundles.Replication.Reponsders
+namespace Raven.Bundles.Replication.Responders
 {
 	public class ReplicationLastEtagResponser : RequestResponder
 	{

@@ -60,7 +60,7 @@
     <Compile Include="Data\DestinationFailureInformation.cs" />
     <Compile Include="Plugins\AbstractAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Plugins\AbstractDocumentReplicationConflictResolver.cs" />
-    <Compile Include="Reponsders\AttachmentReplicationResponder.cs" />
+    <Compile Include="Responders\AttachmentReplicationResponder.cs" />
     <Compile Include="Triggers\AttachmentAncestryPutTrigger.cs" />
     <Compile Include="Triggers\HideVirtuallyDeletedAttachmentsReadTrigger.cs" />
     <Compile Include="Triggers\HideVirtuallyDeletedDocumentsReadTrigger.cs" />
@@ -68,8 +68,8 @@
     <Compile Include="Triggers\RemoveConflictOnAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\RemoveConflictOnPutTrigger.cs" />
     <Compile Include="ReplicationConstants.cs" />
-    <Compile Include="Reponsders\ReplicationLastEtagResponser.cs" />
-    <Compile Include="Reponsders\DocumentReplicationResponder.cs" />
+    <Compile Include="Responders\ReplicationLastEtagResponser.cs" />
+    <Compile Include="Responders\DocumentReplicationResponder.cs" />
     <Compile Include="Tasks\ReplicationTask.cs" />
     <Compile Include="Data\SourceReplicationInformation.cs" />
     <Compile Include="Triggers\ReplicationHiLo.cs" />
