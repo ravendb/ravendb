@@ -146,13 +146,13 @@ namespace Raven.Tests
 
 		}
 
-		protected RavenDbServer GetNewServer(int port = 8079, string dataDirectory = "Data")
+		protected RavenDbServer GetNewServer(int port = 8079, string dataDirectory = "Data", bool runInMemory = true)
 		{
 			var ravenConfiguration = new RavenConfiguration
 									 {
 										 Port = port,
 										 DataDirectory = dataDirectory,
-										 RunInMemory = true,
+										 RunInMemory = runInMemory,
 										 AnonymousUserAccessMode = AnonymousUserAccessMode.All
 									 };
 
