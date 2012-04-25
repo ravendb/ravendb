@@ -39,6 +39,40 @@ namespace Raven.Bundles.Tests.Replication
 		}
 
 		[Fact]
+		public void Can_replicate_documents_between_two_external_instances()
+		{
+			var store1 = UseStore(8080);
+			var store2 = UseStore(8081);
+
+			TellFirstInstanceToReplicateToSecondInstance();
+
+			var databaseCommands = store1.DatabaseCommands;
+			const int documentCount = 20;
+			for (int i = 0; i < documentCount; i++)
+			{
+				databaseCommands.PutAttachment(i.ToString(), null, new MemoryStream(new[] { (byte)i }), new RavenJObject());
+			}
+
+			bool foundAll = false;
+			for (int i = 0; i < RetriesCount; i++)
+			{
+				var countFound = 0;
+				for (int j = 0; j < documentCount; j++)
+				{
+					var attachment = store2.DatabaseCommands.GetAttachment(j.ToString());
+					if (attachment == null)
+						break;
+					countFound++;
+				}
+				foundAll = countFound == documentCount;
+				if (foundAll)
+					break;
+				Thread.Sleep(100);
+			}
+			Assert.True(foundAll);
+		}
+
+		[Fact]
 		public void Can_replicate_large_number_of_documents_between_two_instances()
 		{
 			var store1 = CreateStore();
