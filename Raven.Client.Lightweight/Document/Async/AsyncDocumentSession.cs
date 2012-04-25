@@ -25,7 +25,7 @@ namespace Raven.Client.Document.Async
 	/// <summary>
 	/// Implementation for async document session 
 	/// </summary>
-	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
+	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
 	{
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
