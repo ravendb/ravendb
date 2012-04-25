@@ -644,7 +644,7 @@ namespace Raven.Client.Shard
 
 		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
 		{
-			throw new NotSupportedException("Shared document store doesn't support async operations");
+			throw new NotSupportedException("Sharded document store doesn't support async operations");
 		}
 #endif
 
