@@ -107,23 +107,33 @@ namespace Raven.Studio.Controls
                     var child = (UIElement)_itemsGenerator.GenerateNext(out newlyRealized);
                     SetVirtualItemIndex(child, itemIndex);
 
-                    if (newlyRealized || visualIndex >= Children.Count)
+                    if (newlyRealized)
                     {
                         InsertInternalChild(visualIndex, child);
                     }
                     else
                     {
-                        // check if item is recycled and needs to be moved into a new position in the Children collection
-                        if (Children[visualIndex] != child)
+                        // check if item needs to be moved into a new position in the Children collection
+                        if (visualIndex < Children.Count)
                         {
-                            var childCurrentIndex = Children.IndexOf(child);
-
-                            if (childCurrentIndex >= 0)
+                            if (Children[visualIndex] != child)
                             {
-                                RemoveInternalChildRange(childCurrentIndex, 1);
-                            }
+                                var childCurrentIndex = Children.IndexOf(child);
 
-                            InsertInternalChild(visualIndex, child);
+                                if (childCurrentIndex >= 0)
+                                {
+                                    RemoveInternalChildRange(childCurrentIndex, 1);
+                                }
+
+                                InsertInternalChild(visualIndex, child);
+                            }
+                        }
+                        else
+                        {
+                            // we know that the child can't already be in the children collection
+                            // because we've been inserting children in correct visualIndex order,
+                            // and this child has a visualIndex greater than the Children.Count
+                            AddInternalChild(child);
                         }
                     }
 
