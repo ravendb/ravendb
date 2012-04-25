@@ -46,6 +46,10 @@ namespace Raven.Database.Plugins
 				{
 					context.WaitForWork(TimeoutForNextWork(), ref workCounter, name);
 				}
+				else
+				{
+					context.UpdateFoundWork();
+				}
 			}
 		}
 
