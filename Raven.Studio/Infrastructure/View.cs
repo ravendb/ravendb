@@ -24,14 +24,14 @@ namespace Raven.Studio.Infrastructure
 
         private void HandleDataContectChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
-            var oldViewModel = e.OldValue as ViewModel;
-            if (oldViewModel != null)
-            {
-                oldViewModel.NotifyViewUnloaded();
-            }
-
             if (isLoaded)
             {
+                var oldViewModel = e.OldValue as ViewModel;
+                if (oldViewModel != null)
+                {
+                    oldViewModel.NotifyViewUnloaded();
+                }
+
                 var newViewModel = e.NewValue as ViewModel;
                 if (newViewModel != null)
                 {
