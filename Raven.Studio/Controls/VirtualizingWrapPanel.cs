@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Controls
 {
@@ -32,6 +33,17 @@ namespace Raven.Studio.Controls
         private static readonly DependencyProperty VirtualItemIndexProperty =
             DependencyProperty.RegisterAttached("VirtualItemIndex", typeof(int), typeof(VirtualizingWrapPanel), new PropertyMetadata(-1));
         private IRecyclingItemContainerGenerator _itemsGenerator;
+
+        public static readonly DependencyProperty DeferScrollingProperty =
+            DependencyProperty.Register("DeferScrolling", typeof(bool), typeof(VirtualizingWrapPanel), new PropertyMetadata(default(bool)));
+
+        private DeferredActionInvoker _deferredMeasureInvalidation;
+
+        public bool DeferScrolling
+        {
+            get { return (bool)GetValue(DeferScrollingProperty); }
+            set { SetValue(DeferScrollingProperty, value); }
+        }
 
         private static int GetVirtualItemIndex(DependencyObject obj)
         {
@@ -58,6 +70,8 @@ namespace Raven.Studio.Controls
         public VirtualizingWrapPanel()
         {
             Dispatcher.BeginInvoke(Initialize);
+            _deferredMeasureInvalidation = new DeferredActionInvoker(InvalidateMeasure,
+                                                                     TimeSpan.FromSeconds(0.05));
         }
 
         private void Initialize()
@@ -79,6 +93,8 @@ namespace Raven.Studio.Controls
             {
                 return availableSize;
             }
+
+            _deferredMeasureInvalidation.Cancel();
 
             _childLayouts.Clear();
 
@@ -338,7 +354,16 @@ namespace Raven.Studio.Controls
             offset = Clamp(offset, 0, ExtentHeight - ViewportHeight);
             _offset = new Point(_offset.X, offset);
 
-            InvalidateMeasure();
+            InvalidateScrollInfo();
+
+            if (DeferScrolling)
+            {
+                _deferredMeasureInvalidation.Request();
+            }
+            else
+            {
+                InvalidateMeasure();
+            }
         }
 
         public Rect MakeVisible(UIElement visual, Rect rectangle)

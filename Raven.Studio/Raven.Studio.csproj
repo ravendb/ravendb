@@ -172,6 +172,7 @@
     <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
     <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
     <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
+    <Compile Include="Infrastructure\DeferredActionInvoker.cs" />
     <Compile Include="Infrastructure\IEnquireAboutItemVisibility.cs" />
     <Compile Include="Infrastructure\INotifyOnDataFetchErrors.cs" />
     <Compile Include="Infrastructure\IVirtualCollectionSource.cs" />
