@@ -160,7 +160,7 @@ namespace Raven.Studio.Controls
 
                     child.Measure(new Size(ItemWidth, ItemHeight));
 
-                    _childLayouts.Add(child, new Rect(currentX, currentY, child.DesiredSize.Width, child.DesiredSize.Height));
+                    _childLayouts.Add(child, new Rect(currentX, currentY, ItemWidth, ItemHeight));
 
                     if (currentX + ItemWidth * 2 >= availableSize.Width)
                     {

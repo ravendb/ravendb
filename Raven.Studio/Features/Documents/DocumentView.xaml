@@ -11,8 +11,6 @@
 			 d:DesignWidth="400" d:DataContext="{d:DesignInstance Documents:ViewableDocument}">
 
 	<Grid Background="Transparent"
-		  Width="{Binding Path=Current.Width, Source={StaticResource DocumentSize}}"
-		  Height="{Binding Path=Current.Height, Source={StaticResource DocumentSize}}"
 		  ToolTipService.ToolTip="{Binding ToolTipText}">
 
 		<i:Interaction.Behaviors>

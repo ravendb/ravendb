@@ -18,7 +18,9 @@
 	<Grid>
 		<Grid.Resources>
 			<DataTemplate x:Key="DataTemplate_Document_CardView">
-				<Documents:DocumentView />
+                <Documents:DocumentView 
+                    Width="{Binding Path=Current.Width, Source={StaticResource DocumentSize}}"
+		            Height="{Binding Path=Current.Height, Source={StaticResource DocumentSize}}"/>
 			</DataTemplate>
 		</Grid.Resources>
 		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
