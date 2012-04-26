@@ -94,44 +94,42 @@
 
             </toolkit:HeaderedContentControl.Header>
 
-            <toolkit:BusyIndicator IsBusy="{Binding IsLoadingDocuments}" BusyContent="Querying documents...">
-                <ListBox x:Name="DocumentsList"
-						 ItemsSource="{Binding Documents}"
-						 Style="{StaticResource StealthPagingDocumentList}"
-						 Margin="10"
-						 ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
+            <ListBox x:Name="DocumentsList"
+						ItemsSource="{Binding Documents}"
+						Style="{StaticResource StealthPagingDocumentList}"
+						Margin="10"
+						ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
 
-                    <i:Interaction.Triggers>
-                        <Behaviors:StudioKeyTrigger Key="Delete">
-                            <i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
-												   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-                        </Behaviors:StudioKeyTrigger>
-                    </i:Interaction.Triggers>
+                <i:Interaction.Triggers>
+                    <Behaviors:StudioKeyTrigger Key="Delete">
+                        <i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
+												CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+                    </Behaviors:StudioKeyTrigger>
+                </i:Interaction.Triggers>
 
-                    <i:Interaction.Behaviors>
-                        <Behaviors:SelectItemOnRightClick />
-                        <Infrastructure:ProvideVisibleItemRangeBehavior/>
-                    </i:Interaction.Behaviors>
+                <i:Interaction.Behaviors>
+                    <Behaviors:SelectItemOnRightClick />
+                    <Infrastructure:ProvideVisibleItemRangeBehavior/>
+                </i:Interaction.Behaviors>
 
-                    <Controls:ContextMenuService.ContextMenu>
-                        <Controls:ContextMenu x:Name="DocumentsContextMenu">
-                            <Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
-											   Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
-											   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-                            <Controls:MenuItem Header="Delete"
-											   Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
-											   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-                        </Controls:ContextMenu>
-                    </Controls:ContextMenuService.ContextMenu>
+                <Controls:ContextMenuService.ContextMenu>
+                    <Controls:ContextMenu x:Name="DocumentsContextMenu">
+                        <Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
+											Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
+											CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+                        <Controls:MenuItem Header="Delete"
+											Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
+											CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+                    </Controls:ContextMenu>
+                </Controls:ContextMenuService.ContextMenu>
                     
-                    <ListBox.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <Controls1:VirtualizingWrapPanel ItemWidth="{Binding Source={StaticResource DocumentSize}, Path=Current.Width}"
-                                                             ItemHeight="{Binding Source={StaticResource DocumentSize}, Path=Current.Height}"/>
-                        </ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
-                </ListBox>
-            </toolkit:BusyIndicator>
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Controls1:VirtualizingWrapPanel ItemWidth="{Binding Source={StaticResource DocumentSize}, Path=Current.Width}"
+                                                            ItemHeight="{Binding Source={StaticResource DocumentSize}, Path=Current.Height}"/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+            </ListBox>
 
         </toolkit:HeaderedContentControl>
     </Grid>

@@ -33,8 +33,7 @@
 			</ToggleButton.Content>
 		</ToggleButton>
 		<Popup IsOpen="{Binding ElementName=ToggleButton, Path=IsChecked, Mode=TwoWay}"
-			   b:Popup.PlacementTarget="{Binding ElementName=ToggleButton}"
-			   b:Popup.StaysOpen="False">
+			   b:Popup.PlacementTarget="{Binding ElementName=ToggleButton}">
 			<b:Popup.PreferredOrientations>
 				<b:PopupOrientationCollection>
 					<b:PopupOrientation Placement="Bottom"
