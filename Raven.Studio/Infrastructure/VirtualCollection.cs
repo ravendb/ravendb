@@ -477,12 +477,19 @@ namespace Raven.Studio.Infrastructure
             if (handler != null) handler(this, e);
         }
 
-        public event EventHandler CurrentChanged;
+        public event EventHandler CurrentChanged
+        {
+            add { 
+                // don't raise CurrentChanged events
+                // ListBox causes a memory leak by not unsubscribing
+            }
+            remove {  }
+        }
 
         protected void OnCurrentChanged(EventArgs e)
         {
-            EventHandler handler = CurrentChanged;
-            if (handler != null) handler(this, e);
+            //EventHandler handler = CurrentChanged;
+            //if (handler != null) handler(this, e);
         }
 
         public IEnumerator<VirtualItem<T>> GetEnumerator()
