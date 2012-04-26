@@ -965,7 +965,7 @@ namespace Raven.Database
 			}
 		}
 
-		public void PutStatic(string name, Guid? etag, Stream data, RavenJObject metadata)
+		public Guid PutStatic(string name, Guid? etag, Stream data, RavenJObject metadata)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 			name = name.Trim();
@@ -989,7 +989,7 @@ namespace Raven.Database
 
 			TransactionalStorage
 				.ExecuteImmediatelyOrRegisterForSyncronization(() => AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
-
+			return newEtag;
 		}
 
 		public void DeleteStatic(string name, Guid? etag)
@@ -1072,7 +1072,7 @@ namespace Raven.Database
 				if (etag == null)
 					documents = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
 				else
-					documents = actions.Attachments.GetAttachmentsAfter(etag.Value).Take(pageSize).ToArray();
+					documents = actions.Attachments.GetAttachmentsAfter(etag.Value, pageSize).ToArray();
 
 			});
 			return documents;

@@ -51,6 +51,7 @@ namespace Raven.Bundles.Tests.Replication
 			                          	Port = port
 			                          };
 			ConfigureServer(serverConfiguration);
+			IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
 			serverConfiguration.PostInit();
 			var ravenDbServer = new RavenDbServer(serverConfiguration);
 			ravenDbServer.Server.SetupTenantDatabaseConfiguration += configuration => configuration.Catalog.Catalogs.Add(assemblyCatalog);
@@ -136,7 +137,7 @@ namespace Raven.Bundles.Tests.Replication
 			{
 				var replicationDestination = new ReplicationDestination
 				{
-					Url = destination.Url,
+					Url = destination.Url.Replace("localhost", "ipv4.fiddler"),
 					TransitiveReplicationBehavior = transitiveReplicationBehavior,
 				};
 				SetupDestination(replicationDestination);

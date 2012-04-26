@@ -18,6 +18,6 @@ namespace Raven.Database.Storage
 		void DeleteAttachment(string key, Guid? etag);
 		Attachment GetAttachment(string key);
 		IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start);
-		IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid value);
+		IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid value, int take);
 	}
 }
