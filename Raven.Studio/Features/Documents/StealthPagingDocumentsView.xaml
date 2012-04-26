@@ -9,7 +9,8 @@
                 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
                 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
                 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
-                xmlns:Models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d"
+                xmlns:Models="clr-namespace:Raven.Studio.Models"
+             xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:StealthPagingDocumentsModel}">
 
     <Grid>
@@ -109,6 +110,7 @@
 
                     <i:Interaction.Behaviors>
                         <Behaviors:SelectItemOnRightClick />
+                        <Infrastructure:ProvideVisibleItemRangeBehavior/>
                     </i:Interaction.Behaviors>
 
                     <Controls:ContextMenuService.ContextMenu>

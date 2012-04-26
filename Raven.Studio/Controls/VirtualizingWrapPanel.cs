@@ -223,6 +223,11 @@ namespace Raven.Studio.Controls
 
         private ItemLayoutInfo GetLayoutInfo(Size availableSize, double itemHeight, ExtentInfo extentInfo)
         {
+            if (_itemsControl == null)
+            {
+                return new ItemLayoutInfo();
+            }
+
             var precedingLines = (int) Math.Floor(VerticalOffset/itemHeight);
             
             var firstRealizedIndex = extentInfo.ItemsPerLine*precedingLines;
@@ -242,6 +247,11 @@ namespace Raven.Studio.Controls
 
         private ExtentInfo GetExtentInfo(Size viewPortSize, double itemHeight)
         {
+            if (_itemsControl == null)
+            {
+                return new ExtentInfo();
+            }
+
             var itemsPerLine = Math.Max((int)Math.Floor(viewPortSize.Width / ItemWidth), 1);
             var totalLines = (int)Math.Ceiling((double)_itemsControl.Items.Count / itemsPerLine);
             var extentHeight = Math.Max(totalLines*ItemHeight, viewPortSize.Height);
@@ -336,6 +346,11 @@ namespace Raven.Studio.Controls
             return new Rect();
         }
 
+        public ItemLayoutInfo GetVisibleItemsRange()
+        {
+            return GetLayoutInfo(_viewportSize, ItemHeight, GetExtentInfo(_viewportSize, ItemHeight));
+        }
+
         public bool CanVerticallyScroll
         {
             get; set;
@@ -402,14 +417,6 @@ namespace Raven.Studio.Controls
             return Math.Min(Math.Max(value, min), max);
         }
 
-        private class ItemLayoutInfo
-        {
-            public int FirstRealizedItemIndex;
-            public double FirstRealizedLineTop;
-            public double FirstRealizedItemLeft;
-            public int LastRealizedItemIndex;
-        }
-
         internal class ExtentInfo
         {
             public int ItemsPerLine;
@@ -419,5 +426,11 @@ namespace Raven.Studio.Controls
         }
     }
 
-
+    public class ItemLayoutInfo
+    {
+        public int FirstRealizedItemIndex;
+        public double FirstRealizedLineTop;
+        public double FirstRealizedItemLeft;
+        public int LastRealizedItemIndex;
+    }
 }

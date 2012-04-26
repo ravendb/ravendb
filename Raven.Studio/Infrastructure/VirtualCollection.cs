@@ -18,7 +18,7 @@ namespace Raven.Studio.Infrastructure
     /// <typeparam name="T"></typeparam>
     /// <remarks>The trick to ensuring that the silverlight datagrid doesn't attempt to enumerate all
     /// items from its DataSource in one shot is to implement both IList and ICollectionView.</remarks>
-    public class VirtualCollection<T> : IList<VirtualItem<T>>, IList, ICollectionView, INotifyPropertyChanged, INotifyOnDataFetchErrors where T : class
+    public class VirtualCollection<T> : IList<VirtualItem<T>>, IList, ICollectionView, INotifyPropertyChanged, INotifyOnDataFetchErrors, IEnquireAboutItemVisibility where T : class
     {
         private readonly IVirtualCollectionSource<T> _source;
         private readonly int _pageSize;
@@ -27,6 +27,7 @@ namespace Raven.Studio.Infrastructure
         public event EventHandler<DataFetchErrorEventArgs> DataFetchError;
         public event EventHandler<EventArgs> FetchSucceeded;
         public event PropertyChangedEventHandler PropertyChanged;
+        public event EventHandler<QueryItemVisibilityEventArgs> QueryItemVisibility;
 
         private volatile uint _state; // used to ensure that data-requests are not stale
         private readonly SparseList<VirtualItem<T>> _virtualItems;
@@ -119,19 +120,14 @@ namespace Raven.Studio.Infrastructure
             }
         }
 
-        private void BeginGetPage(int page, bool isInternalRefreshRequest = false)
+        private void BeginGetPage(int page)
         {
             if (IsPageAlreadyRequested(page))
             {
                 return;
             }
 
-            // only add page to the mru list if it was actually requested by the
-            // user of the collection
-            if (!isInternalRefreshRequest)
-            {
-                _mostRecentlyRequestedPages.Add(page);
-            }
+            _mostRecentlyRequestedPages.Add(page);
 
             _requestedPages.Add(page);
 
@@ -230,10 +226,24 @@ namespace Raven.Studio.Infrastructure
 
             UpdateCount();
 
-            var pagesToRefresh = _mostRecentlyRequestedPages.ToArray();
-            foreach (var page in pagesToRefresh)
+            var queryItemVisibilityArgs = new QueryItemVisibilityEventArgs();
+            OnQueryItemVisibility(queryItemVisibilityArgs);
+
+            if (queryItemVisibilityArgs.FirstVisibleIndex.HasValue)
             {
-                BeginGetPage(page, isInternalRefreshRequest:true);
+                var firstVisiblePage = queryItemVisibilityArgs.FirstVisibleIndex.Value/_pageSize;
+                var lastVisiblePage = queryItemVisibilityArgs.LastVisibleIndex.Value/_pageSize;
+
+                for (int i = firstVisiblePage; i <= lastVisiblePage; i++)
+                {
+                    BeginGetPage(i);
+                }
+            }
+            else
+            {
+                // in this case we have no way of knowing which items are currenly visible,
+                // so we signal a collection reset, and wait to see which pages are requested
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
             }
         }
 
@@ -297,6 +307,12 @@ namespace Raven.Studio.Infrastructure
         public int IndexOf(VirtualItem<T> item)
         {
             return item.Index;
+        }
+
+        protected void OnQueryItemVisibility(QueryItemVisibilityEventArgs e)
+        {
+            EventHandler<QueryItemVisibilityEventArgs> handler = QueryItemVisibility;
+            if (handler != null) handler(this, e);
         }
 
         object IList.this[int index]
@@ -602,5 +618,7 @@ namespace Raven.Studio.Infrastructure
         }
 
         #endregion
+
+
     }
 }

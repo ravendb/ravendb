@@ -172,6 +172,7 @@
     <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
     <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
     <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
+    <Compile Include="Infrastructure\IEnquireAboutItemVisibility.cs" />
     <Compile Include="Infrastructure\INotifyOnDataFetchErrors.cs" />
     <Compile Include="Infrastructure\IVirtualCollectionSource.cs" />
     <Compile Include="Infrastructure\MostRecentUsedList.cs" />
@@ -182,6 +183,7 @@
     <Compile Include="Infrastructure\VirtualCollectionChangedEventArgs.cs" />
     <Compile Include="Infrastructure\VirtualCollectionSource.cs" />
     <Compile Include="Infrastructure\VirtualItem.cs" />
+    <Compile Include="Infrastructure\ProvideVisibleItemRangeBehavior.cs" />
     <Compile Include="Infrastructure\WeakEventListener.cs" />
     <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />

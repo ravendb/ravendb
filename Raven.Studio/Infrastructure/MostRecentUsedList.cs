@@ -52,5 +52,10 @@ namespace Raven.Studio.Infrastructure
         {
             return GetEnumerator();
         }
+
+        public void Clear()
+        {
+            _list.Clear();
+        }
     }
 }
