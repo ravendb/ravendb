@@ -19,9 +19,21 @@ namespace Raven.Studio.Models
 {
     public class DocumentsCollectionSource : VirtualCollectionSource<ViewableDocument>
     {
+        public DocumentsCollectionSource()
+        {
+        }
+
         protected override Task<int> GetCount()
         {
-            return TaskEx.FromResult((int)ApplicationModel.Database.Value.Statistics.Value.CountOfDocuments);
+            if (ApplicationModel.Database.Value != null
+                && ApplicationModel.Database.Value.Statistics.Value != null)
+            {
+                return TaskEx.FromResult((int) ApplicationModel.Database.Value.Statistics.Value.CountOfDocuments);
+            }
+            else
+            {
+                return TaskEx.FromResult(0);
+            }
         }
 
         public override Task<IList<ViewableDocument>> GetPageAsync(int start, int pageSize, IList<SortDescription> sortDescriptions)

@@ -12,9 +12,9 @@ using System.Windows.Shapes;
 
 namespace Raven.Studio.Features.Documents
 {
-    public partial class StealthPagingDocumentsView : UserControl
+    public partial class DocumentsViewEnhanced : UserControl
     {
-        public StealthPagingDocumentsView()
+        public DocumentsViewEnhanced()
         {
             InitializeComponent();
         }

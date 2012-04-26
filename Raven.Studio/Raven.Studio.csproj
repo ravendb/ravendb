@@ -153,8 +153,8 @@
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
-    <Compile Include="Features\Documents\StealthPagingDocumentsView.xaml.cs">
-      <DependentUpon>StealthPagingDocumentsView.xaml</DependentUpon>
+    <Compile Include="Features\Documents\DocumentsViewEnhanced.xaml.cs">
+      <DependentUpon>DocumentsViewEnhanced.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Query\QueryIndexAutoComplete.cs" />
@@ -191,7 +191,7 @@
     <Compile Include="Models\DocumentsCollectionSource.cs" />
     <Compile Include="Models\DocumentSize.cs" />
     <Compile Include="Models\IHasPageTitle.cs" />
-    <Compile Include="Models\StealthPagingDocumentsModel.cs" />
+    <Compile Include="Models\DocumentsModelEnhanced.cs" />
     <Compile Include="Models\TermsModel.cs" />
     <Compile Include="Views\StealthPagingDocuments.xaml.cs">
       <DependentUpon>StealthPagingDocuments.xaml</DependentUpon>
@@ -446,7 +446,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Documents\StealthPagingDocumentsView.xaml">
+    <Page Include="Features\Documents\DocumentsViewEnhanced.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -14,22 +14,40 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-    public class StealthPagingDocumentsModel : Model
+    public class DocumentsModelEnhanced : Model
     {
-        private ICommand refresh;
         public VirtualCollection<ViewableDocument> Documents { get; private set; }
 
-        public ICommand Refresh { get { return refresh ?? (refresh = new ActionCommand(() => Documents.Refresh())); } }
-        
-        public StealthPagingDocumentsModel()
+        public bool SkipAutoRefresh { get; set; }
+        public bool ShowEditControls { get; set; }
+
+        public DocumentsModelEnhanced()
         {
             Documents = new VirtualCollection<ViewableDocument>(new DocumentsCollectionSource(), 25, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified));
+
+            ShowEditControls = true;
         }
 
         public override System.Threading.Tasks.Task TimerTickedAsync()
         {
+            if (SkipAutoRefresh)
+            {
+                return null;
+            }
+
             Documents.Refresh();
             return base.TimerTickedAsync();
+        }
+
+        private string header;
+        public string Header
+        {
+            get { return header ?? (header = "Documents"); }
+            set
+            {
+                header = value;
+                OnPropertyChanged(() => Header);
+            }
         }
     }
 }

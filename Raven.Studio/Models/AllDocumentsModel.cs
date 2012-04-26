@@ -6,26 +6,19 @@ namespace Raven.Studio.Models
 {
 	public class AllDocumentsModel : PageViewModel
 	{
-		private static void SetTotalResults()
-		{
-			Documents.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
-		}
-
 		public AllDocumentsModel()
 		{
 			ModelUrl = "/documents";
 		}
 
-		private static WeakReference<Observable<DocumentsModel>> documents;
-		public static Observable<DocumentsModel> Documents
+		private static WeakReference<Observable<DocumentsModelEnhanced>> documents;
+        public static Observable<DocumentsModelEnhanced> Documents
 		{
 			get
 			{
 				if (documents == null || documents.IsAlive == false)
 				{
-					documents = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel> { Value = new DocumentsModel() });
-					SetTotalResults();
-					ApplicationModel.Database.PropertyChanged += (sender, args) => SetTotalResults();
+                    documents = new WeakReference<Observable<DocumentsModelEnhanced>>(new Observable<DocumentsModelEnhanced> { Value = new DocumentsModelEnhanced() });
 				}
 				var target = documents.Target ?? Documents;
 				return target;
@@ -34,7 +27,6 @@ namespace Raven.Studio.Models
 
 		public override void LoadModelParameters(string parameters)
 		{
-			Documents.Value.Pager.SetSkip(new UrlParser(parameters));
 		}
 
 		public override Task TimerTickedAsync()

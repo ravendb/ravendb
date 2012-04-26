@@ -15,7 +15,7 @@
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 
-		<Documents:DocumentsView DataContext="{Binding Path=Documents.Value}"
+		<Documents:DocumentsViewEnhanced DataContext="{Binding Path=Documents.Value}"
 								 Margin="{StaticResource Margin_ContentPage}" />
 	</Grid>
 </Infrastructure:PageView>

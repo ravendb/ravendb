@@ -78,6 +78,8 @@ namespace Raven.Studio.Controls
         {
             _itemsControl = ItemsControl.GetItemsOwner(this);
             _itemsGenerator = (IRecyclingItemContainerGenerator) ItemContainerGenerator;
+
+            InvalidateMeasure();
         }
 
         protected override void OnItemsChanged(object sender, ItemsChangedEventArgs args)

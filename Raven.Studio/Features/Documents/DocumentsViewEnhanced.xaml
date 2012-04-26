@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Raven.Studio.Features.Documents.StealthPagingDocumentsView"
+﻿<UserControl x:Class="Raven.Studio.Features.Documents.DocumentsViewEnhanced"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -11,7 +11,7 @@
                 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
                 xmlns:Models="clr-namespace:Raven.Studio.Models"
              xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" mc:Ignorable="d"
-    d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:StealthPagingDocumentsModel}">
+    d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:DocumentsModelEnhanced}">
 
     <Grid>
         <Grid.Resources>
@@ -19,6 +19,7 @@
                 <Documents:DocumentView DataContext="{Binding Item}" />
             </DataTemplate>
         </Grid.Resources>
+        
         <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
             <toolkit:HeaderedContentControl.Header>
                 <Grid Margin="4">
@@ -63,14 +64,6 @@
 								Orientation="Horizontal"
 								VerticalAlignment="Center"
 								Margin="0,0,10,0">
-
-                        <Button Command="{Binding Refresh}"
-								Style="{StaticResource Style_Button_MouseOverChrome}">
-                            <Button.Content>
-                                    <TextBlock Text="Refresh"
-											   VerticalAlignment="Center" />
-                            </Button.Content>
-                        </Button>
                         
                         <Button Command="{StaticResource NavigateToCommand}"
 								CommandParameter="/edit?mode=new"
@@ -103,7 +96,7 @@
                 <i:Interaction.Triggers>
                     <Behaviors:StudioKeyTrigger Key="Delete">
                         <i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
-												CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+											CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
                     </Behaviors:StudioKeyTrigger>
                 </i:Interaction.Triggers>
 
@@ -126,7 +119,7 @@
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <Controls1:VirtualizingWrapPanel ItemWidth="{Binding Source={StaticResource DocumentSize}, Path=Current.Width}"
-                                                            ItemHeight="{Binding Source={StaticResource DocumentSize}, Path=Current.Height}"
+                                                         ItemHeight="{Binding Source={StaticResource DocumentSize}, Path=Current.Height}"
                                                          DeferScrolling="False"/>
                     </ItemsPanelTemplate>
                 </ListBox.ItemsPanel>

@@ -19,20 +19,22 @@ namespace Raven.Studio.Infrastructure
         private static readonly DependencyProperty ItemsSourceProperty =
             DependencyProperty.Register("ItemsSource", typeof (object), typeof (ProvideVisibleItemRangeBehavior), new PropertyMetadata(default(object), HandleItemsSourceChanged));
 
+        private IEnquireAboutItemVisibility _cachedEnquirer;
+        private bool _isLoaded;
+
         private static void HandleItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var behavior = d as ProvideVisibleItemRangeBehavior;
 
-            var oldEnquirer = e.OldValue as IEnquireAboutItemVisibility;
-            if (oldEnquirer != null)
-            {
-                oldEnquirer.QueryItemVisibility -= behavior.HandleQueryItemVisibility;
-            }
+            behavior.HandleItemsSourceChanged();
+        }
 
-            var newEnquirer = e.NewValue as IEnquireAboutItemVisibility;
-            if (newEnquirer != null)
+        private void HandleItemsSourceChanged()
+        {
+            if (_isLoaded)
             {
-                newEnquirer.QueryItemVisibility += behavior.HandleQueryItemVisibility;
+                DetachFromCachedEnquirer();
+                AttachToEnquirer();
             }
         }
 
@@ -52,6 +54,30 @@ namespace Raven.Studio.Infrastructure
 
             BindingOperations.SetBinding(this, ItemsSourceProperty,
                                          new Binding("ItemsSource") {Source = AssociatedObject});
+
+            AssociatedObject.Loaded += HandleLoaded;
+            AssociatedObject.Unloaded += HandleUnloaded;
+        }
+
+        private void HandleLoaded(object sender, RoutedEventArgs e)
+        {
+            AttachToEnquirer();
+            _isLoaded = true;
+        }
+
+        private void AttachToEnquirer()
+        {
+            _cachedEnquirer = GetValue(ItemsSourceProperty) as IEnquireAboutItemVisibility;
+            if (_cachedEnquirer != null)
+            {
+                _cachedEnquirer.QueryItemVisibility += HandleQueryItemVisibility;
+            }
+        }
+
+        private void HandleUnloaded(object sender, RoutedEventArgs e)
+        {
+            DetachFromCachedEnquirer();
+            _isLoaded = false;
         }
 
         protected override void OnDetaching()
@@ -59,6 +85,19 @@ namespace Raven.Studio.Infrastructure
             base.OnDetaching();
 
            ClearValue(ItemsSourceProperty);
+
+           AssociatedObject.Loaded -= HandleLoaded;
+           AssociatedObject.Unloaded -= HandleUnloaded;
+
+           DetachFromCachedEnquirer();
+        }
+
+        private void DetachFromCachedEnquirer()
+        {
+            if (_cachedEnquirer != null)
+            {
+                _cachedEnquirer.QueryItemVisibility -= HandleQueryItemVisibility;
+            }
         }
     }
 }

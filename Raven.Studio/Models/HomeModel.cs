@@ -41,10 +41,12 @@ namespace Raven.Studio.Models
 
 		private static void SetTotalResults()
 		{
-			recentDocuments.Target.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
+		    var target = recentDocuments.Target;
+            if (target != null)
+		        target.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 		}
 
-		public HomeModel()
+	    public HomeModel()
 		{
 			ModelUrl = "/home";
 			ShowCreateSampleData = new Observable<bool>(RecentDocuments.Value.Pager.TotalResults, ShouldShowCreateSampleData);

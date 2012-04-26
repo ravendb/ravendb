@@ -11,6 +11,6 @@
 					 Infrastructure:ModelAttacher.AttachObservableModel="StealthPagingDocumentsModel">
     
     <Grid x:Name="LayoutRoot" Background="White">
-        <Documents:StealthPagingDocumentsView DataContext="{Binding Value}"/>
+        <Documents:DocumentsViewEnhanced DataContext="{Binding Value}"/>
     </Grid>
 </Infrastructure:PageView>
