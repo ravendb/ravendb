@@ -47,6 +47,7 @@
       <Link>Constants.cs</Link>
     </Compile>
     <Compile Include="UniqueConstraintAttribte.cs" />
+    <Compile Include="UniqueConstraintExtensions.cs" />
     <Compile Include="UniqueConstraintsStoreListener.cs" />
   </ItemGroup>
   <ItemGroup>
