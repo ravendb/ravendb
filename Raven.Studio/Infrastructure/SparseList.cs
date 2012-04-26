@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -10,14 +11,22 @@ namespace Raven.Studio.Infrastructure
     /// <typeparam name="T"></typeparam>
     public class SparseList<T>
     {
+        public event EventHandler<ItemRangeEvictedEventArgs> ItemsEvicted;
+
         private readonly int _pageSize;
         private readonly PageList _allocatedPages;
         private Page _currentPage;
-
-        public SparseList(int pageSize)
+        private MostRecentUsedList<int> _mostRecentlyUsedPages;
+ 
+        public SparseList(int pageSize, int? maxCachedPages)
         {
             _pageSize = pageSize;
             _allocatedPages = new PageList(_pageSize);
+            if (maxCachedPages.HasValue)
+            {
+                _mostRecentlyUsedPages = new MostRecentUsedList<int>(maxCachedPages.Value);
+                _mostRecentlyUsedPages.ItemEvicted += HandlePageEvicted;
+            }
         }
 
         /// <remarks>This method is optimised for sequential access. I.e. it performs
@@ -30,7 +39,7 @@ namespace Raven.Studio.Infrastructure
 
                 if (_currentPage == null || _currentPage.PageIndex != pageAndSubIndex.PageIndex)
                 {
-                    _currentPage = _allocatedPages.GetOrCreatePage(pageAndSubIndex.PageIndex);
+                    _currentPage = GetOrCreatePage(pageAndSubIndex.PageIndex);
                 }
 
                 return _currentPage[pageAndSubIndex.SubIndex];
@@ -41,11 +50,37 @@ namespace Raven.Studio.Infrastructure
 
                 if (_currentPage == null || _currentPage.PageIndex != pageAndSubIndex.PageIndex)
                 {
-                    _currentPage = _allocatedPages.GetOrCreatePage(pageAndSubIndex.PageIndex);
+                    _currentPage = GetOrCreatePage(pageAndSubIndex.PageIndex);
                 }
 
                 _currentPage[pageAndSubIndex.SubIndex] = value;
             }
+        }
+
+        private Page GetOrCreatePage(int pageIndex)
+        {
+            if (_mostRecentlyUsedPages != null)
+            {
+                _mostRecentlyUsedPages.Add(pageIndex);
+            }
+
+            return _allocatedPages.GetOrCreatePage(pageIndex);
+        }
+
+        private void HandlePageEvicted(object sender, ItemEvictedEventArgs<int> e)
+        {
+            _allocatedPages.Remove(e.Item);
+            OnItemsEvicted(new ItemRangeEvictedEventArgs()
+                               {
+                                   FirstItemIndex = e.Item * _pageSize,
+                                   Count = _pageSize
+                               });
+        }
+
+        protected void OnItemsEvicted(ItemRangeEvictedEventArgs e)
+        {
+            EventHandler<ItemRangeEvictedEventArgs> handler = ItemsEvicted;
+            if (handler != null) handler(this, e);
         }
 
         private PageAndSubIndex GetPageAndSubIndex(int itemIndex)
@@ -122,5 +157,12 @@ namespace Raven.Studio.Infrastructure
                 return this[pageIndex];
             }
         }
+    }
+
+    public class ItemRangeEvictedEventArgs : EventArgs
+    {
+        public int FirstItemIndex { get; set; }
+
+        public int Count { get; set; }
     }
 }

@@ -15,6 +15,8 @@ namespace Raven.Studio.Infrastructure
 {
     public class MostRecentUsedList<T> : IEnumerable<T>
     {
+        public event EventHandler<ItemEvictedEventArgs<T>> ItemEvicted;
+
         private readonly int _size;
         private LinkedList<T> _list = new LinkedList<T>();
  
@@ -39,7 +41,9 @@ namespace Raven.Studio.Infrastructure
         {
             while (_list.Count > _size)
             {
+                var item = _list.Last;
                 _list.RemoveLast();
+                OnItemEvicted(new ItemEvictedEventArgs<T>(item.Value));
             }
         }
 
@@ -56,6 +60,22 @@ namespace Raven.Studio.Infrastructure
         public void Clear()
         {
             _list.Clear();
+        }
+
+        protected void OnItemEvicted(ItemEvictedEventArgs<T> e)
+        {
+            EventHandler<ItemEvictedEventArgs<T>> handler = ItemEvicted;
+            if (handler != null) handler(this, e);
+        }
+    }
+
+    public class ItemEvictedEventArgs<T> : EventArgs
+    {
+        public T Item { get; private set; }
+
+        public ItemEvictedEventArgs(T item)
+        {
+            Item = item;
         }
     }
 }

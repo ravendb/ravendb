@@ -41,12 +41,12 @@ namespace Raven.Studio.Infrastructure
 
         private readonly SortDescriptionCollection _sortDescriptions = new SortDescriptionCollection();
 
-        public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize) : this(source, pageSize, EqualityComparer<T>.Default)
+        public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize, int cachedPages) : this(source, pageSize, cachedPages, EqualityComparer<T>.Default)
         {
             
         } 
 
-        public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize, IEqualityComparer<T> equalityComparer)
+        public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize, int cachedPages, IEqualityComparer<T> equalityComparer)
         {
             if (pageSize < 1)
             {
@@ -62,11 +62,32 @@ namespace Raven.Studio.Infrastructure
             _source.DataFetchError += HandleSourceDataFetchError;
             _pageSize = pageSize;
             _equalityComparer = equalityComparer;
-            _virtualItems = new SparseList<VirtualItem<T>>(DetermineSparseListPageSize(pageSize));
+            _virtualItems = CreateItemsCache(pageSize, cachedPages);
+            _virtualItems.ItemsEvicted += HandleCachedItemsEvicted;
             _currentItem = -1;
             _synchronizationContextScheduler = TaskScheduler.FromCurrentSynchronizationContext();
             _mostRecentlyRequestedPages = new MostRecentUsedList<int>(10);
             (_sortDescriptions as INotifyCollectionChanged).CollectionChanged += HandleSortDescriptionsChanged;
+        }
+
+        private SparseList<VirtualItem<T>> CreateItemsCache(int fetchPageSize, int cachedFetchPages)
+        {
+            // we don't want the sparse list to have pages that are too small,
+            // because that will harm performance by fragmenting the list across memory,
+            // but too big, and we'll be wasting lots of space
+            const int TargetSparseListPageSize = 100;
+
+            var pageSize = fetchPageSize;
+
+            if (pageSize < TargetSparseListPageSize)
+            {
+                // make pageSize the smallest multiple of fetchPageSize that is bigger than TargetSparseListPageSize
+                pageSize = (int)Math.Ceiling((double)TargetSparseListPageSize / pageSize) * pageSize;
+            }
+
+            var cachedStoragePages = (int) Math.Ceiling((double) (cachedFetchPages*fetchPageSize)/pageSize);
+
+            return new SparseList<VirtualItem<T>>(pageSize, cachedStoragePages);
         }
 
         private void HandleSourceDataFetchError(object sender, DataFetchErrorEventArgs e)
@@ -79,28 +100,21 @@ namespace Raven.Studio.Infrastructure
             Refresh();
         }
 
+        private void HandleCachedItemsEvicted(object sender, ItemRangeEvictedEventArgs e)
+        {
+            var firstPage = e.FirstItemIndex/_pageSize;
+            var pageCount = firstPage + e.Count/_pageSize;
+
+            for (var i = firstPage; i < pageCount; i++)
+            {
+                _fetchedPages.Remove(i);
+            }
+        }
+
         private void HandleSourceCollectionChanged(object sender, EventArgs e)
         {
             var stateWhenUpdateRequested = _state;
             Task.Factory.StartNew(() => UpdateData(stateWhenUpdateRequested), CancellationToken.None, TaskCreationOptions.None, _synchronizationContextScheduler);
-        }
-
-        private int DetermineSparseListPageSize(int fetchPageSize)
-        {
-            // we don't want the sparse list to have pages that are too small,
-            // because that will harm performance by fragmenting the list across memory,
-            // but too big, and we'll be wasting lots of space
-            const int TargetSparseListPageSize = 100;
-
-            if (fetchPageSize > TargetSparseListPageSize)
-            {
-                return fetchPageSize;
-            }
-            else
-            {
-                // return the smallest multiple of fetchPageSize that is bigger than TargetSparseListPageSize
-                return (int)Math.Ceiling((double)TargetSparseListPageSize / fetchPageSize) * fetchPageSize;
-            }
         }
 
         private void MarkExistingItemsAsStale()
