@@ -127,7 +127,7 @@
                     <ItemsPanelTemplate>
                         <Controls1:VirtualizingWrapPanel ItemWidth="{Binding Source={StaticResource DocumentSize}, Path=Current.Width}"
                                                             ItemHeight="{Binding Source={StaticResource DocumentSize}, Path=Current.Height}"
-                                                         DeferScrolling="True"/>
+                                                         DeferScrolling="False"/>
                     </ItemsPanelTemplate>
                 </ListBox.ItemsPanel>
             </ListBox>
