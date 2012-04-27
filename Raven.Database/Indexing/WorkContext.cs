@@ -36,6 +36,11 @@ namespace Raven.Database.Indexing
 			get { return doWork; }
 		}
 
+		public void UpdateFoundWork()
+		{
+			LastWorkTime = SystemTime.UtcNow;
+		}
+
 		public InMemoryRavenConfiguration Configuration { get; set; }
 		public IndexStorage IndexStorage { get; set; }
 
@@ -80,7 +85,7 @@ namespace Raven.Database.Indexing
 				log.Debug("No work was found, workerWorkCounter: {0}, for: {1}, will wait for additional work", workerWorkCounter, name);
 				var forWork = Monitor.Wait(waitForWork, timeout);
 				if (forWork)
-					LastWorkTime = DateTime.UtcNow;
+					LastWorkTime = SystemTime.UtcNow;
 				return forWork;
 			}
 		}
@@ -88,6 +93,7 @@ namespace Raven.Database.Indexing
 		public void ShouldNotifyAboutWork(Func<string> why)
 		{
 			shouldNotifyOnWork.Value.Add(why);
+			UpdateFoundWork();
 		}
 
 		public void HandleWorkNotifications()

@@ -12,7 +12,7 @@ namespace Raven.Database.Indexing
 		public IndexBatchSizeAutoTuner(WorkContext context)
 		{
 			this.context = context;
-			numberOfItemsToIndexInSingleBatch = context.Configuration.InitialNumberOfItemsToIndexInSingleBatch;
+			NumberOfItemsToIndexInSingleBatch = context.Configuration.InitialNumberOfItemsToIndexInSingleBatch;
 		}
 
 		public int NumberOfItemsToIndexInSingleBatch
