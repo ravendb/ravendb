@@ -111,6 +111,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
@@ -182,6 +185,7 @@
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
+    <Compile Include="Server\Responders\AdminRunIdleOperations.cs" />
     <Compile Include="Server\Responders\DatabaseSize.cs" />
     <Compile Include="Server\Responders\Favicon.cs" />
     <Compile Include="Server\Responders\Licensing.cs" />
@@ -429,7 +433,6 @@
     <Compile Include="Linq\IndexingFunc.cs" />
     <Compile Include="Linq\PrivateExtensions\LinqOnDynamic.cs" />
     <Compile Include="Plugins\VetoResult.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Config\RavenConfiguration.cs" />
     <Compile Include="Queries\SuggestionQueryExtensions.cs" />
     <Compile Include="Queries\SuggestionQueryIndexExtension.cs" />

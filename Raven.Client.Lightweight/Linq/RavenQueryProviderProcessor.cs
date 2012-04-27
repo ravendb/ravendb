@@ -386,9 +386,50 @@ namespace Raven.Client.Linq
 			else
 			{
 				var memberExpression = GetMemberExpression(expression);
+
+				AssertNoComputation(memberExpression);
+
 				path = memberExpression.ToString();
 				isNestedPath = memberExpression.Expression is MemberExpression;
 				memberType = memberExpression.Member.GetMemberType();
+			}
+		}
+
+		private void AssertNoComputation(MemberExpression memberExpression)
+		{
+			var cur = memberExpression;
+
+			while (cur != null)
+			{
+				switch (cur.Expression.NodeType)
+				{
+					case ExpressionType.Call:
+					case ExpressionType.Invoke:
+					case ExpressionType.Add:
+					case ExpressionType.And:
+					case ExpressionType.AndAlso:
+#if !NET_3_5
+					case ExpressionType.AndAssign:
+					case ExpressionType.Decrement:
+					case ExpressionType.Increment:
+					case ExpressionType.PostDecrementAssign:
+					case ExpressionType.PostIncrementAssign:
+					case ExpressionType.PreDecrementAssign:
+					case ExpressionType.PreIncrementAssign:
+					case ExpressionType.AddAssign:
+					case ExpressionType.AddAssignChecked:
+					case ExpressionType.AddChecked:
+					case ExpressionType.Index:
+					case ExpressionType.Assign:
+					case ExpressionType.Block:
+#endif
+					case ExpressionType.Conditional:
+					case ExpressionType.ArrayIndex:
+
+						throw new ArgumentException("Invalid computation: " + memberExpression +
+						                            ". You cannot use computation (only simple member expression are allowed) in RavenDB queries.");
+				}
+				cur = cur.Expression as MemberExpression;
 			}
 		}
 
@@ -651,7 +692,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					{
 						luceneQuery.NegateNext();
 					}
-					luceneQuery.Search(expressionInfo.Path, RavenQuery.Escape(searchTerms, false, false));
+
+					if (GetValueFromExpressionWithoutConversion(expression.Arguments[5], out value) == false)
+					{
+						throw new InvalidOperationException("Could not extract value from " + expression);
+					}
+					var queryOptions = (EscapeQueryOptions) value;
+					luceneQuery.Search(expressionInfo.Path, searchTerms, queryOptions);
 					luceneQuery.Boost(boost);
 
 					if ((options & SearchOptions.And) == SearchOptions.And)
@@ -864,8 +911,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
-			var propertyInfo = ((MemberExpression)expression.Body).Member as PropertyInfo;
-			var fieldInfo = ((MemberExpression)expression.Body).Member as FieldInfo;
+			var memberExpression = GetMemberExpression(expression.Body);
+			var propertyInfo = memberExpression.Member as PropertyInfo;
+			var fieldInfo = memberExpression.Member as FieldInfo;
 			var expressionMemberInfo = GetMember(expression.Body);
 			var type = propertyInfo != null
 						? propertyInfo.PropertyType

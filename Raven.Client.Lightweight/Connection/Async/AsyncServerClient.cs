@@ -337,7 +337,8 @@ namespace Raven.Client.Connection.Async
 							throw new ConflictException("Conflict detected on " + key +
 														", conflict must be resolved before the document will be accessible")
 							{
-								ConflictedVersionIds = conflictIds
+								ConflictedVersionIds = conflictIds,
+								Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
 							};
 						}
 						throw;

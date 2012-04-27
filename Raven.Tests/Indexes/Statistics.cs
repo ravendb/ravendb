@@ -10,8 +10,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
 using Raven.Tests.Storage;
 using Xunit;
 using System.Linq;
@@ -24,7 +22,7 @@ namespace Raven.Tests.Indexes
 
 		public Statistics()
 		{
-			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true});
+			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true});
 			db.SpinBackgroundWorkers();
 
 			db.PutIndex("pagesByTitle2",
@@ -38,15 +36,11 @@ namespace Raven.Tests.Indexes
 			            });
 		}
 
-		#region IDisposable Members
-
 		public override void Dispose()
 		{
 			db.Dispose();
 			base.Dispose();
 		}
-
-		#endregion
 
 		[Fact]
 		public void Can_get_stats_for_indexing_without_any_indexing()

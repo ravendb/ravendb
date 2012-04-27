@@ -23,7 +23,7 @@ namespace Raven.Tests.Bugs.Identifiers
 		[InlineData("SHA1-UdVhzPmv0o+wUez+Jirt0OFBcUY=")]
 		public void Can_load_entity(string entityId)
 		{
-			using (var testContext = new IISExpressTestClient())
+			using (var testContext = new IisExpressTestClient())
 			{
 				using (var store = testContext.NewDocumentStore())
 				{

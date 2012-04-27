@@ -136,6 +136,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
@@ -161,6 +164,7 @@
     <Compile Include="Infrastructure\Converters\TaskStatusConverter.cs" />
     <Compile Include="Infrastructure\Converters\RedIfError.cs" />
     <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
+    <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
     <Compile Include="Infrastructure\WeakEventListener.cs" />
     <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />
@@ -404,7 +408,6 @@
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Views\Index.xaml.cs">
       <DependentUpon>Index.xaml</DependentUpon>
     </Compile>

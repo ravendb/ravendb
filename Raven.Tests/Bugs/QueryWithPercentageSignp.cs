@@ -31,11 +31,12 @@ namespace Raven.Tests.Bugs
 			documentStore = new DocumentStore { Url = "http://localhost:" + port }.Initialize();
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			documentStore.Dispose();
 			ravenDbServer.Dispose();
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
 
 		[Fact]

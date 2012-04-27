@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class IisQueryLengthIssues : IISExpressTestClient
+	public class IisQueryLengthIssues : IisExpressTestClient
 	{
 		private readonly string[] errorOptions = new[]
 		                                {

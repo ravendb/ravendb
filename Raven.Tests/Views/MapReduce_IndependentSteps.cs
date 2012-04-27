@@ -10,8 +10,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -37,18 +35,15 @@ select new {
 
 		private readonly DocumentDatabase db;
 
-
 		public MapReduce_IndependentSteps()
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = "raven.db.test.esent",
+				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
 			});
 			db.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.NotAnalyzed}}});
 		}
-
-		#region IDisposable Members
 
 		public override void Dispose()
 		{
@@ -56,7 +51,6 @@ select new {
 			base.Dispose();
 		}
 
-		#endregion
 		[Fact]
 		public void CanGetReducedValues()
 		{

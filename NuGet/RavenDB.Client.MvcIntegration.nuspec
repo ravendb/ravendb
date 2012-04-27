@@ -6,7 +6,7 @@
 		<title>RavenDB Client MvcIntegration</title>
 		<authors>Hibernating Rhinos</authors>
 		<summary>A visual profiler for RavenDB that you can use in your ASP.NET MVC application.</summary>
-		<description>RavenDB client MvcIntegration let you include a visual profiler in your ASP.NET MVC application which will show you all the opened session and the time took to complete each database request. This can help you when developing with RavenDB.</description>
+		<description>RavenDB Client MvcIntegration let you include a visual profiler in your ASP.NET MVC application which will show you all the opened sessions and the time took to complete each database request. This can help you when developing with RavenDB.</description>
 		<language>en-US</language>
 		<licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
 		<projectUrl>http://www.ravendb.net/</projectUrl>

@@ -8,8 +8,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -23,21 +21,17 @@ namespace Raven.Tests.Indexes
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = "raven.db.test.esent",
+				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
 			});
 			db.SpinBackgroundWorkers();
 		}
-
-		#region IDisposable Members
 
 		public override void Dispose()
 		{
 			db.Dispose();
 			base.Dispose();
 		}
-
-		#endregion
 
 		[Fact]
 		public void CanQueryOnKey()

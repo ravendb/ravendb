@@ -9,7 +9,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Exceptions;
 using Raven.Tests.Storage;
 using Xunit;
 
@@ -21,7 +20,7 @@ namespace Raven.Tests.Transactions
 
 		public WriteConflicts()
 		{
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = "raven.db.test.esent", RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true });
+			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true });
 		}
 
 		public override void Dispose()

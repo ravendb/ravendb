@@ -50,6 +50,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Bundles.Authorization\Constants.cs">
       <Link>Constants.cs</Link>
     </Compile>
@@ -75,7 +78,6 @@
       <Link>Model\OperationAllowedResult.cs</Link>
     </Compile>
     <Compile Include="AuthorizationClientExtensions.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">

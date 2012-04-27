@@ -55,11 +55,12 @@ namespace Raven.Tests.Queries
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			store.Dispose();
 			server.Dispose();
 			ClearDatabaseDirectory();
+			base.Dispose();
 		}
 
 		public class Customer

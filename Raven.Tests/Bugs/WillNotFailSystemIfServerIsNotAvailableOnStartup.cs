@@ -4,32 +4,23 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.IO;
 using System.Net;
-using System.Reflection;
-using System.Web.Management;
 using Raven.Client.Document;
-using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
-using Raven.Tests.Document;
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
 	public class WillNotFailSystemIfServerIsNotAvailableOnStartup : RemoteClientTest, IDisposable
 	{
-		private string path;
+		private readonly string path;
 
-		#region IDisposable Members
-
-		public void Dispose()
+		public override void Dispose()
 		{
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
-
-		#endregion
-
 
 		public WillNotFailSystemIfServerIsNotAvailableOnStartup()
 		{

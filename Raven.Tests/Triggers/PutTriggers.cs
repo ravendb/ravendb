@@ -11,7 +11,6 @@ using Raven.Database.Config;
 using Raven.Database.Exceptions;
 using Raven.Tests.Storage;
 using Xunit;
-using Raven.Database.Json;
 
 namespace Raven.Tests.Triggers
 {
@@ -23,7 +22,7 @@ namespace Raven.Tests.Triggers
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = "raven.db.test.esent",
+				DataDirectory = DataDir,
 				Container = new CompositionContainer(new TypeCatalog(
 					typeof(VetoCapitalNamesPutTrigger),
 					typeof(AuditPutTrigger))),

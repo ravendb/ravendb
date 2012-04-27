@@ -3,7 +3,6 @@
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
 					 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 					 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 					 mc:Ignorable="d">
@@ -68,10 +67,11 @@
 				<TextBlock Grid.Row="2" Text="Count Of Documents" Style="{StaticResource Style_TextBlock_FieldName}"/>
 				<TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CountOfDocuments, StringFormat='\{0:#,#;;0\}'}" />
 
-				<TextBlock Grid.Row="3" Text="Stale Indexes" Style="{StaticResource Style_TextBlock_FieldName}"/>
-				<ItemsControl Grid.Row="3"
-						  Grid.Column="2"
-						  ItemsSource="{Binding StaleIndexes}">
+				<TextBlock Grid.Row="3" Text="Count of Item to Index In Batch" Style="{StaticResource Style_TextBlock_FieldName}" />
+				<TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding CurrentNumberOfItemsToIndexInSingleBatch, StringFormat='\{0:#,#;;0\}'}" />
+				
+				<TextBlock Grid.Row="4" Text="Stale Indexes" Style="{StaticResource Style_TextBlock_FieldName}"/>
+				<ItemsControl Grid.Row="4" Grid.Column="2" ItemsSource="{Binding StaleIndexes}">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
 							<StackPanel>
@@ -100,6 +100,23 @@
 										</DataTemplate>
 									</ItemsControl.ItemTemplate>
 								</ItemsControl>
+							</StackPanel>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+
+				<TextBlock Grid.Row="7"
+						   Text="Triggers"
+						   Style="{StaticResource Style_TextBlock_FieldName}" />
+				<ItemsControl Grid.Row="7"
+							  Grid.Column="2"
+							  ItemsSource="{Binding Triggers}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<StackPanel>
+								<TextBlock Text="{Binding Name}"
+										   FontWeight="Bold" />
+								<TextBlock Text="{Binding Type, StringFormat='Type: {0}'}" />
 							</StackPanel>
 						</DataTemplate>
 					</ItemsControl.ItemTemplate>

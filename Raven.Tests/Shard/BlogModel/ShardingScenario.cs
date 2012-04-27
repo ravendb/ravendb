@@ -84,13 +84,14 @@ namespace Raven.Tests.Shard.BlogModel
 			Assert.Equal(numberOfRequests, server.Server.NumberOfRequests);
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			ShardedDocumentStore.Dispose();
 			foreach (var ravenDbServer in Servers)
 			{
 				ravenDbServer.Value.Dispose();
 			}
+			base.Dispose();
 		}
 	}
 }

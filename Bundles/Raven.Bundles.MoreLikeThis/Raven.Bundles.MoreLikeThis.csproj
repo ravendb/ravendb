@@ -43,11 +43,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="MoreLikeThisQueryParameters.cs" />
     <Compile Include="MoreLikeThisResponder.cs" />
     <Compile Include="MoreLikeThis.cs" />
     <Compile Include="ParametersParsingHelpers.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RavenMoreLikeThis.cs" />
     <Compile Include="StopWordsSetup.cs" />
   </ItemGroup>

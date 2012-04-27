@@ -51,6 +51,7 @@ namespace Raven.Bundles.Tests.Replication
 			                          	Port = port
 			                          };
 			ConfigureServer(serverConfiguration);
+			IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
 			serverConfiguration.PostInit();
 			var ravenDbServer = new RavenDbServer(serverConfiguration);
 			ravenDbServer.Server.SetupTenantDatabaseConfiguration += configuration => configuration.Catalog.Catalogs.Add(assemblyCatalog);
@@ -73,16 +74,34 @@ namespace Raven.Bundles.Tests.Replication
 
 		public void Dispose()
 		{
+			var err = new List<Exception>();
 			foreach (var documentStore in stores)
 			{
-				documentStore.Dispose();
+				try
+				{
+					documentStore.Dispose();
+				}
+				catch (Exception e)
+				{
+					err.Add(e);	
+				}
 			}
 
 			foreach (var ravenDbServer in servers)
 			{
-				ravenDbServer.Dispose();
-				IOExtensions.DeleteDirectory(ravenDbServer.Database.Configuration.DataDirectory);
+				try
+				{
+					ravenDbServer.Dispose();
+					IOExtensions.DeleteDirectory(ravenDbServer.Database.Configuration.DataDirectory);
+				}
+				catch (Exception e)
+				{
+					err.Add(e);
+				}
 			}
+
+			if (err.Count > 0)
+				throw new AggregateException(err);
 		}
 
 		public IDocumentStore ResetDatabase(int index)
@@ -118,14 +137,14 @@ namespace Raven.Bundles.Tests.Replication
 			{
 				var replicationDestination = new ReplicationDestination
 				{
-					Url = destination.Url,
+					Url = destination.Url.Replace("localhost", "ipv4.fiddler"),
 					TransitiveReplicationBehavior = transitiveReplicationBehavior,
 				};
 				SetupDestination(replicationDestination);
 				session.Store(new ReplicationDocument
 				{
 					Destinations = {replicationDestination}
-				});
+				}, "Raven/Replication/Destinations");
 				session.SaveChanges();
 			}
 		}

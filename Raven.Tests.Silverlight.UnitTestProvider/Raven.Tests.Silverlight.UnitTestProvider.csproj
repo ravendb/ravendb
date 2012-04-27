@@ -73,10 +73,12 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="AsynchronousTaskTest.cs" />
     <Compile Include="ExpectedException.cs" />
     <Compile Include="Priority.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ProviderAttributes.cs" />
     <Compile Include="TestClass.cs" />
     <Compile Include="TestMethod.cs" />

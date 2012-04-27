@@ -57,16 +57,12 @@ namespace Raven.Bundles.Tests.Expiration
 			documentStore.Initialize();
 		}
 
-		#region IDisposable Members
-
 		public void Dispose()
 		{
 			documentStore.Dispose();
 			ravenDbServer.Dispose();
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 		}
-
-		#endregion
 
 		[Fact]
 		public void Can_add_entity_with_expiry_then_read_it_before_it_expires()

@@ -187,7 +187,7 @@ namespace Raven.Tests.Shard
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			server1.Dispose();
 			server2.Dispose();
@@ -202,6 +202,7 @@ namespace Raven.Tests.Shard
 				}
 				catch (Exception) { }
 			}
+			base.Dispose();
 		}
 	}
 }

@@ -43,6 +43,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Bundles.MoreLikeThis\MoreLikeThisQueryParameters.cs">
       <Link>MoreLikeThisQueryParameters.cs</Link>
     </Compile>
@@ -50,7 +53,6 @@
       <Link>StopWordsSetup.cs</Link>
     </Compile>
     <Compile Include="ServerClientExtensions.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">

@@ -52,7 +52,10 @@ namespace Raven.Database.Server.Abstractions
 
 		public bool RequiresAuthentication
 		{
-			get { return true; }
+			get
+			{
+				return !(configuration.AllowLocalAccessWithoutAuthorization && ctx.Request.IsLocal);
+			}
 		}
 
 		public InMemoryRavenConfiguration Configuration

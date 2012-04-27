@@ -20,7 +20,7 @@ namespace Raven.Tests.Triggers
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = "raven.db.test.esent",
+				DataDirectory = DataDir,
 				Container = new CompositionContainer(new TypeCatalog(
 					typeof(CascadeDeleteTrigger))),
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true

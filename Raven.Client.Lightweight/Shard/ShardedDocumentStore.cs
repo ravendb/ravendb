@@ -80,8 +80,6 @@ namespace Raven.Client.Shard
 		/// <value>The identifier.</value>
 		public override string Identifier { get; set; }
 		
-		#region IDisposable Members
-
 		/// <summary>
 		/// Called after dispose is completed
 		/// </summary>
@@ -100,9 +98,6 @@ namespace Raven.Client.Shard
 			if (afterDispose != null)
 				afterDispose(this, EventArgs.Empty);
 		}
-
-		#endregion
-
 
 #if !NET_3_5
 
@@ -286,11 +281,13 @@ namespace Raven.Client.Shard
 		public override void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
 		{
 			var list = ShardStrategy.Shards.Values.Select(x => x.DatabaseCommands).ToList();
-			ShardStrategy.ShardAccessStrategy.Apply<object>(list, (commands, i) =>
-			{
-				indexCreationTask.Execute(commands, Conventions);
-				return null;
-			});
+			ShardStrategy.ShardAccessStrategy.Apply<object>(list,
+			                                                new ShardRequestData()
+			                                                , (commands, i) =>
+			                                                {
+			                                                	indexCreationTask.Execute(commands, Conventions);
+			                                                	return null;
+			                                                });
 		}
 	}
 }

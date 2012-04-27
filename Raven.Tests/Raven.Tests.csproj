@@ -121,6 +121,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Bugs\Account.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AdHocProjections.cs" />
@@ -156,6 +159,7 @@
     <Compile Include="Bugs\HiLoToMaxTests.cs" />
     <Compile Include="Bugs\IndexesWithDateTimeMin.cs" />
     <Compile Include="Bugs\Indexing\CanHaveAnIndexNameThatStartsWithDynamic.cs" />
+    <Compile Include="Bugs\Indexing\CannotCreateIndexWithoutReduce.cs" />
     <Compile Include="Bugs\Indexing\WithStringReverse.cs" />
     <Compile Include="Bugs\Indexing\InvalidIndexes.cs" />
     <Compile Include="Bugs\InitializeConfiguration.cs" />
@@ -499,6 +503,7 @@
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />
     <Compile Include="Document\Company.cs" />
     <Compile Include="Document\Contact.cs" />
+    <Compile Include="Document\DocumentStoreEmbeddedGranularTests.cs" />
     <Compile Include="Document\CustomDynamicClass.cs" />
     <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />
     <Compile Include="Document\DocumentStoreServerGranularTests.cs" />
@@ -509,9 +514,8 @@
     <Compile Include="Document\Inheritance.cs" />
     <Compile Include="Document\TagCloud.cs" />
     <Compile Include="Document\TotalCountServerTest.cs" />
-    <Compile Include="Document\When_Using_Multiple_Unsharded_Servers.cs" />
+    <Compile Include="Document\WhenUsingMultipleUnshardedServers.cs" />
     <Compile Include="Document\ZoneCountResult.cs" />
-    <Compile Include="IISDeploymentUtil.cs" />
     <Compile Include="IISExpressTestClient.cs" />
     <Compile Include="Bugs\IndexDefinitions.cs" />
     <Compile Include="Indexes\AnalyzerResolution.cs" />
@@ -556,32 +560,49 @@
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="LocalClientTest.cs" />
+    <Compile Include="MailingList\Asger2.cs" />
     <Compile Include="MailingList\AttachmentContentType.cs" />
+    <Compile Include="MailingList\bhiku.cs" />
     <Compile Include="MailingList\BooleanCollection.cs" />
     <Compile Include="MailingList\CanUpdateInsideDtcWithOptimisticConcurrency.cs" />
+    <Compile Include="CriticalCulturesAttribute.cs" />
+    <Compile Include="MailingList\EtagUsage.cs" />
+    <Compile Include="MailingList\HiloTests.cs" />
     <Compile Include="MailingList\DeserialisationToObjectTests.cs" />
     <Compile Include="MailingList\DtcIssue.cs" />
     <Compile Include="MailingList\Everett\CanReadBytes.cs" />
     <Compile Include="MailingList\Afif.cs" />
     <Compile Include="MailingList\BuildStarted.cs" />
     <Compile Include="MailingList\Everett616.cs" />
+    <Compile Include="MailingList\Idsa\Casino.cs" />
+    <Compile Include="MailingList\Idsa\CasinosSuspensionsIndex.cs" />
+    <Compile Include="MailingList\Idsa\IdsaTest.cs" />
     <Compile Include="MailingList\IndexWhereClause .cs" />
     <Compile Include="MailingList\Johnson.cs" />
+    <Compile Include="MailingList\Jorre.cs" />
     <Compile Include="MailingList\Mark2.cs" />
     <Compile Include="MailingList\MattJohnson.cs" />
+    <Compile Include="MailingList\Maverix.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
     <Compile Include="MailingList\Nick.cs" />
+    <Compile Include="MailingList\NSB.cs" />
+    <Compile Include="MailingList\OrderByValueTypeCast.cs" />
     <Compile Include="MailingList\Phil.cs" />
     <Compile Include="MailingList\JoelAsync.cs" />
+    <Compile Include="MailingList\PhilJones_Search.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
     <Compile Include="MailingList\RecreatingIndexes.cs" />
+    <Compile Include="MailingList\RobinM\AttachmentsStatic.cs" />
     <Compile Include="MailingList\RyanD.cs" />
     <Compile Include="MailingList\Scott.cs" />
+    <Compile Include="MailingList\SearchByMapReduceExample.cs" />
+    <Compile Include="MailingList\SpecialChars.cs" />
     <Compile Include="MailingList\Stacey\Image.cs" />
     <Compile Include="MailingList\Stacey\ImageByName.cs" />
     <Compile Include="MailingList\Stacey\InServerTesting.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
+    <Compile Include="TemporaryCulture.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />
     <Compile Include="MailingList\Thor\LinqTest.cs" />
@@ -652,6 +673,7 @@
     <Compile Include="MailingList\Victor.cs" />
     <Compile Include="MailingList\Vitaly.cs" />
     <Compile Include="MailingList\Vlad.cs" />
+    <Compile Include="MailingList\Wallace.cs" />
     <Compile Include="MailingList\Weave.cs" />
     <Compile Include="ManagedStorage\Attachments.cs">
       <SubType>Code</SubType>
@@ -730,6 +752,7 @@
     <Compile Include="Shard\BlogModel\ShardedDocumentStoreTest.cs" />
     <Compile Include="Shard\BlogModel\ShardingScenario.cs" />
     <Compile Include="Shard\BlogModel\User.cs" />
+    <Compile Include="Shard\RoundRobinSharding.cs" />
     <Compile Include="Shard\SimpleSharding.cs" />
     <Compile Include="Shard\WhenUsingParallelAccessStrategy.cs" />
     <Compile Include="Shard\WhenUsingShardedServers.cs" />
@@ -751,7 +774,6 @@
     <Compile Include="Patching\SimplePatchApplication.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Spatial\SpatialIndexTestHelper.cs" />
     <Compile Include="Spatial\SpatialSearch.cs" />
     <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
@@ -768,6 +790,7 @@
     <Compile Include="Storage\ReduceStaleness.cs" />
     <Compile Include="Storage\SimilarIndexNames.cs" />
     <Compile Include="Stress\BigDoc.cs" />
+    <Compile Include="Suggestions\SuggestionsLazy.cs" />
     <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />

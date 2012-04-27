@@ -48,11 +48,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Data\VersioningConfiguration.cs" />
     <Compile Include="Triggers\HideVersionedDocumentsFromIndexingTrigger.cs" />
     <Compile Include="Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Triggers\VersioningPutTrigger.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />

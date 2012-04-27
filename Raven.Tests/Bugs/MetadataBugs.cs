@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class MetadataBugs : IISExpressTestClient
+	public class MetadataBugs : IisExpressTestClient
 	{
 		public class DeviceStatusRecord
 		{

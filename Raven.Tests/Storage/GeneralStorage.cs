@@ -6,19 +6,18 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Database.Tasks;
 using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 using Xunit;
 using System.Linq;
-using JTokenType = Newtonsoft.Json.Linq.JTokenType;
 
 namespace Raven.Tests.Storage
 {
@@ -30,7 +29,7 @@ namespace Raven.Tests.Storage
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = "raven.db.test.esent",
+				DataDirectory = DataDir,
 			});
 		}
 

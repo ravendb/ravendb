@@ -51,8 +51,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="JsonFormatterAndFieldsFilterer.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RavenProfiler.cs" />
     <Compile Include="RavenProfilingHandler.cs" />
     <Compile Include="RecordCurrentControllerContextFilter.cs" />

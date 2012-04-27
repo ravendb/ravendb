@@ -55,7 +55,7 @@ namespace Raven.VisualHost
 					var adaptHttpContext = AdaptHttpContext(context, serverLog);
 					if (adaptHttpContext != null)
 					{
-						var increment = Interlocked.Increment(ref serverLog.NumOfRequests);
+						var increment = serverLog.IncrementRequest();
 						BeginInvoke((Action) (() =>
 						{
 							tabPage.Text = string.Format("{0} ({1})", serverLog.Url, increment);

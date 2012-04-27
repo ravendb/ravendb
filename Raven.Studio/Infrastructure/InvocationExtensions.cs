@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Extensions;
 using System.Threading.Tasks;
 

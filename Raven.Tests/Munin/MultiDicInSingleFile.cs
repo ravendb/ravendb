@@ -20,15 +20,11 @@ namespace Raven.Munin.Tests
 			OpenDictionary();
 		}
 
-		#region IDisposable Members
-
 		public void Dispose()
 		{
 			persistentSource.Dispose();
 			persistentSource.Delete();
 		}
-
-		#endregion
 
 		protected void Commit()
 		{

@@ -2,13 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using System.Threading;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Raven.Abstractions.Indexing;
@@ -16,7 +14,6 @@ using Raven.Bundles.MoreLikeThis;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.MoreLikeThis;
-using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
 using MoreLikeThisQueryParameters = Raven.Client.MoreLikeThis.MoreLikeThisQueryParameters;
@@ -69,16 +66,12 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 		#endregion
 
-		#region IDisposable Members
-
 		public void Dispose()
 		{
 			documentStore.Dispose();
 			ravenDbServer.Dispose();
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 		}
-
-		#endregion
 
 		#region Test Facts
 

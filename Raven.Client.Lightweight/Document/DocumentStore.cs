@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Connection;
@@ -59,7 +58,11 @@ namespace Raven.Client.Document
 		///</summary>
 		public override HttpJsonRequestFactory JsonRequestFactory
 		{
-			get { return jsonRequestFactory; }
+			get
+			{
+				AssertInitialized();
+				return jsonRequestFactory;
+			}
 		}
 
 #if !SILVERLIGHT
@@ -228,14 +231,15 @@ namespace Raven.Client.Document
 		/// <value>The default database name.</value>
 		public string DefaultDatabase { get; set; }
 
-		#region IDisposable Members
-
 		/// <summary>
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
 		public override void Dispose()
 		{
+#if DEBUG
 			GC.SuppressFinalize(this);
+#endif
+			
 			if (jsonRequestFactory != null)
 				jsonRequestFactory.Dispose();
 #if !SILVERLIGHT
@@ -250,15 +254,15 @@ namespace Raven.Client.Document
 				afterDispose(this, EventArgs.Empty);
 		}
 
-		private readonly StackTrace e = new StackTrace();
+#if DEBUG
+		private readonly System.Diagnostics.StackTrace e = new System.Diagnostics.StackTrace();
 		~DocumentStore()
 		{
 			var buffer = e.ToString();
-			var stacktraceDebug = string.Format("StackTrace recorded.{0}{1}{0}{0}", Environment.NewLine, buffer);
+			var stacktraceDebug = string.Format("StackTrace of un-disposed document store recorded. Please make sure to dispose any document store in the tests in order to avoid race conditions in tests.{0}{1}{0}{0}", Environment.NewLine, buffer);
 			Console.WriteLine(stacktraceDebug);
 		}
-
-		#endregion
+#endif
 
 #if !SILVERLIGHT
 

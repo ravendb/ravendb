@@ -56,6 +56,9 @@
     <Reference Include="System.Transactions" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\Async\IAsyncDatabaseCommands.cs" />
@@ -87,7 +90,6 @@
     <Compile Include="Converters\ITypeConverter.cs" />
     <Compile Include="DocumentStoreBase.cs" />
     <Compile Include="Document\AsyncDocumentQuery.cs" />
-    <Compile Include="Document\AsyncSpatialDocumentQuery.cs" />
     <Compile Include="Document\Async\AsyncDocumentSession.cs" />
     <Compile Include="Document\AsyncMultiLoaderWithInclude.cs" />
     <Compile Include="Document\Batches\ILazyLoaderWithInclude.cs" />
@@ -122,7 +124,6 @@
     <Compile Include="Document\SessionOperations\QueryOperation.cs" />
     <Compile Include="Document\OpenSessionOptions.cs" />
     <Compile Include="Document\ShardedDocumentQuery.cs" />
-    <Compile Include="Document\SpatialDocumentQuery.cs" />
     <Compile Include="EntityStored.cs" />
     <Compile Include="EntityToDocument.cs" />
     <Compile Include="Exceptions\ConflictException.cs" />
@@ -130,7 +131,6 @@
     <Compile Include="Exceptions\NonUniqueObjectException.cs" />
     <Compile Include="Exceptions\ReadVetoException.cs" />
     <Compile Include="Extensions\DatabaseCommandsExtensions.cs" />
-    <Compile Include="Extensions\ExceptionExtensions.cs" />
     <Compile Include="Extensions\MultiDatabase.cs" />
     <Compile Include="Extensions\MultiTenancyExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
@@ -177,7 +177,6 @@
     <Compile Include="Linq\RavenQueryStatistics.cs" />
     <Compile Include="Linq\ReflectionExtensions.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shard\IShardResolutionStrategy.cs" />
     <Compile Include="Shard\ShardedDocumentSession.cs" />
     <Compile Include="Shard\ShardedDocumentStore.cs" />

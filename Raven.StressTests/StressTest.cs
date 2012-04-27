@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Globalization;
-using System.Net;
 using System.Net.NetworkInformation;
 using System.Xml;
 using NLog;
@@ -31,9 +30,9 @@ namespace Raven.StressTests
 			var i = 0;
 			try
 			{
-				for (; i < Math.Min(iterations, 1000); i++)
+				for (; i < iterations; i++)
 				{
-					Console.Write("\r"+i);
+					Console.Write("\r" + i);
 					RunTest(action, i);
 				}
 			}
@@ -75,9 +74,9 @@ namespace Raven.StressTests
 				.GetIPGlobalProperties()
 				.GetActiveTcpListeners();
 
-			for (int j = 8000; j < 8079; j--)
+			for (int j = 8079; j > 8020; j--)
 			{
-				if(activeTcpListeners.Any(x=>x.Port == j))
+				if (activeTcpListeners.Any(x => x.Port == j))
 				{
 					throw new InvalidOperationException("Port " + j + " is still busy after the test");
 				}

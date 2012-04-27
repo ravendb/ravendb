@@ -25,9 +25,10 @@ namespace Raven.Tests.Bugs
 		}
 
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			IOExtensions.DeleteDirectory(path);
+			base.Dispose();
 		}
 
 		[Fact]

@@ -83,7 +83,7 @@ namespace Raven.Tests.Storage
 				DataDirectory = "Test"
 			}, () => { }))
 			{
-				when_there_are_multiple_map_results_and_we_ask_for_results(transactionalStorage);
+				when_there_are_multiple_map_results_and_we_ask_for_results_will_get_latest(transactionalStorage);
 			}
 
 		}
@@ -97,11 +97,11 @@ namespace Raven.Tests.Storage
 				DataDirectory = "Test"
 			}, () => { }))
 			{
-				when_there_are_multiple_map_results_and_we_ask_for_results(transactionalStorage);
+				when_there_are_multiple_map_results_and_we_ask_for_results_will_get_latest(transactionalStorage);
 			}
 		}
 
-		private static void when_there_are_multiple_map_results_and_we_ask_for_results(ITransactionalStorage transactionalStorage)
+		private static void when_there_are_multiple_map_results_and_we_ask_for_results_will_get_latest(ITransactionalStorage transactionalStorage)
 		{
 			transactionalStorage.Initialize(new DummyUuidGenerator());
 
@@ -121,9 +121,9 @@ namespace Raven.Tests.Storage
 
 			transactionalStorage.Batch(actionsAccessor =>
 			{
-				Assert.Equal(2, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("a", Guid.Empty, false, 100).Count());
-				Assert.Equal(2, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("b", Guid.Empty, false, 100).Count());
-				Assert.Equal(2, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("c", Guid.Empty, false, 100).Count());
+				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("a", Guid.Empty, false, 100).Count());
+				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("b", Guid.Empty, false, 100).Count());
+				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("c", Guid.Empty, false, 100).Count());
 			});
 		}
 

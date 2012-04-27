@@ -69,7 +69,6 @@ namespace Raven.Munin.Tests
 			Assert.Equal("Buy Milk #9", results[0].Action);
 			Assert.Equal("Buy Milk #8", results[1].Action);
 			Assert.Equal("Buy Milk #7", results[2].Action);
-
 		}
 	}
 }

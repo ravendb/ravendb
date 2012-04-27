@@ -82,6 +82,9 @@
     <Reference Include="System.Windows.Browser" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
       <Link>Imports\Connection\WebResponseExtensions.cs</Link>
     </Compile>
@@ -132,6 +135,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\Buffers.cs">
       <Link>Imports\Extensions\Buffers.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\ExceptionExtensions.cs">
+      <Link>Imports\Extensions\ExceptionExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\ListExtensions.cs">
       <Link>Imports\Extensions\ListExtensions.cs</Link>
@@ -238,9 +244,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\AsyncMultiLoaderWithInclude.cs">
       <Link>Imports\Document\AsyncMultiLoaderWithInclude.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncSpatialDocumentQuery.cs">
-      <Link>Imports\Document\AsyncSpatialDocumentQuery.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyLoaderWithInclude.cs">
       <Link>Imports\Document\Batches\ILazyLoaderWithInclude.cs</Link>
     </Compile>
@@ -297,9 +300,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDocumentQueryBase.cs">
       <Link>Imports\IDocumentQueryBase.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Extensions\ExceptionExtensions.cs">
-      <Link>Imports\Extensions\ExceptionExtensions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractGenericIndexCreationTask.cs">
       <Link>Imports\Indexes\AbstractGenericIndexCreationTask.cs</Link>
@@ -377,7 +377,6 @@
     <Compile Include="DotNetZip\ZlibStream.cs" />
     <Compile Include="DotNetZip\ZlibStreamFlavor.cs" />
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Raven.Database\RavenDB.snk">
@@ -607,9 +606,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\ShardedDocumentQuery.cs">
       <Link>Imports\Document\ShardedDocumentQuery.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\SpatialDocumentQuery.cs">
-      <Link>Imports\Document\SpatialDocumentQuery.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\EntityStored.cs">
       <Link>Imports\EntityStored.cs</Link>

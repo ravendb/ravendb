@@ -8,7 +8,6 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -30,15 +29,11 @@ namespace Raven.Tests.Spatial
 			db.SpinBackgroundWorkers();
 		}
 
-		#region IDisposable Members
-
 		public override void Dispose()
 		{
 			db.Dispose();
 			base.Dispose();
 		}
-
-		#endregion
 
 		// same test as in Spatial.Net test cartisian
 		[Fact]

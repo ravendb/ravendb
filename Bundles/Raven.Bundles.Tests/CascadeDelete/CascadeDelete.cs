@@ -49,16 +49,12 @@ namespace Raven.Bundles.Tests.CascadeDelete
 			documentStore.Initialize();
 		}
 
-		#region IDisposable Members
-
 		public void Dispose()
 		{
 			documentStore.Dispose();
 			ravenDbServer.Dispose();
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 		}
-
-		#endregion
 
 		[Fact]
 		public void Can_delete_document_with_no_cascades_specified()
@@ -71,7 +67,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 				session.SaveChanges();
 			}
 
-			// assert intial creation
+			// assert initial creation
 			using (var session = documentStore.OpenSession())
 			{
 				// assert master created
@@ -103,7 +99,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 				session.SaveChanges();
 			}
 
-			// assert intial creation
+			// assert initial creation
 			using (var session = documentStore.OpenSession())
 			{
 				// assert master created
@@ -136,7 +132,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 				session.SaveChanges();
 			}
 
-			// assert intial creation
+			// assert initial creation
 			using (var session = documentStore.OpenSession())
 			{
 				// assert master created
@@ -174,7 +170,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 				session.SaveChanges();
 			}
 
-			// assert intial creation
+			// assert initial creation
 			using (var session = documentStore.OpenSession())
 			{
 				// assert master created
@@ -216,7 +212,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 
 
 
-			// assert intial creation
+			// assert initial creation
 			using (var session = documentStore.OpenSession())
 			{
 				// assert master created
@@ -254,7 +250,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 
 
 
-			// assert intial creation
+			// assert initial creation
 			using (var session = documentStore.OpenSession())
 			{
 				// assert master created
@@ -282,7 +278,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 
 		}
 
-	   [Fact]
+		[Fact]
 		public void Can_cascade_delete_multiple_referenced_documents_and_attachments()
 		{
 			var master = new CascadeTester {Name="Master"};
@@ -303,7 +299,7 @@ namespace Raven.Bundles.Tests.CascadeDelete
 
 
 
-			// assert intial creation
+			// assert initial creation
 			using (var session = documentStore.OpenSession())
 			{
 				// assert master created
@@ -339,46 +335,41 @@ namespace Raven.Bundles.Tests.CascadeDelete
 
 		}
 
-	   [Fact]
-	   public void Can_cascade_delete_documents_that_specify_each_other_as_cascade_deletes()
-	   {
-		   var master1 = new CascadeTester { Name = "Master 1" };
-		   var master2 = new CascadeTester { Name = "Master 2" };
+		[Fact]
+		public void Can_cascade_delete_documents_that_specify_each_other_as_cascade_deletes()
+		{
+			var master1 = new CascadeTester { Name = "Master 1" };
+			var master2 = new CascadeTester { Name = "Master 2" };
 
-		   using (var session = documentStore.OpenSession())
-		   {
-		   	session.Store(master1);
-		   	session.Store(master2);
-		   	session.Advanced.GetMetadataFor(master1)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray{master2.Id}
-	   	;
-			   session.Advanced.GetMetadataFor(master2)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray{master1.Id};
-			   session.SaveChanges();
-		   }
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(master1);
+				session.Store(master2);
+				session.Advanced.GetMetadataFor(master1)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray { master2.Id };
+				session.Advanced.GetMetadataFor(master2)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray { master1.Id };
+				session.SaveChanges();
+			}
 
-		   // assert intial creation
-		   using (var session = documentStore.OpenSession())
-		   {
-			   // assert master 1 created
-			   Assert.NotNull(session.Load<CascadeTester>(master1.Id));
-			   // assert master 2 created
-			   Assert.NotNull(session.Load<CascadeTester>(master2.Id));
-		   }
-
-
-		   using (var session = documentStore.OpenSession())
-		   {
-			   session.Delete<CascadeTester>(session.Load<CascadeTester>(master1.Id));
-			   session.SaveChanges();
-			   // assert master 1 deleted
-			   Assert.Null(session.Load<CascadeTester>(master1.Id));
-			   // assert master 2 deleted
-			   Assert.Null(session.Load<CascadeTester>(master2.Id));
-		   }
-
-	   }
+			// assert initial creation
+			using (var session = documentStore.OpenSession())
+			{
+				// assert master 1 created
+				Assert.NotNull(session.Load<CascadeTester>(master1.Id));
+				// assert master 2 created
+				Assert.NotNull(session.Load<CascadeTester>(master2.Id));
+			}
 
 
-#region nested test document classes
+			using (var session = documentStore.OpenSession())
+			{
+				session.Delete<CascadeTester>(session.Load<CascadeTester>(master1.Id));
+				session.SaveChanges();
+				// assert master 1 deleted
+				Assert.Null(session.Load<CascadeTester>(master1.Id));
+				// assert master 2 deleted
+				Assert.Null(session.Load<CascadeTester>(master2.Id));
+			}
+		}
 
 		public class CascadeTester
 		{
@@ -386,9 +377,5 @@ namespace Raven.Bundles.Tests.CascadeDelete
 
 			public string Id { get; set; }
 		}
-
 	}
-
-#endregion
-
 }
