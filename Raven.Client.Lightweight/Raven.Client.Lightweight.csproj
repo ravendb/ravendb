@@ -174,6 +174,7 @@
     <Compile Include="Linq\RavenQueryStatistics.cs" />
     <Compile Include="Linq\ReflectionExtensions.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
+    <Compile Include="Shard\BaseShardedDocumentSession.cs" />
     <Compile Include="Shard\IShardResolutionStrategy.cs" />
     <Compile Include="Shard\ShardedDocumentSession.cs" />
     <Compile Include="Shard\ShardedDocumentStore.cs" />

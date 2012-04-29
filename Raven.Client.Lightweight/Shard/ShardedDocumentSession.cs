@@ -31,17 +31,9 @@ namespace Raven.Client.Shard
 	/// <summary>
 	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
 	/// </summary>
-	public class ShardedDocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ITransactionalDocumentSession,
+	public class ShardedDocumentSession : BaseShardedDocumentSession<IDatabaseCommands>, IDocumentQueryGenerator,
 		IDocumentSessionImpl, ISyncAdvancedSessionOperation
 	{
-#if !NET35
-		private readonly List<Tuple<ILazyOperation, IList<IDatabaseCommands>>> pendingLazyOperations = new List<Tuple<ILazyOperation, IList<IDatabaseCommands>>>();
-		private readonly Dictionary<ILazyOperation, Action<object>> onEvaluateLazy = new Dictionary<ILazyOperation, Action<object>>();
-#endif
-		private readonly ShardStrategy shardStrategy;
-		private readonly IDictionary<string, IDatabaseCommands> shardDbCommands;
-		private readonly IDictionary<string, List<ICommandData>> deferredCommandsByShard = new Dictionary<string, List<ICommandData>>();
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ShardedDocumentSession"/> class.
 		/// </summary>
@@ -52,46 +44,9 @@ namespace Raven.Client.Shard
 		/// <param name="listeners"></param>
 		public ShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
 			ShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands)
-			: base(documentStore, listeners, id)
+			: base(documentStore, listeners, id, shardStrategy, shardDbCommands)
 		{
-			this.shardStrategy = shardStrategy;
-			this.shardDbCommands = shardDbCommands;
 		}
-
-		#region Sharding support methods
-
-		private IList<Tuple<string, IDatabaseCommands>> GetShardsToOperateOn(ShardRequestData resultionData)
-		{
-			var shardIds = shardStrategy.ShardResolutionStrategy.PotentialShardsFor(resultionData);
-
-			IEnumerable<KeyValuePair<string, IDatabaseCommands>> cmds = shardDbCommands;
-
-			if (shardIds == null)
-			{
-				return cmds.Select(x => Tuple.Create(x.Key, x.Value)).ToList();
-			}
-
-			var list = new List<Tuple<string, IDatabaseCommands>>();
-			foreach (var shardId in shardIds)
-			{
-				IDatabaseCommands value;
-				if (shardDbCommands.TryGetValue(shardId, out value) == false)
-					throw new InvalidOperationException("Could not find shard id: " + shardId);
-
-				list.Add(Tuple.Create(shardId, value));
-
-			}
-			return list;
-		}
-
-		private IList<IDatabaseCommands> GetCommandsToOperateOn(ShardRequestData resultionData)
-		{
-			return GetShardsToOperateOn(resultionData).Select(x => x.Item2).ToList();
-		}
-
-		#endregion
-
-		#region InMemoryDocumentSessionOperations implementation
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
@@ -112,96 +67,6 @@ namespace Raven.Client.Shard
 
 			throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
 		}
-
-		public override void Defer(params ICommandData[] commands)
-		{
-			var cmdsByShard = commands.Select(cmd =>
-			{
-				var shardsToOperateOn = GetShardsToOperateOn(new ShardRequestData
-				{
-					Keys = { cmd.Key }
-				}).Select(x => x.Item1).ToList();
-
-				if (shardsToOperateOn.Count == 0)
-				{
-					throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Key +
-														" because it matched no shards");
-				}
-
-				if (shardsToOperateOn.Count > 1)
-				{
-					throw new InvalidOperationException("Cannot execute " + cmd.Method + " on " + cmd.Key +
-														" because it matched multiple shards");
-
-				}
-
-				return new
-				{
-					shard = shardsToOperateOn[0],
-					cmd
-				};
-			}).GroupBy(x => x.shard);
-
-			foreach (var cmdByShard in cmdsByShard)
-			{
-				deferredCommandsByShard.GetOrAdd(cmdByShard.Key).AddRange(cmdByShard.Select(x => x.cmd));
-			}
-		}
-
-		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
-		{
-			var shardId = shardStrategy.ShardResolutionStrategy.GenerateShardIdFor(entity);
-			if (string.IsNullOrEmpty(shardId))
-				throw new InvalidOperationException("Could not find shard id for " + entity + " because " + shardStrategy.ShardAccessStrategy + " returned null or empty string for the document shard id.");
-			metadata[Constants.RavenShardId] = shardId;
-			var modifyDocumentId = shardStrategy.ModifyDocumentId(Conventions, shardId, id);
-			if (modifyDocumentId != id)
-				TrySetIdentity(entity, modifyDocumentId);
-			base.StoreEntityInUnitOfWork(modifyDocumentId, entity, etag, metadata, forceConcurrencyCheck);
-		}
-
-		#endregion
-
-		#region Transaction methods (not supported)
-
-		public override void Commit(Guid txId)
-		{
-			throw new NotSupportedException("DTC support is handled via the internal document stores");
-		}
-
-		public override void Rollback(Guid txId)
-		{
-			throw new NotSupportedException("DTC support is handled via the internal document stores");
-		}
-
-		/// <summary>
-		/// Promotes a transaction specified to a distributed transaction
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns>The token representing the distributed transaction</returns>
-		public override byte[] PromoteTransaction(Guid fromTxId)
-		{
-			throw new NotSupportedException("DTC support is handled via the internal document stores");
-		}
-
-		/// <summary>
-		/// Stores the recovery information for the specified transaction
-		/// </summary>
-		/// <param name="resourceManagerId">The resource manager Id for this transaction</param>
-		/// <param name="txId">The tx id.</param>
-		/// <param name="recoveryInformation">The recovery information.</param>
-		public void StoreRecoveryInformation(Guid resourceManagerId, Guid txId, byte[] recoveryInformation)
-		{
-			throw new NotSupportedException("DTC support is handled via the internal document stores");
-		}
-
-		protected override void TryEnlistInAmbientTransaction()
-		{
-			// we DON'T support enlisting at the sharded document store level, only at the managed document stores, which 
-			// turns out to be pretty much the same thing
-		}
-
-		#endregion
 
 		#region Properties to access different interfacess
 
@@ -638,77 +503,18 @@ namespace Raven.Client.Shard
 		#endregion
 
 		#region Queries
-		#region Synchronous Query
 
-		/// <summary>
-		/// Queries the specified index using Linq.
-		/// </summary>
-		/// <typeparam name="T">The result of the query</typeparam>
-		/// <param name="indexName">Name of the index.</param>
-		/// <returns></returns>
-		public IRavenQueryable<T> Query<T>(string indexName)
-		{
-			var ravenQueryStatistics = new RavenQueryStatistics();
-			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, null
-#if !NET35
-, null
-#endif
-);
-			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, indexName, null, this, null
-#if !NET35
-, null
-#endif
-);
-		}
-
-		/// <summary>
-		/// Query RavenDB dynamically using LINQ
-		/// </summary>
-		/// <typeparam name="T">The result of the query</typeparam>
-		public IRavenQueryable<T> Query<T>()
-		{
-			var indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
-			return Query<T>(indexName)
-				.Customize(x => x.TransformResults((query, results) => results.Take(query.PageSize)));
-		}
-
-		/// <summary>
-		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using Linq.
-		/// </summary>
-		/// <typeparam name="T">The result of the query</typeparam>
-		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-		/// <returns></returns>
-		public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
-		{
-			var indexCreator = new TIndexCreator
-			{
-				Conventions = Conventions
-			};
-			return Query<T>(indexCreator.IndexName)
-				.Customize(x => x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
-		}
-
-		IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName)
+		protected override IDocumentQuery<T> IDocumentQueryGeneratorQuery<T>(string indexName)
 		{
 			return LuceneQuery<T>(indexName);
 		}
 
-		#endregion
-		#region AsyncQuery
 #if !NET35
-
-		IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName)
+		protected override IAsyncDocumentQuery<T> IDocumentQueryGeneratorAsyncQuery<T>(string indexName)
 		{
-			throw new NotSupportedException("Sharded document store doesn't support async operations");
+			throw new NotSupportedException("The synchronous sharded document store doesn't support async operations");
 		}
-
 #endif
-		#endregion
-		#region LuceneQuery
 
 		public IDocumentQuery<T> LuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
 		{
@@ -732,6 +538,21 @@ namespace Raven.Client.Shard
 		}
 
 		#endregion
+
+		#region DatabaseCommands (not supported)
+
+		Raven.Client.Connection.IDatabaseCommands ISyncAdvancedSessionOperation.DatabaseCommands
+		{
+			get { throw new NotSupportedException("Not supported in a sharded session"); }
+		}
+
+#if !NET35
+		Raven.Client.Connection.Async.IAsyncDatabaseCommands ISyncAdvancedSessionOperation.AsyncDatabaseCommands
+		{
+			get { throw new NotSupportedException("Not supported in a sharded session"); }
+		}
+#endif
+
 		#endregion
 
 		/// <summary>
@@ -824,26 +645,6 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		#region DatabaseCommands
-
-		IDatabaseCommands ISyncAdvancedSessionOperation.DatabaseCommands
-		{
-			get { throw new NotSupportedException("Not supported in a sharded session"); }
-		}
-
-#if !NET35
-		/// <summary>
-		/// Gets the async database commands.
-		/// </summary>
-		/// <value>The async database commands.</value>
-		IAsyncDatabaseCommands ISyncAdvancedSessionOperation.AsyncDatabaseCommands
-		{
-			get { throw new NotSupportedException("Not supported in a sharded session"); }
-		}
-#endif
-
-		#endregion
-
 		string ISyncAdvancedSessionOperation.GetDocumentUrl(object entity)
 		{
 			DocumentMetadata value;
@@ -855,23 +656,6 @@ namespace Raven.Client.Shard
 			if (shardDbCommands.TryGetValue(shardId, out commands) == false)
 				throw new InvalidOperationException("Could not find matching shard for shard id: " + shardId);
 			return commands.UrlFor(value.Key);
-		}
-
-		internal class DbCmdsListComparer : IEqualityComparer<IList<IDatabaseCommands>>
-		{
-			public bool Equals(IList<IDatabaseCommands> x, IList<IDatabaseCommands> y)
-			{
-				if (x.Count != y.Count)
-					return false;
-
-				return !x.Where((t, i) => t != y[i]).Any();
-			}
-
-			public int GetHashCode(IList<IDatabaseCommands> obj)
-			{
-				return obj.Aggregate(obj.Count, (current, item) => (current * 397) ^ item.GetHashCode());
-			}
-
 		}
 	}
 }

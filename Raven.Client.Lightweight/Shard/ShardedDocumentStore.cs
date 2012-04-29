@@ -281,12 +281,12 @@ namespace Raven.Client.Shard
 		public override void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
 		{
 			var list = ShardStrategy.Shards.Values.Select(x => x.DatabaseCommands).ToList();
-			ShardStrategy.ShardAccessStrategy.Apply<object>(list,
+			ShardStrategy.ShardAccessStrategy.Apply(list,
 			                                                new ShardRequestData()
 			                                                , (commands, i) =>
 			                                                {
 			                                                	indexCreationTask.Execute(commands, Conventions);
-			                                                	return null;
+			                                                	return (object)null;
 			                                                });
 		}
 	}

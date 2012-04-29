@@ -9,6 +9,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Connection;
 
+#if !NET35
+using System.Threading.Tasks;
+using Raven.Client.Connection.Async;
+#endif
+
 namespace Raven.Client.Shard
 {
 	/// <summary>
@@ -16,6 +21,8 @@ namespace Raven.Client.Shard
 	/// </summary>
 	public class SequentialShardAccessStrategy : IShardAccessStrategy
 	{
+		public event ShardingErrorHandle<IDatabaseCommands> OnError;
+
 		/// <summary>
 		/// Applies the specified action for all shard sessions.
 		/// </summary>
@@ -37,7 +44,7 @@ namespace Raven.Client.Shard
 					var error = OnError;
 					if (error == null)
 						throw;
-					if(error(commands[i], request, e) == false)
+					if (error(commands[i], request, e) == false)
 					{
 						throw;
 					}
@@ -47,7 +54,55 @@ namespace Raven.Client.Shard
 			return list.ToArray();
 		}
 
-		public event ShardingErrorHandle OnError;
+#if !NET35
+		public event ShardingErrorHandle<IAsyncDatabaseCommands> OnAsyncError;
+
+		public Task<T[]> ApplyAsync<T>(IList<IAsyncDatabaseCommands> commands, ShardRequestData request, Func<IAsyncDatabaseCommands, int, Task<T>> operation)
+		{
+			var resultsTask = new TaskCompletionSource<List<T>>();
+			var results = new List<T>();
+
+			Action<int> executer = null;
+			executer = index =>
+				{
+					if (index >= commands.Count)
+					{
+						// finished all commands successfully
+						resultsTask.SetResult(results);
+						return;
+					}
+
+					operation(commands[index], index).ContinueWith(task =>
+					{
+						if (task.IsFaulted)
+						{
+							var error = OnAsyncError;
+							if (error == null)
+							{
+								resultsTask.SetException(task.Exception);
+								return;
+							}
+							if (error(commands[index], request, task.Exception) == false)
+							{
+								resultsTask.SetException(task.Exception);
+								return;
+							}
+						}
+						else
+						{
+							results.Add(task.Result);
+						}
+
+						// After we've dealt with one result, we call the operation on the next shard
+						executer(index + 1);
+					});
+				};
+
+			var tcs = new TaskCompletionSource<T[]>();
+			executer(0);
+			return resultsTask.Task.ContinueWith(task => task.Result.ToArray());
+		}
+#endif
 	}
 }
 #endif
