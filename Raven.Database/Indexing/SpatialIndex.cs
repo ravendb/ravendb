@@ -64,8 +64,8 @@ namespace Raven.Database.Indexing
 
 		public static IEnumerable<AbstractField> Generate(double? lat, double? lng)
 		{
-			if(lat == null || lng == null)
-				yield break;
+			lat = lat ?? 0;
+			lng = lng ?? 0;
 
 			yield return new Field("latitude", Lat(lat.Value), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 			yield return new Field("longitude", Lng(lng.Value), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
