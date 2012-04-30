@@ -144,7 +144,7 @@ namespace Raven.Client.Shard
 
 		public T[] Load<T>(IEnumerable<string> ids)
 		{
-			return ((IDocumentSessionImpl)this).LoadInternal<T>(ids.ToArray());
+			return LoadInternal<T>(ids.ToArray());
 		}
 
 		public T Load<T>(ValueType id)
@@ -155,25 +155,17 @@ namespace Raven.Client.Shard
 
 		public T[] LoadInternal<T>(string[] ids, string[] includes)
 		{
-			if (ids.Length == 0)
-				return new T[0];
+			var results = new T[ids.Length];
+			var idsToLoad = GetIdsThatNeedLoading<T>(ids, includes);
+
+			if (!idsToLoad.Any())
+				return results;
 
 			IncrementRequestCount();
-			var idsAndShards = ids.Select(id => new
-			{
-				id,
-				shards = GetCommandsToOperateOn(new ShardRequestData
-				{
-					EntityType = typeof(T),
-					Keys = { id }
-				})
-			})
-				.GroupBy(x => x.shards, new DbCmdsListComparer());
 
-			var results = new T[ids.Length];
-			foreach (var shard in idsAndShards)
+			foreach (var shard in idsToLoad)
 			{
-				var currentShardIds = shard.Select(x => x.id).ToArray();
+				var currentShardIds = shard.Select(x => x.Id).ToArray();
 				var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, new ShardRequestData
 				{
 					EntityType = typeof(T),
@@ -214,69 +206,7 @@ namespace Raven.Client.Shard
 
 		public T[] LoadInternal<T>(string[] ids)
 		{
-			if (ids.Length == 0)
-				return new T[0];
-
-			// only load documents that aren't already cached
-			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false)
-				.Distinct(StringComparer.InvariantCultureIgnoreCase)
-				.ToArray();
-
-			var results = new T[ids.Length];
-			if (idsOfNotExistingObjects.Length > 0)
-			{
-				IncrementRequestCount();
-				var idsAndShards = ids.Select(id => new
-				{
-					id,
-					shards = GetCommandsToOperateOn(new ShardRequestData
-					{
-						EntityType = typeof(T),
-						Keys = { id }
-					})
-				})
-					.GroupBy(x => x.shards, new DbCmdsListComparer());
-
-				foreach (var shard in idsAndShards)
-				{
-					var currentShardIds = shard.Select(x => x.id).ToArray();
-					var multiLoadOperations = shardStrategy.ShardAccessStrategy.Apply(shard.Key, new ShardRequestData
-					{
-						EntityType = typeof(T),
-						Keys = currentShardIds.ToList()
-					}, (dbCmd, i) =>
-					{
-						var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
-						MultiLoadResult multiLoadResult;
-						do
-						{
-							multiLoadOperation.LogOperation();
-							using (multiLoadOperation.EnterMultiLoadContext())
-							{
-								multiLoadResult = dbCmd.Get(currentShardIds, null);
-							}
-						} while (multiLoadOperation.SetResult(multiLoadResult));
-						return multiLoadOperation;
-					});
-					foreach (var multiLoadOperation in multiLoadOperations)
-					{
-						var loadResults = multiLoadOperation.Complete<T>();
-						for (int i = 0; i < loadResults.Length; i++)
-						{
-							if (ReferenceEquals(loadResults[i], null))
-								continue;
-							var id = currentShardIds[i];
-							var itemPosition = Array.IndexOf(ids, id);
-							if (ReferenceEquals(results[itemPosition], default(T)) == false)
-							{
-								throw new InvalidOperationException("Found document with id: " + id + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
-							}
-							results[itemPosition] = loadResults[i];
-						}
-					}
-				}
-			}
-			return results;
+			return LoadInternal<T>(ids, null);
 		}
 
 		public ILoaderWithInclude<object> Include(string path)
@@ -529,12 +459,7 @@ namespace Raven.Client.Shard
 
 		public IDocumentQuery<T> LuceneQuery<T>()
 		{
-			string indexName = "dynamic";
-			if (typeof(T).IsEntityType())
-			{
-				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
-			}
-			return LuceneQuery<T>(indexName);
+			return LuceneQuery<T>(GetDynamicIndexName<T>());
 		}
 
 		#endregion

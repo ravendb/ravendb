@@ -64,6 +64,44 @@ namespace Raven.Client.Shard
 			return GetShardsToOperateOn(resultionData).Select(x => x.Item2).ToList();
 		}
 
+		protected IEnumerable<IGrouping<IList<TDatabaseCommands>, IdToLoad<T>>> GetIdsThatNeedLoading<T>(string[] ids, string[] includes)
+		{
+			string[] idsToLoad;
+			if (includes != null)
+			{
+				// Need to load everything, for the includes
+				idsToLoad = ids;
+			}
+			else
+			{
+				// Only load items which aren't already loaded
+				idsToLoad = ids.Where(id => IsLoaded(id) == false)
+					.Distinct(StringComparer.InvariantCultureIgnoreCase)
+					.ToArray();
+			}
+
+			var idsAndShards = idsToLoad.Select(id => new IdToLoad<T>(
+				id,
+				GetCommandsToOperateOn(new ShardRequestData
+				{
+					EntityType = typeof(T),
+					Keys = { id }
+				})
+			)).GroupBy(x => x.Shards, new DbCmdsListComparer());
+
+			return idsAndShards;
+		}
+
+		protected string GetDynamicIndexName<T>()
+		{
+			string indexName = "dynamic";
+			if (typeof(T).IsEntityType())
+			{
+				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
+			}
+			return indexName;
+		}
+
 		#endregion
 
 		#region InMemoryDocumentSessionOperations implementation
@@ -211,7 +249,7 @@ namespace Raven.Client.Shard
 			return Query<T>(indexCreator.IndexName)
 				.Customize(x => x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
 		}
-		
+
 		/// <summary>
 		/// Implements IDocumentQueryGenerator.Query
 		/// </summary>
@@ -233,7 +271,7 @@ namespace Raven.Client.Shard
 			return IDocumentQueryGeneratorAsyncQuery<T>(indexName);
 		}
 #endif
-		
+
 		#endregion
 
 		internal class DbCmdsListComparer : IEqualityComparer<IList<TDatabaseCommands>>
@@ -250,6 +288,18 @@ namespace Raven.Client.Shard
 			{
 				return obj.Aggregate(obj.Count, (current, item) => (current * 397) ^ item.GetHashCode());
 			}
+		}
+
+		protected struct IdToLoad<T>
+		{
+			public IdToLoad(string id, IList<TDatabaseCommands> shards)
+			{
+				this.Id = id;
+				this.Shards = shards;
+			}
+
+			public readonly string Id;
+			public readonly IList<TDatabaseCommands> Shards;
 		}
 	}
 }
