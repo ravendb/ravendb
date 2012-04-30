@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs
 
 				store.DocumentDatabase.TransactionalStorage.Batch(accessor =>
 				{
-					accessor.Attachments.GetAttachmentsAfter(Guid.Empty).ToList();
+					accessor.Attachments.GetAttachmentsAfter(Guid.Empty, 100).ToList();
 				});
 			}
 		}

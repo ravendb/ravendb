@@ -11,10 +11,12 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using Lucene.Net.Analysis.Standard;
 using Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
@@ -27,6 +29,8 @@ namespace Raven.Database.Storage
 	public class IndexDefinitionStorage
 	{
 		private const string IndexDefDir = "IndexDefinitions";
+
+		private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim();
 
 		private readonly ConcurrentDictionary<string, AbstractViewGenerator> indexCache =
 			new ConcurrentDictionary<string, AbstractViewGenerator>(StringComparer.InvariantCultureIgnoreCase);
@@ -261,6 +265,19 @@ namespace Raven.Database.Storage
 			}
 		}
 
-		
+		public IDisposable TryRemoveIndexContext()
+		{
+			if(currentlyIndexingLock.TryEnterWriteLock(TimeSpan.FromSeconds(10)) == false)
+				throw new InvalidOperationException("Cannot modify indexes while indexing is in progress (already waited 10 seconds). Try again later");
+			return new DisposableAction(currentlyIndexingLock.ExitWriteLock);
+		}
+
+		public IDisposable CurrentlyIndexing()
+		{
+			currentlyIndexingLock.EnterReadLock();
+
+			return new DisposableAction(currentlyIndexingLock.ExitReadLock);
+
+		}
 	}
 }

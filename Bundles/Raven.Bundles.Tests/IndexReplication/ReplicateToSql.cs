@@ -251,7 +251,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 						new Vote{ Up = false, Comment = "No!"}, 
 					  }
 				};
-				session.Store(q);
+				session.Store(q, q.Id);
 				session.SaveChanges();
 			}
 

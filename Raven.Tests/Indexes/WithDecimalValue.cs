@@ -35,12 +35,7 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void IgnoresLocale()
 		{
-			var oldCurrentCulture = Thread.CurrentThread.CurrentCulture;
-			Thread.CurrentThread.CurrentCulture = new CultureInfo("de");
-			using (new DisposableAction(() =>
-			{
-				Thread.CurrentThread.CurrentCulture = oldCurrentCulture;
-			}))
+			using (new TemporaryCulture("de"))
 			{
 				using (var store = NewDocumentStore())
 				{

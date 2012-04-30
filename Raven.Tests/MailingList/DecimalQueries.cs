@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using Xunit;
@@ -42,15 +40,11 @@ namespace Raven.Tests.MailingList
 
 
 		[Theory]
-		[PropertyData("Cultures")]
+		[CriticalCultures]
 		public void CanQueryWithOtherCulture(CultureInfo culture)
 		{
-			var oldCulture = Thread.CurrentThread.CurrentCulture;
-
-			try
+			using(new TemporaryCulture(culture))
 			{
-				Thread.CurrentThread.CurrentCulture = culture;
-
 				using (var store = NewDocumentStore())
 				{
 					using (var session = store.OpenSession())
@@ -72,26 +66,6 @@ namespace Raven.Tests.MailingList
 					}
 				}
 			}
-			finally
-			{
-				Thread.CurrentThread.CurrentCulture = oldCulture;
-			}
 		}
-
-		public static IEnumerable<object[]> Cultures
-		{
-			get
-			{
-				var cultures = new[]
-				{ 
-					CultureInfo.InvariantCulture,
-					CultureInfo.CurrentCulture,
-					CultureInfo.GetCultureInfo("NL"), // Uses comma instead of point: 12,34
-					CultureInfo.GetCultureInfo("tr-TR"), // "The Turkey Test"
-				};
-				return cultures.Select(c => new object[] { c });
-			}
-		}
-
 	}
 }

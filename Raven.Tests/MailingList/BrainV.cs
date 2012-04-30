@@ -51,7 +51,7 @@ namespace Raven.Tests.MailingList
 			{
 				var indexDefinition = new IndexDefinition
 				{
-					Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude ?? 100, e.Longitude ?? 100) }",
+					Map = "from e in docs.Events select new { Tag = \"Event\", _ = SpatialIndex.Generate(e.Latitude ?? 38.9103000, e.Longitude ?? -77.3942) }",
 					Indexes = {
 					{ "Tag", FieldIndexing.NotAnalyzed }
 				}
@@ -66,7 +66,7 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					var objects = session.Query<object>("eventsByLatLng")
-						.Customize(x => x.WithinRadiusOf(6, 100, 100))
+						.Customize(x => x.WithinRadiusOf(6, 38.9103000, -77.3942))
 						.Customize(x => x.WaitForNonStaleResults())
 						.ToArray();
 
