@@ -88,7 +88,7 @@ namespace Raven.Database.Linq
 		protected AbstractViewGenerator()
 		{
 			MapDefinitions = new List<IndexingFunc>();
-			ForEntityNames = new HashSet<string>();
+			ForEntityNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 			Stores = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<string, FieldIndexing>();
 		}
