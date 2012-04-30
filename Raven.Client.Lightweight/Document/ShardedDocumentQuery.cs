@@ -196,7 +196,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
-			get { throw new NotSupportedException("Sharded doesn't support async operations."); }
+			get { throw new NotSupportedException("Sharded has more than one DatabaseCommands to operate on."); }
 		}
 #endif
 
