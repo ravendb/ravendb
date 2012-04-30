@@ -146,7 +146,7 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="json">A <see cref="String"/> that contains JSON.</param>
 		/// <returns>A <see cref="RavenJArray"/> populated from the string that contains JSON.</returns>
-		public static RavenJArray Parse(string json)
+		public new static RavenJArray Parse(string json)
 		{
 			try
 			{

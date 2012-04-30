@@ -422,12 +422,12 @@ namespace Raven.Json.Linq
 			}
 		}
 
-		private JsonReaderException CreateReaderException(JsonReader reader, string message)
+		private new JsonReaderException CreateReaderException(JsonReader reader, string message)
 		{
 			return new JsonReaderException(message);
 		}
 
-		internal static bool IsPrimitiveToken(JsonToken token)
+		internal new static bool IsPrimitiveToken(JsonToken token)
 		{
 			switch (token)
 			{
