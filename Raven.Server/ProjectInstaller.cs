@@ -13,13 +13,12 @@ namespace Raven.Server
 	[RunInstaller(true)]
 	public partial class ProjectInstaller : Installer
 	{
-		internal const string SERVICE_NAME = "RavenDB";
-
-		public ProjectInstaller()
+        public ProjectInstaller()
 		{
 			InitializeComponent();
 
-			ServiceName = SERVICE_NAME;
+            var ravenConfiguration = new Raven.Database.Config.RavenConfiguration();
+            ServiceName = ravenConfiguration.WindowsServiceName;
 
 			this.serviceInstaller1.StartType = ServiceStartMode.Automatic;
 

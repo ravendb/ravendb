@@ -82,6 +82,7 @@ namespace Raven.Database.Config
 			{"Raven/TransactionMode", "string", "lazy,safe", "What transaction mode to use. Safe transaction mode ensures data consistency, but is slower. Lazy is faster, but may result in a data loss if the server crashes. Default: Safe."},
 			{"Raven/MaxNumberOfParallelIndexTasks", "int", "1 or higher", "The number of indexing tasks that can be run in parallel. There is usually one or two indexing tasks for each index. Default: machine processor count."},
 			{"Raven/SkipCreatingStudioIndexes", "bool", "true,false", "Control whatever the Studio default indexes will be created or not. These default indexes are only used by the UI, and are not required for RavenDB to operate. Default: false"},
+            {"Raven/WindowsServiceName", "string", null, "Register RavenDB Service with a different name (It, indirectly, allows register multiple RavenDB instances)."},
 			
 			// Plugins
 			{"Raven/PluginsDirectory", "string", null, "The location of the plugins directory for this database. Default: ~\\Plugins."},
@@ -97,7 +98,6 @@ namespace Raven.Database.Config
 			//Licensing
 			{"Raven/License", "string", null, "The full license string for RavenDB. If Raven/License is specified, it overrides the Raven/LicensePath configuration."},
 			{"Raven/LicensePath", "string", null, "The path to the license file for RavenDB, default for ~\\license.xml."},
-
 		};
 
 		private readonly List<ConfigOption> inner = new List<ConfigOption>();
