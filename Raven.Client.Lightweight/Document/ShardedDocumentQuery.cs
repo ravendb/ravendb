@@ -146,7 +146,7 @@ namespace Raven.Client.Document
 				Thread.Sleep(100);
 			}
 
-			AssertNoDuplicateIdsInResults();
+			AssertNoDuplicateIdsInResults(shardQueryOperations);
 
 			var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
 
@@ -154,7 +154,7 @@ namespace Raven.Client.Document
 			queryOperation = shardQueryOperations[0];
 		}
 
-		private void AssertNoDuplicateIdsInResults()
+		internal static void AssertNoDuplicateIdsInResults(List<QueryOperation> shardQueryOperations)
 		{
 			var shardsPerId = new Dictionary<string, HashSet<QueryOperation>>(StringComparer.InvariantCultureIgnoreCase);
 

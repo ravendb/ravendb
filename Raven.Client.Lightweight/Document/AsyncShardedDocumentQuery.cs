@@ -30,6 +30,8 @@ namespace Raven.Client.Document
 		private readonly Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn;
 		private readonly ShardStrategy shardStrategy;
 
+		private List<QueryOperation> shardQueryOperations;
+
 		private IList<IAsyncDatabaseCommands> databaseCommands;
 		private IList<IAsyncDatabaseCommands> ShardDatabaseCommands
 		{
@@ -64,29 +66,114 @@ namespace Raven.Client.Document
 			this.shardStrategy = shardStrategy;
 		}
 
-		protected override void InitSync()
+		protected override Task<QueryOperation> InitAsync()
 		{
-			throw new NotImplementedException();
+			if (queryOperation != null)
+				return CompletedTask.With(queryOperation);
+
+			ExecuteBeforeQueryListeners();
+
+			shardQueryOperations = new List<QueryOperation>();
+
+			foreach (var commands in ShardDatabaseCommands)
+			{
+				ClearSortHints(commands);
+				shardQueryOperations.Add(InitializeQueryOperation((key, val) => commands.OperationsHeaders[key] = val));
+			}
+
+			theSession.IncrementRequestCount();
+			return ExecuteActualQueryAsync();
 		}
 
 		public override IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
 		{
-			throw new NotImplementedException();
+			var documentQuery = new AsyncShardedDocumentQuery<TProjection>(theSession,
+				getShardsToOperateOn,
+				shardStrategy,
+				indexName,
+				fields,
+				queryListeners)
+			{
+				pageSize = pageSize,
+				theQueryText = new StringBuilder(theQueryText.ToString()),
+				start = start,
+				timeout = timeout,
+				cutoff = cutoff,
+				queryStats = queryStats,
+				theWaitForNonStaleResults = theWaitForNonStaleResults,
+				sortByHints = sortByHints,
+				orderByFields = orderByFields,
+				groupByFields = groupByFields,
+				aggregationOp = aggregationOp,
+				transformResultsFunc = transformResultsFunc,
+				includes = new HashSet<string>(includes)
+			};
+			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
+			return documentQuery;
 		}
 
 		protected override void ExecuteActualQuery()
 		{
-			throw new NotImplementedException();
+			throw new NotSupportedException("Async queries don't support synchronous execution");
 		}
 
 		protected override Task<QueryOperation> ExecuteActualQueryAsync()
 		{
-			throw new NotImplementedException();
+			var results = CompletedTask.With(new bool[ShardDatabaseCommands.Count]);
+
+			Func<Task> loop = null;
+			loop = () =>
+			{
+				var lastResults = results.Result;
+
+				Task<bool[]> newResults = shardStrategy.ShardAccessStrategy.ApplyAsync(ShardDatabaseCommands,
+					new ShardRequestData
+					{
+						EntityType = typeof(T),
+						Query = IndexQuery
+					}, (commands, i) =>
+					{
+						if (lastResults[i]) // if we already got a good result here, do nothing
+							return CompletedTask.With(true);
+
+						var queryOp = shardQueryOperations[i];
+
+						var queryContext = queryOp.EnterQueryContext();
+						return commands.QueryAsync(indexName, queryOp.IndexQuery, includes.ToArray())
+							.ContinueWith(task =>
+						{
+							queryContext.Dispose();
+							return queryOp.IsAcceptable(task.Result);
+						});
+					});
+
+				return newResults.ContinueWith(task =>
+				{
+					if (lastResults.All(acceptable => acceptable))
+						return new CompletedTask().Task;
+
+					Thread.Sleep(100);
+
+					return loop();
+				}).Unwrap();
+			};
+
+			return loop().ContinueWith(task =>
+			{
+				ShardedDocumentQuery<T>.AssertNoDuplicateIdsInResults(shardQueryOperations);
+
+				var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
+
+				shardQueryOperations[0].ForceResult(mergedQueryResult);
+				queryOperation = shardQueryOperations[0];
+
+				return queryOperation;
+			});
 		}
 
 		public override Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
 		{
-			throw new NotImplementedException();
+			throw new NotSupportedException("Lazy in not supported with the async API");
 		}
 
 		public override IDatabaseCommands DatabaseCommands

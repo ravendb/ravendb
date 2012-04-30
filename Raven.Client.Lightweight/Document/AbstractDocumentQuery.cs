@@ -427,11 +427,19 @@ namespace Raven.Client.Document
 			ExecuteActualQuery();
 		}
 
-		protected void ClearSortHints(IDatabaseCommands shardDbCommands)
+		protected void ClearSortHints(IDatabaseCommands dbCommands)
 		{
-			foreach (var key in shardDbCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
+			foreach (var key in dbCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
 			{
-				shardDbCommands.OperationsHeaders.Remove(key);
+				dbCommands.OperationsHeaders.Remove(key);
+			}
+		}
+
+		protected void ClearSortHints(IAsyncDatabaseCommands dbCommands)
+		{
+			foreach (var key in dbCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
+			{
+				dbCommands.OperationsHeaders.Remove(key);
 			}
 		}
 
@@ -506,14 +514,11 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private Task<QueryOperation> InitAsync()
+		protected virtual Task<QueryOperation> InitAsync()
 		{
 			if (queryOperation != null)
-				return TaskResult(queryOperation);
-			foreach (var key in AsyncDatabaseCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
-			{
-				AsyncDatabaseCommands.OperationsHeaders.Remove(key);
-			}
+				return CompletedTask.With(queryOperation);
+			ClearSortHints(AsyncDatabaseCommands);
 			ExecuteBeforeQueryListeners();
 
 			queryOperation = InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
@@ -1426,12 +1431,6 @@ If you really want to do in memory filtering on the data returned from the query
 			return taskComplectionSource.Task;
 		}
 
-		private static Task<TResult> TaskResult<TResult>(TResult value)
-		{
-			var taskComplectionSource = new TaskCompletionSource<TResult>();
-			taskComplectionSource.SetResult(value);
-			return taskComplectionSource.Task;
-		}
 #endif
 	 
 		/// <summary>
