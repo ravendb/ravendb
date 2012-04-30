@@ -1536,17 +1536,18 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if (type == typeof(DateTime))
 			{
-				return DateTools.DateToString(((DateTime)whereParams.Value), DateTools.Resolution.MILLISECOND);
+				var val = (DateTime)whereParams.Value;
+				return val.ToString(Default.DateTimeFormatsToWrite);
+			}
+			if (type == typeof(DateTimeOffset))
+			{
+				var val = (DateTimeOffset)whereParams.Value;
+				return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite);
 			}
 			
 			if(type == typeof(decimal))
 			{
 				return RavenQuery.Escape(((double)((decimal)whereParams.Value)).ToString(CultureInfo.InvariantCulture), false, false);
-			}
-
-			if (type == typeof(DateTimeOffset))
-			{
-				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).UtcDateTime, DateTools.Resolution.MILLISECOND);
 			}
 
 			if(whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
@@ -1571,9 +1572,9 @@ If you really want to do in memory filtering on the data returned from the query
 				return Constants.EmptyStringNotAnalyzed;
 
 			if (whereParams.Value is DateTime)
-				return DateTools.DateToString(((DateTime)whereParams.Value), DateTools.Resolution.MILLISECOND);
+				return ((DateTime)whereParams.Value).ToString(Default.DateTimeFormatsToWrite);
 			if (whereParams.Value is DateTimeOffset)
-				return DateTools.DateToString(((DateTimeOffset)whereParams.Value).UtcDateTime, DateTools.Resolution.MILLISECOND);
+				return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite);
 
 			if (whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
