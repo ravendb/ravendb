@@ -338,7 +338,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where user.Birthday < new DateTime(2010, 05, 15)
 					select user;
-			Assert.Equal("Birthday:{* TO 20100515000000000}", q.ToString());
+			Assert.Equal("Birthday:{* TO 2010-05-15T00:00:00.0000000}", q.ToString());
 		}
 
 		[Fact]
@@ -360,7 +360,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where user.Birthday == new DateTime(2010, 05, 15)
 					select user;
-			Assert.Equal("Birthday:20100515000000000", q.ToString());
+			Assert.Equal("Birthday:2010-05-15T00:00:00.0000000", q.ToString());
 		}
 
 		[Fact]
@@ -370,7 +370,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where user.Birthday <= new DateTime(2010, 05, 15)
 					select user;
-			Assert.Equal("Birthday:[* TO 20100515000000000]", q.ToString());
+			Assert.Equal("Birthday:[* TO 2010-05-15T00:00:00.0000000]", q.ToString());
 		}
 
 		[Fact]
@@ -380,7 +380,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where user.Birthday > new DateTime(2010, 05, 15)
 					select user;
-			Assert.Equal("Birthday:{20100515000000000 TO NULL}", q.ToString());
+			Assert.Equal("Birthday:{2010-05-15T00:00:00.0000000 TO NULL}", q.ToString());
 		}
 
 		[Fact]
@@ -390,7 +390,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where user.Birthday >= new DateTime(2010, 05, 15)
 					select user;
-			Assert.Equal("Birthday:[20100515000000000 TO NULL]", q.ToString());
+			Assert.Equal("Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
 		}
 
 		[Fact]
@@ -400,7 +400,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where user.Birthday >= new DateTime(2010, 05, 15)
 					select user.Name;
-			Assert.Equal("<Name>: Birthday:[20100515000000000 TO NULL]", q.ToString());
+			Assert.Equal("<Name>: Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
 		}
 
 		[Fact]
@@ -411,7 +411,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where user.Birthday >= dateTime
 					select new { user.Name, user.Age };
-			Assert.Equal("<Name, Age>: Birthday:[20100515000000000 TO NULL]", q.ToString());
+			Assert.Equal("<Name, Age>: Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
 		}
 
 		[Fact]
@@ -442,7 +442,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where user.Birthday >= DateTime.Parse("2010-05-15")
 					select new { user.Name, user.Age };
-			Assert.Equal("<Name, Age>: Birthday:[20100515000000000 TO NULL]", q.ToString());
+			Assert.Equal("<Name, Age>: Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
 		}
 
 		[Fact]

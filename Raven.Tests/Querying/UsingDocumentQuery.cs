@@ -125,7 +125,7 @@ namespace Raven.Tests.Querying
 		{
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
 				.WhereLessThan("Birthday", new DateTime(2010, 05, 15));
-			Assert.Equal("Birthday:{* TO 20100515000000000}", q.ToString());
+			Assert.Equal("Birthday:{* TO 2010-05-15T00:00:00.0000000}", q.ToString());
 		}
 
 		[Fact]
@@ -133,7 +133,7 @@ namespace Raven.Tests.Querying
 		{
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
 				.WhereEquals("Birthday", new DateTime(2010, 05, 15));
-			Assert.Equal("Birthday:20100515000000000", q.ToString());
+			Assert.Equal("Birthday:2010-05-15T00:00:00.0000000", q.ToString());
 		}
 
 		[Fact]
@@ -141,7 +141,7 @@ namespace Raven.Tests.Querying
 		{
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
 				.WhereLessThanOrEqual("Birthday", new DateTime(2010, 05, 15));
-			Assert.Equal("Birthday:[* TO 20100515000000000]", q.ToString());
+			Assert.Equal("Birthday:[* TO 2010-05-15T00:00:00.0000000]", q.ToString());
 		}
 
 		[Fact]
@@ -149,7 +149,7 @@ namespace Raven.Tests.Querying
 		{
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
 				.WhereGreaterThan("Birthday", new DateTime(2010, 05, 15));
-			Assert.Equal("Birthday:{20100515000000000 TO NULL}", q.ToString());
+			Assert.Equal("Birthday:{2010-05-15T00:00:00.0000000 TO NULL}", q.ToString());
 		}
 
 		[Fact]
@@ -157,7 +157,7 @@ namespace Raven.Tests.Querying
 		{
 			var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null))
 				.WhereGreaterThanOrEqual("Birthday", new DateTime(2010, 05, 15));
-			Assert.Equal("Birthday:[20100515000000000 TO NULL]", q.ToString());
+			Assert.Equal("Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
 		}
 
 		[Fact]
@@ -168,7 +168,7 @@ namespace Raven.Tests.Querying
 				.SelectFields<IndexedUser>("Name") as DocumentQuery<IndexedUser>;
 			string fields = q.GetProjectionFields().Any() ?
 				"<" + String.Join(", ", q.GetProjectionFields().ToArray()) + ">: " : "";
-			Assert.Equal("<Name>: Birthday:[20100515000000000 TO NULL]", fields + q.ToString());
+			Assert.Equal("<Name>: Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", fields + q.ToString());
 		}
 
 		[Fact]
@@ -179,7 +179,7 @@ namespace Raven.Tests.Querying
 				.SelectFields<IndexedUser>("Name", "Age") as DocumentQuery<IndexedUser>;
 			string fields = q.GetProjectionFields().Any() ?
 				"<" + String.Join(", ", q.GetProjectionFields().ToArray()) + ">: " : "";
-			Assert.Equal("<Name, Age>: Birthday:[20100515000000000 TO NULL]", fields + q.ToString());
+			Assert.Equal("<Name, Age>: Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", fields + q.ToString());
 		}
 
 		[Fact]
