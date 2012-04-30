@@ -52,7 +52,10 @@ namespace Raven.Database.Indexing
 
 				var replaceToken = queryParser.ReplaceToken(field, termReplacement);
 				queryStringBuilder.Remove(searchMatch.Index, searchMatch.Length);
-				queryStringBuilder.Append(field).Append(":").Append(replaceToken);
+				queryStringBuilder
+					.Insert(searchMatch.Index, field)
+					.Insert(searchMatch.Index + field.Length, ":")
+					.Insert(searchMatch.Index + field.Length + 1, replaceToken);
 			}
 
 			return queryStringBuilder.ToString();
