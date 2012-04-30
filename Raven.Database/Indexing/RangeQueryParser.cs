@@ -26,15 +26,29 @@ namespace Raven.Database.Indexing
 	{
 		static readonly Regex rangeValue = new Regex(@"^[\w\d]x[-\w\d.]+$", RegexOptions.Compiled);
 
-		private Dictionary<string,HashSet<string>> untokenized = new Dictionary<string, HashSet<string>>();
+		private readonly Dictionary<string, HashSet<string>> untokenized = new Dictionary<string, HashSet<string>>();
+		private readonly Dictionary<Tuple<string,string>, string> replacedTokens = new Dictionary<Tuple<string, string>, string>();
 
 		public RangeQueryParser(Version matchVersion, string f, Analyzer a)
 			: base(matchVersion, f, a)
 		{
 		}
 
+		public string ReplaceToken(string fieldName, string replacement)
+		{
+			var tokenReplacement = Guid.NewGuid().ToString("n");
+
+			replacedTokens[Tuple.Create(fieldName, tokenReplacement)] = replacement;
+
+			return tokenReplacement;
+		}
+
 		public override Query GetFieldQuery(string field, string queryText)
 		{
+			string value;
+			if (replacedTokens.TryGetValue(Tuple.Create(field, queryText), out value))
+				return new TermQuery(new Term(field, value));
+
 			HashSet<string> set;
 			if(untokenized.TryGetValue(field, out set))
 			{
