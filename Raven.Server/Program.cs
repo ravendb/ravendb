@@ -103,11 +103,11 @@ namespace Raven.Server
 					ravenConfiguration.Initialize();
 				}},
 				{"config=", "The config {0:file} to use", path => ravenConfiguration.LoadFrom(path)},
-				{"install", "Installs the RavenDB service", key => actionToTake= () => AdminRequired(InstallAndStart, key)},
-				{"uninstall", "Uninstalls the RavenDB service", key => actionToTake= () => AdminRequired(EnsureStoppedAndUninstall, key)},
-				{"start", "Starts the RavenDB servce", key => actionToTake= () => AdminRequired(StartService, key)},
-				{"restart", "Restarts the RavenDB service", key => actionToTake= () => AdminRequired(RestartService, key)},
-				{"stop", "Stops the RavenDB service", key => actionToTake= () => AdminRequired(StopService, key)},
+				{"install", "Installs the RavenDB service", key => actionToTake= () => AdminRequired(() => InstallAndStart(ravenConfiguration.WindowsServiceName), key)},
+				{"uninstall", "Uninstalls the RavenDB service", key => actionToTake= () => AdminRequired(() => EnsureStoppedAndUninstall(ravenConfiguration.WindowsServiceName), key)},
+				{"start", "Starts the RavenDB servce", key => actionToTake= () => AdminRequired(() => StartService(ravenConfiguration.WindowsServiceName), key)},
+				{"restart", "Restarts the RavenDB service", key => actionToTake= () => AdminRequired(() => RestartService(ravenConfiguration.WindowsServiceName), key)},
+				{"stop", "Stops the RavenDB service", key => actionToTake= () => AdminRequired(() => StopService(ravenConfiguration.WindowsServiceName), key)},
 				{"ram", "Run RavenDB in RAM only", key =>
 				{
 					ravenConfiguration.Settings["Raven/RunInMemory"] = "true";
@@ -367,15 +367,15 @@ Enjoy...
 ");
 		}
 
-		private static void EnsureStoppedAndUninstall()
+        private static void EnsureStoppedAndUninstall(string serviceName)
 		{
-			if (ServiceIsInstalled() == false)
+			if (ServiceIsInstalled(serviceName) == false)
 			{
 				Console.WriteLine("Service is not installed");
 			}
 			else
 			{
-				var stopController = new ServiceController(ProjectInstaller.SERVICE_NAME);
+                var stopController = new ServiceController(serviceName);
 
 				if (stopController.Status == ServiceControllerStatus.Running)
 					stopController.Stop();
@@ -384,9 +384,9 @@ Enjoy...
 			}
 		}
 
-		private static void StopService()
+        private static void StopService(string serviceName)
 		{
-			var stopController = new ServiceController(ProjectInstaller.SERVICE_NAME);
+			var stopController = new ServiceController(serviceName);
 
 			if (stopController.Status == ServiceControllerStatus.Running)
 			{
@@ -396,9 +396,9 @@ Enjoy...
 		}
 
 
-		private static void StartService()
+        private static void StartService(string serviceName)
 		{
-			var stopController = new ServiceController(ProjectInstaller.SERVICE_NAME);
+			var stopController = new ServiceController(serviceName);
 
 			if (stopController.Status != ServiceControllerStatus.Running)
 			{
@@ -407,9 +407,9 @@ Enjoy...
 			}
 		}
 
-		private static void RestartService()
+        private static void RestartService(string serviceName)
 		{
-			var stopController = new ServiceController(ProjectInstaller.SERVICE_NAME);
+			var stopController = new ServiceController(serviceName);
 
 			if (stopController.Status == ServiceControllerStatus.Running)
 			{
@@ -424,9 +424,9 @@ Enjoy...
 
 		}
 
-		private static void InstallAndStart()
+        private static void InstallAndStart(string serviceName)
 		{
-			if (ServiceIsInstalled())
+			if (ServiceIsInstalled(serviceName))
 			{
 				Console.WriteLine("Service is already installed");
 			}
@@ -434,14 +434,14 @@ Enjoy...
 			{
 				ManagedInstallerClass.InstallHelper(new[] { Assembly.GetExecutingAssembly().Location });
 				SetRecoveryOptions("RavenDB");
-				var startController = new ServiceController(ProjectInstaller.SERVICE_NAME);
+				var startController = new ServiceController(serviceName);
 				startController.Start();
 			}
 		}
 
-		private static bool ServiceIsInstalled()
+        private static bool ServiceIsInstalled(string serviceName)
 		{
-			return (ServiceController.GetServices().Count(s => s.ServiceName == ProjectInstaller.SERVICE_NAME) > 0);
+			return (ServiceController.GetServices().Count(s => s.ServiceName == serviceName) > 0);
 		}
 
 		static void SetRecoveryOptions(string serviceName)

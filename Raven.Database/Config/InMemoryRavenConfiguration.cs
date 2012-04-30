@@ -141,6 +141,8 @@ namespace Raven.Database.Config
 			SetupTransactionMode();
 
 			DataDirectory = Settings["Raven/DataDir"] ?? @"~\Data";
+
+            WindowsServiceName = Settings["Raven/WindowsServiceName"] ?? "RavenDB";
 			
 			if (string.IsNullOrEmpty(Settings["Raven/IndexStoragePath"]) == false)
 			{
@@ -494,6 +496,11 @@ namespace Raven.Database.Config
 		#endregion
 
 		#region Data settings
+
+        /// <summary>
+        /// Register with this Windows service name.
+        /// </summary>
+        public string WindowsServiceName { get; set; }
 
 		/// <summary>
 		/// The directory for the RavenDB database. 
