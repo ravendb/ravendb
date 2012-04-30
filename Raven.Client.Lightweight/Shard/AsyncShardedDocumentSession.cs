@@ -260,51 +260,40 @@ namespace Raven.Client.Shard
 		/// </summary>
 		Task IAsyncDocumentSession.SaveChangesAsync()
 		{
-			throw new NotImplementedException();
-			//	using (EntitiesToJsonCachingScope())
-			//	{
-			//		var data = PrepareForSaveChanges();
-			//		if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
-			//			return; // nothing to do here
+			using (EntitiesToJsonCachingScope())
+			{
+				var data = PrepareForSaveChanges();
+				if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
+					return new CompletedTask(); // nothing to do here
 
-			//		IncrementRequestCount();
-			//		LogBatch(data);
+				IncrementRequestCount();
+				LogBatch(data);
 
-			//		// split by shards
-			//		var saveChangesPerShard = new Dictionary<string, SaveChangesData>();
+				// split by shards
+				var saveChangesPerShard = GetChangesToSavePerShard(data);
 
-			//		foreach (var deferredCommands in deferredCommandsByShard)
-			//		{
-			//			var saveChangesData = saveChangesPerShard.GetOrAdd(deferredCommands.Key);
-			//			saveChangesData.DeferredCommandsCount += deferredCommands.Value.Count;
-			//			saveChangesData.Commands.AddRange(deferredCommands.Value);
-			//		}
-			//		deferredCommandsByShard.Clear();
+				var saveTasks = new List<Task>();
 
-			//		for (int index = 0; index < data.Entities.Count; index++)
-			//		{
-			//			var entity = data.Entities[index];
-			//			var metadata = GetMetadataFor(entity);
-			//			var shardId = metadata.Value<string>(Constants.RavenShardId);
+				// execute on all shards
+				foreach (var shardAndObjects in saveChangesPerShard)
+				{
+					var shardId = shardAndObjects.Key;
 
-			//			var shardSaveChangesData = saveChangesPerShard.GetOrAdd(shardId);
-			//			shardSaveChangesData.Entities.Add(entity);
-			//			shardSaveChangesData.Commands.Add(data.Commands[index]);
-			//		}
+					IAsyncDatabaseCommands databaseCommands;
+					if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
+						throw new InvalidOperationException(string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
 
-			//		// execute on all shards
-			//		foreach (var shardAndObjects in saveChangesPerShard)
-			//		{
-			//			var shardId = shardAndObjects.Key;
+					saveTasks.Add(databaseCommands.BatchAsync(shardAndObjects.Value.Commands.ToArray())
+						.ContinueWith(t => UpdateBatchResults(t.Result, shardAndObjects.Value)));
+				}
 
-			//			IAsyncDatabaseCommands databaseCommands;
-			//			if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
-			//				throw new InvalidOperationException(string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
-
-			//			var results = databaseCommands.Batch(shardAndObjects.Value.Commands);
-			//			UpdateBatchResults(results, shardAndObjects.Value);
-			//		}
-			//	}
+				return Task.Factory.ContinueWhenAll(saveTasks.ToArray(), tasks =>
+				{
+					var exceptions = tasks.Where(t => t.IsFaulted).Select(t => t.Exception).ToList();
+					if (exceptions.Any())
+						throw new AggregateException(exceptions);
+				});
+			}
 		}
 	}
 }

@@ -495,26 +495,7 @@ namespace Raven.Client.Shard
 				LogBatch(data);
 
 				// split by shards
-				var saveChangesPerShard = new Dictionary<string, SaveChangesData>();
-
-				foreach (var deferredCommands in deferredCommandsByShard)
-				{
-					var saveChangesData = saveChangesPerShard.GetOrAdd(deferredCommands.Key);
-					saveChangesData.DeferredCommandsCount += deferredCommands.Value.Count;
-					saveChangesData.Commands.AddRange(deferredCommands.Value);
-				}
-				deferredCommandsByShard.Clear();
-
-				for (int index = 0; index < data.Entities.Count; index++)
-				{
-					var entity = data.Entities[index];
-					var metadata = GetMetadataFor(entity);
-					var shardId = metadata.Value<string>(Constants.RavenShardId);
-
-					var shardSaveChangesData = saveChangesPerShard.GetOrAdd(shardId);
-					shardSaveChangesData.Entities.Add(entity);
-					shardSaveChangesData.Commands.Add(data.Commands[index]);
-				}
+				var saveChangesPerShard = GetChangesToSavePerShard(data);
 
 				// execute on all shards
 				foreach (var shardAndObjects in saveChangesPerShard)
