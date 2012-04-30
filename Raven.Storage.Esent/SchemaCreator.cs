@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Globalization;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 
@@ -58,8 +59,8 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
@@ -72,9 +73,12 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
 			}, defaultValue, defaultValue.Length, out columnid);
 
-			const string indexDef = "+key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   80);
+			CreateIndexes(tableid, new JET_INDEXCREATE
+			{
+				szKey = "+key\0\0",
+				szIndexName = "by_key",
+				grbit = CreateIndexGrbit.IndexPrimary
+			});
 		}
 
 		private void CreateIndexingStatsTable(JET_DBID dbid)
@@ -85,8 +89,8 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
@@ -124,9 +128,12 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnEscrowUpdate | ColumndefGrbit.ColumnNotNULL
 			}, defaultValue, defaultValue.Length, out columnid);
 
-			const string indexDef = "+key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-			                   80);
+			CreateIndexes(tableid, new JET_INDEXCREATE
+			{
+				szIndexName = "by_key",
+				szKey = "+key\0\0",
+				grbit = CreateIndexGrbit.IndexPrimary
+			});
 		}
 
 		// this table exists solely so that other threads can touch the index
@@ -140,8 +147,8 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
@@ -153,9 +160,12 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnEscrowUpdate
 			}, defaultValue, defaultValue.Length, out columnid);
 
-			const string indexDef = "+key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   80);
+			CreateIndexes(tableid, new JET_INDEXCREATE
+			{
+				szIndexName = "by_key",
+				szKey = "+key\0\0",
+				grbit = CreateIndexGrbit.IndexPrimary
+			});
 		}
 
 		private void CreateIndexingStatsReduceTable(JET_DBID dbid)
@@ -166,8 +176,8 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
@@ -205,9 +215,12 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
-			const string indexDef = "+key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   80);
+			CreateIndexes(tableid, new JET_INDEXCREATE
+			{
+				szIndexName = "by_key",
+				szKey = "+key\0\0",
+				grbit = CreateIndexGrbit.IndexPrimary
+			});
 		}
 
 		private void CreateTransactionsTable(JET_DBID dbid)
@@ -229,9 +242,12 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
 			}, null, 0, out columnid);
 
-			const string indexDef = "+tx_id\0\0";
-			Api.JetCreateIndex(session, tableid, "by_tx_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   80);
+			CreateIndexes(tableid, new JET_INDEXCREATE
+			{
+				szIndexName = "by_tx_id",
+				szKey = "+tx_id\0\0",
+				grbit = CreateIndexGrbit.IndexPrimary
+			});
 		}
 
 	    private void CreateDocumentsTable(JET_DBID dbid)
@@ -248,8 +264,8 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
@@ -286,18 +302,69 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
 
+	    	CreateIndexes(tableid,
+	    	              new JET_INDEXCREATE
+	    	              {
+	    	              	szIndexName = "by_id",
+	    	              	szKey = "+id\0\0",
+	    	              	grbit = CreateIndexGrbit.IndexPrimary
+	    	              },
+	    	              new JET_INDEXCREATE
+	    	              {
+	    	              	szIndexName = "by_etag",
+	    	              	szKey = "+etag\0\0",
+	    	              	grbit = CreateIndexGrbit.IndexDisallowNull
+	    	              },
+	    	              new JET_INDEXCREATE
+	    	              {
+	    	              	szIndexName = "by_key",
+	    	              	szKey = "+key\0\0",
+	    	              	grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+	    	              });
+		}
 
-			var indexDef = "+key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique, indexDef, indexDef.Length,
-			                   80);
+		private const uint
+			LCMAP_LOWERCASE = 0x00000100,
+			LCMAP_UPPERCASE = 0x00000200,
+			LCMAP_SORTKEY = 0x00000400,
+			LCMAP_BYTEREV = 0x00000800,
+			LCMAP_HIRAGANA = 0x00100000,
+			LCMAP_KATAKANA = 0x00200000,
+			LCMAP_HALFWIDTH = 0x00400000,
+			LCMAP_FULLWIDTH = 0x00800000,
+			LCMAP_LINGUISTIC_CASING = 0x01000000,
+			LCMAP_SIMPLIFIED_CHINESE = 0x02000000,
+			LCMAP_TRADITIONAL_CHINESE = 0x04000000;
 
-			indexDef = "+id\0\0";
-			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-			                   80);
+		private const uint
+			NORM_IGNORECASE = 1,
+			NORM_IGNORENONSPACE = 2,
+			NORM_IGNORESYMBOLS = 4,
+			SORT_STRINGSORT = 0x01000,
+			NORM_IGNOREKANATYPE = 0x10000,
+			NORM_IGNOREWIDTH = 0x20000;
 
-			indexDef = "+etag\0\0";
-			Api.JetCreateIndex(session, tableid, "by_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-							   80);
+		private void CreateIndexes(JET_TABLEID tableid, params JET_INDEXCREATE[] indexes)
+		{
+			foreach (var index in indexes)
+			{
+				index.cbKey = index.szKey.Length;
+				index.ulDensity = 90;
+				index.cbKeyMost = SystemParameters.KeyMost;
+				index.pidxUnicode = new JET_UNICODEINDEX
+				{
+				    lcid = CultureInfo.InvariantCulture.LCID,
+				    dwMapFlags = LCMAP_SORTKEY | NORM_IGNORECASE | NORM_IGNOREKANATYPE | NORM_IGNOREWIDTH
+				};
+				try
+				{
+					Api.JetCreateIndex2(session, tableid, new[] { index }, 1);
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Could not create index: " + index.szIndexName, e);
+				}
+			}
 		}
 
 		private void CreateDocumentsBeingModifiedByTransactionsTable(JET_DBID dbid)
@@ -314,8 +381,8 @@ namespace Raven.Storage.Esent
 			
 			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
@@ -358,27 +425,27 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
-			var indexDef = "+key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-							   80);
-
-			indexDef = "+id\0\0";
-			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   80);
-
-			indexDef = "+locked_by_transaction\0\0";
-			Api.JetCreateIndex2(session, tableid, new[]
-			{
+			CreateIndexes(tableid,
 				new JET_INDEXCREATE
 				{
-					cbKey = indexDef.Length,
+					szIndexName = "by_id",
+					szKey = "+id\0\0",
+ 					grbit = CreateIndexGrbit.IndexPrimary
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_key",
+					szKey = "+key\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull
+				},
+				new JET_INDEXCREATE
+				{
 					cbKeyMost = SystemParameters.KeyMost,
 					grbit = CreateIndexGrbit.IndexDisallowNull,
 					szIndexName = "by_tx",
-					szKey = indexDef,
+					szKey = "+locked_by_transaction\0\0",
 					ulDensity = 80,
-				},
-			}, 1);
+				});
 		}
 
 		private void CreateMapResultsTable(JET_DBID dbid)
@@ -395,16 +462,16 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "view", new JET_COLUMNDEF
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
 				grbit = ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "document_key", new JET_COLUMNDEF
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
 				grbit = ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
@@ -442,26 +509,35 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed
 			}, null, 0, out columnid);
 
-			var indexDef = "+id\0\0";
-			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   80);
-			
-			indexDef = "+view\0+document_key\0\0";
-			Api.JetCreateIndex(session, tableid, "by_view_and_doc_key", CreateIndexGrbit.IndexDisallowNull, indexDef,
-			                   indexDef.Length,
-			                   80);
-
-			indexDef = "+view\0\0";
-			Api.JetCreateIndex(session, tableid, "by_view", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-			                   80);
-
-			indexDef = "+view\0-etag\0\0";
-			Api.JetCreateIndex(session, tableid, "by_view_and_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-							   80);
-
-			indexDef = "+reduce_key_and_view_hashed\0\0";
-			Api.JetCreateIndex(session, tableid, "by_reduce_key_and_view_hashed", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-							   80);
+			CreateIndexes(tableid,
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_id",
+					szKey = "+id\0\0",
+					grbit = CreateIndexGrbit.IndexPrimary
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view_and_doc_key",
+					szKey	= "+view\0+document_key\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view",
+					szKey = "+view\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view_and_etag",
+					szKey = "+view\0-etag\0\0",
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_reduce_key_and_view_hashed",
+					szKey = "+reduce_key_and_view_hashed\0\0",
+				});
 		}
 
 		private void CreateTasksTable(JET_DBID dbid)
@@ -492,14 +568,15 @@ namespace Raven.Storage.Esent
 			{
 				cbMax = 255,
 				coltyp = JET_coltyp.Text,
-				cp = JET_CP.Unicode,
+				cp = JET_CP.ASCII,
 				grbit = ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "for_index", new JET_COLUMNDEF
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
+				
 				cp = JET_CP.Unicode,
 				grbit = ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
@@ -510,23 +587,25 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
-			var indexDef = "+id\0\0";
-			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-			                   80);
-			indexDef = "+for_index\0\0";
-			Api.JetCreateIndex(session, tableid, "by_index", CreateIndexGrbit.IndexIgnoreNull, indexDef, indexDef.Length,
-			                   80);
-
-			indexDef = "+supports_merging\0+for_index\0+task_type\0\0";
-			Api.JetCreateIndex2(session, tableid, new[]{new JET_INDEXCREATE
-			{
-				cbKey = indexDef.Length,
-				cbKeyMost = SystemParameters.KeyMost,
-				grbit = CreateIndexGrbit.IndexIgnoreNull,
-				szIndexName = "mergables_by_task_type",
-				ulDensity = 80,
-				szKey = indexDef
-			}, },1);
+			CreateIndexes(tableid,
+			              new JET_INDEXCREATE
+			              {
+			              	szIndexName = "by_id",
+			              	szKey = "+id\0\0",
+			              	grbit = CreateIndexGrbit.IndexPrimary
+			              },
+			              new JET_INDEXCREATE
+			              {
+			              	szIndexName = "by_index",
+			              	szKey = "+for_index\0\0",
+			              	grbit = CreateIndexGrbit.IndexIgnoreNull
+			              },
+			              new JET_INDEXCREATE
+			              {
+			              	szIndexName = "mergables_by_task_type",
+			              	szKey = "+supports_merging\0+for_index\0+task_type\0\0",
+			              	grbit = CreateIndexGrbit.IndexIgnoreNull,
+			              });
 		}
 
 		private void CreateFilesTable(JET_DBID dbid)
@@ -544,8 +623,8 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "name", new JET_COLUMNDEF
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
@@ -569,18 +648,25 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
 
-			var indexDef = "+name\0\0";
-			Api.JetCreateIndex(session, tableid, "by_name", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-			                   80);
-
-			indexDef = "+id\0\0";
-			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   80);
-
-
-			indexDef = "+etag\0\0";
-			Api.JetCreateIndex(session, tableid, "by_etag", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-							   80);
+			CreateIndexes(tableid,
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_id",
+					szKey = "+id\0\0",
+					grbit = CreateIndexGrbit.IndexPrimary
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_name",
+					szKey = "+name\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_etag",
+					szKey = "+etag\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull
+				});
 		}
 
 	    public void CreateQueueTable(JET_DBID dbid)
@@ -598,8 +684,9 @@ namespace Raven.Storage.Esent
 
 			Api.JetAddColumn(session, tableid, "name", new JET_COLUMNDEF
 			{
-				cbMax = 255,
-				coltyp = JET_coltyp.Text,
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
+				
 				cp = JET_CP.Unicode,
 				grbit = ColumndefGrbit.ColumnTagged
 			}, null, 0, out columnid);
@@ -618,13 +705,19 @@ namespace Raven.Storage.Esent
 			}, bytes, bytes.Length, out columnid);
 
 
-			var indexDef = "+name\0\0";
-			Api.JetCreateIndex(session, tableid, "by_name", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
-							   80);
-
-			indexDef = "+id\0\0";
-			Api.JetCreateIndex(session, tableid, "by_id", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
-							   80);
+			CreateIndexes(tableid,
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_id",
+					szKey = "+id\0\0",
+					grbit = CreateIndexGrbit.IndexPrimary
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_name",
+					szKey = "+name\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull
+				});
 		}
 		
 		private void CreateDetailsTable(JET_DBID dbid)
@@ -642,10 +735,10 @@ namespace Raven.Storage.Esent
 			JET_COLUMNID schemaVersion;
 			Api.JetAddColumn(session, tableid, "schema_version", new JET_COLUMNDEF
 			{
-				cbMax = Encoding.Unicode.GetByteCount(SchemaVersion),
+				cbMax = 50,
 				cp = JET_CP.Unicode,
 				coltyp = JET_coltyp.Text,
-				grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed
+				grbit = ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out schemaVersion);
 
 			JET_COLUMNID documentCount;
