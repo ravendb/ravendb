@@ -77,7 +77,9 @@
     <Compile Include="SchemaUpdates\From28To29.cs" />
     <Compile Include="SchemaUpdates\From30To32.cs" />
     <Compile Include="SchemaUpdates\From33To34.cs" />
+    <Compile Include="SchemaUpdates\From36To37.cs" />
     <Compile Include="SchemaUpdates\ISchemaUpdate.cs" />
+    <Compile Include="SchemaUpdates\SchemaUpdaterHelper.cs" />
     <Compile Include="StorageActionsAccessor.cs" />
     <Compile Include="StorageActions\DocumentStorageActions.cs" />
     <Compile Include="StorageActions\Documents.cs" />
