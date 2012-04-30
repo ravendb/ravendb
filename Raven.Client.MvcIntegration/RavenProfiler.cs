@@ -6,6 +6,7 @@ using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
 
 namespace Raven.Client.MvcIntegration
 {
@@ -34,6 +35,9 @@ namespace Raven.Client.MvcIntegration
 				existing.AddStore(store);
 				return;
 			}
+			store.Conventions.DisableProfiling = false;
+
+			((DocumentStore)store).InitializeProfiling();
 			
 			ProfilingInformation.OnContextCreated += ProfilingInformationOnOnContextCreated;
 
