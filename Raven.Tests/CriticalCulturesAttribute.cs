@@ -7,6 +7,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests
 {
+	[CLSCompliant(false)]
 	public class CriticalCulturesAttribute: DataAttribute
 	{
 		public override IEnumerable<object[]> GetData(MethodInfo methodUnderTest, Type[] parameterTypes)

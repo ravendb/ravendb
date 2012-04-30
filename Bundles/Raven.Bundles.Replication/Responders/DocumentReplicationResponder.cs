@@ -19,7 +19,7 @@ using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
-namespace Raven.Bundles.Replication.Reponsders
+namespace Raven.Bundles.Replication.Responders
 {
 	public class DocumentReplicationResponder : RequestResponder
 	{
@@ -94,6 +94,15 @@ namespace Raven.Bundles.Replication.Reponsders
 				actions.Documents.AddDocument(id, Guid.Empty, document, metadata);
 				return;
 			}
+
+			// we just got the same version from the same source - request playback again?
+			// at any rate, not an error, moving on
+			if (existingDoc.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == metadata.Value<string>(ReplicationConstants.RavenReplicationSource)
+				&& existingDoc.Metadata.Value<int>(ReplicationConstants.RavenReplicationVersion) == metadata.Value<int>(ReplicationConstants.RavenReplicationVersion))
+			{
+				return;
+			}
+			
 			
 			var existingDocumentIsInConflict = existingDoc.Metadata[ReplicationConstants.RavenReplicationConflict] != null;
 			if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics

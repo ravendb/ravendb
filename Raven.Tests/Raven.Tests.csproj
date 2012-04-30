@@ -588,6 +588,7 @@
     <Compile Include="MailingList\PhilJones\Projections.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
     <Compile Include="MailingList\RecreatingIndexes.cs" />
+    <Compile Include="MailingList\RobinM\AttachmentsStatic.cs" />
     <Compile Include="MailingList\RyanD.cs" />
     <Compile Include="MailingList\Scott.cs" />
     <Compile Include="MailingList\SearchByMapReduceExample.cs" />
