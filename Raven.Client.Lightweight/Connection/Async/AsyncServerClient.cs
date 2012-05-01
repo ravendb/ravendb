@@ -138,6 +138,12 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("PUT", url =>
 			{
 				string requestUri = url + "/indexes/" + name;
+				if (overwrite)
+				{
+					// When overwriting, skip the check to see if the index already exists
+					return DirectPutIndexAfterHeadCheck(indexDef, requestUri);
+				}
+
 				var webRequest = (HttpWebRequest)WebRequest.Create(requestUri);
 				AddOperationHeaders(webRequest);
 				webRequest.Method = "HEAD";
@@ -149,8 +155,7 @@ namespace Raven.Client.Connection.Async
 						try
 						{
 							task.Result.Close();
-							if (overwrite == false)
-								throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+							throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 
 						}
 						catch (AggregateException e)
@@ -163,17 +168,22 @@ namespace Raven.Client.Connection.Async
 								throw;
 						}
 
-						var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
-						request.AddOperationHeaders(OperationsHeaders);
-						var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
-						return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, serializeObject, null)
-							.ContinueWith(writeTask => request.ReadResponseJsonAsync()
-														.ContinueWith(readJsonTask =>
-														{
-															return readJsonTask.Result.Value<string>("index");
-														})).Unwrap();
+						return DirectPutIndexAfterHeadCheck(indexDef, requestUri);
 					}).Unwrap();
 			});
+		}
+
+		private Task<string> DirectPutIndexAfterHeadCheck(IndexDefinition indexDef, string requestUri)
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+			var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
+			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, serializeObject, null)
+				.ContinueWith(writeTask => request.ReadResponseJsonAsync()
+											.ContinueWith(readJsonTask =>
+											{
+												return readJsonTask.Result.Value<string>("index");
+											})).Unwrap();
 		}
 
 		/// <summary>
