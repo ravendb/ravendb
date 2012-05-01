@@ -9,7 +9,11 @@
 					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
 					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-					 xmlns:Controls="clr-namespace:System.Windows.Controls">
+					 xmlns:Controls="clr-namespace:System.Windows.Controls"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:Models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d"
+                         d:DataContext="{d:DesignInstance Models:QueryModel}">
 
 	<toolkit:DockPanel Margin="{StaticResource Margin_ContentPage}">
 		<Border Background="{StaticResource Brush_HeaderBackground}"
@@ -238,29 +242,38 @@
 					Grid.RowSpan="1" />
 			<Grid Grid.Row="2">
 				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
 					<RowDefinition Height="*" />
+					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
-				<StackPanel>
-					<TextBlock Text="Error"
+				<Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+					<TextBlock Grid.Row="0"
+                               Text="Error"
 							   Style="{StaticResource Style_TextBlock_PagePartHeader}"
 							   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
-					<TextBlock Text="{Binding Error}"
+                    <TextBlock Grid.Row="1"
+                               Text="{Binding Error}"
 							   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
-					<StackPanel DataContext="{Binding Path=DocumentsResult.Value}"
+					<Grid Grid.Row="2"
+                        DataContext="{Binding Path=DocumentsResult}"
 								Visibility="{Binding Path=., Converter={StaticResource HiddenWhenNull}}">
 
-						<Documents:DocumentsView Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}" />
+						<Documents:DocumentsViewEnhanced Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}" />
 						<TextBlock Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
-								   Text="There are no results for this query." />
-					</StackPanel>
+								   Text="There are no results for this query." VerticalAlignment="Center" />
+                    </Grid>
 
-					<toolkit:BusyIndicator IsBusy="{Binding DocumentsResult.Value.IsLoadingDocuments, Mode=TwoWay}"
-										   BusyContent="Querying..." />
-					<ItemsControl ItemsSource="{Binding Suggestions}">
+					<ItemsControl 
+                        Grid.Row="3"
+                        ItemsSource="{Binding Suggestions}">
 						<ItemsControl.ItemTemplate>
 							<DataTemplate>
 								<StackPanel Orientation="Horizontal">
@@ -277,7 +290,7 @@
 							</DataTemplate>
 						</ItemsControl.ItemTemplate>
 					</ItemsControl>
-				</StackPanel>
+                </Grid>
 
 				<StackPanel Grid.Row="1"
 							VerticalAlignment="Bottom"

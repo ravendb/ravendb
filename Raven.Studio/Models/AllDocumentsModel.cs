@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models

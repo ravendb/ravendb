@@ -37,15 +37,7 @@ namespace Raven.Studio.Features.Query
 			ClearRecentQuery();
 			model.RememberHistory();
 
-			model.DocumentsResult.Value = new DocumentsModel
-			                              {
-			                              	SkipAutoRefresh = true,
-			                              	ShowEditControls = false,
-			                              	Header = "Results",
-			                              	CustomFetchingOfDocuments = GetFetchDocumentsMethod, 
-											Pager = {IsSkipBasedOnTheUrl = false},
-			                              };
-			model.DocumentsResult.Value.ForceTimerTicked();
+            model.CollectionSource.UpdateQuery(model.IndexName, CreateTemplateQuery());
 		}
 
 		private void ClearRecentQuery()
@@ -56,42 +48,9 @@ namespace Raven.Studio.Features.Query
 
 		private Task GetFetchDocumentsMethod(DocumentsModel documentsModel)
 		{
-			var q = new IndexQuery
-			{
-				Start = model.DocumentsResult.Value.Pager.Skip,
-				PageSize = model.DocumentsResult.Value.Pager.PageSize,
-				Query = query,
-			};
+			var q = CreateTemplateQuery();
 
-			if (model.SortBy != null && model.SortBy.Count > 0)
-			{
-				var sortedFields = new List<SortedField>();
-				foreach (var sortByRef in model.SortBy)
-				{
-					var sortBy = sortByRef.Value;
-					if (sortBy.EndsWith(QueryModel.SortByDescSuffix))
-					{
-						var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length);
-						sortedFields.Add(new SortedField(field) {Descending = true});
-					}
-					else
-						sortedFields.Add(new SortedField(sortBy));
-				}
-				q.SortedFields = sortedFields.ToArray();
-			}
-
-			if (model.IsSpatialQuerySupported && 
-				model.Latitude.HasValue && model.Longitude.HasValue)
-			{
-				q = new SpatialIndexQuery(q)
-					{
-						Latitude = model.Latitude.Value,
-						Longitude = model.Longitude.Value,
-						Radius = model.Radius.HasValue ? model.Radius.Value : 1,
-					};
-			}
-
-			var queryStartTime = DateTime.Now.Ticks;
+		    var queryStartTime = DateTime.Now.Ticks;
 			var queryEndtime = DateTime.MinValue.Ticks;
 			return DatabaseCommands.QueryAsync(model.IndexName, q, null)
 				.ContinueWith(task =>
@@ -138,7 +97,44 @@ namespace Raven.Studio.Features.Query
 				.CatchIgnore<WebException>(ex => model.Error = ex.SimplifyError());
 		}
 
-		private void SuggestResults()
+	    private IndexQuery CreateTemplateQuery()
+	    {
+	        var q = new IndexQuery
+	                    {
+	                        Query = query,
+	                    };
+
+	        if (model.SortBy != null && model.SortBy.Count > 0)
+	        {
+	            var sortedFields = new List<SortedField>();
+	            foreach (var sortByRef in model.SortBy)
+	            {
+	                var sortBy = sortByRef.Value;
+	                if (sortBy.EndsWith(QueryModel.SortByDescSuffix))
+	                {
+	                    var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length);
+	                    sortedFields.Add(new SortedField(field) {Descending = true});
+	                }
+	                else
+	                    sortedFields.Add(new SortedField(sortBy));
+	            }
+	            q.SortedFields = sortedFields.ToArray();
+	        }
+
+	        if (model.IsSpatialQuerySupported &&
+	            model.Latitude.HasValue && model.Longitude.HasValue)
+	        {
+	            q = new SpatialIndexQuery(q)
+	                    {
+	                        Latitude = model.Latitude.Value,
+	                        Longitude = model.Longitude.Value,
+	                        Radius = model.Radius.HasValue ? model.Radius.Value : 1,
+	                    };
+	        }
+	        return q;
+	    }
+
+	    private void SuggestResults()
 		{
 			foreach (var fieldAndTerm in QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value))
 			{

@@ -1,23 +1,13 @@
-﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
-using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
-namespace Raven.Studio.Models
+namespace Raven.Studio.Features.Documents
 {
     public class CollectionDocumentsCollectionSource : VirtualCollectionSource<ViewableDocument>
     {
@@ -74,14 +64,20 @@ namespace Raven.Studio.Models
 
         private Task<QueryResult> GetQueryResults(int start, int pageSize)
         {
-            if (string.IsNullOrEmpty(CollectionName))
+            string collectionName;
+            lock (_lockObject)
+            {
+                collectionName = CollectionName;
+            }
+
+            if (string.IsNullOrEmpty(collectionName))
             {
                 return TaskEx.FromResult(new QueryResult());
             }
 
             return ApplicationModel.DatabaseCommands
                 .QueryAsync("Raven/DocumentsByEntityName",
-                            new IndexQuery {Start = start, PageSize = pageSize, Query = "Tag:" + CollectionName},
+                            new IndexQuery {Start = start, PageSize = pageSize, Query = "Tag:" + collectionName},
                             new string[] {});
         }
     }

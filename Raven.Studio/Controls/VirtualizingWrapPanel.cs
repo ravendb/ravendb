@@ -178,7 +178,10 @@ namespace Raven.Studio.Controls
             RemoveRedundantChildren();
             UpdateScrollInfo(availableSize, extentInfo);
 
-            return availableSize;
+            var desiredSize = new Size(double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width,
+                                       double.IsInfinity(availableSize.Height) ? 0 : availableSize.Height);
+
+            return desiredSize;
         }
 
         private void EnsureScrollOffsetIsWithinConstrains(ExtentInfo extentInfo)

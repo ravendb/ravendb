@@ -1,16 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Windows.Input;
 using Raven.Client.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Models
 {
 	public class QueryModel : PageViewModel, IHasPageTitle
 	{
+        public QueryDocumentsCollectionSource CollectionSource { get; private set; }
+
 		private QueryIndexAutoComplete queryIndexAutoComplete;
 		public QueryIndexAutoComplete QueryIndexAutoComplete
 		{
@@ -205,8 +209,26 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/query";
 			
-			DocumentsResult = new Observable<DocumentsModel>();
-			Query = new Observable<string>();
+            CollectionSource = new QueryDocumentsCollectionSource();
+		    Observable.FromEventPattern<QueryStatisticsUpdatedEventArgs>(h => CollectionSource.QueryStatisticsUpdated += h,
+		                                                                 h => CollectionSource.QueryStatisticsUpdated -= h)
+		        .SampleResponsive(TimeSpan.FromSeconds(0.5))
+                .TakeUntil(Unloaded)
+		        .ObserveOnDispatcher()
+		        .Subscribe(e =>
+		                       {
+		                           QueryTime = e.EventArgs.QueryTime;
+		                           Results = e.EventArgs.Statistics;
+		                       });
+
+		    DocumentsResult = new DocumentsModelEnhanced(CollectionSource)
+		                          {
+		                              ShowEditControls = false,
+                                      Header = "Results",
+                                      SkipAutoRefresh = true,
+		                          };
+
+            Query = new Observable<string>();
 
 			SortBy = new BindableCollection<StringRef>(x => x.Value);
 			SortByOptions = new BindableCollection<string>(x => x);
@@ -297,7 +319,7 @@ namespace Raven.Studio.Models
 			set { error = value; OnPropertyChanged(() => Error); }
 		}
 
-		public Observable<DocumentsModel> DocumentsResult { get; private set; }
+		public DocumentsModelEnhanced DocumentsResult { get; private set; }
 
 		public BindableCollection<FieldAndTerm> Suggestions { get; private set; }
 		public ICommand RepairTermInQuery
