@@ -574,6 +574,7 @@
     <Compile Include="MailingList\Idsa\CasinosSuspensionsIndex.cs" />
     <Compile Include="MailingList\Idsa\IdsaTest.cs" />
     <Compile Include="MailingList\IndexWhereClause .cs" />
+    <Compile Include="MailingList\JamesCrowley.cs" />
     <Compile Include="MailingList\Johnson.cs" />
     <Compile Include="MailingList\Jorre.cs" />
     <Compile Include="MailingList\Mark2.cs" />
