@@ -226,6 +226,7 @@ namespace Raven.Studio.Models
 		                              ShowEditControls = false,
                                       Header = "Results",
                                       SkipAutoRefresh = true,
+                                      NavigationQueryGenerator = () => CollectionSource.TemplateQuery != null ? CollectionSource.TemplateQuery.GetQueryString() : "",
 		                          };
 
             Query = new Observable<string>();

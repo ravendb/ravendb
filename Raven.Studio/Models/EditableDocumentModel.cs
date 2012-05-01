@@ -62,6 +62,10 @@ namespace Raven.Studio.Models
 			var neighbors = url.GetQueryParam("neighbors");
 			if (neighbors != null)
 				NeighborIds = neighbors.Split(',').ToList();
+
+		    var navigationQueryString = url.GetQueryParam("navigationQuery");
+		    var query = IndexQueryHelpers.FromQueryString(navigationQueryString);
+
 			if (string.IsNullOrWhiteSpace(docId) == false)
 			{
 				Mode = DocumentMode.DocumentWithId;

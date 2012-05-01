@@ -29,6 +29,17 @@ namespace Raven.Studio.Features.Query
 
         public event EventHandler<QueryStatisticsUpdatedEventArgs> QueryStatisticsUpdated;
 
+        public IndexQuery TemplateQuery
+        {
+            get
+            {
+                lock (_lockObject)
+                {
+                    return _templateQuery;
+                }
+            }
+        }
+
         public void UpdateQuery(string indexName, IndexQuery templateQuery)
         {
             lock (_lockObject)
@@ -90,7 +101,7 @@ namespace Raven.Studio.Features.Query
 
             lock (_lockObject)
             {
-                templateQuery = _templateQuery;
+                templateQuery = TemplateQuery;
                 indexName = _indexName;
             }
 

@@ -16,6 +16,8 @@ namespace Raven.Studio.Models
 {
     public class DocumentsModelEnhanced : Model
     {
+        private ICommand editDocument;
+
         public VirtualCollection<ViewableDocument> Documents { get; private set; }
 
         public bool SkipAutoRefresh { get; set; }
@@ -27,6 +29,15 @@ namespace Raven.Studio.Models
 
             ShowEditControls = true;
         }
+
+        public Func<string> NavigationQueryGenerator { get; set; }
+
+        public ICommand EditDocument { get
+        {
+            return editDocument ??
+                   (editDocument =
+                    new EditVirtualDocumentCommand() {NavigationQueryGenerator = NavigationQueryGenerator});
+        } }
 
         public override System.Threading.Tasks.Task TimerTickedAsync()
         {
@@ -40,6 +51,7 @@ namespace Raven.Studio.Models
         }
 
         private string header;
+
         public string Header
         {
             get { return header ?? (header = "Documents"); }

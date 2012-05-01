@@ -1047,10 +1047,6 @@
 			
 		</toolkit:WrapPanel>
 	</ItemsPanelTemplate>
-
-    <ItemsPanelTemplate x:Key="VirtualizingWrapPanel">
-        <VirtualizingWrapPanel:VirtualizingWrapPanel/>
-    </ItemsPanelTemplate>
     
     <ItemsPanelTemplate x:Key="VerticalFluidWrapPanel">
 		<toolkit:WrapPanel Orientation="Vertical">

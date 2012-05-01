@@ -67,7 +67,7 @@
 					HorizontalAlignment="Right"
 					Style="{StaticResource Style_Button_MouseOverChrome}"
 					Padding="4"
-					Command="{Binding Path=Edit}"
+					Command="{Binding Path=DataContext.EditDocument, RelativeSource={RelativeSource AncestorType=Documents:DocumentsViewEnhanced}}"
 					ToolTipService.ToolTip="click here to edit the document"
 					Grid.Row="2"
 					Grid.Column="3">
