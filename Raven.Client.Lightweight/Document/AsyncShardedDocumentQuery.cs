@@ -119,14 +119,14 @@ namespace Raven.Client.Document
 
 		protected override Task<QueryOperation> ExecuteActualQueryAsync()
 		{
-			var results = CompletedTask.With(new bool[ShardDatabaseCommands.Count]);
+			var results = CompletedTask.With(new bool[ShardDatabaseCommands.Count]).Task;
 
 			Func<Task> loop = null;
 			loop = () =>
 			{
 				var lastResults = results.Result;
 
-				Task<bool[]> newResults = shardStrategy.ShardAccessStrategy.ApplyAsync(ShardDatabaseCommands,
+				results = shardStrategy.ShardAccessStrategy.ApplyAsync(ShardDatabaseCommands,
 					new ShardRequestData
 					{
 						EntityType = typeof(T),
@@ -142,12 +142,14 @@ namespace Raven.Client.Document
 						return commands.QueryAsync(indexName, queryOp.IndexQuery, includes.ToArray())
 							.ContinueWith(task =>
 						{
-							queryContext.Dispose();
+							if (queryContext != null)
+								queryContext.Dispose();
+
 							return queryOp.IsAcceptable(task.Result);
 						});
 					});
 
-				return newResults.ContinueWith(task =>
+				return results.ContinueWith(task =>
 				{
 					if (lastResults.All(acceptable => acceptable))
 						return new CompletedTask().Task;

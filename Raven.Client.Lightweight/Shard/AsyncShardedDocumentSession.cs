@@ -97,7 +97,8 @@ namespace Raven.Client.Shard
 					IDisposable loadContext = loadOperation.EnterLoadContext();
 					return commands.GetAsync(id).ContinueWith(task =>
 					{
-						loadContext.Dispose();
+						if (loadContext != null)
+							loadContext.Dispose();
 
 						if (loadOperation.SetResult(task.Result))
 							return executer();

@@ -33,7 +33,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		/// <value>The shared operations headers.</value>
 		/// <exception cref="NotSupportedException"></exception>
-		public override NameValueCollection SharedOperationsHeaders 
+		public override NameValueCollection SharedOperationsHeaders
 #else
 		public IDictionary<string,string> SharedOperationsHeaders 
 #endif
@@ -79,7 +79,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		/// <value>The identifier.</value>
 		public override string Identifier { get; set; }
-		
+
 		/// <summary>
 		/// Called after dispose is completed
 		/// </summary>
@@ -109,14 +109,14 @@ namespace Raven.Client.Shard
 		{
 			get { throw new NotSupportedException("Sharded document store doesn't have a database commands. you need to explicitly use the shard instances to get access to the database commands"); }
 		}
-		
+
 		/// <summary>
 		/// Opens the async session.
 		/// </summary>
 		/// <returns></returns>
 		public override IAsyncDocumentSession OpenAsyncSession()
 		{
-			throw new NotSupportedException("Sharded document store doesn't support async operations");
+			return OpenAsyncSessionInternal(ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands));
 		}
 
 		/// <summary>
@@ -125,7 +125,17 @@ namespace Raven.Client.Shard
 		/// <returns></returns>
 		public override IAsyncDocumentSession OpenAsyncSession(string databaseName)
 		{
-			throw new NotSupportedException("Sharded document store doesn't support async operations");
+			return OpenAsyncSessionInternal(ShardStrategy.Shards.ToDictionary(x => x.Key, x => x.Value.AsyncDatabaseCommands.ForDatabase(databaseName)));
+		}
+
+		private IAsyncDocumentSession OpenAsyncSessionInternal(Dictionary<string, IAsyncDatabaseCommands> shardDbCommands)
+		{
+			EnsureNotClosed();
+
+			var sessionId = Guid.NewGuid();
+			var session = new AsyncShardedDocumentSession(this, listeners, sessionId, ShardStrategy, shardDbCommands);
+			AfterSessionCreated(session);
+			return session;
 		}
 
 #endif
@@ -174,7 +184,7 @@ namespace Raven.Client.Shard
 		}
 
 #if !SILVERLIGHT
-		
+
 		/// <summary>
 		/// Opens the session.
 		/// </summary>
@@ -282,12 +292,12 @@ namespace Raven.Client.Shard
 		{
 			var list = ShardStrategy.Shards.Values.Select(x => x.DatabaseCommands).ToList();
 			ShardStrategy.ShardAccessStrategy.Apply(list,
-			                                                new ShardRequestData()
-			                                                , (commands, i) =>
-			                                                {
-			                                                	indexCreationTask.Execute(commands, Conventions);
-			                                                	return (object)null;
-			                                                });
+															new ShardRequestData()
+															, (commands, i) =>
+															{
+																indexCreationTask.Execute(commands, Conventions);
+																return (object)null;
+															});
 		}
 	}
 }

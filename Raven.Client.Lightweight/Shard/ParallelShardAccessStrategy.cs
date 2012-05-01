@@ -61,8 +61,7 @@ namespace Raven.Client.Shard
 		/// </summary>
 		public Task<T[]> ApplyAsync<T>(IList<IAsyncDatabaseCommands> commands, ShardRequestData request, Func<IAsyncDatabaseCommands, int, Task<T>> operation)
 		{
-			TaskCompletionSource<T[]> tcs = new TaskCompletionSource<T[]>();
-			Task.Factory.ContinueWhenAll(commands.Select(operation).ToArray(), tasks =>
+			return Task.Factory.ContinueWhenAll(commands.Select(operation).ToArray(), tasks =>
 			{
 				List<T> results = new List<T>(tasks.Length);
 				int index = 0;
@@ -89,8 +88,6 @@ namespace Raven.Client.Shard
 
 				return results.ToArray();
 			});
-
-			return tcs.Task;
 		}
 	}
 }
