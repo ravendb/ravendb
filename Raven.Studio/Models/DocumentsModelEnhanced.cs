@@ -21,9 +21,9 @@ namespace Raven.Studio.Models
         public bool SkipAutoRefresh { get; set; }
         public bool ShowEditControls { get; set; }
 
-        public DocumentsModelEnhanced()
+        public DocumentsModelEnhanced(VirtualCollectionSource<ViewableDocument> collectionSource)
         {
-            Documents = new VirtualCollection<ViewableDocument>(new DocumentsCollectionSource(), 25, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified));
+            Documents = new VirtualCollection<ViewableDocument>(collectionSource, 25, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified));
 
             ShowEditControls = true;
         }

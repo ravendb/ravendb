@@ -188,6 +188,7 @@
     <Compile Include="Infrastructure\WeakEventListener.cs" />
     <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />
+    <Compile Include="Models\CollectionDocumentsCollectionSource.cs" />
     <Compile Include="Models\DocumentsCollectionSource.cs" />
     <Compile Include="Models\DocumentSize.cs" />
     <Compile Include="Models\IHasPageTitle.cs" />
