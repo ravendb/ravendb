@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -26,7 +27,7 @@ namespace Raven.Bundles.MoreLikeThis
 	{
 		public override string UrlPattern
 		{
-			get { return @"^/morelikethis/([\w\-_]+)/(.+)"; } // /morelikethis/(index-name)/(ravendb-document-id)
+			get { return @"^/morelikethis/(.+)"; } // /morelikethis/(index-name)/(ravendb-document-id)
 		}
 
 		public override string[] SupportedVerbs
@@ -37,11 +38,10 @@ namespace Raven.Bundles.MoreLikeThis
 		public override void Respond(IHttpContext context)
 		{
 			var match = urlMatcher.Match(context.GetRequestUrl());
-			var indexName = match.Groups[1].Value;
+			var indexNameAndUrl = match.Groups[1].Value;
 
 			var parameters = new MoreLikeThisQueryParameters
 								 {
-									 DocumentId = match.Groups[2].Value,
 									 Fields = context.Request.QueryString.GetValues("fields"),
                                      Boost = context.Request.QueryString.Get("boost").ToNullableBool(),
                                      MaximumNumberOfTokensParsed = context.Request.QueryString.Get("maxNumTokens").ToNullableInt(),
@@ -52,14 +52,17 @@ namespace Raven.Bundles.MoreLikeThis
 									 MinimumWordLength = context.Request.QueryString.Get("minWordLen").ToNullableInt(),
                                      StopWordsDocumentId = context.Request.QueryString.Get("stopWords"),
 		                         };
-            
-			var indexDefinition = Database.IndexDefinitionStorage.GetIndexDefinition(indexName);
+
+			string indexName, docId;
+			var indexDefinition = GetIndexDefinitionAndDocumentId(indexNameAndUrl, out indexName, out docId);
 			if (indexDefinition == null)
 			{
 				context.SetStatusToNotFound();
 				context.WriteJson(new { Error = "The index " + indexName + " cannot be found" });
 				return;
 			}
+
+			parameters.DocumentId = docId;
 
 			if (string.IsNullOrEmpty(parameters.DocumentId))
 			{
@@ -69,6 +72,30 @@ namespace Raven.Bundles.MoreLikeThis
 			}
 
 			PerformSearch(context, indexName, indexDefinition, parameters);
+		}
+
+		private IndexDefinition GetIndexDefinitionAndDocumentId(string indexNameAndUrl, out string indexName, out string docId)
+		{
+			var parts = indexNameAndUrl.Split(new[]{'/'}, StringSplitOptions.RemoveEmptyEntries);
+			var sb = new StringBuilder();
+
+			for (int i = 0; i < parts.Length; i++)
+			{
+				sb.Append(parts[i]);
+				var indexDef = Database.IndexDefinitionStorage.GetIndexDefinition(sb.ToString());
+				if(indexDef != null)
+				{
+					indexName = sb.ToString();
+					docId = string.Join("/", parts.Skip(i + 1));
+					return indexDef;
+				}
+				sb.Append("/");
+			}
+
+			indexName = sb.ToString();
+			docId = null;
+
+			return null;
 		}
 
 		private void PerformSearch(IHttpContext context, string indexName, IndexDefinition indexDefinition, MoreLikeThisQueryParameters parameters)
