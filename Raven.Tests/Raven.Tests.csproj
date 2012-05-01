@@ -733,6 +733,10 @@
     <Compile Include="Security\OAuth\CertHelper.cs" />
     <Compile Include="Security\OAuth\GrantAccessTokenClientCredentialsFlow.cs" />
     <Compile Include="Security\OAuth\HttpWebRequestExtensions.cs" />
+    <Compile Include="Shard\Async\RoundRobinSharding.cs" />
+    <Compile Include="Shard\Async\SimpleSharding.cs" />
+    <Compile Include="Shard\Async\WhenUsingParallelAccessStrategy.cs" />
+    <Compile Include="Shard\Async\WhenUsingShardedServers.cs" />
     <Compile Include="Shard\BlogModel\Blog.cs" />
     <Compile Include="Shard\BlogModel\BlogShardResolutionStrategy.cs" />
     <Compile Include="Shard\BlogModel\CanMapReduce.cs" />
