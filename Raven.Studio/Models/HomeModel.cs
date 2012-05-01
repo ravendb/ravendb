@@ -16,57 +16,41 @@ namespace Raven.Studio.Models
 {
 	public class HomeModel : PageViewModel
 	{
-		private static WeakReference<Observable<DocumentsModel>> recentDocuments;
-		public static Observable<DocumentsModel> RecentDocuments
+		private static WeakReference<DocumentsModelEnhanced> recentDocuments;
+
+		public static DocumentsModelEnhanced RecentDocuments
 		{
 			get
 			{
 				if (recentDocuments == null || recentDocuments.IsAlive == false)
 				{
-					recentDocuments = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel>
-					                                                                	{
-					                                                                		Value = new DocumentsModel
-					                                                                		        	{
-					                                                                		        		Header = "Recent Documents",
-					                                                                		        		Pager = {PageSize = 15},
-					                                                                		        	}
-					                                                                	});
-					SetTotalResults();
-					ApplicationModel.Database.PropertyChanged += (sender, args) => SetTotalResults();
+				    recentDocuments =
+				        new WeakReference<DocumentsModelEnhanced>(new DocumentsModelEnhanced(new DocumentsCollectionSource())
+				                                                      {
+				                                                          Header = "Recent Documents",
+				                                                      });
 				}
-				var target = recentDocuments.Target ?? RecentDocuments;
-				return target;
+			    return recentDocuments.Target;
 			}
-		}
-
-		private static void SetTotalResults()
-		{
-		    var target = recentDocuments.Target;
-            if (target != null)
-		        target.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
 		}
 
 	    public HomeModel()
 		{
 			ModelUrl = "/home";
-			ShowCreateSampleData = new Observable<bool>(RecentDocuments.Value.Pager.TotalResults, ShouldShowCreateSampleData);
-		}
 
-		private static bool ShouldShowCreateSampleData(object x)
-		{
-			if (x == null)
-				return false;
-			return (long)x == 0;
+			ShowCreateSampleData = new Observable<bool>() { Value = RecentDocuments.Documents.Count == 0};
+
+	        RecentDocuments.Documents.CollectionChanged +=
+                delegate { ShowCreateSampleData.Value = RecentDocuments.Documents.Count == 0; };
 		}
 
 		public override void LoadModelParameters(string parameters)
 		{
-			RecentDocuments.Value.Pager.SetSkip(new UrlParser(parameters));
 		}
 
 		public override Task TimerTickedAsync()
 		{
-			return RecentDocuments.Value.TimerTickedAsync();
+			return RecentDocuments.TimerTickedAsync();
 		}
 
 		public static Observable<bool> ShowCreateSampleData { get; private set; }

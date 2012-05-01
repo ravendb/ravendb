@@ -14,7 +14,7 @@
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 		
-		<Documents:DocumentsView DataContext="{Binding Path=RecentDocuments.Value}"
+		<Documents:DocumentsViewEnhanced DataContext="{Binding Path=RecentDocuments}"
 								 Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}"
 								 Margin="{StaticResource Margin_ContentPage}" />
 		

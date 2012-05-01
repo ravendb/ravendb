@@ -74,6 +74,11 @@ namespace Raven.Studio.Models
 
         private Task<QueryResult> GetQueryResults(int start, int pageSize)
         {
+            if (string.IsNullOrEmpty(CollectionName))
+            {
+                return TaskEx.FromResult(new QueryResult());
+            }
+
             return ApplicationModel.DatabaseCommands
                 .QueryAsync("Raven/DocumentsByEntityName",
                             new IndexQuery {Start = start, PageSize = pageSize, Query = "Tag:" + CollectionName},
