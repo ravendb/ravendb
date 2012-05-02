@@ -183,6 +183,7 @@ namespace Raven.Studio.Models
 		private void UpdateFromDocument()
 		{
 			var newdoc = document.Value;
+		    RemoveNonDisplayedMetadata(newdoc.Metadata);
 			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
 			UpdateMetadata(newdoc.Metadata);
 			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
@@ -190,7 +191,13 @@ namespace Raven.Studio.Models
 			OnEverythingChanged();
 		}
 
-		private void UpdateMetadata(RavenJObject metadataAsJson)
+	    private void RemoveNonDisplayedMetadata(RavenJObject metaData)
+	    {
+	        metaData.Remove("@etag");
+	        metaData.Remove("@id");
+	    }
+
+	    private void UpdateMetadata(RavenJObject metadataAsJson)
 		{
 			metadata = metadataAsJson.ToDictionary(x => x.Key, x =>
 															   {
@@ -425,7 +432,9 @@ namespace Raven.Studio.Models
 		{
 			get
 			{
-				return metadata.OrderBy(x => x.Key)
+				return metadata
+                    .Where(x => x.Key != "@etag" && x.Key != "@id")
+                    .OrderBy(x => x.Key)
 					.Concat(new[]
 								{
 									new KeyValuePair<string, string>("ETag", Etag.HasValue ? Etag.ToString() : ""),
