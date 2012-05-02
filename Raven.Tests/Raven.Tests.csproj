@@ -498,6 +498,7 @@
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />
     <Compile Include="Document\Company.cs" />
     <Compile Include="Document\Contact.cs" />
+    <Compile Include="Document\DocumentIdTests.cs" />
     <Compile Include="Document\DocumentStoreEmbeddedGranularTests.cs" />
     <Compile Include="Document\CustomDynamicClass.cs" />
     <Compile Include="Document\DocumentStoreEmbeddedTests.cs" />

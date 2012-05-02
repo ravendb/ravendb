@@ -37,6 +37,7 @@ namespace Raven.Client.Document.Async
 			: base(documentStore, listeners, id)
 		{
 			AsyncDatabaseCommands = asyncDatabaseCommands;
+			GenerateDocumentKeysOnStore = false;
 		}
 
 		/// <summary>
@@ -203,14 +204,33 @@ namespace Raven.Client.Document.Async
 		/// <returns></returns>
 		public Task SaveChangesAsync()
 		{
-			var cachingScope = EntitiesToJsonCachingScope();
-			var data = PrepareForSaveChanges();
-			return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
-				.ContinueWith(task =>
+			return GenerateDocumentKeysForSaveChanges().ContinueWith(keysTask =>
 				{
-					UpdateBatchResults(task.Result, data);
-					cachingScope.Dispose();
-				});
+					keysTask.Wait();
+
+					var cachingScope = EntitiesToJsonCachingScope();
+					var data = PrepareForSaveChanges();
+					return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
+						.ContinueWith(task =>
+						{
+							UpdateBatchResults(task.Result, data);
+							cachingScope.Dispose();
+						});
+				}).Unwrap();
+		}
+
+		private Task GenerateDocumentKeysForSaveChanges()
+		{
+			return Task.Factory.StartNew(() =>
+			{
+				foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)))
+				{
+					if (entity.Value.Key == null)
+					{
+						entity.Value.Key = GenerateDocumentKeyForStorage(entity.Key);
+					}
+				}
+			});
 		}
 
 		/// <summary>

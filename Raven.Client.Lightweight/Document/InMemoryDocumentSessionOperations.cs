@@ -37,6 +37,8 @@ namespace Raven.Client.Document
 	/// </summary>
 	public abstract class InMemoryDocumentSessionOperations : IDisposable
 	{
+		protected bool GenerateDocumentKeysOnStore = true;
+
 		/// <summary>
 		/// The session id 
 		/// </summary>
@@ -554,26 +556,9 @@ more responsive application.
 
 			if (id == null)
 			{
-#if !NET35
-				if (entity is IDynamicMetaObjectProvider)
+				if (GenerateDocumentKeysOnStore)
 				{
-					if (TryGetIdFromDynamic(entity, out id) == false)
-					{
-						id = Conventions.DocumentKeyGenerator(entity);
-
-						if (id != null)
-						{
-							// Store it back into the Id field so the client has access to to it                    
-							TrySetIdOnynamic(entity, id);
-						}
-					}
-				}
-				else
-#endif
-				{
-					id = GetOrGenerateDocumentKey(entity);
-
-					TrySetIdentity(entity, id);
+					id = GenerateDocumentKeyForStorage(entity);
 				}
 			}
 			else
@@ -592,6 +577,30 @@ more responsive application.
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
 			StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
+		}
+
+		protected string GenerateDocumentKeyForStorage(object entity)
+		{
+			string id;
+#if !NET35
+			if (entity is IDynamicMetaObjectProvider)
+			{
+				if (TryGetIdFromDynamic(entity, out id) == false)
+				{
+					id = Conventions.DocumentKeyGenerator(entity);
+					if (id != null)
+					{
+						// Store it back into the Id field so the client has access to to it                    
+						TrySetIdOnynamic(entity, id);
+					}
+					return id;
+				}
+			}
+#endif
+
+			id = GetOrGenerateDocumentKey(entity);
+			TrySetIdentity(entity, id);
+			return id;
 		}
 
 		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
