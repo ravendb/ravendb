@@ -16,7 +16,8 @@ namespace Raven.Studio.Models
 {
     public class DocumentsModelEnhanced : Model
     {
-        private ICommand editDocument;
+        private EditVirtualDocumentCommand editDocument;
+        private Func<string, int, DocumentNavigator> documentNavigatorFactory;
 
         public VirtualCollection<ViewableDocument> Documents { get; private set; }
 
@@ -30,13 +31,24 @@ namespace Raven.Studio.Models
             ShowEditControls = true;
         }
 
-        public Func<string> NavigationQueryGenerator { get; set; }
+        public Func<string, int, DocumentNavigator> DocumentNavigatorFactory
+        {
+            get { return documentNavigatorFactory; }
+            set
+            {
+                documentNavigatorFactory = value;
+                if (editDocument != null)
+                {
+                    editDocument.DocumentNavigatorFactory = value;
+                }
+            }
+        }
 
         public ICommand EditDocument { get
         {
             return editDocument ??
                    (editDocument =
-                    new EditVirtualDocumentCommand() {NavigationQueryGenerator = NavigationQueryGenerator});
+                    new EditVirtualDocumentCommand() {DocumentNavigatorFactory = DocumentNavigatorFactory});
         } }
 
         public override System.Threading.Tasks.Task TimerTickedAsync()

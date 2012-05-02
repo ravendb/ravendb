@@ -14,7 +14,14 @@ namespace Raven.Studio.Features.Documents
 {
     public class EditVirtualDocumentCommand : Command
     {
-        public Func<string> NavigationQueryGenerator { get; set; }
+        private static readonly Func<string, int, DocumentNavigator> DefaultNavigatorFactory =
+            (id, index) => DocumentNavigator.Create(id);
+
+        public Func<string, int,DocumentNavigator> DocumentNavigatorFactory { get; set; }
+
+        public EditVirtualDocumentCommand()
+        {
+        }
 
         public override bool CanExecute(object parameter)
         {
@@ -33,21 +40,11 @@ namespace Raven.Studio.Features.Documents
 
             var viewableDocument = virtualItem.Item;
 
-            var urlParser = new UrlParser("/edit");
+            var navigatorFactory = DocumentNavigatorFactory ?? DefaultNavigatorFactory;
 
-            if (!string.IsNullOrEmpty(viewableDocument.Id))
-            {
-                urlParser.SetQueryParam("id", viewableDocument.Id);
-            }
+            var navigator = navigatorFactory(viewableDocument.Id, virtualItem.Index);
 
-            if (NavigationQueryGenerator != null)
-            {
-                urlParser.SetQueryParam("index", virtualItem.Index);
-                urlParser.SetQueryParam("navigationQuery", NavigationQueryGenerator());
-            }
-
-            UrlUtil.Navigate(urlParser.BuildUrl());
-
+            UrlUtil.Navigate(navigator.GetUrl());
         }
     }
 }

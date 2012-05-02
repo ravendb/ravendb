@@ -9,12 +9,12 @@
 					 xmlns:Studio="clr-namespace:Raven.Studio"
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-					 xmlns:Controls="clr-namespace:System.Windows.Controls"
-					 mc:Ignorable="d"
+					 xmlns:Controls="clr-namespace:System.Windows.Controls" xmlns:Models="clr-namespace:Raven.Studio.Models"
+                         mc:Ignorable="d"
 					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel">
 
 	<Grid Margin="{StaticResource Margin_ContentPage}"
-		  DataContext="{Binding Value}">
+		  DataContext="{Binding Value}" d:DataContext="{d:DesignInstance Models:EditableDocumentModel}">
 
 		<i:Interaction.Triggers>
 			<Behaviors:StudioKeyTrigger Key="S" Modifiers="Control">
@@ -94,11 +94,11 @@
 				<StackPanel Grid.Column="1"
 							HorizontalAlignment="Center"
 							Orientation="Horizontal"
-							Visibility="{Binding NeighborIds, Converter={StaticResource HiddenWhenEmpty}}">
+							Visibility="{Binding CanNavigate, Converter={StaticResource BooleanToVisibility}}">
 
-					<HyperlinkButton Command="{StaticResource EditNeighbouringDocumentCommand}"
-									 CommandParameter="{Binding PrevDocument}"
+					<HyperlinkButton Command="{Binding NavigateToPrevious}"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
+                                     IsEnabled="{Binding HasPrevious}"
 									 ToolTipService.ToolTip="Previous Document">
 						<HyperlinkButton.Content>
 							<Image Source="{StaticResource Image_PreviousPage_Tiny}"
@@ -109,14 +109,14 @@
 
 					<TextBlock Text="Document "
 							   VerticalAlignment="Center" />
-					<TextBlock Text="{Binding CurrentIndexDisplay}"
+					<TextBlock Text="{Binding CurrentItemNumber}"
 							   VerticalAlignment="Center" />
 					<TextBlock Text=" of "
 							   VerticalAlignment="Center" />
-					<TextBlock Text="{Binding LastIndexDisplay}"
+					<TextBlock Text="{Binding TotalItems}"
 							   VerticalAlignment="Center" />
-					<HyperlinkButton Command="{StaticResource EditNeighbouringDocumentCommand}"
-									 CommandParameter="{Binding NextDocument}"
+                    <HyperlinkButton Command="{Binding NavigateToNext}"
+                                     IsEnabled="{Binding HasNext}"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
 									 ToolTipService.ToolTip="Next Document">
 						<HyperlinkButton.Content>

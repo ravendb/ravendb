@@ -19,7 +19,13 @@ namespace Raven.Studio.Models
 			{
 				if (documents == null || documents.IsAlive == false)
 				{
-                    documents = new WeakReference<Observable<DocumentsModelEnhanced>>(new Observable<DocumentsModelEnhanced> { Value = new DocumentsModelEnhanced(new DocumentsCollectionSource()) });
+                    documents = new WeakReference<Observable<DocumentsModelEnhanced>>(new Observable<DocumentsModelEnhanced>
+                                                                                          {
+                                                                                              Value = new DocumentsModelEnhanced(new DocumentsCollectionSource())
+                                                                                                          {
+                                                                                                              DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index)
+                                                                                                          }
+                                                                                          });
 				}
 				var target = documents.Target ?? Documents;
 				return target;

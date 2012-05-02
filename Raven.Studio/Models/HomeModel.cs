@@ -29,6 +29,7 @@ namespace Raven.Studio.Models
 				        new WeakReference<DocumentsModelEnhanced>(new DocumentsModelEnhanced(new DocumentsCollectionSource())
 				                                                      {
 				                                                          Header = "Recent Documents",
+                                                                          DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index)
 				                                                      });
 				}
 			    return recentDocuments.Target;

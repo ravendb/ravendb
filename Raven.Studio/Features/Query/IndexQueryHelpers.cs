@@ -39,7 +39,7 @@ namespace Raven.Studio.Features.Query
 
             var query = new IndexQuery
             {
-                Query = fields["query"].FirstOrDefault() ?? "",
+                Query = Uri.UnescapeDataString(fields["query"].FirstOrDefault() ?? ""),
                 Start = fields.GetStart(),
                 Cutoff = fields.GetCutOff(),
                 CutoffEtag = fields.GetCutOffEtag(),

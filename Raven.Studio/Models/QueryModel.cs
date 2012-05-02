@@ -5,6 +5,7 @@ using System.Reactive.Linq;
 using System.Windows.Input;
 using Raven.Client.Linq;
 using Raven.Studio.Commands;
+using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Extensions;
@@ -226,7 +227,7 @@ namespace Raven.Studio.Models
 		                              ShowEditControls = false,
                                       Header = "Results",
                                       SkipAutoRefresh = true,
-                                      NavigationQueryGenerator = () => CollectionSource.TemplateQuery != null ? CollectionSource.TemplateQuery.GetQueryString() : "",
+                                      DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index, IndexName, CollectionSource.TemplateQuery),
 		                          };
 
             Query = new Observable<string>();

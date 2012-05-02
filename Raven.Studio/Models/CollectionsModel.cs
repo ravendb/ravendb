@@ -54,6 +54,10 @@ namespace Raven.Studio.Models
 			{
 				PutCollectionNameInTheUrl();
 				CollectionSource.CollectionName = GetSelectedCollectionName();
+			    DocumentsForSelectedCollection.DocumentNavigatorFactory =
+			        (id, index) =>
+			        DocumentNavigator.Create(id, index, "Raven/DocumentsByEntityName",
+			                                 new IndexQuery() {Query = "Tag:" + GetSelectedCollectionName()});
 			};
 		}
 

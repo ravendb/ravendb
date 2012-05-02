@@ -152,13 +152,17 @@
     <Compile Include="Extensions\IObservableExtensions.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
+    <Compile Include="Features\Documents\AllDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\CollectionDocumentsCollectionSource.cs" />
+    <Compile Include="Features\Documents\DocumentNavigationStrategy.cs" />
     <Compile Include="Features\Documents\DocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
     <Compile Include="Features\Documents\DocumentsViewEnhanced.xaml.cs">
       <DependentUpon>DocumentsViewEnhanced.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Documents\EditVirtualDocumentCommand.cs" />
+    <Compile Include="Features\Documents\IndexDocumentsNavigator.cs" />
+    <Compile Include="Features\Documents\SingleDocumentNavigator.cs" />
     <Compile Include="Features\Query\IndexQueryHelpers.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Query\QueryDocumentsCollectionSource.cs" />
