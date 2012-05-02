@@ -73,16 +73,6 @@ namespace Raven.Studio.Features.Documents
                              : ApplicationModel.Database.Value.Statistics.Value.CountOfDocuments;
         }
 
-        public override bool HasNext()
-        {
-            return true;
-        }
-
-        public override bool HasPrevious()
-        {
-            return itemIndex > 0;
-        }
-
         public override string GetUrlForNext()
         {
             var builder = GetBaseUrl();

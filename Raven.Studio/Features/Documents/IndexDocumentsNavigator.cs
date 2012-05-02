@@ -98,16 +98,6 @@ namespace Raven.Studio.Features.Documents
             return DatabaseCommands.QueryAsync(indexName, query, null);
         }
 
-        public override bool HasNext()
-        {
-            return true;
-        }
-
-        public override bool HasPrevious()
-        {
-            return itemIndex > 0;
-        }
-
         public override string GetUrlForNext()
         {
             var builder = GetBaseUrl();
