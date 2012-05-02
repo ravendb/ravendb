@@ -43,6 +43,7 @@
 
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 
@@ -89,43 +90,6 @@
 					<TextBlock Text="{Binding DisplayId}"
 							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
 							   VerticalAlignment="Center" />
-				</StackPanel>
-
-				<StackPanel Grid.Column="1"
-							HorizontalAlignment="Center"
-							Orientation="Horizontal"
-							Visibility="{Binding CanNavigate, Converter={StaticResource BooleanToVisibility}}">
-
-					<HyperlinkButton Command="{Binding NavigateToPrevious}"
-									 Style="{StaticResource Style_Link_MouseOverChrome}"
-                                     IsEnabled="{Binding HasPrevious}"
-									 ToolTipService.ToolTip="Previous Document">
-						<HyperlinkButton.Content>
-							<Image Source="{StaticResource Image_PreviousPage_Tiny}"
-								   Stretch="None"
-								   VerticalAlignment="Center" />
-						</HyperlinkButton.Content>
-					</HyperlinkButton>
-
-					<TextBlock Text="Document "
-							   VerticalAlignment="Center" />
-					<TextBlock Text="{Binding CurrentItemNumber}"
-							   VerticalAlignment="Center" />
-					<TextBlock Text=" of "
-							   VerticalAlignment="Center" />
-					<TextBlock Text="{Binding TotalItems}"
-							   VerticalAlignment="Center" />
-                    <HyperlinkButton Command="{Binding NavigateToNext}"
-                                     IsEnabled="{Binding HasNext}"
-									 Style="{StaticResource Style_Link_MouseOverChrome}"
-									 ToolTipService.ToolTip="Next Document">
-						<HyperlinkButton.Content>
-							<Image Source="{StaticResource Image_NextPage_Tiny}"
-								   Stretch="None"
-								   VerticalAlignment="Center" />
-						</HyperlinkButton.Content>
-					</HyperlinkButton>
-
 				</StackPanel>
 
 				<StackPanel Orientation="Horizontal"
@@ -183,9 +147,50 @@
 			</Grid>
 		</Border>
 
+        <Border Grid.Row="1" 
+                Grid.ColumnSpan="3"
+                Visibility="{Binding CanNavigate, Converter={StaticResource BooleanToVisibility}}"
+                Background="#C0CBB8">
+            <StackPanel HorizontalAlignment="Center"
+							Orientation="Horizontal"
+                        Margin="0,1">
+
+                <HyperlinkButton Command="{Binding NavigateToPrevious}"
+									 Style="{StaticResource Style_Link_MouseOverChrome}"
+                                     IsEnabled="{Binding HasPrevious}"
+									 ToolTipService.ToolTip="Previous Document">
+                    <HyperlinkButton.Content>
+                        <Image Source="{StaticResource Image_PreviousPage_Tiny}"
+								   Stretch="None"
+								   VerticalAlignment="Center" />
+                    </HyperlinkButton.Content>
+                </HyperlinkButton>
+
+                <TextBlock Text="Document "
+							   VerticalAlignment="Center" />
+                <TextBlock Text="{Binding CurrentItemNumber}"
+							   VerticalAlignment="Center" />
+                <TextBlock Text=" of "
+							   VerticalAlignment="Center" />
+                <TextBlock Text="{Binding TotalItems}"
+							   VerticalAlignment="Center" />
+                <HyperlinkButton Command="{Binding NavigateToNext}"
+                                     IsEnabled="{Binding HasNext}"
+									 Style="{StaticResource Style_Link_MouseOverChrome}"
+									 ToolTipService.ToolTip="Next Document">
+                    <HyperlinkButton.Content>
+                        <Image Source="{StaticResource Image_NextPage_Tiny}"
+								   Stretch="None"
+								   VerticalAlignment="Center" />
+                    </HyperlinkButton.Content>
+                </HyperlinkButton>
+
+            </StackPanel>
+        </Border>
+        
 		<Grid x:Name="document"
 			  Margin="0"
-			  Grid.Row="1">
+			  Grid.Row="2">
 
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
@@ -213,7 +218,7 @@
 		</Grid>
 
 		<ScrollViewer Grid.Column="1"
-					  Grid.Row="1"
+					  Grid.Row="2"
 					  Style="{StaticResource Style_ScrollViewer_Unintrusive}">
 			<Grid x:Name="details">
 				<Grid.RowDefinitions>
