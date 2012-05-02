@@ -357,19 +357,22 @@ namespace Raven.Studio.Models
 
 		private void UpdateRelated()
 		{
-			DatabaseCommands.GetDocumentsStartingWithAsync(Key + Seperator, 0, 15)
-				.ContinueOnSuccess(items =>
-								   {
-									   if (items == null)
-										   return;
+            if (!string.IsNullOrEmpty(Key) && !string.IsNullOrEmpty(Seperator))
+            {
+                DatabaseCommands.GetDocumentsStartingWithAsync(Key + Seperator, 0, 15)
+                    .ContinueOnSuccess(items =>
+                                           {
+                                               if (items == null)
+                                                   return;
 
-									   var linkModels = items.Select(doc => new LinkModel
-																			{
-																				Title = doc.Key,
-																				HRef = "/Edit?id=" + doc.Key
-																			}).ToArray();
-									   Related.Set(linkModels);
-								   });
+                                               var linkModels = items.Select(doc => new LinkModel
+                                                                                        {
+                                                                                            Title = doc.Key,
+                                                                                            HRef = "/Edit?id=" + doc.Key
+                                                                                        }).ToArray();
+                                               Related.Set(linkModels);
+                                           });
+            }
 		}
 
 		public string Key
