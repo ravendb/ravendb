@@ -262,34 +262,38 @@
                                Text="{Binding Error}"
 							   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
-					<Grid Grid.Row="2"
-                        DataContext="{Binding Path=DocumentsResult}"
-								Visibility="{Binding Path=., Converter={StaticResource HiddenWhenNull}}">
+					<Grid Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-						<Documents:DocumentsViewEnhanced Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}" />
-						<TextBlock Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
-								   Text="There are no results for this query." VerticalAlignment="Center" />
-                    </Grid>
+                        <Documents:DocumentsViewEnhanced DataContext="{Binding DocumentsResult}" Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}" Grid.RowSpan="2"/>
 
-					<ItemsControl 
-                        Grid.Row="3"
+                        <TextBlock Visibility="{Binding Path=DocumentsResult.Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
+								   Text="There are no results for this query." VerticalAlignment="Center" HorizontalAlignment="Center"
+                                   Margin="0,10"/>
+
+                        <ItemsControl 
+                        Grid.Row="1"
                         ItemsSource="{Binding Suggestions}">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<StackPanel Orientation="Horizontal">
-									<TextBlock Text="Did you mean " />
-									<HyperlinkButton Content="{Binding SuggestedTerm}"
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Did you mean " />
+                                        <HyperlinkButton Content="{Binding SuggestedTerm}"
 													 FontStyle="Italic"
 													 Command="{Binding Path=DataContext.RepairTermInQuery, ElementName=this}"
 													 CommandParameter="{Binding}" />
-									<TextBlock Text=" for the field " />
-									<TextBlock Text="{Binding Field}"
+                                        <TextBlock Text=" for the field " />
+                                        <TextBlock Text="{Binding Field}"
 											   FontStyle="Italic" />
-									<TextBlock Text=" ?" />
-								</StackPanel>
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
+                                        <TextBlock Text=" ?" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
                 </Grid>
 
 				<StackPanel Grid.Row="1"
