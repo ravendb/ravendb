@@ -91,7 +91,7 @@ namespace Raven.Studio.Controls
 
         protected override Size MeasureOverride(Size availableSize)
         {
-            if (_itemsControl == null || _itemsControl.Items.Count == 0)
+            if (_itemsControl == null)
             {
                 return availableSize;
             }
