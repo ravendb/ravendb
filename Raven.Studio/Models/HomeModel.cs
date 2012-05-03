@@ -17,22 +17,22 @@ namespace Raven.Studio.Models
 {
 	public class HomeModel : PageViewModel
 	{
-		private static WeakReference<DocumentsModelEnhanced> recentDocuments;
+		private DocumentsModelEnhanced recentDocuments;
 
-		public static DocumentsModelEnhanced RecentDocuments
+		public DocumentsModelEnhanced RecentDocuments
 		{
 			get
 			{
-				if (recentDocuments == null || recentDocuments.IsAlive == false)
+				if (recentDocuments == null)
 				{
-				    recentDocuments =
-				        new WeakReference<DocumentsModelEnhanced>(new DocumentsModelEnhanced(new DocumentsCollectionSource())
+				    recentDocuments = (new DocumentsModelEnhanced(new DocumentsCollectionSource())
 				                                                      {
 				                                                          Header = "Recent Documents",
                                                                           DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index)
 				                                                      });
 				}
-			    return recentDocuments.Target;
+
+			    return recentDocuments;
 			}
 		}
 
@@ -42,12 +42,13 @@ namespace Raven.Studio.Models
 
 			ShowCreateSampleData = new Observable<bool>() { Value = RecentDocuments.Documents.Count == 0};
 
-	        RecentDocuments.Documents.CollectionChanged +=
+	        RecentDocuments.Documents.PropertyChanged +=
                 delegate { ShowCreateSampleData.Value = RecentDocuments.Documents.Count == 0; };
 		}
 
 		public override void LoadModelParameters(string parameters)
 		{
+            RecentDocuments.TimerTickedAsync();
 		}
 
 		public override Task TimerTickedAsync()
@@ -55,7 +56,7 @@ namespace Raven.Studio.Models
 			return RecentDocuments.TimerTickedAsync();
 		}
 
-		public static Observable<bool> ShowCreateSampleData { get; private set; }
+		public Observable<bool> ShowCreateSampleData { get; private set; }
 
 		private bool isGeneratingSampleData;
 		public bool IsGeneratingSampleData
@@ -94,7 +95,7 @@ namespace Raven.Studio.Models
 				// this code assumes a small enough dataset, and doesn't do any sort
 				// of paging or batching whatsoever.
 
-				HomeModel.ShowCreateSampleData.Value = false;
+				model.ShowCreateSampleData.Value = false;
 				model.IsGeneratingSampleData = true;
 
 				using (var sampleData = typeof(HomeModel).Assembly.GetManifestResourceStream("Raven.Studio.Assets.EmbeddedData.MvcMusicStore_Dump.json"))

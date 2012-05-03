@@ -5,13 +5,15 @@
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 					 Title="Home"
 					 Style="{StaticResource PageStyle}"
+                        NavigationCacheMode="Enabled"
 					 Infrastructure:ModelAttacher.AttachObservableModel="HomeModel">
 
 	<Grid DataContext="{Binding Value}">
 		<Grid.RowDefinitions>
-			<RowDefinition Height="250" />
+			<RowDefinition Height="1*" />
 			<RowDefinition Height="8" />
 			<RowDefinition Height="Auto" />
+            <RowDefinition Height="1*" />
 		</Grid.RowDefinitions>
 		
 		<Documents:DocumentsViewEnhanced DataContext="{Binding Path=RecentDocuments}"
