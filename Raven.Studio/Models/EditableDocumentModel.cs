@@ -44,14 +44,19 @@ namespace Raven.Studio.Models
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
-			document.Value = new JsonDocument
-								{
-									DataAsJson = { { "Name", "..." } },
-									Etag = Guid.Empty
-								};
+			InitialiseDocument();
 
 			currentDatabase = Database.Value.Name;
 		}
+
+	    private void InitialiseDocument()
+	    {
+	        document.Value = new JsonDocument
+	                             {
+	                                 DataAsJson = {{"Name", "..."}},
+	                                 Etag = Guid.Empty
+	                             };
+	    }
 
 	    private DocumentNavigator Navigator
 	    {
@@ -81,6 +86,12 @@ namespace Raven.Studio.Models
 			if (url.GetQueryParam("mode") == "new")
 			{
 				Mode = DocumentMode.New;
+                InitialiseDocument();
+			    Navigator = null;
+                CurrentIndex = 0;
+                TotalItems = 0;
+                SetCurrentDocumentId(null);
+
 				return;
 			}
 
@@ -104,7 +115,7 @@ namespace Raven.Studio.Models
                         {
                             Mode = DocumentMode.DocumentWithId;
                             LocalId = result.Document.Key;
-                            SetCurrentDocumentKey(result.Document.Key);
+                            SetCurrentDocumentId(result.Document.Key);
                         }
 
 		                isLoaded = true;
@@ -172,15 +183,20 @@ namespace Raven.Studio.Models
             get { return Navigator != null && (HasNext || HasPrevious); }
 	    }
 
-		public void SetCurrentDocumentKey(string docId)
+		public void PutDocumentIdInUrl(string docId)
 		{
-			if (DocumentKey != null && DocumentKey != docId)
+		    if (DocumentKey != null && DocumentKey != docId)
 				UrlUtil.Navigate("/edit?id=" + docId);
 
-			DocumentKey = Key = docId;
+		    SetCurrentDocumentId(docId);
 		}
 
-		private void UpdateFromDocument()
+	    private void SetCurrentDocumentId(string docId)
+	    {
+	        DocumentKey = Key = docId;
+	    }
+
+	    private void UpdateFromDocument()
 		{
 			var newdoc = document.Value;
 		    RemoveNonDisplayedMetadata(newdoc.Metadata);
@@ -578,7 +594,7 @@ namespace Raven.Studio.Models
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
 						document.Etag = result.ETag;
-						document.SetCurrentDocumentKey(result.Key);
+						document.PutDocumentIdInUrl(result.Key);
 					})
 					.ContinueOnSuccess(() => new RefreshDocumentCommand(document).Execute(null))
 					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));

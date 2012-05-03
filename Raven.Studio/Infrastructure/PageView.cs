@@ -101,5 +101,15 @@ namespace Raven.Studio.Infrastructure
 
 			Unloaded += (sender, args) => CurrentViews.Remove(this);
 		}
+
+        protected override void OnNavigatedTo(System.Windows.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+
+            if (DataContext is IObservable && (DataContext as IObservable).Value is PageViewModel)
+            {
+                (((DataContext as IObservable).Value) as PageViewModel).LoadModel(UrlUtil.Url);
+            }
+        }
 	}
 }
