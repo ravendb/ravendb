@@ -1944,7 +1944,53 @@
 		</Setter>		
 	</Style>
 
-	<Style x:Key="Style_ListBoxItem_Database" TargetType="ListBoxItem">
+    <Style x:Key="Style_ListBoxItem_Collection" TargetType="ListBoxItem">
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Margin" Value="8"/>
+        <Setter Property="MinWidth" Value="120"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Grid Margin="8" d:DesignWidth="241" d:DesignHeight="112">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="SelectionStates">
+                                <VisualState x:Name="Unselected"/>
+                                <VisualState x:Name="Selected">
+                                    <Storyboard>
+                                        <ColorAnimation Duration="0:0:0.05"
+														To="{StaticResource Color_Contrast}"
+														Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+														Storyboard.TargetName="InnerMargin"
+														d:IsOptimized="True" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        
+                        <Border x:Name="OuterBorder" BorderThickness="1" BorderBrush="#CBCBCB" Margin="8,-8,-8,8"/>
+                        <Border x:Name="OuterBorder2" BorderThickness="1" BorderBrush="#CBCBCB" Margin="4,-4,-4,4" Background="White"/>
+                        <Rectangle Margin="-4" Fill="#03000000"/>
+                        <Border x:Name="OuterBorder3" BorderThickness="1" BorderBrush="#CBCBCB" />
+                        <Border x:Name="InnerMargin" Background="White" Margin="1">
+                            <Border x:Name="border" BorderBrush="Black" Margin="3" Padding="4,0,0,0">
+                                <Border.Background>
+                                    <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                        <GradientStop Color="#FFF6F6F3" Offset="0"/>
+                                        <GradientStop Color="#FFF6F6F3" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <ContentPresenter VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                            </Border>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+
+    <Style x:Key="Style_ListBoxItem_Database" TargetType="ListBoxItem">
 		<Setter Property="VerticalContentAlignment" Value="Stretch"/>
 		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 		<Setter Property="Padding" Value="15,6,60,6"/>
