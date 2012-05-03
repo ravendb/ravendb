@@ -127,7 +127,7 @@ namespace Raven.Client.Shard
 
 			IncrementRequestCount();
 
-			IEnumerable<Func<Task>> loadTasks = idsToLoad.Select(shardsAndIds => (Func<Task>)(() =>
+			var loadTasks = idsToLoad.Select(shardsAndIds => (Func<Task>)(() =>
 			{
 				var shards = shardsAndIds.Key;
 				var idsForCurrentShards = shardsAndIds.Select(x => x.Id).ToArray();
@@ -152,8 +152,7 @@ namespace Raven.Client.Shard
 
 							if (multiLoadOperation.SetResult(task.Result))
 								return executer();
-							else
-								return CompletedTask.With(multiLoadOperation);
+							return CompletedTask.With(multiLoadOperation);
 						}).Unwrap();
 					};
 
@@ -162,9 +161,8 @@ namespace Raven.Client.Shard
 
 				return multiLoadOperations.ContinueWith(task =>
 				{
-					foreach (var multiLoadOperation in task.Result)
+					foreach (var loadResults in task.Result.Select(multiLoadOperation => multiLoadOperation.Complete<T>()))
 					{
-						var loadResults = multiLoadOperation.Complete<T>();
 						for (int i = 0; i < loadResults.Length; i++)
 						{
 							if (ReferenceEquals(loadResults[i], null))
@@ -181,14 +179,16 @@ namespace Raven.Client.Shard
 				});
 			}));
 
-			return Task.Factory.StartNew(() =>
+			return Task.Factory.ContinueWhenAll(loadTasks.Select(func => func()).ToArray(), tasks =>
 			{
-				foreach (var task in loadTasks)
-				{
-					task().Wait();
-				}
+				AggregateException[] aggregateExceptions = tasks.Where(x=>x.IsFaulted).Select(x=>x.Exception).ToArray();
+				if(aggregateExceptions.Length>0)
+					throw new AggregateException(aggregateExceptions);
+			}).ContinueWith(_ =>
+			{
+				_.AssertNotFailed();
 				return results;
-			});
+			} );
 		}
 
 		public IAsyncLoaderWithInclude<object> Include(string path)
