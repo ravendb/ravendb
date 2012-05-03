@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,10 +15,24 @@ using System.Windows.Threading;
 
 namespace Raven.Studio.Infrastructure
 {
-    public class RecyclingContentLoader : INavigationContentLoader
+    public class RecyclingContentLoader : DependencyObject, INavigationContentLoader
     {
         PageResourceContentLoader innerLoader = new PageResourceContentLoader();
-        private UserControl previousView;
+        private TaskScheduler scheduler;
+
+        public static readonly DependencyProperty ParentFrameProperty =
+            DependencyProperty.Register("ParentFrame", typeof(Frame), typeof(RecyclingContentLoader), new PropertyMetadata(default(Frame)));
+
+        public Frame ParentFrame
+        {
+            get { return (Frame)GetValue(ParentFrameProperty); }
+            set { SetValue(ParentFrameProperty, value); }
+        }
+
+        public RecyclingContentLoader()
+        {
+            scheduler = TaskScheduler.FromCurrentSynchronizationContext();
+        }
 
         public IAsyncResult BeginLoad(Uri targetUri, Uri currentUri, AsyncCallback userCallback, object asyncState)
         {
@@ -28,10 +43,15 @@ namespace Raven.Studio.Infrastructure
 
                 if (targetPage == currentPage)
                 {
-                    var task = new TaskCompletionSource<bool>(asyncState);
-                    Application.Current.RootVisual.Dispatcher.BeginInvoke(() => userCallback(task.Task));
+                    var tcs = new TaskCompletionSource<UserControl>(asyncState);
 
-                    return task.Task;
+                    Task.Factory.StartNew(() =>
+                                              {
+                                                  tcs.SetResult(ParentFrame.Content as UserControl);
+                                                  userCallback(tcs.Task);
+                                              }, CancellationToken.None, TaskCreationOptions.None, scheduler);
+
+                    return tcs.Task;
                 }
             }
             return innerLoader.BeginLoad(targetUri, currentUri, userCallback, asyncState);
@@ -44,14 +64,13 @@ namespace Raven.Studio.Infrastructure
 
         public LoadResult EndLoad(IAsyncResult asyncResult)
         {
-            if (asyncResult is Task<bool>)
+            if (asyncResult is Task<UserControl>)
             {
-                return new LoadResult(previousView);
+                return new LoadResult((asyncResult as Task<UserControl>).Result);
             }
             else
             {
                 var result = innerLoader.EndLoad(asyncResult);
-                previousView = result.LoadedContent as UserControl;
                 return result;
             }
         }

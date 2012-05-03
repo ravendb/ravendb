@@ -208,7 +208,7 @@
 							  Margin="15,0">
 
                 <sdk:Frame.ContentLoader>
-                    <Infrastructure:RecyclingContentLoader/>
+                    <Infrastructure:RecyclingContentLoader ParentFrame="{Binding ElementName=ContentFrame}"/>
                 </sdk:Frame.ContentLoader>
 				<sdk:Frame.UriMapper>
 					<sdk:UriMapper>
