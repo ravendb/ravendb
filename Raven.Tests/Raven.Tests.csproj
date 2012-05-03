@@ -142,6 +142,7 @@
     <Compile Include="Bugs\ConflictsWithRemote.cs" />
     <Compile Include="Bugs\CreatingIndexes.cs" />
     <Compile Include="Bugs\CS1977.cs" />
+    <Compile Include="Bugs\DanTurner.cs" />
     <Compile Include="Bugs\DeserializationAcrossTypes.cs" />
     <Compile Include="Bugs\DictionaryOfDateTime.cs" />
     <Compile Include="Bugs\DynamicQuerySorting.cs" />
@@ -495,6 +496,7 @@
     <Compile Include="Bugs\Zhang\UseMaxForLongTypeInReduce.cs" />
     <Compile Include="ConcurrentPatching.cs" />
     <Compile Include="ConnectionStrings.cs" />
+    <Compile Include="CriticalCulturesAttribute.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
     <Compile Include="Document\CasingIssue.cs" />
     <Compile Include="Document\ClientKeyGeneratorTests.cs" />
@@ -564,7 +566,6 @@
     <Compile Include="MailingList\BigDocId.cs" />
     <Compile Include="MailingList\BooleanCollection.cs" />
     <Compile Include="MailingList\CanUpdateInsideDtcWithOptimisticConcurrency.cs" />
-    <Compile Include="CriticalCulturesAttribute.cs" />
     <Compile Include="MailingList\EtagUsage.cs" />
     <Compile Include="MailingList\HiloTests.cs" />
     <Compile Include="MailingList\DeserialisationToObjectTests.cs" />
@@ -589,8 +590,8 @@
     <Compile Include="MailingList\OrderByValueTypeCast.cs" />
     <Compile Include="MailingList\Phil.cs" />
     <Compile Include="MailingList\JoelAsync.cs" />
-    <Compile Include="MailingList\PhilJones_Search.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />
+    <Compile Include="MailingList\PhilJones_Search.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
     <Compile Include="MailingList\RavenDB252.cs" />
     <Compile Include="MailingList\RecreatingIndexes.cs" />
@@ -603,7 +604,6 @@
     <Compile Include="MailingList\Stacey\ImageByName.cs" />
     <Compile Include="MailingList\Stacey\InServerTesting.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
-    <Compile Include="TemporaryCulture.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />
     <Compile Include="MailingList\Thor\LinqTest.cs" />
@@ -800,6 +800,7 @@
     <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
+    <Compile Include="TemporaryCulture.cs" />
     <Compile Include="Track\AsyncProjectionShouldWork.cs" />
     <Compile Include="Track\RavenDB053.cs" />
     <Compile Include="Track\RavenDB17.cs" />
@@ -905,6 +906,9 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Bugs\Facets\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
