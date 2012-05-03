@@ -217,8 +217,19 @@ namespace Raven.Studio.Infrastructure
 
         public void Refresh()
         {
+           Refresh(RefreshMode.DisplayStaleData);
+        }
+
+        public void Refresh(RefreshMode mode)
+        {
             if (!_isRefreshDeferred)
             {
+                if (mode == RefreshMode.ClearStaleData)
+                {
+                    ClearExistingData();
+                    UpdateCount(0);
+                }
+
                 _source.Refresh();
                 OnFetchSucceeded(EventArgs.Empty);
             }
@@ -280,7 +291,12 @@ namespace Raven.Studio.Infrastructure
 
         private void UpdateCount()
         {
-            if (_itemCount == _source.Count)
+            UpdateCount(_source.Count);
+        }
+
+        private void UpdateCount(int count)
+        {
+            if (_itemCount == count)
             {
                 return;
             }
@@ -288,8 +304,8 @@ namespace Raven.Studio.Infrastructure
             var wasCurrentBeyondLast = IsCurrentAfterLast;
 
             var originalItemCount = _itemCount;
-            var delta = _source.Count - originalItemCount;
-            _itemCount = _source.Count;
+            var delta = count - originalItemCount;
+            _itemCount = count;
 
             if (IsCurrentAfterLast && !wasCurrentBeyondLast)
             {
@@ -306,14 +322,17 @@ namespace Raven.Studio.Infrastructure
             {
                 for (int i = 0; i < delta; i++)
                 {
-                    OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, null, originalItemCount + i));
+                    OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, null,
+                                                                             originalItemCount + i));
                 }
             }
-            else if (delta <0)
+            else if (delta < 0)
             {
                 for (int i = delta; i < 0; i++)
                 {
-                    OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, _virtualItems[originalItemCount + i], originalItemCount + i));
+                    OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove,
+                                                                             _virtualItems[originalItemCount + i],
+                                                                             originalItemCount + i));
                 }
             }
         }
@@ -641,5 +660,11 @@ namespace Raven.Studio.Infrastructure
         #endregion
 
 
+    }
+
+    public enum RefreshMode
+    {
+        DisplayStaleData,
+        ClearStaleData,
     }
 }
