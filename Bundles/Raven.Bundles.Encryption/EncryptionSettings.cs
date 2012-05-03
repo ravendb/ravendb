@@ -57,20 +57,8 @@ namespace Raven.Bundles.Encryption
 
 		private void SetSymmetricAlgorithmType<T>() where T : SymmetricAlgorithm, new()
 		{
-			var type = typeof(T);
-
-			Func<SymmetricAlgorithm> generator;
-			try
-			{
-				generator = Expression.Lambda<Func<SymmetricAlgorithm>>(Expression.New(type)).Compile();
-			}
-			catch (Exception ex)
-			{
-				throw new ArgumentException("Could not compile the expression \"new " + algorithmType.Name + "();\". Inner exception was: " + ex.Message, ex);
-			}
-
-			algorithmGenerator = generator;
-			algorithmType = type;
+			algorithmGenerator = () => new T();
+			algorithmType = typeof(T);
 		}
 
 		public Type SymmetricAlgorithmType
