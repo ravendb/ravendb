@@ -202,8 +202,9 @@ namespace Raven.Studio.Controls
                     {
                         _itemsGenerator.Recycle(generatorPosition, 1);
                     }
-                    SetVirtualItemIndex(child, -1);
                 }
+
+                SetVirtualItemIndex(child, -1);
             }
         }
 
