@@ -40,22 +40,7 @@ namespace Raven.Client.Shard
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
-			var shardRequestData = new ShardRequestData
-			{
-				EntityType = typeof(object),
-				Keys = { documentKey }
-			};
-			var dbCommands = GetCommandsToOperateOn(shardRequestData);
-
-			var documents = shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands,
-				shardRequestData,
-				(commands, i) => commands.GetAsync(documentKey));
-
-			var document = documents.Result.FirstOrDefault(x => x != null);
-			if (document != null)
-				return document;
-
-			throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
+			throw new NotSupportedException("This method requires a syncronous call to the server, which is not supported by the async session");
 		}
 
 		#region Properties to access different interfacess
