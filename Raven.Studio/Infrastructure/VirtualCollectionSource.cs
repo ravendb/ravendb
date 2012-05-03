@@ -8,7 +8,7 @@ namespace Raven.Studio.Infrastructure
     public abstract class VirtualCollectionSource<T> : IVirtualCollectionSource<T>
     {
         private readonly object lockObject = new object();
-        public event EventHandler<EventArgs> CollectionChanged;
+        public event EventHandler<VirtualCollectionSourceChangedEventArgs> CollectionChanged;
         public event EventHandler<DataFetchErrorEventArgs> DataFetchError;
 
         private int count;
@@ -27,8 +27,13 @@ namespace Raven.Studio.Infrastructure
         protected abstract Task<int> GetCount();
         public abstract Task<IList<T>> GetPageAsync(int start, int pageSize, IList<SortDescription> sortDescriptions);
 
-        public virtual void Refresh()
+        public virtual void Refresh(RefreshMode mode)
         {
+            if (mode == RefreshMode.ClearStaleData)
+            {
+                OnCollectionChanged(new VirtualCollectionSourceChangedEventArgs(ChangeType.Reset));
+            }
+
             BeginGetCount();
         }
 
@@ -50,7 +55,7 @@ namespace Raven.Studio.Infrastructure
                 TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        protected void OnCollectionChanged(EventArgs e)
+        protected void OnCollectionChanged(VirtualCollectionSourceChangedEventArgs e)
         {
             var handler = CollectionChanged;
             if (handler != null) handler(this, e);
@@ -74,7 +79,7 @@ namespace Raven.Studio.Infrastructure
 
             if (fileCountChanged || forceCollectionChangeNotification)
             {
-                OnCollectionChanged(EventArgs.Empty);
+                OnCollectionChanged(new VirtualCollectionSourceChangedEventArgs(ChangeType.Refresh));
             }
         }
     }

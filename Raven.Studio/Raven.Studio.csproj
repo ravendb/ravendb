@@ -190,7 +190,6 @@
     <Compile Include="Infrastructure\View.cs" />
     <Compile Include="Infrastructure\ViewModel.cs" />
     <Compile Include="Infrastructure\VirtualCollection.cs" />
-    <Compile Include="Infrastructure\VirtualCollectionChangedEventArgs.cs" />
     <Compile Include="Infrastructure\VirtualCollectionSource.cs" />
     <Compile Include="Infrastructure\VirtualItem.cs" />
     <Compile Include="Infrastructure\ProvideVisibleItemRangeBehavior.cs" />

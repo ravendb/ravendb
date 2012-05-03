@@ -17,12 +17,22 @@ namespace Raven.Studio.Infrastructure
     {
         public event EventHandler<ItemEvictedEventArgs<T>> ItemEvicted;
 
-        private readonly int _size;
+        private int _size;
         private LinkedList<T> _list = new LinkedList<T>();
  
         public MostRecentUsedList(int size)
         {
             _size = size;
+        }
+
+        public int Size
+        {
+            get { return _size; }
+            set
+            {
+                _size = value;
+                Trim();
+            }
         }
 
         public void Add(T item)
@@ -39,7 +49,7 @@ namespace Raven.Studio.Infrastructure
 
         private void Trim()
         {
-            while (_list.Count > _size)
+            while (_list.Count > Size)
             {
                 var item = _list.Last;
                 _list.RemoveLast();

@@ -73,10 +73,5 @@ namespace Raven.Studio.Models
                 OnPropertyChanged(() => Header);
             }
         }
-
-        public void CompleteRefresh()
-        {
-            Documents.Refresh(RefreshMode.ClearStaleData);
-        }
     }
 }

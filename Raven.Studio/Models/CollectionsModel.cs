@@ -53,7 +53,6 @@ namespace Raven.Studio.Models
 			SelectedCollection.PropertyChanged += (sender, args) =>
 			{
 				PutCollectionNameInTheUrl();
-			    DocumentsForSelectedCollection.CompleteRefresh();
 				CollectionSource.CollectionName = GetSelectedCollectionName();
 			    DocumentsForSelectedCollection.DocumentNavigatorFactory =
 			        (id, index) =>

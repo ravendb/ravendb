@@ -9,24 +9,16 @@ namespace Raven.Studio.Infrastructure
     /// in pages.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class SparseList<T>
+    public class SparseList<T> where T:class 
     {
-        public event EventHandler<ItemRangeEvictedEventArgs> ItemsEvicted;
-
         private readonly int _pageSize;
         private readonly PageList _allocatedPages;
         private Page _currentPage;
-        private MostRecentUsedList<int> _mostRecentlyUsedPages;
  
-        public SparseList(int pageSize, int? maxCachedPages)
+        public SparseList(int pageSize)
         {
             _pageSize = pageSize;
             _allocatedPages = new PageList(_pageSize);
-            if (maxCachedPages.HasValue)
-            {
-                _mostRecentlyUsedPages = new MostRecentUsedList<int>(maxCachedPages.Value);
-                _mostRecentlyUsedPages.ItemEvicted += HandlePageEvicted;
-            }
         }
 
         /// <remarks>This method is optimised for sequential access. I.e. it performs
@@ -35,57 +27,45 @@ namespace Raven.Studio.Infrastructure
         {
             get
             {
-                var pageAndSubIndex = GetPageAndSubIndex(index);
-
-                if (_currentPage == null || _currentPage.PageIndex != pageAndSubIndex.PageIndex)
-                {
-                    _currentPage = GetOrCreatePage(pageAndSubIndex.PageIndex);
-                }
+                var pageAndSubIndex = EnsureCurrentPage(index);
 
                 return _currentPage[pageAndSubIndex.SubIndex];
             }
             set
             {
-                var pageAndSubIndex = GetPageAndSubIndex(index);
-
-                if (_currentPage == null || _currentPage.PageIndex != pageAndSubIndex.PageIndex)
-                {
-                    _currentPage = GetOrCreatePage(pageAndSubIndex.PageIndex);
-                }
+                var pageAndSubIndex = EnsureCurrentPage(index);
 
                 _currentPage[pageAndSubIndex.SubIndex] = value;
             }
         }
 
-        private Page GetOrCreatePage(int pageIndex)
+        private PageAndSubIndex EnsureCurrentPage(int index)
         {
-            if (_mostRecentlyUsedPages != null)
+            var pageAndSubIndex = new PageAndSubIndex(index / _pageSize, index % _pageSize);
+
+            if (_currentPage == null || _currentPage.PageIndex != pageAndSubIndex.PageIndex)
             {
-                _mostRecentlyUsedPages.Add(pageIndex);
+                _currentPage = _allocatedPages.GetOrCreatePage(pageAndSubIndex.PageIndex);
             }
 
-            return _allocatedPages.GetOrCreatePage(pageIndex);
+            return pageAndSubIndex;
         }
 
-        private void HandlePageEvicted(object sender, ItemEvictedEventArgs<int> e)
+        public void RemoveRange(int firstIndex, int count)
         {
-            _allocatedPages.Remove(e.Item);
-            OnItemsEvicted(new ItemRangeEvictedEventArgs()
-                               {
-                                   FirstItemIndex = e.Item * _pageSize,
-                                   Count = _pageSize
-                               });
-        }
+            var firstItem = new PageAndSubIndex(firstIndex / _pageSize, firstIndex % _pageSize);
+            if (firstItem.SubIndex + count > _pageSize)
+            {
+                throw new NotImplementedException("RemoveRange is only implemented to work within page boundaries");
+            }
 
-        protected void OnItemsEvicted(ItemRangeEvictedEventArgs e)
-        {
-            EventHandler<ItemRangeEvictedEventArgs> handler = ItemsEvicted;
-            if (handler != null) handler(this, e);
-        }
-
-        private PageAndSubIndex GetPageAndSubIndex(int itemIndex)
-        {
-            return new PageAndSubIndex(itemIndex / _pageSize, itemIndex % _pageSize);
+            if (_allocatedPages.Contains(firstItem.PageIndex))
+            {
+                if (_allocatedPages[firstItem.PageIndex].Trim(firstItem.SubIndex, count))
+                {
+                    _allocatedPages.Remove(firstItem.PageIndex);
+                }
+            }
         }
 
         private struct PageAndSubIndex
@@ -128,8 +108,32 @@ namespace Raven.Studio.Infrastructure
 
             public T this[int index]
             {
-                get { return _items[index]; }
-                set { _items[index] = value; }
+                get
+                {
+                    return _items[index];
+                }
+                set
+                {
+                    _items[index] = value;
+                }
+            }
+
+            public bool Trim(int firstIndex, int count)
+            {
+                for (int i = firstIndex; i < firstIndex + count; i++)
+                {
+                    _items[i] = default(T);
+                }
+
+                for (int i = 0; i < _items.Length; i++)
+                {
+                    if (_items[i] != null)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
             }
         }
 
@@ -157,12 +161,5 @@ namespace Raven.Studio.Infrastructure
                 return this[pageIndex];
             }
         }
-    }
-
-    public class ItemRangeEvictedEventArgs : EventArgs
-    {
-        public int FirstItemIndex { get; set; }
-
-        public int Count { get; set; }
     }
 }

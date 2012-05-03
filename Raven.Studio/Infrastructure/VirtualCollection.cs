@@ -62,15 +62,23 @@ namespace Raven.Studio.Infrastructure
             _source.DataFetchError += HandleSourceDataFetchError;
             _pageSize = pageSize;
             _equalityComparer = equalityComparer;
-            _virtualItems = CreateItemsCache(pageSize, cachedPages);
-            _virtualItems.ItemsEvicted += HandleCachedItemsEvicted;
+            _virtualItems = CreateItemsCache(pageSize);
             _currentItem = -1;
             _synchronizationContextScheduler = TaskScheduler.FromCurrentSynchronizationContext();
-            _mostRecentlyRequestedPages = new MostRecentUsedList<int>(10);
+            _mostRecentlyRequestedPages = new MostRecentUsedList<int>(cachedPages);
+            _mostRecentlyRequestedPages.ItemEvicted += HandlePageEvicted;
+
             (_sortDescriptions as INotifyCollectionChanged).CollectionChanged += HandleSortDescriptionsChanged;
         }
 
-        private SparseList<VirtualItem<T>> CreateItemsCache(int fetchPageSize, int cachedFetchPages)
+        private void HandlePageEvicted(object sender, ItemEvictedEventArgs<int> e)
+        {
+            _requestedPages.Remove(e.Item);
+            _fetchedPages.Remove(e.Item);
+            _virtualItems.RemoveRange(e.Item*_pageSize, _pageSize);
+        }
+
+        private SparseList<VirtualItem<T>> CreateItemsCache(int fetchPageSize)
         {
             // we don't want the sparse list to have pages that are too small,
             // because that will harm performance by fragmenting the list across memory,
@@ -85,9 +93,7 @@ namespace Raven.Studio.Infrastructure
                 pageSize = (int)Math.Ceiling((double)TargetSparseListPageSize / pageSize) * pageSize;
             }
 
-            var cachedStoragePages = (int) Math.Ceiling((double) (cachedFetchPages*fetchPageSize)/pageSize);
-
-            return new SparseList<VirtualItem<T>>(pageSize, cachedStoragePages);
+            return new SparseList<VirtualItem<T>>(pageSize);
         }
 
         private void HandleSourceDataFetchError(object sender, DataFetchErrorEventArgs e)
@@ -100,21 +106,19 @@ namespace Raven.Studio.Infrastructure
             Refresh();
         }
 
-        private void HandleCachedItemsEvicted(object sender, ItemRangeEvictedEventArgs e)
-        {
-            var firstPage = e.FirstItemIndex/_pageSize;
-            var pageCount = firstPage + e.Count/_pageSize;
-
-            for (var i = firstPage; i < pageCount; i++)
-            {
-                _fetchedPages.Remove(i);
-            }
-        }
-
-        private void HandleSourceCollectionChanged(object sender, EventArgs e)
+        private void HandleSourceCollectionChanged(object sender, VirtualCollectionSourceChangedEventArgs e)
         {
             var stateWhenUpdateRequested = _state;
-            Task.Factory.StartNew(() => UpdateData(stateWhenUpdateRequested), CancellationToken.None, TaskCreationOptions.None, _synchronizationContextScheduler);
+            if (e.ChangeType == ChangeType.Refresh)
+            {
+                Task.Factory.StartNew(() => UpdateData(stateWhenUpdateRequested), CancellationToken.None,
+                                      TaskCreationOptions.None, _synchronizationContextScheduler);
+            }
+            else if (e.ChangeType == ChangeType.Reset)
+            {
+                Task.Factory.StartNew(() => Reset(stateWhenUpdateRequested), CancellationToken.None,
+                                      TaskCreationOptions.None, _synchronizationContextScheduler);
+            }
         }
 
         private void MarkExistingItemsAsStale()
@@ -176,7 +180,12 @@ namespace Raven.Studio.Infrastructure
                 return;
             }
 
-            _requestedPages.Remove(page);
+            bool stillRelevant = _requestedPages.Remove(page); 
+            if (!stillRelevant)
+            {
+                return;
+            }
+
             _fetchedPages.Add(page);
 
             var startIndex = page * _pageSize;
@@ -217,20 +226,14 @@ namespace Raven.Studio.Infrastructure
 
         public void Refresh()
         {
-           Refresh(RefreshMode.DisplayStaleData);
+           Refresh(RefreshMode.PermitStaleDataWhilstRefreshing);
         }
 
         public void Refresh(RefreshMode mode)
         {
             if (!_isRefreshDeferred)
             {
-                if (mode == RefreshMode.ClearStaleData)
-                {
-                    ClearExistingData();
-                    UpdateCount(0);
-                }
-
-                _source.Refresh();
+                _source.Refresh(mode);
                 OnFetchSucceeded(EventArgs.Empty);
             }
         }
@@ -259,6 +262,9 @@ namespace Raven.Studio.Infrastructure
                 var firstVisiblePage = queryItemVisibilityArgs.FirstVisibleIndex.Value/_pageSize;
                 var lastVisiblePage = queryItemVisibilityArgs.LastVisibleIndex.Value/_pageSize;
 
+                int numberOfVisiblePages = lastVisiblePage - firstVisiblePage + 1;
+                EnsurePageCacheSize(numberOfVisiblePages);
+
                 for (int i = firstVisiblePage; i <= lastVisiblePage; i++)
                 {
                     BeginGetPage(i);
@@ -272,8 +278,21 @@ namespace Raven.Studio.Infrastructure
             }
         }
 
-        private void ClearExistingData()
+        private void EnsurePageCacheSize(int numberOfPages)
         {
+            if (_mostRecentlyRequestedPages.Size < numberOfPages)
+            {
+                _mostRecentlyRequestedPages.Size = numberOfPages;
+            }
+        }
+
+        private void Reset(uint stateWhenRequested)
+        {
+            if (_state != stateWhenRequested)
+            {
+                return;
+            }
+
             foreach (var page in _fetchedPages)
             {
                 var startIndex = page * _pageSize;
@@ -287,6 +306,7 @@ namespace Raven.Studio.Infrastructure
                     }
                 }
             }
+            UpdateCount(0);
         }
 
         private void UpdateCount()
@@ -664,7 +684,7 @@ namespace Raven.Studio.Infrastructure
 
     public enum RefreshMode
     {
-        DisplayStaleData,
+        PermitStaleDataWhilstRefreshing,
         ClearStaleData,
     }
 }

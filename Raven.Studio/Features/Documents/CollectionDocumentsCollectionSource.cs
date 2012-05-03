@@ -34,7 +34,7 @@ namespace Raven.Studio.Features.Documents
 
                 if (needsUpdate)
                 {
-                    Refresh();
+                    Refresh(RefreshMode.ClearStaleData);
                 }
             }
         }

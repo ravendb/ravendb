@@ -48,7 +48,7 @@ namespace Raven.Studio.Features.Query
                 _indexName = indexName;
             }
 
-            Refresh();
+            Refresh(RefreshMode.ClearStaleData);
         }
 
         protected override Task<int> GetCount()
