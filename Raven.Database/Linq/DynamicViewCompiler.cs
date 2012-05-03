@@ -413,6 +413,17 @@ Reduce only fields: {2}
 					new IndexerExpression(new IdentifierExpression("__document"), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
 					new List<Expression> { new PrimitiveExpression(Constants.RavenEntityName, Constants.RavenEntityName) }
 					);
+
+				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.InvariantCultureIgnoreCase)
+				var binaryOperatorExpression =
+					new InvocationExpression(
+						new MemberReferenceExpression(new TypeReferenceExpression(new TypeReference("string", true)), "Equals"),
+						new List<Expression>
+						{
+							metadata,
+							new PrimitiveExpression(mre.MemberName, mre.MemberName),
+							new MemberReferenceExpression(new TypeReferenceExpression(new TypeReference(typeof(StringComparison).FullName)),"InvariantCultureIgnoreCase")
+						});
 				var whereMethod = new InvocationExpression(new MemberReferenceExpression(mre.TargetObject, "Where"),
 				                                           new List<Expression>
 				                                           {
@@ -422,11 +433,7 @@ Reduce only fields: {2}
 				                                           			{
 				                                           				new ParameterDeclarationExpression(null, "__document")
 				                                           			},
-				                                           		ExpressionBody = new BinaryOperatorExpression(
-				                                           			metadata,
-				                                           			BinaryOperatorType.Equality,
-				                                           			new PrimitiveExpression(mre.MemberName, mre.MemberName)
-				                                           			)
+				                                           		ExpressionBody = binaryOperatorExpression
 				                                           	}
 				                                           });
 
@@ -452,15 +459,21 @@ Reduce only fields: {2}
 					new IndexerExpression(new IdentifierExpression(queryExpression.FromClause.Identifier), new List<Expression> { new PrimitiveExpression("@metadata", "@metadata") }),
 					new List<Expression> { new PrimitiveExpression(Constants.RavenEntityName, Constants.RavenEntityName) }
 					);
-				queryExpression.MiddleClauses.Insert(0, 
+
+				// string.Equals(doc["@metadata"]["Raven-Entity-Name"], "Blogs", StringComparison.InvariantCultureIgnoreCase)
+				var binaryOperatorExpression =
+					new InvocationExpression(
+						new MemberReferenceExpression(new TypeReferenceExpression(new TypeReference("string", true)), "Equals"),
+						new List<Expression>
+						{
+							metadata,
+							new PrimitiveExpression(mre.MemberName, mre.MemberName),
+							new MemberReferenceExpression(new TypeReferenceExpression(new TypeReference(typeof(StringComparison).FullName)),"InvariantCultureIgnoreCase")
+						});
+				queryExpression.MiddleClauses.Insert(0,
 				                                     new QueryExpressionWhereClause
 				                                     {
-				                                     	Condition = 
-				                                     		new BinaryOperatorExpression(
-				                                     		metadata,
-				                                     		BinaryOperatorType.Equality,
-				                                     		new PrimitiveExpression(mre.MemberName, mre.MemberName)
-				                                     		)
+														 Condition = binaryOperatorExpression
 				                                     });
 			}
 			var selectOrGroupClause = queryExpression.SelectOrGroupClause;

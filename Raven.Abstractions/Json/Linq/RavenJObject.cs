@@ -234,7 +234,7 @@ namespace Raven.Json.Linq
 		/// </summary>
 		/// <param name="json">A <see cref="String"/> that contains JSON.</param>
 		/// <returns>A <see cref="RavenJObject"/> populated from the string that contains JSON.</returns>
-		public static RavenJObject Parse(string json)
+		public new static RavenJObject Parse(string json)
 		{
 			try
 			{

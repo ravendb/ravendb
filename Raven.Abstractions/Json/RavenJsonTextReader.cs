@@ -32,19 +32,14 @@ namespace Raven.Abstractions.Json
 		public static DateTime ParseDateMicrosoft(string text)
 		{
 			string value = text.Substring(6, text.Length - 8);
-			DateTimeKind kind = DateTimeKind.Utc;
 
 			int index = value.IndexOf('+', 1);
 
 			if (index == -1)
 				index = value.IndexOf('-', 1);
 
-			TimeSpan offset = TimeSpan.Zero;
-
 			if (index != -1)
 			{
-				kind = DateTimeKind.Local;
-				offset = ReadOffset(value.Substring(index));
 				value = value.Substring(0, index);
 			}
 

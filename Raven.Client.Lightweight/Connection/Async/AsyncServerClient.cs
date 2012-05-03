@@ -664,7 +664,11 @@ namespace Raven.Client.Connection.Async
 				var data = jArray.ToString(Formatting.None);
 
 				return Task.Factory.FromAsync(req.BeginWrite, req.EndWrite, data, null)
-					.ContinueWith(writeTask => req.ReadResponseJsonAsync())
+					.ContinueWith(writeTask =>
+					{
+						writeTask.Wait(); // throw
+						return req.ReadResponseJsonAsync();
+					})
 					.Unwrap()
 					.ContinueWith(task =>
 					{

@@ -17,6 +17,7 @@ namespace Raven.Database.Indexing
 	{
 		static readonly Regex untokenizedQuery = new Regex(@"([\w\d_]+?):\s*(\[\[.+?\]\])", RegexOptions.Compiled);
 		static readonly Regex searchQuery = new Regex(@"([\w\d_]+?):\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled);
+		static readonly Regex dateQuery = new Regex(@"([\w\d_]+?):\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7})", RegexOptions.Compiled);
 
 		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
 		{
@@ -26,6 +27,7 @@ namespace Raven.Database.Indexing
 				var queryParser = new RangeQueryParser(Version.LUCENE_29, string.Empty, analyzer);
 				query = PreProcessUntokenizedTerms(query, queryParser);
 				query = PreProcessSearchTerms(query);
+				query = PreProcessDateTerms(query, queryParser);
 				queryParser.SetAllowLeadingWildcard(true); // not the recommended approach, should rather use ReverseFilter
 				return queryParser.Parse(query);
 			}
@@ -33,6 +35,30 @@ namespace Raven.Database.Indexing
 			{
 				keywordAnalyzer.Close();
 			}
+		}
+
+		private static string PreProcessDateTerms(string query, RangeQueryParser queryParser)
+		{
+			var searchMatches = dateQuery.Matches(query);
+			if (searchMatches.Count < 1)
+				return query;
+
+			var queryStringBuilder = new StringBuilder(query);
+			for (var i = searchMatches.Count-1; i >= 0; i--) // reversing the scan so we won't affect positions of later items
+			{
+				var searchMatch = searchMatches[i];
+				var field = searchMatch.Groups[1].Value;
+				var termReplacement = searchMatch.Groups[2].Value;
+
+				var replaceToken = queryParser.ReplaceToken(field, termReplacement);
+				queryStringBuilder.Remove(searchMatch.Index, searchMatch.Length);
+				queryStringBuilder
+					.Insert(searchMatch.Index, field)
+					.Insert(searchMatch.Index + field.Length, ":")
+					.Insert(searchMatch.Index + field.Length + 1, replaceToken);
+			}
+
+			return queryStringBuilder.ToString();
 		}
 
 		private static string PreProcessSearchTerms(string query)

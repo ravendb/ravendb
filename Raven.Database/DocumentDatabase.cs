@@ -965,13 +965,13 @@ namespace Raven.Database
 			}
 		}
 
-		public void PutStatic(string name, Guid? etag, Stream data, RavenJObject metadata)
+		public Guid PutStatic(string name, Guid? etag, Stream data, RavenJObject metadata)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 			name = name.Trim();
 			
-			if (Encoding.Unicode.GetByteCount(name) >= 255)
-				throw new ArgumentException("The key must be a maximum of 255 bytes in Unicode, 127 characters", "name");
+			if (Encoding.Unicode.GetByteCount(name) >= 2048)
+				throw new ArgumentException("The key must be a maximum of 2,048 bytes in Unicode, 1,024 characters", "name");
 
 			Guid newEtag = Guid.Empty;
 			TransactionalStorage.Batch(actions =>
@@ -989,7 +989,7 @@ namespace Raven.Database
 
 			TransactionalStorage
 				.ExecuteImmediatelyOrRegisterForSyncronization(() => AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
-
+			return newEtag;
 		}
 
 		public void DeleteStatic(string name, Guid? etag)
@@ -1072,7 +1072,7 @@ namespace Raven.Database
 				if (etag == null)
 					documents = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
 				else
-					documents = actions.Attachments.GetAttachmentsAfter(etag.Value).Take(pageSize).ToArray();
+					documents = actions.Attachments.GetAttachmentsAfter(etag.Value, pageSize).ToArray();
 
 			});
 			return documents;

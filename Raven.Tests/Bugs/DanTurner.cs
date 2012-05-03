@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs
 			_store = NewDocumentStore();
 
 
-			IndexCreation.CreateIndexes(typeof(DriversIndex).Assembly, _store);
+			new DriversIndex().Execute(_store);
 
 			using (var session = _store.OpenSession())
 			{
@@ -118,11 +118,8 @@ namespace Raven.Tests.Bugs
 			{
 				var results = session
 					.Query<Driver, DriversIndex>()
-					.Customize(c =>
-					{
-						c.CreateQueryForSelectedFields<Driver>("PersonId", "PersonName", "CarRegistration", "CarMake");
-						c.WaitForNonStaleResults();
-					});
+					.Customize(c => c.WaitForNonStaleResults())
+					.Select(x=>new{x.PersonId, x.PersonName, x.CarRegistration, x.CarMake});
 
 				Assert.Equal(4, results.Count());
 			}

@@ -12,13 +12,11 @@ using Raven.Abstractions.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
-using Raven.Client.Document.Batches;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;
 using Raven.Client.Connection;
 using Raven.Client.Shard;
-using Raven.Json.Linq;
-using Raven.Abstractions.Extensions;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Document
 {
@@ -77,8 +75,9 @@ namespace Raven.Client.Document
 
 			foreach (var commands in ShardDatabaseCommands)
 			{
-				ClearSortHints(commands);
-				shardQueryOperations.Add(InitializeQueryOperation((key, val) => commands.OperationsHeaders[key] = val));
+				var dbCommands = commands;
+				ClearSortHints(dbCommands);
+				shardQueryOperations.Add(InitializeQueryOperation((key, val) => dbCommands.OperationsHeaders[key] = val));
 			}
 
 			theSession.IncrementRequestCount();
@@ -106,7 +105,7 @@ namespace Raven.Client.Document
 				groupByFields = groupByFields,
 				aggregationOp = aggregationOp,
 				transformResultsFunc = transformResultsFunc,
-				includes = new HashSet<string>(includes)
+				includes = new HashSet<string>(includes),
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;
@@ -151,6 +150,8 @@ namespace Raven.Client.Document
 
 				return results.ContinueWith(task =>
 				{
+					task.AssertNotFailed();
+
 					if (lastResults.All(acceptable => acceptable))
 						return new CompletedTask().Task;
 
@@ -162,6 +163,8 @@ namespace Raven.Client.Document
 
 			return loop().ContinueWith(task =>
 			{
+				task.AssertNotFailed();
+
 				ShardedDocumentQuery<T>.AssertNoDuplicateIdsInResults(shardQueryOperations);
 
 				var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());

@@ -62,14 +62,17 @@ namespace Raven.Database.Indexing
 			return DistanceUtils.GetInstance().GetDistanceMi(x1, y1, x2, y2);
 		}
 
-		public static IEnumerable<AbstractField> Generate(double lat, double lng)
+		public static IEnumerable<AbstractField> Generate(double? lat, double? lng)
 		{
-			yield return new Field("latitude", Lat(lat), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-			yield return new Field("longitude", Lng(lng), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+			lat = lat ?? 0;
+			lng = lng ?? 0;
+
+			yield return new Field("latitude", Lat(lat.Value), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+			yield return new Field("longitude", Lng(lng.Value), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 
 			for (var id = MinTier; id <= MaxTier; ++id)
 			{
-				yield return new Field("_tier_" + id, Tier(id, lat, lng),Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+				yield return new Field("_tier_" + id, Tier(id, lat.Value, lng.Value),Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 			}
 		}
 	}

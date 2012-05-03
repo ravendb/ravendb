@@ -8,28 +8,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading;
-using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.SessionOperations;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Client.Util;
-using Raven.Json.Linq;
 using Raven.Client.Connection.Async;
-using Raven.Client.Document.Batches;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Shard
 {
 	/// <summary>
 	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
 	/// </summary>
-	public class AsyncShardedDocumentSession : BaseShardedDocumentSession<IAsyncDatabaseCommands>, IDocumentQueryGenerator,
+	public class AsyncShardedDocumentSession : BaseShardedDocumentSession<IAsyncDatabaseCommands>,
 		IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations
 	{
 		public AsyncShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
@@ -40,22 +32,7 @@ namespace Raven.Client.Shard
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
-			var shardRequestData = new ShardRequestData
-			{
-				EntityType = typeof(object),
-				Keys = { documentKey }
-			};
-			var dbCommands = GetCommandsToOperateOn(shardRequestData);
-
-			var documents = shardStrategy.ShardAccessStrategy.ApplyAsync(dbCommands,
-				shardRequestData,
-				(commands, i) => commands.GetAsync(documentKey));
-
-			var document = documents.Result.FirstOrDefault(x => x != null);
-			if (document != null)
-				return document;
-
-			throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
+			throw new NotSupportedException("This method requires a syncronous call to the server, which is not supported by the async session");
 		}
 
 		#region Properties to access different interfacess
@@ -94,7 +71,7 @@ namespace Raven.Client.Shard
 				{
 					loadOperation.LogOperation();
 
-					IDisposable loadContext = loadOperation.EnterLoadContext();
+					var loadContext = loadOperation.EnterLoadContext();
 					return commands.GetAsync(id).ContinueWith(task =>
 					{
 						if (loadContext != null)
@@ -102,11 +79,14 @@ namespace Raven.Client.Shard
 
 						if (loadOperation.SetResult(task.Result))
 							return executer();
-						else
-							return new CompletedTask();
+						return new CompletedTask();
 					}).Unwrap();
 				};
-				return executer().ContinueWith(_ => loadOperation.Complete<T>());
+				return executer().ContinueWith(_ =>
+				{
+					_.AssertNotFailed();
+					return loadOperation.Complete<T>();
+				});
 			});
 
 			return results.ContinueWith(task =>
@@ -147,7 +127,7 @@ namespace Raven.Client.Shard
 
 			IncrementRequestCount();
 
-			IEnumerable<Func<Task>> loadTasks = idsToLoad.Select(shardsAndIds => (Func<Task>)(() =>
+			var loadTasks = idsToLoad.Select(shardsAndIds => (Func<Task>)(() =>
 			{
 				var shards = shardsAndIds.Key;
 				var idsForCurrentShards = shardsAndIds.Select(x => x.Id).ToArray();
@@ -172,8 +152,7 @@ namespace Raven.Client.Shard
 
 							if (multiLoadOperation.SetResult(task.Result))
 								return executer();
-							else
-								return CompletedTask.With(multiLoadOperation);
+							return CompletedTask.With(multiLoadOperation);
 						}).Unwrap();
 					};
 
@@ -182,9 +161,8 @@ namespace Raven.Client.Shard
 
 				return multiLoadOperations.ContinueWith(task =>
 				{
-					foreach (var multiLoadOperation in task.Result)
+					foreach (var loadResults in task.Result.Select(multiLoadOperation => multiLoadOperation.Complete<T>()))
 					{
-						var loadResults = multiLoadOperation.Complete<T>();
 						for (int i = 0; i < loadResults.Length; i++)
 						{
 							if (ReferenceEquals(loadResults[i], null))
@@ -201,14 +179,16 @@ namespace Raven.Client.Shard
 				});
 			}));
 
-			return Task.Factory.StartNew(() =>
+			return Task.Factory.ContinueWhenAll(loadTasks.Select(func => func()).ToArray(), tasks =>
 			{
-				foreach (var task in loadTasks)
-				{
-					task().Wait();
-				}
+				AggregateException[] aggregateExceptions = tasks.Where(x=>x.IsFaulted).Select(x=>x.Exception).ToArray();
+				if(aggregateExceptions.Length>0)
+					throw new AggregateException(aggregateExceptions);
+			}).ContinueWith(_ =>
+			{
+				_.AssertNotFailed();
 				return results;
-			});
+			} );
 		}
 
 		public IAsyncLoaderWithInclude<object> Include(string path)
@@ -273,8 +253,8 @@ namespace Raven.Client.Shard
 				// split by shards
 				var saveChangesPerShard = GetChangesToSavePerShard(data);
 
-				var saveTasks = new List<Task>();
-
+				var saveTasks = new List<Task<BatchResult[]>>();
+				var saveChanges = new List<SaveChangesData>();
 				// execute on all shards
 				foreach (var shardAndObjects in saveChangesPerShard)
 				{
@@ -284,15 +264,20 @@ namespace Raven.Client.Shard
 					if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
 						throw new InvalidOperationException(string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
 
-					saveTasks.Add(databaseCommands.BatchAsync(shardAndObjects.Value.Commands.ToArray())
-						.ContinueWith(t => UpdateBatchResults(t.Result, shardAndObjects.Value)));
+					saveChanges.Add(shardAndObjects.Value);
+					saveTasks.Add(databaseCommands.BatchAsync(shardAndObjects.Value.Commands.ToArray()));
 				}
 
 				return Task.Factory.ContinueWhenAll(saveTasks.ToArray(), tasks =>
 				{
 					var exceptions = tasks.Where(t => t.IsFaulted).Select(t => t.Exception).ToList();
 					if (exceptions.Any())
-						throw new AggregateException(exceptions);
+					    throw new AggregateException(exceptions);
+
+					for (int index = 0; index < tasks.Length; index++)
+					{
+						UpdateBatchResults(tasks[index].Result, saveChanges[index]);
+					}
 				});
 			}
 		}

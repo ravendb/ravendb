@@ -213,8 +213,14 @@ namespace Raven.Client.Document.Async
 					return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
 						.ContinueWith(task =>
 						{
-							UpdateBatchResults(task.Result, data);
-							cachingScope.Dispose();
+							try
+							{
+								UpdateBatchResults(task.Result, data);
+							}
+							finally 
+							{
+								cachingScope.Dispose();
+							}
 						});
 				}).Unwrap();
 		}
@@ -225,10 +231,7 @@ namespace Raven.Client.Document.Async
 			{
 				foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)))
 				{
-					if (entity.Value.Key == null)
-					{
-						entity.Value.Key = GenerateDocumentKeyForStorage(entity.Key);
-					}
+					entity.Value.Key = GenerateDocumentKeyForStorage(entity.Key);
 				}
 			});
 		}

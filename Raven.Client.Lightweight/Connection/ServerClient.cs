@@ -210,15 +210,15 @@ namespace Raven.Client.Connection
 
 		private static ConflictException CreateConcurrencyException(string key, RavenJObject conflictsDoc, string etag)
 		{
-					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+			var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 			return new ConflictException("Conflict detected on " + key +
-												", conflict must be resolved before the document will be accessible")
-					{
+			                            ", conflict must be resolved before the document will be accessible")
+			{
 				ConflictedVersionIds = conflictIds,
 				Etag = new Guid(etag)
-					};
-				}
+			};
+		}
 
 		private static void EnsureIsNotNullOrEmpty(string key, string argName)
 		{
@@ -339,7 +339,7 @@ namespace Raven.Client.Connection
 				metadata["ETag"] = etag.Value.ToString();
 			}
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this, operationUrl + "/static/" + key, "PUT", metadata, credentials, convention);
-			
+
 			webRequest.Write(data);
 			try
 			{
@@ -419,7 +419,7 @@ namespace Raven.Client.Connection
 					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 					throw new ConflictException("Conflict detected on " + key +
-					                            ", conflict must be resolved before the attachment will be accessible")
+												", conflict must be resolved before the attachment will be accessible")
 					{
 						ConflictedVersionIds = conflictIds,
 						Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
@@ -446,7 +446,7 @@ namespace Raven.Client.Connection
 			var result = ExecuteGetRequest("".Databases(pageSize).NoCache());
 
 			var json = (RavenJArray)result;
-		
+
 			return json
 				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
 				.ToArray();
@@ -900,8 +900,8 @@ namespace Raven.Client.Connection
 		private byte[] DirectPromoteTransaction(Guid fromTxId, string operationUrl)
 		{
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(this,
-			                                                          operationUrl + "/transaction/promote?fromTxId=" + fromTxId,
-			                                                          "POST", credentials, convention);
+																	  operationUrl + "/transaction/promote?fromTxId=" + fromTxId,
+																	  "POST", credentials, convention);
 
 			return webRequest.ReadResponseBytes();
 		}
@@ -942,9 +942,9 @@ namespace Raven.Client.Connection
 			if (databaseUrl == Url)
 				return this;
 			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId)
-			       {
-			       	OperationsHeaders = OperationsHeaders
-			       };
+				   {
+					   OperationsHeaders = OperationsHeaders
+				   };
 		}
 
 		public IDatabaseCommands ForDefaultDatabase()
@@ -958,7 +958,7 @@ namespace Raven.Client.Connection
 			};
 		}
 
-		
+
 
 		/// <summary>
 		/// Gets a value indicating whether [supports promotable transactions].
@@ -1078,12 +1078,12 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
 				var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&distance={4}&accuracy={5}",
-				                                     Uri.EscapeUriString(index),
-				                                     Uri.EscapeDataString(suggestionQuery.Term),
-				                                     Uri.EscapeDataString(suggestionQuery.Field),
-				                                     Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString()),
-				                                     Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
-				                                     Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
+													 Uri.EscapeUriString(index),
+													 Uri.EscapeDataString(suggestionQuery.Term),
+													 Uri.EscapeDataString(suggestionQuery.Field),
+													 Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString()),
+													 Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
+													 Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
@@ -1171,33 +1171,33 @@ namespace Raven.Client.Connection
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
 			return ExecuteWithReplication("GET", // this is a logical GET, physical POST
-			                              operationUrl =>
-			                              {
-			                              	var multiGetOperation = new MultiGetOperation(this, convention, operationUrl, requests);
+										  operationUrl =>
+										  {
+											  var multiGetOperation = new MultiGetOperation(this, convention, operationUrl, requests);
 
-			                              	var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this,
-			                              	                                                               multiGetOperation.
-			                              	                                                               	RequestUri, "POST",
-			                              	                                                               credentials, convention);
+											  var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this,
+																											 multiGetOperation.
+																											  RequestUri, "POST",
+																											 credentials, convention);
 
-			                              	var requestsForServer =
-			                              		multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
+											  var requestsForServer =
+												  multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
 
-			                              	var postedData = JsonConvert.SerializeObject(requestsForServer);
+											  var postedData = JsonConvert.SerializeObject(requestsForServer);
 
-			                              	if (multiGetOperation.CanFullyCache(jsonRequestFactory, httpJsonRequest, postedData))
-			                              	{
-			                              		return multiGetOperation.HandleCachingResponse(new GetResponse[requests.Length],
-			                              		                                               jsonRequestFactory);
-			                              	}
+											  if (multiGetOperation.CanFullyCache(jsonRequestFactory, httpJsonRequest, postedData))
+											  {
+												  return multiGetOperation.HandleCachingResponse(new GetResponse[requests.Length],
+																								 jsonRequestFactory);
+											  }
 
 			                              	httpJsonRequest.Write(postedData);
 											  var results = (RavenJArray)httpJsonRequest.ReadResponseJson();
-			                              	var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(
-																				new RavenJTokenReader(results));
+											  var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(
+																				  new RavenJTokenReader(results));
 
-			                              	return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
-			                              });
+											  return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
+										  });
 		}
 
 		///<summary>
@@ -1211,10 +1211,10 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
 				var requestUri = operationUrl + string.Format("/terms/{0}?field={1}&pageSize={2}&fromValue={3}",
-				                                     Uri.EscapeUriString(index),
-				                                     Uri.EscapeDataString(field),
-				                                     pageSize,
-				                                     Uri.EscapeDataString(fromValue ?? ""));
+													 Uri.EscapeUriString(index),
+													 Uri.EscapeDataString(field),
+													 pageSize,
+													 Uri.EscapeDataString(fromValue ?? ""));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
@@ -1235,8 +1235,8 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
 				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
-				                                              Uri.EscapeUriString(index),
-				                                              Uri.EscapeDataString(facetSetupDoc),
+															  Uri.EscapeUriString(index),
+															  Uri.EscapeDataString(facetSetupDoc),
 															  Uri.EscapeUriString(Uri.EscapeDataString(query.Query)));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);

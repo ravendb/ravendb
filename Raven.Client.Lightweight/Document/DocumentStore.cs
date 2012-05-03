@@ -355,12 +355,8 @@ namespace Raven.Client.Document
 #endif
 			try
 			{
-#if !NET35
-				if (Conventions.DisableProfiling == false)
-				{
-					jsonRequestFactory.LogRequest += profilingContext.RecordAction;
-				}
-#endif
+				InitializeProfiling();
+
 				InitializeInternal();
 
 				InitializeSecurity();
@@ -398,6 +394,16 @@ namespace Raven.Client.Document
 #endif
 
 			return this;
+		}
+
+		public void InitializeProfiling()
+		{
+#if !NET35
+			if (Conventions.DisableProfiling == false)
+			{
+				jsonRequestFactory.LogRequest += profilingContext.RecordAction;
+			}
+#endif
 		}
 
 		private void InitializeSecurity()
