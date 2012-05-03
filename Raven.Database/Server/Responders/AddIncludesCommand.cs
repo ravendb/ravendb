@@ -46,6 +46,8 @@ namespace Raven.Database.Server.Responders
 
 		public void Execute(RavenJObject document)
 		{
+			if (Includes == null)
+				return;
 			foreach (var include in Includes)
 			{
 				if (string.IsNullOrEmpty(include))
