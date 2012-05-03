@@ -8,20 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading;
-using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.SessionOperations;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Client.Util;
-using Raven.Json.Linq;
 using Raven.Client.Connection.Async;
-using Raven.Client.Document.Batches;
 using System.Threading.Tasks;
 
 namespace Raven.Client.Shard
@@ -29,7 +20,7 @@ namespace Raven.Client.Shard
 	/// <summary>
 	/// Implements Unit of Work for accessing a set of sharded RavenDB servers
 	/// </summary>
-	public class AsyncShardedDocumentSession : BaseShardedDocumentSession<IAsyncDatabaseCommands>, IDocumentQueryGenerator,
+	public class AsyncShardedDocumentSession : BaseShardedDocumentSession<IAsyncDatabaseCommands>,
 		IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations
 	{
 		public AsyncShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
@@ -79,7 +70,7 @@ namespace Raven.Client.Shard
 				{
 					loadOperation.LogOperation();
 
-					IDisposable loadContext = loadOperation.EnterLoadContext();
+					var loadContext = loadOperation.EnterLoadContext();
 					return commands.GetAsync(id).ContinueWith(task =>
 					{
 						if (loadContext != null)
@@ -87,8 +78,7 @@ namespace Raven.Client.Shard
 
 						if (loadOperation.SetResult(task.Result))
 							return executer();
-						else
-							return new CompletedTask();
+						return new CompletedTask();
 					}).Unwrap();
 				};
 				return executer().ContinueWith(_ => loadOperation.Complete<T>());
