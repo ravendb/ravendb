@@ -1,9 +1,10 @@
 ﻿using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interactivity;
 
 namespace Raven.Studio.Behaviors
 {
-	public class DoubleClickBehavior : StudioBehavior<FrameworkElement>
+	public class DoubleClickBehavior : Behavior<FrameworkElement>
 	{
 		public ICommand Command
 		{
