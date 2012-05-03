@@ -5,7 +5,7 @@ namespace Raven.Studio.Models
 {
 	public class DocumentSize : NotifyPropertyChangedBase
 	{
-		public const double DefaultDocumentHeight = 66;
+		public const double DefaultDocumentHeight = 130;
 		public const double ExpandedDocumentHeight = 130;
 		public const double ExpandedMinimumHeight = 110;
 		

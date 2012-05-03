@@ -71,8 +71,10 @@
 					Command="{Binding Path=DataContext.EditDocument, RelativeSource={RelativeSource AncestorType=Documents:DocumentsViewEnhanced}}"
 					CommandParameter="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
                     ToolTipService.ToolTip="click here to edit the document"
-					Grid.Row="2"
-					Grid.Column="3">
+					Grid.Row="0"
+                    Grid.RowSpan="3"
+					Grid.Column="0"
+                    Grid.ColumnSpan="3">
 				<Button.Content>
 					<Image Source="{StaticResource Image_Edit_Small}"
 						   Stretch="None" />

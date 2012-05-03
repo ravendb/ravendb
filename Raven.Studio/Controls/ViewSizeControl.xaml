@@ -55,7 +55,7 @@
 					</Grid.ColumnDefinitions>
 
 					<Slider Orientation="Vertical"
-							Minimum="66"
+							Minimum="80"
 							Maximum="700"
 							Value="{Binding ViewSize, Mode=TwoWay}"
 							Grid.Column="0"
