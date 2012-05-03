@@ -185,7 +185,7 @@ namespace Raven.Studio.Models
 
 		public void PutDocumentIdInUrl(string docId)
 		{
-		    if (DocumentKey != null && DocumentKey != docId)
+		    if (docId != null && DocumentKey != docId)
 				UrlUtil.Navigate("/edit?id=" + docId);
 
 		    SetCurrentDocumentId(docId);
