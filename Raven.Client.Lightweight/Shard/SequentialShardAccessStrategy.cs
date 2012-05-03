@@ -98,7 +98,6 @@ namespace Raven.Client.Shard
 					});
 				};
 
-			var tcs = new TaskCompletionSource<T[]>();
 			executer(0);
 			return resultsTask.Task.ContinueWith(task => task.Result.ToArray());
 		}
