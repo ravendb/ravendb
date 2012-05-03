@@ -273,8 +273,8 @@ namespace Raven.Client.Shard
 				// split by shards
 				var saveChangesPerShard = GetChangesToSavePerShard(data);
 
-				var saveTasks = new List<Task>();
-
+				var saveTasks = new List<Task<BatchResult[]>>();
+				var saveChanges = new List<SaveChangesData>();
 				// execute on all shards
 				foreach (var shardAndObjects in saveChangesPerShard)
 				{
@@ -284,15 +284,20 @@ namespace Raven.Client.Shard
 					if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
 						throw new InvalidOperationException(string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
 
-					saveTasks.Add(databaseCommands.BatchAsync(shardAndObjects.Value.Commands.ToArray())
-						.ContinueWith(t => UpdateBatchResults(t.Result, shardAndObjects.Value)));
+					saveChanges.Add(shardAndObjects.Value);
+					saveTasks.Add(databaseCommands.BatchAsync(shardAndObjects.Value.Commands.ToArray()));
 				}
 
 				return Task.Factory.ContinueWhenAll(saveTasks.ToArray(), tasks =>
 				{
 					var exceptions = tasks.Where(t => t.IsFaulted).Select(t => t.Exception).ToList();
 					if (exceptions.Any())
-						throw new AggregateException(exceptions);
+					    throw new AggregateException(exceptions);
+
+					for (int index = 0; index < tasks.Length; index++)
+					{
+						UpdateBatchResults(tasks[index].Result, saveChanges[index]);
+					}
 				});
 			}
 		}
