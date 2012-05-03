@@ -200,7 +200,7 @@
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
 					Grid.RowSpan="2" />
 
-			<TextBox Text="{Binding Key, Mode=TwoWay}"
+			<TextBox Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 					 Grid.Row="0"
 					 Margin="5,10,10,0" />
 
