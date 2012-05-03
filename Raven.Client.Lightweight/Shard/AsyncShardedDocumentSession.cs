@@ -14,6 +14,7 @@ using Raven.Client.Document;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Shard
 {
@@ -81,7 +82,11 @@ namespace Raven.Client.Shard
 						return new CompletedTask();
 					}).Unwrap();
 				};
-				return executer().ContinueWith(_ => loadOperation.Complete<T>());
+				return executer().ContinueWith(_ =>
+				{
+					_.AssertNotFailed();
+					return loadOperation.Complete<T>();
+				});
 			});
 
 			return results.ContinueWith(task =>
