@@ -8,9 +8,11 @@ using System.Configuration;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lucene.Net.Documents;
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.IndexReplication.Data;
 using Raven.Database.Json;
@@ -103,7 +105,7 @@ namespace Raven.Bundles.IndexReplication
 						var field = document.GetFieldable(mapping.Key);
 						if (field == null)
 							parameter.Value = DBNull.Value;
-						else if(field is NumericField)
+						else if (field is NumericField)
 						{
 							var numField = (NumericField) field;
 							parameter.Value = numField.GetNumericValue();
@@ -111,24 +113,33 @@ namespace Raven.Bundles.IndexReplication
 						else
 						{
 							var stringValue = field.StringValue();
-							if(datePattern.IsMatch(stringValue))
+							if (datePattern.IsMatch(stringValue))
 							{
 								try
 								{
 									parameter.Value = DateTools.StringToDate(stringValue);
 								}
-								catch 
+								catch
 								{
 									parameter.Value = stringValue;
 								}
 							}
 							else
 							{
-								parameter.Value = stringValue;
+								DateTime time;
+								if (DateTime.TryParseExact(stringValue, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+								                           DateTimeStyles.None, out time))
+								{
+									parameter.Value = time;
+								}
+								else
+								{
+									parameter.Value = stringValue;
+								}
 							}
+							cmd.Parameters.Add(parameter);
+							sb.Append(parameter.ParameterName).Append(", ");
 						}
-						cmd.Parameters.Add(parameter);
-						sb.Append(parameter.ParameterName).Append(", ");
 					}
 					sb.Length = sb.Length - 2;
 					sb.Append(")");

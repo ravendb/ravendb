@@ -178,7 +178,6 @@ namespace Raven.Json.Linq
 		/// Load a <see cref="RavenJToken"/> from a string that contains JSON.
 		/// </summary>
 		/// <param name="json">A <see cref="String"/> that contains JSON.</param>
-		/// <param name="returnNullForEmptyString">If this parameter is true, and json is null or empty, RavenJValue.Null is returned.</param>
 		/// <returns>A <see cref="RavenJToken"/> populated from the string that contains JSON.</returns>
 		public static RavenJToken Parse(string json)
 		{

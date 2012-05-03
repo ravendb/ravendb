@@ -225,10 +225,17 @@ namespace Raven.Client.Document.Async
 			{
 				foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)))
 				{
-					if (entity.Value.Key == null)
+					try
 					{
+						UpdateBatchResults(task.Result, data);
 						entity.Value.Key = GenerateDocumentKeyForStorage(entity.Key);
 					}
+				});
+					finally
+					{
+						cachingScope.Dispose();
+					}
+				});
 				}
 			});
 		}

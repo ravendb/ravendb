@@ -1,7 +1,11 @@
 ﻿
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
@@ -12,6 +16,10 @@ namespace Raven.Tryouts
 	public class Foo
 	{
 		public string Bar { get; set; }
+	}
+
+	public class Foo2 : Foo
+	{
 	}
 
 	public class SimpleReduceResult
@@ -42,17 +50,44 @@ namespace Raven.Tryouts
 		}
 	}
 
+	public class MyIndex : AbstractMultiMapIndexCreationTask
+	{
+		public MyIndex()
+		{
+			AddMapForAll<Foo>(foos => from foo in foos select new {foo.Bar});
+		}
+
+		private void AddMapForAll<T>(Expression<Func<IEnumerable<T>, IEnumerable>> expr)
+		{
+			AddMap(expr); // base class
+
+			// child classes
+			var children = typeof(T).Assembly.GetTypes().Where(x=>x.IsSubclassOf(typeof(T)));
+			var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance|BindingFlags.NonPublic);
+			foreach (var child in children)
+			{
+				var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
+				var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
+				var lambdaExpression = Expression.Lambda(delegateType,expr.Body, Expression.Parameter(genericEnumerable, expr.Parameters[0].Name));
+				addMapGeneric.MakeGenericMethod(child).Invoke(this, new[] { lambdaExpression });
+			}
+		}
+	}
+
 	class Program
 	{
 		static void Main(string[] args)
 		{
+			var myIndex = new MyIndex();
+			myIndex.Conventions = new DocumentConvention();
+			Console.WriteLine(myIndex.CreateIndexDefinition().ToString());
+
 			using (var store = new EmbeddableDocumentStore
 			{
-				DataDirectory = @"~\data",
-				UseEmbeddedHttpServer = true
+				RunInMemory = true
 			}.Initialize())
 			{
-
+				
 				var sp = Stopwatch.StartNew();
 				for (int i = 0; i < 5000; i++)
 				{

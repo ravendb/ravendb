@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Imports.Newtonsoft.Json;
@@ -48,10 +49,16 @@ namespace Raven.Storage.Esent.StorageActions
 			using (var update = new Update(session, Files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);
+				long written;
 				using (var stream = new BufferedStream(new ColumnStream(session, Files, tableColumnsCache.FilesColumns["data"])))
 				{
 					data.CopyTo(stream);
+					written = stream.Position;
 					stream.Flush();
+				}
+				if(written == 0) // empty attachment
+				{
+					Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["data"], new byte[0]);
 				}
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["etag"], newETag.TransformToValueForEsentSorting());
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["metadata"], headers.ToString(Formatting.None), Encoding.Unicode);
@@ -110,23 +117,26 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid etag)
+		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid etag, int take)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_etag");
 			Api.MakeKey(session, Files, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekGT) == false)
-				yield break;
+				return Enumerable.Empty<AttachmentInformation>();
+
+			var optimizer = new OptimizedIndexReader(Session, Files, take);
 			do
 			{
-				var columnSize = Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]);
-				yield return new AttachmentInformation
-				{
-					Size = columnSize ?? 0,
-					Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
-					Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
-					Metadata = RavenJObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
-				};
-			} while (Api.TryMoveNext(session, Files));
+				optimizer.Add();
+			} while (Api.TryMoveNext(session, Files) && optimizer.Count < take);
+
+			return optimizer.Select(() => new AttachmentInformation
+			{
+				Size = Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]) ?? 0,
+				Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
+				Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
+				Metadata = RavenJObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
+			});
 		}
 
 		public Attachment GetAttachment(string key)

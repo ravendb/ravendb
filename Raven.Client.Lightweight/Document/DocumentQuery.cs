@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -641,7 +642,7 @@ namespace Raven.Client.Document
 		{
 			var trim = QueryText.ToString().Trim();
 			if(isSpatialQuery)
-				return trim + " Lat: " + lat + " Lng: " + lng + " Radius: " + radius;
+				return string.Format(CultureInfo.InvariantCulture, "{0} Lat: {1} Lng: {2} Radius: {3}", trim, lat, lng, radius);
 			return trim;
 		}
 	}

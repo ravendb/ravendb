@@ -20,6 +20,7 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
+				store.Conventions.DisableProfiling = false;
 				store.Initialize();
 				using (var session = store.OpenSession())
 				{
@@ -55,6 +56,7 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
+				store.Conventions.DisableProfiling = false; 
 				store.Initialize();
 				using (var session = store.OpenSession())
 				{
@@ -98,6 +100,7 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
+				store.Conventions.DisableProfiling = false; 
 				store.Initialize();
 				using (var session = store.OpenSession())
 				{
@@ -141,6 +144,7 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
+				store.Conventions.DisableProfiling = false; 
 				store.Initialize();
 				using (var session = store.OpenSession())
 				{
@@ -189,6 +193,7 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
+				store.Conventions.DisableProfiling = false; 
 				store.Initialize();
 				using (var session = store.OpenSession())
 				{
@@ -239,6 +244,7 @@ namespace Raven.Tests.MultiGet
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" })
 			{
+				store.Conventions.DisableProfiling = false; 
 				store.Initialize();
 				using (var session = store.OpenSession())
 				{

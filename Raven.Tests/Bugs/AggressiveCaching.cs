@@ -49,7 +49,14 @@ namespace Raven.Tests.Bugs
 		public void CanAggressivelyCacheQueries()
 		{
 			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+				Conventions =
+					{
+						FailoverBehavior = FailoverBehavior.FailImmediately
+					}
+			}.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -81,7 +88,14 @@ namespace Raven.Tests.Bugs
 		public void WaitForUnstaleResultIgnoresAggressiveCaching()
 		{
 			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+				Conventions =
+					{
+						FailoverBehavior = FailoverBehavior.FailImmediately
+					}
+			}.Initialize())
 			{
 				using (var session = store.OpenSession())
 				{
