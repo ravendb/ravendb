@@ -13,7 +13,7 @@ namespace Raven.Studio.Models
 	{
 		public const double DefaultDocumentHeight = 130;
 		public const double ExpandedDocumentHeight = 130;
-		public const double CardMinimumHeight = 110;
+		public const double CardMinimumHeight = 90;
 	    public const double CardMaximumHeight = 700;
 
 	    private double indicatorPosition;
@@ -32,6 +32,11 @@ namespace Raven.Studio.Models
 	    public readonly double MinimumIndicatorPosition = 0;
 	    public readonly double MaximumIndicatorPosition = 100;
 	    private const double DetailsToCardSwitchover = 20;
+
+        public DocumentSize()
+        {
+            IndicatorPosition = DetailsToCardSwitchover;
+        }
 
 	    public double IndicatorPosition
 	    {
