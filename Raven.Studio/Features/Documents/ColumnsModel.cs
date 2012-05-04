@@ -38,7 +38,8 @@ namespace Raven.Studio.Features.Documents
             return new ColumnModel()
                        {
                            Binding = column.Binding, 
-                           Header = column.Header
+                           Header = column.Header,
+                           DefaultWidth = column.DefaultWidth,
                        };
         }
     }

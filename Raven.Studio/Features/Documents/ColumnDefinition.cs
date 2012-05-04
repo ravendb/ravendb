@@ -19,5 +19,7 @@ namespace Raven.Studio.Features.Documents
         /// The binding is a property path relative to a JsonDocument, e.g. DataAsJson[Title]
         /// </summary>
         public string Binding { get; set; }
+
+        public string DefaultWidth { get; set; }
     }
 }

@@ -162,9 +162,24 @@ namespace Raven.Studio.Behaviors
                              {
                                  Header = columnModel.Header,
                                  CellTemplate = CreateCellTemplate(columnModel),
+                                 Width = ParseWidth(columnModel.DefaultWidth),
                              };
 
             AssociatedObject.Columns.Add(column);
+        }
+
+        private DataGridLength ParseWidth(string defaultWidth)
+        {
+            if (string.IsNullOrEmpty(defaultWidth))
+            {
+                return new DataGridLength(100);
+            }
+            else
+            {
+                var converter = new DataGridLengthConverter();
+
+                return (DataGridLength)converter.ConvertFromString(defaultWidth);
+            }
         }
 
         private void RemoveColumn(ColumnModel columnModel)
@@ -179,8 +194,9 @@ namespace Raven.Studio.Behaviors
         private DataTemplate CreateCellTemplate(ColumnModel columnModel)
         {
             var templateString =
-                @"<DataTemplate  xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:Behaviors=""clr-namespace:Raven.Studio.Behaviors"">
+                @"<DataTemplate  xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:Behaviors=""clr-namespace:Raven.Studio.Behaviors;assembly=Raven.Studio"">
                                     <TextBlock Text=""{Binding Item.Document.$$$BindingPath$$$}""
+                                               Behaviors:FadeTrimming.IsEnabled=""True"" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed=""True""
                                                VerticalAlignment=""Center""
                                                Margin=""5,0""/>
                                 </DataTemplate>";

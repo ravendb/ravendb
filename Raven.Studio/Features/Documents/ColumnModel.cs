@@ -16,6 +16,7 @@ namespace Raven.Studio.Features.Documents
     {
         private string header;
         private string binding;
+        private string defaultWidth;
 
         public string Header
         {
@@ -34,6 +35,16 @@ namespace Raven.Studio.Features.Documents
             {
                 binding = value;
                 OnPropertyChanged(() => Header);
+            }
+        }
+
+        public string DefaultWidth
+        {
+            get { return defaultWidth; }
+            set
+            {
+                defaultWidth = value;
+                OnPropertyChanged(() => DefaultWidth);
             }
         }
     }
