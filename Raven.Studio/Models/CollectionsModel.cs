@@ -13,55 +13,39 @@ namespace Raven.Studio.Models
 {
 	public class CollectionsModel : PageViewModel, IHasPageTitle
 	{
-		private static string initialSelectedDatabaseName;
-		public static BindableCollection<CollectionModel> Collections { get; set; }
-		public static Observable<CollectionModel> SelectedCollection { get; set; }
+		private string initialSelectedDatabaseName;
+		public BindableCollection<CollectionModel> Collections { get; set; }
+		public Observable<CollectionModel> SelectedCollection { get; set; }
 
-	    private static WeakReference<CollectionDocumentsCollectionSource> collectionSource; 
-		private static WeakReference<DocumentsModelEnhanced> documentsForSelectedCollection;
+	    private CollectionDocumentsCollectionSource collectionSource; 
+		private DocumentsModelEnhanced documentsForSelectedCollection;
 
-        public static CollectionDocumentsCollectionSource CollectionSource
+        public CollectionDocumentsCollectionSource CollectionSource
 		{
 			get
 			{
-                if (collectionSource == null || collectionSource.IsAlive == false)
-                    collectionSource = new WeakReference<CollectionDocumentsCollectionSource>(new CollectionDocumentsCollectionSource { CollectionName  = GetSelectedCollectionName()});
-                return collectionSource.Target;
+                if (collectionSource == null)
+                    collectionSource = new CollectionDocumentsCollectionSource { CollectionName  = GetSelectedCollectionName()};
+                return collectionSource;
 			}
 		}
 
-	    private static string GetSelectedCollectionName()
+	    private string GetSelectedCollectionName()
 	    {
 	        return SelectedCollection.Value != null ? SelectedCollection.Value.Name  : "";
 	    }
 
-	    public static DocumentsModelEnhanced DocumentsForSelectedCollection
+	    public DocumentsModelEnhanced DocumentsForSelectedCollection
 	    {
 	        get
 	        {
-	            if (documentsForSelectedCollection == null || documentsForSelectedCollection.IsAlive == false)
-                    documentsForSelectedCollection = new WeakReference<DocumentsModelEnhanced>(new DocumentsModelEnhanced(CollectionSource));
-	            return documentsForSelectedCollection.Target;
+	            if (documentsForSelectedCollection == null)
+                    documentsForSelectedCollection = new DocumentsModelEnhanced(CollectionSource);
+	            return documentsForSelectedCollection;
 	        }
 	    }
 
-		static CollectionsModel()
-		{
-			Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
-			SelectedCollection = new Observable<CollectionModel>();
-
-			SelectedCollection.PropertyChanged += (sender, args) =>
-			{
-				PutCollectionNameInTheUrl();
-				CollectionSource.CollectionName = GetSelectedCollectionName();
-			    DocumentsForSelectedCollection.DocumentNavigatorFactory =
-			        (id, index) =>
-			        DocumentNavigator.Create(id, index, "Raven/DocumentsByEntityName",
-			                                 new IndexQuery() {Query = "Tag:" + GetSelectedCollectionName()});
-			};
-		}
-
-		private static void PutCollectionNameInTheUrl()
+		private void PutCollectionNameInTheUrl()
 		{
 			var urlParser = new UrlParser(UrlUtil.Url);
 			var collection = SelectedCollection.Value;
@@ -72,7 +56,6 @@ namespace Raven.Studio.Models
 			if (urlParser.GetQueryParam("name") != name)
 			{
 				urlParser.SetQueryParam("name", name);
-				urlParser.RemoveQueryParam("skip");
 				UrlUtil.Navigate(urlParser.BuildUrl());
 			}
 		}
@@ -80,6 +63,19 @@ namespace Raven.Studio.Models
 		public CollectionsModel()
 		{
 			ModelUrl = "/collections";
+
+            Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
+            SelectedCollection = new Observable<CollectionModel>();
+
+            SelectedCollection.PropertyChanged += (sender, args) =>
+            {
+                PutCollectionNameInTheUrl();
+                CollectionSource.CollectionName = GetSelectedCollectionName();
+                DocumentsForSelectedCollection.DocumentNavigatorFactory =
+                    (id, index) =>
+                    DocumentNavigator.Create(id, index, "Raven/DocumentsByEntityName",
+                                             new IndexQuery() { Query = "Tag:" + GetSelectedCollectionName() });
+            };
 		}
 
 		public override void LoadModelParameters(string parameters)
