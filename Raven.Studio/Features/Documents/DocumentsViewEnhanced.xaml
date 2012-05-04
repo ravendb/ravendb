@@ -10,7 +10,10 @@
                 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
                 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
                 xmlns:Models="clr-namespace:Raven.Studio.Models"
-             xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" mc:Ignorable="d"
+             xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+             xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+             xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+             xmlns:Converters="clr-namespace:Raven.Studio.Infrastructure.Converters" mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:DocumentsModelEnhanced}">
 
     <Grid>
@@ -18,6 +21,127 @@
             <DataTemplate x:Key="DataTemplate_Document_CardView">
                 <Documents:DocumentView DataContext="{Binding Item}" />
             </DataTemplate>
+            
+            <DataTemplate x:Key="DataTemplate_List_CardView">
+                <ListBox x:Name="DocumentsList"
+						ItemsSource="{Binding Documents}"
+						Style="{StaticResource StealthPagingDocumentList}"
+						Margin="10"
+						ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
+
+                    <i:Interaction.Triggers>
+                        <Behaviors:StudioKeyTrigger Key="Delete">
+                            <i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
+											CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+                        </Behaviors:StudioKeyTrigger>
+                    </i:Interaction.Triggers>
+
+                    <i:Interaction.Behaviors>
+                        <Behaviors:SelectItemOnRightClick />
+                        <Infrastructure:ProvideVisibleItemRangeBehavior/>
+                    </i:Interaction.Behaviors>
+
+                    <Controls:ContextMenuService.ContextMenu>
+                        <Controls:ContextMenu x:Name="DocumentsContextMenu">
+                            <Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
+											Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
+											CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+                            <Controls:MenuItem Header="Delete"
+											Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
+											CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+                        </Controls:ContextMenu>
+                    </Controls:ContextMenuService.ContextMenu>
+
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Controls1:VirtualizingWrapPanel ItemWidth="{Binding Source={StaticResource DocumentSize}, Path=Current.Width}"
+                                                         ItemHeight="{Binding Source={StaticResource DocumentSize}, Path=Current.Height}"
+                                                         DeferScrolling="False"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                </ListBox>
+            </DataTemplate>
+
+            <DataTemplate x:Key="DataTemplate_List_DetailsView">
+                <sdk:DataGrid x:Name="DocumentsList"
+						ItemsSource="{Binding Documents}"
+                        AutoGenerateColumns="False"
+                        IsReadOnly="True">
+
+                    <i:Interaction.Triggers>
+                        <!--<Behaviors:StudioKeyTrigger Key="Delete">
+                            <i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
+											CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+                        </Behaviors:StudioKeyTrigger>-->
+                    </i:Interaction.Triggers>
+
+                    <i:Interaction.Behaviors>
+                        <!--<Behaviors:SelectItemOnRightClick />
+                        <Infrastructure:ProvideVisibleItemRangeBehavior/>-->
+                    </i:Interaction.Behaviors>
+
+                    <!--<Controls:ContextMenuService.ContextMenu>
+                        <Controls:ContextMenu x:Name="DocumentsContextMenu">
+                            <Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
+											Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
+											CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+                            <Controls:MenuItem Header="Delete"
+											Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
+											CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+                        </Controls:ContextMenu>
+                    </Controls:ContextMenuService.ContextMenu>-->
+                    <sdk:DataGrid.Columns>
+                        <sdk:DataGridTemplateColumn Width="8">
+                            <sdk:DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Rectangle Margin="0"
+                                           HorizontalAlignment="Left"
+                                           Fill="#06000000"
+                                           Width="8"
+                                           RadiusX="1"
+					                       RadiusY="1"/>
+
+                                        <Rectangle HorizontalAlignment="Left"
+					                       Width="4"
+					                       Fill="{Binding Path=Item.Fill}"
+					                       Margin="2"
+                                           Height="25"          
+					                       RadiusX="1"
+					                       RadiusY="1">
+                                        </Rectangle>
+                                    </Grid>
+                                </DataTemplate>
+                            </sdk:DataGridTemplateColumn.CellTemplate>
+                        </sdk:DataGridTemplateColumn>
+                        <sdk:DataGridTemplateColumn Header="Id">
+                            <sdk:DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Item.Id, FallbackValue='...'}" Behaviors:FadeTrimming.IsEnabled="True" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                               VerticalAlignment="Center"
+                                               Margin="5,0"/>
+                                </DataTemplate>
+                            </sdk:DataGridTemplateColumn.CellTemplate>
+                        </sdk:DataGridTemplateColumn>
+                        <sdk:DataGridTemplateColumn Header="LastModified">
+                            <sdk:DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Item.LastModified}" Behaviors:FadeTrimming.IsEnabled="True" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                               VerticalAlignment="Center"
+                                               Margin="5,0"/>
+                                </DataTemplate>
+                            </sdk:DataGridTemplateColumn.CellTemplate>
+                        </sdk:DataGridTemplateColumn>
+                    </sdk:DataGrid.Columns>
+                </sdk:DataGrid>
+            </DataTemplate>
+            
+            <Converters:StringValueToObjectConverter x:Key="Converter_DisplayStyleToTemplate">
+                <Converters:StringValueToObjectConverter.Conversions>
+                    <Converters:StringValueConversion When="Card" Then="{StaticResource DataTemplate_List_CardView}"/>
+                    <Converters:StringValueConversion When="Details" Then="{StaticResource DataTemplate_List_DetailsView}"/>
+                </Converters:StringValueToObjectConverter.Conversions>
+            </Converters:StringValueToObjectConverter>
         </Grid.Resources>
         
         <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
@@ -81,49 +205,16 @@
                             </Button.Content>
                         </Button>
 
-                        <Controls1:ViewSizeControl ViewSize="{Binding Path=Current.Height, Source={StaticResource DocumentSize}, Mode=TwoWay}" />
+                        <Controls1:ViewSizeControl ViewSize="{Binding Path=Current.IndicatorPosition, Source={StaticResource DocumentSize}, Mode=TwoWay}" />
                     </StackPanel>
                 </Grid>
 
             </toolkit:HeaderedContentControl.Header>
 
-            <ListBox x:Name="DocumentsList"
-						ItemsSource="{Binding Documents}"
-						Style="{StaticResource StealthPagingDocumentList}"
-						Margin="10"
-						ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
-
-                <i:Interaction.Triggers>
-                    <Behaviors:StudioKeyTrigger Key="Delete">
-                        <i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"
-											CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-                    </Behaviors:StudioKeyTrigger>
-                </i:Interaction.Triggers>
-
-                <i:Interaction.Behaviors>
-                    <Behaviors:SelectItemOnRightClick />
-                    <Infrastructure:ProvideVisibleItemRangeBehavior/>
-                </i:Interaction.Behaviors>
-
-                <Controls:ContextMenuService.ContextMenu>
-                    <Controls:ContextMenu x:Name="DocumentsContextMenu">
-                        <Controls:MenuItem Header="Copy Document(s) Id to Clipboard"
-											Command="{Binding Source={StaticResource CopyDocumentsIdsCommand}}"
-											CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-                        <Controls:MenuItem Header="Delete"
-											Command="{Binding Source={StaticResource DeleteDocumentsCommand}}"
-											CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
-                    </Controls:ContextMenu>
-                </Controls:ContextMenuService.ContextMenu>
-                    
-                <ListBox.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <Controls1:VirtualizingWrapPanel ItemWidth="{Binding Source={StaticResource DocumentSize}, Path=Current.Width}"
-                                                         ItemHeight="{Binding Source={StaticResource DocumentSize}, Path=Current.Height}"
-                                                         DeferScrolling="False"/>
-                    </ItemsPanelTemplate>
-                </ListBox.ItemsPanel>
-            </ListBox>
+            <ContentControl Content="{Binding }" 
+                            ContentTemplate="{Binding Path=Current.DisplayStyle, Source={StaticResource DocumentSize}, Converter={StaticResource Converter_DisplayStyleToTemplate}}"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"/>
 
         </toolkit:HeaderedContentControl>
     </Grid>

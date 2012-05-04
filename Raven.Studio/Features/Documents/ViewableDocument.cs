@@ -78,7 +78,7 @@ namespace Raven.Studio.Features.Documents
 		private void CalculateData()
 		{
 			string d = null;
-			if (DocumentSize.Current.Height >= DocumentSize.ExpandedMinimumHeight)
+			if (DocumentSize.Current.Height >= DocumentSize.CardMinimumHeight)
 			{
 				var margin = Math.Sqrt(DocumentSize.Current.Width) - 4;
 				d = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, (int)margin);

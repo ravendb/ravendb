@@ -142,6 +142,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Behaviors\FadeTrimming.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
@@ -175,6 +176,9 @@
       <DependentUpon>TermsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringValueToObjectConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringValueConversion.cs" />
+    <Compile Include="Infrastructure\Converters\StringValueConversionCollection.cs" />
     <Compile Include="Infrastructure\Converters\TaskStatusConverter.cs" />
     <Compile Include="Infrastructure\Converters\RedIfError.cs" />
     <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
@@ -449,6 +453,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="Assets\DataGridStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Controls\Taggers.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
