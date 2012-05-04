@@ -1959,10 +1959,20 @@
                                 <VisualState x:Name="Unselected"/>
                                 <VisualState x:Name="Selected">
                                     <Storyboard>
-                                        <ColorAnimation Duration="0:0:0.05"
+                                        <ColorAnimation Duration="0:0:0.00"
 														To="{StaticResource Color_Contrast}"
 														Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
 														Storyboard.TargetName="InnerMargin"
+														d:IsOptimized="True" />
+                                        <ColorAnimation Duration="0:0:0.00"
+														To="{StaticResource Color_Contrast}"
+														Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+														Storyboard.TargetName="OuterBorder"
+														d:IsOptimized="True" />
+                                        <ColorAnimation Duration="0:0:0.00"
+														To="{StaticResource Color_Contrast}"
+														Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+														Storyboard.TargetName="OuterBorder2"
 														d:IsOptimized="True" />
                                     </Storyboard>
                                 </VisualState>
