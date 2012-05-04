@@ -79,6 +79,7 @@
                         <!--<Behaviors:SelectItemOnRightClick />
                         <Infrastructure:ProvideVisibleItemRangeBehavior/>-->
                         <Behaviors:BindColumnsToColumnSetBehavior Columns="{Binding Columns}"/>
+                        <Behaviors:DataGridRowDoubleClickCommandBehavior Command="{Binding EditDocument}"/>
                     </i:Interaction.Behaviors>
 
                     <!--<Controls:ContextMenuService.ContextMenu>
