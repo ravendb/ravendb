@@ -142,6 +142,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Behaviors\BindColumnsToColumnSetBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
@@ -155,6 +156,10 @@
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Features\Documents\AllDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\CollectionDocumentsCollectionSource.cs" />
+    <Compile Include="Features\Documents\ColumnDefinition.cs" />
+    <Compile Include="Features\Documents\ColumnModel.cs" />
+    <Compile Include="Features\Documents\ColumnSet.cs" />
+    <Compile Include="Features\Documents\ColumnsModel.cs" />
     <Compile Include="Features\Documents\DocumentNavigationStrategy.cs" />
     <Compile Include="Features\Documents\DocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />

@@ -196,7 +196,7 @@ namespace Raven.Studio.Features.Documents
 			set { id = value; OnPropertyChanged(() => Id); }
 		}
 
-		public JsonDocument InnerDocument
+		public JsonDocument Document
 		{
 			get { return inner; }
 		}
