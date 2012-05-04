@@ -792,7 +792,7 @@ more responsive application.
 
 		private void PrepareForEntitiesPuts(SaveChangesData result)
 		{
-			foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)))
+			foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).ToArray())
 			{
 				foreach (var documentStoreListener in listeners.StoreListeners)
 				{
