@@ -67,5 +67,41 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 				});
 			}
 		}
+
+		/* 
+		 * Can't use OperationVetoedException here for some reason I don't understad 
+		 * The code won't compile.
+		 * 
+		[Fact]
+		public void Can_not_insert_document_when_constraints_are_used()
+		{
+			var user1 = new User { Id = "users/1", Email = "user1@bar.com", Name = "James" };
+			var user2 = new User { Id = "users/2", Email = "user2@bar.com", Name = "Watson" };
+			var user3 = new User { Id = "users/3", Email = "user3@bar.com", Name = "Sherlock" };
+
+			using (var session = DocumentStore.OpenSession())
+			{
+				session.Store(user1);
+				session.Store(user2);
+				session.Store(user3);
+				session.SaveChanges();
+			}
+
+			using (var session = DocumentStore.OpenSession())
+			{
+				var checkUser = new User { Id = "users/5", Email = "user2@bar.com", Name = "McLovin" };
+
+				var checkResult = session.CheckForUniqueConstraints(checkUser);
+
+				Assert.False(checkResult.ConstraintsAreFree());
+
+				session.Store(checkUser);
+				
+				Assert.Throws<Raven.Database.Exceptions.OperationVetoedException>(delegate
+				{
+					session.SaveChanges();
+				});
+			}
+		}*/
 	}
 }
