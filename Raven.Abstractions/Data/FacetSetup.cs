@@ -6,5 +6,10 @@ namespace Raven.Abstractions.Data
 	{
 		public string Id { get; set; }
 		public List<Facet> Facets { get; set; }
+
+		public FacetSetup()
+		{
+			Facets = new List<Facet>();
+		}
 	}
 }

@@ -40,6 +40,7 @@ namespace Raven.Storage.Esent
 				Recovery = true,
 				NoInformationEvent = false,
 				CreatePathIfNotExist = true,
+				EnableIndexChecking = true,
 				TempDirectory = Path.Combine(logsPath, "temp"),
 				SystemDirectory = Path.Combine(logsPath, "system"),
 				LogFileDirectory = Path.Combine(logsPath, "logs"),
