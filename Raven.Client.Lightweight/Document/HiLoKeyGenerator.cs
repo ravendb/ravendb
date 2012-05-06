@@ -32,16 +32,16 @@ namespace Raven.Client.Document
 		private long capacity;
 		private readonly object generatorLock = new object();
 		private long current;
-		private volatile Hodler currentMax = new Hodler(0);
+		private volatile Holder currentMax = new Holder(0);
 		private DateTime lastRequestedUtc;
 		private IDatabaseCommands databaseCommands;
 		private string lastServerPrefix;
 
-		private class Hodler
+		private class Holder
 		{
 			public readonly long Value;
 
-			public Hodler(long value)
+			public Holder(long value)
 			{
 				Value = value;
 			}
@@ -86,7 +86,7 @@ namespace Raven.Client.Document
 				{
 					if (current > currentMax.Value)
 					{
-						currentMax = new Hodler(GetNextMax());
+						currentMax = new Holder(GetNextMax());
 						incrementedCurrent = current;
 					}
 					else
