@@ -110,10 +110,8 @@ namespace Raven.Tests.MailingList
 					.TheNext(4)
 						.With(x => x.Make = "Toyota")
 						.With(x => x.Model = "Camry")
-						.With(x => x.Latitude = new
-	 HawthornEast().Latitude)
-						.With(x => x.Longitude = new
-	 HawthornEast().Longitude)
+						.With(x => x.Latitude = new HawthornEast().Latitude)
+						.With(x => x.Longitude = new HawthornEast().Longitude)
 					.Build();
 
 				using (var session = Store.OpenSession())
