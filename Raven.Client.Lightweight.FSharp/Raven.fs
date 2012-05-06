@@ -6,6 +6,7 @@ open System.Linq.Expressions
 open System.ComponentModel.Composition
 
 open Raven.Client
+open Raven.Client.Indexes
 open Raven.Client.Linq
 open Raven.Client.Document
 open Raven.Abstractions.Extensions
@@ -16,11 +17,29 @@ open Newtonsoft.Json
  [<AutoOpen>]
  module Operators = 
         
+        let private toOption<'a> (a : 'a) = 
+            match box a with
+            | null -> None
+            | _ -> Some(a)
+
         let query (f : (IRavenQueryable<'a> -> #IQueryable<'b>)) (a : IDocumentSession) = 
             f(a.Query<'a>()).AsEnumerable()
         
         let luceneQuery<'a, 'b> (f : (IDocumentQuery<'a> -> IDocumentQuery<'b>)) (a : IDocumentSession) = 
             f(a.Advanced.LuceneQuery<'a>()).AsEnumerable()
+        
+        let select (p : Expr<'a -> 'b>) (a : IRavenQueryable<'a>) =
+            let expr = Linq.toLinqExpression (fun b a -> Expression.Lambda<Func<'a,'b>>(a, b |> Array.ofSeq)) p
+            a.Select(expr)
+
+        let skip n (a : IRavenQueryable<'a>) = 
+            a.Skip(n)
+
+        let take n (a : IRavenQueryable<'a>) = 
+            a.Take(n)
+
+        let queryIndex<'a, 'b, 'index when 'index : (new : unit -> 'index) and 'index :> AbstractIndexCreationTask> (f : (IRavenQueryable<'a> -> IQueryable<'b>)) (a : IDocumentSession) =
+            f(a.Query<'a, 'index>()).AsEnumerable()
 
         let where (p : Expr<'a -> bool>) (a : IRavenQueryable<'a>) =
             let expr = Linq.toLinqExpression (fun b a -> Expression.Lambda<Func<'a,bool>>(a, b |> Array.ofSeq)) p
@@ -50,6 +69,9 @@ open Newtonsoft.Json
             let attachment = a.Advanced.DatabaseCommands.GetAttachment(documentId)
             let attachmentBody = attachment.Data.Invoke().ReadData()
             (attachment.Metadata.JsonDeserialization<'a>(), attachment.Etag, attachmentBody)
+        
+        let tryLoad<'a> (id : seq<string>) (a : IDocumentSession) = 
+            a.Load<'a>(id) |> Seq.map2 (fun id result -> (id, toOption result)) id
         
         let load<'a> (id : seq<string>) (a : IDocumentSession) = 
             a.Load(id).Cast<'a>()
