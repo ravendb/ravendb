@@ -24,18 +24,18 @@ namespace Raven.Tests.MailingList
 						Category = Categories.Fiction,
 						Name = "Book 1",
 						Ratings = new[]
-                        {
-                            new Rating
-                            {
-                                User = "User 1",
-                                Rate = 1.5F,
-                            },
-                            new Rating
-                            {
-                                User = "User 2",
-                                Rate = 3.5F,
-                            }
-                        }
+						{
+							new Rating
+							{
+								User = "User 1",
+								Rate = 1.5F,
+							},
+							new Rating
+							{
+								User = "User 2",
+								Rate = 3.5F,
+							}
+						}
 					});
 
 					session.Store(new Book
@@ -43,18 +43,18 @@ namespace Raven.Tests.MailingList
 						Category = Categories.Fiction,
 						Name = "Book 2",
 						Ratings = new[]
-                        {
-                            new Rating
-                            {
-                                User = "User 3",
-                                Rate = 2.5F,
-                            },
-                            new Rating
-                            {
-                                User = "User 4",
-                                Rate = 4.5F,
-                            }
-                        }
+						{
+							new Rating
+							{
+								User = "User 3",
+								Rate = 2.5F,
+							},
+							new Rating
+							{
+								User = "User 4",
+								Rate = 4.5F,
+							}
+						}
 					});
 
 					session.SaveChanges();
@@ -133,14 +133,14 @@ namespace Raven.Tests.MailingList
 				{
 					Category = p.Category,
 					Books = new dynamic[]
-                    {
-                        new
-                        {
-                            p.Name,
-                            MinRating = p.Ratings.Min(),
-                            MaxRating = p.Ratings.Max(),
-                        }
-                    },
+					{
+						new
+						{
+							p.Name,
+							MinRating = p.Ratings.Min(),
+							MaxRating = p.Ratings.Max(),
+						}
+					},
 				}));
 
 			Reduce = results => results
