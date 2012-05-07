@@ -731,8 +731,14 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\AsyncDocumentQuery.cs">
       <Link>Imports\Document\AsyncDocumentQuery.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncHiLoKeyGenerator.cs">
+      <Link>Imports\Document\AsyncHiLoKeyGenerator.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\AsyncMultiLoaderWithInclude.cs">
       <Link>Imports\Document\AsyncMultiLoaderWithInclude.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncMultiTypeHiLoKeyGenerator.cs">
+      <Link>Imports\Document\AsyncMultiTypeHiLoKeyGenerator.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyLoaderWithInclude.cs">
       <Link>Imports\Document\Batches\ILazyLoaderWithInclude.cs</Link>
@@ -754,6 +760,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\FailoverBehavior.cs">
       <Link>Imports\Document\FailoverBehavior.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\HiLoKeyGeneratorBase.cs">
+      <Link>Imports\Document\HiLoKeyGeneratorBase.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\IAbstractDocumentQuery.cs">
       <Link>Imports\Document\IAbstractDocumentQuery.cs</Link>

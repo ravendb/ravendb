@@ -823,7 +823,9 @@ namespace Raven.Client.Connection.Async
 										}
 									}
 								}
-								throw task.Exception;
+								// This will rethrow the task's exception.
+								task.AssertNotFailed();
+								return null;
 
 							case TaskStatus.Canceled:
 								throw new TaskCanceledException();
