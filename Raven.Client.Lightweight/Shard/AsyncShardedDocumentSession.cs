@@ -286,7 +286,7 @@ namespace Raven.Client.Shard
 						cachingScope.Dispose();
 						throw;
 					}
-				});
+				}).Unwrap();
 		}
 
 		private Task GenerateDocumentKeysForSaveChanges()
