@@ -295,7 +295,7 @@ namespace Raven.Client.Shard
 
 			var tasks = entities.Select(entity => new Func<Task>(() =>
 				GenerateDocumentKeyForStorageAsync(entity.Key)
-					.ContinueWith(task => entity.Value.Key = task.Result)));
+					.ContinueWith(task => entity.Value.Key = ModifyObjectId(task.Result, entity.Key, entity.Value.Metadata))));
 
 			return tasks.StartSequentially();
 		}

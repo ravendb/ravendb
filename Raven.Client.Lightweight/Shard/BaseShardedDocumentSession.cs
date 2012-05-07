@@ -168,6 +168,16 @@ namespace Raven.Client.Shard
 
 		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
+			string modifyDocumentId = null;
+			if (id != null)
+			{
+				modifyDocumentId = ModifyObjectId(id, entity, metadata);
+			}
+			base.StoreEntityInUnitOfWork(modifyDocumentId, entity, etag, metadata, forceConcurrencyCheck);
+		}
+
+		protected string ModifyObjectId(string id, object entity, RavenJObject metadata)
+		{
 			var shardId = shardStrategy.ShardResolutionStrategy.GenerateShardIdFor(entity);
 			if (string.IsNullOrEmpty(shardId))
 				throw new InvalidOperationException("Could not find shard id for " + entity + " because " + shardStrategy.ShardAccessStrategy + " returned null or empty string for the document shard id.");
@@ -175,7 +185,8 @@ namespace Raven.Client.Shard
 			var modifyDocumentId = shardStrategy.ModifyDocumentId(Conventions, shardId, id);
 			if (modifyDocumentId != id)
 				TrySetIdentity(entity, modifyDocumentId);
-			base.StoreEntityInUnitOfWork(modifyDocumentId, entity, etag, metadata, forceConcurrencyCheck);
+
+			return modifyDocumentId;
 		}
 
 		#endregion
