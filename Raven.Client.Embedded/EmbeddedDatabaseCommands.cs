@@ -347,16 +347,20 @@ namespace Raven.Client.Embedded
 						.Where(x => x["@metadata"] != null)
 						.Select(x => x["@metadata"].Value<string>("@id"))
 						.Where(x => x != null)
-					); 
-			var includeCmd = new AddIncludesCommand(database, TransactionInformation,
-			                                        (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
+					);
 
-			foreach (var result in queryResult.Results)
+			if (includes != null)
 			{
-				includeCmd.Execute(result);
-			}
+				var includeCmd = new AddIncludesCommand(database, TransactionInformation,
+														(etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
 
-			EnsureLocalDate(queryResult.Includes);
+				foreach (var result in queryResult.Results)
+				{
+					includeCmd.Execute(result);
+				}
+
+				EnsureLocalDate(queryResult.Includes);
+			}
 
 			return queryResult;
 		}
@@ -405,11 +409,16 @@ namespace Raven.Client.Embedded
 					.Select(x => EnsureLocalDate(x).ToJson())
 					.ToList(),
 			};
-			var includeCmd = new AddIncludesCommand(database, TransactionInformation, (etag, doc) => multiLoadResult.Includes.Add(doc), includes, new HashSet<string>(ids));
-			foreach (var jsonDocument in multiLoadResult.Results)
+			
+			if (includes != null)
 			{
-				includeCmd.Execute(jsonDocument);
+				var includeCmd = new AddIncludesCommand(database, TransactionInformation, (etag, doc) => multiLoadResult.Includes.Add(doc), includes, new HashSet<string>(ids));
+				foreach (var jsonDocument in multiLoadResult.Results)
+				{
+					includeCmd.Execute(jsonDocument);
+				}
 			}
+
 			return multiLoadResult;
 		}
 
