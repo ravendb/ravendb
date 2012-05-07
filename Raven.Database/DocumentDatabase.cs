@@ -443,16 +443,14 @@ namespace Raven.Database
 
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
+			key = key.Trim();
 			if (string.IsNullOrEmpty(key))
 			{
 				// we no longer sort by the key, so it doesn't matter
 				// that the key is no longer sequential
 				key = Guid.NewGuid().ToString();
 			}
-			else
-			{
-				key = key.Trim();
-			}
+
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;

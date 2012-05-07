@@ -7,8 +7,19 @@ namespace Raven.Database.Plugins
 {
 	public enum ReadOperation
 	{
+		/// <summary>
+		/// Load operation. Load a document by its ID operation.
+		/// </summary>
 		Load,
+
+		/// <summary>
+		/// Query operation. Query documents by a query.
+		/// </summary>
 		Query,
-		Index
+
+		/// <summary>
+		/// Index operation. Indexing documents.
+		/// </summary>
+		Index,
 	}
 }

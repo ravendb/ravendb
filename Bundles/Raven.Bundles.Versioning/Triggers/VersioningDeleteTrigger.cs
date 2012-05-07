@@ -15,9 +15,13 @@ namespace Raven.Bundles.Versioning.Triggers
 			JsonDocument document = Database.Get(key, transactionInformation);
 			if (document == null)
 				return VetoResult.Allowed;
-			if (document.Metadata.Value<string>(VersioningPutTrigger.RavenDocumentRevisionStatus) != "Historical")
+			if (document.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) != "Historical")
 				return VetoResult.Allowed;
-			return VetoResult.Deny("Deleting a historical revision is not allowed");
+
+			if (Database.IsVersioningActive(document.Metadata))
+				return VetoResult.Deny("Deleting a historical revision is not allowed");
+
+			return VetoResult.Allowed;
 		}
 	}
 }

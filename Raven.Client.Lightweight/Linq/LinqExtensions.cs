@@ -5,12 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Linq;
-#if !NET35
-using System.Threading.Tasks;
-#endif
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -18,6 +15,9 @@ using Raven.Client.Document.Batches;
 
 namespace Raven.Client.Linq
 {
+#if !NET35
+	using System.Threading.Tasks;
+#endif
 
 	///<summary>
 	/// Extensions to the linq syntax
@@ -265,7 +265,7 @@ namespace Raven.Client.Linq
 		/// Includes the specified path in the query, loading the document specified in that path
 		/// </summary>
 		/// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
-        /// <param name="source">The source for querying</param>
+		/// <param name="source">The source for querying</param>
 		/// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
 		/// <returns></returns>
 		public static IRavenQueryable<TResult> Include<TResult>(this IRavenQueryable<TResult> source, Expression<Func<TResult, object>> path)

@@ -17,9 +17,15 @@ namespace Raven.Database.Plugins
 		///  Ask the trigger whatever the PUT should be vetoed.
 		///  If the trigger vote to veto the PUT, it needs to provide a human readable 
 		///  explanation why the PUT was rejected.
-		///  </summary><remarks>
+		///  </summary>
+		/// <remarks>
 		///  This method SHOULD NOT modify either the document or the metadata.
-		///  </remarks><param name="key">The document key</param><param name="document">The new document about to be put into Raven</param><param name="metadata">The new document metadata</param><param name="transactionInformation">The current transaction, if it exists</param><returns>Whatever the put was vetoed or not</returns>
+		///  </remarks>
+		/// <param name="key">The document key</param>
+		/// <param name="document">The new document about to be put into Raven</param>
+		/// <param name="metadata">The new document metadata</param>
+		/// <param name="transactionInformation">The current transaction, if it exists</param>
+		/// <returns>Whatever the put was vetoed or not</returns>
 		public virtual VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			return VetoResult.Allowed;
