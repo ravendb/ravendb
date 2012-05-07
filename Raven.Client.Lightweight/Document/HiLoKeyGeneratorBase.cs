@@ -17,8 +17,7 @@ namespace Raven.Client.Document
 		protected readonly string tag;
 		protected long capacity;
 		[CLSCompliant(false)]
-		protected volatile LongHolder currentMax = new LongHolder(0);
-		protected long current;
+		protected volatile Range range;
 		protected string lastServerPrefix;
 		protected DateTime lastRequestedUtc;
 
@@ -26,7 +25,7 @@ namespace Raven.Client.Document
 		{
 			this.tag = tag;
 			this.capacity = capacity;
-			this.current = 0;
+			this.range = new Range(1, 0);
 		}
 
 		protected string GetDocumentKeyFromId(DocumentConvention convention, long nextId)
@@ -87,14 +86,19 @@ namespace Raven.Client.Document
 			}
 			return jsonDocument;
 		}
-
-		protected class LongHolder
+		
+		[System.Diagnostics.DebuggerDisplay("[{Min}-{Max}]: {Current}")]
+		protected class Range
 		{
-			public readonly long Value;
+			public readonly long Min;
+			public readonly long Max;
+			public long Current;
 
-			public LongHolder(long value)
+			public Range(long min, long max)
 			{
-				Value = value;
+				this.Min = min;
+				this.Max = max;
+				this.Current = min - 1;
 			}
 		}
 	}

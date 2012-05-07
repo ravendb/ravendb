@@ -53,8 +53,9 @@ namespace Raven.Client.Document
 		///</summary>
 		public Task<long> NextIdAsync()
 		{
-			long incrementedCurrent = Interlocked.Increment(ref current);
-			if (incrementedCurrent <= currentMax.Value)
+			var myRange = range; // thread safe copy
+			long incrementedCurrent = Interlocked.Increment(ref myRange.Current);
+			if (incrementedCurrent <= myRange.Max)
 			{
 				return CompletedTask.With(incrementedCurrent);
 			}
@@ -63,7 +64,7 @@ namespace Raven.Client.Document
 			try
 			{
 				generatorLock.Enter(ref lockTaken);
-				if (current < currentMax.Value)
+				if (range != myRange)
 				{
 					// Lock was contended, and the max has already been changed. Just get a new id as usual.
 					generatorLock.Exit();
@@ -72,12 +73,12 @@ namespace Raven.Client.Document
 				else
 				{
 					// Get a new max, and use the current value.
-					return GetNextMaxAsync()
+					return GetNextRangeAsync()
 						.ContinueWith(task =>
 						{
 							try
 							{
-								currentMax = new LongHolder(task.Result);
+								range = task.Result;
 							}
 							finally
 							{
@@ -98,16 +99,16 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private Task<long> GetNextMaxAsync()
+		private Task<Range> GetNextRangeAsync()
 		{
 			IncreaseCapacityIfRequired();
 
 			return GetNextMaxAsyncInner();
 		}
 
-		private Task<long> GetNextMaxAsyncInner()
+		private Task<Range> GetNextMaxAsyncInner()
 		{
-			var minNextMax = currentMax.Value;
+			var minNextMax = range.Max;
 			return GetDocumentAsync().ContinueWith(task =>
 			{
 				try
@@ -134,27 +135,33 @@ namespace Raven.Client.Document
 									Key = HiLoDocumentKey
 								}))
 							.Unwrap()
-							.WithResult(GetNextMaxAsync);
+							.WithResult(GetNextRangeAsync);
 					}
 
+					long min, max;
 					if (document == null)
 					{
-						return PutDocumentAsync(new JsonDocument
+						min = minNextMax + 1;
+						max = minNextMax + capacity;
+						document = new JsonDocument
 						{
 							Etag = Guid.Empty,
 							// sending empty guid means - ensure the that the document does NOT exists
 							Metadata = new RavenJObject(),
-							DataAsJson = RavenJObject.FromObject(new { Max = minNextMax + capacity }),
+							DataAsJson = RavenJObject.FromObject(new { Max = max }),
 							Key = HiLoDocumentKey
-						}).WithResult(minNextMax + capacity);
+						};
+					}
+					else
+					{
+						var oldMax = GetMaxFromDocument(document, minNextMax);
+						min = oldMax + 1;
+						max = oldMax + capacity;
+
+						document.DataAsJson["Max"] = max;
 					}
 
-					var max = GetMaxFromDocument(document, minNextMax);
-					current = max + 1;
-					var newMax = max + capacity;
-
-					document.DataAsJson["Max"] = newMax;
-					return PutDocumentAsync(document).WithResult(newMax);
+					return PutDocumentAsync(document).WithResult(new Range(min, max));
 				}
 				catch (ConcurrencyException)
 				{

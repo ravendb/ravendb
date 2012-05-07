@@ -56,19 +56,24 @@ namespace Raven.Client.Document
 		{
 			while (true)
 			{
-				long incrementedCurrent = Interlocked.Increment(ref current);
-				if (incrementedCurrent <= currentMax.Value)
-					return incrementedCurrent;
+				var myRange = range; // thread safe copy
+
+				var current = Interlocked.Increment(ref myRange.Current);
+				if (current <= myRange.Max)
+					return current;
 
 				lock (generatorLock)
 				{
-					if (current > currentMax.Value)
-						currentMax = new LongHolder(GetNextMax());
+					if (range != myRange)
+						// Lock was contended, and the max has already been changed. Just get a new id as usual.
+						continue;
+
+					range = GetNextRange();
 				}
 			}
 		}
 
-		private long GetNextMax()
+		private Range GetNextRange()
 		{
 			using (new TransactionScope(TransactionScopeOption.Suppress))
 			{
@@ -77,7 +82,7 @@ namespace Raven.Client.Document
 				{
 					try
 					{
-						var minNextMax = currentMax.Value;
+						var minNextMax = range.Max;
 						JsonDocument document;
 
 						try
@@ -101,24 +106,32 @@ namespace Raven.Client.Document
 
 							continue;
 						}
+
+						long min, max;
 						if (document == null)
 						{
-							PutDocument(new JsonDocument
+							min = minNextMax + 1;
+							max = minNextMax + capacity;
+							document = new JsonDocument
 							{
 								Etag = Guid.Empty,
 								// sending empty guid means - ensure the that the document does NOT exists
 								Metadata = new RavenJObject(),
-								DataAsJson = RavenJObject.FromObject(new { Max = minNextMax + capacity }),
+								DataAsJson = RavenJObject.FromObject(new { Max = max }),
 								Key = HiLoDocumentKey
-							});
-							return minNextMax + capacity;
+							};
 						}
-						var max = GetMaxFromDocument(document, minNextMax);
-						document.DataAsJson["Max"] = max + capacity;
+						else
+						{
+							var oldMax = GetMaxFromDocument(document, minNextMax);
+							min = oldMax + 1;
+							max = oldMax + capacity;
+
+							document.DataAsJson["Max"] = max;
+						}
 						PutDocument(document);
 
-						current = max + 1;
-						return max + capacity;
+						return new Range(min, max);
 					}
 					catch (ConcurrencyException)
 					{

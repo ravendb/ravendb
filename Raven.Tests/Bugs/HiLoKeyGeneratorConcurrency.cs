@@ -13,11 +13,11 @@ namespace Raven.Tests.Bugs
 {
 	public class HiLoKeyGeneratorConcurrency : RemoteClientTest
 	{
-		private const int GeneratedIdCount = 10000;
+		private const int GeneratedIdCount = 2000;
 		private const int ThreadCount = 100;
 
 		[Fact]
-		public void When_generating_lots_of_keys_concurrently_there_are_no_clashes()
+		public void ParallelGeneration_NoClashesOrGaps()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore
@@ -26,13 +26,12 @@ namespace Raven.Tests.Bugs
 			}.Initialize())
 			{
 				var gen = new HiLoKeyGenerator(store.DatabaseCommands, "When_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
-
-				Test(gen.NextId);
+				Test(gen.NextId, ThreadCount, GeneratedIdCount);
 			}
 		}
 
 		[Fact]
-		public void When_async_generating_lots_of_keys_concurrently_there_are_no_clashes()
+		public void AsyncParallelGeneration_NoClashesOrGaps()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore
@@ -41,23 +40,51 @@ namespace Raven.Tests.Bugs
 			}.Initialize())
 			{
 				var gen = new AsyncHiLoKeyGenerator(store.AsyncDatabaseCommands, "When_async_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
-				Test(() => gen.NextIdAsync().Result);
+				Test(() => gen.NextIdAsync().Result, ThreadCount, GeneratedIdCount);
 			}
 		}
 
-		private void Test(Func<long> generate)
+		[Fact]
+		public void SequentialGeneration_NoClashesOrGaps()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				var gen = new HiLoKeyGenerator(store.DatabaseCommands, "When_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
+				Test(gen.NextId, 1, GeneratedIdCount);
+			}
+		}
+
+		[Fact]
+		public void AsyncSequentialGeneration_NoClashesOrGaps()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				var gen = new AsyncHiLoKeyGenerator(store.AsyncDatabaseCommands, "When_async_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
+				Test(() => gen.NextIdAsync().Result, 1, GeneratedIdCount);
+			}
+		}
+
+		private void Test(Func<long> generate, int threadCount, int generatedIdCount)
 		{
 			var waitingThreadCount = 0;
 			var starterGun = new ManualResetEvent(false);
 
-			var results = new long[GeneratedIdCount];
-			var threads = Enumerable.Range(0, ThreadCount).Select(threadNumber => new Thread(() =>
+			var results = new long[generatedIdCount];
+			var threads = Enumerable.Range(0, threadCount).Select(threadNumber => new Thread(() =>
 			{
 				// Wait for all threads to be ready
 				Interlocked.Increment(ref waitingThreadCount);
 				starterGun.WaitOne();
 
-				for (int i = threadNumber; i < GeneratedIdCount; i += ThreadCount)
+				for (int i = threadNumber; i < generatedIdCount; i += threadCount)
 					results[i] = generate();
 			})).ToArray();
 
@@ -66,7 +93,7 @@ namespace Raven.Tests.Bugs
 
 			// Wait for all tasks to reach the waiting stage
 			var wait = new SpinWait();
-			while (waitingThreadCount < ThreadCount)
+			while (waitingThreadCount < threadCount)
 				wait.SpinOnce();
 
 			// Start all the threads at the same time
@@ -80,9 +107,12 @@ namespace Raven.Tests.Bugs
 				if (!ids.Add(value))
 				{
 					throw new AssertException("Id " + value + " was generated more than once, in indices "
-						+ string.Join(", ", results.Select(Tuple.Create<long,int>).Where(x => x.Item1 == value).Select(x => x.Item2)));
+						+ string.Join(", ", results.Select(Tuple.Create<long, int>).Where(x => x.Item1 == value).Select(x => x.Item2)));
 				}
 			}
+
+			for (long i = 1; i <= GeneratedIdCount; i++)
+				Assert.True(ids.Contains(i), "Id " + i + " was not generated.");
 		}
 	}
 }
