@@ -80,6 +80,8 @@ namespace Raven.Tests.MailingList
 							.Customize(c => c.WaitForNonStaleResults())
 							.ToList();
 
+					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+
 					Assert.Equal(tasksForUserA, result.Single(s => s.OwnerId == userA.Id).Count);
 					Assert.Equal(tasksForUserB, result.Single(s => s.OwnerId == userB.Id).Count);
 				}
@@ -119,17 +121,13 @@ namespace Raven.Tests.MailingList
 
 			public TasksCount_ForPerson()
 			{
-				Map = projects =>
-					projects
-					.SelectMany(p => p.Activities)
-					.SelectMany(a => a.Tasks)
-						.Select(task =>
-								new
-								{
-									OwnerId = task.Owner.Id,
-									Count = 1
-								}
-						);
+				Map = projects => from project in projects
+				                  from task in project.Activities.SelectMany(a => a.Tasks)
+				                  select new
+				                  {
+				                  	OwnerId = task.Owner.Id,
+				                  	Count = 1
+				                  };
 
 				Reduce =
 					results => results
