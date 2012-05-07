@@ -5,12 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Linq;
-#if !NET35
-using System.Threading.Tasks;
-#endif
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -18,6 +15,9 @@ using Raven.Client.Document.Batches;
 
 namespace Raven.Client.Linq
 {
+#if !NET35
+	using System.Threading.Tasks;
+#endif
 
 	///<summary>
 	/// Extensions to the linq syntax
