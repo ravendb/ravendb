@@ -24,38 +24,18 @@ namespace Raven.Client.Document
 	/// <summary>
 	/// Generate hilo numbers against a RavenDB document
 	/// </summary>
-	public class HiLoKeyGenerator
+	public class HiLoKeyGenerator : HiLoKeyGeneratorBase
 	{
-		private const string RavenKeyGeneratorsHilo = "Raven/Hilo/";
-		private const string RavenKeyServerPrefix = "Raven/ServerPrefixForHilo";
-		private readonly string tag;
-		private long capacity;
+		private readonly IDatabaseCommands databaseCommands;
 		private readonly object generatorLock = new object();
-		private long current;
-		private volatile Holder currentMax = new Holder(0);
-		private DateTime lastRequestedUtc;
-		private IDatabaseCommands databaseCommands;
-		private string lastServerPrefix;
-
-		private class Holder
-		{
-			public readonly long Value;
-
-			public Holder(long value)
-			{
-				Value = value;
-			}
-		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
 		/// </summary>
 		public HiLoKeyGenerator(IDatabaseCommands databaseCommands, string tag, long capacity)
+			: base(tag, capacity)
 		{
 			this.databaseCommands = databaseCommands;
-			this.tag = tag;
-			this.capacity = capacity;
-			current = 0;
 		}
 
 		/// <summary>
@@ -66,12 +46,7 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public string GenerateDocumentKey(DocumentConvention convention, object entity)
 		{
-			var nextId = NextId();
-			return string.Format("{0}{1}{2}{3}",
-								 tag,
-								 convention.IdentityPartsSeparator,
-								 lastServerPrefix,
-								 nextId);
+			return GetDocumentKeyFromId(convention, NextId());
 		}
 
 		///<summary>
@@ -79,36 +54,25 @@ namespace Raven.Client.Document
 		///</summary>
 		public long NextId()
 		{
-			long incrementedCurrent = Interlocked.Increment(ref current);
-			while (incrementedCurrent > currentMax.Value)
+			while (true)
 			{
+				long incrementedCurrent = Interlocked.Increment(ref current);
+				if (incrementedCurrent <= currentMax.Value)
+					return incrementedCurrent;
+
 				lock (generatorLock)
 				{
 					if (current > currentMax.Value)
-					{
-						currentMax = new Holder(GetNextMax());
-						incrementedCurrent = current;
-					}
-					else
-					{
-						incrementedCurrent = Interlocked.Increment(ref current);
-					}
+						currentMax = new LongHolder(GetNextMax());
 				}
 			}
-			return incrementedCurrent;
 		}
 
 		private long GetNextMax()
 		{
 			using (new TransactionScope(TransactionScopeOption.Suppress))
 			{
-				var span = DateTime.UtcNow - lastRequestedUtc;
-				if (span.TotalSeconds < 1)
-				{
-					capacity *= 2;
-				}
-
-				lastRequestedUtc = DateTime.UtcNow;
+				IncreaseCapacityIfRequired();
 				while (true)
 				{
 					try
@@ -132,7 +96,7 @@ namespace Raven.Client.Document
 								Etag = e.Etag,
 								Metadata = new RavenJObject(),
 								DataAsJson = RavenJObject.FromObject(new { Max = highestMax }),
-								Key = RavenKeyGeneratorsHilo + tag
+								Key = HiLoDocumentKey
 							});
 
 							continue;
@@ -145,7 +109,7 @@ namespace Raven.Client.Document
 								// sending empty guid means - ensure the that the document does NOT exists
 								Metadata = new RavenJObject(),
 								DataAsJson = RavenJObject.FromObject(new { Max = minNextMax + capacity }),
-								Key = RavenKeyGeneratorsHilo + tag
+								Key = HiLoDocumentKey
 							});
 							return minNextMax + capacity;
 						}
@@ -164,46 +128,17 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private long GetMaxFromDocument(JsonDocument document, long minMax)
-		{
-			long max;
-			if (document.DataAsJson.ContainsKey("ServerHi")) // convert from hi to max
-			{
-				var hi = document.DataAsJson.Value<long>("ServerHi");
-				max = ((hi - 1) * capacity);
-				document.DataAsJson.Remove("ServerHi");
-				document.DataAsJson["Max"] = max;
-			}
-			max = document.DataAsJson.Value<long>("Max");
-			return Math.Max(max, minMax);
-		}
-
 		private void PutDocument(JsonDocument document)
 		{
-			databaseCommands.Put(RavenKeyGeneratorsHilo + tag, document.Etag,
+			databaseCommands.Put(HiLoDocumentKey, document.Etag,
 								 document.DataAsJson,
 								 document.Metadata);
 		}
 
 		private JsonDocument GetDocument()
 		{
-			var documents = databaseCommands.Get(new[] {RavenKeyGeneratorsHilo + tag, RavenKeyServerPrefix}, new string[0]);
-			if(documents.Results.Count == 2 && documents.Results[1] != null)
-			{
-				lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
-			}
-			else
-			{
-				lastServerPrefix = string.Empty;
-			}
-			if (documents.Results.Count == 0 || documents.Results[0] == null)
-				return null;
-			var jsonDocument = documents.Results[0].ToJsonDocument();
-			foreach (var key in jsonDocument.Metadata.Keys.Where(x => x.StartsWith("@")).ToArray())
-			{
-				jsonDocument.Metadata.Remove(key);
-			}
-			return jsonDocument;
+			var documents = databaseCommands.Get(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0]);
+			return HandleGetDocumentResult(documents);
 		}
 	}
 }

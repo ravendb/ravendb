@@ -6,6 +6,7 @@
 #if !NET35
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
@@ -14,6 +15,7 @@ using NLog;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Util;
@@ -206,34 +208,42 @@ namespace Raven.Client.Document.Async
 		{
 			return GenerateDocumentKeysForSaveChanges().ContinueWith(keysTask =>
 				{
-					keysTask.Wait();
+					keysTask.AssertNotFailed();
 
 					var cachingScope = EntitiesToJsonCachingScope();
-					var data = PrepareForSaveChanges();
-					return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
-						.ContinueWith(task =>
-						{
-							try
+					try
+					{
+						var data = PrepareForSaveChanges();
+						return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
+							.ContinueWith(task =>
 							{
-								UpdateBatchResults(task.Result, data);
-							}
-							finally 
-							{
-								cachingScope.Dispose();
-							}
-						});
+								try
+								{
+									UpdateBatchResults(task.Result, data);
+								}
+								finally
+								{
+									cachingScope.Dispose();
+								}
+							});
+					}
+					catch
+					{
+						cachingScope.Dispose();
+						throw;
+					}
 				}).Unwrap();
 		}
 
 		private Task GenerateDocumentKeysForSaveChanges()
 		{
-			return Task.Factory.StartNew(() =>
-			{
-				foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)))
-				{
-					entity.Value.Key = GenerateDocumentKeyForStorage(entity.Key);
-				}
-			});
+			var entities = entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).ToList();
+
+			var tasks = entities.Select(entity => new Func<Task>(() =>
+				GenerateDocumentKeyForStorageAsync(entity.Key)
+					.ContinueWith(task => entity.Value.Key = task.Result)));
+
+			return tasks.StartSequentially();
 		}
 
 		/// <summary>
