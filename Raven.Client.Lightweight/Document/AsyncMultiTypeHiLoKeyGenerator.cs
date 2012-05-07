@@ -7,6 +7,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Document
@@ -43,7 +44,7 @@ namespace Raven.Client.Document
 		{
 		    var typeTagName = conventions.GetTypeTagName(entity.GetType());
 			if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
-				return null;
+				return CompletedTask.With<string>(null);
 			var tag = conventions.TransformTypeTagNameToDocumentKeyPrefix(typeTagName);
 			AsyncHiLoKeyGenerator value;
 			if (keyGeneratorsByTag.TryGetValue(tag, out value))
