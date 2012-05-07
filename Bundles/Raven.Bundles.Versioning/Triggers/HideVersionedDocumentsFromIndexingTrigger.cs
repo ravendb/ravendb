@@ -6,13 +6,12 @@ namespace Raven.Bundles.Versioning.Triggers
 {
 	public class HideVersionedDocumentsFromIndexingTrigger : AbstractReadTrigger
 	{
-		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation,
-		                                         TransactionInformation transactionInformation)
+		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
 		{
 			if (operation != ReadOperation.Index)
 				return ReadVetoResult.Allowed;
 
-			if (metadata.Value<string>(VersioningPutTrigger.RavenDocumentRevisionStatus) == "Historical")
+			if (metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical" && Database.IsVersioningActive(metadata))
 				return ReadVetoResult.Ignore;
 
 			return ReadVetoResult.Allowed;
