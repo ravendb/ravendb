@@ -32,7 +32,7 @@ namespace Raven.Smuggler
 			ConnectionStringOptions = connectionStringOptions;
 		}
 
-		private HttpRavenRequest CreateRequest(string url, string method = "GET")
+		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
 		{
 			var builder = new StringBuilder(ConnectionStringOptions.Url, 2);
 			if (string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase) == false)
@@ -443,15 +443,12 @@ namespace Raven.Smuggler
 
 			ensuredDatabaseExists = true;
 
-			var document = MultiDatabase.CreateDatabaseDocument(ConnectionStringOptions.DefaultDatabase);
 			var rootDatabaseUrl = MultiDatabase.GetRootDatabaseUrl(ConnectionStringOptions.Url);
-
 			var docUrl = rootDatabaseUrl + "/docs/Raven/Databases/" + ConnectionStringOptions.DefaultDatabase;
 
 			try
 			{
-				CreateRequest(docUrl)
-					.ExecuteRequest();
+				httpRavenRequestFactory.Create(docUrl, "GET", ConnectionStringOptions).ExecuteRequest();
 				return;
 			}
 			catch (WebException e)
@@ -462,6 +459,7 @@ namespace Raven.Smuggler
 			}
 
 			var request = CreateRequest(docUrl, "PUT");
+			var document = MultiDatabase.CreateDatabaseDocument(ConnectionStringOptions.DefaultDatabase);
 			request.Write(document);
 			request.ExecuteRequest();
 		}

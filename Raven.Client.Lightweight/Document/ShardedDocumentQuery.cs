@@ -146,7 +146,7 @@ namespace Raven.Client.Document
 				Thread.Sleep(100);
 			}
 
-			AssertNoDuplicateIdsInResults();
+			AssertNoDuplicateIdsInResults(shardQueryOperations);
 
 			var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
 
@@ -154,7 +154,7 @@ namespace Raven.Client.Document
 			queryOperation = shardQueryOperations[0];
 		}
 
-		private void AssertNoDuplicateIdsInResults()
+		internal static void AssertNoDuplicateIdsInResults(List<QueryOperation> shardQueryOperations)
 		{
 			var shardsPerId = new Dictionary<string, HashSet<QueryOperation>>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -196,7 +196,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
-			get { throw new NotSupportedException("Sharded doesn't support async operations."); }
+			get { throw new NotSupportedException("Sharded has more than one DatabaseCommands to operate on."); }
 		}
 #endif
 

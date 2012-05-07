@@ -762,7 +762,7 @@
       <Link>Imports\Document\IAsyncLoaderWithInclude.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\OpenSessionOptions.cs">
-      <Link>Document\OpenSessionOptions.cs</Link>
+      <Link>Imports\Document\OpenSessionOptions.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\SessionOperations\LoadOperation.cs">
       <Link>Imports\Document\SessionOperations\LoadOperation.cs</Link>
@@ -787,6 +787,9 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentQuery.cs">
       <Link>Imports\IAsyncDocumentQuery.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\IAsyncDocumentSessionImpl.cs">
+      <Link>Imports\IAsyncDocumentSessionImpl.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\IDisposalNotification.cs">
       <Link>Imports\IDisposalNotification.cs</Link>

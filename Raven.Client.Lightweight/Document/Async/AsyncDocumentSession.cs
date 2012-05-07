@@ -25,7 +25,7 @@ namespace Raven.Client.Document.Async
 	/// <summary>
 	/// Implementation for async document session 
 	/// </summary>
-	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSession, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
+	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
 	{
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
@@ -37,6 +37,7 @@ namespace Raven.Client.Document.Async
 			: base(documentStore, listeners, id)
 		{
 			AsyncDatabaseCommands = asyncDatabaseCommands;
+			GenerateDocumentKeysOnStore = false;
 		}
 
 		/// <summary>
@@ -203,20 +204,36 @@ namespace Raven.Client.Document.Async
 		/// <returns></returns>
 		public Task SaveChangesAsync()
 		{
-			var cachingScope = EntitiesToJsonCachingScope();
-			var data = PrepareForSaveChanges();
-			return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
-				.ContinueWith(task =>
+			return GenerateDocumentKeysForSaveChanges().ContinueWith(keysTask =>
 				{
-					try
-					{
-						UpdateBatchResults(task.Result, data);
-					}
-					finally
-					{
-						cachingScope.Dispose();
-					}
-				});
+					keysTask.Wait();
+
+					var cachingScope = EntitiesToJsonCachingScope();
+					var data = PrepareForSaveChanges();
+					return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
+						.ContinueWith(task =>
+						{
+							try
+							{
+								UpdateBatchResults(task.Result, data);
+							}
+							finally 
+							{
+								cachingScope.Dispose();
+							}
+						});
+				}).Unwrap();
+		}
+
+		private Task GenerateDocumentKeysForSaveChanges()
+		{
+			return Task.Factory.StartNew(() =>
+			{
+				foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)))
+				{
+					entity.Value.Key = GenerateDocumentKeyForStorage(entity.Key);
+				}
+			});
 		}
 
 		/// <summary>

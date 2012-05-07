@@ -84,6 +84,8 @@
     <Compile Include="Converters\Int32Converter.cs" />
     <Compile Include="Converters\Int64Converter.cs" />
     <Compile Include="Converters\ITypeConverter.cs" />
+    <Compile Include="Document\AsyncShardedDocumentQuery.cs" />
+    <Compile Include="IAsyncDocumentSessionImpl.cs" />
     <Compile Include="DocumentStoreBase.cs" />
     <Compile Include="Document\AsyncDocumentQuery.cs" />
     <Compile Include="Document\Async\AsyncDocumentSession.cs" />
@@ -173,6 +175,8 @@
     <Compile Include="Linq\RavenQueryStatistics.cs" />
     <Compile Include="Linq\ReflectionExtensions.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
+    <Compile Include="Shard\BaseShardedDocumentSession.cs" />
+    <Compile Include="Shard\AsyncShardedDocumentSession.cs" />
     <Compile Include="Shard\IShardResolutionStrategy.cs" />
     <Compile Include="Shard\ShardedDocumentSession.cs" />
     <Compile Include="Shard\ShardedDocumentStore.cs" />

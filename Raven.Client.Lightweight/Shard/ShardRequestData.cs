@@ -19,7 +19,7 @@ namespace Raven.Client.Shard
 		/// Gets or sets the key.
 		/// </summary>
 		/// <value>The key.</value>
-		public List<string> Keys { get; set; }
+		public IList<string> Keys { get; set; }
 
 		/// <summary>
 		/// Gets or sets the type of the entity.

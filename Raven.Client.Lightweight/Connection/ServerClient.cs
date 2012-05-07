@@ -604,20 +604,24 @@ namespace Raven.Client.Connection
 		{
 			string requestUri = operationUrl + "/indexes/" + name;
 
-			var checkIndexExists = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "HEAD", credentials, convention);
-			checkIndexExists.AddOperationHeaders(OperationsHeaders);
+			if (!overwrite)
+			{
 
-			try
-			{
-				checkIndexExists.ExecuteRequest();
-				if (overwrite == false)
+				var checkIndexExists = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "HEAD", credentials, convention);
+				checkIndexExists.AddOperationHeaders(OperationsHeaders);
+
+				try
+				{
+					// If the index doesn't exist this will throw a NotFound exception and continue with a PUT request
+					checkIndexExists.ExecuteRequest();
 					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-					throw;
+				}
+				catch (WebException e)
+				{
+					var httpWebResponse = e.Response as HttpWebResponse;
+					if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
+						throw;
+				}
 			}
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);

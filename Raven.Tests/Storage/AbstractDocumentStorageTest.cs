@@ -22,14 +22,18 @@ namespace Raven.Tests.Storage
 
 		protected AbstractDocumentStorageTest()
 		{
-			IOExtensions.DeleteDirectory(DataDir);
-			DeleteIfExists(BackupDir); // for full backups, we can't have anything in the target dir
+			Delete();	 
 		}
 
 		public virtual void Dispose()
 		{
+			Delete();
+		}
+
+		private static void Delete()
+		{
 			IOExtensions.DeleteDirectory(DataDir);
-			IOExtensions.DeleteDirectory(BackupDir);
+			DeleteIfExists(BackupDir);
 		}
 
 		protected static void DeleteIfExists(string directoryName)
