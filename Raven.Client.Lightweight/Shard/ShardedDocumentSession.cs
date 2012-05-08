@@ -23,7 +23,6 @@ using Raven.Json.Linq;
 #if !NET35
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Batches;
-#endif
 
 
 namespace Raven.Client.Shard
@@ -565,4 +564,5 @@ namespace Raven.Client.Shard
 		}
 	}
 }
+#endif
 #endif

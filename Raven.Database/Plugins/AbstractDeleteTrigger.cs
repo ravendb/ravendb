@@ -18,7 +18,10 @@ namespace Raven.Database.Plugins
 		///  explanation why the DELETE was rejected.
 		///  </summary><remarks>
 		///  This method SHOULD NOT modify either the document or the metadata.
-		///  </remarks><param name="key">The document key</param><param name="transactionInformation">The current transaction, if any</param><returns>Whatever the put was vetoed or not</returns>
+		///  </remarks>
+		/// <param name="key">The document key</param>
+		/// <param name="transactionInformation">The current transaction, if any</param>
+		/// <returns>Whatever the delete was vetoed or not</returns>
 		public virtual VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
 		{
 			return VetoResult.Allowed;

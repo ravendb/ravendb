@@ -6,7 +6,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Document;
-
+#if !NET35
 namespace Raven.Client.Shard
 {
 	public class ShardedHiloKeyGenerator
@@ -49,3 +49,4 @@ namespace Raven.Client.Shard
 		}
 	}
 }
+#endif

@@ -545,6 +545,8 @@
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="Indexes\WithDecimalValue.cs" />
     <Compile Include="IndexQueryUrl.cs" />
+    <Compile Include="MailingList\Bruno.cs" />
+    <Compile Include="MailingList\ChrisH.cs" />
     <Compile Include="MailingList\IndexTest.cs" />
     <Compile Include="Issues\RavenDB_187.cs" />
     <Compile Include="Issues\RavenDB_72.cs" />
@@ -590,6 +592,7 @@
     <Compile Include="MailingList\Nick.cs" />
     <Compile Include="MailingList\NSB.cs" />
     <Compile Include="MailingList\OrderByValueTypeCast.cs" />
+    <Compile Include="MailingList\Oregon.cs" />
     <Compile Include="MailingList\Phil.cs" />
     <Compile Include="MailingList\JoelAsync.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />
@@ -606,6 +609,10 @@
     <Compile Include="MailingList\Stacey\ImageByName.cs" />
     <Compile Include="MailingList\Stacey\InServerTesting.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
+    
+    <Compile Include="MailingList\TomCabanski.cs" />
+    <Compile Include="MailingList\WallaceTurner.cs" />
+    
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />
     <Compile Include="MailingList\Thor\LinqTest.cs" />

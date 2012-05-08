@@ -55,9 +55,7 @@
     <Compile Include="Triggers\HideVersionedDocumentsFromIndexingTrigger.cs" />
     <Compile Include="Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Triggers\VersioningPutTrigger.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <WCFMetadata Include="Service References\" />
+    <Compile Include="VersioningUtil.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">

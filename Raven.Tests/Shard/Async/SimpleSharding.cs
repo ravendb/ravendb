@@ -59,8 +59,8 @@ namespace Raven.Tests.Shard.Async
 			{
 				var entity = new User();
 				session.Store(entity);
-				userId = entity.Id;
 				session.SaveChangesAsync().Wait();
+				userId = entity.Id;
 			}
 
 			using(var session = documentStore.OpenAsyncSession())
