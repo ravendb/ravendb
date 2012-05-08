@@ -166,11 +166,12 @@ type ``Given a Initailised Document store execute using computation expression``
     [<Fact>]
     let ``Should be able to project a property with select``() = 
         use ds = test.NewDocumentStore()
+        ds.Conventions.DefaultQueryingConsistency <- Raven.Client.Document.ConsistencyOptions.QueryYourWrites
         use session = ds.OpenSession()
         let actual = 
                    raven {
                             do! storeMany (createCustomers 7) >> ignore
-                            let! actual = query (select <@ fun x -> x.Id @>)
+                            let! actual = query (select <@ fun x -> x.Id @>)  
                             return actual
                          } |> run session |> Seq.toList
 
@@ -200,7 +201,24 @@ type ``Given a Initailised Document store execute using computation expression``
                          return expected, actual
                       } |> run session
            Assert.Equal(exp,act)
-
+    
+    [<Fact>]
+    let ``Should be able to save and retrieve an entity with tryLoad``() =
+           use ds = test.NewDocumentStore()
+           use session = ds.OpenSession()
+           let cust, act =
+                raven {
+                         let! customer = store (Customer.Create("test", new DateTime(2012, 1, 1)))
+                         do! saveChanges
+                         let! actual = (tryLoad<Customer> ["customers/test";"customers/doesntexist"]) 
+                         return customer, actual
+                      } |> run session
+           let exp = 
+                [
+                  ("customers/test", Option.Some(cust));
+                  ("customers/doesntexist", None)
+                ]
+           Assert.True((exp = (act |> Seq.toList)))
 
     [<Fact>]
     let ``Should be able to query for filtered all entites``() = 

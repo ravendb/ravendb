@@ -866,27 +866,30 @@ namespace Raven.Database
 
 		public void DeleteIndex(string name)
 		{
-			name = IndexDefinitionStorage.FixupIndexName(name);
-			IndexDefinitionStorage.RemoveIndex(name);
-			IndexStorage.DeleteIndex(name);
-			//we may run into a conflict when trying to delete if the index is currently
-			//busy indexing documents, worst case scenario, we will have an orphaned index
-			//row which will get cleaned up on next db restart.
-			for (var i = 0; i < 10; i++)
+			using(IndexDefinitionStorage.TryRemoveIndexContext())
 			{
-				try
+				name = IndexDefinitionStorage.FixupIndexName(name);
+				IndexDefinitionStorage.RemoveIndex(name);
+				IndexStorage.DeleteIndex(name);
+				//we may run into a conflict when trying to delete if the index is currently
+				//busy indexing documents, worst case scenario, we will have an orphaned index
+				//row which will get cleaned up on next db restart.
+				for (var i = 0; i < 10; i++)
 				{
-					TransactionalStorage.Batch(action =>
+					try
 					{
-						action.Indexing.DeleteIndex(name);
+						TransactionalStorage.Batch(action =>
+						{
+							action.Indexing.DeleteIndex(name);
 
-						workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
-					});
-					return;
-				}
-				catch (ConcurrencyException)
-				{
-					Thread.Sleep(100);
+							workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
+						});
+						return;
+					}
+					catch (ConcurrencyException)
+					{
+						Thread.Sleep(100);
+					}
 				}
 			}
 		}
@@ -962,7 +965,7 @@ namespace Raven.Database
 			}
 		}
 
-		public void PutStatic(string name, Guid? etag, Stream data, RavenJObject metadata)
+		public Guid PutStatic(string name, Guid? etag, Stream data, RavenJObject metadata)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 			name = name.Trim();
@@ -986,7 +989,7 @@ namespace Raven.Database
 
 			TransactionalStorage
 				.ExecuteImmediatelyOrRegisterForSyncronization(() => AttachmentPutTriggers.Apply(trigger => trigger.AfterCommit(name, data, metadata, newEtag)));
-
+			return newEtag;
 		}
 
 		public void DeleteStatic(string name, Guid? etag)
@@ -1069,7 +1072,7 @@ namespace Raven.Database
 				if (etag == null)
 					documents = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
 				else
-					documents = actions.Attachments.GetAttachmentsAfter(etag.Value).Take(pageSize).ToArray();
+					documents = actions.Attachments.GetAttachmentsAfter(etag.Value, pageSize).ToArray();
 
 			});
 			return documents;

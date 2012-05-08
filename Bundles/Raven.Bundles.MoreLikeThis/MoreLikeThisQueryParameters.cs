@@ -75,6 +75,11 @@ namespace Raven.Bundles.MoreLikeThis
 		public string DocumentId { get; set; }
 
 		/// <summary>
+		/// The name of the index to use for this operation
+		/// </summary>
+		public string IndexName { get; set; }
+
+		/// <summary>
 		/// Values for the the mapping group fields to use as the basis for comparison
 		/// </summary>
 		public NameValueCollection MapGroupFields { get; set; }
@@ -83,23 +88,23 @@ namespace Raven.Bundles.MoreLikeThis
 		{
 			var uri = new StringBuilder();
 
-			string pathSuffix = "";
+			string pathSuffix = string.Empty;
 
 			if (MapGroupFields.Count > 0)
 			{
-				var separator = "";
+				var separator = string.Empty;
 				foreach(string key in MapGroupFields.Keys)
 				{
-					pathSuffix = pathSuffix + separator + Uri.EscapeUriString(key) + '=' + Uri.EscapeUriString(MapGroupFields[key]);
+					pathSuffix = pathSuffix + separator + key + '=' + MapGroupFields[key];
 					separator = ";";
 				}
 			}
 			else
 			{
-				pathSuffix = Uri.EscapeUriString(DocumentId);
+				pathSuffix = DocumentId;
 			}
 
-			uri.AppendFormat("/morelikethis/{0}/{1}?", Uri.EscapeUriString(index), pathSuffix);
+			uri.AppendFormat("/morelikethis/?index={0}&docid={1}&", Uri.EscapeUriString(index), Uri.EscapeDataString(pathSuffix));
 			if (Fields != null)
 			{
 				foreach (var field in Fields)
@@ -127,14 +132,11 @@ namespace Raven.Bundles.MoreLikeThis
 		}
 
 #if !CLIENT
-		public static MoreLikeThisQueryParameters GetParametersFromPath(Regex urlMatcher, string path, NameValueCollection query, out string indexName)
+		public static MoreLikeThisQueryParameters GetParametersFromPath(string path, NameValueCollection query)
 		{
-			var match = urlMatcher.Match(path);
-
-			indexName = match.Groups[1].Value;
-
 			var results = new MoreLikeThisQueryParameters
 			{
+				IndexName = query.Get("index"),
 				Fields = query.GetValues("fields"),
 				Boost = query.Get("boost").ToNullableBool(),
 				MaximumNumberOfTokensParsed = query.Get("maxNumTokens").ToNullableInt(),
@@ -146,8 +148,7 @@ namespace Raven.Bundles.MoreLikeThis
 				StopWordsDocumentId = query.Get("stopWords"),
 			};
 
-			var keyValues = match.Groups[2].Value.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-
+			var keyValues = query.Get("docid").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
 			foreach(var keyValue in keyValues)
 			{
 				var split = keyValue.IndexOf('=');
@@ -158,18 +159,17 @@ namespace Raven.Bundles.MoreLikeThis
 				} 
 				else
 				{
-					results.DocumentId = keyValue;    
+					results.DocumentId = keyValue;
 				}
 			}
 
-			indexName = match.Groups[1].Value;
 			return results;
 		}
 
-		public static MoreLikeThisQueryParameters GetParametersFromPath(string pathAndQuery, out string indexName)
+		public static MoreLikeThisQueryParameters GetParametersFromPath(string pathAndQuery)
 		{
 			var path = pathAndQuery;
-			var query = "";
+			var query = string.Empty;
 
 			var split = pathAndQuery.IndexOf('?');
 			if (split >= 0)
@@ -178,11 +178,7 @@ namespace Raven.Bundles.MoreLikeThis
 				query = pathAndQuery.Substring(split);
 			}
 
-			return GetParametersFromPath(
-				new Regex(new MoreLikeThisResponder().UrlPattern), 
-				path, 
-				System.Web.HttpUtility.ParseQueryString(query), 
-				out indexName);
+			return GetParametersFromPath(path, System.Web.HttpUtility.ParseQueryString(query));
 		}
 #endif
 	}

@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -30,7 +31,7 @@ namespace Raven.Bundles.MoreLikeThis
 	{
 		public override string UrlPattern
 		{
-			get { return @"^/morelikethis/([\w\-_]+)/(.+)"; } // /morelikethis/(index-name)/(ravendb-document-id)
+			get { return "^/morelikethis/?(.+)"; } // /morelikethis/?index={index-name}&docid={ravendb-document-id}
 		}
 
 		public override string[] SupportedVerbs
@@ -40,14 +41,13 @@ namespace Raven.Bundles.MoreLikeThis
 
 		public override void Respond(IHttpContext context)
 		{
-			string indexName;
-			MoreLikeThisQueryParameters parameters = MoreLikeThisQueryParameters.GetParametersFromPath(this.urlMatcher, context.GetRequestUrl(), context.Request.QueryString, out indexName);
-
-			var index = Database.IndexStorage.GetIndexInstance(indexName);
+			var parameters = MoreLikeThisQueryParameters.GetParametersFromPath(context.GetRequestUrl(), context.Request.QueryString);
+            
+			var index = Database.IndexStorage.GetIndexInstance(parameters.IndexName);
 			if (index == null)
 			{
 				context.SetStatusToNotFound();
-				context.WriteJson(new { Error = "The index " + indexName + " cannot be found" });
+				context.WriteJson(new { Error = "The index " + parameters.IndexName + " cannot be found" });
 				return;
 			}
 
@@ -58,7 +58,7 @@ namespace Raven.Bundles.MoreLikeThis
 				return;
 			}
 
-			PerformSearch(context, indexName, index, parameters);
+			PerformSearch(context, parameters.IndexName, index, parameters);
 		}
 
 		private void PerformSearch(IHttpContext context, string indexName, Index index, MoreLikeThisQueryParameters parameters)
@@ -173,7 +173,7 @@ namespace Raven.Bundles.MoreLikeThis
 			}
 		}
 
-		private IEnumerable<JsonDocument> GetJsonDocuments(MoreLikeThisQueryParameters parameters, IndexSearcher searcher, string index, ScoreDoc[] hits, int baseDocId)
+		private IEnumerable<JsonDocument> GetJsonDocuments(MoreLikeThisQueryParameters parameters, IndexSearcher searcher, string index, IEnumerable<ScoreDoc> hits, int baseDocId)
 		{
 			if (string.IsNullOrEmpty(parameters.DocumentId) == false)
 			{

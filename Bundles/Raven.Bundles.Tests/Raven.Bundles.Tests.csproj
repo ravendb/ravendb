@@ -86,6 +86,7 @@
     <Compile Include="MoreLikeThis\MoreLikeThis_should_support_MapReduce_indexes.cs" />
     <Compile Include="MoreLikeThis\TestWithInMemoryDatabase.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
+    <Compile Include="Replication\AttachmentReplicationBugs.cs" />
     <Compile Include="Replication\Bugs\MultipleWritesInReplicationWindow.cs" />
     <Compile Include="Replication\Bugs\ReplicatingDanish.cs" />
     <Compile Include="Replication\Bugs\SameEtagFromDifferentServers.cs" />
@@ -102,6 +103,8 @@
     <Compile Include="UniqueConstraints\Bugs\Lars.cs" />
     <Compile Include="UniqueConstraints\CreateTests.cs" />
     <Compile Include="UniqueConstraints\DeleteTests.cs" />
+    <Compile Include="UniqueConstraints\ExtensionCheckTests.cs" />
+    <Compile Include="UniqueConstraints\ExtensionLoadTests.cs" />
     <Compile Include="UniqueConstraints\UniqueConstraintsTest.cs" />
     <Compile Include="UniqueConstraints\UpdateTests.cs" />
     <Compile Include="Versioning\Bugs\MultipleVersions.cs" />

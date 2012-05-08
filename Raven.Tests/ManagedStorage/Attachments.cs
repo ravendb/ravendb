@@ -71,12 +71,12 @@ namespace Raven.Tests.ManagedStorage
 
 				tx.Batch(viewer =>
 				{
-					var attachments = viewer.Attachments.GetAttachmentsAfter(Guid.Empty).ToArray();
-					var strings = viewer.Attachments.GetAttachmentsAfter(Guid.Empty).Select(x => x.Key).ToArray();
+					var attachments = viewer.Attachments.GetAttachmentsAfter(Guid.Empty, 100).ToArray();
+					var strings = viewer.Attachments.GetAttachmentsAfter(Guid.Empty, 100).Select(x => x.Key).ToArray();
 					Assert.Equal(new[] { "1", "2", "3" }, strings);
-					Assert.Equal(new[] { "2", "3" }, viewer.Attachments.GetAttachmentsAfter(attachments[0].Etag).Select(x => x.Key).ToArray());
-					Assert.Equal(new[] {  "3" }, viewer.Attachments.GetAttachmentsAfter(attachments[1].Etag).Select(x => x.Key).ToArray());
-					Assert.Equal(new string[] {  }, viewer.Attachments.GetAttachmentsAfter(attachments[2].Etag).Select(x => x.Key).ToArray());
+					Assert.Equal(new[] { "2", "3" }, viewer.Attachments.GetAttachmentsAfter(attachments[0].Etag, 100).Select(x => x.Key).ToArray());
+					Assert.Equal(new[] { "3" }, viewer.Attachments.GetAttachmentsAfter(attachments[1].Etag, 100).Select(x => x.Key).ToArray());
+					Assert.Equal(new string[] { }, viewer.Attachments.GetAttachmentsAfter(attachments[2].Etag, 100).Select(x => x.Key).ToArray());
 				});
 
 			}

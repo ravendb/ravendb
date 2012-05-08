@@ -109,16 +109,19 @@ namespace Raven.Database.Impl
 							return null;
 					}
 				}
-				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null);
-				var doc = GetDocumentWithCaching(queryResult.Key);
-				if (doc != null)
+				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null).ToArray();
+				if (fieldsToFetchFromDocument.Length > 0)
 				{
-					var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
-					foreach (var property in result)
+					var doc = GetDocumentWithCaching(queryResult.Key);
+					if (doc != null)
 					{
-						if(property.Value == null || property.Value.Type == JTokenType.Null)
-							continue;
-						queryResult.Projection[property.Key] = property.Value;
+						var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
+						foreach (var property in result)
+						{
+							if (property.Value == null || property.Value.Type == JTokenType.Null)
+								continue;
+							queryResult.Projection[property.Key] = property.Value;
+						}
 					}
 				}
 			}

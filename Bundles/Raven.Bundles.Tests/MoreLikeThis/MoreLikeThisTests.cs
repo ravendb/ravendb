@@ -94,6 +94,47 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		}
 
 		[Fact]
+		public void Can_Get_Results_when_index_has_slash_in_it()
+		{
+			const string key = "datas/1";
+
+			using (var session = documentStore.OpenSession())
+			{
+				new Data_Index().Execute(documentStore);
+
+				var list = new List<Data>
+				{
+					new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
+					new Data {Body = "I have a test tomorrow. I hate having a test"},
+					new Data {Body = "Cake is great."},
+					new Data {Body = "This document has the word test only once"},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"}
+				};
+				list.ForEach(session.Store);
+
+				session.SaveChanges();
+
+				//Ensure non stale index
+				var testObj = session.Query<Data, Data_Index>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
+				Assert.NotNull(testObj);
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<Data, Data_Index>(new MoreLikeThisQueryParameters
+				{
+					DocumentId = key,
+					Fields = new[] { "Body" }
+				});
+
+				Assert.NotEmpty(list);
+			}
+		}
+
+		[Fact]
 		public void Query_On_Document_That_Does_Not_Have_High_Enough_Word_Frequency()
 		{
 			const string key = "datas/4";
@@ -421,6 +462,37 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		public class DataIndex : AbstractIndexCreationTask<Data>
 		{
 			public DataIndex()
+			{
+				Map = docs => from doc in docs
+							  select new { doc.Body, doc.WhitespaceAnalyzerField };
+
+				Analyzers = new Dictionary<Expression<Func<Data, object>>, string>
+				{
+					{
+						x => x.Body,
+						typeof (StandardAnalyzer).FullName
+						},
+					{
+						x => x.WhitespaceAnalyzerField,
+						typeof (WhitespaceAnalyzer).FullName
+						}
+				};
+
+				Stores = new Dictionary<Expression<Func<Data, object>>, FieldStorage>
+				{
+					{
+						x => x.Body, FieldStorage.Yes
+						},
+					{
+						x => x.WhitespaceAnalyzerField, FieldStorage.Yes
+						}
+				};
+
+			}
+		}
+		public class Data_Index : AbstractIndexCreationTask<Data>
+		{
+			public Data_Index()
 			{
 				Map = docs => from doc in docs
 							  select new { doc.Body, doc.WhitespaceAnalyzerField };

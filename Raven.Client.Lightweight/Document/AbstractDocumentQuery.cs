@@ -11,6 +11,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
@@ -37,6 +38,9 @@ namespace Raven.Client.Document
 	/// </summary>
 	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
 	{
+		protected bool isSpatialQuery;
+		protected double lat, lng, radius;
+
 		/// <summary>
 		/// Whatever to negate the next operation
 		/// </summary>
@@ -1130,7 +1134,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			if (boost <= 0m)
 			{
-				throw new ArgumentOutOfRangeException("Boost factor must be a positive number");
+				throw new ArgumentOutOfRangeException("boost","Boost factor must be a positive number");
 			}
 
 			if (boost != 1m)
@@ -1438,6 +1442,25 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		protected virtual IndexQuery GenerateIndexQuery(string query)
 		{
+			if(isSpatialQuery)
+			{
+				return new SpatialIndexQuery
+				{
+					GroupBy = groupByFields,
+					AggregationOperation = aggregationOp,
+					Query = query,
+					PageSize = pageSize ?? 128,
+					Start = start,
+					Cutoff = cutoff,
+					CutoffEtag = cutoffEtag,
+					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
+					FieldsToFetch = projectionFields,
+					Latitude = lat,
+					Longitude = lng,
+					Radius = radius,
+				};
+			}
+
 			return new IndexQuery
 			{
 				GroupBy = groupByFields,
@@ -1452,16 +1475,44 @@ If you really want to do in memory filtering on the data returned from the query
 			};
 		}
 
+		private static readonly Regex espacePostfixWildcard = new Regex(@"\\\*(\s|$)", 
+#if !SILVERLIGHT
+			RegexOptions.Compiled
+#else
+			RegexOptions.None
+#endif
+
+			);
+
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		public void Search(string fieldName, string searchTerms)
+		public void Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
 		{
 			lastEquality = new KeyValuePair<string, string>(fieldName, "<<"+searchTerms+">>");
 			theQueryText.Append(' ');
 			
 			NegateIfNeeded();
+			switch (escapeQueryOptions)
+			{
+				case EscapeQueryOptions.EscapeAll:
+					searchTerms = RavenQuery.Escape(searchTerms, false, false);
+					break;
+				case EscapeQueryOptions.AllowPostfixWildcard:
+					searchTerms = RavenQuery.Escape(searchTerms, false, false);
+					searchTerms = espacePostfixWildcard.Replace(searchTerms, "*");
+					break;
+				case EscapeQueryOptions.AllowAllWildcards:
+					searchTerms = RavenQuery.Escape(searchTerms, false, false);
+					searchTerms = searchTerms.Replace("\\*", "*");
+					break;
+				case EscapeQueryOptions.RawQuery:
+					break;
+				default:
+					throw new ArgumentOutOfRangeException("escapeQueryOptions", "Value: "  + escapeQueryOptions);
+			}
+
 			theQueryText.Append(fieldName).Append(":").Append("<<").Append(searchTerms).Append(">>");
 		}
 

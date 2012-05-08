@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Document;

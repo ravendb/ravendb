@@ -17,6 +17,11 @@ open Newtonsoft.Json
  [<AutoOpen>]
  module Operators = 
         
+        let private toOption<'a> (a : 'a) = 
+            match box a with
+            | null -> None
+            | _ -> Some(a)
+
         let query (f : (IRavenQueryable<'a> -> #IQueryable<'b>)) (a : IDocumentSession) = 
             f(a.Query<'a>()).AsEnumerable()
         
@@ -64,6 +69,9 @@ open Newtonsoft.Json
             let attachment = a.Advanced.DatabaseCommands.GetAttachment(documentId)
             let attachmentBody = attachment.Data.Invoke().ReadData()
             (attachment.Metadata.JsonDeserialization<'a>(), attachment.Etag, attachmentBody)
+        
+        let tryLoad<'a> (id : seq<string>) (a : IDocumentSession) = 
+            a.Load<'a>(id) |> Seq.map2 (fun id result -> (id, toOption result)) id
         
         let load<'a> (id : seq<string>) (a : IDocumentSession) = 
             a.Load(id).Cast<'a>()

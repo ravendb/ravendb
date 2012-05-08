@@ -176,7 +176,8 @@ namespace Raven.Tests.Faceted
 				{
 					x => x.Cost >= 100 && x.Cost <= 300,
 					x => x.DateOfListing > new DateTime(2000, 1, 1),
-					x => x.Megapixels > 5.0m && x.Cost < 500
+					x => x.Megapixels > 5.0m && x.Cost < 500,
+					x => x.Manufacturer == "abc&edf"
 				};
 
 				foreach (var exp in expressions)

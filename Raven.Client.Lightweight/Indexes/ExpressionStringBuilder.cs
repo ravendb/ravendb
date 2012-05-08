@@ -217,7 +217,7 @@ namespace Raven.Client.Indexes
 			_out.Append(s);
 		}
 
-		private void OutMember(Expression instance, MemberInfo member)
+		private void OutMember(Expression instance, MemberInfo member, Type exprType)
 		{
 			if (instance == null || instance.NodeType != ExpressionType.MemberAccess)
 			{
@@ -227,7 +227,7 @@ namespace Raven.Client.Indexes
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
 				// only translate from the root type or deriatives
-				(queryRoot == null || (member.DeclaringType.IsAssignableFrom(queryRoot))) &&
+				(queryRoot == null || (exprType.IsAssignableFrom(queryRoot))) &&
 				// only translate from the root alias
 				(queryRootName == null || (
 					instance.NodeType == ExpressionType.Parameter &&
@@ -1070,7 +1070,7 @@ namespace Raven.Client.Indexes
 		/// </returns>
 		protected override Expression VisitMember(MemberExpression node)
 		{
-			OutMember(node.Expression, node.Member);
+			OutMember(node.Expression, node.Member, node.Expression == null ? node.Type : node.Expression.Type);
 			return node;
 		}
 
