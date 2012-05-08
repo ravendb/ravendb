@@ -12,6 +12,7 @@ using Raven.Client.Linq;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 
+#if !NET35
 namespace Raven.Client.Shard
 {
 	public abstract class BaseShardedDocumentSession<TDatabaseCommands> : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ITransactionalDocumentSession
@@ -339,3 +340,4 @@ namespace Raven.Client.Shard
 		}
 	}
 }
+#endif

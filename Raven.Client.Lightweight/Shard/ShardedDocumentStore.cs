@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !NET35
+
 using System;
 #if !SILVERLIGHT
 using System.Collections.Generic;
@@ -327,3 +329,5 @@ namespace Raven.Client.Shard
 		}
 	}
 }
+
+#endif
