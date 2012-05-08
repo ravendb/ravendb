@@ -82,6 +82,8 @@ namespace Raven.Tests.Shard.Async
 					session.Store(company1);
 					session.Store(company2);
 
+					session.SaveChangesAsync().Wait();
+
 					Assert.Equal("Shard1/companies/1", company1.Id);
 					Assert.Equal("Shard2/companies/2", company2.Id);
 				}
