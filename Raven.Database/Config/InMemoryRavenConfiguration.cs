@@ -347,7 +347,7 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// The initial number of items to take when indexing a batch
-		/// Default: 5,000
+		/// Default: 512 or 256 depending on CPU architecture
 		/// </summary>
 		public int InitialNumberOfItemsToIndexInSingleBatch { get; set; }
 
