@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Raven.Bundles.MoreLikeThis;
 using Xunit;
 
@@ -15,22 +11,22 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		{
 			var parameters = new MoreLikeThisQueryParameters();
 
+			parameters.IndexName = "dataIndex";
 			parameters.DocumentId = "foo/1";
 			parameters.Fields = new[] { "Body" };
 			parameters.MinimumWordLength = 3;
 			parameters.MinimumDocumentFrequency = 1;
 			parameters.Boost = true;
 
-			var uri = parameters.GetRequestUri("dataIndex");
+			var uri = parameters.GetRequestUri(parameters.IndexName);
 
-			Assert.Equal("/morelikethis/dataIndex/foo/1?fields=Body&boost=true&minDocFreq=1&minWordLen=3&", uri);
+			Assert.Equal("/morelikethis/?index=dataIndex&docid=foo%2F1&fields=Body&boost=true&minDocFreq=1&minWordLen=3&", uri);
 
 			var path = uri.Substring(0, uri.IndexOf('?'));
 
-			string indexName;
-			var decodedParameters = MoreLikeThisQueryParameters.GetParametersFromPath(uri, out indexName);
+			var decodedParameters = MoreLikeThisQueryParameters.GetParametersFromPath(uri);
 
-			Assert.Equal("dataIndex", indexName);
+			Assert.Equal("dataIndex", decodedParameters.IndexName);
 			Assert.Equal(JsonConvert.SerializeObject(parameters), JsonConvert.SerializeObject(decodedParameters));
 		}
 
@@ -39,6 +35,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		{
 			var parameters = new MoreLikeThisQueryParameters();
 
+			parameters.IndexName = "dataIndex";
 			parameters.MapGroupFields.Add("foo", "bar");
 			parameters.MapGroupFields.Add("be", "bop");
 			parameters.Fields = new[] { "Body" };
@@ -46,16 +43,15 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			parameters.MinimumDocumentFrequency = 1;
 			parameters.Boost = true;
 
-			var uri = parameters.GetRequestUri("dataIndex");
+			var uri = parameters.GetRequestUri(parameters.IndexName);
 
-			Assert.Equal("/morelikethis/dataIndex/foo=bar;be=bop?fields=Body&boost=true&minDocFreq=1&minWordLen=3&", uri);
+			Assert.Equal("/morelikethis/?index=dataIndex&docid=foo%3Dbar%3Bbe%3Dbop&fields=Body&boost=true&minDocFreq=1&minWordLen=3&", uri);
 
 			var path = uri.Substring(0, uri.IndexOf('?'));
 
-			string indexName;
-			var decodedParameters = MoreLikeThisQueryParameters.GetParametersFromPath(uri, out indexName);
+			var decodedParameters = MoreLikeThisQueryParameters.GetParametersFromPath(uri);
 
-			Assert.Equal("dataIndex", indexName);
+			Assert.Equal("dataIndex", decodedParameters.IndexName);
 			Assert.Equal(JsonConvert.SerializeObject(parameters), JsonConvert.SerializeObject(decodedParameters));
 		}
 	}
