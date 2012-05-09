@@ -19,15 +19,13 @@ namespace Raven.Database.Indexing
 		protected ITransactionalStorage transactionalStorage;
 		protected int workCounter;
 		protected int lastFlushedWorkCounter;
-		protected IndexBatchSizeAutoTuner autoTuner;
+		protected BaseBatchSizeAutoTuner autoTuner;
 
 		protected AbstractIndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
 		{
 			this.transactionalStorage = transactionalStorage;
 			this.context = context;
 			this.scheduler = scheduler;
-
-			autoTuner = new IndexBatchSizeAutoTuner(context);
 		}
 
 		public void Execute()
