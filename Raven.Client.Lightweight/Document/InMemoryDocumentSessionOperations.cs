@@ -561,6 +561,10 @@ more responsive application.
 				{
 					id = GenerateDocumentKeyForStorage(entity);
 				}
+				else
+				{
+					RememberEntityForDocumentKeyGeneration(entity);
+				}
 			}
 			else
 			{
@@ -602,6 +606,9 @@ more responsive application.
 			id = GetOrGenerateDocumentKey(entity);
 			TrySetIdentity(entity, id);
 			return id;
+		}
+
+		protected virtual void RememberEntityForDocumentKeyGeneration(object entity) {
 		}
 
 #if !NET35
