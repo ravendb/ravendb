@@ -609,6 +609,7 @@
     <Compile Include="MailingList\Stacey\Image.cs" />
     <Compile Include="MailingList\Stacey\ImageByName.cs" />
     <Compile Include="MailingList\Stacey\InServerTesting.cs" />
+    <Compile Include="MailingList\StartsWith.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />

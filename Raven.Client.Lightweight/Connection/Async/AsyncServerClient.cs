@@ -456,6 +456,18 @@ namespace Raven.Client.Connection.Async
 			throw new NotImplementedException();
 		}
 
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize)
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", metadata, credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray) task.Result).OfType<RavenJObject>()).ToArray());
+		}
+
 		/// <summary>
 		/// Perform a single POST requst containing multiple nested GET requests
 		/// </summary>

@@ -617,6 +617,11 @@ namespace Raven.Client.Shard
 		}
 
 #if !NET_3_5
+		public IEnumerable<T> LoadStartingWith<T>(string keyPrefix, int start = 0, int pageSize = 25)
+		{
+			throw new NotImplementedException();
+		}
+
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>
