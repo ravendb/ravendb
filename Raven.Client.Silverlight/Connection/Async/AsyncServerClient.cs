@@ -172,11 +172,18 @@ namespace Raven.Client.Silverlight.Connection.Async
 					try
 					{
 						var token = task.Result;
+						var docKey = key;
+						IList<string> list;
+						if(request.ResponseHeaders.TryGetValue(Constants.DocumentIdFieldName, out list))
+						{
+							docKey = list.FirstOrDefault() ?? key;
+							request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
+						}
 						return new JsonDocument
 						{
 							DataAsJson = (RavenJObject)token,
 							NonAuthoritativeInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
-							Key = key,
+							Key = docKey,
 							LastModified = DateTime.ParseExact(request.ResponseHeaders[Constants.LastModified].First(), "r", CultureInfo.InvariantCulture).ToLocalTime(),
 							Etag = new Guid(request.ResponseHeaders["ETag"].First()),
 							Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)

@@ -50,7 +50,7 @@ namespace Raven.Client.Shard
 		protected override JsonDocument GetJsonDocument(string documentKey)
 		{
 			var shardRequestData = new ShardRequestData
-			{
+		{
 				EntityType = typeof (object),
 				Keys = {documentKey}
 			};
@@ -86,9 +86,9 @@ namespace Raven.Client.Shard
 		/// Access the eager operations
 		/// </summary>
 		IEagerSessionOperations ISyncAdvancedSessionOperation.Eagerly
-		{
+			{
 			get { return this; }
-		}
+			}
 
 		#endregion
 
@@ -100,9 +100,9 @@ namespace Raven.Client.Shard
 		{
 			object existingEntity;
 			if (entitiesByKey.TryGetValue(id, out existingEntity))
-			{
+		{
 				return (T) existingEntity;
-			}
+		}
 
 			IncrementRequestCount();
 			var shardRequestData = new ShardRequestData
@@ -193,7 +193,7 @@ namespace Raven.Client.Shard
 						var id = currentShardIds[i];
 						var itemPosition = Array.IndexOf(ids, id);
 						if (ReferenceEquals(results[itemPosition], default(T)) == false)
-						{
+		{
 							throw new InvalidOperationException("Found document with id: " + id +
 							                                    " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
 						}
@@ -251,10 +251,10 @@ namespace Raven.Client.Shard
 			});
 
 			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, () =>
-			{
-				var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
-				return new DisposableAction(() => list.ForEach(x => x.Dispose()));
-			}, id));
+			                                                                                   	{
+			                                                                                   		var list = cmds.Select(databaseCommands => databaseCommands.DisableAllCaching()).ToList();
+			                                                                                   		return new DisposableAction(() => list.ForEach(x => x.Dispose()));
+			                                                                                   	}, id));
 			return AddLazyOperation(lazyLoadOperation, onEval, cmds);
 		}
 
@@ -262,10 +262,10 @@ namespace Raven.Client.Shard
 		{
 			pendingLazyOperations.Add(Tuple.Create(operation, cmds));
 			var lazyValue = new Lazy<T>(() =>
-			{
-				ExecuteAllPendingLazyOperations();
-				return (T) operation.Result;
-			});
+			                            	{
+			                            		ExecuteAllPendingLazyOperations();
+			                            		return (T) operation.Result;
+			                            	});
 			if (onEval != null)
 				onEvaluateLazy[operation] = result => onEval((T) result);
 
@@ -402,9 +402,9 @@ namespace Raven.Client.Shard
 
 					var sb = new StringBuilder();
 					foreach (var response in from shardReponses in multiResponses
-					                         from getResponse in shardReponses
-					                         where getResponse.RequestHasErrors()
-					                         select getResponse)
+											 from getResponse in shardReponses
+											 where getResponse.RequestHasErrors()
+											 select getResponse)
 						sb.AppendFormat("Got an error from server, status code: {0}{1}{2}", response.Status, Environment.NewLine,
 						                response.Result)
 							.AppendLine();
@@ -470,9 +470,9 @@ namespace Raven.Client.Shard
 			get { throw new NotSupportedException("Not supported in a sharded session"); }
 		}
 
-		Raven.Client.Connection.Async.IAsyncDatabaseCommands ISyncAdvancedSessionOperation.AsyncDatabaseCommands
+		public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
 		{
-			get { throw new NotSupportedException("Not supported in a sharded session"); }
+			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
 		}
 
 		#endregion
@@ -557,6 +557,11 @@ namespace Raven.Client.Shard
 			throw new NotImplementedException();
 		}
 
+		public IAsyncDatabaseCommands AsyncDatabaseCommands
+		{
+			get { throw new NotSupportedException("Not supported for sharded session"); }
+		}
+
 		string ISyncAdvancedSessionOperation.GetDocumentUrl(object entity)
 		{
 			DocumentMetadata value;
@@ -569,6 +574,6 @@ namespace Raven.Client.Shard
 				throw new InvalidOperationException("Could not find matching shard for shard id: " + shardId);
 			return commands.UrlFor(value.Key);
 		}
-	}
+					}
 }
 #endif

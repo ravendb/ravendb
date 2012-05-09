@@ -187,7 +187,9 @@ namespace Raven.Client.Connection
 			try
 			{
 				var responseJson = request.ReadResponseJson();
-				return SerializationHelper.DeserializeJsonDocument(key, responseJson, request.ResponseHeaders, request.ResponseStatusCode);
+				var docKey = request.ResponseHeaders[Constants.DocumentIdFieldName] ?? key;
+				request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
+				return SerializationHelper.DeserializeJsonDocument(docKey, responseJson, request.ResponseHeaders, request.ResponseStatusCode);
 			}
 			catch (WebException e)
 			{
