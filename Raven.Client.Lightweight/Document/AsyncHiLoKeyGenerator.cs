@@ -135,7 +135,7 @@ namespace Raven.Client.Document
 									Key = HiLoDocumentKey
 								}))
 							.Unwrap()
-							.WithResult(GetNextRangeAsync);
+							.ContinueWithTask(GetNextRangeAsync);
 					}
 
 					long min, max;

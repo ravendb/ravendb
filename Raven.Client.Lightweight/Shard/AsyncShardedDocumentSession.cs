@@ -15,6 +15,7 @@ using Raven.Client.Document.SessionOperations;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
+using System.Collections.Concurrent;
 
 namespace Raven.Client.Shard
 {
@@ -24,6 +25,8 @@ namespace Raven.Client.Shard
 	public class AsyncShardedDocumentSession : BaseShardedDocumentSession<IAsyncDatabaseCommands>,
 		IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations
 	{
+		private ConcurrentQueue<object> entitiesStoredWithoutIDs = new ConcurrentQueue<object>();
+
 		public AsyncShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
 			ShardStrategy shardStrategy, IDictionary<string, IAsyncDatabaseCommands> shardDbCommands)
 			: base(documentStore, listeners, id, shardStrategy, shardDbCommands)
@@ -291,13 +294,24 @@ namespace Raven.Client.Shard
 
 		private Task GenerateDocumentKeysForSaveChanges()
 		{
-			var entities = entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).ToList();
+			object entity;
+			if (entitiesStoredWithoutIDs.TryDequeue(out entity))
+			{
+				DocumentMetadata metadata;
+				if (entitiesAndMetadata.TryGetValue(entity, out metadata))
+				{
+					return GenerateDocumentKeyForStorageAsync(entity)
+						.ContinueWith(task => metadata.Key = ModifyObjectId(task.Result, entity, metadata.Metadata))
+						.ContinueWithTask(GenerateDocumentKeysForSaveChanges);
+				}
+			}
+		
+			return new CompletedTask();
+		}
 
-			var tasks = entities.Select(entity => new Func<Task>(() =>
-				GenerateDocumentKeyForStorageAsync(entity.Key)
-					.ContinueWith(task => entity.Value.Key = ModifyObjectId(task.Result, entity.Key, entity.Value.Metadata))));
-
-			return tasks.StartSequentially();
+		protected override void RememberEntityForDocumentKeyGeneration(object entity)
+		{
+			entitiesStoredWithoutIDs.Enqueue(entity);
 		}
 	}
 }

@@ -76,9 +76,14 @@ namespace Raven.Client.Extensions
 			return task.WithResult<Task<T>>(result).Unwrap();
 		}
 
-		public static Task<T> WithResult<T>(this Task task, Func<Task<T>> result)
+		public static Task<T> ContinueWithTask<T>(this Task task, Func<Task<T>> result)
 		{
 			return task.WithResult<Task<T>>(result).Unwrap();
+		}
+
+		public static Task ContinueWithTask(this Task task, Func<Task> result)
+		{
+			return task.WithResult<Task>(result).Unwrap();
 		}
 
 		public static Task<T[]> StartSequentially<T>(this IEnumerable<Func<Task<T>>> tasks)
