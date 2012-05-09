@@ -100,6 +100,11 @@ namespace Raven.Client
 		/// <param name="path">The path.</param>
 		ILoaderWithInclude<T> Include<T>(Expression<Func<T,object>> path);
 
+		/// <summary>
+		/// Begin a load while including the specified path 
+		/// </summary>
+		/// <param name="path">The path.</param>
+		ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path);
 	
 		/// <summary>
 		/// Saves all the changes to the Raven server.

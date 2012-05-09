@@ -410,6 +410,12 @@ namespace Raven.Client.Document
 			return new MultiLoaderWithInclude<T>(this).Include(path);
 		}
 
+
+		public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
+		{
+			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
+		}
+
 		/// <summary>
 		/// Gets the document URL for the specified entity.
 		/// </summary>
