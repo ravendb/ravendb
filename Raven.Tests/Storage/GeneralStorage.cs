@@ -69,6 +69,14 @@ namespace Raven.Tests.Storage
 // ReSharper restore AssignNullToNotNullAttribute
 		}
 
+		[Fact(DisplayName = "This is  a failing test, for proposing change in the storage.")]
+		public void StartWithEmptyString_ShouldReturnAll()
+		{
+			db.Put("id", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+
+			Assert.NotEmpty(db.GetDocumentsWithIdStartingWith("", 0, 10));
+		}
+
 		[Fact]
 		public void CanProperlyHandleDeletingThreeItemsBothFromPK_And_SecondaryIndexes()
 		{
