@@ -207,6 +207,11 @@ namespace Raven.Client.Shard
 			return AsyncLuceneQuery<T>(indexName);
 		}
 
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25)
+		{
+			throw new NotImplementedException();
+		}
+
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string indexName)
 		{
 			return new AsyncShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, listeners.QueryListeners);
