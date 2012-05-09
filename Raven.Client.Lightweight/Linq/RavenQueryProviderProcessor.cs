@@ -276,6 +276,7 @@ namespace Raven.Client.Linq
 					Equals(((ConstantExpression)expression.Right).Value, 0))
 			{
 				var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
+				luceneQuery.OpenSubclause();
 				luceneQuery.NegateNext();
 				luceneQuery.WhereEquals(new WhereParams
 				{
@@ -293,7 +294,7 @@ namespace Raven.Client.Linq
 						IsAnalyzed = true,
 						AllowWildcards = true
 					});
-
+				luceneQuery.CloseSubclause();
 				return;
 			}
 
@@ -304,7 +305,7 @@ namespace Raven.Client.Linq
 			}
 
 			var memberInfo = GetMember(expression.Left);
-
+			luceneQuery.OpenSubclause();
 			luceneQuery.NegateNext();
 			luceneQuery.WhereEquals(new WhereParams
 			{
@@ -321,6 +322,7 @@ namespace Raven.Client.Linq
 				IsAnalyzed = true,
 				AllowWildcards = true
 			});
+			luceneQuery.CloseSubclause();
 		}
 
 		private static Type GetMemberType(ExpressionInfo info)
