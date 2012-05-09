@@ -55,6 +55,21 @@ namespace Raven.Tests.Storage
 		}
 
 		[Fact]
+		public void WhenPutAnIdWithASpace_IdWillBeAGuid()
+		{
+			db.Put(" ", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
+
+			var doc = db.GetDocuments(0, 10, null)
+				.OfType<RavenJObject>()
+				.Single();
+			var id = doc["@metadata"].Value<string>("@id");
+			Assert.False(string.IsNullOrWhiteSpace(id));
+// ReSharper disable AssignNullToNotNullAttribute
+			new Guid(id); // Assert.IsGuid(id)
+// ReSharper restore AssignNullToNotNullAttribute
+		}
+
+		[Fact]
 		public void CanProperlyHandleDeletingThreeItemsBothFromPK_And_SecondaryIndexes()
 		{
 			var cmds = new[]
