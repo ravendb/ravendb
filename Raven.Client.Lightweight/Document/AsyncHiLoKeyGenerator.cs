@@ -70,24 +70,21 @@ namespace Raven.Client.Document
 					generatorLock.Exit();
 					return NextIdAsync();
 				}
-				else
-				{
-					// Get a new max, and use the current value.
-					return GetNextRangeAsync()
-						.ContinueWith(task =>
+				// Get a new max, and use the current value.
+				return GetNextRangeAsync()
+					.ContinueWith(task =>
+					{
+						try
 						{
-							try
-							{
-								range = task.Result;
-							}
-							finally
-							{
-								generatorLock.Exit();
-							}
+							range = task.Result;
+						}
+						finally
+						{
+							generatorLock.Exit();
+						}
 
-							return NextIdAsync();
-						}).Unwrap();
-				}
+						return NextIdAsync();
+					}).Unwrap();
 			}
 			catch
 			{
@@ -109,65 +106,66 @@ namespace Raven.Client.Document
 		private Task<Range> GetNextMaxAsyncInner()
 		{
 			var minNextMax = range.Max;
-			return GetDocumentAsync().ContinueWith(task =>
-			{
-				try
+			return GetDocumentAsync()
+				.ContinueWith(task =>
 				{
-					JsonDocument document;
 					try
 					{
-						document = task.Result;
-					}
-					catch (ConflictException e)
-					{
-						// resolving the conflict by selecting the highest number
-						var highestMax = e.ConflictedVersionIds
-							.Select(conflictedVersionId => databaseCommands.GetAsync(conflictedVersionId)
-									.ContinueWith(t => GetMaxFromDocument(t.Result, minNextMax)))
-							.AggregateAsync(Enumerable.Max);
+						JsonDocument document;
+						try
+						{
+							document = task.Result;
+						}
+						catch (ConflictException e)
+						{
+							// resolving the conflict by selecting the highest number
+							var highestMax = e.ConflictedVersionIds
+								.Select(conflictedVersionId => databaseCommands.GetAsync(conflictedVersionId)
+								                               	.ContinueWith(t => GetMaxFromDocument(t.Result, minNextMax)))
+								.AggregateAsync(Enumerable.Max);
 
-						return highestMax
-							.ContinueWith(t => PutDocumentAsync(new JsonDocument
+							return highestMax
+								.ContinueWith(t => PutDocumentAsync(new JsonDocument
 								{
 									Etag = e.Etag,
 									Metadata = new RavenJObject(),
-									DataAsJson = RavenJObject.FromObject(new { Max = t.Result }),
+									DataAsJson = RavenJObject.FromObject(new {Max = t.Result}),
 									Key = HiLoDocumentKey
 								}))
-							.Unwrap()
-							.ContinueWithTask(GetNextRangeAsync);
-					}
+								.Unwrap()
+								.ContinueWithTask(GetNextRangeAsync);
+						}
 
-					long min, max;
-					if (document == null)
-					{
-						min = minNextMax + 1;
-						max = minNextMax + capacity;
-						document = new JsonDocument
+						long min, max;
+						if (document == null)
 						{
-							Etag = Guid.Empty,
-							// sending empty guid means - ensure the that the document does NOT exists
-							Metadata = new RavenJObject(),
-							DataAsJson = RavenJObject.FromObject(new { Max = max }),
-							Key = HiLoDocumentKey
-						};
+							min = minNextMax + 1;
+							max = minNextMax + capacity;
+							document = new JsonDocument
+							{
+								Etag = Guid.Empty,
+								// sending empty guid means - ensure the that the document does NOT exists
+								Metadata = new RavenJObject(),
+								DataAsJson = RavenJObject.FromObject(new {Max = max}),
+								Key = HiLoDocumentKey
+							};
+						}
+						else
+						{
+							var oldMax = GetMaxFromDocument(document, minNextMax);
+							min = oldMax + 1;
+							max = oldMax + capacity;
+
+							document.DataAsJson["Max"] = max;
+						}
+
+						return PutDocumentAsync(document).WithResult(new Range(min, max));
 					}
-					else
+					catch (ConcurrencyException)
 					{
-						var oldMax = GetMaxFromDocument(document, minNextMax);
-						min = oldMax + 1;
-						max = oldMax + capacity;
-
-						document.DataAsJson["Max"] = max;
+						return GetNextMaxAsyncInner();
 					}
-
-					return PutDocumentAsync(document).WithResult(new Range(min, max));
-				}
-				catch (ConcurrencyException)
-				{
-					return GetNextMaxAsyncInner();
-				}
-			}).Unwrap();
+				}).Unwrap();
 		}
 
 		private Task PutDocumentAsync(JsonDocument document)

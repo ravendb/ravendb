@@ -608,7 +608,9 @@ more responsive application.
 			return id;
 		}
 
-		protected virtual void RememberEntityForDocumentKeyGeneration(object entity) {
+		protected virtual void RememberEntityForDocumentKeyGeneration(object entity)
+		{
+			throw new NotImplementedException("You cannot set GenerateDocumentKeysOnStore to false without implementing RememberEntityForDocumentKeyGeneration");
 		}
 
 #if !NET35
