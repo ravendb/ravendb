@@ -616,11 +616,12 @@ namespace Raven.Client.Shard
 			get { throw new NotSupportedException("Not supported in a sharded session"); }
 		}
 
-#if !NET_3_5
 		public IEnumerable<T> LoadStartingWith<T>(string keyPrefix, int start = 0, int pageSize = 25)
 		{
 			throw new NotImplementedException();
 		}
+
+#if !NET_3_5
 
 		/// <summary>
 		/// Gets the async database commands.
