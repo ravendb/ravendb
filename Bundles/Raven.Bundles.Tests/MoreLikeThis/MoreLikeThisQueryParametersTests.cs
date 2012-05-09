@@ -1,5 +1,5 @@
-﻿using Newtonsoft.Json;
-using Raven.Bundles.MoreLikeThis;
+﻿using Raven.Bundles.MoreLikeThis;
+using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
 namespace Raven.Bundles.Tests.MoreLikeThis
