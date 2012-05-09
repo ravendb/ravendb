@@ -316,7 +316,9 @@ namespace Raven.Client.Connection.Async
 					try
 					{
 						var requestJson = task.Result;
-						return SerializationHelper.DeserializeJsonDocument(key, requestJson, request.ResponseHeaders, request.ResponseStatusCode);
+						var docKey = request.ResponseHeaders[Constants.DocumentIdFieldName] ?? key;
+						request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
+						return SerializationHelper.DeserializeJsonDocument(docKey, requestJson, request.ResponseHeaders, request.ResponseStatusCode);
 					}
 					catch (AggregateException e)
 					{
