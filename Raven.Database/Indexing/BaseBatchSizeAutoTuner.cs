@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Raven.Database.Indexing
 {
-	public class BaseBatchSizeAutoTuner 
+	public class BaseBatchSizeAutoTuner
 	{
 		private readonly WorkContext context;
 		private int numberOfItemsToIndexInSingleBatch;
@@ -79,7 +79,7 @@ namespace Raven.Database.Indexing
 				return;
 			}
 
-			
+
 		}
 
 		private bool ReduceBatchSizeIfCloseToMemoryCeiling()
@@ -106,7 +106,7 @@ namespace Raven.Database.Indexing
 			{
 				// we don't want to try increasing things, we just hit the ceiling, maybe on the next try
 				return true;
-			} 
+			}
 
 			// we are still too high, let us reduce the size and see what is going on.
 
@@ -132,7 +132,7 @@ namespace Raven.Database.Indexing
 				return true;
 
 			// we were above the max the last times, we can't reduce the work load now
-			if (context.Configuration.IndexingScheduler.GetLastAmountOfItemsToIndex().Any(x=>x > NumberOfItemsToIndexInSingleBatch))
+			if (context.Configuration.IndexingScheduler.GetLastAmountOfItemsToIndex().Any(x => x > NumberOfItemsToIndexInSingleBatch))
 				return true;
 
 			var old = NumberOfItemsToIndexInSingleBatch;
@@ -149,7 +149,7 @@ namespace Raven.Database.Indexing
 			// let us ask the GC nicely to clean it
 
 			// but we only want to do it if the change was significant 
-			if ( NumberOfItemsToIndexInSingleBatch - old > 4096)
+			if (NumberOfItemsToIndexInSingleBatch - old > 4096)
 			{
 				GC.Collect(1, GCCollectionMode.Optimized);
 			}
@@ -165,7 +165,7 @@ namespace Raven.Database.Indexing
 		{
 			// first thing to do, reset the number of items per batch
 			NumberOfItemsToIndexInSingleBatch = context.Configuration.InitialNumberOfItemsToIndexInSingleBatch;
-			
+
 			// now, we need to be more conservative about how we are increasing memory usage, so instead of increasing
 			// every time we hit the limit twice, we will increase every time we hit it three times, then 5, 9, etc
 
