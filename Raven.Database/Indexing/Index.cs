@@ -170,7 +170,7 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		private static RavenJObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
+		public static RavenJObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
 		{
 			var documentFromFields = new RavenJObject();
 			var q = fieldsToFetch
@@ -693,26 +693,23 @@ namespace Raven.Database.Indexing
 					IndexSearcher indexSearcher;
 					using (parent.GetSearcher(out indexSearcher))
 					{
-						int pageSizeBestGuess = (indexQuery.Start + indexQuery.PageSize) * 2;
-						int returnedResults = 0;
-						int skippedResultsInCurrentLoop = 0;
-						int previousIntersectMatches = 0;
-
 						var subQueries = indexQuery.Query.Split(new[] { Constants.IntersectSeperator }, StringSplitOptions.RemoveEmptyEntries);
 						if (subQueries.Length <= 1)
 							throw new InvalidOperationException("Invalid INTRESECT query, must have multiple intersect clauses.");
 
-						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
-						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0]));
-
 						//Not sure how to select the page size here??? The problem is that only docs in this search can be part 
 						//of the final result because we're doing an intersection query (but we might exclude some of them)
-						var search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
-						var intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
-						var intersectMatches = 0;
+						int pageSizeBestGuess = (indexQuery.Start + indexQuery.PageSize) * 2;
+						int intersectMatches = 0, skippedResultsInCurrentLoop = 0;
+						int previousBaseQueryMatches = 0, currentBaseQueryMatches = 0;
 
-						//Keep going until we've pulled through enough intersecting docs to satisfy pageSize + start
-						//OR the current loop doesn't get us any more results, despite increasing the page size
+						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0]));
+
+						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
+						var search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
+						currentBaseQueryMatches = search.ScoreDocs.Length;
+						var intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
+
 						do
 						{
 							if (skippedResultsInCurrentLoop > 0)
@@ -721,6 +718,8 @@ namespace Raven.Database.Indexing
 								pageSizeBestGuess = pageSizeBestGuess * 2;
 
 								search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
+								previousBaseQueryMatches = currentBaseQueryMatches;
+								currentBaseQueryMatches = search.ScoreDocs.Length;
 								intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
 							}
 
@@ -732,11 +731,11 @@ namespace Raven.Database.Indexing
 							}
 
 							var currentIntersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
-							previousIntersectMatches = intersectMatches;
 							intersectMatches = currentIntersectResults.Count;
 							skippedResultsInCurrentLoop = pageSizeBestGuess - intersectMatches;
-
-						} while (previousIntersectMatches < intersectMatches && intersectMatches < indexQuery.PageSize);
+						} while (intersectMatches < indexQuery.PageSize && //stop if we've got enough results to satisfy the pageSize
+								 currentBaseQueryMatches < search.TotalHits && //stop if increasing the page size wouldn't make any difference
+								 previousBaseQueryMatches < currentBaseQueryMatches); //stop if increasing the page size didn't result in any more "base query" results
 
 						var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
 						//It's hard to know what to do here, the TotalHits from the base search isn't really the TotalSize, 
@@ -746,6 +745,7 @@ namespace Raven.Database.Indexing
 						indexQuery.SkippedResults.Value = skippedResultsInCurrentLoop;
 
 						//Using the final set of results in the intersectionCollector
+						int returnedResults = 0;
 						for (int i = indexQuery.Start; i < intersectResults.Count && (i - indexQuery.Start) < pageSizeBestGuess; i++)
 						{
 							Document document = indexSearcher.Doc(intersectResults[i].LuceneId);

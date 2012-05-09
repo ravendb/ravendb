@@ -327,6 +327,18 @@ namespace Raven.Client.Silverlight.Connection.Async
 				}).Unwrap();
 		}
 
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize)
+		{
+			var metadata = new RavenJObject();
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", metadata, credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result).OfType<RavenJObject>()).ToArray());
+	
+		}
+
 		public Task<BuildNumber> GetBuildNumber()
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/build/version").NoCache(), "GET", credentials, convention);

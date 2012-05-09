@@ -49,6 +49,15 @@ namespace Raven.Client.Document.Async
 		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
 
 		/// <summary>
+		/// Load documents with the specified key prefix
+		/// </summary>
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25)
+		{
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, start, pageSize)
+				.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
+		}
+
+		/// <summary>
 		/// Query the specified index using Lucene syntax
 		/// </summary>
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string index)

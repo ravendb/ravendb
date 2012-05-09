@@ -36,7 +36,8 @@ namespace Raven.Database.Indexing
 		
 		public override void Collect(int doc)
 		{
-			var document = currentReader.Document(currentBase + doc);
+			//Don't need to add the currentBase here, it's already accounted for
+			var document = currentReader.Document(doc);
 			var key = document.Get(Constants.DocumentIdFieldName) ?? document.Get(Constants.ReduceKeyFieldName);
 			var currentScore = currentScorer.Score();
 

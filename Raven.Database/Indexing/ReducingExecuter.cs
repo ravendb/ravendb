@@ -14,6 +14,7 @@ namespace Raven.Database.Indexing
 		public ReducingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
 			: base(transactionalStorage, context, scheduler)
 		{
+			autoTuner = new ReduceBatchSizeAutoTuner(context);
 		}
 
 		protected void HandleReduceForIndex(IndexToWorkOn indexToWorkOn)
@@ -28,10 +29,7 @@ namespace Raven.Database.Indexing
 							indexToWorkOn.IndexName,
 							indexToWorkOn.LastIndexedEtag,
 							loadData: false,
-							// for reduce operations, we use the smaller value, rather than tuning stuff on the fly
-							// the reason for that is that we may have large number of map values to reduce anyway, 
-							// so we don't want to try to load too much all at once.
-							take: context.Configuration.InitialNumberOfItemsToIndexInSingleBatch
+							take: autoTuner.NumberOfItemsToIndexInSingleBatch
 						)
 						.ToList();
 
@@ -67,6 +65,8 @@ namespace Raven.Database.Indexing
 							actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexName, lastByEtag.Etag, lastByEtag.Timestamp);
 						}
 					});
+
+					autoTuner.AutoThrottleBatchSize(reduceKeyAndEtags.Count, reduceKeyAndEtags.Sum(x => x.Size));
 				}
 			}
 		}

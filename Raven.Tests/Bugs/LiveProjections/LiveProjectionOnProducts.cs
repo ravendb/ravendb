@@ -50,7 +50,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 
 					var first = rep.FirstOrDefault();
 
-					Assert.Equal(first.Id, "productskus/1");
+					Assert.Equal(first.Id, "ProductSkus/1");
 					Assert.Equal(first.Name, "variant 1");
 				}
 			}

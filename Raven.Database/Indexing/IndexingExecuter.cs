@@ -25,6 +25,7 @@ namespace Raven.Database.Indexing
 		public IndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
 			: base(transactionalStorage, context, scheduler)
 		{
+			autoTuner = new IndexBatchSizeAutoTuner(context);
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
