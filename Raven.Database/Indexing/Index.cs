@@ -170,7 +170,7 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		private static RavenJObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
+		public static RavenJObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
 		{
 			var documentFromFields = new RavenJObject();
 			var q = fieldsToFetch
