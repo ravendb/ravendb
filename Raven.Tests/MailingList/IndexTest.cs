@@ -43,18 +43,18 @@ namespace Raven.Tests.MailingList
 						Category = Categories.Fiction,
 						Name = "Book 2",
 						Ratings = new[]
-                        {
-                            new Rating
-                            {
-                                User = "User 3",
-                                Rate = 2.5F,
-                            },
-                            new Rating
-                            {
-                                User = "User 4",
-                                Rate = 4.5F,
-                            }
-                        }
+						{
+							new Rating
+							{
+								User = "User 3",
+								Rate = 2.5F,
+							},
+							new Rating
+							{
+								User = "User 4",
+								Rate = 4.5F,
+							}
+						}
 					});
 
 					session.SaveChanges();
@@ -123,25 +123,25 @@ namespace Raven.Tests.MailingList
 		public RatingByCategoryIndex()
 		{
 			AddMap<Book>(books => books
-				.Select(p => new
-				{
-					p.Name,
-					p.Category,
-					Ratings = p.Ratings.Select(x => x.Rate),
-				})
-				.Select(p => new IndexData
-				{
-					Category = p.Category,
-					Books = new dynamic[]
-                    {
-                        new
-                        {
-                            p.Name,
-                            MinRating = p.Ratings.Min(),
-                            MaxRating = p.Ratings.Max(),
-                        }
-                    },
-				}));
+									.Select(p => new
+									{
+										p.Name,
+										p.Category,
+										Ratings = p.Ratings.Select(x => x.Rate),
+									})
+									.Select(p => new IndexData
+									{
+										Category = p.Category,
+										Books = new dynamic[]
+										{
+											new
+											{
+												p.Name,
+												MinRating = p.Ratings.Min(),
+												MaxRating = p.Ratings.Max(),
+											}
+										},
+									}));
 
 			Reduce = results => results
 				.GroupBy(x => x.Category)
