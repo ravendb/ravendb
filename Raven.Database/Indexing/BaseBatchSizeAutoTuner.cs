@@ -1,26 +1,28 @@
 using System;
 using Raven.Database.Config;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace Raven.Database.Indexing
 {
-	public class BaseBatchSizeAutoTuner
+	public abstract class BaseBatchSizeAutoTuner
 	{
-		private readonly WorkContext context;
-		private int numberOfItemsToIndexInSingleBatch;
+		protected readonly WorkContext context;
+
+		private int currentNumber;
 
 		public BaseBatchSizeAutoTuner(WorkContext context)
 		{
 			this.context = context;
-			NumberOfItemsToIndexInSingleBatch = context.Configuration.InitialNumberOfItemsToIndexInSingleBatch;
+			this.NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
 		}
 
 		public int NumberOfItemsToIndexInSingleBatch
 		{
-			get { return numberOfItemsToIndexInSingleBatch; }
+			get { return currentNumber; }
 			set
 			{
-				context.CurrentNumberOfItemsToIndexInSingleBatch = numberOfItemsToIndexInSingleBatch = value;
+				CurrentNumberOfItems = currentNumber = value;
 			}
 		}
 
@@ -36,7 +38,7 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
-				context.Configuration.IndexingScheduler.RecordAmountOfItemsToIndex(amountOfItemsToIndex);
+				RecordAmountOfItems(amountOfItemsToIndex);
 			}
 		}
 
@@ -47,7 +49,7 @@ namespace Raven.Database.Indexing
 				return;
 			}
 
-			if (context.Configuration.IndexingScheduler.GetLastAmountOfItemsToIndex().Any(x => x < NumberOfItemsToIndexInSingleBatch))
+			if (GetLastAmountOfItems().Any(x => x < NumberOfItemsToIndexInSingleBatch))
 			{
 				// this is the first time we hit the limit, we will give another go before we increase
 				// the batch size
@@ -74,7 +76,7 @@ namespace Raven.Database.Indexing
 
 			if (remainingMemoryAfterBatchSizeIncrease >= context.Configuration.AvailableMemoryForRaisingIndexBatchSizeLimit)
 			{
-				NumberOfItemsToIndexInSingleBatch = Math.Min(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch,
+				NumberOfItemsToIndexInSingleBatch = Math.Min(MaxNumberOfItems,
 															 NumberOfItemsToIndexInSingleBatch * 2);
 				return;
 			}
@@ -110,7 +112,7 @@ namespace Raven.Database.Indexing
 
 			// we are still too high, let us reduce the size and see what is going on.
 
-			NumberOfItemsToIndexInSingleBatch = Math.Max(context.Configuration.InitialNumberOfItemsToIndexInSingleBatch,
+			NumberOfItemsToIndexInSingleBatch = Math.Max(InitialNumberOfItems,
 														 NumberOfItemsToIndexInSingleBatch / 2);
 
 			return true;
@@ -128,18 +130,18 @@ namespace Raven.Database.Indexing
 			// we didn't have a lot of work to do, so let us see if we can reduce the batch size
 
 			// we are at the configured minimum, nothing to do
-			if (NumberOfItemsToIndexInSingleBatch == context.Configuration.InitialNumberOfItemsToIndexInSingleBatch)
+			if (NumberOfItemsToIndexInSingleBatch == InitialNumberOfItems)
 				return true;
 
 			// we were above the max the last times, we can't reduce the work load now
-			if (context.Configuration.IndexingScheduler.GetLastAmountOfItemsToIndex().Any(x => x > NumberOfItemsToIndexInSingleBatch))
+			if (GetLastAmountOfItems().Any(x => x > NumberOfItemsToIndexInSingleBatch))
 				return true;
 
 			var old = NumberOfItemsToIndexInSingleBatch;
 			// we have had a couple of times were we didn't get to the current max, so we can probably
 			// reduce the max again now, this will reduce the memory consumption eventually, and will cause 
 			// faster indexing times in case we get a big batch again
-			NumberOfItemsToIndexInSingleBatch = Math.Max(context.Configuration.InitialNumberOfItemsToIndexInSingleBatch,
+			NumberOfItemsToIndexInSingleBatch = Math.Max(InitialNumberOfItems,
 														 NumberOfItemsToIndexInSingleBatch / 2);
 
 			// we just reduced the batch size because we have two concurrent runs where we had
@@ -164,12 +166,20 @@ namespace Raven.Database.Indexing
 		public void OutOfMemoryExceptionHappened()
 		{
 			// first thing to do, reset the number of items per batch
-			NumberOfItemsToIndexInSingleBatch = context.Configuration.InitialNumberOfItemsToIndexInSingleBatch;
+			NumberOfItemsToIndexInSingleBatch = InitialNumberOfItems;
 
 			// now, we need to be more conservative about how we are increasing memory usage, so instead of increasing
 			// every time we hit the limit twice, we will increase every time we hit it three times, then 5, 9, etc
 
-			context.Configuration.IndexingScheduler.LastAmountOfItemsToIndexToRemember *= 2;
+			LastAmountOfItemsToRemember *= 2;
 		}
+
+		// The following methods and properties are wrappers around members of the context which are different for the different indexes
+		protected abstract int InitialNumberOfItems { get; }
+		protected abstract int MaxNumberOfItems { get; }
+		protected abstract int CurrentNumberOfItems { get; set; }
+		protected abstract int LastAmountOfItemsToRemember { get; set; }
+		protected abstract void RecordAmountOfItems(int numberOfItems);
+		protected abstract IEnumerable<int> GetLastAmountOfItems();
 	}
 }

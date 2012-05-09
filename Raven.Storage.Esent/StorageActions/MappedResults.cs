@@ -158,6 +158,7 @@ namespace Raven.Storage.Esent.StorageActions
 	        		       	? Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]).
 	        		       	  	ToJObject()
 	        		       	: null,
+					Size = Api.RetrieveColumnSize(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]) ?? 0
 	        	};
 
 	        	results[mappedResultInfo.ReduceKey] = mappedResultInfo;

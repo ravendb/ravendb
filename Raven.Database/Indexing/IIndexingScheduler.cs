@@ -6,7 +6,10 @@ namespace Raven.Database.Indexing
 	{
 		IList<IndexToWorkOn> FilterMapIndexes(IList<IndexToWorkOn> indexes);
 		void RecordAmountOfItemsToIndex(int value);
+		void RecordAmountOfItemsToReduce(int value);
 		IEnumerable<int> GetLastAmountOfItemsToIndex();
+		IEnumerable<int> GetLastAmountOfItemsToReduce();
 		int LastAmountOfItemsToIndexToRemember { get; set; }
+		int LastAmountOfItemsToReduceToRemember { get; set; }
 	}
 }

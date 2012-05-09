@@ -25,5 +25,6 @@ namespace Raven.Database.Storage
 		public Guid Etag { get; set; }
 
 		public RavenJObject Data { get; set; }
+		public int Size { get; set; }
 	}
 }
