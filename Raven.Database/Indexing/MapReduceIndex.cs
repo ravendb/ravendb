@@ -65,7 +65,7 @@ namespace Raven.Database.Indexing
 				return doc;
 			});
 			var stats = new IndexingWorkStats();
-			foreach (var mappedResultFromDocument in GroupByDocumentId(RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context,stats)))
+			foreach (var mappedResultFromDocument in GroupByDocumentId(context,RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context,stats)))
 			{
 				foreach (var doc in RobustEnumerationReduceDuringMapPhase(mappedResultFromDocument, viewGenerator.ReduceDefinition, actions, context))
 				{
@@ -107,7 +107,7 @@ namespace Raven.Database.Indexing
 		// we don't use the usual GroupBy, because that isn't streaming
 		// we rely on the fact that all values from the same docs are always outputed at 
 		// the same time, so we can take advantage of this fact
-		private static IEnumerable<IGrouping<object, dynamic>> GroupByDocumentId(IEnumerable<object> docs)
+		private IEnumerable<IGrouping<object, dynamic>> GroupByDocumentId( WorkContext context,IEnumerable<object> docs)
 		{
 			var enumerator = docs.GetEnumerator();
 			if (enumerator.MoveNext() == false)
@@ -115,7 +115,19 @@ namespace Raven.Database.Indexing
 
 			while (true)
 			{
-				var groupByDocumentId = new Grouping(GetDocumentId(enumerator.Current), enumerator);
+				object documentId;
+				try
+				{
+					documentId = GetDocumentId(enumerator.Current);
+				}
+				catch (Exception e)
+				{
+					context.AddError(name, null, e.Message);
+					if(enumerator.MoveNext() == false)
+						yield break;
+					continue;
+				}
+				var groupByDocumentId = new Grouping(documentId, enumerator);
 				yield return groupByDocumentId;
 				if (groupByDocumentId.Done)
 					break;
@@ -180,8 +192,8 @@ namespace Raven.Database.Indexing
 			if (docIdFetcher == null)
 				throw new InvalidOperationException("Could not create document id fetcher for this document");
 			var documentId = docIdFetcher(doc);
-			if (documentId == null)
-				throw new InvalidOperationException("Could not getdocument id fetcher for this document");
+			if (documentId == null || documentId is DynamicNullObject)
+				throw new InvalidOperationException("Could not get document id fetcher for this document");
 
 			return documentId;
 		}

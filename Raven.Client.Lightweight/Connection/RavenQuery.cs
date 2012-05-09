@@ -114,7 +114,15 @@ namespace Raven.Client.Connection
 			if (buffer == null)
 			{
 				// no changes required
-				return term;
+				switch (term)
+				{
+					case "OR":
+						return "\"OR\"";
+					case "AND":
+						return "\"AND\"";
+					default:
+						return term;
+				}
 			}
 
 			if (length > start)

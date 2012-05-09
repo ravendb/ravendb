@@ -1,5 +1,7 @@
-﻿using Raven.Database.Extensions;
+﻿using System;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
@@ -12,7 +14,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET"}; }
+			get { return new[] { "GET" }; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -20,7 +22,22 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					context.WriteJson(Database.GetDocumentsWithIdStartingWith("Raven/Databases/", context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize)));
+					Guid lastDocEtag = Guid.Empty;
+					Database.TransactionalStorage.Batch(accessor =>
+					{
+						lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+					});
+
+					if (context.MatchEtag(lastDocEtag))
+					{
+						context.SetStatusToNotModified();
+					}
+					else
+					{
+						context.WriteHeaders(new RavenJObject(), lastDocEtag);
+
+						context.WriteJson(Database.GetDocumentsWithIdStartingWith("Raven/Databases/", context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize)));
+					}
 					break;
 			}
 		}

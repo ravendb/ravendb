@@ -60,16 +60,6 @@ namespace Raven.Database.Extensions
 			return null;
 		}
 
-		public static Analyzer GetAnalyzer(this IndexDefinition self, string name)
-		{
-			if (self.Analyzers == null)
-				return null;
-			string analyzerTypeAsString;
-			if (self.Analyzers.TryGetValue(name, out analyzerTypeAsString) == false)
-				return null;
-			return CreateAnalyzerInstance(name, analyzerTypeAsString);
-		}
-
 		public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index defaultIndex)
 		{
 			if (self.Indexes == null)
