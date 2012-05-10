@@ -91,6 +91,19 @@ namespace Raven.Client.Connection
 				return;
 			lock (replicationLock)
 			{
+				if (firstTime)
+				{
+					var serverHash = GetServerHash(serverClient);
+
+					var document = TryLoadReplicationInformationFromLocalCache(serverHash);
+					if(document != null)
+					{
+						UpdateReplicationInformationFromDocument(document);
+					}
+				}
+
+				firstTime = false;
+
 				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 					return;
 
