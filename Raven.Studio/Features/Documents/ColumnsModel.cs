@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
@@ -23,11 +24,11 @@ namespace Raven.Studio.Features.Documents
             Columns = new ObservableCollection<ColumnDefinition>();
         }
 
-        public void LoadFromColumnSet(ColumnSet columnSet)
+        public void LoadFromColumnDefinitions(IEnumerable<ColumnDefinition> columnDefinitions)
         {
             Columns.Clear();
 
-            foreach (var column in columnSet.Columns)
+            foreach (var column in columnDefinitions)
             {
                 Columns.Add(column);
             }

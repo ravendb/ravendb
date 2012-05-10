@@ -89,7 +89,7 @@ namespace Raven.Studio.Models
                                 ? GetDefaultColumnSet()
                                 : columnSetDocument.DataAsJson.Deserialize<ColumnSet>(new DocumentConvention() {});
 
-            Columns.LoadFromColumnSet(columnSet);
+            Columns.LoadFromColumnDefinitions(columnSet.Columns);
         }
 
         private ColumnSet GetDefaultColumnSet()

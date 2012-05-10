@@ -67,7 +67,8 @@
                 <sdk:DataGrid x:Name="DocumentsList"
 						ItemsSource="{Binding Documents}"
                         AutoGenerateColumns="False"
-                        IsReadOnly="True">
+                        IsReadOnly="True"
+                        ColumnWidth="100">
 
                     <i:Interaction.Triggers>
                         <!--<Behaviors:StudioKeyTrigger Key="Delete">

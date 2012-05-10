@@ -17,6 +17,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using Raven.Studio.Features.Documents;
 using System.Linq;
+using Raven.Studio.Infrastructure;
 using ColumnDefinition = Raven.Studio.Features.Documents.ColumnDefinition;
 
 namespace Raven.Studio.Behaviors
@@ -40,6 +41,7 @@ namespace Raven.Studio.Behaviors
         }
         
         private bool isLoaded;
+        private bool internalColumnUpdate;
 
         public ColumnsModel Columns
         {
@@ -53,8 +55,17 @@ namespace Raven.Studio.Behaviors
 
             AssociatedObject.Loaded += HandleLoaded;
             AssociatedObject.Unloaded += HandleUnloaded;
-
+            AssociatedObject.ColumnReordered += HandleColumnReordered;
             ResetColumns();
+        }
+
+        private void HandleColumnReordered(object sender, DataGridColumnEventArgs e)
+        {
+            internalColumnUpdate = true;
+
+            Columns.LoadFromColumnDefinitions(GetColumnDefinitionsFromColumns());
+
+            internalColumnUpdate = false;
         }
 
         protected override void OnDetaching()
@@ -65,6 +76,7 @@ namespace Raven.Studio.Behaviors
 
             AssociatedObject.Loaded -= HandleLoaded;
             AssociatedObject.Unloaded -= HandleUnloaded;
+            AssociatedObject.ColumnReordered -= HandleColumnReordered;
         }
 
         private void HandleUnloaded(object sender, RoutedEventArgs e)
@@ -98,7 +110,7 @@ namespace Raven.Studio.Behaviors
 
         private void HandleColumnsChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            if (!isLoaded)
+            if (!isLoaded || internalColumnUpdate)
             {
                 return;
             }
@@ -165,8 +177,12 @@ namespace Raven.Studio.Behaviors
                              {
                                  Header = columnDefinition.Header,
                                  CellTemplate = CreateCellTemplate(columnDefinition),
-                                 Width = ParseWidth(columnDefinition.DefaultWidth),
                              };
+
+            if (!string.IsNullOrEmpty(columnDefinition.DefaultWidth))
+            {
+                column.Width = ParseWidth(columnDefinition.DefaultWidth);
+            }
 
             SetAssociatedColumn(column, columnDefinition);
 
@@ -277,5 +293,17 @@ namespace Raven.Studio.Behaviors
                 }
             }
         }
+
+        private IList<ColumnDefinition> GetColumnDefinitionsFromColumns()
+        {
+            var boundColumns = from column in AssociatedObject.Columns
+                               let columnDefinition = GetAssociatedColumn(column)
+                               where columnDefinition != null
+                               let displayIndex = column.DisplayIndex
+                               orderby displayIndex
+                               select columnDefinition;
+
+            return boundColumns.ToList();
+        } 
     }
 }
