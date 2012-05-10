@@ -188,6 +188,7 @@
       <DependentUpon>TermsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringValueToObjectConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringValueConversion.cs" />
     <Compile Include="Infrastructure\Converters\StringValueConversionCollection.cs" />
@@ -200,6 +201,7 @@
     <Compile Include="Infrastructure\IEnquireAboutItemVisibility.cs" />
     <Compile Include="Infrastructure\INotifyOnDataFetchErrors.cs" />
     <Compile Include="Infrastructure\IVirtualCollectionSource.cs" />
+    <Compile Include="Infrastructure\MarkupExtensions\StaticExtension.cs" />
     <Compile Include="Infrastructure\MostRecentUsedList.cs" />
     <Compile Include="Infrastructure\RecyclingContentLoader.cs" />
     <Compile Include="Infrastructure\SparseList.cs" />

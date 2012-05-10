@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Net;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -211,18 +212,52 @@ namespace Raven.Studio.Behaviors
         private DataTemplate CreateCellTemplate(ColumnDefinition columnDefinition)
         {
             var templateString =
-                @"<DataTemplate  xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:Behaviors=""clr-namespace:Raven.Studio.Behaviors;assembly=Raven.Studio"">
-                                    <TextBlock Text=""{Binding Item.Document.$$$BindingPath$$$}""
+                @"<DataTemplate  xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:Behaviors=""clr-namespace:Raven.Studio.Behaviors;assembly=Raven.Studio""
+ xmlns:m=""clr-namespace:Raven.Studio.Infrastructure.MarkupExtensions;assembly=Raven.Studio""
+                                    xmlns:Converters=""clr-namespace:Raven.Studio.Infrastructure.Converters;assembly=Raven.Studio"">
+                                    <TextBlock Text=""{Binding Item.Document.$$$BindingPath$$$, Converter={m:Static Member=Converters:DocumentPropertyToSingleLineStringConverter.Default}}""
                                                Behaviors:FadeTrimming.IsEnabled=""True"" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed=""True""
                                                VerticalAlignment=""Center""
                                                Margin=""5,0""/>
                                 </DataTemplate>";
 
-            templateString = templateString.Replace("$$$BindingPath$$$", columnDefinition.Binding);
+            templateString = templateString.Replace("$$$BindingPath$$$", ExpandBinding(columnDefinition.Binding));
 
             var template = XamlReader.Load(templateString) as DataTemplate;
 
             return template;
+        }
+
+        private string ExpandBinding(string binding)
+        {
+            if (binding.StartsWith("$JsonDocument:"))
+            {
+                return binding.Substring("$JsonDocument:".Length);
+            }
+            else if (binding.StartsWith("$Meta:"))
+            {
+                return "Metadata" + ExpandPropertyPathToXamlBinding(binding.Substring("$Meta:".Length));
+            }
+            else
+            {
+                return "DataAsJson" + ExpandPropertyPathToXamlBinding(binding);
+            }
+        }
+
+        private string ExpandPropertyPathToXamlBinding(string binding)
+        {
+            // for example TestNested[0].MyProperty will be expanded to [TestNested][0][MyProperty]
+            var result = binding.Split(new[] {'.'}, StringSplitOptions.RemoveEmptyEntries)
+                .SelectMany(s => s.Split(new[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries))
+                .Aggregate(new StringBuilder(), (sb, next) =>
+                                                    {
+                                                        sb.Append('[');
+                                                        sb.Append(next);
+                                                        sb.Append(']');
+                                                        return sb;
+                                                    }, sb => sb.ToString());
+
+            return result;
         }
 
         private static void HandleColumnsModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
