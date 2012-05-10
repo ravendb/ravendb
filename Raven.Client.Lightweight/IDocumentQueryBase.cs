@@ -127,19 +127,19 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		///   Matches substrings of the field
 		/// </summary>
-		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		[Obsolete("Avoid using WhereContains(), use Search() instead")]
 		TSelf WhereContains(string fieldName, object value);
 
 		/// <summary>
 		///   Matches substrings of the field
 		/// </summary>
-		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		[Obsolete("Avoid using WhereContains(), use Search() instead")]
 		TSelf WhereContains(string fieldName, params object[] values);
 
 		/// <summary>
 		///   Matches substrings of the field
 		/// </summary>
-		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		[Obsolete("Avoid using WhereContains(), use Search() instead")]
 		TSelf WhereContains(string fieldName, IEnumerable<object> values);
 
 

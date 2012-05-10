@@ -141,7 +141,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches substrings of the field
 		/// </summary>
-		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		[Obsolete("Avoid using WhereContains(), use Search() instead")]
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereContains(string fieldName, object value)
 		{
 			WhereContains(fieldName, value);
@@ -151,7 +151,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches substrings of the field
 		/// </summary>
-		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		[Obsolete("Avoid using WhereContains(), use Search() instead")]
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereContains(string fieldName, params object[] values)
 		{
 			WhereContains(fieldName, values);
@@ -161,7 +161,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches substrings of the field
 		/// </summary>
-		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		[Obsolete("Avoid using WhereContains(), use Search() instead")]
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereContains(string fieldName, IEnumerable<object> values)
 		{
 			WhereContains(fieldName, values);
