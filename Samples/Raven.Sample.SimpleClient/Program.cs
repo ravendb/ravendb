@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using System.Linq;
@@ -17,22 +18,19 @@ namespace Raven.Sample.SimpleClient
 		{
 			using (var documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8080",
-				DefaultDatabase = "Scratch"
+				Url = "http://localhost:8079",
 			}.Initialize())
 			{
-				using (var session = documentStore.OpenSession())
+				for (int i = 0; i < 1000; i++)
 				{
-					var companies = session.Query<Company>()
-						.Where(x => x.Name == "Hibernating Rhinos")
-						.ToList();
-
-					Console.WriteLine(companies.Count);
-
-					session.SaveChanges();
+					var sp = Stopwatch.StartNew();
+					using (var session = documentStore.OpenSession())
+					{
+						session.Load<dynamic>("users/ayende");
+					}
+					Console.WriteLine("{0}: {1:#,#} ms", i, sp.ElapsedMilliseconds);
+					Console.ReadLine();
 				}
-
-
 			}
 		}
 	}
