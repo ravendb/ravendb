@@ -237,6 +237,8 @@ namespace Raven.Client.Connection.Async
 		Task<BuildNumber> GetBuildNumber();
 
 		Task StartBackupAsync(string backupLocation);
+
+		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize);
 	}
 }
 #endif

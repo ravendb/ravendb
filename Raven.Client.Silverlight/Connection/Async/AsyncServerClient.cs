@@ -155,11 +155,18 @@ namespace Raven.Client.Silverlight.Connection.Async
 					try
 					{
 						var token = task.Result;
+						var docKey = key;
+						IList<string> list;
+						if(request.ResponseHeaders.TryGetValue(Constants.DocumentIdFieldName, out list))
+						{
+							docKey = list.FirstOrDefault() ?? key;
+							request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
+						}
 						return new JsonDocument
 						{
 							DataAsJson = (RavenJObject)token,
 							NonAuthoritativeInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
-							Key = key,
+							Key = docKey,
 							LastModified = DateTime.ParseExact(request.ResponseHeaders[Constants.LastModified].First(), "r", CultureInfo.InvariantCulture).ToLocalTime(),
 							Etag = new Guid(request.ResponseHeaders["ETag"].First()),
 							Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
@@ -315,6 +322,18 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 					return request.ExecuteRequest();
 				}).Unwrap();
+		}
+
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize)
+		{
+			var metadata = new RavenJObject();
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", metadata, credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result).OfType<RavenJObject>()).ToArray());
+	
 		}
 
 		public Task<BuildNumber> GetBuildNumber()

@@ -470,6 +470,11 @@ namespace Raven.Client.Shard
 			return new MultiLoaderWithInclude<T>(this).Include(path);
 		}
 
+		public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
+		{
+			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
+		}
+
 		public override void Defer(params ICommandData[] commands)
 		{
 			var cmdsByShard = commands.Select(cmd =>
@@ -616,7 +621,13 @@ namespace Raven.Client.Shard
 			get { throw new NotSupportedException("Not supported in a sharded session"); }
 		}
 
+		public IEnumerable<T> LoadStartingWith<T>(string keyPrefix, int start = 0, int pageSize = 25)
+		{
+			throw new NotImplementedException();
+		}
+
 #if !NET_3_5
+
 		/// <summary>
 		/// Gets the async database commands.
 		/// </summary>

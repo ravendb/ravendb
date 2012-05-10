@@ -162,7 +162,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where 15 != user.Age
 					select user;
-			Assert.Equal("-Age:15 AND Age:*", q.ToString());
+			Assert.Equal("(-Age:15 AND Age:*)", q.ToString());
 		}
 
 		[Fact]

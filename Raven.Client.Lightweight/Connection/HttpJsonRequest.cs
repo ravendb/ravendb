@@ -309,7 +309,7 @@ namespace Raven.Client.Connection
 			}
 #endif
 
-			ResponseHeaders = response.Headers;
+			ResponseHeaders = new NameValueCollection(response.Headers);
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{

@@ -316,7 +316,9 @@ namespace Raven.Client.Connection.Async
 					try
 					{
 						var requestJson = task.Result;
-						return SerializationHelper.DeserializeJsonDocument(key, requestJson, request.ResponseHeaders, request.ResponseStatusCode);
+						var docKey = request.ResponseHeaders[Constants.DocumentIdFieldName] ?? key;
+						request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
+						return SerializationHelper.DeserializeJsonDocument(docKey, requestJson, request.ResponseHeaders, request.ResponseStatusCode);
 					}
 					catch (AggregateException e)
 					{
@@ -454,6 +456,18 @@ namespace Raven.Client.Connection.Async
 		public Task StartBackupAsync(string backupLocation)
 		{
 			throw new NotImplementedException();
+		}
+
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize)
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", metadata, credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray) task.Result).OfType<RavenJObject>()).ToArray());
 		}
 
 		/// <summary>

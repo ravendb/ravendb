@@ -30,6 +30,13 @@ namespace Raven.Client.Document
 		MultiLoaderWithInclude<T> Include(Expression<Func<T, object>> path);
 
 		/// <summary>
+		/// Includes the specified path.
+		/// </summary>
+		/// <param name="path">The path.</param>
+		/// <returns></returns>
+		MultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path);
+
+		/// <summary>
 		/// Loads the specified ids.
 		/// </summary>
 		/// <param name="ids">The ids.</param>
