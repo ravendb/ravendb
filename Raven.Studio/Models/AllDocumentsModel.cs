@@ -23,7 +23,8 @@ namespace Raven.Studio.Models
                                                                                           {
                                                                                               Value = new DocumentsModelEnhanced(new DocumentsCollectionSource())
                                                                                                           {
-                                                                                                              DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index)
+                                                                                                              DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
+                                                                                                              Context = "AllDocuments",
                                                                                                           }
                                                                                           });
 				}

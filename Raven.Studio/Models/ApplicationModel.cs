@@ -22,9 +22,12 @@ namespace Raven.Studio.Models
 			Notifications = new BindableCollection<Notification>(x=>x.Message);
 			LastNotification = new Observable<string>();
 			Server = new Observable<ServerModel> {Value = new ServerModel()};
+		    State = new ApplicationState();
 		}
 
-		public static Observable<DatabaseModel> Database { get { return Current.Server.Value.SelectedDatabase; } }
+	    public ApplicationState State { get; private set; }
+
+	    public static Observable<DatabaseModel> Database { get { return Current.Server.Value.SelectedDatabase; } }
 
 		public static IAsyncDatabaseCommands DatabaseCommands
 		{

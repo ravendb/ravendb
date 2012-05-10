@@ -19,6 +19,7 @@ namespace Raven.Studio.Infrastructure
 
         public void NotifyViewLoaded()
         {
+            IsLoaded = true;
             OnViewLoaded();
         }
 
@@ -30,6 +31,8 @@ namespace Raven.Studio.Infrastructure
             }
 
             OnViewUnloaded();
+
+            IsLoaded = false;
         }
 
         protected virtual void OnViewUnloaded()
@@ -46,5 +49,7 @@ namespace Raven.Studio.Infrastructure
         {
             get { return unloadedSubject ?? (unloadedSubject = new Subject<Unit>()); }
         }
+
+        protected bool IsLoaded { get; private set; }
     }
 }

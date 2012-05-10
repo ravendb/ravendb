@@ -101,6 +101,7 @@ namespace Raven.Studio.Models
 				}
 
 				indexName = value;
+                DocumentsResult.Context = "Index:" + indexName;
 				OnPropertyChanged(() => IndexName);
 				RestoreHistory();
 			}

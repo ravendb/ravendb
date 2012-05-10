@@ -28,7 +28,8 @@ namespace Raven.Studio.Models
 				    recentDocuments = (new DocumentsModelEnhanced(new DocumentsCollectionSource())
 				                                                      {
 				                                                          Header = "Recent Documents",
-                                                                          DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index)
+                                                                          DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
+                                                                          Context = "AllDocuments",
 				                                                      });
 				}
 

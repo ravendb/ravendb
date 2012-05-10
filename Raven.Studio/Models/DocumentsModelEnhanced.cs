@@ -24,9 +24,14 @@ namespace Raven.Studio.Models
         private Func<string, int, DocumentNavigator> documentNavigatorFactory;
 
         public VirtualCollection<ViewableDocument> Documents { get; private set; }
+        
+        private ColumnsModel columns;
 
         public bool SkipAutoRefresh { get; set; }
         public bool ShowEditControls { get; set; }
+
+        private string header;
+        private string context;
 
         private ICommand editColumns;
 
@@ -39,7 +44,44 @@ namespace Raven.Studio.Models
             Columns = new ColumnsModel();
         }
 
-        public ColumnsModel Columns { get; private set; }
+        public string Context
+        {
+            get { return context; }
+            set
+            {
+                context = value;
+                UpdateColumnSet();
+            }
+        }
+
+        private void UpdateColumnSet()
+        {
+            if (!IsLoaded)
+            {
+                return;
+            }
+
+            var columnsModel = ApplicationModel.Current.State.Databases[ApplicationModel.Database.Value].DocumentViewState.GetDocumentState(context);
+
+            if (columnsModel != null)
+            {
+                Columns = columnsModel;
+            }
+            else
+            {
+                BeginLoadColumnSet();
+            }
+        }
+
+        public ColumnsModel Columns
+        {
+            get { return columns; }
+            private set
+            {
+                columns = value;
+                OnPropertyChanged(() => Columns);
+            }
+        }
 
         public Func<string, int, DocumentNavigator> DocumentNavigatorFactory
         {
@@ -68,12 +110,12 @@ namespace Raven.Studio.Models
 
         protected override void OnViewLoaded()
         {
-            BeginLoadColumnSet();
+            UpdateColumnSet();
 
             ApplicationModel.Database
                 .ObservePropertyChanged()
                 .TakeUntil(Unloaded)
-                .Subscribe(_ => BeginLoadColumnSet());
+                .Subscribe(_ => UpdateColumnSet());
         }
 
         private void BeginLoadColumnSet()
@@ -90,6 +132,8 @@ namespace Raven.Studio.Models
                                 : columnSetDocument.DataAsJson.Deserialize<ColumnSet>(new DocumentConvention() {});
 
             Columns.LoadFromColumnDefinitions(columnSet.Columns);
+
+            ApplicationModel.Current.State.Databases[ApplicationModel.Database.Value].DocumentViewState.StoreDocumentState(Context, Columns);
         }
 
         private ColumnSet GetDefaultColumnSet()
@@ -115,9 +159,6 @@ namespace Raven.Studio.Models
             Documents.Refresh();
             return base.TimerTickedAsync();
         }
-
-        private string header;
-
 
         public string Header
         {
