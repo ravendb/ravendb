@@ -20,9 +20,9 @@ namespace Raven.Sample.ShardClient
 		{
 			var shards = new Dictionary<string, IDocumentStore>
 			             	{
-			             		{"one", new DocumentStore {Url = "http://localhost:8080"}},
-			             		{"two", new DocumentStore {Url = "http://localhost:8081"}},
-			             		{"three", new DocumentStore {Url = "http://localhost:8082"}},
+			             		{"one", new DocumentStore {Url = "http://localhost:8079"}},
+			             		{"two", new DocumentStore {Url = "http://localhost:8078"}},
+			             		{"three", new DocumentStore {Url = "http://localhost:8077"}},
 			             	};
 
 			var shardStrategy = new ShardStrategy(shards)
