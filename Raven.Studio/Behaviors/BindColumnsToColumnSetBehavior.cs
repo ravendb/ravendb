@@ -16,6 +16,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using Raven.Studio.Features.Documents;
 using System.Linq;
+using ColumnDefinition = Raven.Studio.Features.Documents.ColumnDefinition;
 
 namespace Raven.Studio.Behaviors
 {
@@ -24,19 +25,17 @@ namespace Raven.Studio.Behaviors
         public static readonly DependencyProperty ColumnsProperty =
             DependencyProperty.Register("Columns", typeof (ColumnsModel), typeof (BindColumnsToColumnSetBehavior), new PropertyMetadata(default(ColumnsModel), HandleColumnsModelChanged));
 
-        public static readonly DependencyProperty AssociatedModelProperty =
-            DependencyProperty.RegisterAttached("AssociatedModel", typeof(ColumnModel), typeof(BindColumnsToColumnSetBehavior), new PropertyMetadata(null));
+        private static readonly DependencyProperty AssociatedColumnProperty =
+            DependencyProperty.RegisterAttached("AssociatedModel", typeof(ColumnDefinition), typeof(BindColumnsToColumnSetBehavior), new PropertyMetadata(null));
 
-        private Dictionary<ColumnModel, DataGridTemplateColumn> _associatedColumns = new Dictionary<ColumnModel, DataGridTemplateColumn>();
-
-        private static ColumnModel GetAssociatedModel(DependencyObject obj)
+        private static ColumnDefinition GetAssociatedColumn(DependencyObject obj)
         {
-            return (ColumnModel)obj.GetValue(AssociatedModelProperty);
+            return (ColumnDefinition)obj.GetValue(AssociatedColumnProperty);
         }
 
-        private static void SetAssociatedModel(DependencyObject obj, ColumnModel value)
+        private static void SetAssociatedColumn(DependencyObject obj, ColumnDefinition value)
         {
-            obj.SetValue(AssociatedModelProperty, value);
+            obj.SetValue(AssociatedColumnProperty, value);
         }
         
         private bool isLoaded;
@@ -62,7 +61,6 @@ namespace Raven.Studio.Behaviors
             base.OnDetaching();
 
             StopObservingColumnsModel(Columns);
-            DisassociateFromColumns();
 
             AssociatedObject.Loaded -= HandleLoaded;
             AssociatedObject.Unloaded -= HandleUnloaded;
@@ -72,7 +70,6 @@ namespace Raven.Studio.Behaviors
         {
             isLoaded = false;
             StopObservingColumnsModel(Columns);
-            DisassociateFromColumns();
         }
 
         private void HandleLoaded(object sender, RoutedEventArgs e)
@@ -98,38 +95,6 @@ namespace Raven.Studio.Behaviors
             }
         }
 
-        private void DisassociateFromColumns()
-        {
-            foreach (var columnModel in _associatedColumns.Keys)
-            {
-                columnModel.PropertyChanged -= HandleColumnModelPropertyChanged;
-            }
-
-            _associatedColumns.Clear();
-        }
-
-        private void HandleColumnModelPropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            var columnModel = sender as ColumnModel;
-
-            DataGridTemplateColumn column;
-            if (_associatedColumns.TryGetValue(columnModel, out column))
-            {
-                // special-case Binding, because that is the most expensive to update
-                if (e.PropertyName == "Binding")
-                {
-                    var index = GetIndexOfAssociatedColumn(columnModel);
-                    RemoveColumn(columnModel);
-                    AddColumn(columnModel, index);
-                }
-                else
-                {
-                    column.Header = columnModel.Header;
-                    column.Width = ParseWidth(columnModel.DefaultWidth);
-                }
-            }
-        }
-
         private void HandleColumnsChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             if (!isLoaded)
@@ -139,17 +104,17 @@ namespace Raven.Studio.Behaviors
 
             if (e.Action == NotifyCollectionChangedAction.Add)
             {
-                AddColumn(e.NewItems[0] as ColumnModel);
+                AddColumn(e.NewItems[0] as ColumnDefinition);
             }
             else if (e.Action == NotifyCollectionChangedAction.Remove)
             {
-                RemoveColumn(e.OldItems[0] as ColumnModel);
+                RemoveColumn(e.OldItems[0] as ColumnDefinition);
             }
             else if (e.Action == NotifyCollectionChangedAction.Replace)
             {
-                var index = GetIndexOfAssociatedColumn(e.OldItems[0] as ColumnModel);
-                RemoveColumn(e.OldItems[0] as ColumnModel);
-                AddColumn(e.NewItems[0] as ColumnModel, index);
+                var index = GetIndexOfAssociatedColumn(e.OldItems[0] as ColumnDefinition);
+                RemoveColumn(e.OldItems[0] as ColumnDefinition);
+                AddColumn(e.NewItems[0] as ColumnDefinition, index);
             }
             else if (e.Action == NotifyCollectionChangedAction.Reset)
             {
@@ -158,7 +123,7 @@ namespace Raven.Studio.Behaviors
             
         }
 
-        private int GetIndexOfAssociatedColumn(ColumnModel columnModel)
+        private int GetIndexOfAssociatedColumn(ColumnDefinition columnModel)
         {
             var column = FindAssociatedColumn(columnModel);
             return column == null ? -1 : AssociatedObject.Columns.IndexOf(column);
@@ -166,7 +131,6 @@ namespace Raven.Studio.Behaviors
 
         private void ResetColumns()
         {
-            DisassociateFromColumns();
             ClearBoundColumns();
             AddColumns();
         }
@@ -186,7 +150,7 @@ namespace Raven.Studio.Behaviors
 
         private void ClearBoundColumns()
         {
-            var columnsToRemove = AssociatedObject.Columns.Where(c => GetAssociatedModel(c) != null).ToList();
+            var columnsToRemove = AssociatedObject.Columns.Where(c => GetAssociatedColumn(c) != null).ToList();
 
             foreach (var column in columnsToRemove)
             {
@@ -194,19 +158,16 @@ namespace Raven.Studio.Behaviors
             }
         }
 
-        private void AddColumn(ColumnModel columnModel, int? index = null)
+        private void AddColumn(ColumnDefinition columnDefinition, int? index = null)
         {
             var column = new DataGridTemplateColumn()
                              {
-                                 Header = columnModel.Header,
-                                 CellTemplate = CreateCellTemplate(columnModel),
-                                 Width = ParseWidth(columnModel.DefaultWidth),
+                                 Header = columnDefinition.Header,
+                                 CellTemplate = CreateCellTemplate(columnDefinition),
+                                 Width = ParseWidth(columnDefinition.DefaultWidth),
                              };
 
-            SetAssociatedModel(column, columnModel);
-            _associatedColumns.Add(columnModel, column);
-
-            columnModel.PropertyChanged += HandleColumnModelPropertyChanged;
+            SetAssociatedColumn(column, columnDefinition);
 
             if (!index.HasValue)
             {
@@ -232,28 +193,22 @@ namespace Raven.Studio.Behaviors
             }
         }
 
-        private void RemoveColumn(ColumnModel columnModel)
+        private void RemoveColumn(ColumnDefinition columnDefinition)
         {
-            DataGridTemplateColumn column = FindAssociatedColumn(columnModel);
+            DataGridTemplateColumn column = FindAssociatedColumn(columnDefinition);
 
             if (column != null)
             {
                 AssociatedObject.Columns.Remove(column);
             }
-
-            _associatedColumns.Remove(columnModel);
-
-            columnModel.PropertyChanged -= HandleColumnModelPropertyChanged;
         }
 
-        private DataGridTemplateColumn FindAssociatedColumn(ColumnModel columnModel)
+        private DataGridTemplateColumn FindAssociatedColumn(ColumnDefinition columnDefinition)
         {
-             DataGridTemplateColumn column;
-
-            return _associatedColumns.TryGetValue(columnModel, out column) ? column : null;
+            return AssociatedObject.Columns.FirstOrDefault(c => GetAssociatedColumn(c) == columnDefinition) as DataGridTemplateColumn;
         }
 
-        private DataTemplate CreateCellTemplate(ColumnModel columnModel)
+        private DataTemplate CreateCellTemplate(ColumnDefinition columnDefinition)
         {
             var templateString =
                 @"<DataTemplate  xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:Behaviors=""clr-namespace:Raven.Studio.Behaviors;assembly=Raven.Studio"">
@@ -263,7 +218,7 @@ namespace Raven.Studio.Behaviors
                                                Margin=""5,0""/>
                                 </DataTemplate>";
 
-            templateString = templateString.Replace("$$$BindingPath$$$", columnModel.Binding);
+            templateString = templateString.Replace("$$$BindingPath$$$", columnDefinition.Binding);
 
             var template = XamlReader.Load(templateString) as DataTemplate;
 

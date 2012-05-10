@@ -18,7 +18,7 @@ namespace Raven.Studio.Features.Documents
     {
         public event EventHandler<EventArgs> ChangesCommitted;
 
-        private readonly ColumnModel column;
+        private readonly ColumnDefinition column;
         private string header;
         private string binding;
         private string defaultWidth;
@@ -26,22 +26,39 @@ namespace Raven.Studio.Features.Documents
         public string Header
         {
             get { return this.header; }
-            set { this.header = value; }
+            set
+            {
+                this.header = value;
+                OnPropertyChanged(() => Header);
+            }
         }
-        
+
         public string Binding
         {
             get { return this.binding; }
-            set { this.binding = value; }
+            set
+            {
+                this.binding = value;
+                OnPropertyChanged(() => Binding);
+            }
         }
 
         public string DefaultWidth
         {
             get { return this.defaultWidth; }
-            set { this.defaultWidth = value; }
+            set
+            {
+                this.defaultWidth = value;
+                OnPropertyChanged(() => DefaultWidth);
+            }
         }
 
-        public ColumnEditorViewModel(ColumnModel column)
+        public ColumnEditorViewModel()
+        {
+            
+        }
+
+        public ColumnEditorViewModel(ColumnDefinition column)
         {
             this.column = column;
             LoadPropertiesFromColumn();
@@ -93,9 +110,14 @@ namespace Raven.Studio.Features.Documents
             get { return false; }
         }
 
-        public ColumnModel Column
+        public ColumnDefinition GetColumn()
         {
-            get { return column; }
+            return new ColumnDefinition()
+                       {
+                           Header = header,
+                           Binding = binding,
+                           DefaultWidth = defaultWidth
+                       };
         }
 
         public event EventHandler<DataErrorsChangedEventArgs> ErrorsChanged;
@@ -104,11 +126,6 @@ namespace Raven.Studio.Features.Documents
         {
             EventHandler<EventArgs> handler = ChangesCommitted;
             if (handler != null) handler(this, e);
-        }
-
-        public void ApplyChanges()
-        {
-            SavePropertiesToColumn();
         }
     }
 }

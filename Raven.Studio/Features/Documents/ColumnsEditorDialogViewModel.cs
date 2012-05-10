@@ -26,7 +26,7 @@ namespace Raven.Studio.Features.Documents
 
         private void AddEmptyRow()
         {
-            var newRow = new ColumnEditorViewModel(new ColumnModel());
+            var newRow = new ColumnEditorViewModel();
             newRow.ChangesCommitted += HandleNewRowChangesCommitted;
 
             columnEditorViewModels.Add(newRow);
@@ -129,30 +129,13 @@ namespace Raven.Studio.Features.Documents
 
         private void SyncChangesWithColumnsModel()
         {
-            var actualColumns = columnEditorViewModels.Where(c => !c.IsNewRow).ToList();
+            var actualColumns = columnEditorViewModels.Where(c => !c.IsNewRow).Select(c => c.GetColumn()).ToList();
 
-            foreach (var columnEditorViewModel in actualColumns)
-            {
-                columnEditorViewModel.ApplyChanges();
-            }
+            columns.Columns.Clear();
 
-            for (int i = 0; i < Math.Max(actualColumns.Count, columns.Columns.Count); i++)
+            foreach (var column in actualColumns)
             {
-                if (actualColumns.Count > i && columns.Columns.Count > i)
-                {
-                    if (columns.Columns[i] != actualColumns[i].Column)
-                    {
-                        columns.Columns[i] = actualColumns[i].Column;
-                    }
-                }
-                else if (actualColumns.Count <= i)
-                {
-                    columns.Columns.RemoveAt(i);
-                }
-                else if (columns.Columns.Count <= i)
-                {
-                    columns.Columns.Add(actualColumns[i].Column);
-                }
+                columns.Columns.Add(column);
             }
         }
     }

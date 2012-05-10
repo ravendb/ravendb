@@ -16,31 +16,21 @@ namespace Raven.Studio.Features.Documents
 {
     public class ColumnsModel : Model
     {
-        public ObservableCollection<ColumnModel> Columns { get; private set; }
+        public ObservableCollection<ColumnDefinition> Columns { get; private set; }
  
         public ColumnsModel()
         {
-            Columns = new ObservableCollection<ColumnModel>();
+            Columns = new ObservableCollection<ColumnDefinition>();
         }
 
         public void LoadFromColumnSet(ColumnSet columnSet)
         {
             Columns.Clear();
 
-            foreach (var columnModel in columnSet.Columns.Select(ToColumnModel))
+            foreach (var column in columnSet.Columns)
             {
-                Columns.Add(columnModel);
+                Columns.Add(column);
             }
-        }
-
-        private ColumnModel ToColumnModel(ColumnDefinition column)
-        {
-            return new ColumnModel()
-                       {
-                           Binding = column.Binding, 
-                           Header = column.Header,
-                           DefaultWidth = column.DefaultWidth,
-                       };
         }
     }
 }
