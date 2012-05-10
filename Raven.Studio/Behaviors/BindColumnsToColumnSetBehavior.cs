@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Net;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,15 +21,13 @@ namespace Raven.Studio.Behaviors
 {
     public class BindColumnsToColumnSetBehavior : Behavior<DataGrid>
     {
-        public static readonly DependencyProperty IsPermanentProperty =
-            DependencyProperty.RegisterAttached("IsPermanent", typeof(bool), typeof(BindColumnsToColumnSetBehavior), new PropertyMetadata(false));
-
         public static readonly DependencyProperty ColumnsProperty =
             DependencyProperty.Register("Columns", typeof (ColumnsModel), typeof (BindColumnsToColumnSetBehavior), new PropertyMetadata(default(ColumnsModel), HandleColumnsModelChanged));
 
         public static readonly DependencyProperty AssociatedModelProperty =
             DependencyProperty.RegisterAttached("AssociatedModel", typeof(ColumnModel), typeof(BindColumnsToColumnSetBehavior), new PropertyMetadata(null));
 
+        private Dictionary<ColumnModel, DataGridTemplateColumn> _associatedColumns = new Dictionary<ColumnModel, DataGridTemplateColumn>();
 
         private static ColumnModel GetAssociatedModel(DependencyObject obj)
         {
@@ -39,16 +39,6 @@ namespace Raven.Studio.Behaviors
             obj.SetValue(AssociatedModelProperty, value);
         }
         
-        public static bool GetIsPermanent(DependencyObject obj)
-        {
-            return (bool)obj.GetValue(IsPermanentProperty);
-        }
-
-        public static void SetIsPermanent(DependencyObject obj, bool value)
-        {
-            obj.SetValue(IsPermanentProperty, value);
-        }
-
         private bool isLoaded;
 
         public ColumnsModel Columns
@@ -72,6 +62,7 @@ namespace Raven.Studio.Behaviors
             base.OnDetaching();
 
             StopObservingColumnsModel(Columns);
+            DisassociateFromColumns();
 
             AssociatedObject.Loaded -= HandleLoaded;
             AssociatedObject.Unloaded -= HandleUnloaded;
@@ -81,6 +72,7 @@ namespace Raven.Studio.Behaviors
         {
             isLoaded = false;
             StopObservingColumnsModel(Columns);
+            DisassociateFromColumns();
         }
 
         private void HandleLoaded(object sender, RoutedEventArgs e)
@@ -106,6 +98,38 @@ namespace Raven.Studio.Behaviors
             }
         }
 
+        private void DisassociateFromColumns()
+        {
+            foreach (var columnModel in _associatedColumns.Keys)
+            {
+                columnModel.PropertyChanged -= HandleColumnModelPropertyChanged;
+            }
+
+            _associatedColumns.Clear();
+        }
+
+        private void HandleColumnModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            var columnModel = sender as ColumnModel;
+
+            DataGridTemplateColumn column;
+            if (_associatedColumns.TryGetValue(columnModel, out column))
+            {
+                // special-case Binding, because that is the most expensive to update
+                if (e.PropertyName == "Binding")
+                {
+                    var index = GetIndexOfAssociatedColumn(columnModel);
+                    RemoveColumn(columnModel);
+                    AddColumn(columnModel, index);
+                }
+                else
+                {
+                    column.Header = columnModel.Header;
+                    column.Width = ParseWidth(columnModel.DefaultWidth);
+                }
+            }
+        }
+
         private void HandleColumnsChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             if (!isLoaded)
@@ -121,14 +145,28 @@ namespace Raven.Studio.Behaviors
             {
                 RemoveColumn(e.OldItems[0] as ColumnModel);
             }
+            else if (e.Action == NotifyCollectionChangedAction.Replace)
+            {
+                var index = GetIndexOfAssociatedColumn(e.OldItems[0] as ColumnModel);
+                RemoveColumn(e.OldItems[0] as ColumnModel);
+                AddColumn(e.NewItems[0] as ColumnModel, index);
+            }
             else if (e.Action == NotifyCollectionChangedAction.Reset)
             {
                 ResetColumns();
             }
+            
+        }
+
+        private int GetIndexOfAssociatedColumn(ColumnModel columnModel)
+        {
+            var column = FindAssociatedColumn(columnModel);
+            return column == null ? -1 : AssociatedObject.Columns.IndexOf(column);
         }
 
         private void ResetColumns()
         {
+            DisassociateFromColumns();
             ClearBoundColumns();
             AddColumns();
         }
@@ -148,7 +186,7 @@ namespace Raven.Studio.Behaviors
 
         private void ClearBoundColumns()
         {
-            var columnsToRemove = AssociatedObject.Columns.Where(c => !GetIsPermanent(c)).ToList();
+            var columnsToRemove = AssociatedObject.Columns.Where(c => GetAssociatedModel(c) != null).ToList();
 
             foreach (var column in columnsToRemove)
             {
@@ -156,7 +194,7 @@ namespace Raven.Studio.Behaviors
             }
         }
 
-        private void AddColumn(ColumnModel columnModel)
+        private void AddColumn(ColumnModel columnModel, int? index = null)
         {
             var column = new DataGridTemplateColumn()
                              {
@@ -165,7 +203,19 @@ namespace Raven.Studio.Behaviors
                                  Width = ParseWidth(columnModel.DefaultWidth),
                              };
 
-            AssociatedObject.Columns.Add(column);
+            SetAssociatedModel(column, columnModel);
+            _associatedColumns.Add(columnModel, column);
+
+            columnModel.PropertyChanged += HandleColumnModelPropertyChanged;
+
+            if (!index.HasValue)
+            {
+                AssociatedObject.Columns.Add(column);
+            }
+            else
+            {
+                AssociatedObject.Columns.Insert(index.Value, column);
+            }
         }
 
         private DataGridLength ParseWidth(string defaultWidth)
@@ -184,11 +234,23 @@ namespace Raven.Studio.Behaviors
 
         private void RemoveColumn(ColumnModel columnModel)
         {
-            var column = AssociatedObject.Columns.FirstOrDefault(c => GetAssociatedModel(c) == columnModel);
+            DataGridTemplateColumn column = FindAssociatedColumn(columnModel);
+
             if (column != null)
             {
                 AssociatedObject.Columns.Remove(column);
             }
+
+            _associatedColumns.Remove(columnModel);
+
+            columnModel.PropertyChanged -= HandleColumnModelPropertyChanged;
+        }
+
+        private DataGridTemplateColumn FindAssociatedColumn(ColumnModel columnModel)
+        {
+             DataGridTemplateColumn column;
+
+            return _associatedColumns.TryGetValue(columnModel, out column) ? column : null;
         }
 
         private DataTemplate CreateCellTemplate(ColumnModel columnModel)

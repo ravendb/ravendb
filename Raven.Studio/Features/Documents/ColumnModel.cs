@@ -23,8 +23,11 @@ namespace Raven.Studio.Features.Documents
             get { return header; }
             set
             {
-                header = value;
-                OnPropertyChanged(() => Header);
+                if (header != value)
+                {
+                    header = value;
+                    OnPropertyChanged(() => Header);
+                }
             }
         }
 
@@ -33,8 +36,11 @@ namespace Raven.Studio.Features.Documents
             get { return binding; }
             set
             {
-                binding = value;
-                OnPropertyChanged(() => Header);
+                if (binding != value)
+                {
+                    binding = value;
+                    OnPropertyChanged(() => Binding);
+                }
             }
         }
 
@@ -43,8 +49,11 @@ namespace Raven.Studio.Features.Documents
             get { return defaultWidth; }
             set
             {
-                defaultWidth = value;
-                OnPropertyChanged(() => DefaultWidth);
+                if (defaultWidth != value)
+                {
+                    defaultWidth = value;
+                    OnPropertyChanged(() => DefaultWidth);
+                }
             }
         }
     }

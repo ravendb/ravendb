@@ -143,6 +143,7 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="Behaviors\BindColumnsToColumnSetBehavior.cs" />
+    <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
@@ -158,7 +159,12 @@
     <Compile Include="Features\Documents\AllDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\CollectionDocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\ColumnDefinition.cs" />
+    <Compile Include="Features\Documents\ColumnEditorViewModel.cs" />
     <Compile Include="Features\Documents\ColumnModel.cs" />
+    <Compile Include="Features\Documents\ColumnsEditorDialog.xaml.cs">
+      <DependentUpon>ColumnsEditorDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\ColumnsEditorDialogViewModel.cs" />
     <Compile Include="Features\Documents\ColumnSet.cs" />
     <Compile Include="Features\Documents\ColumnsModel.cs" />
     <Compile Include="Features\Documents\DocumentNavigationStrategy.cs" />
@@ -464,6 +470,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Controls\Taggers.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\ColumnsEditorDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -1,0 +1,40 @@
+﻿<controls:ChildWindow x:Class="Raven.Studio.Features.Documents.ColumnsEditorDialog"
+           xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+           xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+           xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
+                      xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" Width="400" Height="300" 
+           Title="ColumnsEditorDialog" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                      xmlns:Models="clr-namespace:Raven.Studio.Models"
+                      xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                      xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" mc:Ignorable="d">
+    <Grid x:Name="LayoutRoot" Margin="2" d:DataContext="{d:DesignInstance Documents:ColumnsEditorDialogViewModel}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="0">
+            <Button Content="Delete" Command="{Binding DeleteSelectedColumn}"  Width="75" Height="23" Margin="5" />
+            <Button Content="Move Up" Command="{Binding MoveSelectedColumnUp}" Width="75" Height="23" Margin="5" />
+            <Button Content="Move Down" Command="{Binding MoveSelectedColumnDown}" Width="75" Height="23" Margin="5"  />
+        </StackPanel>
+        
+        <sdk:DataGrid Grid.Row="1" ItemsSource="{Binding Columns}" IsReadOnly="False" AutoGenerateColumns="False" SelectedItem="{Binding SelectedColumn, Mode=TwoWay}">
+            <sdk:DataGrid.Columns>
+                <sdk:DataGridTextColumn Header="Header" Binding="{Binding Header, Mode=TwoWay}" Width="*"/>
+                <sdk:DataGridTextColumn Header="Binding" Binding="{Binding Binding, Mode=TwoWay}" Width="*"/>
+                <sdk:DataGridTextColumn Header="Default Width" Binding="{Binding DefaultWidth, Mode=TwoWay}" Width="120"/>
+            </sdk:DataGrid.Columns>
+        </sdk:DataGrid>
+        
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="2">
+            <Button Content="Apply" Command="{Binding Apply}"  Width="75" Height="23" Margin="5" />
+            <Button Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" Margin="5" />
+            <Button  Content="OK" Click="OKButton_Click" Width="75" Height="23" Margin="5"  />
+        </StackPanel>
+    </Grid>
+</controls:ChildWindow>

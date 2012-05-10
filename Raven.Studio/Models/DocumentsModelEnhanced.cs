@@ -28,6 +28,8 @@ namespace Raven.Studio.Models
         public bool SkipAutoRefresh { get; set; }
         public bool ShowEditControls { get; set; }
 
+        private ICommand editColumns;
+
         public DocumentsModelEnhanced(VirtualCollectionSource<ViewableDocument> collectionSource)
         {
             Documents = new VirtualCollection<ViewableDocument>(collectionSource, 25, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified));
@@ -58,6 +60,11 @@ namespace Raven.Studio.Models
                    (editDocument =
                     new EditVirtualDocumentCommand() {DocumentNavigatorFactory = DocumentNavigatorFactory});
         } }
+
+        public ICommand EditColumns
+        {
+            get { return editColumns ?? (editColumns = new ActionCommand(HandleEditColumns)); }
+        }
 
         protected override void OnViewLoaded()
         {
@@ -111,6 +118,7 @@ namespace Raven.Studio.Models
 
         private string header;
 
+
         public string Header
         {
             get { return header ?? (header = "Documents"); }
@@ -119,6 +127,11 @@ namespace Raven.Studio.Models
                 header = value;
                 OnPropertyChanged(() => Header);
             }
+        }
+
+        private void HandleEditColumns()
+        {
+            ColumnsEditorDialog.Show(Columns);
         }
     }
 }

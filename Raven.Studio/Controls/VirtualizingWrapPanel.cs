@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Net;
 using System.Windows;
 using System.Windows.Controls;
@@ -69,7 +70,11 @@ namespace Raven.Studio.Controls
 
         public VirtualizingWrapPanel()
         {
-            Dispatcher.BeginInvoke(Initialize);
+            if (!DesignerProperties.IsInDesignTool)
+            {
+                Dispatcher.BeginInvoke(Initialize);
+            }
+
             _deferredMeasureInvalidation = new DeferredActionInvoker(InvalidateMeasure,
                                                                      TimeSpan.FromSeconds(0.05));
         }
