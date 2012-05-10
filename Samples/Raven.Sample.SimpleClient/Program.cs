@@ -11,20 +11,16 @@ namespace Raven.Sample.SimpleClient
 	{
 		static void Main()
 		{
-			using (var documentStore = new DocumentStore { Url = "http://ipv4.fiddler:8080" })
+			using (var documentStore = new DocumentStore
 			{
-				documentStore.Initialize();
-
-			   
-
+				Url = "http://localhost:8080"
+			}.Initialize())
+			{
+				using (var session = documentStore.OpenSession())
+				{
+					session.SaveChanges();
+				}
 			}
 		}
-
-		public class U2
-		{
-			public string Id { get; set; }
-			public string Name { get; set; }
-		}
-
 	}
 }
