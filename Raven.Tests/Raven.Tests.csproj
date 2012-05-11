@@ -599,6 +599,7 @@
     <Compile Include="MailingList\Oregon.cs" />
     <Compile Include="MailingList\Phil.cs" />
     <Compile Include="MailingList\JoelAsync.cs" />
+    <Compile Include="MailingList\LazyWithIncludes.cs" />
     <Compile Include="MailingList\PhilJones_Search.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />

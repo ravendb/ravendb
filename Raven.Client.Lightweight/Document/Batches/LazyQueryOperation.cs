@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -15,11 +16,13 @@ namespace Raven.Client.Document.Batches
 	{
 		private readonly QueryOperation queryOperation;
 		private readonly Action<QueryResult> afterQueryExecuted;
+		private readonly HashSet<string> includes;
 
-		public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted)
+		public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted, HashSet<string> includes)
 		{
 			this.queryOperation = queryOperation;
 			this.afterQueryExecuted = afterQueryExecuted;
+			this.includes = includes;
 		}
 
 		public GetRequest CraeteRequest()
@@ -27,6 +30,10 @@ namespace Raven.Client.Document.Batches
 			var stringBuilder = new StringBuilder();
 			queryOperation.IndexQuery.AppendQueryString(stringBuilder);
 
+			foreach (var include in includes)
+			{
+				stringBuilder.Append("&include=").Append(include);
+			}
 			return new GetRequest
 			{
 				Url = "/indexes/" + queryOperation.IndexName,
@@ -89,7 +96,7 @@ namespace Raven.Client.Document.Batches
 
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
-			return commands.Query(queryOperation.IndexName, queryOperation.IndexQuery, null);
+			return commands.Query(queryOperation.IndexName, queryOperation.IndexQuery, includes.ToArray());
 		}
 
 		public void HandleEmbeddedResponse(object result)

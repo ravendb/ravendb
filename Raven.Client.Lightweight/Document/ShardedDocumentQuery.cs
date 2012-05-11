@@ -227,7 +227,7 @@ namespace Raven.Client.Document
 				queryOperation = InitializeQueryOperation((s, s1) => ShardDatabaseCommands.ForEach(cmd => cmd.OperationsHeaders.Set(s, s1)));
 			}
 
-			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback);
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
 
 			return ((ShardedDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval, ShardDatabaseCommands);
 		}
