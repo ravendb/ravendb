@@ -69,9 +69,10 @@ namespace Raven.Client.Shard
 		{
 			return Task.Factory.ContinueWhenAll(commands.Select(operation).ToArray(), tasks =>
 			{
-				List<T> results = new List<T>(tasks.Length);
+				var results = new List<T>(tasks.Length);
 				int index = 0;
-				List<Exception> exceptions = new List<Exception>();
+				var handledExceptions = new List<Exception>();
+				var unhandledExceptions = new List<Exception>();
 				foreach (var task in tasks)
 				{
 					try
@@ -82,15 +83,20 @@ namespace Raven.Client.Shard
 					{
 						var error = OnAsyncError;
 						if (error == null)
-							exceptions.Add(e);
-						if (error(commands[index], request, e) == false)
-							exceptions.Add(e);
+							unhandledExceptions.Add(e);
+						else if (error(commands[index], request, e) == false)
+							unhandledExceptions.Add(e);
+						else
+							handledExceptions.Add(e);
 					}
 					index++;
 				}
 
-				if (exceptions.Any())
-					throw new AggregateException(exceptions);
+				if (unhandledExceptions.Any())
+					throw new AggregateException(unhandledExceptions);
+
+				if (handledExceptions.Count == tasks.Length)
+					throw new AggregateException(handledExceptions);
 
 				return results.ToArray();
 			});

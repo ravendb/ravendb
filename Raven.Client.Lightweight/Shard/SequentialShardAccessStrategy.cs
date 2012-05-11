@@ -67,12 +67,15 @@ namespace Raven.Client.Shard
 		{
 			var resultsTask = new TaskCompletionSource<List<T>>();
 			var results = new List<T>();
+			var errors = new List<Exception>();
 
 			Action<int> executer = null;
 			executer = index =>
 				{
 					if (index >= commands.Count)
 					{
+						if (errors.Count == commands.Count)
+							throw new AggregateException(errors);
 						// finished all commands successfully
 						resultsTask.SetResult(results);
 						return;
@@ -93,6 +96,7 @@ namespace Raven.Client.Shard
 								resultsTask.SetException(task.Exception);
 								return;
 							}
+							errors.Add(task.Exception);
 						}
 						else
 						{
