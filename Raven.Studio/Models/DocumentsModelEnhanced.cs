@@ -41,7 +41,7 @@ namespace Raven.Studio.Models
 
             ShowEditControls = true;
 
-            Columns = new ColumnsModel();
+            Context = "Default";
         }
 
         public string Context
@@ -49,7 +49,7 @@ namespace Raven.Studio.Models
             get { return context; }
             set
             {
-                context = value;
+                context = value ?? "Default";
                 UpdateColumnSet();
             }
         }
@@ -61,7 +61,7 @@ namespace Raven.Studio.Models
                 return;
             }
 
-            var columnsModel = ApplicationModel.Current.State.Databases[ApplicationModel.Database.Value].DocumentViewState.GetDocumentState(context);
+            var columnsModel = PerDatabaseState.DocumentViewState.GetDocumentState(context);
 
             if (columnsModel != null)
             {
@@ -69,6 +69,9 @@ namespace Raven.Studio.Models
             }
             else
             {
+                Columns = new ColumnsModel();
+                PerDatabaseState.DocumentViewState.SetDocumentState(context, Columns);
+
                 BeginLoadColumnSet();
             }
         }
@@ -121,7 +124,7 @@ namespace Raven.Studio.Models
         private void BeginLoadColumnSet()
         {
             ApplicationModel.DatabaseCommands
-                .GetAsync("Raven/Studio/DefaultColumns")
+                .GetAsync("Raven/Studio/Columns/" + Context)
                 .ContinueOnSuccessInTheUIThread(UpdateColumns);
         }
 
@@ -132,8 +135,6 @@ namespace Raven.Studio.Models
                                 : columnSetDocument.DataAsJson.Deserialize<ColumnSet>(new DocumentConvention() {});
 
             Columns.LoadFromColumnDefinitions(columnSet.Columns);
-
-            ApplicationModel.Current.State.Databases[ApplicationModel.Database.Value].DocumentViewState.StoreDocumentState(Context, Columns);
         }
 
         private ColumnSet GetDefaultColumnSet()
@@ -142,8 +143,8 @@ namespace Raven.Studio.Models
                        {
                            Columns =
                                {
-                                   new ColumnDefinition() {Header = "Id", Binding = "Key"},
-                                   new ColumnDefinition() {Header = "Last Modified", Binding = "LastModified"},
+                                   new ColumnDefinition() {Header = "Id", Binding = "$meta:@id"},
+                                   new ColumnDefinition() {Header = "Last Modified", Binding = "$meta:Last-Modified"},
                                }
                        };
         }
@@ -172,7 +173,7 @@ namespace Raven.Studio.Models
 
         private void HandleEditColumns()
         {
-            ColumnsEditorDialog.Show(Columns);
+            ColumnsEditorDialog.Show(Columns, Context);
         }
     }
 }

@@ -1,25 +1,32 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
+using Raven.Abstractions.Data;
+using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Documents
 {
     public class ColumnsEditorDialogViewModel : ViewModel
     {
         private readonly ColumnsModel columns;
+        private readonly string context;
         private ObservableCollection<ColumnEditorViewModel> columnEditorViewModels;
         private ICommand applyCommand;
         private ColumnEditorViewModel selectedColumn;
         private ICommand deleteSelectedColumn;
         private ICommand moveSelectedColumnUp;
         private ICommand moveSelectedColumnDown;
+        private ICommand saveAsDefault;
 
-        public ColumnsEditorDialogViewModel(ColumnsModel columns)
+        public ColumnsEditorDialogViewModel(ColumnsModel columns, string context)
         {
             this.columns = columns;
+            this.context = context;
             columnEditorViewModels = new ObservableCollection<ColumnEditorViewModel>(this.columns.Columns.Select(c => new ColumnEditorViewModel(c)));
             AddEmptyRow();
         }
@@ -69,6 +76,22 @@ namespace Raven.Studio.Features.Documents
                 return moveSelectedColumnDown ??
                        (moveSelectedColumnDown = new ActionCommand(() => HandleMoveSelectedColumn(1)));
             }
+        }
+
+        public ICommand SaveAsDefault
+        {
+            get { return saveAsDefault ?? (saveAsDefault = new ActionCommand(HandleSaveAsDefault)); }
+        }
+
+        private void HandleSaveAsDefault()
+        {
+            SyncChangesWithColumnsModel();
+
+            var columnSet = new ColumnSet() {Columns = GetCurrentColumnDefinitions()};
+            var document = RavenJObject.FromObject(columnSet);
+
+            ApplicationModel.DatabaseCommands.PutAsync("Raven/Studio/Columns/" + context, null, document,
+                                                       new RavenJObject());
         }
 
         private void HandleMoveSelectedColumn(int change)
@@ -129,7 +152,7 @@ namespace Raven.Studio.Features.Documents
 
         private void SyncChangesWithColumnsModel()
         {
-            var actualColumns = columnEditorViewModels.Where(c => !c.IsNewRow).Select(c => c.GetColumn()).ToList();
+            var actualColumns = GetCurrentColumnDefinitions();
 
             columns.Columns.Clear();
 
@@ -137,6 +160,11 @@ namespace Raven.Studio.Features.Documents
             {
                 columns.Columns.Add(column);
             }
+        }
+
+        private List<ColumnDefinition> GetCurrentColumnDefinitions()
+        {
+            return columnEditorViewModels.Where(c => !c.IsNewRow).Select(c => c.GetColumn()).ToList();
         }
     }
 

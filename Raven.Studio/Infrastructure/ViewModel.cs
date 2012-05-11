@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -51,5 +52,9 @@ namespace Raven.Studio.Infrastructure
         }
 
         protected bool IsLoaded { get; private set; }
+        protected PerDatabaseState PerDatabaseState
+        {
+            get { return ApplicationModel.Current.State.Databases[ApplicationModel.Database.Value]; }
+        }
     }
 }

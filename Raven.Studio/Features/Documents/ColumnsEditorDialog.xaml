@@ -32,6 +32,7 @@
         </sdk:DataGrid>
         
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="2">
+            <Button Content="Set as Default" Command="{Binding SaveAsDefault}"  Width="75" Height="23" Margin="5" />
             <Button Content="Apply" Command="{Binding Apply}"  Width="75" Height="23" Margin="5" />
             <Button Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" Margin="5" />
             <Button  Content="OK" Click="OKButton_Click" Width="75" Height="23" Margin="5"  />

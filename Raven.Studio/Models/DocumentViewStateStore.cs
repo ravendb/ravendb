@@ -17,7 +17,7 @@ namespace Raven.Studio.Models
     {
         public Dictionary<string, ColumnsModel> documentViewState = new Dictionary<string, ColumnsModel>();
  
-        public void StoreDocumentState(string context, ColumnsModel columns)
+        public void SetDocumentState(string context, ColumnsModel columns)
         {
             documentViewState[context] = columns;
         }

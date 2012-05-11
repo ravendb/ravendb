@@ -19,11 +19,11 @@ namespace Raven.Studio.Features.Documents
             InitializeComponent();
         }
 
-        public static void Show(ColumnsModel columns)
+        public static void Show(ColumnsModel columns, string context)
         {
             var dialog = new ColumnsEditorDialog()
                              {
-                                 DataContext = new ColumnsEditorDialogViewModel(columns)
+                                 DataContext = new ColumnsEditorDialogViewModel(columns, context)
                              };
             dialog.Show();
         }
