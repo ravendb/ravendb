@@ -143,6 +143,7 @@
     <Compile Include="Indexes\AbstractGenericIndexCreationTask.cs" />
     <Compile Include="Indexes\AbstractMultiMapIndexCreationTask.cs" />
     <Compile Include="Linq\Indexing\IndexingLinqExtensions.cs" />
+    <Compile Include="Linq\ReflectionExtensions.cs" />
     <Compile Include="Linq\SearchOptions.cs" />
     <Compile Include="Listeners\IDocumentConversionListener.cs" />
     <Compile Include="Listeners\IDocumentDeleteListener.cs" />
@@ -175,7 +176,7 @@
     <Compile Include="Linq\RavenQueryProvider.cs" />
     <Compile Include="Linq\RavenQueryProviderProcessor.cs" />
     <Compile Include="Linq\RavenQueryStatistics.cs" />
-    <Compile Include="Linq\ReflectionExtensions.cs" />
+    <Compile Include="Linq\ExpressionExtensions.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
     <Compile Include="Shard\IShardResolutionStrategy.cs" />
     <Compile Include="Shard\ShardedDocumentSession.cs" />

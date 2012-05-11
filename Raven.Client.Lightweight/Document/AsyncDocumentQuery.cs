@@ -1,6 +1,7 @@
 ﻿#if !NET_3_5
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
@@ -118,6 +119,18 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Matches exact value
+		/// </summary>
+		/// <remarks>
+		///   Defaults to NotAnalyzed
+		/// </remarks>
+		public IAsyncDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereEquals(propertySelector.GetPropertyName(), value);
+			return this;
+		}
+
+		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
 		/// <remarks>
@@ -126,6 +139,18 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(string fieldName, object value, bool isAnalyzed)
 		{
 			WhereEquals(fieldName, value, isAnalyzed);
+			return this;
+		}
+
+		/// <summary>
+		///   Matches exact value
+		/// </summary>
+		/// <remarks>
+		///   Defaults to allow wildcards only if analyzed
+		/// </remarks>
+		public IAsyncDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool isAnalyzed)
+		{
+			WhereEquals(propertySelector.GetPropertyName(), value, isAnalyzed);
 			return this;
 		}
 
@@ -178,6 +203,15 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Check that the field has one of the specified value
+		/// </summary>
+		public IAsyncDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+		{
+			//WhereIn(propertySelector.GetPropertyName(), values.Cast<object>());
+			return this;
+		}
+
+		/// <summary>
 		/// Matches fields which starts with the specified value.
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
@@ -189,6 +223,17 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Matches fields which starts with the specified value.
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "value">The value.</param>
+		public IAsyncDocumentQuery<T> WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereStartsWith(propertySelector.GetPropertyName(), value);
+			return this;
+		}
+
+		/// <summary>
 		/// Matches fields which ends with the specified value.
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
@@ -196,6 +241,17 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith(string fieldName, object value)
 		{
 			WhereEndsWith(fieldName, value);
+			return this;
+		}
+
+		/// <summary>
+		///   Matches fields which ends with the specified value.
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "value">The value.</param>
+		public IAsyncDocumentQuery<T> WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereEndsWith(propertySelector.GetPropertyName(), value);
 			return this;
 		}
 
@@ -212,6 +268,18 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Matches fields where the value is between the specified start and end, exclusive
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "start">The start.</param>
+		/// <param name = "end">The end.</param>
+		public IAsyncDocumentQuery<T> WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
+		{
+			WhereBetween(propertySelector.GetPropertyName(), start, end);
+			return this;
+		}
+
+		/// <summary>
 		/// Matches fields where the value is between the specified start and end, inclusive
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
@@ -220,6 +288,18 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereBetweenOrEqual(string fieldName, object start, object end)
 		{
 			WhereBetweenOrEqual(fieldName, start, end);
+			return this;
+		}
+
+		/// <summary>
+		///   Matches fields where the value is between the specified start and end, inclusive
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "start">The start.</param>
+		/// <param name = "end">The end.</param>
+		public IAsyncDocumentQuery<T> WhereBetweenOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
+		{
+			WhereBetweenOrEqual(propertySelector.GetPropertyName(), start, end);
 			return this;
 		}
 
@@ -235,6 +315,17 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Matches fields where the value is greater than the specified value
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "value">The value.</param>
+		public IAsyncDocumentQuery<T> WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereGreaterThan(propertySelector.GetPropertyName(), value);
+			return this;
+		}
+
+		/// <summary>
 		/// Matches fields where the value is greater than or equal to the specified value
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
@@ -242,6 +333,17 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereGreaterThanOrEqual(string fieldName, object value)
 		{
 			WhereGreaterThanOrEqual(fieldName, value);
+			return this;
+		}
+
+		/// <summary>
+		///   Matches fields where the value is greater than or equal to the specified value
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "value">The value.</param>
+		public IAsyncDocumentQuery<T> WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereGreaterThanOrEqual(propertySelector.GetPropertyName(), value);
 			return this;
 		}
 
@@ -257,6 +359,17 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Matches fields where the value is less than the specified value
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "value">The value.</param>
+		public IAsyncDocumentQuery<T> WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereLessThan(propertySelector.GetPropertyName(), value);
+			return this;
+		}
+
+		/// <summary>
 		/// Matches fields where the value is less than or equal to the specified value
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
@@ -264,6 +377,17 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLessThanOrEqual(string fieldName, object value)
 		{
 			WhereLessThanOrEqual(fieldName, value);
+			return this;
+		}
+
+		/// <summary>
+		///   Matches fields where the value is less than or equal to the specified value
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "value">The value.</param>
+		public IAsyncDocumentQuery<T> WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereGreaterThanOrEqual(propertySelector.GetPropertyName(), value);
 			return this;
 		}
 
@@ -370,6 +494,18 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Order the results by the specified fields
+		///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
+		///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </summary>
+		/// <param name = "propertySelectors">Property selectors for the fields.</param>
+		public IAsyncDocumentQuery<T> OrderBy(params Expression<Func<T, object>>[] propertySelectors)
+		{
+			OrderBy(propertySelectors.Select(x => x.GetPropertyName()).ToArray());
+			return this;
+		}
+
+		/// <summary>
 		/// Instructs the query to wait for non stale results as of now.
 		/// </summary>
 		/// <returns></returns>
@@ -467,29 +603,29 @@ namespace Raven.Client.Document
 		{
 			var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(theSession,
 #if !SILVERLIGHT
-			                                                             theDatabaseCommands,
+																		 theDatabaseCommands,
 #endif
 #if !NET_3_5
-			                                                             theAsyncDatabaseCommands,
+																		 theAsyncDatabaseCommands,
 #endif
-			                                                             indexName, fields, queryListeners)
-			                         	{
-			                         		pageSize = pageSize,
-			                         		theQueryText = new StringBuilder(theQueryText.ToString()),
-			                         		start = start,
-			                         		timeout = timeout,
-			                         		cutoff = cutoff,
-			                         		theWaitForNonStaleResults = theWaitForNonStaleResults,
-			                         		sortByHints = sortByHints,
-			                         		orderByFields = orderByFields,
-			                         		groupByFields = groupByFields,
-			                         		aggregationOp = aggregationOp,
-			                         		transformResultsFunc = transformResultsFunc,
+																		 indexName, fields, queryListeners)
+										{
+											pageSize = pageSize,
+											theQueryText = new StringBuilder(theQueryText.ToString()),
+											start = start,
+											timeout = timeout,
+											cutoff = cutoff,
+											theWaitForNonStaleResults = theWaitForNonStaleResults,
+											sortByHints = sortByHints,
+											orderByFields = orderByFields,
+											groupByFields = groupByFields,
+											aggregationOp = aggregationOp,
+											transformResultsFunc = transformResultsFunc,
 											includes = new HashSet<string>(includes),
 											negate = negate,
 											queryOperation = queryOperation,
 											queryStats = queryStats
-			                         	};
+										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;
 		}
@@ -502,6 +638,17 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AddOrder(string fieldName, bool descending)
 		{
 			AddOrder(fieldName, descending);
+			return this;
+		}
+
+		/// <summary>
+		///   Adds an ordering for a specific field to the query
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "descending">if set to <c>true</c> [descending].</param>
+		public IAsyncDocumentQuery<T> AddOrder(Expression<Func<T, object>> propertySelector, bool descending)
+		{
+			AddOrder(propertySelector.GetPropertyName(), descending);
 			return this;
 		}
 
@@ -557,12 +704,34 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Perform a search for documents which fields that match the searchTerms.
+		/// If there is more than a single term, each of them will be checked independently.
+		/// </summary>
+		public IAsyncDocumentQuery<T> Search(Expression<Func<T, object>> propertySelector, string searchTerms)
+		{
+			Search(propertySelector.GetPropertyName(), searchTerms);
+			return this;
+		}
+
+		/// <summary>
 		/// Simplified method for closing a clause within the query
 		/// </summary>
 		/// <returns></returns>
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.CloseSubclause()
 		{
 			CloseSubclause();
+			return this;
+		}
+
+		///<summary>
+		///  Instruct the index to group by the specified fields using the specified aggregation operation
+		///</summary>
+		///<remarks>
+		///  This is only valid on dynamic indexes queries
+		///</remarks>
+		public IAsyncDocumentQuery<T> GroupBy(AggregationOperation aggregationOperation, params Expression<Func<T, object>>[] groupPropertySelectors)
+		{
+			GroupBy(aggregationOperation, groupPropertySelectors.Select(x => x.GetPropertyName()).ToArray());
 			return this;
 		}
 
