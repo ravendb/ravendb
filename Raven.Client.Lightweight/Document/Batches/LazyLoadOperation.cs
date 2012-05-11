@@ -55,6 +55,11 @@ namespace Raven.Client.Document.Batches
 				headers[header.Key] = header.Value;
 			}
 			var jsonDocument = SerializationHelper.DeserializeJsonDocument(key, RavenJObject.Parse(response.Result), headers, (HttpStatusCode)response.Status);
+			HandleResponse(jsonDocument);
+		}
+
+		private void HandleResponse(JsonDocument jsonDocument)
+		{
 			RequiresRetry = loadOperation.SetResult(jsonDocument);
 			if (RequiresRetry == false)
 				Result = loadOperation.Complete<T>();
@@ -63,6 +68,16 @@ namespace Raven.Client.Document.Batches
 		public IDisposable EnterContext()
 		{
 			return loadOperation.EnterLoadContext();
+		}
+
+		public object ExecuteEmbedded(IDatabaseCommands commands)
+		{
+			return commands.Get(key);
+		}
+
+		public void HandleEmbeddedResponse(object result)
+		{
+			HandleResponse((JsonDocument) result);
 		}
 	}
 }

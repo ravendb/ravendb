@@ -68,8 +68,13 @@ namespace Raven.Client.Document.Batches
 				throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + Environment.NewLine + response.Result);
 			var json = RavenJObject.Parse(response.Result);
 			var queryResult = SerializationHelper.ToQueryResult(json, response.Headers["ETag"]);
+			HandleResponse(queryResult);
+		}
+
+		private void HandleResponse(QueryResult queryResult)
+		{
 			RequiresRetry = queryOperation.IsAcceptable(queryResult) == false;
-			if (RequiresRetry) 
+			if (RequiresRetry)
 				return;
 
 			if (afterQueryExecuted != null)
@@ -80,6 +85,16 @@ namespace Raven.Client.Document.Batches
 		public IDisposable EnterContext()
 		{
 			return queryOperation.EnterQueryContext();
+		}
+
+		public object ExecuteEmbedded(IDatabaseCommands commands)
+		{
+			return commands.Query(queryOperation.IndexName, queryOperation.IndexQuery, null);
+		}
+
+		public void HandleEmbeddedResponse(object result)
+		{
+			HandleResponse((QueryResult)result);
 		}
 	}
 }
