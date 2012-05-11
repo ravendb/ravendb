@@ -240,15 +240,6 @@ namespace Raven.Client.Shard
 
 		#endregion
 
-		#region DatabaseCommands (not supported)
-
-		Raven.Client.Connection.Async.IAsyncDatabaseCommands IAsyncAdvancedSessionOperations.AsyncDatabaseCommands
-		{
-			get { throw new NotSupportedException("Not supported in a sharded session"); }
-		}
-
-		#endregion
-
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>

@@ -26,23 +26,11 @@ namespace Raven.Client
 		void Refresh<T>(T entity);
 
 		/// <summary>
-		/// Gets the database commands.
-		/// </summary>
-		/// <value>The database commands.</value>
-		IDatabaseCommands DatabaseCommands { get; }
-
-		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
 		IEnumerable<T> LoadStartingWith<T>(string keyPrefix, int start = 0, int pageSize = 25);
 
 #if !NET35
-		/// <summary>
-		/// Gets the async database commands.
-		/// </summary>
-		/// <value>The async database commands.</value>
-		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
-
 		/// <summary>
 		/// Access the lazy operations
 		/// </summary>

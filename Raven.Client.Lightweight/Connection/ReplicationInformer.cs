@@ -366,6 +366,7 @@ namespace Raven.Client.Connection
 
 			lastReplicationUpdate = SystemTime.UtcNow;
 		}
+#endif
 
 		private void UpdateReplicationInformationFromDocument(JsonDocument document)
 		{
@@ -383,7 +384,6 @@ namespace Raven.Client.Connection
 				failureCounts[replicationDestination] = new IntHolder();
 			}
 		}
-#endif
 
 		private IsolatedStorageFile GetIsolatedStorageFileForReplicationInformation()
 		{

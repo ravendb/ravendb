@@ -29,7 +29,7 @@ namespace Raven.Tests.MultiGet
 				Guid id;
 				using (var session = store.OpenSession())
 				{
-					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
+					id = store.DatabaseCommands.ProfilingInformation.Id;
 					session.Advanced.Lazily.Load<User>("users/1");
 					session.Advanced.Lazily.Load<User>("users/2");
 					session.Advanced.Lazily.Load<User>("users/3");
@@ -76,7 +76,7 @@ namespace Raven.Tests.MultiGet
 
 				using (var session = store.OpenSession())
 				{
-					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
+					id = store.DatabaseCommands.ProfilingInformation.Id;
 					session.Query<User>().Where(x => x.Name == "oren").Lazily();
 					session.Query<User>().Where(x => x.Name == "ayende").Lazily();
 					session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
@@ -119,7 +119,7 @@ namespace Raven.Tests.MultiGet
 
 				using (var session = store.OpenSession())
 				{
-					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
+					id = store.DatabaseCommands.ProfilingInformation.Id;
 					session.Query<User>().Where(x => x.Name == "oren").Lazily();
 					session.Query<User>().Where(x => x.Name == "ayende").Lazily();
 					session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
@@ -165,7 +165,7 @@ namespace Raven.Tests.MultiGet
 
 				using (var session = store.OpenSession())
 				{
-					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
+					id = store.DatabaseCommands.ProfilingInformation.Id;
 					using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 					{
 						session.Advanced.Lazily.Load<User>("users/1");
@@ -215,7 +215,7 @@ namespace Raven.Tests.MultiGet
 
 				using (var session = store.OpenSession())
 				{
-					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
+					id = store.DatabaseCommands.ProfilingInformation.Id;
 					using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 					{
 						session.Advanced.Lazily.Load<User>("users/1");
@@ -258,7 +258,7 @@ namespace Raven.Tests.MultiGet
 
 				using (var session = store.OpenSession())
 				{
-					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
+					id = store.DatabaseCommands.ProfilingInformation.Id;
 					session.Advanced.LuceneQuery<object, RavenDocumentsByEntityName>().WhereEquals("Not", "There").Lazily();
 					Assert.Throws<InvalidOperationException>(() => session.Advanced.Eagerly.ExecuteAllPendingLazyOperations());
 				}

@@ -465,11 +465,6 @@ namespace Raven.Client.Shard
 
 		#region DatabaseCommands (not supported)
 
-		Raven.Client.Connection.IDatabaseCommands ISyncAdvancedSessionOperation.DatabaseCommands
-		{
-			get { throw new NotSupportedException("Not supported in a sharded session"); }
-		}
-
 		public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
 		{
 			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);

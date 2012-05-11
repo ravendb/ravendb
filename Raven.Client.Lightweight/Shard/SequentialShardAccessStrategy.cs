@@ -56,7 +56,7 @@ namespace Raven.Client.Shard
 
 			// if ALL nodes failed, we still throw
 			if (errors.Count == commands.Count)
-#if !NET_3_5
+#if !NET35
 				throw new AggregateException(errors);
 #else
 			throw new InvalidOperationException("Got an error from all servers", errors.First())

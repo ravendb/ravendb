@@ -619,7 +619,6 @@
     <Compile Include="MailingList\TomCabanski.cs" />
     <Compile Include="MailingList\WallaceTurner.cs" />
     <Compile Include="Querying\UsingStronglyTypedDocumentQuery.cs" />
-    <Compile Include="TemporaryCulture.cs" />
     <Compile Include="Shard\ShardingFailure.cs" />
     <Compile Include="TemporaryCulture.cs" />
     
@@ -819,7 +818,6 @@
     <Compile Include="Suggestions\Person.cs" />
     <Compile Include="Suggestions\Suggestions.cs" />
     <Compile Include="Suggestions\SuggestionsHelper.cs" />
-    <Compile Include="TemporaryCulture.cs" />
     <Compile Include="Track\AsyncProjectionShouldWork.cs" />
     <Compile Include="Track\RavenDB053.cs" />
     <Compile Include="Track\RavenDB17.cs" />

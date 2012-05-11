@@ -320,7 +320,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
 				null,
 #endif
-			Advanced.AsyncDatabaseCommands),
+			AsyncDatabaseCommands),
 				ravenQueryStatistics,
 				indexName,
 				null,
@@ -328,7 +328,7 @@ namespace Raven.Client.Document.Async
 #if !SILVERLIGHT
 				null,
 #endif
-				Advanced.AsyncDatabaseCommands);
+				AsyncDatabaseCommands);
 		}
 
 		/// <summary>

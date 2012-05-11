@@ -37,7 +37,7 @@ namespace Raven.Client.MoreLikeThis
 
 		public static T[] MoreLikeThis<T>(this ISyncAdvancedSessionOperation advancedSession, string index, MoreLikeThisQueryParameters parameters)
 		{
-			var cmd = advancedSession.DatabaseCommands as ServerClient;
+			var cmd = advancedSession.DocumentStore.DatabaseCommands as ServerClient;
 			if (cmd == null)
 				throw new NotImplementedException("Embedded client isn't supported by the MoreLikeThis bundle");
 

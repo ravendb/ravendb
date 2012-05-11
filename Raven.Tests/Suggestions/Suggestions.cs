@@ -48,7 +48,7 @@ namespace Raven.Tests.Suggestions
 
 			using (var s = documentStore.OpenSession())
 			{
-				var suggestionQueryResult = s.Advanced.DatabaseCommands.Suggest("Test",
+				var suggestionQueryResult = documentStore.DatabaseCommands.Suggest("Test",
 				                                                                new SuggestionQuery
 				                                                                	{
 				                                                                		Field = "Name",
@@ -134,7 +134,7 @@ namespace Raven.Tests.Suggestions
 
 			using (var s = documentStore.OpenSession())
 			{
-				var suggestionQueryResult = s.Advanced.DatabaseCommands.Suggest("Test",
+				var suggestionQueryResult = documentStore.DatabaseCommands.Suggest("Test",
 				                                                                new SuggestionQuery
 				                                                                	{
 				                                                                		Field = "Name",

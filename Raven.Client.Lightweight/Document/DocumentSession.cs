@@ -328,11 +328,11 @@ namespace Raven.Client.Document
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
+			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, DatabaseCommands
 #if !NET35
 , AsyncDatabaseCommands
 #endif
-), ravenQueryStatistics, indexName, null, this, Advanced.DatabaseCommands
+), ravenQueryStatistics, indexName, null, this, DatabaseCommands
 #if !NET35
 , AsyncDatabaseCommands
 #endif

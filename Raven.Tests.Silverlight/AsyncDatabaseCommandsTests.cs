@@ -116,7 +116,7 @@ namespace Raven.Tests.Silverlight
 					session.Store(entity);
 					yield return session.SaveChangesAsync();
 
-					yield return session.Advanced.AsyncDatabaseCommands
+					yield return documentStore.AsyncDatabaseCommands
 						.DeleteDocumentAsync(entity.Id);
 				}
 
@@ -154,7 +154,7 @@ namespace Raven.Tests.Silverlight
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					yield return session.Advanced.AsyncDatabaseCommands
+					yield return documentStore.AsyncDatabaseCommands
 						.DeleteDocumentAsync(task.Result[0].Key);
 
 					var second = cmd.ForDatabase(dbname).GetDocumentsAsync(0, 25);

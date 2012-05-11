@@ -92,7 +92,7 @@ namespace Raven.Tests.Bugs.Caching
 				using (var s = store.OpenSession())
 				{
 					s.Store(new User { Name = "Ayende", Email="same.email@example.com"});
-					s.Advanced.DatabaseCommands.PutIndex("index",
+					store.DatabaseCommands.PutIndex("index",
 														 new IndexDefinition()
 															 {
 																 Map =

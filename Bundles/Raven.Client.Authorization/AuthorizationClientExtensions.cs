@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Bundles.Authorization;
 using System.Linq;
@@ -27,7 +28,7 @@ namespace Raven.Client.Authorization
 
 		public static OperationAllowedResult[] IsOperationAllowedOnDocument(this ISyncAdvancedSessionOperation session, string userId, string operation, params string[] documentIds)
 		{
-			var serverClient = session.DatabaseCommands as ServerClient;
+			var serverClient = ((DocumentSession)session).DatabaseCommands as ServerClient;
 			if (serverClient == null)
 				throw new InvalidOperationException("Cannot get whatever operation is allowed on document in embedded mode.");
 
@@ -107,8 +108,9 @@ namespace Raven.Client.Authorization
 
 		public static void SecureFor(this IDocumentSession session, string userId, string operation)
 		{
-			session.Advanced.DatabaseCommands.OperationsHeaders[Constants.RavenAuthorizationUser] = userId;
-			session.Advanced.DatabaseCommands.OperationsHeaders[Constants.RavenAuthorizationOperation] = operation;
+			var databaseCommands = ((DocumentSession)session).DatabaseCommands;
+			databaseCommands.OperationsHeaders[Constants.RavenAuthorizationUser] = userId;
+			databaseCommands.OperationsHeaders[Constants.RavenAuthorizationOperation] = operation;
 		}
 	}
 }
