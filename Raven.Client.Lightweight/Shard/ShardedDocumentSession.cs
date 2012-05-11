@@ -554,7 +554,20 @@ namespace Raven.Client.Shard
 
 		public IEnumerable<T> LoadStartingWith<T>(string keyPrefix, int start = 0, int pageSize = 25)
 		{
-			throw new NotImplementedException();
+			IncrementRequestCount();
+			var shards = GetCommandsToOperateOn(new ShardRequestData
+			{
+				EntityType = typeof (T),
+				Keys = {keyPrefix}
+			});
+			var results = shardStrategy.ShardAccessStrategy.Apply(shards, new ShardRequestData
+			{
+				EntityType = typeof (T),
+				Keys = {keyPrefix}
+			}, (dbCmd, i) => dbCmd.StartsWith(keyPrefix, start, pageSize));
+
+			return results.SelectMany(x => x).Select(TrackEntity<T>)
+				.ToList();
 		}
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
