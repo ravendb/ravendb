@@ -24,11 +24,11 @@ namespace Raven.Studio.Infrastructure.Converters
             if (value is string)
             {
                 var stringValue = value as string;
-                return stringValue.Replace(Environment.NewLine, " ");
+                return stringValue.Replace(Environment.NewLine, " ").Trim('"');
             }
             else if (value is RavenJToken)
             {
-                return (value as RavenJToken).ToString(Formatting.None);
+                return (value as RavenJToken).ToString(Formatting.None).Trim('"');
             }
             else
             {
