@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO.IsolatedStorage;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -32,8 +34,9 @@ namespace Raven.Studio.Models
 	    public readonly double MinimumIndicatorPosition = 0;
 	    public readonly double MaximumIndicatorPosition = 100;
 	    private const double DetailsToCardSwitchover = 20;
+	    private const string IndicatorPostitionSettingsKey = "DocumentSize.IndicatorPosition";
 
-        public DocumentSize()
+	    public DocumentSize()
         {
             IndicatorPosition = DetailsToCardSwitchover;
         }
@@ -130,5 +133,18 @@ namespace Raven.Studio.Models
 			if (SizeChanged != null)
 				SizeChanged(this, EventArgs.Empty);
 		}
+
+	    public void LoadDefaults(IDictionary<string, object> settingsDictionary)
+	    {
+	        if (settingsDictionary.ContainsKey(IndicatorPostitionSettingsKey))
+	        {
+                IndicatorPosition = Convert.ToInt32(settingsDictionary[IndicatorPostitionSettingsKey]);
+	        }
+	    }
+
+        public void SaveDefaults(IDictionary<string, object> settingsDictionary)
+        {
+            settingsDictionary[IndicatorPostitionSettingsKey] = IndicatorPosition;
+        }
 	}
 }
