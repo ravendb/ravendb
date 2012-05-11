@@ -45,6 +45,11 @@ namespace Raven.Studio.Behaviors
         {
             var columnHeadersPresenter = AssociatedObject.GetVisualDescendants().OfType<DataGridColumnHeadersPresenter>().FirstOrDefault();
 
+            if (columnHeadersPresenter != null && columnHeadersPresenter.Background == null)
+            {
+                columnHeadersPresenter.Background = new SolidColorBrush(Colors.Transparent);
+            }
+
             if (ContextMenu != null)
             {
                 ContextMenu.Owner = columnHeadersPresenter;
