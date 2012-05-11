@@ -173,7 +173,7 @@ namespace Raven.Studio.Models
 
         private void HandleEditColumns()
         {
-            ColumnsEditorDialog.Show(Columns, Context, GetDocumentSampler());
+            ColumnsEditorDialog.Show(Columns, Context, new ColumnSuggester(Documents.Source, Context).AllSuggestions);
         }
 
         private Func<Task<JsonDocument[]>> GetDocumentSampler()

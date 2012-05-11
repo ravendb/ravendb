@@ -167,6 +167,7 @@
     <Compile Include="Features\Documents\ColumnsEditorDialogViewModel.cs" />
     <Compile Include="Features\Documents\ColumnSet.cs" />
     <Compile Include="Features\Documents\ColumnsModel.cs" />
+    <Compile Include="Features\Documents\ColumnSuggester.cs" />
     <Compile Include="Features\Documents\DocumentNavigationStrategy.cs" />
     <Compile Include="Features\Documents\DocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />

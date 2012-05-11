@@ -32,7 +32,7 @@ namespace Raven.Studio.Features.Documents
             }
         }
 
-        public static void Show(ColumnsModel columns, string context, Func<Task<JsonDocument[]>> documentSampler)
+        public static void Show(ColumnsModel columns, string context, Func<Task<IList<SuggestedColumn>>> documentSampler)
         {
             var dialog = new ColumnsEditorDialog()
                              {
