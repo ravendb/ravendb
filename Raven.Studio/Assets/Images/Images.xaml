@@ -31,5 +31,7 @@
     <BitmapImage x:Key="Image_AddIndex_Tiny" UriSource="document_prepare.png"/>
     <BitmapImage x:Key="Image_ExecuteQuery_Small" UriSource="ExecuteQuery.png"/>
     <BitmapImage x:Key="Image_ChangeView_Tiny" UriSource="ChangeView.png"/>
+    <BitmapImage x:Key="Image_Up_Tiny" UriSource="Up.png"/>
+    <BitmapImage x:Key="Image_Down_Tiny" UriSource="Down.png"/>
     
 </ResourceDictionary>

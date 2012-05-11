@@ -30,6 +30,7 @@ namespace Raven.Studio.Features.Documents
             {
                 this.header = value;
                 OnPropertyChanged(() => Header);
+                OnPropertyChanged(() => IsNewRow);
             }
         }
 
@@ -40,6 +41,7 @@ namespace Raven.Studio.Features.Documents
             {
                 this.binding = value;
                 OnPropertyChanged(() => Binding);
+                OnPropertyChanged(() => IsNewRow);
             }
         }
 

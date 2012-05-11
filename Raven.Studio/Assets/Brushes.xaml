@@ -84,7 +84,9 @@
 	<SolidColorBrush x:Key="ButtonBackgroundBrush"
 					 Color="#E6E6E6" />
 
-	<SolidColorBrush x:Key="SelectedItemHighlightBrush"
+    <Color x:Key="Brush_Button_PressedColor">#F9F2F4</Color>
+    
+    <SolidColorBrush x:Key="SelectedItemHighlightBrush"
 					 Color="#dcdcdc" />
 
 	<LinearGradientBrush x:Key="DividerBrush"

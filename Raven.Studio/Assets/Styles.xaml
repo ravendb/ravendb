@@ -709,8 +709,79 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
-	
-	<!-- ******MAIN PAGE STYLES****** -->
+
+    <Style x:Key="Style_Button_Default" TargetType="Button">
+        <Setter Property="Background" Value="#FF1F3B53"/>
+        <Setter Property="Foreground" Value="#FF000000"/>
+        <Setter Property="Padding" Value="5"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="#BBAFB2"></Setter>
+        <Setter Property="MinHeight" Value="30"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="BackgroundAnimation" Storyboard.TargetProperty="Opacity" To="1"/>
+                                        <ColorAnimation Duration="0" Storyboard.TargetName="BackgroundGradient" Storyboard.TargetProperty="(Rectangle.Fill).(GradientBrush.GradientStops)[1].(GradientStop.Color)" To="#F2FFFFFF"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="BackgroundAnimation" Storyboard.TargetProperty="Opacity" To="1"/>
+                                        <ColorAnimation Duration="0" Storyboard.TargetName="BackgroundGradient" Storyboard.TargetProperty="(Rectangle.Fill).(GradientBrush.GradientStops)[1].(GradientStop.Color)" To="{StaticResource Brush_Button_PressedColor}"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="DisabledVisualElement" Storyboard.TargetProperty="Opacity" To=".55"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused">
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="FocusVisualElement" Storyboard.TargetProperty="Opacity" To="1"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Unfocused" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border x:Name="Background" CornerRadius="0" Background="White" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}">
+                            <Grid Background="{TemplateBinding Background}"  Margin="1">
+                                <Border Opacity="0"  x:Name="BackgroundAnimation" Background="#FF448DCA" />
+                                <Rectangle x:Name="BackgroundGradient" >
+                                    <Rectangle.Fill>
+                                        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                            <GradientStop Color="#FFF7F7F7" Offset="0.049"/>
+                                            <GradientStop Color="#FFE8E8E8" Offset="0.74"/>
+                                        </LinearGradientBrush>
+                                    </Rectangle.Fill>
+                                </Rectangle>
+                            </Grid>
+                        </Border>
+                        <ContentPresenter
+                              x:Name="contentPresenter"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              Margin="{TemplateBinding Padding}"/>
+                        <Rectangle x:Name="DisabledVisualElement" RadiusX="0" RadiusY="0" Fill="#FFFFFFFF" Opacity="0" IsHitTestVisible="false" />
+                        <Rectangle x:Name="FocusVisualElement" RadiusX="0" RadiusY="0" Margin="2" Stroke="#D5D5D5" StrokeThickness="1" Opacity="0" IsHitTestVisible="false" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="Button" BasedOn="{StaticResource Style_Button_Default}"/>
+
+    <!-- ******MAIN PAGE STYLES****** -->
 	<!-- **************************** -->
 	<!-- Primary Color Brushes -->
   <SolidColorBrush x:Key="NavigationBackgroundColorBrush" Color="#FF484848"/>

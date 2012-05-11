@@ -731,6 +731,8 @@
     <Resource Include="Assets\Images\ExecuteQuery.png" />
     <Resource Include="Assets\Images\ChangeView.png" />
     <Resource Include="Assets\Images\Search.png" />
+    <Resource Include="Assets\Images\Up.png" />
+    <Resource Include="Assets\Images\Down.png" />
     <Content Include="Impl\PopupPlacement\Credit.txt" />
   </ItemGroup>
   <ItemGroup>

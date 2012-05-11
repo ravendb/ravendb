@@ -7,9 +7,18 @@
                       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                       xmlns:Models="clr-namespace:Raven.Studio.Models"
                       xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
-                      xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents" mc:Ignorable="d">
+                      xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
+                           xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+                           xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+                           xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d">
     <Grid x:Name="LayoutRoot" Margin="2" d:DataContext="{d:DesignInstance Documents:ColumnsEditorDialogViewModel}">
+        <i:Interaction.Triggers>
+            <Behaviors:StudioKeyTrigger Key="Escape">
+                <i:InvokeCommandAction Command="{Binding Cancel}"/>
+            </Behaviors:StudioKeyTrigger>
+        </i:Interaction.Triggers>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition />
             <RowDefinition Height="Auto" />
@@ -19,43 +28,90 @@
         <Grid.ColumnDefinitions>
         </Grid.ColumnDefinitions>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="0">
-            <Button Content="Delete" Command="{Binding DeleteSelectedColumn}"  Width="75" Height="23" Margin="5" />
-            <Button Content="Move Up" Command="{Binding MoveSelectedColumnUp}" Width="75" Height="23" Margin="5" />
-            <Button Content="Move Down" Command="{Binding MoveSelectedColumnDown}" Width="75" Height="23" Margin="5"  />
+        <TextBlock Grid.Row="0" Text="Current Columns" Style="{StaticResource Style_TextBlock_PagePartHeader}" Margin="0,0,0,5"/>
+        
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="1">
+            <StackPanel.Resources>
+                <Style TargetType="Button" BasedOn="{StaticResource Style_Button_MouseOverChrome}">
+                </Style>
+            </StackPanel.Resources>
+            <Button ToolTipService.ToolTip="Delete Selected Column" Command="{Binding DeleteSelectedColumn}">
+                <Image Source="{StaticResource Image_Delete_Small}" Stretch="None"/>
+            </Button>
+            <Button ToolTipService.ToolTip="Move Selected Column Up" Command="{Binding MoveSelectedColumnUp}" >
+                <Image Source="{StaticResource Image_Up_Tiny}" Stretch="None"/>
+            </Button>
+          <Button ToolTipService.ToolTip="Move Selected Column Down" Command="{Binding MoveSelectedColumnDown}">
+                <Image Source="{StaticResource Image_Down_Tiny}" Stretch="None"/>
+            </Button>
         </StackPanel>
         
-        <sdk:DataGrid Grid.Row="1" ItemsSource="{Binding Columns}" IsReadOnly="False" AutoGenerateColumns="False" SelectedItem="{Binding SelectedColumn, Mode=TwoWay}"
+        <sdk:DataGrid Grid.Row="2" ItemsSource="{Binding Columns}" IsReadOnly="False" AutoGenerateColumns="False" SelectedItem="{Binding SelectedColumn, Mode=TwoWay}"
                       CanUserSortColumns="False"
                       CanUserReorderColumns="False"
                       RowHeight="28">
+            <i:Interaction.Triggers>
+                <Behaviors:StudioKeyTrigger Key="Delete">
+                    <i:InvokeCommandAction Command="{Binding DeleteSelectedColumn}"/>
+                </Behaviors:StudioKeyTrigger>
+            </i:Interaction.Triggers>
             <sdk:DataGrid.Columns>
-                <sdk:DataGridTextColumn Header="Header" Binding="{Binding Header, Mode=TwoWay}" Width="*"/>
+                <sdk:DataGridTemplateColumn Header="Column" Width="*" IsReadOnly="False">
+                    <sdk:DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <TextBlock Text="{Binding Header}" 
+                                           Visibility="{Binding IsNewRow, Converter={StaticResource BooleanToOppositeVisibility}}"
+                                           Behaviors:FadeTrimming.IsEnabled="True" 
+                                           Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                           VerticalAlignment="Center"
+                                           Margin="4"/>
+                                <TextBlock Text="[New Column]" 
+                                           Visibility="{Binding IsNewRow, Converter={StaticResource BooleanToVisibility}}"
+                                           Behaviors:FadeTrimming.IsEnabled="True" 
+                                           ToolTipService.ToolTip="Double-click to edit"
+                                           VerticalAlignment="Center"
+                                           Foreground="Gray"
+                                           Margin="4"/>
+                            </Grid>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellTemplate>
+                    <sdk:DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <TextBox Text="{Binding Header, Mode=TwoWay}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellEditingTemplate>
+                </sdk:DataGridTemplateColumn>
                 <sdk:DataGridTextColumn Header="Binding" Binding="{Binding Binding, Mode=TwoWay}" Width="*"/>
                 <sdk:DataGridTextColumn Header="Default Width" Binding="{Binding DefaultWidth, Mode=TwoWay}" Width="120"/>
             </sdk:DataGrid.Columns>
         </sdk:DataGrid>
+
+        <TextBlock Grid.Row="3" Text="Suggested Columns" Style="{StaticResource Style_TextBlock_PagePartHeader}" Margin="0,8,0,5"/>
         
-        <TextBlock Grid.Row="2" Text="Suggested Columns"/>
-        
-        <controls:TreeView Grid.Row="3" ItemsSource="{Binding SuggestedColumns}" HorizontalContentAlignment="Stretch" ItemContainerStyle="{StaticResource Style_TreeViewItem_SuggestedColumn}">
+        <controls:TreeView Grid.Row="4" ItemsSource="{Binding SuggestedColumns}" HorizontalContentAlignment="Stretch" ItemContainerStyle="{StaticResource Style_TreeViewItem_SuggestedColumn}">
             <controls:TreeView.ItemTemplate>
                 <sdk:HierarchicalDataTemplate ItemsSource="{Binding Children}" DataType="Documents:SuggestedColumn">
                     <Grid>
                         <TextBlock Text="{Binding Header}" HorizontalAlignment="Left"/>
                         <Button Command="{Binding DataContext.AddSuggestedColumn, RelativeSource={RelativeSource AncestorType=controls:TreeView}}" 
                                 CommandParameter="{Binding}"
-                                HorizontalAlignment="Right"/>
+                                HorizontalAlignment="Right" ToolTipService.ToolTip="Add Column"
+                                Style="{StaticResource Style_Button_MouseOverChrome}">
+                            <Image Source="{StaticResource Image_Add_Tiny}" Stretch="None"/>
+                        </Button>
                     </Grid>
                 </sdk:HierarchicalDataTemplate>
             </controls:TreeView.ItemTemplate>    
         </controls:TreeView>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="4">
-            <Button Content="Set as Default" Command="{Binding SaveAsDefault}"  Padding="5,0" Height="23" Margin="5" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="5" Margin="0,10,0,5">
+            <Button Content="Set as Default" Command="{Binding SaveAsDefault}" Height="23" />
         </StackPanel>
-        
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="4">
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="5" Margin="0,10,0,5">
             <Button  Content="OK" Command="{Binding OK}" Width="75" Height="23" Margin="5"  />
             <Button Content="Cancel" Command="{Binding Cancel}" Width="75" Height="23" Margin="5" />
             <Button Content="Apply" Command="{Binding Apply}"  Width="75" Height="23" Margin="5,0,0,0" />
