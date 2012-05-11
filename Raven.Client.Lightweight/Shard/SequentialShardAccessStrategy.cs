@@ -26,6 +26,7 @@ namespace Raven.Client.Shard
 		public T[] Apply<T>(IList<IDatabaseCommands> commands, ShardRequestData request, Func<IDatabaseCommands, int, T> operation)
 		{
 			var list = new List<T>();
+			var errors = new List<Exception>();
 			for (int i = 0; i < commands.Count; i++)
 			{
 				try
@@ -41,8 +42,13 @@ namespace Raven.Client.Shard
 					{
 						throw;
 					}
+					errors.Add(e);
 				}
 			}
+
+			// if ALL nodes failed, we still throw
+			if(errors.Count == commands.Count)
+				throw new AggregateException(errors);
 
 			return list.ToArray();
 		}
