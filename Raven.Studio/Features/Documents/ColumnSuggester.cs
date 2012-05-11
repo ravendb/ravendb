@@ -28,10 +28,10 @@ namespace Raven.Studio.Features.Documents
             this.context = context;
         }
 
-        private IList<SuggestedColumn> CreateSuggestedColumnsFromDocuments(JsonDocument[] jsonDocuments)
+        private IList<SuggestedColumn> CreateSuggestedColumnsFromDocuments(JsonDocument[] jsonDocuments, bool includeNestedPropeties)
         {
             var columnsByBinding = new Dictionary<string, SuggestedColumn>();
-            var foundColumns = jsonDocuments.SelectMany(jDoc => CreateSuggestedColumnsFromJObject(jDoc.DataAsJson, parentPropertyPath: ""));
+            var foundColumns = jsonDocuments.SelectMany(jDoc => CreateSuggestedColumnsFromJObject(jDoc.DataAsJson, parentPropertyPath: "", includeNestedProperties: includeNestedPropeties));
 
             foreach (var suggestedColumn in foundColumns)
             {
@@ -49,7 +49,7 @@ namespace Raven.Studio.Features.Documents
             return columnsByBinding.OrderBy(kv => kv.Key).Select(kv => kv.Value).ToList();
         }
 
-        private IList<SuggestedColumn> CreateSuggestedColumnsFromJObject(RavenJObject jObject, string parentPropertyPath)
+        private IList<SuggestedColumn> CreateSuggestedColumnsFromJObject(RavenJObject jObject, string parentPropertyPath, bool includeNestedProperties)
         {
             return (from property in jObject
                     let path = parentPropertyPath + (string.IsNullOrEmpty(parentPropertyPath) ? "" : ".") + property.Key
@@ -57,16 +57,30 @@ namespace Raven.Studio.Features.Documents
                     {
                         Header = path,
                         Binding = path,
-                        Children = property.Value is RavenJObject
-                                ? CreateSuggestedColumnsFromJObject(property.Value as RavenJObject, path)
+                        Children = property.Value is RavenJObject && includeNestedProperties 
+                                ?  CreateSuggestedColumnsFromJObject(property.Value as RavenJObject, path, includeNestedProperties)
                                 : new SuggestedColumn[0]
                     }).ToList();
         }
 
+        public Task<IList<SuggestedColumn>> AutoSuggest()
+        {
+            return AllSuggestions(includeNestedProperties: false).ContinueWith(t => PickLikelyColumns(t.Result));
+        }
+
+        private IList<SuggestedColumn> PickLikelyColumns(IList<SuggestedColumn> allColumns)
+        {
+            return allColumns.Take(6).ToList();
+        }
 
         public Task<IList<SuggestedColumn>> AllSuggestions()
         {
-            return GetSampleDocuments().ContinueWith(t => CreateSuggestedColumnsFromDocuments(t.Result));
+            return AllSuggestions(includeNestedProperties:true);
+        }
+
+        private Task<IList<SuggestedColumn>> AllSuggestions(bool includeNestedProperties)
+        {
+            return GetSampleDocuments().ContinueWith(t => CreateSuggestedColumnsFromDocuments(t.Result, includeNestedProperties));
         }
 
         private Task<JsonDocument[]> GetSampleDocuments()

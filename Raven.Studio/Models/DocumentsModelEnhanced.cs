@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
@@ -124,31 +125,42 @@ namespace Raven.Studio.Models
 
         private void BeginLoadColumnSet()
         {
+            var contextWhenRequested = Context;
+
             ApplicationModel.DatabaseCommands
-                .GetAsync("Raven/Studio/Columns/" + Context)
-                .ContinueOnSuccessInTheUIThread(UpdateColumns);
+                .GetAsync("Raven/Studio/Columns/" + contextWhenRequested)
+                .ContinueOnSuccessInTheUIThread(result => UpdateColumns(result, contextWhenRequested));
         }
 
-        private void UpdateColumns(JsonDocument columnSetDocument)
+        private void UpdateColumns(JsonDocument columnSetDocument, string contextWhenRequested)
         {
-            var columnSet = columnSetDocument == null
-                                ? GetDefaultColumnSet()
-                                : columnSetDocument.DataAsJson.Deserialize<ColumnSet>(new DocumentConvention() {});
+            if (contextWhenRequested != Context)
+            {
+                return;
+            }
 
-            Columns.LoadFromColumnDefinitions(columnSet.Columns);
+            if (columnSetDocument != null)
+            {
+                var columnSet = columnSetDocument.DataAsJson.Deserialize<ColumnSet>(new DocumentConvention() {});
+                Columns.LoadFromColumnDefinitions(columnSet.Columns);
+            }
+            else
+            {
+                var suggester = new ColumnSuggester(Documents.Source, Context);
+
+                suggester.AutoSuggest()
+                    .ContinueOnSuccessInTheUIThread(
+                        result =>
+                            {
+                                if (contextWhenRequested == Context)
+                                {
+                                    Columns.LoadFromColumnDefinitions(
+                                        result.Select(
+                                            s => new ColumnDefinition() {Binding = s.Binding, Header = s.Header}));
+                                }
+                            });
+            }
         }
-
-        private ColumnSet GetDefaultColumnSet()
-        {
-            return new ColumnSet()
-                       {
-                           Columns =
-                               {
-                                   new ColumnDefinition() {Header = "Last Modified", Binding = "$JsonDocument:LastModified"},
-                               }
-                       };
-        }
-
 
         public override System.Threading.Tasks.Task TimerTickedAsync()
         {
@@ -174,15 +186,6 @@ namespace Raven.Studio.Models
         private void HandleEditColumns()
         {
             ColumnsEditorDialog.Show(Columns, Context, new ColumnSuggester(Documents.Source, Context).AllSuggestions);
-        }
-
-        private Func<Task<JsonDocument[]>> GetDocumentSampler()
-        {
-            return 
-                () => Documents.Source.GetPageAsync(0, 1, null)
-                          .ContinueWith(t => new[] {t.Result.Count > 0
-                                                 ? t.Result[0].Document
-                                                 : default(JsonDocument)});
         }
     }
 }
