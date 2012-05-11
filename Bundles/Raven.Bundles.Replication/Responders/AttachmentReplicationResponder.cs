@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -118,9 +120,7 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 
-			var newDocumentConflictId = id + "/conflicts/" +
-				metadata.Value<string>(ReplicationConstants.RavenReplicationSource) + 
-				"/" + lastEtag;
+			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata, lastEtag);
 			metadata.Add(ReplicationConstants.RavenReplicationConflict, RavenJToken.FromObject(true));
 			actions.Attachments.AddAttachment(newDocumentConflictId, null, new MemoryStream(data), metadata);
 
@@ -160,6 +160,15 @@ namespace Raven.Bundles.Replication.Responders
 									{"@Http-Status-Code", 409},
 									{"@Http-Status-Description", "Conflict"}
 								});
+		}
+
+		private static string HashReplicationIdentifier(RavenJObject metadata, Guid lastEtag)
+		{
+			using (var md5 = MD5.Create())
+			{
+				var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(ReplicationConstants.RavenReplicationSource) + "/" + lastEtag);
+				return new Guid(md5.ComputeHash(bytes)).ToString();
+			}
 		}
 
 		private static bool IsDirectChildOfCurrentAttachment(Attachment existingAttachment, RavenJObject metadata)

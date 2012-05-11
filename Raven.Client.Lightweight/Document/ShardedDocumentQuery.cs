@@ -148,7 +148,10 @@ namespace Raven.Client.Document
 
 			AssertNoDuplicateIdsInResults();
 
-			var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery, shardQueryOperations.Select(x => x.CurrentQueryResults).ToList());
+			var mergedQueryResult = shardStrategy.MergeQueryResults(IndexQuery,
+			                                                        shardQueryOperations.Select(x => x.CurrentQueryResults)
+			                                                        	.Where(x => x != null)
+			                                                        	.ToList());
 
 			shardQueryOperations[0].ForceResult(mergedQueryResult);
 			queryOperation = shardQueryOperations[0];
@@ -161,6 +164,8 @@ namespace Raven.Client.Document
 			foreach (var shardQueryOperation in shardQueryOperations)
 			{
 				var currentQueryResults = shardQueryOperation.CurrentQueryResults;
+				if(currentQueryResults == null)
+					continue;
 				foreach (var include in currentQueryResults.Includes.Concat(currentQueryResults.Results))
 				{
 					var includeMetadata = include.Value<RavenJObject>(Constants.Metadata);

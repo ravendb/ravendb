@@ -380,13 +380,13 @@ namespace Raven.Studio.Models
 
 		private void UpdateRelated()
 		{
-            if (!string.IsNullOrEmpty(Key) && !string.IsNullOrEmpty(Seperator))
-            {
-                DatabaseCommands.GetDocumentsStartingWithAsync(Key + Seperator, 0, 15)
-                    .ContinueOnSuccess(items =>
-                                           {
-                                               if (items == null)
-                                                   return;
+			if (string.IsNullOrEmpty(Key))
+				return;
+			DatabaseCommands.GetDocumentsStartingWithAsync(Key + Seperator, 0, 15)
+				.ContinueOnSuccess(items =>
+								   {
+									   if (items == null)
+										   return;
 
                                                var linkModels = items.Select(doc => new LinkModel
                                                                                         {
