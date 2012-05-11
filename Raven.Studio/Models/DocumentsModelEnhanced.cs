@@ -143,8 +143,7 @@ namespace Raven.Studio.Models
                        {
                            Columns =
                                {
-                                   new ColumnDefinition() {Header = "Id", Binding = "$meta:@id"},
-                                   new ColumnDefinition() {Header = "Last Modified", Binding = "$meta:Last-Modified"},
+                                   new ColumnDefinition() {Header = "Last Modified", Binding = "$JsonDocument:LastModified"},
                                }
                        };
         }

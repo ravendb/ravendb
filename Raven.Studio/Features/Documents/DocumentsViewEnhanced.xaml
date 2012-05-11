@@ -68,7 +68,8 @@
 						ItemsSource="{Binding Documents}"
                         AutoGenerateColumns="False"
                         IsReadOnly="True"
-                        ColumnWidth="100">
+                        ColumnWidth="100"
+                        RowHeight="28">
 
                     <i:Interaction.Triggers>
                         <!--<Behaviors:StudioKeyTrigger Key="Delete">
@@ -102,7 +103,7 @@
                         </Controls:ContextMenu>
                     </Controls:ContextMenuService.ContextMenu>-->
                     <sdk:DataGrid.Columns>
-                        <sdk:DataGridTemplateColumn Width="8" CanUserReorder="False" CanUserResize="False" CanUserSort="False">
+                        <sdk:DataGridTemplateColumn Header="Id" Width="100" CanUserReorder="False" CanUserResize="True" CanUserSort="False">
                             <sdk:DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Grid>
@@ -121,6 +122,9 @@
 					                       RadiusX="1"
 					                       RadiusY="1">
                                         </Rectangle>
+                                        
+                                        <TextBlock Text="{Binding Item.Document.Key}" Behaviors:FadeTrimming.IsEnabled="True" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                                   VerticalAlignment="Center" Margin="10,0,0,0"/>
                                     </Grid>
                                 </DataTemplate>
                             </sdk:DataGridTemplateColumn.CellTemplate>
