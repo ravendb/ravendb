@@ -2,7 +2,7 @@
            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
            xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
-                      xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" Width="400" Height="300" 
+                      xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" Width="600" Height="600" 
            Title="ColumnsEditorDialog" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                       xmlns:Models="clr-namespace:Raven.Studio.Models"
@@ -12,6 +12,8 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
@@ -23,7 +25,10 @@
             <Button Content="Move Down" Command="{Binding MoveSelectedColumnDown}" Width="75" Height="23" Margin="5"  />
         </StackPanel>
         
-        <sdk:DataGrid Grid.Row="1" ItemsSource="{Binding Columns}" IsReadOnly="False" AutoGenerateColumns="False" SelectedItem="{Binding SelectedColumn, Mode=TwoWay}">
+        <sdk:DataGrid Grid.Row="1" ItemsSource="{Binding Columns}" IsReadOnly="False" AutoGenerateColumns="False" SelectedItem="{Binding SelectedColumn, Mode=TwoWay}"
+                      CanUserSortColumns="False"
+                      CanUserReorderColumns="False"
+                      RowHeight="28">
             <sdk:DataGrid.Columns>
                 <sdk:DataGridTextColumn Header="Header" Binding="{Binding Header, Mode=TwoWay}" Width="*"/>
                 <sdk:DataGridTextColumn Header="Binding" Binding="{Binding Binding, Mode=TwoWay}" Width="*"/>
@@ -31,7 +36,22 @@
             </sdk:DataGrid.Columns>
         </sdk:DataGrid>
         
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="2">
+        <TextBlock Grid.Row="2" Text="Suggested Columns"/>
+        
+        <controls:TreeView Grid.Row="3" ItemsSource="{Binding SuggestedColumns}" HorizontalContentAlignment="Stretch" ItemContainerStyle="{StaticResource Style_TreeViewItem_SuggestedColumn}">
+            <controls:TreeView.ItemTemplate>
+                <sdk:HierarchicalDataTemplate ItemsSource="{Binding Children}" DataType="Documents:SuggestedColumn">
+                    <Grid>
+                        <TextBlock Text="{Binding Header}" HorizontalAlignment="Left"/>
+                        <Button Command="{Binding DataContext.AddSuggestedColumn, RelativeSource={RelativeSource AncestorType=controls:TreeView}}" 
+                                CommandParameter="{Binding}"
+                                HorizontalAlignment="Right"/>
+                    </Grid>
+                </sdk:HierarchicalDataTemplate>
+            </controls:TreeView.ItemTemplate>    
+        </controls:TreeView>
+        
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="4">
             <Button Content="Set as Default" Command="{Binding SaveAsDefault}"  Width="75" Height="23" Margin="5" />
             <Button Content="Apply" Command="{Binding Apply}"  Width="75" Height="23" Margin="5" />
             <Button Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" Margin="5" />

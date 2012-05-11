@@ -176,6 +176,7 @@
     <Compile Include="Features\Documents\EditVirtualDocumentCommand.cs" />
     <Compile Include="Features\Documents\IndexDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\SingleDocumentNavigator.cs" />
+    <Compile Include="Features\Documents\SuggestedColumn.cs" />
     <Compile Include="Features\Query\IndexQueryHelpers.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Query\QueryDocumentsCollectionSource.cs" />
@@ -474,6 +475,10 @@
     <Page Include="Assets\DataGridStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Assets\TreeViewStyles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\Taggers.xaml">
       <SubType>Designer</SubType>

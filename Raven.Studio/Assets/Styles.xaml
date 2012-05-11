@@ -17,6 +17,7 @@
 		<ResourceDictionary Source="Brushes.xaml" />
 		<ResourceDictionary Source="Images/Images.xaml" />
 		<ResourceDictionary Source="DataGridStyles.xaml" />
+		<ResourceDictionary Source="TreeViewStyles.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style TargetType="ScrollBar">

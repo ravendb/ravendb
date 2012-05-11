@@ -2,12 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
+using System.Reactive.Linq;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -15,6 +18,7 @@ namespace Raven.Studio.Features.Documents
     {
         private readonly ColumnsModel columns;
         private readonly string context;
+        private readonly Func<Task<JsonDocument[]>> documentSampler;
         private ObservableCollection<ColumnEditorViewModel> columnEditorViewModels;
         private ICommand applyCommand;
         private ColumnEditorViewModel selectedColumn;
@@ -22,12 +26,16 @@ namespace Raven.Studio.Features.Documents
         private ICommand moveSelectedColumnUp;
         private ICommand moveSelectedColumnDown;
         private ICommand saveAsDefault;
+        private ICommand addSuggestedColumn;
+        private Dictionary<string, SuggestedColumn> columnsByBinding = new Dictionary<string, SuggestedColumn>();
 
-        public ColumnsEditorDialogViewModel(ColumnsModel columns, string context)
+        public ColumnsEditorDialogViewModel(ColumnsModel columns, string context, Func<Task<JsonDocument[]>> documentSampler)
         {
             this.columns = columns;
             this.context = context;
+            this.documentSampler = documentSampler;
             columnEditorViewModels = new ObservableCollection<ColumnEditorViewModel>(this.columns.Columns.Select(c => new ColumnEditorViewModel(c)));
+            SuggestedColumns = new ObservableCollection<SuggestedColumn>();
             AddEmptyRow();
         }
 
@@ -81,6 +89,25 @@ namespace Raven.Studio.Features.Documents
         public ICommand SaveAsDefault
         {
             get { return saveAsDefault ?? (saveAsDefault = new ActionCommand(HandleSaveAsDefault)); }
+        }
+
+        public ICommand AddSuggestedColumn
+        {
+            get { return addSuggestedColumn ?? (addSuggestedColumn = new ActionCommand(HandleAddSuggestedColumn)); }
+        }
+
+        public ObservableCollection<SuggestedColumn> SuggestedColumns { get; private set; } 
+
+        private void HandleAddSuggestedColumn(object parameter)
+        {
+            var column = parameter as SuggestedColumn;
+            if (column == null)
+            {
+                return;
+            }
+
+            Columns.Insert(Columns.Count - 1, new ColumnEditorViewModel(column.ToColumnDefinition()));
+            SuggestedColumns.Remove(column);
         }
 
         private void HandleSaveAsDefault()
@@ -160,6 +187,64 @@ namespace Raven.Studio.Features.Documents
             {
                 columns.Columns.Add(column);
             }
+        }
+
+        protected override void OnViewLoaded()
+        {
+            base.OnViewLoaded();
+
+            PopulateSuggestedColumns();
+        }
+
+        private void PopulateSuggestedColumns()
+        {
+            SuggestedColumns.AddRange(GetDefaultSuggestedColumns());
+
+            documentSampler()
+                .ContinueOnSuccessInTheUIThread(CreateSuggestedColumnsFromDocuments);
+        }
+
+        private void CreateSuggestedColumnsFromDocuments(JsonDocument[] jsonDocuments)
+        {
+            var foundColumns = jsonDocuments.SelectMany(jDoc => CreateSuggestedColumnsFromJObject(jDoc.DataAsJson, parentPropertyPath: ""));
+
+            foreach (var suggestedColumn in foundColumns)
+            {
+                if (!columnsByBinding.ContainsKey(suggestedColumn.Binding))
+                {
+                    columnsByBinding.Add(suggestedColumn.Binding, suggestedColumn);
+                }
+                else
+                {
+                    var existingColumn = columnsByBinding[suggestedColumn.Binding];
+                    existingColumn.MergeFrom(suggestedColumn);
+                }
+            }
+
+            SuggestedColumns.AddRange(columnsByBinding.OrderBy(kv => kv.Key).Select(kv => kv.Value));
+        }
+
+        private IList<SuggestedColumn> CreateSuggestedColumnsFromJObject(RavenJObject jObject, string parentPropertyPath)
+        {
+            return (from property in jObject
+                    let path = parentPropertyPath + (string.IsNullOrEmpty(parentPropertyPath) ? "" : ".") + property.Key
+                    select new SuggestedColumn()
+                               {
+                                   Header = path,
+                                   Binding = path,
+                                   Children = property.Value is RavenJObject
+                                           ? CreateSuggestedColumnsFromJObject(property.Value as RavenJObject, path) 
+                                           : new SuggestedColumn[0]
+                               }).ToList();
+        }
+
+        private IEnumerable<SuggestedColumn> GetDefaultSuggestedColumns()
+        {
+            return new[]
+                       {
+                           new SuggestedColumn() {Header = "ETag", Binding = "$JsonDocument:ETag"},
+                           new SuggestedColumn() {Header = "Last Modified", Binding = "$JsonDocument:LastModified"},
+                       };
         }
 
         private List<ColumnDefinition> GetCurrentColumnDefinitions()

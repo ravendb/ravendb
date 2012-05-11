@@ -206,6 +206,8 @@ namespace Raven.Studio.Infrastructure
             Refresh();
         }
 
+        public IVirtualCollectionSource<T> Source { get { return _source; } }
+
         public void RealizeItemRequested(int index)
         {
             var page = index / _pageSize;

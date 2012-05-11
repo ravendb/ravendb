@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Ink;
@@ -172,7 +173,16 @@ namespace Raven.Studio.Models
 
         private void HandleEditColumns()
         {
-            ColumnsEditorDialog.Show(Columns, Context);
+            ColumnsEditorDialog.Show(Columns, Context, GetDocumentSampler());
+        }
+
+        private Func<Task<JsonDocument[]>> GetDocumentSampler()
+        {
+            return 
+                () => Documents.Source.GetPageAsync(0, 1, null)
+                          .ContinueWith(t => new[] {t.Result.Count > 0
+                                                 ? t.Result[0].Document
+                                                 : default(JsonDocument)});
         }
     }
 }
