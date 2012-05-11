@@ -15,21 +15,12 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Documents
 {
-    public partial class ColumnsEditorDialog : ChildWindow
+    public partial class ColumnsEditorDialog : DialogView
     {
         public ColumnsEditorDialog()
         {
             InitializeComponent();
 
-            Loaded += HandleLoaded;
-        }
-
-        private void HandleLoaded(object sender, RoutedEventArgs e)
-        {
-            if (DataContext is ViewModel)
-            {
-                (DataContext as ViewModel).NotifyViewLoaded();
-            }
         }
 
         public static void Show(ColumnsModel columns, string context, Func<Task<IList<SuggestedColumn>>> documentSampler)
@@ -39,16 +30,6 @@ namespace Raven.Studio.Features.Documents
                                  DataContext = new ColumnsEditorDialogViewModel(columns, context, documentSampler)
                              };
             dialog.Show();
-        }
-
-        private void OKButton_Click(object sender, RoutedEventArgs e)
-        {
-            this.DialogResult = true;
-        }
-
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
-        {
-            this.DialogResult = false;
         }
     }
 }

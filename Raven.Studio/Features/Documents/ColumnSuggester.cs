@@ -14,6 +14,7 @@ using System.Windows.Shapes;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Documents
 {

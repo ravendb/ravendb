@@ -14,7 +14,7 @@ using System.Reactive.Linq;
 
 namespace Raven.Studio.Features.Documents
 {
-    public class ColumnsEditorDialogViewModel : ViewModel
+    public class ColumnsEditorDialogViewModel : DialogViewModel
     {
         private readonly ColumnsModel columns;
         private readonly string context;
@@ -28,6 +28,8 @@ namespace Raven.Studio.Features.Documents
         private ICommand saveAsDefault;
         private ICommand addSuggestedColumn;
         private Dictionary<string, SuggestedColumn> columnsByBinding = new Dictionary<string, SuggestedColumn>();
+        private ICommand okCommand;
+        private ICommand cancelCommand;
 
         public ColumnsEditorDialogViewModel(ColumnsModel columns, string context, Func<Task<IList<SuggestedColumn>>> suggestedColumnLoader)
         {
@@ -96,7 +98,23 @@ namespace Raven.Studio.Features.Documents
             get { return addSuggestedColumn ?? (addSuggestedColumn = new ActionCommand(HandleAddSuggestedColumn)); }
         }
 
+        public ICommand OK
+        {
+            get { return okCommand ?? (okCommand = new ActionCommand(HandleOKCommand)); }
+        }
+
+        public ICommand Cancel
+        {
+            get { return cancelCommand ?? (cancelCommand = new ActionCommand(() => Close(false))); }
+        }
+
         public ObservableCollection<SuggestedColumn> SuggestedColumns { get; private set; } 
+
+        private void HandleOKCommand()
+        {
+            SyncChangesWithColumnsModel();
+            Close(true);
+        }
 
         private void HandleAddSuggestedColumn(object parameter)
         {
