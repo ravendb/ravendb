@@ -618,6 +618,7 @@
     
     <Compile Include="MailingList\TomCabanski.cs" />
     <Compile Include="MailingList\WallaceTurner.cs" />
+    <Compile Include="Querying\UsingStronglyTypedDocumentQuery.cs" />
     <Compile Include="TemporaryCulture.cs" />
     <Compile Include="Shard\ShardingFailure.cs" />
     <Compile Include="TemporaryCulture.cs" />

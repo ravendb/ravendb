@@ -818,6 +818,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenDocumentsByEntityName.cs">
       <Link>Imports\Indexes\RavenDocumentsByEntityName.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Linq\ExpressionExtensions.cs">
+      <Link>ExpressionExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\LinqExtensions_Obsolete.cs">
       <Link>Imports\Linq\LinqExtensions_Obsolete.cs</Link>
     </Compile>
