@@ -740,6 +740,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Document\AsyncMultiTypeHiLoKeyGenerator.cs">
       <Link>Imports\Document\AsyncMultiTypeHiLoKeyGenerator.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\Async\AsyncDocumentKeyGeneration.cs">
+      <Link>Imports\Document\Async\AsyncDocumentKeyGeneration.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Batches\ILazyLoaderWithInclude.cs">
       <Link>Imports\Document\Batches\ILazyLoaderWithInclude.cs</Link>
     </Compile>

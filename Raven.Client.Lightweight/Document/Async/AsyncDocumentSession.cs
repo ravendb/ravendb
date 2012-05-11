@@ -6,6 +6,7 @@
 #if !NET35
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -29,6 +30,8 @@ namespace Raven.Client.Document.Async
 	/// </summary>
 	public class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
 	{
+		private AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
 		/// </summary>
@@ -40,6 +43,7 @@ namespace Raven.Client.Document.Async
 		{
 			AsyncDatabaseCommands = asyncDatabaseCommands;
 			GenerateDocumentKeysOnStore = false;
+			asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, entitiesAndMetadata.TryGetValue, (key, entity, metadata) => key);
 		}
 
 		/// <summary>
@@ -215,7 +219,8 @@ namespace Raven.Client.Document.Async
 		/// <returns></returns>
 		public Task SaveChangesAsync()
 		{
-			return GenerateDocumentKeysForSaveChanges().ContinueWith(keysTask =>
+			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
+				.ContinueWith(keysTask =>
 				{
 					keysTask.AssertNotFailed();
 
@@ -242,17 +247,6 @@ namespace Raven.Client.Document.Async
 						throw;
 					}
 				}).Unwrap();
-		}
-
-		private Task GenerateDocumentKeysForSaveChanges()
-		{
-			var entities = entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).ToList();
-
-			var tasks = entities.Select(entity => new Func<Task>(() =>
-				GenerateDocumentKeyForStorageAsync(entity.Key)
-					.ContinueWith(task => entity.Value.Key = task.Result)));
-
-			return tasks.StartSequentially();
 		}
 
 		/// <summary>
@@ -345,6 +339,11 @@ namespace Raven.Client.Document.Async
 		public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName)
 		{
 			return AsyncLuceneQuery<T>(indexName);
+		}
+
+		protected override void RememberEntityForDocumentKeyGeneration(object entity)
+		{
+			asyncDocumentKeyGeneration.Add(entity);
 		}
 	}
 }

@@ -11,6 +11,7 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Document.Async;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
@@ -25,13 +26,15 @@ namespace Raven.Client.Shard
 	public class AsyncShardedDocumentSession : BaseShardedDocumentSession<IAsyncDatabaseCommands>,
 		IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations
 	{
-		private ConcurrentQueue<object> entitiesStoredWithoutIDs = new ConcurrentQueue<object>();
+		private AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
+
 
 		public AsyncShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
 			ShardStrategy shardStrategy, IDictionary<string, IAsyncDatabaseCommands> shardDbCommands)
 			: base(documentStore, listeners, id, shardStrategy, shardDbCommands)
 		{
 			GenerateDocumentKeysOnStore = false;
+			asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, entitiesAndMetadata.TryGetValue, ModifyObjectId);
 		}
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
@@ -245,7 +248,8 @@ namespace Raven.Client.Shard
 		/// </summary>
 		Task IAsyncDocumentSession.SaveChangesAsync()
 		{
-			return GenerateDocumentKeysForSaveChanges().ContinueWith(keysTask =>
+			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
+				.ContinueWith(keysTask =>
 				{
 					keysTask.AssertNotFailed();
 
@@ -301,26 +305,11 @@ namespace Raven.Client.Shard
 				}).Unwrap();
 		}
 
-		private Task GenerateDocumentKeysForSaveChanges()
-		{
-			object entity;
-			if (entitiesStoredWithoutIDs.TryDequeue(out entity))
-			{
-				DocumentMetadata metadata;
-				if (entitiesAndMetadata.TryGetValue(entity, out metadata))
-				{
-					return GenerateDocumentKeyForStorageAsync(entity)
-						.ContinueWith(task => metadata.Key = ModifyObjectId(task.Result, entity, metadata.Metadata))
-						.ContinueWithTask(GenerateDocumentKeysForSaveChanges);
-				}
-			}
 		
-			return new CompletedTask();
-		}
 
 		protected override void RememberEntityForDocumentKeyGeneration(object entity)
 		{
-			entitiesStoredWithoutIDs.Enqueue(entity);
+			asyncDocumentKeyGeneration.Add(entity);
 		}
 	}
 }

@@ -614,7 +614,7 @@ more responsive application.
 		}
 
 #if !NET35
-		protected Task<string> GenerateDocumentKeyForStorageAsync(object entity)
+		protected internal Task<string> GenerateDocumentKeyForStorageAsync(object entity)
 		{
 			if (entity is IDynamicMetaObjectProvider)
 			{

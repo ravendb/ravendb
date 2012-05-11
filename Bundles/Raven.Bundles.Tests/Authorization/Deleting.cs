@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 extern alias client;
+using Raven.Client.Connection;
+using Raven.Client.Document;
 using client::Raven.Client.Authorization;
 using client::Raven.Bundles.Authorization.Model;
 
@@ -41,7 +43,7 @@ namespace Raven.Bundles.Tests.Authorization
 			{
 				s.SecureFor(UserId, "Company/Rename");
 
-				Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.Delete(company.Id, null));
+				Assert.Throws<InvalidOperationException>(() => ((DocumentSession)s).DatabaseCommands.Delete(company.Id, null));
 			}
 		}
 
