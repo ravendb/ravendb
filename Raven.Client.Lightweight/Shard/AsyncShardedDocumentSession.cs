@@ -212,7 +212,20 @@ namespace Raven.Client.Shard
 
 		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25)
 		{
-			throw new NotImplementedException();
+
+			IncrementRequestCount();
+			var shards = GetCommandsToOperateOn(new ShardRequestData
+			{
+				EntityType = typeof(T),
+				Keys = { keyPrefix }
+			});
+
+			return shardStrategy.ShardAccessStrategy.ApplyAsync(shards, new ShardRequestData
+			{
+				EntityType = typeof (T),
+				Keys = {keyPrefix}
+			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, start, pageSize))
+				.ContinueWith(task => (IEnumerable<T>)task.Result.SelectMany(x => x).Select(TrackEntity<T>).ToList());
 		}
 
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string indexName)
