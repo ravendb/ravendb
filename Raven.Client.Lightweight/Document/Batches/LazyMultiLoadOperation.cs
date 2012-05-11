@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 #if !SILVERLIGHT
 using Raven.Client.Shard;
@@ -92,6 +93,11 @@ namespace Raven.Client.Document.Batches
 				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
 				Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
 			};
+			HandleResponse(multiLoadResult);
+		}
+
+		private void HandleResponse(MultiLoadResult multiLoadResult)
+		{
 			RequiresRetry = loadOperation.SetResult(multiLoadResult);
 			if (RequiresRetry == false)
 				Result = loadOperation.Complete<T>();
@@ -101,6 +107,18 @@ namespace Raven.Client.Document.Batches
 		{
 			return loadOperation.EnterMultiLoadContext();
 		}
+
+#if !SILVERLIGHT
+		public object ExecuteEmbedded(IDatabaseCommands commands)
+		{
+			return commands.Get(ids, includes);
+		}
+
+		public void HandleEmbeddedResponse(object result)
+		{
+			HandleResponse((MultiLoadResult) result);
+		}
+#endif
 	}
 }
 #endif

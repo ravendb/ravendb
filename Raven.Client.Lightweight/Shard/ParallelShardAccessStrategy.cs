@@ -29,29 +29,35 @@ namespace Raven.Client.Shard
 		{
 			var returnedLists = new T[commands.Count];
 			var valueSet = new bool[commands.Count];
+			var errors = new Exception[commands.Count];
 			commands
 				.Select((cmd, i) =>
-						Task.Factory.StartNew(() => operation(cmd, i))
-							.ContinueWith(task =>
-							{
-								try
-								{
-									returnedLists[i] = task.Result;
-									valueSet[i] = true;
-								}
-								catch (Exception e)
-								{
-									var error = OnError;
-									if (error == null)
-										throw;
-									if (error(commands[i], request, e) == false)
-									{
-										throw;
-									}
-								}
-							})
+				        Task.Factory.StartNew(() => operation(cmd, i))
+				        	.ContinueWith(task =>
+				        	{
+				        		try
+				        		{
+				        			returnedLists[i] = task.Result;
+				        			valueSet[i] = true;
+				        		}
+				        		catch (Exception e)
+				        		{
+				        			var error = OnError;
+				        			if (error == null)
+				        				throw;
+				        			if (error(commands[i], request, e) == false)
+				        			{
+				        				throw;
+				        			}
+				        			errors[i] = e;
+				        		}
+				        	})
 				)
 				.WaitAll();
+
+			// if ALL nodes failed, we still throw
+			if (errors.All(x => x != null))
+				throw new AggregateException(errors);
 
 			return returnedLists.Where((t, i) => valueSet[i]).ToArray();
 		}

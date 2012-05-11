@@ -2,6 +2,7 @@
 using System;
 using Raven.Abstractions.Data;
 #if !SILVERLIGHT
+using Raven.Client.Connection;
 using Raven.Client.Shard;
 #endif
 
@@ -18,6 +19,10 @@ namespace Raven.Client.Document.Batches
 #endif
 
 		IDisposable EnterContext();
+#if !SILVERLIGHT
+		object ExecuteEmbedded(IDatabaseCommands commands);
+		void HandleEmbeddedResponse(object result);
+#endif
 	}
 }
 #endif

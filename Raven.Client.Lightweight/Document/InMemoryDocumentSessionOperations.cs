@@ -866,7 +866,7 @@ more responsive application.
 			{
 				foreach (var documentStoreListener in listeners.StoreListeners)
 				{
-					if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata))
+					if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata, entity.Value.OriginalValue))
 						cachedJsonDocs.Remove(entity.Key);
 				}
 				result.Entities.Add(entity.Key);

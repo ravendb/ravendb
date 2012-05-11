@@ -545,7 +545,9 @@
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="Indexes\WithDecimalValue.cs" />
     <Compile Include="IndexQueryUrl.cs" />
+    <Compile Include="MailingList\BrianVallelunga.cs" />
     <Compile Include="MailingList\Bruno.cs" />
+    <Compile Include="MailingList\BrunoLopes.cs" />
     <Compile Include="MailingList\ChrisH.cs" />
     <Compile Include="MailingList\IdCasing.cs" />
     <Compile Include="MailingList\IndexTest.cs" />
@@ -596,6 +598,7 @@
     <Compile Include="MailingList\Oregon.cs" />
     <Compile Include="MailingList\Phil.cs" />
     <Compile Include="MailingList\JoelAsync.cs" />
+    <Compile Include="MailingList\LazyWithIncludes.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />
     <Compile Include="MailingList\PhilJones_Search.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
@@ -615,6 +618,9 @@
     
     <Compile Include="MailingList\TomCabanski.cs" />
     <Compile Include="MailingList\WallaceTurner.cs" />
+    <Compile Include="TemporaryCulture.cs" />
+    <Compile Include="Shard\ShardingFailure.cs" />
+    <Compile Include="TemporaryCulture.cs" />
     
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />
