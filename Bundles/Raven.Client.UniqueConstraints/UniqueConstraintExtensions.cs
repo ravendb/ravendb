@@ -73,8 +73,8 @@
 
 		public UniqueConstraintCheckResult(T document, PropertyInfo[] properties, T[] loadedDocs)
 		{
-			this.propertyDocuments = new Dictionary<PropertyInfo, dynamic>(properties.Count());
-			this.checkedDocument = document;
+			propertyDocuments = new Dictionary<PropertyInfo, dynamic>(properties.Count());
+			checkedDocument = document;
 			this.loadedDocs = loadedDocs;
 
 			if (properties == null)
@@ -91,8 +91,8 @@
 				{
 					foundDocument = loadedDocs.FirstOrDefault(x =>
 					{
-						var docProperty = propertyInfo.GetValue((T)x, null);
-						return docProperty.ToString().Equals(checkProperty); ;
+						var docProperty = propertyInfo.GetValue(x, null);
+						return docProperty.ToString().Equals(checkProperty.ToString(), StringComparison.InvariantCultureIgnoreCase); ;
 					});
 				}
 				propertyDocuments.Add(propertyInfo, foundDocument);

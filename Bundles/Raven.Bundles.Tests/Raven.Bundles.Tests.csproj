@@ -108,6 +108,7 @@
     <Compile Include="Replication\WritesDuringFailover.cs" />
     <Compile Include="Replication\WritesDuringFailover2.cs" />
     <Compile Include="UniqueConstraints\Bugs\Lars.cs" />
+    <Compile Include="UniqueConstraints\Bugs\Troy.cs" />
     <Compile Include="UniqueConstraints\CreateTests.cs" />
     <Compile Include="UniqueConstraints\DeleteTests.cs" />
     <Compile Include="UniqueConstraints\ExtensionCheckTests.cs" />
