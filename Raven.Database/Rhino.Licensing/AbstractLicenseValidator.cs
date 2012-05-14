@@ -132,8 +132,23 @@ namespace Rhino.Licensing
 			if (client != null)
 				client.PublishMyPresence();
 
-			if (HasExistingLicense())
+			try
+			{
+				if (IsLicenseValid())
+					return;
+			}
+			catch (RhinoLicensingException)
+			{
+				try
+				{
+					RaiseLicenseInvalidated();
+				}
+				catch (InvalidOperationException)
+				{
+					/* continue to RaiseLicenseInvalidated */
+				}
 				return;
+			}
 
 			RaiseLicenseInvalidated();
 		}
@@ -230,7 +245,7 @@ namespace Rhino.Licensing
 		public virtual void AssertValidLicense(Action onValidLicense)
 		{
 			LicenseAttributes.Clear();
-			if (HasExistingLicense())
+			if (IsLicenseValid())
 			{
 				onValidLicense();
 
@@ -256,7 +271,7 @@ namespace Rhino.Licensing
 			throw new LicenseNotFoundException("Could not find a valid license.");
 		}
 
-		private bool HasExistingLicense()
+		private bool IsLicenseValid()
 		{
 			try
 			{
@@ -273,9 +288,13 @@ namespace Rhino.Licensing
 
 				bool result;
 				if (LicenseType == LicenseType.Subscription)
-					result = ValidateSubscription();
+					result = ValidateLicense();
 				else
+				{
 					result = DateTime.UtcNow < ExpirationDate;
+					if (result)
+						result = ValidateLicense();
+				}
 
 				if (result)
 					ValidateUsingNetworkTime();
@@ -293,7 +312,7 @@ namespace Rhino.Licensing
 			}
 		}
 
-		private bool ValidateSubscription()
+		private bool ValidateLicense()
 		{
 			if ((ExpirationDate - DateTime.UtcNow).TotalDays > 4)
 				return true;
@@ -321,7 +340,7 @@ namespace Rhino.Licensing
 			currentlyValidatingLicense = true;
 			try
 			{
-				return HasExistingLicense();
+				return IsLicenseValid();
 			}
 			finally
 			{
@@ -336,6 +355,20 @@ namespace Rhino.Licensing
 			{
 				var newLicense = service.LeaseLicense(License);
 				TryOverwritingWithNewLicense(newLicense);
+			}
+			catch (FaultException ex)
+			{
+				var message = ex.Message;
+				if (message.StartsWith("The order has been cancelled"))
+					throw new LicenseExpiredException(message);
+				if (message.StartsWith("Invalid license"))
+				{
+					// Ignore.	
+				}
+			}
+			catch (Exception e)
+			{
+				Logger.Error("Could not re-lease subscription license", e);
 			}
 			finally
 			{
@@ -399,6 +432,7 @@ namespace Rhino.Licensing
 		/// </summary>
 		public virtual void RemoveExistingLicense()
 		{
+			discoveryHost.Stop();
 		}
 
 		/// <summary>
@@ -437,8 +471,7 @@ namespace Rhino.Licensing
 					if (node == null)
 					{
 						Logger.Warn("Invalid license, floating license without license server public key:\r\n{0}", License);
-						throw new InvalidOperationException(
-							"Invalid license file format, floating license without license server public key");
+						throw new InvalidOperationException("Invalid license file format, floating license without license server public key");
 					}
 					return ValidateFloatingLicense(node.InnerText);
 				}
