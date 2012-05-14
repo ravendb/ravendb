@@ -12,6 +12,7 @@ using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
@@ -285,6 +286,12 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 			else
 			{
+				if (etag != null && etag != Guid.Empty) // expected something to be there.
+					throw new ConcurrencyException("PUT attempted on document '" + key +
+					                               "' using a non current etag (document deleted)")
+					{
+						ExpectedETag = etag.Value
+					};
 				EnsureDocumentIsNotCreatedInAnotherTransaction(key, Guid.NewGuid());
 				if (Api.TryMoveFirst(session, Details))
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);
