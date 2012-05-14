@@ -61,11 +61,7 @@ namespace Rhino.Licensing
 		/// <summary>
 		/// Gets the expiration date of the license
 		/// </summary>
-		public DateTime ExpirationDate
-		{
-			get;
-			private set;
-		}
+		public DateTime ExpirationDate { get; private set; }
 
 		/// <summary>
 		/// How to behave when using the same license multiple times
@@ -95,65 +91,37 @@ namespace Rhino.Licensing
 		/// <summary>
 		/// Gets or Sets the endpoint address of the subscription service
 		/// </summary>
-		public string SubscriptionEndpoint
-		{
-			get;
-			set;
-		}
+		public string SubscriptionEndpoint { get; set; }
 
 		/// <summary>
 		/// Gets the Type of the license
 		/// </summary>
-		public LicenseType LicenseType
-		{
-			get;
-			private set;
-		}
+		public LicenseType LicenseType { get; private set; }
 
 		/// <summary>
 		/// Gets the Id of the license holder
 		/// </summary>
-		public Guid UserId
-		{
-			get;
-			private set;
-		}
+		public Guid UserId { get; private set; }
 
 		/// <summary>
 		/// Gets the name of the license holder
 		/// </summary>
-		public string Name
-		{
-			get;
-			private set;
-		}
+		public string Name { get; private set; }
 
 		/// <summary>
 		/// Gets or Sets Floating license support
 		/// </summary>
-		public bool DisableFloatingLicenses
-		{
-			get;
-			set;
-		}
+		public bool DisableFloatingLicenses { get; set; }
 
 		/// <summary>
 		/// Gets extra license information
 		/// </summary>
-		public IDictionary<string, string> LicenseAttributes
-		{
-			get;
-			private set;
-		}
+		public IDictionary<string, string> LicenseAttributes { get; private set; }
 
 		/// <summary>
 		/// Gets or Sets the license content
 		/// </summary>
-		protected abstract string License
-		{
-			get;
-			set;
-		}
+		protected abstract string License { get; set; }
 
 		private void LeaseLicenseAgain(object state)
 		{
@@ -173,8 +141,8 @@ namespace Rhino.Licensing
 			if (licenseInvalidated == null)
 				throw new InvalidOperationException("License was invalidated, but there is no one subscribe to the LicenseInvalidated event");
 			licenseInvalidated(LicenseType == LicenseType.Floating
-								? InvalidationType.CannotGetNewLicense
-								: InvalidationType.TimeExpired);
+			                   	? InvalidationType.CannotGetNewLicense
+			                   	: InvalidationType.TimeExpired);
 		}
 
 		/// <summary>
@@ -211,7 +179,7 @@ namespace Rhino.Licensing
 			var client = discoveryClient;
 			if (client != null)
 			{
-				client.PublishMyPresence();			
+				client.PublishMyPresence();
 			}
 			RaiseLicenseInvalidated();
 			var onMultipleLicensesWereDiscovered = MultipleLicensesWereDiscovered;
@@ -251,9 +219,9 @@ namespace Rhino.Licensing
 			if (HasExistingLicense())
 			{
 				onValidLicense();
-				
+
 				if (MultipleLicenseUsageBehavior == MultipleLicenseUsage.AllowSameLicense)
-					return; 
+					return;
 
 				try
 				{
@@ -406,10 +374,10 @@ namespace Rhino.Licensing
 				if (time > ExpirationDate)
 					RaiseLicenseInvalidated();
 			}
-			, () =>
-			{
-				/* ignored */
-			});
+			                  , () =>
+			                  {
+			                  	/* ignored */
+			                  });
 		}
 
 		/// <summary>
@@ -502,7 +470,7 @@ namespace Rhino.Licensing
 					Environment.MachineName,
 					Environment.UserName,
 					clientId);
-				((ICommunicationObject)licensingService).Close();
+				((ICommunicationObject) licensingService).Close();
 				success = true;
 				if (leasedLicense == null)
 				{
@@ -533,7 +501,7 @@ namespace Rhino.Licensing
 			finally
 			{
 				if (success == false)
-					((ICommunicationObject)licensingService).Abort();
+					((ICommunicationObject) licensingService).Abort();
 			}
 		}
 
@@ -564,7 +532,7 @@ namespace Rhino.Licensing
 				return false;
 			}
 
-			LicenseType = (LicenseType)Enum.Parse(typeof(LicenseType), licenseType.Value);
+			LicenseType = (LicenseType) Enum.Parse(typeof (LicenseType), licenseType.Value);
 
 			XmlNode name = doc.SelectSingleNode("/license/name/text()");
 			if (name == null)
@@ -596,7 +564,7 @@ namespace Rhino.Licensing
 			nsMgr.AddNamespace("sig", "http://www.w3.org/2000/09/xmldsig#");
 
 			var signedXml = new SignedXml(doc);
-			var sig = (XmlElement)doc.SelectSingleNode("//sig:Signature", nsMgr);
+			var sig = (XmlElement) doc.SelectSingleNode("//sig:Signature", nsMgr);
 			if (sig == null)
 			{
 				Logger.Warn("Could not find this signature node on license:\r\n{0}", License);
