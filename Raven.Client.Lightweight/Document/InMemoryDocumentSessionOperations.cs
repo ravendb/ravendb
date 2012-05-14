@@ -614,7 +614,7 @@ more responsive application.
 			if (id == null || id.EndsWith("/") || !entitiesByKey.ContainsKey(id) || ReferenceEquals(entitiesByKey[id], entity))
 				return;
 
-			throw new NonUniqueObjectException("Attempted to associated a different object with id '" + id + "'.");
+			throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
 		}
 
 		/// <summary>
