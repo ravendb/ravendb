@@ -48,7 +48,7 @@ namespace Rhino.Licensing
 		private readonly string publicKey;
 		private readonly Timer nextLeaseTimer;
 		private bool disableFutureChecks;
-		private bool currentlyValidatingSubscriptionLicense;
+		private bool currentlyValidatingLicense;
 		private readonly DiscoveryHost discoveryHost;
 		private DiscoveryClient discoveryClient;
 		private readonly Guid senderId = Guid.NewGuid();
@@ -125,6 +125,9 @@ namespace Rhino.Licensing
 
 		private void LeaseLicenseAgain(object state)
 		{
+			if (License == null)
+				return;
+
 			var client = discoveryClient;
 			if (client != null)
 				client.PublishMyPresence();
@@ -146,7 +149,7 @@ namespace Rhino.Licensing
 		}
 
 		/// <summary>
-		/// Creates a license validator with specfied public key.
+		/// Creates a license validator with specified public key.
 		/// </summary>
 		/// <param name="publicKey">public key</param>
 		protected AbstractLicenseValidator(string publicKey)
@@ -175,6 +178,13 @@ namespace Rhino.Licensing
 					if (Environment.UserName == clientDiscoveredEventArgs.UserName)
 						return;
 					break;
+				case MultipleLicenseUsage.Deny:
+					if (Environment.UserName == clientDiscoveredEventArgs.UserName &&
+						Environment.MachineName == clientDiscoveredEventArgs.MachineName)
+						return;
+					break;
+				default:
+					throw new ArgumentOutOfRangeException("invalid MultipleLicenseUsageBehavior: " + MultipleLicenseUsageBehavior);
 			}
 			var client = discoveryClient;
 			if (client != null)
@@ -186,6 +196,10 @@ namespace Rhino.Licensing
 			if (onMultipleLicensesWereDiscovered != null)
 			{
 				onMultipleLicensesWereDiscovered(this, clientDiscoveredEventArgs);
+			}
+			else
+			{
+				throw new InvalidOperationException("Multiple licenses were discovered, but no one is handling the MultipleLicensesWereDiscovered event");
 			}
 		}
 
@@ -284,7 +298,7 @@ namespace Rhino.Licensing
 			if ((ExpirationDate - DateTime.UtcNow).TotalDays > 4)
 				return true;
 
-			if (currentlyValidatingSubscriptionLicense)
+			if (currentlyValidatingLicense)
 				return DateTime.UtcNow < ExpirationDate;
 
 			if (SubscriptionEndpoint == null)
@@ -304,14 +318,14 @@ namespace Rhino.Licensing
 
 		private bool ValidateWithoutUsingSubscriptionLeasing()
 		{
-			currentlyValidatingSubscriptionLicense = true;
+			currentlyValidatingLicense = true;
 			try
 			{
 				return HasExistingLicense();
 			}
 			finally
 			{
-				currentlyValidatingSubscriptionLicense = false;
+				currentlyValidatingLicense = false;
 			}
 		}
 
