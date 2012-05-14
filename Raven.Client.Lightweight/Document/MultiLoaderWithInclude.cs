@@ -40,6 +40,16 @@ namespace Raven.Client.Document
 			return Include(path.ToPropertyPath());
 		}
 
+		public MultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path)
+		{
+			var fullId = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(-1, typeof(TInclude), false);
+			var idPrefix = fullId.Replace("-1", string.Empty);
+
+			var id = path.ToPropertyPath() + "(" + idPrefix + ")";
+
+			return Include(id);
+		}
+
 		/// <summary>
 		/// Loads the specified ids.
 		/// </summary>

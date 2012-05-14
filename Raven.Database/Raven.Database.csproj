@@ -122,6 +122,8 @@
     <Compile Include="Impl\Clustering\NodeClusterState.cs" />
     <Compile Include="Impl\Clustering\RegSam.cs" />
     <Compile Include="Impl\ExceptionAggregator.cs" />
+    <Compile Include="Indexing\BaseBatchSizeAutoTuner.cs" />
+    <Compile Include="Indexing\ReduceBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\BackgroundTaskExecuter.cs" />

@@ -87,6 +87,7 @@
     <Compile Include="Document\AsyncShardedDocumentQuery.cs" />
     <Compile Include="Document\AsyncMultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\AsyncHiLoKeyGenerator.cs" />
+    <Compile Include="Document\Async\AsyncDocumentKeyGeneration.cs" />
     <Compile Include="Document\HiLoKeyGeneratorBase.cs" />
     <Compile Include="IAsyncDocumentSessionImpl.cs" />
     <Compile Include="DocumentStoreBase.cs" />
@@ -144,6 +145,7 @@
     <Compile Include="Indexes\AbstractGenericIndexCreationTask.cs" />
     <Compile Include="Indexes\AbstractMultiMapIndexCreationTask.cs" />
     <Compile Include="Linq\Indexing\IndexingLinqExtensions.cs" />
+    <Compile Include="Linq\ReflectionExtensions.cs" />
     <Compile Include="Linq\SearchOptions.cs" />
     <Compile Include="Listeners\IDocumentConversionListener.cs" />
     <Compile Include="Listeners\IDocumentDeleteListener.cs" />
@@ -176,7 +178,7 @@
     <Compile Include="Linq\RavenQueryProvider.cs" />
     <Compile Include="Linq\RavenQueryProviderProcessor.cs" />
     <Compile Include="Linq\RavenQueryStatistics.cs" />
-    <Compile Include="Linq\ReflectionExtensions.cs" />
+    <Compile Include="Linq\ExpressionExtensions.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
     <Compile Include="Shard\BaseShardedDocumentSession.cs" />
     <Compile Include="Shard\AsyncShardedDocumentSession.cs" />

@@ -380,6 +380,8 @@ namespace Raven.Studio.Models
 
 		private void UpdateRelated()
 		{
+			if (string.IsNullOrEmpty(Key))
+				return;
 			DatabaseCommands.GetDocumentsStartingWithAsync(Key + Seperator, 0, 15)
 				.ContinueOnSuccess(items =>
 								   {

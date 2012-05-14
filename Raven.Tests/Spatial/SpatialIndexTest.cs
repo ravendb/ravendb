@@ -245,7 +245,7 @@ namespace Raven.Tests.Spatial
 			} while (queryResult.IsStale);
 
 
-			var expectedOrder = new[] { "events/5", "events/4", "events/6", "events/2", "events/1", "events/3", };
+			var expectedOrder = new[] { "Events/5", "Events/4", "Events/6", "Events/2", "Events/1", "Events/3", };
 
 			for (int i = 0; i < queryResult.Results.Count; i++)
 			{

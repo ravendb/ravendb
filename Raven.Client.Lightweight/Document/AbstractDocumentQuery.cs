@@ -493,7 +493,7 @@ namespace Raven.Client.Document
 				queryOperation = InitializeQueryOperation(DatabaseCommands.OperationsHeaders.Set);
 			}
 
-			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback);
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
 
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
@@ -863,9 +863,9 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Avoid using WhereConatins(), use Search() instead
+		///   Avoid using WhereContains(), use Search() instead
 		/// </summary>
-		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		[Obsolete("Avoid using WhereContains(), use Search() instead")]
 		public void WhereContains(string fieldName, object value)
 		{
 			WhereEquals(new WhereParams
@@ -878,9 +878,9 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Avoid using WhereConatins(), use Search() instead
+		///   Avoid using WhereContains(), use Search() instead
 		/// </summary>
-		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		[Obsolete("Avoid using WhereContains(), use Search() instead")]
 		public void WhereContains(string fieldName, params object[] values)
 		{
 			if (values == null || values.Length == 0)
@@ -939,9 +939,9 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Avoid using WhereConatins(), use Search() instead
+		///   Avoid using WhereContains(), use Search() instead
 		/// </summary>
-		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		[Obsolete("Avoid using WhereContains(), use Search() instead")]
 		public void WhereContains(string fieldName, IEnumerable<object> values)
 		{
 			WhereContains(fieldName, values.ToArray());

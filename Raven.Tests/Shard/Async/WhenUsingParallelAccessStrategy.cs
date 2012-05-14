@@ -40,7 +40,7 @@ namespace Raven.Tests.Shard.Async
 			using (var shard1 = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			using (var session = shard1.OpenAsyncSession())
 			{
-				var results = new ParallelShardAccessStrategy().ApplyAsync(new[] { session.Advanced.AsyncDatabaseCommands },
+				var results = new ParallelShardAccessStrategy().ApplyAsync(new[] { shard1.AsyncDatabaseCommands },
 					new ShardRequestData(), (x, i) => CompletedTask.With((IList<Company>)null).Task).Result;
 
 				Assert.Equal(1, results.Length);
@@ -56,7 +56,7 @@ namespace Raven.Tests.Shard.Async
 			using (var session = shard1.OpenAsyncSession())
 			{
 				var parallelShardAccessStrategy = new ParallelShardAccessStrategy();
-				Assert.Throws<ApplicationException>(() => parallelShardAccessStrategy.ApplyAsync<object>(new[] { session.Advanced.AsyncDatabaseCommands },
+				Assert.Throws<ApplicationException>(() => parallelShardAccessStrategy.ApplyAsync<object>(new[] { shard1.AsyncDatabaseCommands },
 					new ShardRequestData(), (x, i) => { throw new ApplicationException(); }).Wait());
 			}
 		}

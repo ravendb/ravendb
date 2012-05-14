@@ -101,6 +101,7 @@ namespace Raven.Studio.Models
 				.ContinueOnSuccess(collections =>
 				                   	{
 										var collectionModels = collections.OrderByDescending(x => x.Count)
+											.Where(x=>x.Count > 0)
 											.Select(col => new CollectionModel { Name = col.Name, Count = col.Count })
 											.ToArray();
 

@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 #if !SILVERLIGHT
+using Raven.Client.Connection;
 using Raven.Client.Shard;
 #endif
 using Raven.Json.Linq;
@@ -78,6 +79,17 @@ namespace Raven.Client.Document.Batches
 		{
 			return null;
 		}
+#if !SILVERLIGHT
+		public object ExecuteEmbedded(IDatabaseCommands commands)
+		{
+			return commands.GetFacets(index, query, facetSetupDoc);
+		}
+
+		public void HandleEmbeddedResponse(object result)
+		{
+			Result = result;
+		}
+#endif
 	}
 }
 #endif

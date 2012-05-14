@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Client.Connection;
 using Raven.Client.Document;
 #if !NET35
 using Raven.Client.Document.Batches;
@@ -20,6 +21,7 @@ namespace Raven.Client
 #endif
 	{
 		DocumentConvention Conventions { get; }
+
 		T[] LoadInternal<T>(string[] ids);
 		T[] LoadInternal<T>(string[] ids, string[] includes);
 

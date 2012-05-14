@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs
 				{
 					session.Load<User>("users/1");
 
-					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
+					id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
 				}
 
 				var profilingInformation = store.GetProfilingInformationFor(id);
@@ -54,7 +54,7 @@ namespace Raven.Tests.Bugs
 				{
 					session.Query<User>().ToList();
 
-					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
+					id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
 				}
 
 				var profilingInformation = store.GetProfilingInformationFor(id);
@@ -84,7 +84,7 @@ namespace Raven.Tests.Bugs
 					session.Store(new User());
 					session.SaveChanges();
 
-					id = session.Advanced.DatabaseCommands.ProfilingInformation.Id;
+					id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
 				}
 
 				var profilingInformation = store.GetProfilingInformationFor(id);

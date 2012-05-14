@@ -9,6 +9,7 @@ using Raven.Client.Document.Batches;
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
+using System.Collections.Generic;
 using Raven.Client.Indexes;
 
 namespace Raven.Client
@@ -25,18 +26,11 @@ namespace Raven.Client
 		void Refresh<T>(T entity);
 
 		/// <summary>
-		/// Gets the database commands.
+		/// Load documents with the specified key prefix
 		/// </summary>
-		/// <value>The database commands.</value>
-		IDatabaseCommands DatabaseCommands { get; }
+		IEnumerable<T> LoadStartingWith<T>(string keyPrefix, int start = 0, int pageSize = 25);
 
 #if !NET35
-		/// <summary>
-		/// Gets the async database commands.
-		/// </summary>
-		/// <value>The async database commands.</value>
-		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
-
 		/// <summary>
 		/// Access the lazy operations
 		/// </summary>

@@ -328,11 +328,11 @@ namespace Raven.Client.Document
 		public IRavenQueryable<T> Query<T>(string indexName)
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
-			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, Advanced.DatabaseCommands
+			return new RavenQueryInspector<T>(new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, DatabaseCommands
 #if !NET35
 , AsyncDatabaseCommands
 #endif
-), ravenQueryStatistics, indexName, null, this, Advanced.DatabaseCommands
+), ravenQueryStatistics, indexName, null, this, DatabaseCommands
 #if !NET35
 , AsyncDatabaseCommands
 #endif
@@ -408,6 +408,12 @@ namespace Raven.Client.Document
 		public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
 		{
 			return new MultiLoaderWithInclude<T>(this).Include(path);
+		}
+
+
+		public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
+		{
+			return new MultiLoaderWithInclude<T>(this).Include<TInclude>(path);
 		}
 
 		/// <summary>
@@ -618,22 +624,40 @@ namespace Raven.Client.Document
 			var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
 			try
 			{
-				var requests = pendingLazyOperations.Select(x => x.CraeteRequest()).ToArray();
-				var responses = DatabaseCommands.MultiGet(requests);
-				for (int i = 0; i < pendingLazyOperations.Count; i++)
+				if(DatabaseCommands is ServerClient) // server mode
 				{
-					if (responses[i].RequestHasErrors())
+					var requests = pendingLazyOperations.Select(x => x.CraeteRequest()).ToArray();
+					var responses = DatabaseCommands.MultiGet(requests);
+					for (int i = 0; i < pendingLazyOperations.Count; i++)
 					{
-						throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
-															Environment.NewLine + responses[i].Result);
+						if (responses[i].RequestHasErrors())
+						{
+							throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
+																Environment.NewLine + responses[i].Result);
+						}
+						pendingLazyOperations[i].HandleResponse(responses[i]);
+						if (pendingLazyOperations[i].RequiresRetry)
+						{
+							return true;
+						}
 					}
-					pendingLazyOperations[i].HandleResponse(responses[i]);
-					if (pendingLazyOperations[i].RequiresRetry)
-					{
-						return true;
-					}
+					return false;
 				}
-				return false;
+				else // embedded mode
+				{
+					var responses = pendingLazyOperations.Select(x => x.ExecuteEmbedded(DatabaseCommands)).ToArray();
+					for (int i = 0; i < pendingLazyOperations.Count; i++)
+					{
+						pendingLazyOperations[i].HandleEmbeddedResponse(responses[i]);
+						if (pendingLazyOperations[i].RequiresRetry)
+						{
+							return true;
+						}
+					}
+					return false;
+					
+				}
+				
 			}
 			finally
 			{
@@ -645,6 +669,10 @@ namespace Raven.Client.Document
 		}
 
 #endif
+		public IEnumerable<T> LoadStartingWith<T>(string keyPrefix, int start = 0, int pageSize = 25)
+		{
+			return DatabaseCommands.StartsWith(keyPrefix, start, pageSize).Select(TrackEntity<T>).ToList();
+		}
 	}
 #endif
 }

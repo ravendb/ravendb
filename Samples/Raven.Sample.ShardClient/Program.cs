@@ -20,13 +20,13 @@ namespace Raven.Sample.ShardClient
 		{
 			var shards = new Dictionary<string, IDocumentStore>
 			             	{
-			             		{"Asia", new DocumentStore {Url = "http://localhost:8080"}},
-			             		{"Middle-East", new DocumentStore {Url = "http://localhost:8081"}},
-			             		{"America", new DocumentStore {Url = "http://localhost:8082"}},
+			             		{"one", new DocumentStore {Url = "http://localhost:8079"}},
+			             		{"two", new DocumentStore {Url = "http://localhost:8078"}},
+			             		{"three", new DocumentStore {Url = "http://localhost:8077"}},
 			             	};
 
 			var shardStrategy = new ShardStrategy(shards)
-				.ShardingOn<Company>(x => x.Region)
+				.ShardingOn<Company>()
 				.ShardingOn<Invoice>(x => x.CompanyId);
 
 			using (var documentStore = new ShardedDocumentStore(shardStrategy).Initialize())
@@ -35,11 +35,11 @@ namespace Raven.Sample.ShardClient
 
 				using (var session = documentStore.OpenSession())
 				{
-					var asian = new Company { Name = "Company 1", Region = "Asia" };
+					var asian = new Company { Name = "Company 1" };
 					session.Store(asian);
-					var middleEastern = new Company { Name = "Company 2", Region = "Middle-East" };
+					var middleEastern = new Company { Name = "Company 2" };
 					session.Store(middleEastern);
-					var american = new Company { Name = "Company 3", Region = "America" };
+					var american = new Company { Name = "Company 3" };
 					session.Store(american);
 
 					session.Store(new Invoice { CompanyId = american.Id, Amount = 3, IssuedAt = DateTime.Today.AddDays(-1) });
@@ -63,7 +63,7 @@ namespace Raven.Sample.ShardClient
 				}
 			}
 		}
-		
+
 	}
 }
 

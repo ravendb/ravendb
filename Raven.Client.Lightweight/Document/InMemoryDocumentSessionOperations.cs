@@ -606,11 +606,13 @@ more responsive application.
 			return id;
 		}
 
-		protected virtual void RememberEntityForDocumentKeyGeneration(object entity) {
+		protected virtual void RememberEntityForDocumentKeyGeneration(object entity)
+		{
+			throw new NotImplementedException("You cannot set GenerateDocumentKeysOnStore to false without implementing RememberEntityForDocumentKeyGeneration");
 		}
 
 #if !NET35
-		protected Task<string> GenerateDocumentKeyForStorageAsync(object entity)
+		protected internal Task<string> GenerateDocumentKeyForStorageAsync(object entity)
 		{
 			if (entity is IDynamicMetaObjectProvider)
 			{
@@ -860,7 +862,7 @@ more responsive application.
 			{
 				foreach (var documentStoreListener in listeners.StoreListeners)
 				{
-					if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata))
+					if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata, entity.Value.OriginalValue))
 						cachedJsonDocs.Remove(entity.Key);
 				}
 				result.Entities.Add(entity.Key);

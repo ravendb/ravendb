@@ -56,17 +56,17 @@ open Raven.Imports.Newtonsoft.Json
             loader(a.Include<'a>(expr))
         
         let putAttachment documentId etag data metaData (a : IDocumentSession) = 
-            a.Advanced.DatabaseCommands.PutAttachment(documentId, etag, data, Raven.Json.Linq.RavenJObject.FromObject(metaData))
+            a.Advanced.DocumentStore.DatabaseCommands.PutAttachment(documentId, etag, data, Raven.Json.Linq.RavenJObject.FromObject(metaData))
 
         let createAttachment documentId data metaData (a : IDocumentSession) =
             putAttachment documentId (Nullable()) data metaData a
 
         let getAttachmentAsStream<'a> documentId (a : IDocumentSession) =
-            let attachment = a.Advanced.DatabaseCommands.GetAttachment(documentId)
+            let attachment = a.Advanced.DocumentStore.DatabaseCommands.GetAttachment(documentId)
             (attachment.Metadata.JsonDeserialization<'a>(), attachment.Etag, attachment.Data.Invoke())
 
         let getAttachmentAsBytes<'a> documentId (a : IDocumentSession) =
-            let attachment = a.Advanced.DatabaseCommands.GetAttachment(documentId)
+            let attachment = a.Advanced.DocumentStore.DatabaseCommands.GetAttachment(documentId)
             let attachmentBody = attachment.Data.Invoke().ReadData()
             (attachment.Metadata.JsonDeserialization<'a>(), attachment.Etag, attachmentBody)
         

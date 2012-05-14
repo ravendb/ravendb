@@ -29,29 +29,35 @@ namespace Raven.Client.Shard
 		{
 			var returnedLists = new T[commands.Count];
 			var valueSet = new bool[commands.Count];
+			var errors = new Exception[commands.Count];
 			commands
 				.Select((cmd, i) =>
-						Task.Factory.StartNew(() => operation(cmd, i))
-							.ContinueWith(task =>
-							{
-								try
-								{
-									returnedLists[i] = task.Result;
-									valueSet[i] = true;
-								}
-								catch (Exception e)
-								{
-									var error = OnError;
-									if (error == null)
-										throw;
-									if (error(commands[i], request, e) == false)
-									{
-										throw;
-									}
-								}
-							})
+				        Task.Factory.StartNew(() => operation(cmd, i))
+				        	.ContinueWith(task =>
+				        	{
+				        		try
+				        		{
+				        			returnedLists[i] = task.Result;
+				        			valueSet[i] = true;
+				        		}
+				        		catch (Exception e)
+				        		{
+				        			var error = OnError;
+				        			if (error == null)
+				        				throw;
+				        			if (error(commands[i], request, e) == false)
+				        			{
+				        				throw;
+				        			}
+				        			errors[i] = e;
+				        		}
+				        	})
 				)
 				.WaitAll();
+
+			// if ALL nodes failed, we still throw
+			if (errors.All(x => x != null))
+				throw new AggregateException(errors);
 
 			return returnedLists.Where((t, i) => valueSet[i]).ToArray();
 		}
@@ -63,9 +69,10 @@ namespace Raven.Client.Shard
 		{
 			return Task.Factory.ContinueWhenAll(commands.Select(operation).ToArray(), tasks =>
 			{
-				List<T> results = new List<T>(tasks.Length);
+				var results = new List<T>(tasks.Length);
 				int index = 0;
-				List<Exception> exceptions = new List<Exception>();
+				var handledExceptions = new List<Exception>();
+				var unhandledExceptions = new List<Exception>();
 				foreach (var task in tasks)
 				{
 					try
@@ -76,15 +83,20 @@ namespace Raven.Client.Shard
 					{
 						var error = OnAsyncError;
 						if (error == null)
-							exceptions.Add(e);
-						if (error(commands[index], request, e) == false)
-							exceptions.Add(e);
+							unhandledExceptions.Add(e);
+						else if (error(commands[index], request, e) == false)
+							unhandledExceptions.Add(e);
+						else
+							handledExceptions.Add(e);
 					}
 					index++;
 				}
 
-				if (exceptions.Any())
-					throw new AggregateException(exceptions);
+				if (unhandledExceptions.Any())
+					throw new AggregateException(unhandledExceptions);
+
+				if (handledExceptions.Count == tasks.Length)
+					throw new AggregateException(handledExceptions);
 
 				return results.ToArray();
 			});
