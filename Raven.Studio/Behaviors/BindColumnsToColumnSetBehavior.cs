@@ -30,6 +30,15 @@ namespace Raven.Studio.Behaviors
         private static readonly DependencyProperty AssociatedColumnProperty =
             DependencyProperty.RegisterAttached("AssociatedModel", typeof(ColumnDefinition), typeof(BindColumnsToColumnSetBehavior), new PropertyMetadata(null));
 
+        public static readonly DependencyProperty InvalidBindingHeaderStyleProperty =
+            DependencyProperty.Register("InvalidBindingHeaderStyle", typeof (Style), typeof (BindColumnsToColumnSetBehavior), new PropertyMetadata(default(Style)));
+
+        public Style InvalidBindingHeaderStyle
+        {
+            get { return (Style) GetValue(InvalidBindingHeaderStyleProperty); }
+            set { SetValue(InvalidBindingHeaderStyleProperty, value); }
+        }
+
         private static ColumnDefinition GetAssociatedColumn(DependencyObject obj)
         {
             return (ColumnDefinition)obj.GetValue(AssociatedColumnProperty);
@@ -173,11 +182,27 @@ namespace Raven.Studio.Behaviors
 
         private void AddColumn(ColumnDefinition columnDefinition, int? index = null)
         {
-            var column = new DataGridTemplateColumn()
+            var cellTemplate = CreateCellTemplate(columnDefinition);
+
+            DataGridColumn column;
+            
+            if (cellTemplate != null)
+            {
+                column = new DataGridTemplateColumn()
                              {
                                  Header = columnDefinition.Header,
-                                 CellTemplate = CreateCellTemplate(columnDefinition),
+                                 CellTemplate = cellTemplate,
                              };
+            }
+            else
+            {
+                column = new DataGridTextColumn()
+                                 {
+                                     Binding = new Binding( "NonExistantProperty"),
+                                     Header = columnDefinition,
+                                     HeaderStyle = InvalidBindingHeaderStyle,
+                                 };
+            }
 
             if (!string.IsNullOrEmpty(columnDefinition.DefaultWidth))
             {
@@ -239,9 +264,16 @@ namespace Raven.Studio.Behaviors
 
             templateString = templateString.Replace("$$$BindingPath$$$", ExpandBinding(columnDefinition.Binding));
 
-            var template = XamlReader.Load(templateString) as DataTemplate;
-
-            return template;
+            try
+            {
+                var template = XamlReader.Load(templateString) as DataTemplate;
+                template.LoadContent();
+                return template;
+            }
+            catch (XamlParseException)
+            {
+                return null;
+            }
         }
 
         private string ExpandBinding(string binding)

@@ -62,7 +62,21 @@
                     </ListBox.ItemsPanel>
                 </ListBox>
             </DataTemplate>
-        
+
+            <Style x:Key="InvalidBindingColumnHeaderStyle" TargetType="sdk:DataGridColumnHeader">
+                <Setter Property="ContentTemplate">
+                    <Setter.Value>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource Image_Error_Tiny}" Stretch="None" Margin="2" 
+                                       ToolTipService.ToolTip="{Binding Binding, StringFormat='{}{0} is not a valid column binding'}"/>
+                                <TextBlock Text="{Binding Header}" Margin="2"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            
             <DataTemplate x:Key="DataTemplate_List_DetailsView">
                 <sdk:DataGrid x:Name="DocumentsList"
 						ItemsSource="{Binding Documents}"
@@ -81,7 +95,7 @@
                     <i:Interaction.Behaviors>
                         <!--<Behaviors:SelectItemOnRightClick />
                         <Infrastructure:ProvideVisibleItemRangeBehavior/>-->
-                        <Behaviors:BindColumnsToColumnSetBehavior Columns="{Binding Columns}"/>
+                        <Behaviors:BindColumnsToColumnSetBehavior Columns="{Binding Columns}" InvalidBindingHeaderStyle="{StaticResource InvalidBindingColumnHeaderStyle}"/>
                         <Behaviors:DataGridRowDoubleClickCommandBehavior Command="{Binding EditDocument}"/>
                         <Behaviors:ColumnHeaderContextMenu>
                             <Behaviors:ColumnHeaderContextMenu.ContextMenu>
