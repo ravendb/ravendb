@@ -44,17 +44,19 @@ namespace Raven.Studio.Features.Documents
         private void AddEmptyRow()
         {
             var newRow = new ColumnEditorViewModel();
-            newRow.ChangesCommitted += HandleNewRowChangesCommitted;
+            newRow.PropertyChanged += HandleNewRowPropertyChanged;
 
             columnEditorViewModels.Add(newRow);
         }
 
-        private void HandleNewRowChangesCommitted(object sender, EventArgs e)
+        private void HandleNewRowPropertyChanged(object sender, EventArgs e)
         {
             var row = sender as ColumnEditorViewModel;
-            row.ChangesCommitted -= HandleNewRowChangesCommitted;
-
-            AddEmptyRow();
+            if (!row.IsNewRow)
+            {
+                row.PropertyChanged -= HandleNewRowPropertyChanged;
+                AddEmptyRow();
+            }
         }
 
         public ColumnEditorViewModel SelectedColumn
@@ -112,8 +114,10 @@ namespace Raven.Studio.Features.Documents
 
         private void HandleOKCommand()
         {
-            SyncChangesWithColumnsModel();
-            Close(true);
+            if (SyncChangesWithColumnsModel())
+            {
+                Close(true);
+            }
         }
 
         private void HandleAddSuggestedColumn(object parameter)
@@ -177,7 +181,7 @@ namespace Raven.Studio.Features.Documents
 
         public ICommand Apply
         {
-            get { return applyCommand ?? (applyCommand = new ActionCommand(SyncChangesWithColumnsModel)); }
+            get { return applyCommand ?? (applyCommand = new ActionCommand(() => SyncChangesWithColumnsModel())); }
         }
 
         public ObservableCollection<ColumnEditorViewModel> Columns
@@ -195,8 +199,13 @@ namespace Raven.Studio.Features.Documents
             Columns.Remove(SelectedColumn);
         }
 
-        private void SyncChangesWithColumnsModel()
+        private bool SyncChangesWithColumnsModel()
         {
+            if (Columns.Any(c => c.HasErrors))
+            {
+                return false;
+            }
+
             var actualColumns = GetCurrentColumnDefinitions();
 
             columns.Columns.Clear();
@@ -205,6 +214,8 @@ namespace Raven.Studio.Features.Documents
             {
                 columns.Columns.Add(column);
             }
+
+            return true;
         }
 
         protected override void OnViewLoaded()

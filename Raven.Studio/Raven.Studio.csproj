@@ -85,6 +85,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Newtonsoft.Json.4.0.8\lib\sl4\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations, Version=5.0.5.0, Culture=neutral, PublicKeyToken=ddd0da4d3e678217, processorArchitecture=MSIL" />
     <Reference Include="System.Reactive, Version=1.0.10621.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Rx-Main.1.0.11226\lib\SL4\System.Reactive.dll</HintPath>
     </Reference>
@@ -209,6 +210,8 @@
     <Compile Include="Infrastructure\MostRecentUsedList.cs" />
     <Compile Include="Infrastructure\RecyclingContentLoader.cs" />
     <Compile Include="Infrastructure\SparseList.cs" />
+    <Compile Include="Infrastructure\Validation.cs" />
+    <Compile Include="Infrastructure\Validators\DataGridLengthAttribute.cs" />
     <Compile Include="Infrastructure\View.cs" />
     <Compile Include="Infrastructure\ViewModel.cs" />
     <Compile Include="Infrastructure\VirtualCollection.cs" />

@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Net;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,11 +14,14 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Infrastructure.Validators;
+using Validation = Raven.Studio.Infrastructure.Validation;
 
 namespace Raven.Studio.Features.Documents
 {
     public class ColumnEditorViewModel : ViewModel, IEditableObject, INotifyDataErrorInfo
     {
+        private IList<ValidationResult> validationResults = new List<ValidationResult>();
         public event EventHandler<EventArgs> ChangesCommitted;
 
         private readonly ColumnDefinition column;
@@ -45,6 +51,7 @@ namespace Raven.Studio.Features.Documents
             }
         }
 
+        [DataGridLength]
         public string DefaultWidth
         {
             get { return this.defaultWidth; }
@@ -52,7 +59,15 @@ namespace Raven.Studio.Features.Documents
             {
                 this.defaultWidth = value;
                 OnPropertyChanged(() => DefaultWidth);
+                Revalidate();
             }
+        }
+
+        private void Revalidate()
+        {
+            Validation.Validate(this, validationResults,
+                                property => OnErrorsChanged(new DataErrorsChangedEventArgs(property)));
+            OnPropertyChanged(() => HasErrors);
         }
 
         public ColumnEditorViewModel()
@@ -68,7 +83,11 @@ namespace Raven.Studio.Features.Documents
 
         public bool IsNewRow
         {
-            get { return string.IsNullOrEmpty(Header) && string.IsNullOrEmpty(Binding); }
+            get
+            {
+                return string.IsNullOrEmpty(Header) && string.IsNullOrEmpty(Binding) &&
+                       string.IsNullOrEmpty(DefaultWidth);
+            }
         }
 
         private void LoadPropertiesFromColumn()
@@ -104,12 +123,12 @@ namespace Raven.Studio.Features.Documents
 
         public IEnumerable GetErrors(string propertyName)
         {
-            yield break;
+            return validationResults.Where(v => v.MemberNames.Contains(propertyName)).Select(v => v.ErrorMessage);
         }
 
         public bool HasErrors
         {
-            get { return false; }
+            get { return validationResults.Count > 0; }
         }
 
         public ColumnDefinition GetColumn()
@@ -123,6 +142,12 @@ namespace Raven.Studio.Features.Documents
         }
 
         public event EventHandler<DataErrorsChangedEventArgs> ErrorsChanged;
+
+        protected void OnErrorsChanged(DataErrorsChangedEventArgs e)
+        {
+            EventHandler<DataErrorsChangedEventArgs> handler = ErrorsChanged;
+            if (handler != null) handler(this, e);
+        }
 
         protected void OnChangesCommitted(EventArgs e)
         {
