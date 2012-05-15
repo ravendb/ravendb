@@ -44,6 +44,40 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
+		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_Embedded()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new UserByFirstName().Execute(store);
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User
+					{
+						FirstName = "Ayende"
+					});
+					session.SaveChanges();
+				}
+				using (var session = store.OpenSession())
+				{
+					session.Query<User>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Take(15).ToList();
+					RavenQueryStatistics stats;
+
+					var query = session.Query<User>().Statistics(out stats).Where(x => x.FirstName == "Ayende");
+
+					var results = query.Take(8).Lazily();
+
+					var enumerable = results.Value; //force evaluation
+					Assert.Equal(1, enumerable.Count());
+					Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+					Assert.True(stats.TotalResults > 0);
+				}
+			}
+		}
+
+
+		[Fact]
 		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_NonLazy()
 		{
 			using (GetNewServer())

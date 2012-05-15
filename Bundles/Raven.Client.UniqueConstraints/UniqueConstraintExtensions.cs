@@ -10,17 +10,26 @@
 
 	public static class UniqueConstraintExtensions
 	{
+		public class ConstraintDocument
+		{
+			public string RelatedId { get; set; }
+		}
+
 		public static T LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, object value)
 		{
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
 			var body = (MemberExpression)keySelector.Body;
 			var propertyName = body.Member.Name;
 
-			var constraintDoc = session.Include("Id").Load<dynamic>("UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + value);
+			var constraintDoc = session.Include("Id").Load<ConstraintDocument>("UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + value);
+			if (constraintDoc == null)
+				return default(T);
 
-			if (constraintDoc != null && !string.IsNullOrEmpty(constraintDoc.Id))
+			var id = constraintDoc.RelatedId;
+					
+			if (!string.IsNullOrEmpty(id))
 			{
-				return session.Load<T>(constraintDoc.Id.ToString());
+				return session.Load<T>(id);
 			}
 
 			return default(T);
@@ -43,13 +52,17 @@
 					constraintsIds.Add("UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() + "/" + propertyValue);
 				}
 
-				dynamic[] constraintDocs = session.Include("Id").Load<dynamic>(constraintsIds.ToArray());
+				ConstraintDocument[] constraintDocs = session.Include("Id").Load<ConstraintDocument>(constraintsIds.ToArray());
 
 				foreach (var constraintDoc in constraintDocs)
 				{
-					if (constraintDoc != null && !string.IsNullOrEmpty(constraintDoc.Id) )
+					if(constraintDoc == null)
+						continue;
+
+					var id = constraintDoc.RelatedId;
+					if (!string.IsNullOrEmpty(id))
 					{
-						existingDocsIds.Add(constraintDoc.Id);
+						existingDocsIds.Add(id);
 					}
 				}
 
@@ -65,7 +78,7 @@
 
 	public class UniqueConstraintCheckResult<T>
 	{
-		private readonly Dictionary<PropertyInfo, dynamic> propertyDocuments;
+		private readonly Dictionary<PropertyInfo, object> propertyDocuments;
 
 		private readonly T[] loadedDocs;
 
@@ -73,8 +86,8 @@
 
 		public UniqueConstraintCheckResult(T document, PropertyInfo[] properties, T[] loadedDocs)
 		{
-			this.propertyDocuments = new Dictionary<PropertyInfo, dynamic>(properties.Count());
-			this.checkedDocument = document;
+			propertyDocuments = new Dictionary<PropertyInfo, object>(properties.Count());
+			checkedDocument = document;
 			this.loadedDocs = loadedDocs;
 
 			if (properties == null)
@@ -91,8 +104,8 @@
 				{
 					foundDocument = loadedDocs.FirstOrDefault(x =>
 					{
-						var docProperty = propertyInfo.GetValue((T)x, null);
-						return docProperty.ToString().Equals(checkProperty); ;
+						var docProperty = propertyInfo.GetValue(x, null);
+						return docProperty.ToString().Equals(checkProperty.ToString(), StringComparison.InvariantCultureIgnoreCase); ;
 					});
 				}
 				propertyDocuments.Add(propertyInfo, foundDocument);
@@ -117,11 +130,11 @@
 		{
 			var body = (MemberExpression)keySelector.Body;
 			var prop = (PropertyInfo)body.Member;
-			dynamic doc = null;
+			object doc = null;
 
 			propertyDocuments.TryGetValue(prop, out doc);
 
-			return doc;
+			return (T)doc;
 		}
 	}
 }

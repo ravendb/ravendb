@@ -624,22 +624,40 @@ namespace Raven.Client.Document
 			var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
 			try
 			{
-				var requests = pendingLazyOperations.Select(x => x.CraeteRequest()).ToArray();
-				var responses = DatabaseCommands.MultiGet(requests);
-				for (int i = 0; i < pendingLazyOperations.Count; i++)
+				if(DatabaseCommands is ServerClient) // server mode
 				{
-					if (responses[i].RequestHasErrors())
+					var requests = pendingLazyOperations.Select(x => x.CraeteRequest()).ToArray();
+					var responses = DatabaseCommands.MultiGet(requests);
+					for (int i = 0; i < pendingLazyOperations.Count; i++)
 					{
-						throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
-															Environment.NewLine + responses[i].Result);
+						if (responses[i].RequestHasErrors())
+						{
+							throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
+																Environment.NewLine + responses[i].Result);
+						}
+						pendingLazyOperations[i].HandleResponse(responses[i]);
+						if (pendingLazyOperations[i].RequiresRetry)
+						{
+							return true;
+						}
 					}
-					pendingLazyOperations[i].HandleResponse(responses[i]);
-					if (pendingLazyOperations[i].RequiresRetry)
-					{
-						return true;
-					}
+					return false;
 				}
-				return false;
+				else // embedded mode
+				{
+					var responses = pendingLazyOperations.Select(x => x.ExecuteEmbedded(DatabaseCommands)).ToArray();
+					for (int i = 0; i < pendingLazyOperations.Count; i++)
+					{
+						pendingLazyOperations[i].HandleEmbeddedResponse(responses[i]);
+						if (pendingLazyOperations[i].RequiresRetry)
+						{
+							return true;
+						}
+					}
+					return false;
+					
+				}
+				
 			}
 			finally
 			{

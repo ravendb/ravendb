@@ -40,7 +40,8 @@ namespace Raven.VisualHost
 				var ravenDbServer = new RavenDbServer(new RavenConfiguration
 				{
 					Port = port,
-					DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Server-" + port, "Data"),
+					//DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Server-" + port, "Data"),
+					RunInMemory = true,
 					AnonymousUserAccessMode = AnonymousUserAccessMode.All
 				});
 
