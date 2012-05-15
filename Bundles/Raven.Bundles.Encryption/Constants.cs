@@ -4,13 +4,19 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Json.Linq;
 
 namespace Raven.Bundles.Encryption
 {
 	internal class Constants
 	{
 		public const string DontEncryptDocumentsStartingWith = "Raven/";
-		public const string EncryptionSettingsDocumentKey = "Raven/Encryption/Settings";
+		public const string AlgorithmTypeSetting = "Raven/Encryption/Algorithm";
+		public const string EncryptionKeySetting = "Raven/Encryption/Key";
+		public const string InDatabaseKeyVerificationDocumentName = "Raven/Encryption/Verification";
+		public static readonly RavenJObject InDatabaseKeyVerificationDocumentContents = new RavenJObject {
+			{ "Text", "The encryption is correct." }
+		};
 
 		public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
 		public const int MinimumAcceptableEncryptionKeyLength = 64 / 8;

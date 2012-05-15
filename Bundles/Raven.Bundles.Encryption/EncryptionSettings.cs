@@ -38,7 +38,8 @@ namespace Raven.Bundles.Encryption
 
 		public static bool DontEncrypt(string key)
 		{
-			return key.StartsWith(Constants.DontEncryptDocumentsStartingWith, StringComparison.InvariantCultureIgnoreCase);
+			return key.StartsWith(Constants.DontEncryptDocumentsStartingWith, StringComparison.InvariantCultureIgnoreCase)
+				&& key != Constants.InDatabaseKeyVerificationDocumentName;
 		}
 
 		public byte[] EncryptionKey
