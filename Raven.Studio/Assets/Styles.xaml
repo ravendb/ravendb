@@ -15,9 +15,11 @@
 
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Brushes.xaml" />
-		<ResourceDictionary Source="Images/Images.xaml" />
+        <ResourceDictionary Source="TextBoxStyles.xaml" />
+        <ResourceDictionary Source="Images/Images.xaml" />
 		<ResourceDictionary Source="DataGridStyles.xaml" />
 		<ResourceDictionary Source="TreeViewStyles.xaml" />
+
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style TargetType="ScrollBar">
@@ -1468,12 +1470,6 @@
 				Value="9.333" />
 		<Setter Property="Margin"
 				Value="0,2,2,2" />
-	</Style>
-
-	<Style TargetType="TextBox">
-		<Setter Property="Background"
-				Value="{StaticResource Brush_TextBox_Background}" />
-		<Setter Property="Padding" Value="4,2,4,2" />
 	</Style>
 
 	<Style TargetType="Editors:LinqEditor">
