@@ -82,7 +82,7 @@
 						ItemsSource="{Binding Documents}"
                         AutoGenerateColumns="False"
                         IsReadOnly="True"
-                        ColumnWidth="100"
+                        ColumnWidth="170"
                         RowHeight="28">
 
                     <i:Interaction.Triggers>
