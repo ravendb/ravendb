@@ -56,7 +56,7 @@
                 </Behaviors:StudioKeyTrigger>
             </i:Interaction.Triggers>
             <sdk:DataGrid.Columns>
-                <sdk:DataGridTemplateColumn Header="Column" Width="*" IsReadOnly="False">
+                <sdk:DataGridTemplateColumn Header="Title" Width="*" IsReadOnly="False">
                     <sdk:DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Grid>

@@ -46,6 +46,10 @@ namespace Raven.Studio.Features.Documents
             set
             {
                 this.binding = value;
+                if (string.IsNullOrEmpty(Header) && !value.StartsWith("$"))
+                {
+                    Header = value;
+                }
                 OnPropertyChanged(() => Binding);
                 OnPropertyChanged(() => IsNewRow);
             }
