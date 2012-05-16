@@ -30,11 +30,14 @@ namespace Raven.Studio.Infrastructure
         public event EventHandler<EventArgs> FetchCompleted;
         public event PropertyChangedEventHandler PropertyChanged;
         public event EventHandler<QueryItemVisibilityEventArgs> QueryItemVisibility;
+        public event EventHandler<ItemsRealizedEventArgs> ItemsRealized;
 
         private volatile uint _state; // used to ensure that data-requests are not stale
+
         private readonly SparseList<VirtualItem<T>> _virtualItems;
         private readonly HashSet<int> _fetchedPages = new HashSet<int>();
         private readonly HashSet<int> _requestedPages = new HashSet<int>();
+
         private readonly MostRecentUsedList<int> _mostRecentlyRequestedPages; 
         private int _itemCount;
         private readonly TaskScheduler _synchronizationContextScheduler;
@@ -201,6 +204,8 @@ namespace Raven.Studio.Infrastructure
                     virtualItem.Item = results[i];
                 }
             }
+
+            OnItemsRealized(new ItemsRealizedEventArgs(startIndex, results.Count));
         }
 
         void INotifyOnDataFetchErrors.Retry()
@@ -609,6 +614,12 @@ namespace Raven.Studio.Infrastructure
             if (handler != null) handler(this, e);
         }
 
+        protected void OnItemsRealized(ItemsRealizedEventArgs e)
+        {
+            EventHandler<ItemsRealizedEventArgs> handler = ItemsRealized;
+            if (handler != null) handler(this, e);
+        }
+
         protected void OnFetchStarting(EventArgs e)
         {
             EventHandler<EventArgs> handler = FetchStarting;
@@ -690,6 +701,18 @@ namespace Raven.Studio.Infrastructure
         #endregion
 
 
+    }
+
+    public class ItemsRealizedEventArgs : EventArgs
+    {
+        public ItemsRealizedEventArgs(int startIndex, int count)
+        {
+            StartingIndex = startIndex;
+            Count = count;
+        }
+
+        public int StartingIndex { get; private set; }
+        public int Count { get; private set; }
     }
 
     public enum RefreshMode

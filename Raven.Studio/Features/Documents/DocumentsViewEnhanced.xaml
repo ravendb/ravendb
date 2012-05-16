@@ -14,7 +14,8 @@
              xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
              xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
              xmlns:Converters="clr-namespace:Raven.Studio.Infrastructure.Converters"
-                     xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared" mc:Ignorable="d"
+                     xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
+                     xmlns:z="clr-namespace:Raven.Studio.Infrastructure.MarkupExtensions"  mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400" d:DataContext="{d:DesignInstance Models:DocumentsModelEnhanced}">
 
     <Grid>
@@ -106,6 +107,7 @@
                                 </Controls:ContextMenu>
                             </Behaviors:ColumnHeaderContextMenu.ContextMenu>
                         </Behaviors:ColumnHeaderContextMenu>
+                        <Behaviors:BindColumnVisibility ColumnHeader="Id" Visibility="{Binding DocumentsHaveId, Converter={StaticResource BooleanToVisibility}}"/>
                     </i:Interaction.Behaviors>
 
                     <!--<Controls:ContextMenuService.ContextMenu>
@@ -119,7 +121,7 @@
                         </Controls:ContextMenu>
                     </Controls:ContextMenuService.ContextMenu>-->
                     <sdk:DataGrid.Columns>
-                        <sdk:DataGridTemplateColumn Header="Id" Width="100" CanUserReorder="False" CanUserResize="True" CanUserSort="False" ClipboardContentBinding="{Binding Item.Document.Key}">
+                        <sdk:DataGridTemplateColumn  x:Name="VisibilityColumn" Header="Id" Width="100" CanUserReorder="False" CanUserResize="True" CanUserSort="False" ClipboardContentBinding="{Binding Item.Document.Key}">
                             <sdk:DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Grid>

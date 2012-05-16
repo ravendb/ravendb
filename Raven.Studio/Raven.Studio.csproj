@@ -144,6 +144,7 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="Behaviors\BindColumnsToColumnSetBehavior.cs" />
+    <Compile Include="Behaviors\BindColumnVisibility.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
@@ -234,9 +235,6 @@
     <Compile Include="Models\PerDatabaseState.cs" />
     <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
-    <Compile Include="Views\StealthPagingDocuments.xaml.cs">
-      <DependentUpon>StealthPagingDocuments.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Views\Terms.xaml.cs">
       <DependentUpon>Terms.xaml</DependentUpon>
     </Compile>
@@ -516,10 +514,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Terms\TermsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\StealthPagingDocuments.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

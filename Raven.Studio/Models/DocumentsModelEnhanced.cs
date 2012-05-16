@@ -36,14 +36,20 @@ namespace Raven.Studio.Models
         private string context;
 
         private ICommand editColumns;
+        private bool documentsHaveId;
 
         public DocumentsModelEnhanced(VirtualCollectionSource<ViewableDocument> collectionSource)
         {
             Documents = new VirtualCollection<ViewableDocument>(collectionSource, 25, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified));
-
+            Documents.ItemsRealized += HandleItemsRealized;
             ShowEditControls = true;
 
             Context = "Default";
+        }
+
+        private void HandleItemsRealized(object sender, ItemsRealizedEventArgs e)
+        {
+            DocumentsHaveId = !string.IsNullOrEmpty(Documents[e.StartingIndex].Item.Id);
         }
 
         public string Context
@@ -53,6 +59,19 @@ namespace Raven.Studio.Models
             {
                 context = value ?? "Default";
                 UpdateColumnSet();
+            }
+        }
+
+        public bool DocumentsHaveId
+        {
+            get { return documentsHaveId; }
+            set
+            {
+                if (documentsHaveId != value)
+                {
+                    documentsHaveId = value;
+                    OnPropertyChanged(() => DocumentsHaveId);
+                }
             }
         }
 
