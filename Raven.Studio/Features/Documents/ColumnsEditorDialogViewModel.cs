@@ -18,7 +18,7 @@ namespace Raven.Studio.Features.Documents
     {
         private readonly ColumnsModel columns;
         private readonly string context;
-        private readonly Func<Task<IList<SuggestedColumn>>> suggestedColumnLoader;
+        private readonly Func<Task<IList<string>>> suggestedBindingLoader;
         private ObservableCollection<ColumnEditorViewModel> columnEditorViewModels;
         private ICommand applyCommand;
         private ColumnEditorViewModel selectedColumn;
@@ -26,18 +26,15 @@ namespace Raven.Studio.Features.Documents
         private ICommand moveSelectedColumnUp;
         private ICommand moveSelectedColumnDown;
         private ICommand saveAsDefault;
-        private ICommand addSuggestedColumn;
-        private Dictionary<string, SuggestedColumn> columnsByBinding = new Dictionary<string, SuggestedColumn>();
         private ICommand okCommand;
         private ICommand cancelCommand;
 
-        public ColumnsEditorDialogViewModel(ColumnsModel columns, string context, Func<Task<IList<SuggestedColumn>>> suggestedColumnLoader)
+        public ColumnsEditorDialogViewModel(ColumnsModel columns, string context, Func<Task<IList<string>>> suggestedBindingLoader)
         {
             this.columns = columns;
             this.context = context;
-            this.suggestedColumnLoader = suggestedColumnLoader;
+            this.suggestedBindingLoader = suggestedBindingLoader;
             columnEditorViewModels = new ObservableCollection<ColumnEditorViewModel>(this.columns.Columns.Select(c => new ColumnEditorViewModel(c)));
-            SuggestedColumns = new ObservableCollection<SuggestedColumn>();
             SuggestedBindings = new ObservableCollection<string>();
 
             AddEmptyRow();
@@ -97,11 +94,6 @@ namespace Raven.Studio.Features.Documents
             get { return saveAsDefault ?? (saveAsDefault = new ActionCommand(HandleSaveAsDefault)); }
         }
 
-        public ICommand AddSuggestedColumn
-        {
-            get { return addSuggestedColumn ?? (addSuggestedColumn = new ActionCommand(HandleAddSuggestedColumn)); }
-        }
-
         public ICommand OK
         {
             get { return okCommand ?? (okCommand = new ActionCommand(HandleOKCommand)); }
@@ -112,8 +104,6 @@ namespace Raven.Studio.Features.Documents
             get { return cancelCommand ?? (cancelCommand = new ActionCommand(() => Close(false))); }
         }
 
-        public ObservableCollection<SuggestedColumn> SuggestedColumns { get; private set; }
-
         public ObservableCollection<string> SuggestedBindings { get; private set; }
  
         private void HandleOKCommand()
@@ -122,17 +112,6 @@ namespace Raven.Studio.Features.Documents
             {
                 Close(true);
             }
-        }
-
-        private void HandleAddSuggestedColumn(object parameter)
-        {
-            var column = parameter as SuggestedColumn;
-            if (column == null)
-            {
-                return;
-            }
-
-            Columns.Insert(Columns.Count - 1, new ColumnEditorViewModel(column.ToColumnDefinition()));
         }
 
         private void HandleSaveAsDefault()
@@ -230,30 +209,13 @@ namespace Raven.Studio.Features.Documents
 
         private void PopulateSuggestedColumns()
         {
-            SuggestedColumns.AddRange(GetDefaultSuggestedColumns());
-
-            suggestedColumnLoader()
+            suggestedBindingLoader()
                 .ContinueOnSuccessInTheUIThread(UpdateSuggestedColumns);
         }
 
-        private void UpdateSuggestedColumns(IList<SuggestedColumn> suggestedColumns)
+        private void UpdateSuggestedColumns(IList<string> suggestedColumns)
         {
-            SuggestedColumns.AddRange(suggestedColumns);
-            SuggestedBindings.AddRange(GetBindingsRecursive(suggestedColumns));
-        }
-
-        private IEnumerable<string> GetBindingsRecursive(IList<SuggestedColumn> suggestedColumns)
-        {
-            return suggestedColumns.SelectMany(c => new[] {c.Binding}.Concat(GetBindingsRecursive(c.Children)));
-        }
-
-        private IEnumerable<SuggestedColumn> GetDefaultSuggestedColumns()
-        {
-            return new[]
-                       {
-                           new SuggestedColumn() {Header = "ETag", Binding = "$JsonDocument:ETag"},
-                           new SuggestedColumn() {Header = "Last Modified", Binding = "$JsonDocument:LastModified"},
-                       };
+            SuggestedBindings.AddRange(suggestedColumns);
         }
 
         private List<ColumnDefinition> GetCurrentColumnDefinitions()

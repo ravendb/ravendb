@@ -46,12 +46,28 @@ namespace Raven.Studio.Features.Documents
             set
             {
                 this.binding = value;
-                if (string.IsNullOrEmpty(Header) && !value.StartsWith("$"))
+                if (string.IsNullOrEmpty(Header))
                 {
-                    Header = value;
+                    Header = SuggestColumnName(binding);
                 }
                 OnPropertyChanged(() => Binding);
                 OnPropertyChanged(() => IsNewRow);
+            }
+        }
+
+        private string SuggestColumnName(string binding)
+        {
+            if (binding.StartsWith("$Meta:"))
+            {
+                return binding.Substring("$Meta:".Length);
+            }
+            else if (binding.StartsWith("$JsonDocument:"))
+            {
+                return binding.Substring("$JsonDocument:".Length);
+            }
+            else
+            {
+                return binding;
             }
         }
 

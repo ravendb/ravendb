@@ -155,8 +155,7 @@ namespace Raven.Studio.Models
                                 if (contextWhenRequested == Context)
                                 {
                                     Columns.LoadFromColumnDefinitions(
-                                        result.Select(
-                                            s => new ColumnDefinition() {Binding = s.Binding, Header = s.Header}));
+                                        result.Select(s => new ColumnDefinition() {Binding = s, Header = s}));
                                 }
                             });
             }

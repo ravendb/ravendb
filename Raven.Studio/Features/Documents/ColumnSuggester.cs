@@ -36,12 +36,32 @@ namespace Raven.Studio.Features.Documents
             this.context = context;
         }
 
+        public Task<IList<string>> AutoSuggest()
+        {
+            return GetSampleDocuments().ContinueWith(t => PickLikelyColumns(t.Result));
+        }
+
+        public Task<IList<string>> AllSuggestions()
+        {
+            return GetSampleDocuments().ContinueWith(t => CreateSuggestedBindingsFromDocuments(t.Result));
+        }
+
         private IEnumerable<string> GetPropertiesFromDocuments(JsonDocument[] jsonDocuments, bool includeNestedPropeties)
         {
             return
                 jsonDocuments.SelectMany(
                     doc =>
                     GetPropertiesFromJObject(doc.DataAsJson, parentPropertyPath: "",
+                                             includeNestedProperties: includeNestedPropeties));
+
+        }
+
+        private IEnumerable<string> GetMetadataFromDocuments(JsonDocument[] jsonDocuments, bool includeNestedPropeties)
+        {
+            return
+                jsonDocuments.SelectMany(
+                    doc =>
+                    GetPropertiesFromJObject(doc.Metadata, parentPropertyPath: "",
                                              includeNestedProperties: includeNestedPropeties));
 
         }
@@ -71,56 +91,24 @@ namespace Raven.Studio.Features.Documents
             }
         }
 
-        private IList<SuggestedColumn> CreateSuggestedColumnsFromDocuments(JsonDocument[] jsonDocuments, bool includeNestedPropeties)
+        private IList<string> CreateSuggestedBindingsFromDocuments(JsonDocument[] jsonDocuments)
         {
-            var columnsByBinding = new Dictionary<string, SuggestedColumn>();
-            var foundColumns = jsonDocuments.SelectMany(jDoc => CreateSuggestedColumnsFromJObject(jDoc.DataAsJson, parentPropertyPath: "", includeNestedProperties: includeNestedPropeties));
-
-            foreach (var suggestedColumn in foundColumns)
-            {
-                if (!columnsByBinding.ContainsKey(suggestedColumn.Binding))
-                {
-                    columnsByBinding.Add(suggestedColumn.Binding, suggestedColumn);
-                }
-                else
-                {
-                    var existingColumn = columnsByBinding[suggestedColumn.Binding];
-                    existingColumn.MergeFrom(suggestedColumn);
-                }
-            }
-
-            return columnsByBinding.OrderBy(kv => kv.Key).Select(kv => kv.Value).ToList();
+            var bindings = GetPropertiesFromDocuments(jsonDocuments, true).Distinct()
+                .Concat(GetMetadataFromDocuments(jsonDocuments, true).Distinct().Select(b => "$Meta:" + b))
+                .Concat(new[] {"$JsonDocument:ETag", "$JsonDocument:LastModified"})
+                .ToArray();
+            
+            return bindings;
         }
 
-        private SuggestedColumnCollection CreateSuggestedColumnsFromJObject(RavenJObject jObject, string parentPropertyPath, bool includeNestedProperties)
-        {
-            var columns = (from property in jObject
-                    let path = parentPropertyPath + (string.IsNullOrEmpty(parentPropertyPath) ? "" : ".") + property.Key
-                    select new SuggestedColumn()
-                    {
-                        Header = path,
-                        Binding = path,
-                        Children = property.Value is RavenJObject && includeNestedProperties 
-                                ?  CreateSuggestedColumnsFromJObject(property.Value as RavenJObject, path, includeNestedProperties)
-                                : new SuggestedColumnCollection()
-                    });
-
-            return new SuggestedColumnCollection(columns);
-        }
-
-        public Task<IList<SuggestedColumn>> AutoSuggest()
-        {
-            return GetSampleDocuments().ContinueWith(t => PickLikelyColumns(t.Result));
-        }
-
-        private IList<SuggestedColumn> PickLikelyColumns(JsonDocument[] sampleDocuments)
+        private IList<string> PickLikelyColumns(JsonDocument[] sampleDocuments)
         {
             var columns= GetPropertiesFromDocuments(sampleDocuments, includeNestedPropeties: false)
                 .GroupBy(p => p)
                 .Select(g => new {Property = g.Key, Occurence = g.Count()/(double) sampleDocuments.Length})
                 .Select(p => new {p.Property, Occurence = p.Occurence + ImportanceBoost(p.Property)})
                 .OrderByDescending(p => p.Occurence)
-                .Select(p => new SuggestedColumn() {Binding = p.Property, Header = p.Property})
+                .Select(p => p.Property)
                 .Take(6)
                 .ToList();
 
@@ -149,16 +137,6 @@ namespace Raven.Studio.Features.Documents
             {
                 return "";
             }
-        }
-
-        public Task<IList<SuggestedColumn>> AllSuggestions()
-        {
-            return AllSuggestions(includeNestedProperties:true);
-        }
-
-        private Task<IList<SuggestedColumn>> AllSuggestions(bool includeNestedProperties)
-        {
-            return GetSampleDocuments().ContinueWith(t => CreateSuggestedColumnsFromDocuments(t.Result, includeNestedProperties));
         }
 
         private Task<JsonDocument[]> GetSampleDocuments()

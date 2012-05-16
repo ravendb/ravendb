@@ -23,11 +23,11 @@ namespace Raven.Studio.Features.Documents
 
         }
 
-        public static void Show(ColumnsModel columns, string context, Func<Task<IList<SuggestedColumn>>> documentSampler)
+        public static void Show(ColumnsModel columns, string context, Func<Task<IList<string>>> bindingSuggestions)
         {
             var dialog = new ColumnsEditorDialog()
                              {
-                                 DataContext = new ColumnsEditorDialogViewModel(columns, context, documentSampler)
+                                 DataContext = new ColumnsEditorDialogViewModel(columns, context, bindingSuggestions)
                              };
             dialog.Show();
         }
