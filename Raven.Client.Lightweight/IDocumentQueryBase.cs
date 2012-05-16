@@ -353,7 +353,7 @@ If you really want to do in memory filtering on the data returned from the query
 		///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
 		/// </summary>
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
-		TSelf OrderBy(params Expression<Func<T, object>>[] propertySelectors);
+		TSelf OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
 
 		/// <summary>
 		///   Instructs the query to wait for non stale results as of now.
@@ -436,7 +436,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		/// <param name = "propertySelector">Property selector for the field.</param>
 		/// <param name = "descending">if set to <c>true</c> [descending].</param>
-		TSelf AddOrder(Expression<Func<T, object>> propertySelector, bool descending);
+		TSelf AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending);
 
 		/// <summary>
 		///   Adds an ordering for a specific field to the query and specifies the type of field for sorting purposes
@@ -468,7 +468,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		TSelf Search(Expression<Func<T, object>> propertySelector, string searchTerms);
+		TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms);
 
 		///<summary>
 		///  Instruct the index to group by the specified fields using the specified aggregation operation
@@ -484,7 +484,7 @@ If you really want to do in memory filtering on the data returned from the query
 		///<remarks>
 		///  This is only valid on dynamic indexes queries
 		///</remarks>
-		TSelf GroupBy(AggregationOperation aggregationOperation, params Expression<Func<T, object>>[] groupPropertySelectors);
+		TSelf GroupBy<TValue>(AggregationOperation aggregationOperation, params Expression<Func<T, TValue>>[] groupPropertySelectors);
 
 		/// <summary>
 		/// Partition the query so we can intersect different parts of the query

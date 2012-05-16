@@ -121,7 +121,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name = "propertySelector">Property selector for the field.</param>
 		/// <param name = "descending">if set to <c>true</c> [descending].</param>
-		public IDocumentQuery<T> AddOrder(Expression<Func<T, object>> propertySelector, bool descending)
+		public IDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending)
 		{
 			AddOrder(propertySelector.GetPropertyName(), descending);
 			return this;
@@ -192,7 +192,7 @@ namespace Raven.Client.Document
 		/// Perform a search for documents which fields that match the searchTerms.
 		/// If there is more than a single term, each of them will be checked independently.
 		/// </summary>
-		public IDocumentQuery<T> Search(Expression<Func<T, object>> propertySelector, string searchTerms)
+		public IDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms)
 		{
 			Search(propertySelector.GetPropertyName(), searchTerms);
 			return this;
@@ -216,7 +216,7 @@ namespace Raven.Client.Document
 		///<remarks>
 		///  This is only valid on dynamic indexes queries
 		///</remarks>
-		public IDocumentQuery<T> GroupBy(AggregationOperation aggregationOperation, params Expression<Func<T, object>>[] groupPropertySelectors)
+		public IDocumentQuery<T> GroupBy<TValue>(AggregationOperation aggregationOperation, params Expression<Func<T, TValue>>[] groupPropertySelectors)
 		{
 			GroupBy(aggregationOperation, groupPropertySelectors.Select(x => x.GetPropertyName()).ToArray());
 			return this;
@@ -706,7 +706,7 @@ namespace Raven.Client.Document
 		///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
 		/// </summary>
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
-		public IDocumentQuery<T> OrderBy(params Expression<Func<T, object>>[] propertySelectors)
+		public IDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
 			OrderBy(propertySelectors.Select(x => x.GetPropertyName()).ToArray());
 			return this;
