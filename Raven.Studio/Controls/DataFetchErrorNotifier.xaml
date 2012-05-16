@@ -4,7 +4,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:Controls="clr-namespace:Raven.Studio.Controls"
-             xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
+             xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+             xmlns:System="clr-namespace:System;assembly=mscorlib" mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400"
     FontSize="12">
 
@@ -25,17 +26,25 @@
             <VisualStateGroup x:Name="BusyStates">
                 <VisualState x:Name="Busy">
                     <Storyboard>
-                        <DoubleAnimation Duration="0:0:0.2" To="1" Storyboard.TargetProperty="(FrameworkElement.Opacity)" Storyboard.TargetName="ProgressBar" d:IsOptimized="True"/>
-                        <!--<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(ProgressBar.IsIndeterminate)" Storyboard.TargetName="ProgressBar">
-                            <DiscreteObjectKeyFrame KeyTime="0:0:0.2" Value="True"/>
+                        <!--<DoubleAnimation Duration="0:0:0.2" To="1" Storyboard.TargetProperty="(FrameworkElement.Opacity)" Storyboard.TargetName="ProgressBar" d:IsOptimized="True"/>
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(ProgressBar.IsIndeterminate)" Storyboard.TargetName="ProgressBar">
+                            <DiscreteObjectKeyFrame KeyTime="0:0:0.2">
+                              <DiscreteObjectKeyFrame.Value>
+                                    <System:Boolean>True</System:Boolean>
+                                </DiscreteObjectKeyFrame.Value>
+                            </DiscreteObjectKeyFrame>
                         </ObjectAnimationUsingKeyFrames>-->
                     </Storyboard>
                 </VisualState>
                 <VisualState x:Name="Idle">
                     <Storyboard>
-                        <DoubleAnimation Duration="0:0:0.2" To="0" Storyboard.TargetProperty="(FrameworkElement.Opacity)" Storyboard.TargetName="ProgressBar" d:IsOptimized="True"/>
-                        <!--<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(ProgressBar.IsIndeterminate)" Storyboard.TargetName="ProgressBar">
-                            <DiscreteObjectKeyFrame KeyTime="0:0:0.2" Value="False"/>
+                        <!--<DoubleAnimation Duration="0:0:0.2" To="0" Storyboard.TargetProperty="(FrameworkElement.Opacity)" Storyboard.TargetName="ProgressBar" d:IsOptimized="True"/>
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(ProgressBar.IsIndeterminate)" Storyboard.TargetName="ProgressBar">
+                            <DiscreteObjectKeyFrame KeyTime="0:0:0.2">
+                                <DiscreteObjectKeyFrame.Value>
+                                    <System:Boolean>False</System:Boolean>
+                                </DiscreteObjectKeyFrame.Value>
+                            </DiscreteObjectKeyFrame>
                         </ObjectAnimationUsingKeyFrames>-->
                     </Storyboard>
                 </VisualState>
@@ -70,7 +79,7 @@
     			<Button Content="Retry" Command="{Binding Retry}" Grid.Column="2" VerticalAlignment="Center" Margin="8,0" Width="75"/>
                     </Grid>
                 </Border>
-                <ProgressBar x:Name="ProgressBar" VerticalAlignment="Bottom"  IsIndeterminate="True" Height="10" Opacity="0"/>
+                <ProgressBar x:Name="ProgressBar" VerticalAlignment="Bottom" Height="10" Opacity="0"/>
             </Grid>
         </Border>
     </Grid>
