@@ -86,24 +86,57 @@
                 </sdk:DataGridTemplateColumn>
                 <sdk:DataGridTextColumn Header="Binding" Binding="{Binding Binding, Mode=TwoWay}" Width="*">
                     <sdk:DataGridTextColumn.HeaderStyle>
-                        <Style TargetType="sdk:DataGridColumnHeader">
+                        <Style TargetType="sdk:DataGridColumnHeader" BasedOn="{StaticResource Style_DataGridColumnHeader_Default}">
                             <Setter Property="ContentTemplate">
                                 <Setter.Value>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding}" Margin="2"/>
-                                            <Image Source="{StaticResource Image_Info_Tiny}" Stretch="None">
-                                                <ToolTipService.ToolTip>
-                                                    <RichTextBlock>
-                                                        <Paragraph>
-                                                            <Bold>Properties</Bold>
-                                                            <LineBreak/>
-                                                             Bind to properties just like you would in code. For example:
-                                                            <LineBreak/>
-                                                            <Italic>Address.Postcode</Italic>
-                                                        </Paragraph>
-                                                    </RichTextBlock>
-                                                </ToolTipService.ToolTip>
+                                            <TextBlock Text="{Binding}" Margin="2,0,5,0" Foreground="{StaticResource Brush_ContrastColor}"/>
+                                            <Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" >
+                                                <i:Interaction.Behaviors>
+                                                    <Behaviors:ShowPopupWhilstMouseOver>
+                                                        <Behaviors:ShowPopupWhilstMouseOver.Popup>
+                                                            <Popup>
+                                                                <ContentControl Style="{StaticResource Style_InfoToolTip}">
+                                                                <RichTextBlock MaxWidth="300" Margin="5">
+                                                                    <Paragraph>
+                                                                        <Bold>Properties</Bold>
+                                                                        <LineBreak/>
+                                                                        Bind to properties just like you would in code. For example:
+                                                                        <LineBreak/>
+                                                                        <Italic>Address.Postcode</Italic>
+                                                                        <LineBreak/>
+                                                                        <LineBreak/>
+                                                                        Bind to particular items in an array using an index in square brackets:
+                                                                        <LineBreak/>
+                                                                        <Italic>Tracks[0].Title</Italic>
+                                                                        <LineBreak/>
+                                                                    </Paragraph>
+                                                                    <Paragraph >
+                                                                        <Bold>Metadata</Bold>
+                                                                        <LineBreak/>
+                                                                        Bind to document metadata using prefix
+                                                                        '<Italic>$Meta:</Italic>'. For instance:
+                                                                        <LineBreak/>
+                                                                        <Italic>$Meta:Raven-Clr-Type</Italic>
+                                                                        <LineBreak/>
+                                                                    </Paragraph>
+                                                                    <Paragraph>
+                                                                        <Bold>Advanced</Bold>
+                                                                        <LineBreak/>
+                                                                        Bind directly to the JsonDocument object (using XAML binding syntax) using prefix
+                                                                        '<Italic>$JsonDocument:</Italic>'. For example
+                                                                        <LineBreak/>
+                                                                        <Italic>$JsonDocument:DataAsJson[Tracks].Length</Italic>
+                                                                        <LineBreak/>
+                                                                        displays the number of items in the Tracks array.
+                                                                    </Paragraph>
+                                                                </RichTextBlock>
+                                                                </ContentControl>
+                                                            </Popup>
+                                                        </Behaviors:ShowPopupWhilstMouseOver.Popup>
+                                                    </Behaviors:ShowPopupWhilstMouseOver>
+                                                </i:Interaction.Behaviors>
                                             </Image>
                                         </StackPanel>
                                     </DataTemplate>

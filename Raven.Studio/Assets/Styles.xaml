@@ -3299,4 +3299,26 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+    
+    <Style x:Name="Style_InfoToolTip" TargetType="ContentControl">
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Background">
+        	<Setter.Value>
+        		<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+        			<GradientStop Color="#FFEFEFEF" Offset="0.009"/>
+        			<GradientStop Color="#FFCCCACA" Offset="1"/>
+        		</LinearGradientBrush>
+        	</Setter.Value>
+        </Setter>
+        <Setter Property="BorderBrush" Value="Black"/>
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate>
+					<Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+						<ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+    </Style>
 </ResourceDictionary>

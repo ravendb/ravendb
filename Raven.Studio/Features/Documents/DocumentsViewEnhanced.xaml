@@ -63,7 +63,7 @@
                 </ListBox>
             </DataTemplate>
 
-            <Style x:Key="InvalidBindingColumnHeaderStyle" TargetType="sdk:DataGridColumnHeader">
+            <Style x:Key="InvalidBindingColumnHeaderStyle" TargetType="sdk:DataGridColumnHeader" BasedOn="{StaticResource Style_DataGridColumnHeader_Default}">
                 <Setter Property="ContentTemplate">
                     <Setter.Value>
                         <DataTemplate>
