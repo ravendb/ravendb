@@ -238,6 +238,8 @@ namespace Raven.Client.Connection.Async
 
 		Task StartBackupAsync(string backupLocation);
 
+		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize);
+
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>

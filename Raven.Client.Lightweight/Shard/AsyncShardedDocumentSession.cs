@@ -11,10 +11,12 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Document.Async;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
+using System.Collections.Concurrent;
 
 namespace Raven.Client.Shard
 {
@@ -24,10 +26,15 @@ namespace Raven.Client.Shard
 	public class AsyncShardedDocumentSession : BaseShardedDocumentSession<IAsyncDatabaseCommands>,
 		IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations
 	{
+		private AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
+
+
 		public AsyncShardedDocumentSession(ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
 			ShardStrategy shardStrategy, IDictionary<string, IAsyncDatabaseCommands> shardDbCommands)
 			: base(documentStore, listeners, id, shardStrategy, shardDbCommands)
 		{
+			GenerateDocumentKeysOnStore = false;
+			asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, entitiesAndMetadata.TryGetValue, ModifyObjectId);
 		}
 
 		protected override JsonDocument GetJsonDocument(string documentKey)
@@ -179,16 +186,7 @@ namespace Raven.Client.Shard
 				});
 			}));
 
-			return Task.Factory.ContinueWhenAll(loadTasks.Select(func => func()).ToArray(), tasks =>
-			{
-				AggregateException[] aggregateExceptions = tasks.Where(x=>x.IsFaulted).Select(x=>x.Exception).ToArray();
-				if(aggregateExceptions.Length>0)
-					throw new AggregateException(aggregateExceptions);
-			}).ContinueWith(_ =>
-			{
-				_.AssertNotFailed();
-				return results;
-			} );
+			return loadTasks.StartInParallel().WithResult(() => results);
 		}
 
 		public IAsyncLoaderWithInclude<object> Include(string path)
@@ -215,6 +213,24 @@ namespace Raven.Client.Shard
 			return AsyncLuceneQuery<T>(indexName);
 		}
 
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25)
+		{
+
+			IncrementRequestCount();
+			var shards = GetCommandsToOperateOn(new ShardRequestData
+			{
+				EntityType = typeof(T),
+				Keys = { keyPrefix }
+			});
+
+			return shardStrategy.ShardAccessStrategy.ApplyAsync(shards, new ShardRequestData
+			{
+				EntityType = typeof (T),
+				Keys = {keyPrefix}
+			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, start, pageSize))
+				.ContinueWith(task => (IEnumerable<T>)task.Result.SelectMany(x => x).Select(TrackEntity<T>).ToList());
+		}
+
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string indexName)
 		{
 			return new AsyncShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, listeners.QueryListeners);
@@ -227,59 +243,73 @@ namespace Raven.Client.Shard
 
 		#endregion
 
-		#region DatabaseCommands (not supported)
-
-		Raven.Client.Connection.Async.IAsyncDatabaseCommands IAsyncAdvancedSessionOperations.AsyncDatabaseCommands
-		{
-			get { throw new NotSupportedException("Not supported in a sharded session"); }
-		}
-
-		#endregion
-
 		/// <summary>
 		/// Saves all the changes to the Raven server.
 		/// </summary>
 		Task IAsyncDocumentSession.SaveChangesAsync()
 		{
-			using (EntitiesToJsonCachingScope())
-			{
-				var data = PrepareForSaveChanges();
-				if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
-					return new CompletedTask(); // nothing to do here
-
-				IncrementRequestCount();
-				LogBatch(data);
-
-				// split by shards
-				var saveChangesPerShard = GetChangesToSavePerShard(data);
-
-				var saveTasks = new List<Task<BatchResult[]>>();
-				var saveChanges = new List<SaveChangesData>();
-				// execute on all shards
-				foreach (var shardAndObjects in saveChangesPerShard)
+			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
+				.ContinueWith(keysTask =>
 				{
-					var shardId = shardAndObjects.Key;
+					keysTask.AssertNotFailed();
 
-					IAsyncDatabaseCommands databaseCommands;
-					if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
-						throw new InvalidOperationException(string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
-
-					saveChanges.Add(shardAndObjects.Value);
-					saveTasks.Add(databaseCommands.BatchAsync(shardAndObjects.Value.Commands.ToArray()));
-				}
-
-				return Task.Factory.ContinueWhenAll(saveTasks.ToArray(), tasks =>
-				{
-					var exceptions = tasks.Where(t => t.IsFaulted).Select(t => t.Exception).ToList();
-					if (exceptions.Any())
-					    throw new AggregateException(exceptions);
-
-					for (int index = 0; index < tasks.Length; index++)
+					var cachingScope = EntitiesToJsonCachingScope();
+					try
 					{
-						UpdateBatchResults(tasks[index].Result, saveChanges[index]);
+						var data = PrepareForSaveChanges();
+						if (data.Commands.Count == 0 && deferredCommandsByShard.Count == 0)
+							return new CompletedTask(); // nothing to do here
+
+						IncrementRequestCount();
+						LogBatch(data);
+
+						// split by shards
+						var saveChangesPerShard = GetChangesToSavePerShard(data);
+
+						var saveTasks = new List<Func<Task<BatchResult[]>>>();
+						var saveChanges = new List<SaveChangesData>();
+						// execute on all shards
+						foreach (var shardAndObjects in saveChangesPerShard)
+						{
+							var shardId = shardAndObjects.Key;
+
+							IAsyncDatabaseCommands databaseCommands;
+							if (shardDbCommands.TryGetValue(shardId, out databaseCommands) == false)
+								throw new InvalidOperationException(string.Format("ShardedDocumentStore cannot found a DatabaseCommands for shard id '{0}'.", shardId));
+
+							saveChanges.Add(shardAndObjects.Value);
+							saveTasks.Add(() => databaseCommands.BatchAsync(shardAndObjects.Value.Commands.ToArray()));
+						}
+
+						return saveTasks.StartInParallel().ContinueWith(task =>
+						{
+							try
+							{
+								var results = task.Result;
+								for (int index = 0; index < results.Length; index++)
+								{
+									UpdateBatchResults(results[index], saveChanges[index]);
+								}
+							}
+							finally
+							{
+								cachingScope.Dispose();
+							}
+						});
 					}
-				});
-			}
+					catch
+					{
+						cachingScope.Dispose();
+						throw;
+					}
+				}).Unwrap();
+		}
+
+		
+
+		protected override void RememberEntityForDocumentKeyGeneration(object entity)
+		{
+			asyncDocumentKeyGeneration.Add(entity);
 		}
 	}
 }

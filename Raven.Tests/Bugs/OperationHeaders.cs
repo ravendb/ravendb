@@ -56,7 +56,7 @@ namespace Raven.Tests.Bugs
 				RecordOperationHeaders.Hello = null;
 				using(var session = documentStore.OpenSession())
 				{
-					session.Advanced.DatabaseCommands.OperationsHeaders["Hello"] = "World";
+					((DocumentSession)session).DatabaseCommands.OperationsHeaders["Hello"] = "World";
 					session.Store(new { Bar = "foo"});
 					session.SaveChanges();
 
@@ -87,7 +87,7 @@ namespace Raven.Tests.Bugs
 				RecordOperationHeaders.Hello = null;
 				using (var session = documentStore.OpenSession())
 				{
-					session.Advanced.DatabaseCommands.OperationsHeaders["Hello"] = "World";
+					((DocumentSession)session).DatabaseCommands.OperationsHeaders["Hello"] = "World";
 					session.Store(new { Bar = "foo" });
 					session.SaveChanges();
 

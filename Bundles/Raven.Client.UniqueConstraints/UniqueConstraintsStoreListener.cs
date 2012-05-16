@@ -10,7 +10,7 @@
 
 	public class UniqueConstraintsStoreListener : IDocumentStoreListener
 	{
-		public bool BeforeStore(string key, object entityInstance, RavenJObject metadata)
+		public bool BeforeStore(string key, object entityInstance, RavenJObject metadata, RavenJObject original)
 		{
 			if (metadata[Constants.EnsureUniqueConstraints] != null)
 			{

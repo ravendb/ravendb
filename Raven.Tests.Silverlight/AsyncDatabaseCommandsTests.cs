@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Silverlight.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Raven.Client.Document;
+using Raven.Client.Document.Async;
 using Raven.Client.Extensions;
 using Raven.Tests.Document;
 
@@ -116,7 +117,7 @@ namespace Raven.Tests.Silverlight
 					session.Store(entity);
 					yield return session.SaveChangesAsync();
 
-					yield return session.Advanced.AsyncDatabaseCommands
+					yield return ((AsyncDocumentSession)session).AsyncDatabaseCommands
 						.DeleteDocumentAsync(entity.Id);
 				}
 
@@ -154,7 +155,7 @@ namespace Raven.Tests.Silverlight
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					yield return session.Advanced.AsyncDatabaseCommands
+					yield return ((AsyncDocumentSession)session).AsyncDatabaseCommands
 						.DeleteDocumentAsync(task.Result[0].Key);
 
 					var second = cmd.ForDatabase(dbname).GetDocumentsAsync(0, 25);

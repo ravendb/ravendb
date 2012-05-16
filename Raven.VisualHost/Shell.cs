@@ -11,11 +11,13 @@ using System.Threading;
 using System.Windows.Forms;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Client.Extensions;
 
 namespace Raven.VisualHost
 {
@@ -34,9 +36,11 @@ namespace Raven.VisualHost
 
 			for (int i = 0; i < NumberOfServers.Value; i++)
 			{
+				var port = 8079 - i;
 				var ravenDbServer = new RavenDbServer(new RavenConfiguration
 				{
-					Port = 8079 - i,
+					Port = port,
+					//DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Server-" + port, "Data"),
 					RunInMemory = true,
 					AnonymousUserAccessMode = AnonymousUserAccessMode.All
 				});
@@ -178,6 +182,35 @@ namespace Raven.VisualHost
 			ravenDbServer.Database.Put("Raven/Replication/Destinations", null, doc, new RavenJObject(), null);
 
 			MessageBox.Show("Setup replication between all servers (Master/Slave)");
+		}
+
+		private void setupDatbasesToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			foreach (var ravenDbServer in servers)
+			{
+				using(var docStore = new DocumentStore
+				{
+					Url = ravenDbServer.Server.Configuration.ServerUrl,
+					DefaultDatabase = "Users"
+				}.Initialize())
+				{
+					docStore.DatabaseCommands.EnsureDatabaseExists("Users");
+					docStore.DatabaseCommands.EnsureDatabaseExists("Questions");
+
+					var replicationServer = servers.Where(s => s != ravenDbServer);
+
+					var doc = new RavenJObject
+					{
+						{
+							"Destinations", new RavenJArray(replicationServer.Select(s => new RavenJObject
+							{
+								{"Url", s.Database.Configuration.ServerUrl + "databases/Users"}
+							}))
+						}
+					};
+					docStore.DatabaseCommands.Put("Raven/Replication/Destinations", null, doc, new RavenJObject());
+				}
+			}
 		}
 	}
 }

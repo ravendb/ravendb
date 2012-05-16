@@ -77,7 +77,7 @@ namespace Raven.Tests.Bugs.Indexing
 			using(var store = NewDocumentStore())
 			using (var session = store.OpenSession())
 			{
-				session.Advanced.DatabaseCommands.PutIndex("test", new IndexDefinition
+				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
 					Map =
 						@"from s in docs.Softs select new { s.f_platform, s.f_name, s.f_alias,s.f_License,s.f_totaldownload}",

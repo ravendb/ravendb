@@ -48,7 +48,7 @@ namespace Raven.Tests.Triggers.Bugs
 		{
 			using (var session = store.OpenSession())
 			{
-				session.Advanced.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1085");
+				store.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1085");
 
 				var person = new Person
 				             	{
@@ -67,7 +67,7 @@ namespace Raven.Tests.Triggers.Bugs
 
 			using (var session = store.OpenSession())
 			{
-				session.Advanced.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1081");
+				store.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1081");
 
 				var person = session.Load<Person>("person/1");
 				person.Age = 25;
@@ -78,7 +78,7 @@ namespace Raven.Tests.Triggers.Bugs
 
 			using (var session = store.OpenSession())
 			{
-				session.Advanced.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1022");
+				store.DatabaseCommands.OperationsHeaders.Add("CurrentUserPersonId", "1022");
 
 				var person = session.Load<Person>("person/1");
 

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using Raven.Imports.Newtonsoft.Json;
 using System;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Extensions
@@ -115,6 +116,8 @@ namespace Raven.Abstractions.Extensions
 			foreach (var header in self)
 			{
 				if(header.Key.StartsWith("Temp"))
+					continue;
+				if(header.Key == Constants.DocumentIdFieldName)
 					continue;
 				if (HeadersToIgnoreClient.Contains(header.Key))
 					continue;

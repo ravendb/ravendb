@@ -50,9 +50,10 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		public void Dispose()
+		public override void Dispose()
 		{
 			_store.Dispose();
+			base.Dispose();
 		}
 
 		[Fact]

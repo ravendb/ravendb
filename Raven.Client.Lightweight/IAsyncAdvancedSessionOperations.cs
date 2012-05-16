@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 #if !NET35
 
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 
 namespace Raven.Client
@@ -15,10 +17,10 @@ namespace Raven.Client
 	public interface IAsyncAdvancedSessionOperations : IAdvancedDocumentSessionOperations
 	{
 		/// <summary>
-		/// Gets the async database commands.
+		/// Load documents with the specified key prefix
 		/// </summary>
-		/// <value>The async database commands.</value>
-		IAsyncDatabaseCommands AsyncDatabaseCommands { get; }
+		Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25);
+
 
 		/// <summary>
 		/// Query the specified index using Lucene syntax

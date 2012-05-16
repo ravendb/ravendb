@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !NET35
+
 using System;
 #if !SILVERLIGHT
 using System.Collections.Generic;
@@ -265,6 +267,22 @@ namespace Raven.Client.Shard
 					var generator = new ShardedHiloKeyGenerator(this, 32);
 					Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
 				}
+
+				if (Conventions.AsyncDocumentKeyGenerator == null)
+				{
+#if !SILVERLIGHT
+					var generator = new AsyncShardedHiloKeyGenerator(this, 32);
+					Conventions.AsyncDocumentKeyGenerator = entity => generator.GenerateDocumentKeyAsync(Conventions, entity);
+#else
+					Conventions.AsyncDocumentKeyGenerator = entity =>
+					{
+						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
+						if (typeTagName == null)
+							return CompletedTask.With(Guid.NewGuid().ToString());
+						return CompletedTask.With(typeTagName + "/" + Guid.NewGuid());
+					};
+#endif
+				}
 			}
 			catch (Exception)
 			{
@@ -282,8 +300,18 @@ namespace Raven.Client.Shard
 				throw new InvalidOperationException("Could not find a shard named: " + shardId);
 
 			return store.DatabaseCommands;
-
 		}
+
+#if !NET35
+		public IAsyncDatabaseCommands AsyncDatabaseCommandsFor(string shardId)
+		{
+			IDocumentStore store;
+			if (ShardStrategy.Shards.TryGetValue(shardId, out store) == false)
+				throw new InvalidOperationException("Could not find a shard named: " + shardId);
+
+			return store.AsyncDatabaseCommands;
+		}
+#endif
 
 		/// <summary>
 		/// Executes the index creation against each of the shards.
@@ -301,3 +329,5 @@ namespace Raven.Client.Shard
 		}
 	}
 }
+
+#endif

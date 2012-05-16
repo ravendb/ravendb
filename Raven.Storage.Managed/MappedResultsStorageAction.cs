@@ -83,7 +83,7 @@ namespace Raven.Storage.Managed
 
 		public void DeleteMappedResultsForView(string view)
 		{
-			foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject{{"view", view}})
+			foreach (var key in storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject { { "view", view } })
 			.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), view)))
 			{
 				storage.MappedResults.Remove(key);
@@ -95,22 +95,26 @@ namespace Raven.Storage.Managed
 			var mappedResultInfos = storage.MappedResults["ByViewAndEtagDesc"]
 				// the index is sorted view ascending and then etag descending
 				// we index before this index, then backward toward the last one.
-				.SkipBefore(new RavenJObject { { "view", indexName }, {"etag", lastReducedEtag.ToByteArray()}})
+				.SkipBefore(new RavenJObject { { "view", indexName }, { "etag", lastReducedEtag.ToByteArray() } })
 				.TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), indexName))
 				.Select(key =>
 				{
+
 					var mappedResultInfo = new MappedResultInfo
 					{
 						ReduceKey = key.Value<string>("reduceKey"),
 						Etag = new Guid(key.Value<byte[]>("etag")),
-						Timestamp = key.Value<DateTime>("timestamp"),
+						Timestamp = key.Value<DateTime>("timestamp")
 					};
-					if(loadData)
+
+					var readResult = storage.MappedResults.Read(key);
+					if (readResult != null)
 					{
-						var readResult = storage.MappedResults.Read(key);
-						if (readResult != null)
+						mappedResultInfo.Size = readResult.Size;
+						if (loadData)
 							mappedResultInfo.Data = readResult.Data().ToJObject();
 					}
+
 					return mappedResultInfo;
 				});
 

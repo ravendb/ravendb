@@ -27,6 +27,7 @@ using Raven.Json.Linq;
 #if !NET35
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
+using System.Threading.Tasks;
 
 #endif
 
@@ -560,6 +561,10 @@ more responsive application.
 				{
 					id = GenerateDocumentKeyForStorage(entity);
 				}
+				else
+				{
+					RememberEntityForDocumentKeyGeneration(entity);
+				}
 			}
 			else
 			{
@@ -602,6 +607,41 @@ more responsive application.
 			TrySetIdentity(entity, id);
 			return id;
 		}
+
+		protected virtual void RememberEntityForDocumentKeyGeneration(object entity)
+		{
+			throw new NotImplementedException("You cannot set GenerateDocumentKeysOnStore to false without implementing RememberEntityForDocumentKeyGeneration");
+		}
+
+#if !NET35
+		protected internal Task<string> GenerateDocumentKeyForStorageAsync(object entity)
+		{
+			if (entity is IDynamicMetaObjectProvider)
+			{
+				string id;
+				if (TryGetIdFromDynamic(entity, out id) == false)
+				{
+					return Conventions.AsyncDocumentKeyGenerator(entity)
+						.ContinueWith(task =>
+						{
+							if (task.Result != null)
+							{
+								// Store it back into the Id field so the client has access to to it                    
+								TrySetIdOnynamic(entity, task.Result);
+							}
+							return task.Result;
+						});
+				}
+			}
+			
+			return GetOrGenerateDocumentKeyAsync(entity)
+				.ContinueWith(task =>
+				{
+					TrySetIdentity(entity, task.Result);
+					return task.Result;
+				});
+		}
+#endif
 
 		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
@@ -647,6 +687,27 @@ more responsive application.
 				throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
 			return id;
 		}
+
+#if !NET35
+		protected Task<string> GetOrGenerateDocumentKeyAsync(object entity)
+		{
+			string id;
+			TryGetIdFromInstance(entity, out id);
+
+			Task<string> generator =
+				id != null
+				? CompletedTask.With(id)
+				: Conventions.GenerateDocumentKeyAsync(entity);
+
+			return generator.ContinueWith(task =>
+			{
+				if (task.Result != null && task.Result.StartsWith("/"))
+					throw new InvalidOperationException("Cannot use value '" + id + "' as a document id because it begins with a '/'");
+
+				return task.Result;
+			});
+		}
+#endif
 
 		/// <summary>
 		/// Attempts to get the document key from an instance 
@@ -805,7 +866,7 @@ more responsive application.
 			{
 				foreach (var documentStoreListener in listeners.StoreListeners)
 				{
-					if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata))
+					if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata, entity.Value.OriginalValue))
 						cachedJsonDocs.Remove(entity.Key);
 				}
 				result.Entities.Add(entity.Key);

@@ -86,6 +86,8 @@ namespace Raven.Tests.Shard.Async
 			{
 				var p1 = new Post();
 				session.Store(p1);
+				session.SaveChangesAsync().Wait();
+
 				var pc1 = new PostComments {PostId = p1.Id};
 				session.Store(pc1);
 				session.SaveChangesAsync().Wait();
@@ -113,6 +115,9 @@ namespace Raven.Tests.Shard.Async
 			{
 				var p1 = new Post();
 				session.Store(p1);
+
+				session.SaveChangesAsync().Wait();
+
 				var pc1 = new PostComments { PostId = p1.Id };
 				session.Store(pc1);
 				session.SaveChangesAsync().Wait();
@@ -140,6 +145,9 @@ namespace Raven.Tests.Shard.Async
 			{
 				var p1 = new Post();
 				session.Store(p1);
+
+				session.SaveChangesAsync().Wait();
+
 				var pc1 = new PostComments { PostId = p1.Id };
 				session.Store(pc1);
 				session.SaveChangesAsync().Wait();
@@ -169,6 +177,8 @@ namespace Raven.Tests.Shard.Async
 				session.Store(p1);
 				var p2 = new Post();
 				session.Store(p2);
+
+				session.SaveChangesAsync().Wait();
 
 				var pc1 = new PostComments
 				{

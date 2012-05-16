@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;

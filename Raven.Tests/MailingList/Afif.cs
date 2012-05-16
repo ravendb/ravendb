@@ -73,7 +73,7 @@ namespace Raven.Tests.MailingList
 				{
 					var index = typeof(ByVehicle).Name;
 
-					facetvalues = s.Advanced.DatabaseCommands.GetFacets(
+					facetvalues = Store.DatabaseCommands.GetFacets(
 						index: index,
 						query: new SpatialIndexQuery()
 						{

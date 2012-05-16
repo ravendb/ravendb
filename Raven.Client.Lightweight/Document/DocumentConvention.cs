@@ -252,6 +252,13 @@ namespace Raven.Client.Document
 			return DocumentKeyGenerator(entity);
 		}
 
+#if !NET35
+		public Task<string> GenerateDocumentKeyAsync(object entity)
+		{
+			return AsyncDocumentKeyGenerator(entity);
+		}
+#endif
+
 		/// <summary>
 		/// Gets the identity property.
 		/// </summary>
@@ -357,6 +364,14 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <value>The document key generator.</value>
 		public Func<object, string> DocumentKeyGenerator { get; set; }
+
+#if !NET35
+		/// <summary>
+		/// Gets or sets the document key generator.
+		/// </summary>
+		/// <value>The document key generator.</value>
+		public Func<object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
+#endif
 
 		/// <summary>
 		/// Instruct RavenDB to parallel Multi Get processing 

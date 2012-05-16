@@ -15,14 +15,14 @@
 				session.SaveChanges();
 
 				// Ensures constraint was created
-				Assert.NotNull(session.Advanced.DatabaseCommands.Get("UniqueConstraints/Users/Email/foo@bar.com"));
-				Assert.NotNull(session.Advanced.DatabaseCommands.Get("users/1"));
+				Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/foo@bar.com"));
+				Assert.NotNull(DocumentStore.DatabaseCommands.Get("users/1"));
 
-				session.Advanced.DatabaseCommands.Delete("users/1", null);
+				DocumentStore.DatabaseCommands.Delete("users/1", null);
 
 				// Both docs should be deleted
-				Assert.Null(session.Advanced.DatabaseCommands.Get("UniqueConstraints/Users/Email/foo@bar.com"));
-				Assert.Null(session.Advanced.DatabaseCommands.Get("users/1"));
+				Assert.Null(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/foo@bar.com"));
+				Assert.Null(DocumentStore.DatabaseCommands.Get("users/1"));
 			}
 		}
 
@@ -37,13 +37,13 @@
 				session.SaveChanges();
 
 				// Ensures constraint was created
-				Assert.NotNull(session.Advanced.DatabaseCommands.Get("UniqueConstraints/Users/Email/foo@bar.com"));
-				Assert.NotNull(session.Advanced.DatabaseCommands.Get("users/1"));
+				Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/foo@bar.com"));
+				Assert.NotNull(DocumentStore.DatabaseCommands.Get("users/1"));
 
-				session.Advanced.DatabaseCommands.Delete("UniqueConstraints/Users/Email/foo@bar.com", null);
+				DocumentStore.DatabaseCommands.Delete("UniqueConstraints/Users/Email/foo@bar.com", null);
 
 				// Base doc still intact
-				Assert.NotNull(session.Advanced.DatabaseCommands.Get("users/1"));
+				Assert.NotNull(DocumentStore.DatabaseCommands.Get("users/1"));
 			}
 		}
 	}

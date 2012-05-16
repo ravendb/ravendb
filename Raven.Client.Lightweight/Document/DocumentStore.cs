@@ -377,6 +377,24 @@ namespace Raven.Client.Document
 					};
 #endif
 				}
+
+#if !NET35 
+				if (Conventions.AsyncDocumentKeyGenerator == null && asyncDatabaseCommandsGenerator != null)
+				{
+#if !SILVERLIGHT
+					var generator = new AsyncMultiTypeHiLoKeyGenerator(asyncDatabaseCommandsGenerator(), 32);
+					Conventions.AsyncDocumentKeyGenerator = entity => generator.GenerateDocumentKeyAsync(Conventions, entity);
+#else
+					Conventions.AsyncDocumentKeyGenerator = entity =>
+					{
+						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
+						if (typeTagName == null)
+							return CompletedTask.With(Guid.NewGuid().ToString());
+						return CompletedTask.With(typeTagName + "/" + Guid.NewGuid());
+					};
+#endif
+				}
+#endif
 			}
 			catch (Exception)
 			{

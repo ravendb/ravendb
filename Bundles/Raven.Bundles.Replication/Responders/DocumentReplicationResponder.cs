@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using NLog;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -119,9 +121,7 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 
-			var newDocumentConflictId = id + "/conflicts/" +
-			                            metadata.Value<string>(ReplicationConstants.RavenReplicationSource) + "/" +
-			                            metadata.Value<string>("@etag");
+			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata);
 			metadata.Add(ReplicationConstants.RavenReplicationConflict, RavenJToken.FromObject(true));
 			actions.Documents.AddDocument(newDocumentConflictId, null, document, metadata);
 
@@ -155,6 +155,15 @@ namespace Raven.Bundles.Replication.Responders
 			                              	{"@Http-Status-Code", 409},
 			                              	{"@Http-Status-Description", "Conflict"}
 			                              });
+		}
+
+		private static string HashReplicationIdentifier(RavenJObject metadata)
+		{
+			using(var md5 = MD5.Create())
+			{
+				var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(ReplicationConstants.RavenReplicationSource) + "/" + metadata.Value<string>("@etag"));
+				return new Guid(md5.ComputeHash(bytes)).ToString();
+			}
 		}
 
 		private static bool IsDirectChildOfCurrentDocument(JsonDocument existingDoc, RavenJObject metadata)
