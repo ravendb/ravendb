@@ -155,6 +155,7 @@
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
     <Compile Include="Controls\VirtualizingWrapPanel.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
+    <Compile Include="Extensions\DoubleExtensions.cs" />
     <Compile Include="Extensions\IObservableExtensions.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />

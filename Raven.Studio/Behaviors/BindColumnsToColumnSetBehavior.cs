@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Ink;
@@ -15,6 +16,7 @@ using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using Raven.Studio.Extensions;
 using Raven.Studio.Features.Documents;
 using System.Linq;
 using Raven.Studio.Infrastructure;
@@ -51,6 +53,7 @@ namespace Raven.Studio.Behaviors
         
         private bool isLoaded;
         private bool internalColumnUpdate;
+        private Dictionary<object, double> columnWidths;
 
         public ColumnsModel Columns
         {
@@ -64,11 +67,18 @@ namespace Raven.Studio.Behaviors
 
             AssociatedObject.Loaded += HandleLoaded;
             AssociatedObject.Unloaded += HandleUnloaded;
-            AssociatedObject.ColumnReordered += HandleColumnReordered;
+
+            
+
             ResetColumns();
         }
 
-        private void HandleColumnReordered(object sender, DataGridColumnEventArgs e)
+        private DataGridColumnHeadersPresenter GetColumnHeadersPresenter()
+        {
+            return AssociatedObject.GetVisualDescendants().OfType<DataGridColumnHeadersPresenter>().FirstOrDefault();
+        }
+
+        private void HandleColumnHeadersMouseLeftButtonUp(object sender, RoutedEventArgs e)
         {
             internalColumnUpdate = true;
 
@@ -85,17 +95,29 @@ namespace Raven.Studio.Behaviors
 
             AssociatedObject.Loaded -= HandleLoaded;
             AssociatedObject.Unloaded -= HandleUnloaded;
-            AssociatedObject.ColumnReordered -= HandleColumnReordered;
+
         }
 
         private void HandleUnloaded(object sender, RoutedEventArgs e)
         {
+            var columnHeadersPresenter = GetColumnHeadersPresenter();
+            if (columnHeadersPresenter != null)
+            {
+                columnHeadersPresenter.RemoveHandler(UIElement.MouseLeftButtonUpEvent, new MouseButtonEventHandler(HandleColumnHeadersMouseLeftButtonUp));
+            }
+
             isLoaded = false;
             StopObservingColumnsModel(Columns);
         }
 
         private void HandleLoaded(object sender, RoutedEventArgs e)
         {
+            var columnHeadersPresenter = GetColumnHeadersPresenter();
+            if (columnHeadersPresenter != null)
+            {
+                columnHeadersPresenter.AddHandler(UIElement.MouseLeftButtonUpEvent, new MouseButtonEventHandler(HandleColumnHeadersMouseLeftButtonUp), true);
+            }
+
             isLoaded = true;
             StartObservingColumnsModel(Columns);
             ResetColumns();
@@ -107,6 +129,13 @@ namespace Raven.Studio.Behaviors
             {
                 columnsModel.Columns.CollectionChanged += HandleColumnsChanged;
             }
+        }
+
+        private Dictionary<object, double> GetCurrentColumnWidths()
+        {
+            return AssociatedObject.Columns
+                .Where(c => GetAssociatedColumn(c) != null)
+                .ToDictionary(c => c.Header, c => c.ActualWidth);
         }
 
         private void StopObservingColumnsModel(ColumnsModel columnsModel)
@@ -155,6 +184,12 @@ namespace Raven.Studio.Behaviors
         {
             ClearBoundColumns();
             AddColumns();
+            Dispatcher.BeginInvoke(CacheColumnWidths);
+        }
+
+        private void CacheColumnWidths()
+        {
+            columnWidths = GetCurrentColumnWidths();
         }
 
         private void AddColumns()
@@ -329,12 +364,24 @@ namespace Raven.Studio.Behaviors
 
         private IList<ColumnDefinition> GetColumnDefinitionsFromColumns()
         {
+            var previousColumnWidths = columnWidths ?? new Dictionary<object, double>();
+
             var boundColumns = from column in AssociatedObject.Columns
                                let columnDefinition = GetAssociatedColumn(column)
                                where columnDefinition != null
+                               let widthChanged = column.Width.IsAbsolute
+                                                  && previousColumnWidths.ContainsKey(column.Header)
+                                                  && !previousColumnWidths[column.Header].IsCloseTo(column.ActualWidth)
                                let displayIndex = column.DisplayIndex
                                orderby displayIndex
-                               select columnDefinition;
+                               select widthChanged
+                                          ? new ColumnDefinition
+                                                {
+                                                    Binding = columnDefinition.Binding,
+                                                    Header = columnDefinition.Header,
+                                                    DefaultWidth = column.ActualWidth.ToString()
+                                                }
+                                          : columnDefinition;
 
             return boundColumns.ToList();
         } 
