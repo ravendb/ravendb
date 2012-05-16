@@ -84,8 +84,8 @@
                         </DataTemplate>
                     </sdk:DataGridTemplateColumn.CellEditingTemplate>
                 </sdk:DataGridTemplateColumn>
-                <sdk:DataGridTextColumn Header="Binding" Binding="{Binding Binding, Mode=TwoWay}" Width="*">
-                    <sdk:DataGridTextColumn.HeaderStyle>
+                <sdk:DataGridTemplateColumn Header="Binding" Width="*">
+                    <sdk:DataGridTemplateColumn.HeaderStyle>
                         <Style TargetType="sdk:DataGridColumnHeader" BasedOn="{StaticResource Style_DataGridColumnHeader_Default}">
                             <Setter Property="ContentTemplate">
                                 <Setter.Value>
@@ -143,9 +143,46 @@
                                 </Setter.Value>
                             </Setter>
                         </Style>
-                    </sdk:DataGridTextColumn.HeaderStyle>
-                </sdk:DataGridTextColumn>
-              <sdk:DataGridTextColumn Header="Default Width" Binding="{Binding DefaultWidth, Mode=TwoWay}" Width="120"/>
+                    </sdk:DataGridTemplateColumn.HeaderStyle>
+                    <sdk:DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <TextBlock Text="{Binding Binding}" 
+                                           Behaviors:FadeTrimming.IsEnabled="True" 
+                                           Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                           VerticalAlignment="Center"
+                                           Margin="4"/>
+                            </Grid>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellTemplate>
+                    <sdk:DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <sdk:AutoCompleteBox Text="{Binding Binding, Mode=TwoWay}" 
+                                                     ItemsSource="{Binding DataContext.SuggestedBindings, RelativeSource={RelativeSource AncestorType=sdk:DataGrid}}"
+                                                     IsTextCompletionEnabled="True"
+                                                     MinimumPrefixLength="1"
+                                                     Style="{StaticResource Style_AutoCompleteBox_Default}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellEditingTemplate>
+                </sdk:DataGridTemplateColumn>
+                <sdk:DataGridTemplateColumn Header="Default Width" Width="120">
+                    <sdk:DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                                <TextBlock Text="{Binding DefaultWidth}" 
+                                           Behaviors:FadeTrimming.IsEnabled="True" 
+                                           Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                           VerticalAlignment="Center"
+                                           Margin="4"/>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellTemplate>
+                    <sdk:DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                                <TextBox Text="{Binding DefaultWidth, Mode=TwoWay}"/>
+                        </DataTemplate>
+                    </sdk:DataGridTemplateColumn.CellEditingTemplate>
+                </sdk:DataGridTemplateColumn>
             </sdk:DataGrid.Columns>
         </sdk:DataGrid>
 

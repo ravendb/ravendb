@@ -16,7 +16,6 @@ using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
-
 namespace Raven.Studio.Features.Documents
 {
     public class ColumnSuggester
@@ -72,7 +71,6 @@ namespace Raven.Studio.Features.Documents
             }
         }
 
-
         private IList<SuggestedColumn> CreateSuggestedColumnsFromDocuments(JsonDocument[] jsonDocuments, bool includeNestedPropeties)
         {
             var columnsByBinding = new Dictionary<string, SuggestedColumn>();
@@ -94,9 +92,9 @@ namespace Raven.Studio.Features.Documents
             return columnsByBinding.OrderBy(kv => kv.Key).Select(kv => kv.Value).ToList();
         }
 
-        private IList<SuggestedColumn> CreateSuggestedColumnsFromJObject(RavenJObject jObject, string parentPropertyPath, bool includeNestedProperties)
+        private SuggestedColumnCollection CreateSuggestedColumnsFromJObject(RavenJObject jObject, string parentPropertyPath, bool includeNestedProperties)
         {
-            return (from property in jObject
+            var columns = (from property in jObject
                     let path = parentPropertyPath + (string.IsNullOrEmpty(parentPropertyPath) ? "" : ".") + property.Key
                     select new SuggestedColumn()
                     {
@@ -104,8 +102,10 @@ namespace Raven.Studio.Features.Documents
                         Binding = path,
                         Children = property.Value is RavenJObject && includeNestedProperties 
                                 ?  CreateSuggestedColumnsFromJObject(property.Value as RavenJObject, path, includeNestedProperties)
-                                : new SuggestedColumn[0]
-                    }).ToList();
+                                : new SuggestedColumnCollection()
+                    });
+
+            return new SuggestedColumnCollection(columns);
         }
 
         public Task<IList<SuggestedColumn>> AutoSuggest()

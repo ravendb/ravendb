@@ -180,6 +180,7 @@
     <Compile Include="Features\Documents\IndexDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\SingleDocumentNavigator.cs" />
     <Compile Include="Features\Documents\SuggestedColumn.cs" />
+    <Compile Include="Features\Documents\SuggestedColumnCollection.cs" />
     <Compile Include="Features\Query\IndexQueryHelpers.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Query\QueryDocumentsCollectionSource.cs" />

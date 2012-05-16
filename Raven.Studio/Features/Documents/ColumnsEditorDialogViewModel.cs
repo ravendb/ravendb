@@ -38,6 +38,8 @@ namespace Raven.Studio.Features.Documents
             this.suggestedColumnLoader = suggestedColumnLoader;
             columnEditorViewModels = new ObservableCollection<ColumnEditorViewModel>(this.columns.Columns.Select(c => new ColumnEditorViewModel(c)));
             SuggestedColumns = new ObservableCollection<SuggestedColumn>();
+            SuggestedBindings = new ObservableCollection<string>();
+
             AddEmptyRow();
         }
 
@@ -110,8 +112,10 @@ namespace Raven.Studio.Features.Documents
             get { return cancelCommand ?? (cancelCommand = new ActionCommand(() => Close(false))); }
         }
 
-        public ObservableCollection<SuggestedColumn> SuggestedColumns { get; private set; } 
+        public ObservableCollection<SuggestedColumn> SuggestedColumns { get; private set; }
 
+        public ObservableCollection<string> SuggestedBindings { get; private set; }
+ 
         private void HandleOKCommand()
         {
             if (SyncChangesWithColumnsModel())
@@ -129,7 +133,6 @@ namespace Raven.Studio.Features.Documents
             }
 
             Columns.Insert(Columns.Count - 1, new ColumnEditorViewModel(column.ToColumnDefinition()));
-            SuggestedColumns.Remove(column);
         }
 
         private void HandleSaveAsDefault()
@@ -230,7 +233,18 @@ namespace Raven.Studio.Features.Documents
             SuggestedColumns.AddRange(GetDefaultSuggestedColumns());
 
             suggestedColumnLoader()
-                .ContinueOnSuccessInTheUIThread(result => SuggestedColumns.AddRange(result));
+                .ContinueOnSuccessInTheUIThread(UpdateSuggestedColumns);
+        }
+
+        private void UpdateSuggestedColumns(IList<SuggestedColumn> suggestedColumns)
+        {
+            SuggestedColumns.AddRange(suggestedColumns);
+            SuggestedBindings.AddRange(GetBindingsRecursive(suggestedColumns));
+        }
+
+        private IEnumerable<string> GetBindingsRecursive(IList<SuggestedColumn> suggestedColumns)
+        {
+            return suggestedColumns.SelectMany(c => new[] {c.Binding}.Concat(GetBindingsRecursive(c.Children)));
         }
 
         private IEnumerable<SuggestedColumn> GetDefaultSuggestedColumns()

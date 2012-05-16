@@ -20,7 +20,7 @@ namespace Raven.Studio.Features.Documents
 
         public string Binding { get; set; }
 
-        public IList<SuggestedColumn> Children { get; set; }
+        public SuggestedColumnCollection Children { get; set; }
 
         public ColumnDefinition ToColumnDefinition()
         {
@@ -36,14 +36,13 @@ namespace Raven.Studio.Features.Documents
 
             foreach (var otherChild in suggestedColumn.Children)
             {
-                var similarChild = Children.FirstOrDefault(c => c.Binding == otherChild.Binding);
-                if (similarChild == null)
+                if (!Children.Contains(otherChild.Binding))
                 {
                     Children.Add(otherChild);
                 }
                 else
                 {
-                    similarChild.MergeFrom(otherChild);
+                    Children[otherChild.Binding].MergeFrom(otherChild);
                 }
             }
         }

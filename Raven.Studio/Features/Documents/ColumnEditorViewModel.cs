@@ -24,7 +24,7 @@ namespace Raven.Studio.Features.Documents
         private IList<ValidationResult> validationResults = new List<ValidationResult>();
         public event EventHandler<EventArgs> ChangesCommitted;
 
-        private readonly ColumnDefinition column;
+        private ColumnDefinition column;
         private string header;
         private string binding;
         private string defaultWidth;
@@ -92,15 +92,23 @@ namespace Raven.Studio.Features.Documents
 
         private void LoadPropertiesFromColumn()
         {
-            this.header = column.Header;
-            this.binding = column.Binding;
-            this.defaultWidth = column.DefaultWidth;
+            if (column != null)
+            {
+                this.header = column.Header;
+                this.binding = column.Binding;
+                this.defaultWidth = column.DefaultWidth;
+            }
 
             OnEverythingChanged();
         }
 
         private void SavePropertiesToColumn()
         {
+            if (column == null)
+            {
+                column = new ColumnDefinition();
+            }
+
             column.Header = header;
             column.Binding = binding;
             column.DefaultWidth = defaultWidth;
@@ -108,7 +116,7 @@ namespace Raven.Studio.Features.Documents
 
         public void BeginEdit()
         {
-            
+            SavePropertiesToColumn();
         }
 
         public void EndEdit()
