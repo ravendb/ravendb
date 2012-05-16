@@ -83,7 +83,9 @@
                         AutoGenerateColumns="False"
                         IsReadOnly="True"
                         ColumnWidth="170"
-                        RowHeight="28">
+                        RowHeight="28" 
+                        ClipboardCopyMode="IncludeHeader"
+                        SelectionMode="Extended">
 
                     <i:Interaction.Triggers>
                         <!--<Behaviors:StudioKeyTrigger Key="Delete">
@@ -117,7 +119,7 @@
                         </Controls:ContextMenu>
                     </Controls:ContextMenuService.ContextMenu>-->
                     <sdk:DataGrid.Columns>
-                        <sdk:DataGridTemplateColumn Header="Id" Width="100" CanUserReorder="False" CanUserResize="True" CanUserSort="False">
+                        <sdk:DataGridTemplateColumn Header="Id" Width="100" CanUserReorder="False" CanUserResize="True" CanUserSort="False" ClipboardContentBinding="{Binding Item.Document.Key}">
                             <sdk:DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Grid>

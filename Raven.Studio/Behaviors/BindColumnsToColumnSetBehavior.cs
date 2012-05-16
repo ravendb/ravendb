@@ -20,6 +20,7 @@ using Raven.Studio.Extensions;
 using Raven.Studio.Features.Documents;
 using System.Linq;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Infrastructure.Converters;
 using ColumnDefinition = Raven.Studio.Features.Documents.ColumnDefinition;
 
 namespace Raven.Studio.Behaviors
@@ -225,6 +226,7 @@ namespace Raven.Studio.Behaviors
             {
                 column = new DataGridTemplateColumn()
                              {
+                                 ClipboardContentBinding = new Binding("Item.Document." + ExpandBinding(columnDefinition.Binding)) { Converter = DocumentPropertyToSingleLineStringConverter.Default },
                                  Header = columnDefinition.Header,
                                  CellTemplate = cellTemplate,
                              };
