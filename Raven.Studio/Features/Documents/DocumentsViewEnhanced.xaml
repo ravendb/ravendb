@@ -100,7 +100,7 @@
                         <Behaviors:ColumnHeaderContextMenu>
                             <Behaviors:ColumnHeaderContextMenu.ContextMenu>
                                 <Controls:ContextMenu>
-                                    <Controls:MenuItem Header="Edit Columns" Command="{Binding EditColumns}"/>
+                                    <Controls:MenuItem Header="Choose Columns" Command="{Binding EditColumns}"/>
                                 </Controls:ContextMenu>
                             </Behaviors:ColumnHeaderContextMenu.ContextMenu>
                         </Behaviors:ColumnHeaderContextMenu>

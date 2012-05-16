@@ -3,7 +3,7 @@
            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
            xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
                       xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" Width="600" Height="600" 
-           Title="Edit Columns" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+           Title="Choose Columns" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                       xmlns:Models="clr-namespace:Raven.Studio.Models"
                       xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
