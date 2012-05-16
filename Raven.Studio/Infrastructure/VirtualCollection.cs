@@ -25,7 +25,9 @@ namespace Raven.Studio.Infrastructure
         private readonly IEqualityComparer<T> _equalityComparer;
         public event NotifyCollectionChangedEventHandler CollectionChanged;
         public event EventHandler<DataFetchErrorEventArgs> DataFetchError;
-        public event EventHandler<EventArgs> FetchSucceeded;
+        public event EventHandler<EventArgs> FetchStarting;
+
+        public event EventHandler<EventArgs> FetchCompleted;
         public event PropertyChangedEventHandler PropertyChanged;
         public event EventHandler<QueryItemVisibilityEventArgs> QueryItemVisibility;
 
@@ -75,7 +77,7 @@ namespace Raven.Studio.Infrastructure
         {
             _requestedPages.Remove(e.Item);
             _fetchedPages.Remove(e.Item);
-            _virtualItems.RemoveRange(e.Item*_pageSize, _pageSize);
+            _virtualItems.RemoveRange(e.Item * _pageSize, _pageSize);
         }
 
         private SparseList<VirtualItem<T>> CreateItemsCache(int fetchPageSize)
@@ -154,10 +156,10 @@ namespace Raven.Studio.Infrastructure
             _source.GetPageAsync(page*_pageSize, _pageSize, _sortDescriptions).ContinueWith(
                 t =>
                     {
+                        OnFetchCompleted(EventArgs.Empty);
                         if (!t.IsFaulted)
                         {
                             UpdatePage(page, t.Result, stateWhenRequestInitiated);
-                            OnFetchSucceeded(EventArgs.Empty);
                         }
                         else
                         {
@@ -235,8 +237,8 @@ namespace Raven.Studio.Infrastructure
         {
             if (!_isRefreshDeferred)
             {
+                OnFetchStarting(EventArgs.Empty);
                 _source.Refresh(mode);
-                OnFetchSucceeded(EventArgs.Empty);
             }
         }
 
@@ -607,9 +609,15 @@ namespace Raven.Studio.Infrastructure
             if (handler != null) handler(this, e);
         }
 
-        protected void OnFetchSucceeded(EventArgs e)
+        protected void OnFetchStarting(EventArgs e)
         {
-            EventHandler<EventArgs> handler = FetchSucceeded;
+            EventHandler<EventArgs> handler = FetchStarting;
+            if (handler != null) handler(this, e);
+        }
+
+        protected void OnFetchCompleted(EventArgs e)
+        {
+            EventHandler<EventArgs> handler = FetchCompleted;
             if (handler != null) handler(this, e);
         }
 

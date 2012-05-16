@@ -5,7 +5,8 @@ namespace Raven.Studio.Infrastructure
     public interface INotifyOnDataFetchErrors
     {
         event EventHandler<DataFetchErrorEventArgs> DataFetchError;
-        event EventHandler<EventArgs> FetchSucceeded;
+        event EventHandler<EventArgs> FetchStarting;
+        event EventHandler<EventArgs> FetchCompleted;
         void Retry();
     }
 }

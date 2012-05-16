@@ -224,11 +224,14 @@
 
             </toolkit:HeaderedContentControl.Header>
 
-            <ContentControl Content="{Binding }" 
+            <Grid>
+                <ContentControl Content="{Binding }" 
                             ContentTemplate="{Binding Path=Current.DisplayStyle, Source={StaticResource DocumentSize}, Converter={StaticResource Converter_DisplayStyleToTemplate}}"
                             HorizontalContentAlignment="Stretch"
-                            VerticalContentAlignment="Stretch"/>
-
+                            VerticalContentAlignment="Stretch" Margin="0,0,0,10"/>
+                
+                <Controls1:DataFetchErrorNotifier ErrorSource="{Binding Documents}" VerticalAlignment="Bottom"/>
+            </Grid>
         </toolkit:HeaderedContentControl>
     </Grid>
 </Infrastructure:View>
