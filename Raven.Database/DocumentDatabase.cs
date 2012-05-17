@@ -355,11 +355,17 @@ namespace Raven.Database
 					disposable.Dispose();
 			});
 
+			if (TransactionalStorage != null)
 			exceptionAggregator.Execute(TransactionalStorage.Dispose);
+			if (IndexStorage != null)
 			exceptionAggregator.Execute(IndexStorage.Dispose);
 
+			if (Configuration != null)
 			exceptionAggregator.Execute(Configuration.Dispose);
+
 			exceptionAggregator.Execute(disableAllTriggers.Dispose);
+
+			if (workContext != null)
 			exceptionAggregator.Execute(workContext.Dispose);
 
 
@@ -559,21 +565,27 @@ namespace Raven.Database
 
 		public bool Delete(string key, Guid? etag, TransactionInformation transactionInformation)
 		{
+			RavenJObject metadata;
+			return Delete(key, etag, transactionInformation, out metadata);
+		}
+
+		public bool Delete(string key, Guid? etag, TransactionInformation transactionInformation, out RavenJObject metadata)
+		{
 			if (key == null) throw new ArgumentNullException("key");
 			key = key.Trim();
 			
 			var deleted = false;
 			log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
+			RavenJObject metadataVar = null;
 			TransactionalStorage.Batch(actions =>
 			{
 				if (transactionInformation == null)
 				{
-					AssertDeleteOperationNotVetoed(key, transactionInformation);
+					AssertDeleteOperationNotVetoed(key, null);
 
-					DeleteTriggers.Apply(trigger => trigger.OnDelete(key, transactionInformation));
+					DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
 
-					RavenJObject metadata;
-					if (actions.Documents.DeleteDocument(key, etag, out metadata))
+					if (actions.Documents.DeleteDocument(key, etag, out metadataVar))
 					{
 						deleted = true;
 						foreach (var indexName in IndexDefinitionStorage.IndexNames)
@@ -582,7 +594,7 @@ namespace Raven.Database
 							if(abstractViewGenerator == null)
 								continue;
 
-							var token = metadata.Value<string>(Constants.RavenEntityName);
+							var token = metadataVar.Value<string>(Constants.RavenEntityName);
 
 							if (token != null && // the document has a entity name
 								abstractViewGenerator.ForEntityNames.Count > 0) // the index operations on specific entities
@@ -610,6 +622,7 @@ namespace Raven.Database
 			TransactionalStorage
 				.ExecuteImmediatelyOrRegisterForSyncronization(() => DeleteTriggers.Apply(trigger => trigger.AfterCommit(key)));
 
+			metadata = metadataVar;
 			return deleted;
 		}
 

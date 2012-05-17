@@ -272,7 +272,7 @@ namespace Raven.Tests.ManagedStorage
 			{
 				tx.Batch(mutator => mutator.Transactions.AddDocumentInTransaction("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien1" }), new RavenJObject(),
 																			   transactionInformation));
-				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", Guid.NewGuid(),
+				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null,
 																			   RavenJObject.FromObject(new { Name = "Rahien2" }),
 																			   new RavenJObject()));
 

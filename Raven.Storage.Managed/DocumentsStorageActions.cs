@@ -295,6 +295,13 @@ namespace Raven.Storage.Managed
 				}
 				return existingEtag;
 			}
+			
+			if (etag != null && etag != Guid.Empty) // expected something to be there.
+				throw new ConcurrencyException("PUT attempted on document '" + key +
+				                               "' using a non current etag (document deleted)")
+				{
+					ExpectedETag = etag.Value
+				};
 
 			readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
 			StorageHelper.AssertNotModifiedByAnotherTransaction(storage, transactionStorageActions, key, readResult, transactionInformation);

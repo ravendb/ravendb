@@ -30,7 +30,7 @@
 				Database.Put(
 					"UniqueConstraints/" + entityName + propName + "/" + document.Value<string>(propName),
 					null,
-					RavenJObject.FromObject(new { Id = key }),
+					RavenJObject.FromObject(new { RelatedId = key }),
 					constraintMetaObject,
 					transactionInformation);
 			}
