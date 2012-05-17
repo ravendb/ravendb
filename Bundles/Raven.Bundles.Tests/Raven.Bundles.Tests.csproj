@@ -183,6 +183,10 @@
       <Name>Raven.Client.Authorization</Name>
       <Aliases>client</Aliases>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Client.IndexedProperties\Raven.Client.IndexedProperties.csproj">
+      <Project>{F41C7F7E-A287-449A-A545-E7152937EF77}</Project>
+      <Name>Raven.Client.IndexedProperties</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Client.MoreLikeThis\Raven.Client.MoreLikeThis.csproj">
       <Project>{039CB1C3-C4F3-4D87-A2C0-7531E386E6A3}</Project>
       <Name>Raven.Client.MoreLikeThis</Name>

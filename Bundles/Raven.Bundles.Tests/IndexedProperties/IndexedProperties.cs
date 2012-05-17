@@ -5,6 +5,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Bundles.IndexedProperties;
 using Raven.Client;
 using Raven.Client.Embedded;
+using Raven.Client.IndexedProperties;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 
@@ -40,6 +41,9 @@ namespace Raven.Bundles.Tests.IndexedProperties
 				session.Store(customer2);
 				session.Store(customer3);
 				session.SaveChanges();
+
+				Console.WriteLine("Saved Customer docs: {0}",
+					String.Join(", ", new[] { customer1.Id, customer2.Id, customer3.Id }));
 			}
 
 			//Orders for Customer1
@@ -70,27 +74,31 @@ namespace Raven.Bundles.Tests.IndexedProperties
 				session.Store(order8);
 
 				session.SaveChanges();
-				Console.WriteLine("Save docs: {0}, {1}, {2}", customer1.Id, customer2.Id, customer3.Id);
 			}
 
-			//Proposed Config doc structure (from https://groups.google.com/d/msg/ravendb/Ik6Iv96Z_3I/PXs7h-hawpEJ)
-			//DocId = Raven/IndexedProperties/Orders/AveragePurchaseAmount
-			//     "Orders/AveragePurchaseAmount" in the doc key is the index name we get the data from
-			//{ 
-			//   //The field name that gives us the docId of the doc to write to (is this right???)
-			//  "DocumentKey": "CustomerId",
-			//
-			//  //mapping from index field to doc field (to store it in)
-			//  "Properties": [
-			//       "AveragePurchaseAmount": "AveragePurchaseAmount" 
-			//  ]
-			//}
+			var setupDoc = new SetupDoc
+			{
+				//This is the name of the field in the Map/Reduce results that holds to Id of 
+				//the documents that we need to write the values back into
+				DocumentKey = "test",
 
-			//The whole idea is so we can do this query 
-			//using the AverageValue taken from the Map/Reduce index and stored in the doc
-			//Country:UK SortBy:AveragePurchaseAmount desc
+				//This contains the mappings from the Map/Reduce result back to the original doc
+				FieldNameMappings = new []
+				{
+					Tuple.Create("Average", "AverageOrderCost"),
+					Tuple.Create("Count", "NumberOfOrders")
+				}
+			};
 
-			var indexName = typeof (Orders_ByCustomer_Count).Name.Replace("_", "/");
+			var indexName = typeof(Orders_ByCustomer_Count).Name.Replace("_", "/");
+			using (var session = store.OpenSession())
+			{
+				session.Store(setupDoc, SetupDoc.IdPrefix + indexName);
+				session.SaveChanges();
+			}
+
+			var testJson = store.DatabaseCommands.Get(SetupDoc.IdPrefix + indexName);
+			var testJsonTxt = testJson.DataAsJson.ToString();
 
 			WaitForIndexToUpdate(store, indexName);
 
@@ -102,6 +110,8 @@ namespace Raven.Bundles.Tests.IndexedProperties
 					Console.WriteLine("Reading back doc \"{0}\": Total Orders {1}, Average Cost {2}",
 									doc.Id, doc.NumberOfOrders, doc.AverageOrderCost);
 				}
+
+				var test = session.Load<SetupDoc>("Raven/IndexedProperties/" + indexName);
 			}
 
 			Console.WriteLine("Deleting orders \"{0}\" and \"{1}\"", order1.Id, order8.Id);
@@ -197,7 +207,7 @@ select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""]
 			public string CustomerId { get; set; }
 			public Decimal TotalCost { get; set; }
 			public int Count { get; set; }
-			public double Average { get; set; }
+			public Decimal Average { get; set; }
 		}
 	}
 
@@ -207,7 +217,7 @@ select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""]
 		public String Name { get; set; }
 		public String Country { get; set; }
 		public Decimal AverageOrderCost { get; set; }
-		public Decimal NumberOfOrders { get; set; }
+		public int NumberOfOrders { get; set; }
 	}	
 
 	public class Order

@@ -19,9 +19,10 @@ namespace Raven.Bundles.IndexedProperties
 
 		public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
 		{
-			//This solves Problem #1 (see https://groups.google.com/d/msg/ravendb/Zq9-4xjwxNM/b0HdivNuodMJ)
-			if (indexName == "Orders/ByCustomer/Count")
-				return new IndexPropertyBatcher(this, Database);
+			//Only apply the trigger if there is a setup doc for this particular index
+			var setupDoc = Database.Get("Raven/IndexedProperties/" + indexName, null);
+			if (setupDoc != null)
+				return new IndexPropertyBatcher(this, Database, setupDoc);
 			return null;
 		}
 
@@ -29,11 +30,13 @@ namespace Raven.Bundles.IndexedProperties
 		{
 			private readonly IndexedPropertiesTrigger _parent;
 			private readonly DocumentDatabase _database;
+			private readonly JsonDocument _setupDoc;
 
-			public IndexPropertyBatcher(IndexedPropertiesTrigger parent, DocumentDatabase database)
+			public IndexPropertyBatcher(IndexedPropertiesTrigger parent, DocumentDatabase database, JsonDocument setupDoc)
 			{
 				_parent = parent;
 				_database = database;
+				_setupDoc = setupDoc;
 			}
 
 			public override void OnIndexEntryDeleted(string entryKey)
