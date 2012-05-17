@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
-using System.Text;
 using Raven.Abstractions.Indexing;
 using Raven.Bundles.IndexedProperties;
 using Raven.Client;
@@ -12,25 +10,136 @@ using Raven.Client.Linq;
 
 namespace Raven.Bundles.Tests.IndexedProperties
 {
-	public class IndexedProperty //: Raven.Tests.RavenTest
+	public class IndexedProperty
 	{
-		public class Dummy
-		{
-			public bool Boolean { get; set; }
-			public Dummy Object { get; set; }
-		}
-
 		public void RunTest()
 		{
 			using (var store = new EmbeddableDocumentStore())
 			{
 				store.Configuration.RunInMemory = true;
+				store.Configuration.InitialNumberOfItemsToIndexInSingleBatch = 50;
+				//This lets us wire up the Trigger (only works in embedded mode though)
 				store.Configuration.Container = new CompositionContainer(new TypeCatalog(typeof(IndexedPropertiesTrigger)));
 				store.Initialize();
-				IndexCreation.CreateIndexes(typeof(Customers_ByOrder_Count).Assembly, store);
+				IndexCreation.CreateIndexes(typeof(Orders_ByCustomer_Count).Assembly, store);
 				CreateDocumentsByEntityNameIndex(store);
 
 				ExecuteTest(store);
+			}
+		}
+
+		private void ExecuteTest(IDocumentStore store)
+		{
+			var customer1 = new Customer { Name = "Matt", Country = "UK" };
+			var customer2 = new Customer { Name = "Debs", Country = "UK", };
+			var customer3 = new Customer { Name = "Bob", Country = "USA" };
+
+			using (var session = store.OpenSession())
+			{
+				session.Store(customer1);
+				session.Store(customer2);
+				session.Store(customer3);
+				session.SaveChanges();
+			}
+
+			//Orders for Customer1
+			var order1 = new Order {CustomerId = customer1.Id, Cost = 9.99m};
+			var order2 = new Order {CustomerId = customer1.Id, Cost = 12.99m};
+			var order3 = new Order {CustomerId = customer1.Id, Cost = 1.25m};
+
+			//Orders for Customer2
+			var order4 = new Order {CustomerId = customer2.Id, Cost = 99.99m};
+			var order5 = new Order {CustomerId = customer2.Id, Cost = 105.99m};
+
+			//Orders for Customer3
+			var order6 = new Order {CustomerId = customer3.Id, Cost = 0.05m};
+			var order7 = new Order {CustomerId = customer3.Id, Cost = 0.99m};
+			var order8 = new Order {CustomerId = customer3.Id, Cost = 1.99m};
+
+			using (var session = store.OpenSession())
+			{
+				session.Store(order1);
+				session.Store(order2);
+				session.Store(order3);
+
+				session.Store(order4);
+				session.Store(order5);
+
+				session.Store(order6);
+				session.Store(order7);
+				session.Store(order8);
+
+				session.SaveChanges();
+				Console.WriteLine("Save docs: {0}, {1}, {2}", customer1.Id, customer2.Id, customer3.Id);
+			}
+
+			//Proposed Config doc structure (from https://groups.google.com/d/msg/ravendb/Ik6Iv96Z_3I/PXs7h-hawpEJ)
+			//DocId = Raven/IndexedProperties/Orders/AveragePurchaseAmount
+			//     "Orders/AveragePurchaseAmount" in the doc key is the index name we get the data from
+			//{ 
+			//   //The field name that gives us the docId of the doc to write to (is this right???)
+			//  "DocumentKey": "CustomerId",
+			//
+			//  //mapping from index field to doc field (to store it in)
+			//  "Properties": [
+			//       "AveragePurchaseAmount": "AveragePurchaseAmount" 
+			//  ]
+			//}
+
+			//The whole idea is so we can do this query 
+			//using the AverageValue taken from the Map/Reduce index and stored in the doc
+			//Country:UK SortBy:AveragePurchaseAmount desc
+
+			var indexName = typeof (Orders_ByCustomer_Count).Name.Replace("_", "/");
+
+			WaitForIndexToUpdate(store, indexName);
+
+			using (var session = store.OpenSession())
+			{
+				var docs = session.Load<Customer>(new[] { customer1.Id, customer2.Id, customer3.Id });
+				foreach (var doc in docs)
+				{
+					Console.WriteLine("Reading back doc \"{0}\": Total Orders {1}, Average Cost {2}",
+									doc.Id, doc.NumberOfOrders, doc.AverageOrderCost);
+				}
+			}
+
+			Console.WriteLine("Deleting orders \"{0}\" and \"{1}\"", order1.Id, order8.Id);
+			store.DatabaseCommands.Delete(order1.Id, null); //delete 1 of the orders for customer1
+			store.DatabaseCommands.Delete(order8.Id, null); //delete 1 of the orders for customer3
+
+			WaitForIndexToUpdate(store, indexName);
+
+			var customerJsonTest = store.DatabaseCommands.Get(customer1.Id);
+			var docJsonTest = store.DatabaseCommands.Get(order2.Id);
+
+			using (var session = store.OpenSession())
+			{
+				var docs = session.Load<Customer>(new[] { customer1.Id, customer2.Id, customer3.Id });
+				foreach (var doc in docs)
+				{
+					Console.WriteLine("Reading back doc \"{0}\": Total Orders {1}, Average Cost {2}", 
+									doc.Id, doc.NumberOfOrders, doc.AverageOrderCost);
+				}
+			}
+
+			Console.WriteLine("Test completed, press <ENTER> to exit");
+			Console.ReadLine();
+		}
+
+		private void WaitForIndexToUpdate(IDocumentStore store, string indexName)
+		{
+			using (var session = store.OpenSession())
+			{
+				//Just issue a query to ensure that it's not stale
+				RavenQueryStatistics stats;
+				Console.WriteLine("Issuing query to ensure the indexing has completed.....");
+				var customers = session.Query<Orders_ByCustomer_Count.CustomerResult>(indexName)
+					.Customize(s => s.WaitForNonStaleResultsAsOfNow())
+					.Statistics(out stats)
+					.ToList();
+				Console.WriteLine("DONE, index is no longer stale, contains {0} items:\n\t{1}", 
+					customers.Count, String.Join("\n\t", customers.Select(x => new { x.Count, x.Average, x.TotalCost })));
 			}
 		}
 
@@ -57,105 +166,20 @@ select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""]
 				});
 			}
 		}
-
-		private void ExecuteTest(IDocumentStore store)
-		{
-			var customer1 = new Customer
-			{
-				Name = "Matt",
-				Country = "UK",
-				Orders = new[]
-			{
-				new Order {Cost = 9.99m},
-				new Order {Cost = 12.99m},
-				new Order {Cost = 1.25m}
-			}
-			};
-			var customer2 = new Customer
-			{
-				Name = "Debs",
-				Country = "UK",
-				Orders = new[]
-			{
-				new Order {Cost = 99.99m},
-				new Order {Cost = 105.99m}
-			}
-			};
-			var customer3 = new Customer
-			{
-				Name = "Bob",
-				Country = "USA",
-				Orders = new[]
-			{
-				new Order {Cost = 0.05m},
-				new Order {Cost = 0.99m},
-				new Order {Cost = 1.99m}
-			}
-			};
-
-			using (var session = store.OpenSession())
-			{
-				session.Store(customer1);
-				session.Store(customer2);
-				session.Store(customer3);
-				session.SaveChanges();
-				Console.WriteLine("Save docs: {0}, {1}, {2}", customer1.Id, customer2.Id, customer3.Id);
-			}
-
-			//Proposed Config doc structure (from https://groups.google.com/d/msg/ravendb/Ik6Iv96Z_3I/PXs7h-hawpEJ)
-			//DocId = Raven/IndexedProperties/Orders/AveragePurchaseAmount
-			// "Orders/AveragePurchaseAmount" from the doc key is the index name we get the data from
-			//{ 
-			//   //The field name that gives us the docId of the doc to write to (is this right???)
-			//  "DocumentKey": "CustomerId",
-			//
-			//  //mapping from index field to doc field (to store it in)
-			//  "Properties": [
-			//       "AveragePurchaseAmount": "AveragePurchaseAmount" 
-			//  ]
-			//}
-
-			//The whole idea is so we can do this query 
-			//using the AverageValue taken from the Map/Reduce index and stored in the doc
-			//Country:UK SortBy:AveragePurchaseAmount desc
-
-			using (var session = store.OpenSession())
-			{
-				//Just issue a query to ensure that it's not stale
-				RavenQueryStatistics stats;
-				Console.WriteLine("Issuing query");
-				var customers = session.Query<CustomerResult>("Customers/ByOrder/Count")
-					.Customize(s => s.WaitForNonStaleResultsAsOfNow())
-					.Statistics(out stats)
-					.ToList();
-				var totalOrders = customers.Count;
-
-				foreach (var id in new[] { customer1.Id, customer2.Id })
-				{
-					var customerEx = session.Advanced.DatabaseCommands.Get(id);
-					Console.WriteLine("\n\nReading back calculated Average from doc[{0}] = {1}", id, customerEx.DataAsJson["AverageOrderCost"]);
-				}
-
-				//Would like to be able to do it like this, but the doc was stored as Customer
-				//so we can't load it as CustomerEx (even though that's the shape of the Json)
-				//var cutstomerEx = session.Load<CustomerEx>(customer1.Id);
-			}
-
-			Console.WriteLine("Deleting doc \"{0}\"", customer3.Id);
-			store.DatabaseCommands.Delete(customer3.Id, null);
-
-			Console.WriteLine("Test completed, press <ENTER> to exit");
-			Console.ReadLine();
-		}
 	}
 
-	public class Customers_ByOrder_Count : AbstractIndexCreationTask<Customer, CustomerResult>
+	public class Orders_ByCustomer_Count : AbstractIndexCreationTask<Order, Orders_ByCustomer_Count.CustomerResult>
 	{
-		public Customers_ByOrder_Count()
+		public Orders_ByCustomer_Count()
 		{
-			Map = customers => from customer in customers
-							   from order in customer.Orders
-							   select new { CustomerId = customer.Id, TotalCost = order.Cost, Count = 1, Average = 0 };
+			Map = orders => from order in orders
+							   select new
+							   {
+									CustomerId = order.CustomerId, 
+									TotalCost = order.Cost, 
+									Count = 1, 
+									Average = 0
+							   };
 			Reduce = results => from result in results
 								group result by new { result.CustomerId }
 									into g
@@ -167,14 +191,14 @@ select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""]
 										Average = g.Sum(x => x.TotalCost) / g.Sum(x => x.Count),
 									};
 		}
-	}
 
-	public class CustomerResult
-	{
-		public String CustomerId { get; set; }
-		public Decimal TotalCost { get; set; }
-		public int Count { get; set; }
-		public double Average { get; set; }
+		public class CustomerResult
+		{
+			public string CustomerId { get; set; }
+			public Decimal TotalCost { get; set; }
+			public int Count { get; set; }
+			public double Average { get; set; }
+		}
 	}
 
 	public class Customer
@@ -182,18 +206,14 @@ select new { Tag, LastModified = (DateTime)doc[""@metadata""][""Last-Modified""]
 		public String Id { get; set; }
 		public String Name { get; set; }
 		public String Country { get; set; }
-		public IList<Order> Orders { get; set; }
-	}
-
-	public class CustomerEx : Customer
-	{
 		public Decimal AverageOrderCost { get; set; }
 		public Decimal NumberOfOrders { get; set; }
-	}
+	}	
 
 	public class Order
 	{
 		public String Id { get; set; }
+		public String CustomerId { get; set; }
 		public Decimal Cost { get; set; }
 	}
 }
