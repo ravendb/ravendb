@@ -141,7 +141,6 @@ namespace Raven.Studio.Features.Documents
 
         private Task<JsonDocument[]> GetSampleDocuments()
         {
-            var sampleSize = 10;
             return source.GetPageAsync(0, 10, null)
                           .ContinueWith(t => t.Result.Select(d => d.Document).ToArray());
         }
