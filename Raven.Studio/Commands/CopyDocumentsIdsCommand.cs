@@ -2,15 +2,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using Raven.Studio.Features.Documents;
+using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Commands
 {
-	public class CopyDocumentsIdsCommand : ListBoxCommand<ViewableDocument>
+	public class CopyDocumentsIdsCommand : ListBoxCommand<VirtualItem<ViewableDocument>>
 	{
 		public override void Execute(object parameter)
 		{
 			var documentsIds = SelectedItems
-				.Select(x => x.Id)
+                .Where(v => v.IsRealized)
+				.Select(x => x.Item.Id)
 				.ToList();
 
 			CopyIDs(documentsIds);

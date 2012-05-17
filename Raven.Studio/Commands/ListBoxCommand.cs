@@ -56,5 +56,10 @@ namespace Raven.Studio.Commands
 				return null;
 			return (ListBox)contextMenu.Owner;
 		}
+
+        protected void ClearSelection()
+        {
+            ListBox.SelectedItems.Clear();
+        }
 	}
 }

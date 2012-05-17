@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Views.Tasks"
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Views.Tasks"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
@@ -7,4 +7,4 @@
 	<Grid>
 		<Tasks:TasksView />
   </Grid>
-</Infrastructure:View>
+</Infrastructure:PageView>

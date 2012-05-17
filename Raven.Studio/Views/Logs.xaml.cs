@@ -2,7 +2,7 @@
 
 namespace Raven.Studio.Views
 {
-	public partial class Logs : View
+	public partial class Logs : PageView
 	{
 		public Logs()
 		{

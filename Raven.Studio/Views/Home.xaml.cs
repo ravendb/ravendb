@@ -2,7 +2,7 @@
 
 namespace Raven.Studio.Views
 {
-	public partial class Home : View
+	public partial class Home : PageView
 	{
 		public Home()
 		{

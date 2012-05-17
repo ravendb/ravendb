@@ -30,6 +30,8 @@ namespace System.Windows.Controls
         /// </summary>
         private bool _isFocused;
 
+        private bool _isLoaded;
+
         /// <summary>
         /// Gets or sets a reference to the MenuBase parent.
         /// </summary>
@@ -74,10 +76,15 @@ namespace System.Windows.Controls
             {
                 oldValue.CanExecuteChanged -= new EventHandler(HandleCanExecuteChanged);
             }
-            if (null != newValue)
+
+            if (_isLoaded)
             {
-                newValue.CanExecuteChanged += new EventHandler(HandleCanExecuteChanged);
+                if (null != newValue)
+                {
+                    newValue.CanExecuteChanged += new EventHandler(HandleCanExecuteChanged);
+                }
             }
+
             UpdateIsEnabled();
         }
 
@@ -143,6 +150,30 @@ namespace System.Windows.Controls
         public MenuItem()
         {
             DefaultStyleKey = typeof(MenuItem);
+            UpdateIsEnabled();
+
+            Loaded += HandleLoaded;
+            Unloaded += HandleUnloaded;
+        }
+
+        private void HandleUnloaded(object sender, RoutedEventArgs e)
+        {
+            if (Command != null)
+            {
+                Command.CanExecuteChanged -= HandleCanExecuteChanged;
+            }
+
+            _isLoaded = false;
+        }
+
+        private void HandleLoaded(object sender, RoutedEventArgs e)
+        {
+            if (Command != null)
+            {
+                Command.CanExecuteChanged += HandleCanExecuteChanged;
+            }
+
+            _isLoaded = true;
             UpdateIsEnabled();
         }
 

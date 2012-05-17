@@ -10,7 +10,8 @@
 			 xmlns:System="clr-namespace:System;assembly=mscorlib"
 			 xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity">
+			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+             xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
@@ -206,6 +207,9 @@
 							  NavigationFailed="ContentFrame_NavigationFailed"
 							  Margin="15,0">
 
+                <sdk:Frame.ContentLoader>
+                    <Infrastructure:RecyclingContentLoader ParentFrame="{Binding ElementName=ContentFrame}"/>
+                </sdk:Frame.ContentLoader>
 				<sdk:Frame.UriMapper>
 					<sdk:UriMapper>
 						<sdk:UriMapping Uri=""

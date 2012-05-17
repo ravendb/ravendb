@@ -14,7 +14,7 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
-	public class DeleteDocumentsCommand : ListBoxCommand<ViewableDocument>
+	public class DeleteDocumentsCommand : ListBoxCommand<VirtualItem<ViewableDocument>>
 	{
 		public override bool CanExecute(object parameter)
 		{
@@ -22,7 +22,7 @@ namespace Raven.Studio.Commands
 			{
 				var documentsIds = SelectedItems.FirstOrDefault();
 
-				if (documentsIds != null && documentsIds.Id != null)
+				if (documentsIds != null && documentsIds.Item != null && documentsIds.Item.Id != null)
 					return true;
 			}
 
@@ -32,7 +32,8 @@ namespace Raven.Studio.Commands
 		public override void Execute(object parameter)
 		{
 			var documentsIds = SelectedItems
-				.Select(x => x.Id)
+                .Where(v => v.IsRealized)
+				.Select(x => x.Item.Id)
 				.ToList();
 
 			AskUser.ConfirmationAsync("Confirm Delete", documentsIds.Count > 1
@@ -40,7 +41,6 @@ namespace Raven.Studio.Commands
 			                                            	: string.Format("Are you sure that you want to delete this document? ({0})", documentsIds.First()))
 				.ContinueWhenTrueInTheUIThread(() =>
 				                               	{
-				                               		((DocumentsModel)Context).IsLoadingDocuments = true;
 													ApplicationModel.Current.AddNotification(new Notification("Deleting documents..."));
 				                               	})
 				.ContinueWhenTrue(() => DeleteDocuments(documentsIds));
@@ -64,8 +64,8 @@ namespace Raven.Studio.Commands
 								: string.Format("Document {0} was deleted", documentIds.First());
 			ApplicationModel.Current.AddNotification(new Notification(notification));
 
-			View.UpdateAllFromServer();
-			((DocumentsModel)Context).ForceTimerTicked();
+            ClearSelection();
+			PageView.UpdateAllFromServer();
 		}
 	}
 }

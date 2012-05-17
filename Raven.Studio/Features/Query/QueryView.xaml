@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Name="this"
+﻿<Infrastructure:PageView x:Name="this"
 					 x:Class="Raven.Studio.Features.Query.QueryView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -9,7 +9,11 @@
 					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
 					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-					 xmlns:Controls="clr-namespace:System.Windows.Controls">
+					 xmlns:Controls="clr-namespace:System.Windows.Controls"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:Models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d"
+                         d:DataContext="{d:DesignInstance Models:QueryModel}">
 
 	<toolkit:DockPanel Margin="{StaticResource Margin_ContentPage}">
 		<Border Background="{StaticResource Brush_HeaderBackground}"
@@ -238,46 +242,60 @@
 					Grid.RowSpan="1" />
 			<Grid Grid.Row="2">
 				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
 					<RowDefinition Height="*" />
+					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
-				<StackPanel>
-					<TextBlock Text="Error"
+				<Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+					<TextBlock Grid.Row="0"
+                               Text="Error"
 							   Style="{StaticResource Style_TextBlock_PagePartHeader}"
 							   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
-					<TextBlock Text="{Binding Error}"
+                    <TextBlock Grid.Row="1"
+                               Text="{Binding Error}"
 							   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
-					<StackPanel DataContext="{Binding Path=DocumentsResult.Value}"
-								Visibility="{Binding Path=., Converter={StaticResource HiddenWhenNull}}">
+					<Grid Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-						<Documents:DocumentsView Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}" />
-						<TextBlock Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
-								   Text="There are no results for this query." />
-					</StackPanel>
+                        <Documents:DocumentsViewEnhanced DataContext="{Binding DocumentsResult}" Grid.RowSpan="2"/>
 
-					<toolkit:BusyIndicator IsBusy="{Binding DocumentsResult.Value.IsLoadingDocuments, Mode=TwoWay}"
-										   BusyContent="Querying..." />
-					<ItemsControl ItemsSource="{Binding Suggestions}">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<StackPanel Orientation="Horizontal">
-									<TextBlock Text="Did you mean " />
-									<HyperlinkButton Content="{Binding SuggestedTerm}"
+                        <TextBlock Visibility="{Binding Path=DocumentsResult.Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
+								   Text="There are no results for this query." VerticalAlignment="Center" HorizontalAlignment="Center"
+                                   Margin="0,10"
+                                   Grid.RowSpan="2"/>
+
+                        <ItemsControl 
+                        Grid.Row="1"
+                        ItemsSource="{Binding Suggestions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Did you mean " />
+                                        <HyperlinkButton Content="{Binding SuggestedTerm}"
 													 FontStyle="Italic"
 													 Command="{Binding Path=DataContext.RepairTermInQuery, ElementName=this}"
 													 CommandParameter="{Binding}" />
-									<TextBlock Text=" for the field " />
-									<TextBlock Text="{Binding Field}"
+                                        <TextBlock Text=" for the field " />
+                                        <TextBlock Text="{Binding Field}"
 											   FontStyle="Italic" />
-									<TextBlock Text=" ?" />
-								</StackPanel>
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</StackPanel>
+                                        <TextBlock Text=" ?" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </Grid>
 
 				<StackPanel Grid.Row="1"
 							VerticalAlignment="Bottom"
@@ -300,4 +318,4 @@
 			</Grid>
 		</Grid>
 	</toolkit:DockPanel>
-</Infrastructure:View>
+</Infrastructure:PageView>

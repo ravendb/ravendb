@@ -12,7 +12,7 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class IndexDefinitionModel : ViewModel, IHasPageTitle
+	public class IndexDefinitionModel : PageViewModel, IHasPageTitle
 	{
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;

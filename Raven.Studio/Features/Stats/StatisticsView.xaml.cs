@@ -2,7 +2,7 @@
 
 namespace Raven.Studio.Features.Stats
 {
-	public partial class StatisticsView : View
+	public partial class StatisticsView : PageView
 	{
 		public StatisticsView()
 		{
