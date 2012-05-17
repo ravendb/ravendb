@@ -107,17 +107,8 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\MultiDatabase.cs">
       <Link>Smuggler\Imports\MultiDatabase.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Smuggler\ISmugglerApi.cs">
-      <Link>Smuggler\ISmugglerApi.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Smuggler\SmugglerApi.cs">
       <Link>Smuggler\SmugglerApi.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Smuggler\SmugglerOptions.cs">
-      <Link>Smuggler\SmugglerOptions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Smuggler\TrivialJsonToJsonJsonConverter.cs">
-      <Link>Smuggler\TrivialJsonToJsonJsonConverter.cs</Link>
     </Compile>
     <Compile Include="FromMono\Options.cs" />
     <Compile Include="RavenDbServer.cs" />
