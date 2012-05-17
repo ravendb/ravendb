@@ -80,7 +80,7 @@ namespace Raven.Bundles.Tests.IndexedProperties
 			{
 				//This is the name of the field in the Map/Reduce results that holds to Id of 
 				//the documents that we need to write the values back into
-				DocumentKey = "test",
+				DocumentKey = "CustomerId",
 
 				//This contains the mappings from the Map/Reduce result back to the original doc
 				FieldNameMappings = new []
