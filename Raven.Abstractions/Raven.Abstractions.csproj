@@ -157,6 +157,13 @@
     <Compile Include="Indexing\SortOptions.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
+    <Compile Include="Smuggler\ISmugglerApi.cs" />
+    <Compile Include="Smuggler\ItemType.cs" />
+    <Compile Include="Smuggler\SmugglerAction.cs" />
+    <Compile Include="Smuggler\SmugglerOptions.cs" />
+    <Compile Include="Smuggler\SmugglerApiBase.cs" />
+    <Compile Include="Smuggler\SmugglerStats.cs" />
+    <Compile Include="Smuggler\TrivialJsonToJsonJsonConverter.cs" />
     <Compile Include="SystemTime.cs" />
   </ItemGroup>
   <ItemGroup>
