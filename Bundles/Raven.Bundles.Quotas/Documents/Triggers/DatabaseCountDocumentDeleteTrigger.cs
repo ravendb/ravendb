@@ -1,8 +1,9 @@
+using Raven.Bundles.Quotas.Size;
 using Raven.Database.Plugins;
 
-namespace Raven.Bundles.Quotas.Size.Triggers
+namespace Raven.Bundles.Quotas.Documents.Triggers
 {
-	public class DatabaseSizeDocumentDeleteTrigger : AbstractDeleteTrigger
+	public class DatabaseCountDocumentDeleteTrigger : AbstractDeleteTrigger
 	{
 		public override void AfterDelete(string key, Abstractions.Data.TransactionInformation transactionInformation)
 		{

@@ -4,45 +4,41 @@ using Raven.Database.Plugins;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 
-namespace Raven.Bundles.Quotas.Size
+namespace Raven.Bundles.Quotas.Documents
 {
-	public class SizeQuotaConfiguration
+	public class DocQuotaConfiguration
 	{
 		private readonly DocumentDatabase database;
-		private readonly int margin;
 		private readonly long hardLimit, softLimit;
 		private DateTime lastCheck;
 		private VetoResult skipCheck = VetoResult.Allowed;
 		private bool recheckOnDelete;
 
-		public static SizeQuotaConfiguration GetConfiguration(DocumentDatabase database)
+		public static DocQuotaConfiguration GetConfiguration(DocumentDatabase database)
 		{
 			return
-				(SizeQuotaConfiguration)
-				database.ExternalState.GetOrAddAtomically("Raven.Bundles.Quotas.SizeQuotaConfiguration", s =>
+				(DocQuotaConfiguration)
+				database.ExternalState.GetOrAddAtomically("Raven.Bundles.Quotas.DocQuotaConfiguration", s =>
 				{
-					var sizeQuotaConfiguration = new SizeQuotaConfiguration(database);
+					var sizeQuotaConfiguration = new DocQuotaConfiguration(database);
 					return sizeQuotaConfiguration;
 				});
 		}
 
-		public SizeQuotaConfiguration(DocumentDatabase database)
+		public DocQuotaConfiguration(DocumentDatabase database)
 		{
 			this.database = database;
-			var hardLimitQuotaAsString = database.Configuration.Settings["Raven/Quotas/Size/HardLimitInKB"];
-			var marginAsString = database.Configuration.Settings["Raven/Quotas/Size/SoftMarginInKB"];
-
-			if (int.TryParse(marginAsString, out margin) == false)
-				margin = 1024 * 1024;// 1 MB by default
+			var hardLimitQuotaAsString = database.Configuration.Settings["Raven/Quotas/Documents/HardLimit"];
+			var softLimitQuotaAsString = database.Configuration.Settings["Raven/Quotas/Documents/SoftLimit"];
 
 			if (long.TryParse(hardLimitQuotaAsString, out hardLimit) == false)
 			{
-				softLimit = hardLimit = long.MaxValue;
+				hardLimit = long.MaxValue;
 			}
-			else
+
+			if (long.TryParse(softLimitQuotaAsString, out softLimit) == false)
 			{
-				softLimit = (hardLimit - margin)*1024; // KB -> Bytes
-				hardLimit *= 1024; // KB -> Bytes
+				softLimit = long.MaxValue;
 			}
 		}
 
@@ -66,10 +62,10 @@ namespace Raven.Bundles.Quotas.Size
 		{
 			lastCheck = DateTime.UtcNow;
 
-			var totalSizeOnDisk = database.GetTotalSizeOnDisk();
-			if (totalSizeOnDisk <= softLimit)
+			var countOfDocuments = database.Statistics.CountOfDocuments;
+			if (countOfDocuments <= softLimit)
 			{
-				database.Delete("Raven/Quotas/Size", null, null);
+				database.Delete("Raven/Quotas/Documents", null, null);
 				skipCheck = VetoResult.Allowed;
 				recheckOnDelete = false;
 				return;
@@ -78,12 +74,12 @@ namespace Raven.Bundles.Quotas.Size
 			recheckOnDelete = true;
 
 			string msg;
-			if (totalSizeOnDisk > hardLimit) // beyond the grace margin
+			if (countOfDocuments > hardLimit) // beyond the grace margin
 			{
-				msg = string.Format("Database size is {0:#,#} KB, which is over the allowed quota of {1:#,#} KB. No more documents are allowed in.",
-					totalSizeOnDisk / 1024, hardLimit / 1024);
+				msg = string.Format("Database doc count is {0:#,#}, which is over the allowed quota of {1:#,#}. No more documents are allowed in.",
+					countOfDocuments, hardLimit);
 
-				database.Put("Raven/Quotas/Size", null, new RavenJObject
+				database.Put("Raven/Quotas/Documents", null, new RavenJObject
 				{
 					{"Message", msg}
 				}, new RavenJObject(), null);
@@ -92,10 +88,10 @@ namespace Raven.Bundles.Quotas.Size
 			}
 			else // still before the hard limit, warn, but allow
 			{
-				msg = string.Format("Database size is {0:#,#} KB, which is close to the allowed quota of {1:#,#} KB",
-					totalSizeOnDisk / 1024, softLimit / 1024);
+				msg = string.Format("Database doc count is {0:#,#}, which is close to the allowed quota of {1:#,#}.",
+					countOfDocuments, softLimit);
 
-				database.Put("Raven/Quotas/Size", null, new RavenJObject
+				database.Put("Raven/Quotas/Documents", null, new RavenJObject
 				{
 					{"Message", msg}
 				}, new RavenJObject(), null);

@@ -1,6 +1,6 @@
 ﻿using Raven.Database.Plugins;
 
-namespace Raven.Bundles.Quotas.Triggers
+namespace Raven.Bundles.Quotas.Size.Triggers
 {
 	public class DatabaseSizeAttachmentDeleteTrigger : AbstractDeleteTrigger
 	{
