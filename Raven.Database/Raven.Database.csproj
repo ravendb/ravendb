@@ -466,6 +466,7 @@
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Server\Responders\TransactionStatus.cs" />
+    <Compile Include="Smuggler\DataDumper.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\GetMappedResultsParams.cs" />
     <Compile Include="Storage\IAttachmentsStorageActions.cs" />

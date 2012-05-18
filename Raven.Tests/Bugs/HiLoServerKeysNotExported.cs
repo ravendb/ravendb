@@ -8,6 +8,7 @@ using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Smuggler;
 using Raven.Client.Document;
 using Raven.Database.Config;
 using Raven.Database.Extensions;

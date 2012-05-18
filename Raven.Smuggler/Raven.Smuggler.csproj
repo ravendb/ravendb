@@ -65,12 +65,8 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
-    <Compile Include="ISmugglerApi.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="SmugglerAction.cs" />
     <Compile Include="SmugglerApi.cs" />
-    <Compile Include="SmugglerOptions.cs" />
-    <Compile Include="TrivialJsonToJsonJsonConverter.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\Raven.Server\favicon.ico">
