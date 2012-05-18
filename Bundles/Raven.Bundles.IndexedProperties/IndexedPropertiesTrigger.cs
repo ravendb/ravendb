@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
@@ -40,24 +38,44 @@ namespace Raven.Bundles.IndexedProperties
 
 			public override void OnIndexEntryDeleted(string entryKey)
 			{
-				//Okay, I understand it more now, inside delete we don't need to do anything, everything happens in OnIndexEntryCreated(..)
-				//Map/Reduce will deleted the indexed doc (the results of the Reduce) anytime it needs to re-generate the index
-				//The Map steps are still stored in the doc store, to save having to re-calculate those, but the Reduce steps are re-run when needed
-				//So anytime the Map/Reduce is updated, we'll be notified of it in the OnIndexEntryCreated(..) trigger.
-				Console.WriteLine("DELETING doc {0}:", entryKey);
+				//Want to handle this scenario:
+				// - Customer/1 has 2 orders (order/3 & order/5)
+				// - Map/Reduce runs and AvgOrderCost in "customer/1" is set to the average cost of "order/3" and "order/5" (8.56 for example)
+				// - "order/3" and "order/5" are deleted (so customer/1 will no longer be included in the results of the Map/Reduce
+				// - I think we need to write back to the "customer/1" doc and delete the AvgOrderCost field in the Json (otherwise it'll still have the last value of 8.56)
+
+				var parts = entryKey.Split(new[] {':', '{', '}', ' ', '"'}, StringSplitOptions.RemoveEmptyEntries);
+				if (parts.Length != 2)
+					return;
+
+				var resultDoc = _database.Get(parts[1], null);
+				if (resultDoc == null)
+				{
+					//Log an error?
+					return;
+				}
+				var changesMade = false;
+				foreach (var mapping in _setupDoc.FieldNameMappings)
+				{
+					var jsonData = resultDoc.DataAsJson;
+					if (jsonData.ContainsKey(mapping.Item2))
+					{
+						resultDoc.DataAsJson.Remove(mapping.Item2);
+						changesMade = true;
+					}
+				}
+				if (changesMade)
+					_database.Put(parts[1], resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
 			}
 
 			public override void OnIndexEntryCreated(string entryKey, Document document)
 			{
-				Console.WriteLine("INDEXING doc {0}:", entryKey);
-				//PrintIndexDocInfo(document);
-
 				try
 				{
 					var fields = document.GetFields().OfType<Field>().ToList();
 					var numericFields = document.GetFields().OfType<NumericField>().ToList();
 					var isMapReduce = fields.Any(x => x.Name() == Constants.ReduceKeyFieldName);
-					if (isMapReduce)
+					if (isMapReduce) //Do we need this, it's the responsiblity of the user to make sure the SetupDoc has the right index?
 					{
 						var resultDocId = fields.FirstOrDefault(x => x.Name() == _setupDoc.DocumentKey);
 						if (resultDocId == null)
@@ -72,53 +90,25 @@ namespace Raven.Bundles.IndexedProperties
 							return;
 						}
 
-						var changedMade = false;
+						var changesMade = false;
 						foreach (var mapping in _setupDoc.FieldNameMappings)
 						{
-							Tuple<string, string> localMapping = mapping; //do we really need this??
+							Tuple<string, string> localMapping = mapping; //do we really need this (to stop "access to modified closure issue")??
 							NumericField field = numericFields.FirstOrDefault(x => x.Name() == localMapping.Item1 + "_Range");
 							if (field != null)
 							{
 								//This looks a bit wierd, but we want numeric values to be stored in Raven as numbers (not strings)
 								resultDoc.DataAsJson[localMapping.Item2] = RavenJToken.Parse(field.GetNumericValue().ToString());
-								changedMade = true;
+								changesMade = true;
 							}
 						}
-						if (changedMade)
+						if (changesMade)
 							_database.Put(resultDocId.StringValue(), resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
 					}
 				}
-				catch (Exception ex)
+				catch (Exception) // we don't errors in the trigger to propogate out
 				{
-					Console.WriteLine(ex.Message);
-				}
-			}
-
-			private void PrintIndexDocInfo(Document document)
-			{
-				foreach (object field in document.GetFields())
-				{
-					try
-					{
-						if (field is NumericField)
-						{
-							var numbericField = field as NumericField;
-							Console.WriteLine("\t{0}: {1} - (NumericField)", numbericField.Name(), numbericField.GetNumericValue());
-						}
-						else if (field is Field)
-						{
-							var stdField = field as Field;
-							Console.WriteLine("\t{0}: {1} - (Field)", stdField.Name(), stdField.StringValue());
-						}
-						else
-						{
-							Console.WriteLine("Unknown field type: " + field.GetType());
-						}
-					}
-					catch (Exception ex)
-					{
-						Console.WriteLine(ex.Message);
-					}
+					//Log an error?
 				}
 			}
 		}

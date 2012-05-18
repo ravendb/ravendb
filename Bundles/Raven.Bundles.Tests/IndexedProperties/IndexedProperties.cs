@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using Raven.Abstractions.Indexing;
@@ -8,21 +9,23 @@ using Raven.Client.Embedded;
 using Raven.Client.IndexedProperties;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
+using Xunit;
 
 namespace Raven.Bundles.Tests.IndexedProperties
 {
 	public class IndexedProperty
 	{
-		public void RunTest()
+		[Fact]
+		public void Can_Use_Indexed_Properties()
 		{
 			using (var store = new EmbeddableDocumentStore())
 			{
 				store.Configuration.RunInMemory = true;
-				store.Configuration.InitialNumberOfItemsToIndexInSingleBatch = 50;
 				//This lets us wire up the Trigger (only works in embedded mode though)
 				store.Configuration.Container = new CompositionContainer(new TypeCatalog(typeof(IndexedPropertiesTrigger)));
 				store.Initialize();
 				IndexCreation.CreateIndexes(typeof(Orders_ByCustomer_Count).Assembly, store);
+				//Create another index, so we can check we use the index specified in the SetupDoc
 				CreateDocumentsByEntityNameIndex(store);
 
 				ExecuteTest(store);
@@ -31,9 +34,9 @@ namespace Raven.Bundles.Tests.IndexedProperties
 
 		private void ExecuteTest(IDocumentStore store)
 		{
-			var customer1 = new Customer { Name = "Matt", Country = "UK" };
-			var customer2 = new Customer { Name = "Debs", Country = "UK", };
-			var customer3 = new Customer { Name = "Bob", Country = "USA" };
+			var customer1 = new Customer {Name = "Matt", Country = "UK"};
+			var customer2 = new Customer {Name = "Debs", Country = "UK"};
+			var customer3 = new Customer {Name = "Bob", Country = "USA"};
 
 			using (var session = store.OpenSession())
 			{
@@ -41,20 +44,16 @@ namespace Raven.Bundles.Tests.IndexedProperties
 				session.Store(customer2);
 				session.Store(customer3);
 				session.SaveChanges();
-
-				Console.WriteLine("Saved Customer docs: {0}",
-					String.Join(", ", new[] { customer1.Id, customer2.Id, customer3.Id }));
 			}
+			var customerDocIds = new[] {customer1.Id, customer2.Id, customer3.Id};
 
 			//Orders for Customer1
 			var order1 = new Order {CustomerId = customer1.Id, Cost = 9.99m};
 			var order2 = new Order {CustomerId = customer1.Id, Cost = 12.99m};
 			var order3 = new Order {CustomerId = customer1.Id, Cost = 1.25m};
-
 			//Orders for Customer2
 			var order4 = new Order {CustomerId = customer2.Id, Cost = 99.99m};
 			var order5 = new Order {CustomerId = customer2.Id, Cost = 105.99m};
-
 			//Orders for Customer3
 			var order6 = new Order {CustomerId = customer3.Id, Cost = 0.05m};
 			var order7 = new Order {CustomerId = customer3.Id, Cost = 0.99m};
@@ -83,58 +82,90 @@ namespace Raven.Bundles.Tests.IndexedProperties
 				DocumentKey = "CustomerId",
 
 				//This contains the mappings from the Map/Reduce result back to the original doc
-				FieldNameMappings = new []
+				FieldNameMappings = new[]
 				{
 					Tuple.Create("Average", "AverageOrderCost"),
 					Tuple.Create("Count", "NumberOfOrders")
 				}
 			};
 
-			var indexName = typeof(Orders_ByCustomer_Count).Name.Replace("_", "/");
+			var indexName = typeof (Orders_ByCustomer_Count).Name.Replace("_", "/");
 			using (var session = store.OpenSession())
 			{
 				session.Store(setupDoc, SetupDoc.IdPrefix + indexName);
 				session.SaveChanges();
 			}
-
-			var testJson = store.DatabaseCommands.Get(SetupDoc.IdPrefix + indexName);
-			var testJsonTxt = testJson.DataAsJson.ToString();
-
 			WaitForIndexToUpdate(store, indexName);
 
-			using (var session = store.OpenSession())
-			{
-				var docs = session.Load<Customer>(new[] { customer1.Id, customer2.Id, customer3.Id });
-				foreach (var doc in docs)
-				{
-					Console.WriteLine("Reading back doc \"{0}\": Total Orders {1}, Average Cost {2}",
-									doc.Id, doc.NumberOfOrders, doc.AverageOrderCost);
-				}
+			//Test 1 - Check that the averages are written back to the customer docs
+			var customerDocs = GetCustomerDocs(store, customerDocIds);
+			Assert.Equal((order1.Cost + order2.Cost + order3.Cost)/3.0m, customerDocs[0].AverageOrderCost, 10);
+			Assert.Equal(3, customerDocs[0].NumberOfOrders);
+			Assert.Equal((order4.Cost + order5.Cost)/2.0m, customerDocs[1].AverageOrderCost, 10);
+			Assert.Equal(2, customerDocs[1].NumberOfOrders);
+			Assert.Equal((order6.Cost + order7.Cost + order8.Cost)/3.0m, customerDocs[2].AverageOrderCost, 10);
+			Assert.Equal(3, customerDocs[2].NumberOfOrders);
 
-				var test = session.Load<SetupDoc>("Raven/IndexedProperties/" + indexName);
-			}
-
-			Console.WriteLine("Deleting orders \"{0}\" and \"{1}\"", order1.Id, order8.Id);
-			store.DatabaseCommands.Delete(order1.Id, null); //delete 1 of the orders for customer1
-			store.DatabaseCommands.Delete(order8.Id, null); //delete 1 of the orders for customer3
-
+			//Test 2 - delete some of the orders for 2 of the customers and check the averages update
+			store.DatabaseCommands.Delete(order1.Id, null);
+			store.DatabaseCommands.Delete(order8.Id, null);
 			WaitForIndexToUpdate(store, indexName);
 
-			var customerJsonTest = store.DatabaseCommands.Get(customer1.Id);
-			var docJsonTest = store.DatabaseCommands.Get(order2.Id);
+			customerDocs = GetCustomerDocs(store, customerDocIds);
+			Assert.Equal((order2.Cost + order3.Cost)/2.0m, customerDocs[0].AverageOrderCost, 10);
+			Assert.Equal(2, customerDocs[0].NumberOfOrders);
+			Assert.Equal((order4.Cost + order5.Cost)/2.0m, customerDocs[1].AverageOrderCost, 10);
+			Assert.Equal(2, customerDocs[1].NumberOfOrders);
+			Assert.Equal((order6.Cost + order7.Cost)/2.0m, customerDocs[2].AverageOrderCost, 10);
+			Assert.Equal(2, customerDocs[2].NumberOfOrders);
 
+			//Test 3 - Delete all the orders for customer1, it now has NO orders!
+			store.DatabaseCommands.Delete(order2.Id, null);
+			store.DatabaseCommands.Delete(order3.Id, null);
+			WaitForIndexToUpdate(store, indexName);
+
+			var customer1Json = store.DatabaseCommands.Get(customer1.Id);
+			Assert.False(customer1Json.DataAsJson.ContainsKey("AverageOrderCost"));
+			Assert.False(customer1Json.DataAsJson.ContainsKey("NumberOfOrders"));
+
+			//Test 4 - Modify the orders for customer2, it's average should update
 			using (var session = store.OpenSession())
 			{
-				var docs = session.Load<Customer>(new[] { customer1.Id, customer2.Id, customer3.Id });
-				foreach (var doc in docs)
+				var orders = session.Load<Order>(new[] {order4.Id, order5.Id});
+				orders[0].Cost = 75.8m;
+				orders[1].Cost = 26.1m;
+				session.SaveChanges();
+			}
+			WaitForIndexToUpdate(store, indexName);
+
+			customerDocs = GetCustomerDocs(store, customerDocIds);
+			Assert.Equal((75.8m + 26.1m)/2.0m, customerDocs[1].AverageOrderCost, 10);
+			Assert.Equal(2, customerDocs[1].NumberOfOrders);
+
+			//Test 5 - Can actually do the queries we'd like to, i.e. query against customers using the AverageOrderCost field
+			using (var session = store.OpenSession())
+			{
+				RavenQueryStatistics stats;
+				var customerByTotalOrderCose = session.Query<Customer>()
+					.OrderBy(x => x.AverageOrderCost)
+					.Customize(x => x.WaitForNonStaleResults())
+					.Statistics(out stats)
+					.ToList();
+				var previous = Decimal.MinValue;
+				foreach (var customer in customerByTotalOrderCose)
 				{
-					Console.WriteLine("Reading back doc \"{0}\": Total Orders {1}, Average Cost {2}", 
-									doc.Id, doc.NumberOfOrders, doc.AverageOrderCost);
+					Assert.True(customer.AverageOrderCost > previous);
+					previous = customer.AverageOrderCost;
 				}
 			}
+		}
 
-			Console.WriteLine("Test completed, press <ENTER> to exit");
-			Console.ReadLine();
+		private IList<Customer> GetCustomerDocs(IDocumentStore store, string[] customerDocIds)
+		{
+			using (var session = store.OpenSession())
+			{
+				return session.Load<Customer>(customerDocIds);
+			}
 		}
 
 		private void WaitForIndexToUpdate(IDocumentStore store, string indexName)
@@ -143,13 +174,10 @@ namespace Raven.Bundles.Tests.IndexedProperties
 			{
 				//Just issue a query to ensure that it's not stale
 				RavenQueryStatistics stats;
-				Console.WriteLine("Issuing query to ensure the indexing has completed.....");
-				var customers = session.Query<Orders_ByCustomer_Count.CustomerResult>(indexName)
+				var customerResults = session.Query<Orders_ByCustomer_Count.CustomerResult>(indexName)
 					.Customize(s => s.WaitForNonStaleResultsAsOfNow())
 					.Statistics(out stats)
 					.ToList();
-				Console.WriteLine("DONE, index is no longer stale, contains {0} items:\n\t{1}", 
-					customers.Count, String.Join("\n\t", customers.Select(x => new { x.Count, x.Average, x.TotalCost })));
 			}
 		}
 
