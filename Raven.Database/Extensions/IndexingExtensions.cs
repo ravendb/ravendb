@@ -41,25 +41,6 @@ namespace Raven.Database.Extensions
 			}
 		}
 
-		public static Filter GetFilter(this IndexQuery self)
-		{
-			var spatialIndexQuery = self as SpatialIndexQuery;
-			if(spatialIndexQuery != null)
-			{
-				var dq = new Lucene.Net.Spatial.Tier.DistanceQueryBuilder(
-					spatialIndexQuery.Latitude,
-					spatialIndexQuery.Longitude,
-					spatialIndexQuery.Radius,
-					SpatialIndex.LatField,
-					SpatialIndex.LngField,
-					Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.DefaltFieldPrefix,
-					true);
-
-				return dq.Filter;
-			}
-			return null;
-		}
-
 		public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index defaultIndex)
 		{
 			if (self.Indexes == null)
@@ -107,7 +88,7 @@ namespace Raven.Database.Extensions
 			}
 		}
 
-		public static Sort GetSort(this IndexQuery self, Filter filter, IndexDefinition indexDefinition)
+		public static Sort GetSort(this IndexQuery self, IndexDefinition indexDefinition)
 		{
 			if (self.SortedFields == null || self.SortedFields.Length <= 0)
 				return null;
@@ -122,11 +103,12 @@ namespace Raven.Database.Extensions
 										return new RandomSortField(Guid.NewGuid().ToString());
 									return new RandomSortField(parts[1]);
 								}
-								if (isSpatialIndexQuery && sortedField.Field == Constants.DistanceFieldName)
-								{
-									var dsort = new Lucene.Net.Spatial.Tier.DistanceFieldComparatorSource((Lucene.Net.Spatial.Tier.DistanceFilter)filter);
-									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
-								}
+								// TODO
+								//if (isSpatialIndexQuery && sortedField.Field == Constants.DistanceFieldName)
+								//{
+								//    var dsort = new Lucene.Net.Spatial.Tier.DistanceFieldComparatorSource((Lucene.Net.Spatial.Tier.DistanceFilter)filter);
+								//    return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
+								//}
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);
 								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);

@@ -3,77 +3,44 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Text.RegularExpressions;
+using System.Linq;
 using Lucene.Net.Documents;
-using Lucene.Net.Util;
-using Lucene.Net.Spatial.Tier;
-using Lucene.Net.Spatial.Tier.Projectors;
+using Lucene.Net.Search;
+using Lucene.Net.Spatial;
+using Lucene.Net.Spatial.Prefix;
+using Lucene.Net.Spatial.Prefix.Tree;
+using Spatial4n.Core.Context;
+using Spatial4n.Core.Distance;
+using Spatial4n.Core.Query;
+using Spatial4n.Core.Shapes;
 
 
 namespace Raven.Database.Indexing
 {
 	public static class SpatialIndex
 	{
-		private static readonly List<CartesianTierPlotter> Ctps = new List<CartesianTierPlotter>();
-		private static readonly IProjector Projector = new SinusoidalProjector();
-
-		private const int MinTier = 2;
-		private const int MaxTier = 15;
-
-		public const string LatField = "latitude";
-		public const string LngField = "longitude";
+		internal static readonly SpatialContext RavenSpatialContext = new SpatialContext(DistanceUnits.MILES);
+		private static readonly SpatialStrategy<SimpleSpatialFieldInfo> strategy;
+		private static readonly SimpleSpatialFieldInfo fieldInfo;
+		private static readonly int maxLength;
 
 		static SpatialIndex()
 		{
-			for (int tier = MinTier; tier <= MaxTier; ++tier)
-			{
-				Ctps.Add(new CartesianTierPlotter(tier, Projector, CartesianTierPlotter.DefaltFieldPrefix));
-			}
+			maxLength = GeohashPrefixTree.GetMaxLevelsPossible();
+			fieldInfo = new SimpleSpatialFieldInfo("RavenDBSpatial");
+			strategy = new RecursivePrefixTreeStrategy(new GeohashPrefixTree(RavenSpatialContext, maxLength));
 		}
 
-		public static string Lat(double value)
+		public static IEnumerable<Fieldable> Generate(double? lat, double? lng)
 		{
-			return NumericUtils.DoubleToPrefixCoded(value);
+			Shape shape = RavenSpatialContext.MakePoint(lat ?? 0, lng ?? 0);
+			return strategy.CreateFields(fieldInfo, shape, true, false).Where(f => f != null);
 		}
 
-		public static string Lng(double value)
+		public static Query MakeQuery(double lat, double lng, double radius)
 		{
-			return NumericUtils.DoubleToPrefixCoded(value);
-		}
-
-		public static string Tier(int id, double lat, double lng)
-		{
-			if (id < MinTier || id > MaxTier)
-			{
-				throw new ArgumentException(
-					string.Format("tier id should be between {0} and {1}", MinTier, MaxTier), "id");
-			}
-
-			var boxId = Ctps[id - MinTier].GetTierBoxId(lat, lng);
-
-			return NumericUtils.DoubleToPrefixCoded(boxId);
-		}
-
-		public static double GetDistanceMi(double x1, double y1, double x2, double y2)
-		{
-			return DistanceUtils.GetInstance().GetDistanceMi(x1, y1, x2, y2);
-		}
-
-		public static IEnumerable<AbstractField> Generate(double? lat, double? lng)
-		{
-			lat = lat ?? 0;
-			lng = lng ?? 0;
-
-			yield return new Field("latitude", Lat(lat.Value), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-			yield return new Field("longitude", Lng(lng.Value), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-
-			for (var id = MinTier; id <= MaxTier; ++id)
-			{
-				yield return new Field("_tier_" + id, Tier(id, lat.Value, lng.Value),Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-			}
+			return strategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, RavenSpatialContext.MakeCircle(lat, lng, radius)), fieldInfo);
 		}
 	}
 }

@@ -142,6 +142,9 @@ namespace Raven.Tests.Spatial
 						.ToList();
 
 					var expectedOrder = new[] { "a/2", "b/2", "c/2", "a/1", "b/1", "c/1", "a/3", "b/3", "c/3" };
+
+					Assert.Equal(expectedOrder.Length, events.Count);
+
 					for (int i = 0; i < events.Count; i++)
 					{
 						Assert.Equal(expectedOrder[i], events[i].Venue);

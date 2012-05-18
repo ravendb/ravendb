@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
@@ -25,7 +22,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		[Fact(Skip = "This is currently failing - waiting for the spatial fix")]
+		[Fact]
 		public void WeirdSpatialResults()
 		{
 			using (IDocumentStore store = NewDocumentStore())
