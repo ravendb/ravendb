@@ -7,6 +7,11 @@ namespace Raven.Client.IndexedProperties
 	{
 		public static string IdPrefix = "Raven/IndexedProperties/";
 		public string DocumentKey { get; set; }
-		public IList<Tuple<string, string>> FieldNameMappings { get; set; }
+		public IDictionary<string,string> FieldNameMappings { get; set; }
+
+		public SetupDoc()
+		{
+			FieldNameMappings = new Dictionary<string, string>();
+		}
 	}
 }
