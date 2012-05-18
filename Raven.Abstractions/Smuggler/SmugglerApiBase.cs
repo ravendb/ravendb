@@ -15,13 +15,13 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract RavenJArray GetIndexes(int totalCount);
 		protected abstract RavenJArray GetDocuments(Guid lastEtag);
 		protected abstract Guid ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag);
-		
+
 		protected abstract void PutIndex(string indexName, RavenJToken index);
 		protected abstract void PutAttachment(AttachmentExportInfo attachmentExportInfo);
 		protected abstract void FlushBatch(List<RavenJObject> batch);
-		
+
 		protected abstract void ShowProgress(string format, params object[] args);
-		
+
 		protected bool ensuredDatabaseExists;
 
 		public void ExportData(SmugglerOptions options, bool incremental = false)
@@ -74,7 +74,7 @@ namespace Raven.Abstractions.Smuggler
 				jsonWriter.WriteStartObject();
 				jsonWriter.WritePropertyName("Indexes");
 				jsonWriter.WriteStartArray();
-				if (options.OperateOnTypes.HasFlag(ItemType.Indexes))
+				if ((options.OperateOnTypes & ItemType.Indexes) == ItemType.Indexes)
 				{
 					ExportIndexes(jsonWriter);
 				}
@@ -82,7 +82,7 @@ namespace Raven.Abstractions.Smuggler
 
 				jsonWriter.WritePropertyName("Docs");
 				jsonWriter.WriteStartArray();
-				if (options.OperateOnTypes.HasFlag(ItemType.Documents))
+				if ((options.OperateOnTypes & ItemType.Documents) == ItemType.Documents)
 				{
 					lastDocsEtag = ExportDocuments(options, jsonWriter, lastDocsEtag);
 				}
@@ -90,7 +90,7 @@ namespace Raven.Abstractions.Smuggler
 
 				jsonWriter.WritePropertyName("Attachments");
 				jsonWriter.WriteStartArray();
-				if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
+				if ((options.OperateOnTypes & ItemType.Attachments) == ItemType.Attachments)
 				{
 					lastAttachmentEtag = ExportAttachments(jsonWriter, lastAttachmentEtag);
 				}
@@ -99,7 +99,7 @@ namespace Raven.Abstractions.Smuggler
 				jsonWriter.WriteEndObject();
 				streamWriter.Flush();
 			}
-			if (incremental != true) 
+			if (incremental != true)
 				return;
 
 			using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
@@ -230,7 +230,7 @@ namespace Raven.Abstractions.Smuggler
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
 				var index = RavenJToken.ReadFrom(jsonReader);
-				if (options.OperateOnTypes.HasFlag(ItemType.Indexes) == false)
+				if ((options.OperateOnTypes & ItemType.Indexes) != ItemType.Indexes)
 					continue;
 				var indexName = index.Value<string>("name");
 				if (indexName.StartsWith("Raven/") || indexName.StartsWith("Temp/"))
@@ -254,7 +254,7 @@ namespace Raven.Abstractions.Smuggler
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
 				var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
-				if (options.OperateOnTypes.HasFlag(ItemType.Documents) == false)
+				if ((options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
 					continue;
 				if (options.MatchFilters(document) == false)
 					continue;
@@ -281,7 +281,7 @@ namespace Raven.Abstractions.Smuggler
 			{
 				attachmentCount += 1;
 				var item = RavenJToken.ReadFrom(jsonReader);
-				if (options.OperateOnTypes.HasFlag(ItemType.Attachments) == false)
+				if ((options.OperateOnTypes & ItemType.Attachments) != ItemType.Attachments)
 					continue;
 				var attachmentExportInfo =
 					new JsonSerializer

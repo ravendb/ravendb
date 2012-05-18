@@ -69,9 +69,9 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 					new MoreLikeThisQueryParameters
 					{
 						MapGroupFields = new NameValueCollection()
-                        {
-                            {"BookId", JavascriptBookId}
-                        },
+						{
+							{"BookId", JavascriptBookId}
+						},
 						MinimumTermFrequency = 1,
 						MinimumDocumentFrequency = 1
 					});
@@ -91,9 +91,9 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 					new MoreLikeThisQueryParameters
 					{
 						MapGroupFields = new NameValueCollection()
-                        {
-                            {"BookId", EclipseBookId}
-                        },
+						{
+							{"BookId", EclipseBookId}
+						},
 						MinimumTermFrequency = 1,
 						MinimumDocumentFrequency = 1
 					});
