@@ -74,7 +74,8 @@ namespace Raven.Database.Indexing
 					var reduceValue = viewGenerator.GroupByExtraction(doc);
 					if (reduceValue == null)
 					{
-						logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}", viewGenerator.GroupByExtraction, mappedResultFromDocument.Key);
+						logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}", 
+											viewGenerator.GroupByExtraction, mappedResultFromDocument.Key);
 						continue;
 					}
 					var reduceKey = ReduceKeyToString(reduceValue);
@@ -82,7 +83,7 @@ namespace Raven.Database.Indexing
 
 					reduceKeysToDelete.Remove((string)reduceKey);
 
-					var data = GetMapedData(doc);
+					var data = GetMappedData(doc);
 
 					logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId, data);
 
@@ -156,7 +157,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static RavenJObject GetMapedData(object doc)
+		private static RavenJObject GetMappedData(object doc)
 		{
 			if (doc is IDynamicJsonObject)
 				return ((IDynamicJsonObject)doc).Inner;
@@ -181,7 +182,7 @@ namespace Raven.Database.Indexing
 				throw new InvalidOperationException("Could not create document id fetcher for this document");
 			var documentId = docIdFetcher(doc);
 			if (documentId == null)
-				throw new InvalidOperationException("Could not getdocument id fetcher for this document");
+				throw new InvalidOperationException("Could not get document id fetcher for this document");
 
 			return documentId;
 		}
@@ -202,12 +203,11 @@ namespace Raven.Database.Indexing
 			return RavenJToken.FromObject(reduceValue).ToString(Formatting.None);
 		}
 
-
 		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, float score)
 		{
 			if (fieldsToFetch.IsProjection == false)
 				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().OfType<Fieldable>().Select(x => x.Name()).ToArray());
-			fieldsToFetch.EnsureHasField(Abstractions.Data.Constants.ReduceKeyFieldName);
+			fieldsToFetch.EnsureHasField(Constants.ReduceKeyFieldName);
 			return base.RetrieveDocument(document, fieldsToFetch, score);
 		}
 
@@ -235,8 +235,7 @@ namespace Raven.Database.Indexing
 			{
 				stats.Operation = IndexingWorkStats.Status.Ignore;
 				logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));
-				writer.DeleteDocuments(
-					keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
+				writer.DeleteDocuments(keys.Select(k => new Term(Constants.ReduceKeyFieldName, k.ToLowerInvariant())).ToArray());
 				return keys.Length;
 			});
 		}
@@ -261,7 +260,7 @@ namespace Raven.Database.Indexing
 				foreach (var reduceKey in reduceKeys)
 				{
 					var entryKey = reduceKey;
-					indexWriter.DeleteDocuments(new Term(Abstractions.Data.Constants.ReduceKeyFieldName, entryKey.ToLowerInvariant()));
+					indexWriter.DeleteDocuments(new Term(Constants.ReduceKeyFieldName, entryKey.ToLowerInvariant()));
 					batchers.ApplyAndIgnoreAllErrors(
 						exception =>
 						{
@@ -269,10 +268,7 @@ namespace Raven.Database.Indexing
 								string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
 											  name, entryKey),
 								exception);
-							context.AddError(name,
-											 entryKey,
-											 exception.Message
-								);
+							context.AddError(name, entryKey, exception.Message);
 						},
 						trigger => trigger.OnIndexEntryDeleted(entryKey));
 				}
@@ -305,10 +301,7 @@ namespace Raven.Database.Indexing
 								string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
 											  name, reduceKeyAsString),
 								exception);
-							context.AddError(name,
-											 reduceKeyAsString,
-											 exception.Message
-								);
+							context.AddError(name, reduceKeyAsString, exception.Message);
 						},
 						trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
 
@@ -326,8 +319,7 @@ namespace Raven.Database.Indexing
 					x => x.Dispose());
 				return count + reduceKeys.Length;
 			});
-			logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name,
-							  string.Join(", ", reduceKeys)));
+			logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name, string.Join(", ", reduceKeys)));
 		}
 
 		private string ExtractReduceKey(AbstractViewGenerator viewGenerator, object doc)
