@@ -124,6 +124,25 @@ namespace Raven.Smuggler
 						break;
 				}
 			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null)
+					throw;
+				Console.WriteLine("Error: " + e.Message);
+				Console.WriteLine("Http Status Code: " + httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription);
+
+				using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
+				{
+					string line;
+					while ((line = reader.ReadLine()) != null)
+					{
+						Console.WriteLine(line);
+					}
+				}
+
+				Environment.Exit((int)httpWebResponse.StatusCode);
+			}
 			catch (Exception e)
 			{
 				Console.WriteLine(e);
