@@ -53,7 +53,7 @@ namespace Raven.Smuggler
 			            		{"u|user|username:", "The username to use when the database requires the client to authenticate.", value => Credentials.UserName = value},
 			            		{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => Credentials.Password = value},
 			            		{"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
-			            		{"key|api-key:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
+			            		{"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
 								{"incremental", "States usage of incremental operations", _ => incremental = true },
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};
