@@ -24,7 +24,7 @@ namespace Raven.Bundles.Tests.IndexedProperties
 				//This lets us wire up the Trigger (only works in embedded mode though)
 				store.Configuration.Container = new CompositionContainer(new TypeCatalog(typeof(IndexedPropertiesTrigger)));
 				store.Initialize();
-				IndexCreation.CreateIndexes(typeof(Orders_ByCustomer_Count).Assembly, store);
+				new Orders_ByCustomer_Count().Execute(store);	
 				//Create another index, so we can check we use the index specified in the SetupDoc
 				CreateDocumentsByEntityNameIndex(store);
 
@@ -82,14 +82,14 @@ namespace Raven.Bundles.Tests.IndexedProperties
 				DocumentKey = "CustomerId",
 
 				//This contains the mappings from the Map/Reduce result back to the original doc
-				FieldNameMappings = new[]
+				FieldNameMappings = 
 				{
-					Tuple.Create("Average", "AverageOrderCost"),
-					Tuple.Create("Count", "NumberOfOrders")
+					{"Average", "AverageOrderCost"},
+					{"Count", "NumberOfOrders"}
 				}
 			};
 
-			var indexName = typeof (Orders_ByCustomer_Count).Name.Replace("_", "/");
+			var indexName = new Orders_ByCustomer_Count().IndexName;
 			using (var session = store.OpenSession())
 			{
 				session.Store(setupDoc, SetupDoc.IdPrefix + indexName);
