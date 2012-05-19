@@ -25,7 +25,7 @@ namespace Raven.Tests.MailingList
 
 		public static EmbeddableDocumentStore Store()
 		{
-			var store = new EmbeddableDocumentStore { DataDirectory = "Maverix"};
+			var store = new EmbeddableDocumentStore { DataDirectory = "Maverix" };
 			store.Initialize();
 			store.RegisterListener(new NonStaleQueryListener());
 
@@ -141,20 +141,21 @@ namespace Raven.Tests.MailingList
 		public TemplateTests_Search()
 		{
 			Map = templates => from template in templates
-							   select new
-							   {
-								   name = template.name,
-								   category = template.category,
-								   type = template.type,
-								   state = template.state,
-								   added = template.added,
-								   Query = new object[] { 
-                                        template.name,
-                                        template.category,
-                                        template.subject,
-                                        template.description
-                                    }
-							   };
+								select new
+								{
+								name = template.name,
+								category = template.category,
+								type = template.type,
+								state = template.state,
+								added = template.added,
+								Query = new object[]
+								{
+									template.name,
+									template.category,
+									template.subject,
+									template.description
+								}
+								};
 			Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
 		}
 	}
