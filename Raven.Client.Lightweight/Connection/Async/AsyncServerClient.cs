@@ -445,7 +445,17 @@ namespace Raven.Client.Connection.Async
 
 		public Task<LicensingStatus> GetLicenseStatus()
 		{
-			throw new NotImplementedException();
+			var actualUrl = string.Format("{0}/license/status", url);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", new RavenJObject(), credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => new LicensingStatus
+				{
+					Error = task.Result.Value<bool>("Error"),
+					Message = task.Result.Value<string>("Message"),
+					Status = task.Result.Value<string>("Status"),
+				});
 		}
 
 		public Task<BuildNumber> GetBuildNumber()
