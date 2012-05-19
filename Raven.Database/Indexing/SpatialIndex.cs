@@ -34,13 +34,20 @@ namespace Raven.Database.Indexing
 
 		public static IEnumerable<Fieldable> Generate(double? lat, double? lng)
 		{
-			Shape shape = RavenSpatialContext.MakePoint(lat ?? 0, lng ?? 0);
+			Shape shape = RavenSpatialContext.MakePoint(lng ?? 0, lat ?? 0);
 			return strategy.CreateFields(fieldInfo, shape, true, false).Where(f => f != null);
 		}
 
+		/// <summary>
+		/// Make a spatial query
+		/// </summary>
+		/// <param name="lat"></param>
+		/// <param name="lng"></param>
+		/// <param name="radius">Radius, in miles</param>
+		/// <returns></returns>
 		public static Query MakeQuery(double lat, double lng, double radius)
 		{
-			return strategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, RavenSpatialContext.MakeCircle(lat, lng, radius)), fieldInfo);
+			return strategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, RavenSpatialContext.MakeCircle(lng, lat, radius)), fieldInfo);
 		}
 	}
 }
