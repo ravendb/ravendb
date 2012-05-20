@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants.cs" />
+    <Compile Include="Codec.cs" />
     <Compile Include="EncryptionSettingsDeleteTrigger.cs" />
     <Compile Include="DocumentEncryption.cs" />
     <Compile Include="EncryptionSettings.cs" />
