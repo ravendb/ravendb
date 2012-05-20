@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Directory = Lucene.Net.Store.Directory;
@@ -16,7 +17,8 @@ namespace Raven.Database.Indexing
 	{
 		private readonly IEnumerable<AbstractIndexCodec> codecs;
 
-		public LuceneCodecDirectory(string path, IEnumerable<AbstractIndexCodec> codecs) : base(new DirectoryInfo(path), null)
+		public LuceneCodecDirectory(string path, IEnumerable<AbstractIndexCodec> codecs)
+			: base(new DirectoryInfo(path), null)
 		{
 			this.codecs = codecs ?? Enumerable.Empty<AbstractIndexCodec>();
 		}
@@ -113,14 +115,7 @@ namespace Raven.Database.Indexing
 
 			public override void ReadBytes(byte[] b, int offset, int len)
 			{
-				int totalRead = 0;
-				while (totalRead < len)
-				{
-					int read = stream.Read(b, offset + totalRead, len - totalRead);
-					if (read == 0)
-						throw new EndOfStreamException();
-					totalRead += read;
-				}
+				stream.ReadEntireBlock(b, offset, len);
 			}
 
 			public override void Seek(long pos)
