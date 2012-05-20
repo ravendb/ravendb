@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
+using Raven.Bundles.Encryption.Streams;
 
 namespace Raven.Bundles.Encryption.Plugin
 {
@@ -15,24 +16,22 @@ namespace Raven.Bundles.Encryption.Plugin
 	{
 		public override Stream Encode(string key, Stream dataStream)
 		{
-			// // Can't simply use Codec.Encode(key, dataStream) because the resulting stream needs to be seekable
+			// Can't simply use Codec.Encode(key, dataStream) because the resulting stream needs to be seekable
 
 			if (!Codec.EncryptionSettings.EncryptIndexes)
 				return dataStream;
 
-			// return new EncryptedOutputStream(key, dataStream);
-			return dataStream;
+			return new SeekableCryptoStream(key, dataStream);
 		}
 
 		public override Stream Decode(string key, Stream dataStream)
 		{
-			// // Can't simply use Codec.Decode(key, dataStream) because the resulting stream needs to be seekable
+			// Can't simply use Codec.Decode(key, dataStream) because the resulting stream needs to be seekable
 
 			if (!Codec.EncryptionSettings.EncryptIndexes)
 				return dataStream;
-			
-			// return new EncryptedInputStream(key, dataStream);
-			return dataStream;
+
+			return new SeekableCryptoStream(key, dataStream);
 		}
 	}
 }
