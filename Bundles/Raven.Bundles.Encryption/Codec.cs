@@ -35,8 +35,8 @@ namespace Raven.Bundles.Encryption
 
 		public static EncodedBlock EncodeBlock(string key, byte[] data)
 		{
-			byte[] iv = null;
-			var transform = GetCryptoProvider(key, ref iv).CreateEncryptor();
+			byte[] iv;
+			var transform = GetCryptoProviderWithRandomIV(key, out iv).CreateEncryptor();
 
 			return new EncodedBlock(iv, transform.TransformEntireBlock(data));
 		}
@@ -48,17 +48,23 @@ namespace Raven.Bundles.Encryption
 			return transform.TransformEntireBlock(block.Data);
 		}
 
+		public static int GetIVLength()
+		{
+			if (encryptionIVSize == null)
+			{
+				// This will force detection of the iv size
+				GetCryptoProvider("");
+			}
+
+			return encryptionIVSize.Value;
+		}
+
 		private static SymmetricAlgorithm GetCryptoProvider(string key)
 		{
 			return GetCryptoProvider(key, null);
 		}
-
+		
 		private static SymmetricAlgorithm GetCryptoProvider(string key, byte[] iv)
-		{
-			return GetCryptoProvider(key, ref iv);
-		}
-
-		private static SymmetricAlgorithm GetCryptoProvider(string key, ref byte[] iv)
 		{
 			var result = EncryptionSettings.GenerateAlgorithm();
 			encryptionKeySize = encryptionKeySize ?? GetKeySizeForEncryption(result);
@@ -75,6 +81,15 @@ namespace Raven.Bundles.Encryption
 				iv = passwordBytes.GetBytes(encryptionIVSize.Value);
 			result.IV = iv;
 			return result;
+		}
+
+		private static SymmetricAlgorithm GetCryptoProviderWithRandomIV(string key, out byte[] iv)
+		{
+			var rng = new RNGCryptoServiceProvider();
+			iv = new byte[GetIVLength()];
+			rng.GetBytes(iv);
+
+			return GetCryptoProvider(key, iv);
 		}
 
 		private static byte[] GetSaltFromDocumentKey(string key)
