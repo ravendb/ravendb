@@ -15,6 +15,7 @@ namespace Raven.Bundles.Encryption.Settings
 		private byte[] encryptionKey;
 		private Type algorithmType;
 		private Func<SymmetricAlgorithm> algorithmGenerator;
+		private readonly bool encryptIndexes;
 
 		public EncryptionSettings()
 			: this(GenerateRandomEncryptionKey())
@@ -27,8 +28,14 @@ namespace Raven.Bundles.Encryption.Settings
 		}
 
 		public EncryptionSettings(byte[] encryptionKey, Type symmetricAlgorithmType)
+			: this(encryptionKey, symmetricAlgorithmType, true)
+		{
+		}
+
+		public EncryptionSettings(byte[] encryptionKey, Type symmetricAlgorithmType, bool encryptIndexes)
 		{
 			this.EncryptionKey = encryptionKey;
+			this.encryptIndexes = encryptIndexes;
 
 			typeof(EncryptionSettings)
 				.GetMethod("SetSymmetricAlgorithmType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
@@ -45,7 +52,7 @@ namespace Raven.Bundles.Encryption.Settings
 		public byte[] EncryptionKey
 		{
 			get { return encryptionKey; }
-			set
+			private set
 			{
 				if (value == null)
 					throw new ArgumentNullException("EncryptionKey");
@@ -70,6 +77,11 @@ namespace Raven.Bundles.Encryption.Settings
 		public Func<SymmetricAlgorithm> GenerateAlgorithm
 		{
 			get { return algorithmGenerator; }
+		}
+
+		public bool EncryptIndexes
+		{
+			get { return encryptIndexes; }
 		}
 
 		public static byte[] GenerateRandomEncryptionKey()

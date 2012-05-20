@@ -16,16 +16,22 @@ namespace Raven.Bundles.Encryption.Plugin
 		public override Stream Encode(string key, Stream dataStream)
 		{
 			// // Can't simply use Codec.Encode(key, dataStream) because the resulting stream needs to be seekable
-			// return new EncryptedOutputStream(key, dataStream);
 
+			if (!Codec.EncryptionSettings.EncryptIndexes)
+				return dataStream;
+
+			// return new EncryptedOutputStream(key, dataStream);
 			return dataStream;
 		}
 
 		public override Stream Decode(string key, Stream dataStream)
 		{
 			// // Can't simply use Codec.Decode(key, dataStream) because the resulting stream needs to be seekable
-			// return new EncryptedInputStream(key, dataStream);
 
+			if (!Codec.EncryptionSettings.EncryptIndexes)
+				return dataStream;
+			
+			// return new EncryptedInputStream(key, dataStream);
 			return dataStream;
 		}
 	}

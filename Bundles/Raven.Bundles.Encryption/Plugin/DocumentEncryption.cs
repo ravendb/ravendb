@@ -14,11 +14,6 @@ namespace Raven.Bundles.Encryption.Plugin
 {
 	public class DocumentEncryption : AbstractDocumentCodec
 	{
-		private static EncryptionSettings EncryptionSettings
-		{
-			get { return Codec.EncryptionSettings; }
-		}
-
 		public override Stream Encode(string key, RavenJObject data, RavenJObject metadata, Stream dataStream)
 		{
 			if (EncryptionSettings.DontEncrypt(key))

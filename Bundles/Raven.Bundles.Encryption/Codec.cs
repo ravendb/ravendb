@@ -37,14 +37,15 @@ namespace Raven.Bundles.Encryption
 		{
 			byte[] iv = null;
 			var transform = GetCryptoProvider(key, ref iv).CreateEncryptor();
-			var encoded = transform.TransformFinalBlock(data, 0, data.Length);
-			return new EncodedBlock(iv, encoded);
+
+			return new EncodedBlock(iv, transform.TransformEntireBlock(data));
 		}
 
 		public static byte[] DecodeBlock(string key, EncodedBlock block)
 		{
 			var transform = GetCryptoProvider(key, block.IV).CreateDecryptor();
-			return transform.TransformFinalBlock(block.Data, 0, block.Data.Length);
+
+			return transform.TransformEntireBlock(block.Data);
 		}
 
 		private static SymmetricAlgorithm GetCryptoProvider(string key)

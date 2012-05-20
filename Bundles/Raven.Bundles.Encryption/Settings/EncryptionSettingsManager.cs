@@ -21,8 +21,9 @@ namespace Raven.Bundles.Encryption.Settings
 		{
 			var type = GetTypeFromName(Database.Configuration.Settings[Constants.AlgorithmTypeSetting]);
 			var key = GetKeyFromBase64(Database.Configuration.Settings[Constants.EncryptionKeySetting]);
+			var encryptIndexes = GetEncryptIndexesFromString(Database.Configuration.Settings[Constants.EncryptIndexes], true);
 
-			EncryptionSettings = new EncryptionSettings(key, type);
+			EncryptionSettings = new EncryptionSettings(key, type, encryptIndexes);
 
 			VerifyEncryptionKey();
 		}
@@ -141,6 +142,21 @@ namespace Raven.Bundles.Encryption.Settings
 					// Found a document which is encrypted
 					return true;
 				}
+			}
+		}
+
+		private bool GetEncryptIndexesFromString(string value, bool defaultValue)
+		{
+			if (string.IsNullOrWhiteSpace(value))
+				return defaultValue;
+
+			try
+			{
+				return Convert.ToBoolean(value);
+			}
+			catch (Exception e)
+			{
+				throw new ConfigurationException("Invalid boolean value for setting EncryptIndexes: " + value, e);
 			}
 		}
 	}
