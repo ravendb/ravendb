@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Bundles.Encryption.Settings;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
@@ -16,38 +17,62 @@ namespace Raven.Bundles.Encryption
 		private static readonly ThreadLocal<MD5> LocalMD5 = new ThreadLocal<MD5>(() => MD5.Create());
 		private static int? encryptionKeySize = null;
 		private static int? encryptionIVSize = null;
-		
-		internal static EncryptionSettings EncryptionSettings
+
+		public static EncryptionSettings EncryptionSettings
 		{
 			get { return EncryptionSettingsManager.EncryptionSettings; }
 		}
 
 		public static Stream Encode(string key, Stream dataStream)
 		{
-			if (EncryptionSettings == null)
-				return dataStream;
-
 			return new CryptoStream(dataStream, GetCryptoProvider(key).CreateEncryptor(), CryptoStreamMode.Write);
 		}
 
 		public static Stream Decode(string key, Stream dataStream)
 		{
-			if (EncryptionSettings == null || EncryptionSettings.DontEncrypt(key))
-				return dataStream;
-
 			return new CryptoStream(dataStream, GetCryptoProvider(key).CreateDecryptor(), CryptoStreamMode.Read);
 		}
 
+		public static EncodedBlock EncodeBlock(string key, byte[] data)
+		{
+			byte[] iv = null;
+			var transform = GetCryptoProvider(key, ref iv).CreateEncryptor();
+			var encoded = transform.TransformFinalBlock(data, 0, data.Length);
+			return new EncodedBlock(iv, encoded);
+		}
+
+		public static byte[] DecodeBlock(string key, EncodedBlock block)
+		{
+			var transform = GetCryptoProvider(key, block.IV).CreateDecryptor();
+			return transform.TransformFinalBlock(block.Data, 0, block.Data.Length);
+		}
+
 		private static SymmetricAlgorithm GetCryptoProvider(string key)
+		{
+			return GetCryptoProvider(key, null);
+		}
+
+		private static SymmetricAlgorithm GetCryptoProvider(string key, byte[] iv)
+		{
+			return GetCryptoProvider(key, ref iv);
+		}
+
+		private static SymmetricAlgorithm GetCryptoProvider(string key, ref byte[] iv)
 		{
 			var result = EncryptionSettings.GenerateAlgorithm();
 			encryptionKeySize = encryptionKeySize ?? GetKeySizeForEncryption(result);
 			encryptionIVSize = encryptionIVSize ?? GetIVSizeForEncryption(result);
 
+			if (iv != null && iv.Length != encryptionIVSize)
+				throw new ArgumentException("GetCryptoProvider: IV has wrong length. Given length: " + iv.Length + ", expectd length: " + encryptionIVSize);
+
 			var passwordBytes = new Rfc2898DeriveBytes(EncryptionSettings.EncryptionKey, GetSaltFromDocumentKey(key), Constants.Rfc2898Iterations);
 
 			result.Key = passwordBytes.GetBytes(encryptionKeySize.Value);
-			result.IV = passwordBytes.GetBytes(encryptionIVSize.Value);
+
+			if (iv != null)
+				iv = passwordBytes.GetBytes(encryptionIVSize.Value);
+			result.IV = iv;
 			return result;
 		}
 
@@ -70,6 +95,18 @@ namespace Raven.Bundles.Encryption
 		private static int GetIVSizeForEncryption(SymmetricAlgorithm result)
 		{
 			return result.IV.Length;
+		}
+
+		public struct EncodedBlock
+		{
+			public EncodedBlock(byte[] iv, byte[] data)
+			{
+				this.IV = iv;
+				this.Data = data;
+			}
+
+			public readonly byte[] IV;
+			public readonly byte[] Data;
 		}
 	}
 }

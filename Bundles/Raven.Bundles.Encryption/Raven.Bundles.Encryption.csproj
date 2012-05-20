@@ -30,6 +30,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Lucene.Net, Version=2.9.4.1, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\SharedLibs\Lucene.Net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -51,12 +55,14 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="Codec.cs" />
-    <Compile Include="EncryptionSettingsDeleteTrigger.cs" />
-    <Compile Include="DocumentEncryption.cs" />
-    <Compile Include="EncryptionSettings.cs" />
-    <Compile Include="EncryptionSettingsManager.cs" />
+    <Compile Include="Plugin\IndexEncryption.cs" />
+    <Compile Include="Settings\EncryptionSettingsDeleteTrigger.cs" />
+    <Compile Include="Plugin\DocumentEncryption.cs" />
+    <Compile Include="Settings\EncryptionSettings.cs" />
+    <Compile Include="Settings\EncryptionSettingsManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

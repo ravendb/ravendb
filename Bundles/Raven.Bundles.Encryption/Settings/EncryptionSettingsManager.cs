@@ -11,11 +11,11 @@ using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
-namespace Raven.Bundles.Encryption
+namespace Raven.Bundles.Encryption.Settings
 {
-	internal class EncryptionSettingsManager : AbstractPutTrigger
+	public class EncryptionSettingsManager : AbstractPutTrigger
 	{
-		public static EncryptionSettings EncryptionSettings { get; private set; }
+		internal static EncryptionSettings EncryptionSettings { get; private set; }
 
 		public override void Initialize()
 		{

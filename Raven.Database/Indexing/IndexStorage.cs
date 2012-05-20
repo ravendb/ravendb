@@ -39,6 +39,7 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
+		private readonly DocumentDatabase documentDatabase;
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly string path;
@@ -53,6 +54,7 @@ namespace Raven.Database.Indexing
 		{
 			this.indexDefinitionStorage = indexDefinitionStorage;
 			this.configuration = configuration;
+			this.documentDatabase = documentDatabase;
 			path = configuration.IndexStoragePath;
 
 			if (Directory.Exists(path) == false && configuration.RunInMemory == false)
@@ -80,11 +82,11 @@ namespace Raven.Database.Indexing
 
 			foreach (var indexName in indexDefinitionStorage.IndexNames)
 			{
-				OpenIndexOnStartup(documentDatabase, indexName);
+				OpenIndexOnStartup(indexName);
 			}
 		}
 
-		private void OpenIndexOnStartup(DocumentDatabase documentDatabase, string indexName)
+		private void OpenIndexOnStartup(string indexName)
 		{
 			if (indexName == null) throw new ArgumentNullException("indexName");
 
@@ -147,7 +149,7 @@ namespace Raven.Database.Indexing
 			{
 				var indexDirectory = indexName ?? IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
 				var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
-				directory = FSDirectory.Open(new DirectoryInfo(indexFullPath));
+				directory = new LuceneCodecDirectory(indexFullPath, documentDatabase.IndexCodecs.OfType<AbstractIndexCodec>());
 
 				if (!IndexReader.IndexExists(directory))
 				{
@@ -207,7 +209,7 @@ namespace Raven.Database.Indexing
 
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)
 		{
-			var newDir = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(IndexDefinitionStorage.FixupIndexName(indexName, path)))));
+			var newDir = new LuceneCodecDirectory(Path.Combine(path, MonoHttpUtility.UrlEncode(IndexDefinitionStorage.FixupIndexName(indexName, path))), documentDatabase.IndexCodecs.OfType<AbstractIndexCodec>());
 			Lucene.Net.Store.Directory.Copy(ramDir, newDir, true);
 			return newDir;
 		}

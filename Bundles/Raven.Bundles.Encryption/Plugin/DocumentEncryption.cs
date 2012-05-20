@@ -6,10 +6,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Bundles.Encryption.Settings;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
-namespace Raven.Bundles.Encryption
+namespace Raven.Bundles.Encryption.Plugin
 {
 	public class DocumentEncryption : AbstractDocumentCodec
 	{

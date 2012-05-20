@@ -75,6 +75,9 @@ namespace Raven.Database
 		[ImportMany]
 		public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
 
+		[ImportMany]
+		public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
+
 		private List<IDisposable> toDispose = new List<IDisposable>();
 
 		/// <summary>
@@ -260,6 +263,7 @@ namespace Raven.Database
 						typeof (AbstractDeleteTrigger),
 						typeof (AbstractPutTrigger),
 						typeof (AbstractDocumentCodec),
+						typeof (AbstractIndexCodec),
 						typeof (AbstractDynamicCompilationExtension),
 						typeof (AbstractIndexQueryTrigger),
 						typeof (AbstractIndexUpdateTrigger),

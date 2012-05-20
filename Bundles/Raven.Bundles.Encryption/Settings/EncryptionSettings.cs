@@ -7,10 +7,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Bundles.Encryption
+namespace Raven.Bundles.Encryption.Settings
 {
 	[Serializable]
-	public class EncryptionSettings : ISerializable
+	internal class EncryptionSettings : ISerializable
 	{
 		private byte[] encryptionKey;
 		private Type algorithmType;
