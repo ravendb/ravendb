@@ -55,6 +55,13 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="Codec.cs" />
+    <Compile Include="CryptoTransformExtensions.cs" />
+    <Compile Include="EncryptedStream\BlockReaderWriter.cs" />
+    <Compile Include="EncryptedStream\EncryptedFile.cs" />
+    <Compile Include="EncryptedStream\EncryptedStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="EncryptedStream\StructConverter.cs" />
     <Compile Include="Plugin\IndexEncryption.cs" />
     <Compile Include="Settings\EncryptionSettingsDeleteTrigger.cs" />
     <Compile Include="Plugin\DocumentEncryption.cs" />
