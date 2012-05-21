@@ -104,10 +104,20 @@
             Corresponds with Solr's FieldType.createFields(). 
         </member>
         <member name="M:Lucene.Net.Spatial.SpatialStrategy`1.MakeQuery(Spatial4n.Core.Query.SpatialArgs,`0)">
+            <summary>
             Make a query
+            </summary>
+            <param name="args"></param>
+            <param name="fieldInfo"></param>
+            <returns></returns>
         </member>
         <member name="M:Lucene.Net.Spatial.SpatialStrategy`1.MakeFilter(Spatial4n.Core.Query.SpatialArgs,`0)">
+            <summary>
             Make a Filter
+            </summary>
+            <param name="args"></param>
+            <param name="fieldInfo"></param>
+            <returns></returns>
         </member>
         <member name="M:Lucene.Net.Spatial.Prefix.PrefixTreeStrategy.SetDefaultFieldValuesArrayLen(System.Int32)">
             Used in the in-memory ValueSource as a default ArrayList length for this field's array of values, per doc. 

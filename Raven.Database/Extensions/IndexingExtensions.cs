@@ -4,18 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Search;
-using Lucene.Net.Util;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
 using Raven.Database.Indexing.Sorting;
 using Constants = Raven.Abstractions.Data.Constants;
 
@@ -92,7 +88,9 @@ namespace Raven.Database.Extensions
 		{
 			if (self.SortedFields == null || self.SortedFields.Length <= 0)
 				return null;
-			var isSpatialIndexQuery = self is SpatialIndexQuery;
+
+			var spatialQuery = self as SpatialIndexQuery;
+
 			return new Sort(self.SortedFields
 							.Select(sortedField =>
 							{
@@ -103,12 +101,11 @@ namespace Raven.Database.Extensions
 										return new RandomSortField(Guid.NewGuid().ToString());
 									return new RandomSortField(parts[1]);
 								}
-								// TODO
-								//if (isSpatialIndexQuery && sortedField.Field == Constants.DistanceFieldName)
-								//{
-								//    var dsort = new Lucene.Net.Spatial.Tier.DistanceFieldComparatorSource((Lucene.Net.Spatial.Tier.DistanceFilter)filter);
-								//    return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
-								//}
+								if (spatialQuery != null && sortedField.Field == Constants.DistanceFieldName)
+								{
+									var dsort = new SpatialDistanceFieldComparatorSource(spatialQuery.Latitude, spatialQuery.Longitude);
+									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
+								}
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);
 								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);

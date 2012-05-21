@@ -10,6 +10,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Spatial;
 using Lucene.Net.Spatial.Prefix;
 using Lucene.Net.Spatial.Prefix.Tree;
+using Raven.Abstractions.Data;
 using Spatial4n.Core.Context;
 using Spatial4n.Core.Distance;
 using Spatial4n.Core.Query;
@@ -28,14 +29,15 @@ namespace Raven.Database.Indexing
 		static SpatialIndex()
 		{
 			maxLength = GeohashPrefixTree.GetMaxLevelsPossible();
-			fieldInfo = new SimpleSpatialFieldInfo("RavenDBSpatial");
+			fieldInfo = new SimpleSpatialFieldInfo(Constants.SpatialFieldName);
 			strategy = new RecursivePrefixTreeStrategy(new GeohashPrefixTree(RavenSpatialContext, maxLength));
 		}
 
 		public static IEnumerable<Fieldable> Generate(double? lat, double? lng)
 		{
 			Shape shape = RavenSpatialContext.MakePoint(lng ?? 0, lat ?? 0);
-			return strategy.CreateFields(fieldInfo, shape, true, false).Where(f => f != null);
+			return strategy.CreateFields(fieldInfo, shape, true, false).Where(f => f != null)
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, RavenSpatialContext.ToString(shape), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS), });
 		}
 
 		/// <summary>
@@ -48,6 +50,22 @@ namespace Raven.Database.Indexing
 		public static Query MakeQuery(double lat, double lng, double radius)
 		{
 			return strategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, RavenSpatialContext.MakeCircle(lng, lat, radius)), fieldInfo);
+		}
+
+		public static Filter MakeFilter(IndexQuery indexQuery)
+		{
+			var spatialQry = indexQuery as SpatialIndexQuery;
+			if (spatialQry == null) return null;
+
+			var args = new SpatialArgs(SpatialOperation.IsWithin, RavenSpatialContext.MakeCircle(spatialQry.Longitude, spatialQry.Latitude, spatialQry.Radius));
+			return strategy.MakeFilter(args, fieldInfo);
+		}
+
+		public static double GetDistance(double fromLat, double fromLng, double toLat, double toLng)
+		{
+			var ptFrom = RavenSpatialContext.MakePoint(fromLng, fromLat);
+			var ptTo = RavenSpatialContext.MakePoint(toLng, toLat);
+			return RavenSpatialContext.GetDistCalc().Distance(ptFrom, ptTo);
 		}
 	}
 }

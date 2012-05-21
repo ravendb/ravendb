@@ -902,7 +902,7 @@ namespace Raven.Database.Indexing
 			private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize,
 										IndexQuery indexQuery)
 			{
-				Sort sort = indexQuery.GetSort(parent.indexDefinition);
+				var sort = indexQuery.GetSort(parent.indexDefinition);
 
 				if (pageSize == Int32.MaxValue) // we want all docs
 				{
@@ -915,7 +915,8 @@ namespace Raven.Database.Indexing
 				// NOTE: We get Start + Pagesize results back so we have something to page on
 				if (sort != null)
 				{
-					return indexSearcher.Search(luceneQuery, null, minPageSize, sort);
+					var ret = indexSearcher.Search(luceneQuery, null, minPageSize, sort);
+					return ret;
 				}
 				return indexSearcher.Search(luceneQuery, null, minPageSize);
 			}
