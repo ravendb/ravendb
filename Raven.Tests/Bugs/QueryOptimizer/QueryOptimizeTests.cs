@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Xunit;
@@ -162,10 +163,36 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 				Assert.Equal("test2", queryResult.IndexName);
 			}
 		}
+
+		[Fact]
+		public void WillNotSelectExistingIndexIfFieldAnalyzedSettingsDontMatch()
+		{
+			//https://groups.google.com/forum/#!topic/ravendb/DYjvNjNIiho/discussion
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.PutIndex("test",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Title }",
+													Indexes = { { "Title", FieldIndexing.Analyzed } }
+												});
+
+				var queryResult = store.DatabaseCommands.Query("dynamic",
+															   new IndexQuery
+															   {
+																   Query = "Title:Matt"
+															   },
+															   new string[0]);
+
+				//Because the "test" index has a field set to Analyzed, it shouldn't be considered a match by the query optimiser
+				Assert.NotEqual("test", queryResult.IndexName);
+			}
+		}
 	}
 
 	public class BlogPost
 	{
 		public string[] Tags { get; set; }
+		public string Title { get; set; }
 	}
 }
