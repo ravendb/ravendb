@@ -21,7 +21,6 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 					                where post.Tags.Any(tag => tag == "RavenDB")
 					                select post;
 
-
 					Console.WriteLine(blogPosts);
 					session.Query<User>()
 						.Where(x => x.Email == "ayende@ayende.com")
@@ -173,7 +172,7 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 				store.DatabaseCommands.PutIndex("test",
 												new IndexDefinition
 												{
-													Map = "from doc in docs select new { doc.Title }",
+													Map = "from doc in docs select new { doc.Title, doc.BodyText }",
 													Indexes = { { "Title", FieldIndexing.Analyzed } }
 												});
 
@@ -184,8 +183,18 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 															   },
 															   new string[0]);
 
-				//Because the "test" index has a field set to Analyzed, it shouldn't be considered a match by the query optimiser
+				//Because the "test" index has a field set to Analyzed (and the default is Non-Analysed), 
+				//it should NOT be considered a match by the query optimiser!
 				Assert.NotEqual("test", queryResult.IndexName);
+
+				queryResult = store.DatabaseCommands.Query("dynamic",
+															   new IndexQuery
+															   {
+																   Query = "BodyText:Matt"
+															   },
+															   new string[0]);
+				//This query CAN use the existing index because "BodyText" is NOT set to analyzed
+				Assert.Equal("test", queryResult.IndexName);
 			}
 		}
 	}
@@ -194,5 +203,6 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 	{
 		public string[] Tags { get; set; }
 		public string Title { get; set; }
+		public string BodyText { get; set; }
 	}
 }
