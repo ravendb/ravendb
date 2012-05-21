@@ -548,8 +548,9 @@ namespace Raven.Bundles.Replication.Tasks
 			switch (ReplicationOptionsBehavior)
 			{
 				case TransitiveReplicationOptions.None:
-					return document.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == null ||
-						(document.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == CurrentDatabaseId);
+					var value = document.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource);
+					var replicateDoc = value == null || (value == CurrentDatabaseId);
+					return replicateDoc;
 			}
 			return true;
 
