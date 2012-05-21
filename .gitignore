@@ -36,3 +36,4 @@ ClientBin/
 StyleCop.Cache
 *.dotCover
 RavenDB*.nupkg
+*.orig
