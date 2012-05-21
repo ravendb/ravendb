@@ -67,6 +67,7 @@
     <Compile Include="Authentication\SmugglerOAuth.cs" />
     <Compile Include="Authentication\UsingDatabaseCommands.cs" />
     <Compile Include="Authorization\AuthorizationTest.cs" />
+    <Compile Include="Authorization\Bugs\fampinheiro.cs" />
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
     <Compile Include="Authorization\Bugs\Kwal.cs" />
     <Compile Include="Authorization\Bugs\LoadingSavedInfo.cs" />

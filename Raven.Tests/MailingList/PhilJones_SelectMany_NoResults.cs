@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class PhilJones_SelectMany_NoResults: RavenTest
+	public class PhilJones_SelectMany_NoResults : RavenTest
 	{
 		public class Service
 		{
@@ -38,15 +38,15 @@ namespace Raven.Tests.MailingList
 			public Services_QueryIndex()
 			{
 				Map = suppliers => from supplier in suppliers
-								   select new
-								   {
-									   supplier.Name,
-									   Query = new object[]
-                                    {
-                                        supplier.Name,
-                                        supplier.EmailAddresses.Select(x => x.Email)
-                                    }
-								   };
+				                   select new
+				                   {
+				                   	supplier.Name,
+				                   	Query = new object[]
+				                   	{
+				                   		supplier.Name,
+				                   		supplier.EmailAddresses.Select(x => x.Email)
+				                   	}
+				                   };
 
 				Store(x => x.Query, FieldStorage.Yes);
 				Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
@@ -67,18 +67,18 @@ namespace Raven.Tests.MailingList
 						Name = "Bob",
 						Description = "Bob's Service",
 						EmailAddresses = new List<Service.EmailAddress>
-                                                            {
-                                                                new Service.EmailAddress
-                                                                    {
-                                                                        Email = "bob@example.org",
-                                                                        Notes = "Bobby"
-                                                                    },
-                                                                new Service.EmailAddress
-                                                                    {
-                                                                        Email = "Bobby@example.org",
-                                                                        Notes = "bobobo"
-                                                                    }
-                                                            }
+						{
+							new Service.EmailAddress
+							{
+								Email = "bob@example.org",
+								Notes = "Bobby"
+							},
+							new Service.EmailAddress
+							{
+								Email = "Bobby@example.org",
+								Notes = "bobobo"
+							}
+						}
 					};
 
 					session.Store(service1);
