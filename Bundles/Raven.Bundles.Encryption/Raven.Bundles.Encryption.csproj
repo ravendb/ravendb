@@ -56,6 +56,7 @@
     <Compile Include="Constants.cs" />
     <Compile Include="Codec.cs" />
     <Compile Include="CryptoTransformExtensions.cs" />
+    <Compile Include="Plugin\EncryptionSettingsPutTrigger.cs" />
     <Compile Include="Streams\BlockReaderWriter.cs" />
     <Compile Include="Streams\EncryptedFile.cs" />
     <Compile Include="Streams\SeekableCryptoStream.cs">
@@ -63,7 +64,7 @@
     </Compile>
     <Compile Include="Streams\StructConverter.cs" />
     <Compile Include="Plugin\IndexEncryption.cs" />
-    <Compile Include="Settings\EncryptionSettingsDeleteTrigger.cs" />
+    <Compile Include="Plugin\EncryptionSettingsDeleteTrigger.cs" />
     <Compile Include="Plugin\DocumentEncryption.cs" />
     <Compile Include="Settings\EncryptionSettings.cs" />
     <Compile Include="Settings\EncryptionSettingsManager.cs" />

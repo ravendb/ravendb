@@ -9,11 +9,18 @@ using System.Threading.Tasks;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 using Raven.Bundles.Encryption.Streams;
+using Raven.Bundles.Encryption.Settings;
+using Raven.Database;
 
 namespace Raven.Bundles.Encryption.Plugin
 {
 	public class IndexEncryption : AbstractIndexCodec
 	{
+		public override void Initialize(DocumentDatabase database)
+		{
+			EncryptionSettingsManager.Initialize(database);
+		}
+
 		public override Stream Encode(string key, Stream dataStream)
 		{
 			// Can't simply use Codec.Encode(key, dataStream) because the resulting stream needs to be seekable

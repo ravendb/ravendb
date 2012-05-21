@@ -1,7 +1,7 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
 
-namespace Raven.Bundles.Encryption.Settings
+namespace Raven.Bundles.Encryption.Plugin
 {
 	public class EncryptionSettingsDeleteTrigger : AbstractDeleteTrigger
 	{

@@ -13,25 +13,28 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Encryption.Settings
 {
-	public class EncryptionSettingsManager : AbstractPutTrigger
+	public static class EncryptionSettingsManager
 	{
 		internal static EncryptionSettings EncryptionSettings { get; private set; }
 
-		public override void Initialize()
+		public static void Initialize(DocumentDatabase database)
 		{
-			var type = GetTypeFromName(Database.Configuration.Settings[Constants.AlgorithmTypeSetting]);
-			var key = GetKeyFromBase64(Database.Configuration.Settings[Constants.EncryptionKeySetting]);
-			var encryptIndexes = GetEncryptIndexesFromString(Database.Configuration.Settings[Constants.EncryptIndexes], true);
+			if (EncryptionSettings != null)
+				return;
+
+			var type = GetTypeFromName(database.Configuration.Settings[Constants.AlgorithmTypeSetting]);
+			var key = GetKeyFromBase64(database.Configuration.Settings[Constants.EncryptionKeySetting]);
+			var encryptIndexes = GetEncryptIndexesFromString(database.Configuration.Settings[Constants.EncryptIndexes], true);
+
+			VerifyEncryptionKey(database);
 
 			EncryptionSettings = new EncryptionSettings(key, type, encryptIndexes);
-
-			VerifyEncryptionKey();
 		}
 
 		/// <summary>
 		/// A wrapper around Convert.FromBase64String, with extra validation and relevant exception messages.
 		/// </summary>
-		private byte[] GetKeyFromBase64(string base64)
+		private static byte[] GetKeyFromBase64(string base64)
 		{
 			if (string.IsNullOrWhiteSpace(base64))
 				throw new ConfigurationException("The " + Constants.EncryptionKeySetting + " setting must be set to an encryption key. "
@@ -58,7 +61,7 @@ namespace Raven.Bundles.Encryption.Settings
 		/// <summary>
 		/// A wrapper around Type.GetType, with extra validation and a default value.
 		/// </summary>
-		private Type GetTypeFromName(string typeName)
+		private static Type GetTypeFromName(string typeName)
 		{
 			if (string.IsNullOrWhiteSpace(typeName))
 				return Constants.DefaultCryptoServiceProvider;
@@ -79,12 +82,12 @@ namespace Raven.Bundles.Encryption.Settings
 		/// <summary>
 		/// Uses an encrypted document to verify that the encryption key is correct and decodes it to the right value.
 		/// </summary>
-		private void VerifyEncryptionKey()
+		private static void VerifyEncryptionKey(DocumentDatabase database)
 		{
 			JsonDocument doc;
 			try
 			{
-				doc = Database.Get(Constants.InDatabaseKeyVerificationDocumentName, null);
+				doc = database.Get(Constants.InDatabaseKeyVerificationDocumentName, null);
 			}
 			catch (CryptographicException e)
 			{
@@ -101,31 +104,20 @@ namespace Raven.Bundles.Encryption.Settings
 			else
 			{
 				// This is the first time the database is loaded.
-				if (EncryptedDocumentsExist())
+				if (EncryptedDocumentsExist(database))
 					throw new InvalidOperationException("The database already has existing documents, you cannot start using encryption now.");
 
-				Database.Put(Constants.InDatabaseKeyVerificationDocumentName, null, Constants.InDatabaseKeyVerificationDocumentContents, new RavenJObject(), null);
+				database.Put(Constants.InDatabaseKeyVerificationDocumentName, null, Constants.InDatabaseKeyVerificationDocumentContents, new RavenJObject(), null);
 			}
 		}
 
-		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
-		{
-			if (key == Constants.InDatabaseKeyVerificationDocumentName)
-			{
-				if (Database.Get(key, null) != null)
-					return VetoResult.Deny("The encryption verification document already exists and cannot be overwritten.");
-			}
-
-			return VetoResult.Allowed;
-		}
-
-		private bool EncryptedDocumentsExist()
+		private static bool EncryptedDocumentsExist(DocumentDatabase database)
 		{
 			const int pageSize = 10;
 			int index = 0;
 			while (true)
 			{
-				var array = Database.GetDocuments(index, index + pageSize, null);
+				var array = database.GetDocuments(index, index + pageSize, null);
 				if (array.Length == 0)
 				{
 					// We've gone over all the documents in the database, and none of them are encrypted.
@@ -145,7 +137,7 @@ namespace Raven.Bundles.Encryption.Settings
 			}
 		}
 
-		private bool GetEncryptIndexesFromString(string value, bool defaultValue)
+		private static bool GetEncryptIndexesFromString(string value, bool defaultValue)
 		{
 			if (string.IsNullOrWhiteSpace(value))
 				return defaultValue;

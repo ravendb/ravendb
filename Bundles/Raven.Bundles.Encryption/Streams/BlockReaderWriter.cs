@@ -15,7 +15,7 @@ namespace Raven.Bundles.Encryption.Streams
 		private readonly string key;
 		private readonly object locker = new object();
 
-		public BlockReaderWriter(string key, Stream stream, int blockSize)
+		public BlockReaderWriter(string key, Stream stream, int defaultBlockSize)
 		{
 			if (key == null)
 				throw new ArgumentNullException("key");
@@ -28,29 +28,43 @@ namespace Raven.Bundles.Encryption.Streams
 			this.key = key;
 			this.stream = stream;
 
-			var ivSize = Codec.GetIVLength();
-
-			this.Header = new EncryptedFile.Header
-			{
-				MagicNumber = EncryptedFile.DefaultMagicNumber,
-				IVSize = ivSize,
-				BlockSize = blockSize
-			};
+			this.Header = ReadOrWriteHeader(defaultBlockSize);
 		}
 
-		public void ReadHeader()
+		private EncryptedFile.Header ReadOrWriteHeader(int defaultBlockSize)
 		{
 			lock (locker)
 			{
-				lock (locker)
+				stream.Position = 0;
+
+				if (stream.Length >= EncryptedFile.Header.HeaderSize)
 				{
-					stream.Position = 0;
+					// Read header
+					
 					var headerBytes = stream.ReadEntireBlock(EncryptedFile.Header.HeaderSize);
+					var header = StructConverter.ConvertBitsToStruct<EncryptedFile.Header>(headerBytes);
 
-					Header = StructConverter.ConvertBitsToStruct<EncryptedFile.Header>(headerBytes);
-
-					if (Header.MagicNumber != EncryptedFile.DefaultMagicNumber)
+					if (header.MagicNumber != EncryptedFile.DefaultMagicNumber)
 						throw new InvalidDataException("The magic number in the file doesn't match the expected magic number for encypted files. Perhaps this file isn't encrypted?");
+
+					return header;
+				}
+				else
+				{
+					// Write header
+
+					var ivSize = Codec.GetIVLength();
+					var header = new EncryptedFile.Header
+					{
+						MagicNumber = EncryptedFile.DefaultMagicNumber,
+						IVSize = ivSize,
+						BlockSize = defaultBlockSize
+					};
+					var headerBytes = StructConverter.ConvertStructToBits(header);
+
+					stream.Write(headerBytes, 0, EncryptedFile.Header.HeaderSize);
+
+					return header;
 				}
 			}
 		}
@@ -84,17 +98,6 @@ namespace Raven.Bundles.Encryption.Streams
 					BlockNumber = blockNumber,
 					Data = Codec.DecodeBlock(key, new Codec.EncodedBlock(iv, encrypted))
 				};
-			}
-		}
-
-		public void WriteHeader()
-		{
-			lock (locker)
-			{
-				var headerBytes = StructConverter.ConvertStructToBits(Header);
-
-				stream.Position = 0;
-				stream.Write(headerBytes, 0, EncryptedFile.Header.HeaderSize);
 			}
 		}
 
