@@ -61,7 +61,10 @@ namespace Raven.Database.Indexing
 		private void CreateDirectory()
 		{
 			if (!directory.Exists)
+			{
 				directory.Create();
+				directory.Refresh();
+			}
 		}
 
 		private void DeleteFile(FileInfo file)
