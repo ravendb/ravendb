@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -302,13 +303,15 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl();
+
+				var sp = Stopwatch.StartNew();
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 
 				request.WebRequest.Headers.Add("Attachment-Ids", string.Join(", ", jsonAttachments.Select(x=>x.Value<string>("@id"))));
 
 				request.WriteBson(jsonAttachments);
 				request.ExecuteRequest();
-				log.Info("Replicated {0} attachments to {1}", jsonAttachments.Length, destination);
+				log.Info("Replicated {0} attachments to {1} in {2:#,#;;0} ms", jsonAttachments.Length, destination, sp.ElapsedMilliseconds);
 				return true;
 			}
 			catch (WebException e)
@@ -351,10 +354,13 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl();
+
+				var sp = Stopwatch.StartNew();
+
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 				request.Write(jsonDocuments);
 				request.ExecuteRequest();
-				log.Info("Replicated {0} documents to {1}", jsonDocuments.Length, destination);
+				log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);
 				return true;
 			}
 			catch (WebException e)
@@ -569,7 +575,7 @@ namespace Raven.Bundles.Replication.Tasks
 			if (document.Metadata[ReplicationConstants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propagate the conflict
 				return false;
 
-			if (document.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationId) // prevent replicating back to source
+			if (document.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == destinationId) // prevent replicating back to source
 				return false;
 
 			switch (ReplicationOptionsBehavior)
@@ -597,7 +603,7 @@ namespace Raven.Bundles.Replication.Tasks
 				return false;
 
 			// we don't replicate stuff that was created there
-			if (attachment.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationInstanceId)
+			if (attachment.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == destinationInstanceId)
 				return false;
 
 			switch (ReplicationOptionsBehavior)
