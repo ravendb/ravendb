@@ -26,7 +26,7 @@ namespace Raven.Bundles.Tests.Replication
 				session.SaveChanges();
 			}
 
-			Company company = WaitForDocument<Company>(store2, "companies/1");
+			var company = WaitForDocument<Company>(store2, "companies/1");
 			Assert.Equal("Hibernating Rhinos", company.Name);
 		}
 

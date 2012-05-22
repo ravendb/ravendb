@@ -28,7 +28,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void SimpleLogin()
 		{
-			Run<SimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists());
+			Run<SimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 40);
 		}
 
 		[Fact]
@@ -40,7 +40,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void CanMergeResultFromAllPostsShards()
 		{
-			Run<CanQueryOnlyPosts>(x => x.CanMergeResultFromAllPostsShards(), 10000);
+			Run<CanQueryOnlyPosts>(x => x.CanMergeResultFromAllPostsShards(), 10);
 		}
 		
 		[Fact]
