@@ -37,7 +37,7 @@ namespace Raven.Bundles.Replication.Responders
 			{
 				var document = Database.Get(ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src, null);
 
-				SourceReplicationInformation sourceReplicationInformation = null;
+				SourceReplicationInformation sourceReplicationInformation;
 
 				if (document == null)
 				{

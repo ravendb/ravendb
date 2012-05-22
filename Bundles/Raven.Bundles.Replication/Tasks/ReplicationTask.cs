@@ -249,7 +249,9 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			var jsonDocuments = GetJsonDocuments(destinationsReplicationInformationForSource, destination);
 			if (jsonDocuments == null || jsonDocuments.Length == 0)
+			{
 				return null;
+			}
 			if (TryReplicationDocuments(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
 			{
 				if (IsFirstFailue(destination))
@@ -388,27 +390,28 @@ namespace Raven.Bundles.Replication.Tasks
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					var docsToReplicate = actions.Documents.GetDocumentsAfter(destinationsReplicationInformationForSource.LastDocumentEtag, 100).ToList();
-					var filteredDocsToReplicate = docsToReplicate.Where(document => destination.FilterDocuments(document, destinationId)).ToList();
-
-					if(docsToReplicate.Count != filteredDocsToReplicate.Count)
+					var docsToReplicate =
+						actions.Documents.GetDocumentsAfter(destinationsReplicationInformationForSource.LastDocumentEtag, 100).ToList();
+					var filteredDocsToReplicate =
+						docsToReplicate.Where(document => destination.FilterDocuments(document, destinationId)).ToList();
+					
+					log.Debug(() =>
 					{
-						log.Debug(()=>
-						{
-							var diff = docsToReplicate.Except(filteredDocsToReplicate).Select(x => x.Key);
-							return string.Format("Filtered {0} documents out of {1} to replicate to {2}. [{3}]",
-							                     docsToReplicate.Count - filteredDocsToReplicate.Count, docsToReplicate.Count, destination,
-							                     string.Join(", ", diff));
-						});
-					}
+						var diff = docsToReplicate.Except(filteredDocsToReplicate).Select(x => x.Key);
+						return string.Format("Will replicate {1} (out of {0}) {1} to replicate to {2}. [Not replicated: {3}]",
+						                     docsToReplicate.Count,
+											 filteredDocsToReplicate.Count, 
+											 destination,
+						                     string.Join(", ", diff));
+					});
 
 					jsonDocuments = new RavenJArray(filteredDocsToReplicate
-						.Select(x =>
-						{
-							DocumentRetriever.EnsureIdInMetadata(x);
-							return x;
-						})
-						.Select(x => x.ToJson()));
+					                                	.Select(x =>
+					                                	{
+					                                		DocumentRetriever.EnsureIdInMetadata(x);
+					                                		return x;
+					                                	})
+					                                	.Select(x => x.ToJson()));
 				});
 			}
 			catch (Exception e)
