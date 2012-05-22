@@ -26,8 +26,8 @@ namespace Raven.Database.Indexing
 	{
 		private readonly IndexDefinition indexDefinition;
 		private readonly List<int> multipleItemsSameFieldCount = new List<int>();
-		private readonly Dictionary<object, Field> fieldsCache = new Dictionary<object, Field>();
-		private readonly Dictionary<object, NumericField> numericFieldsCache = new Dictionary<object, NumericField>();
+		private readonly Dictionary<FieldCacheKey, Field> fieldsCache = new Dictionary<FieldCacheKey, Field>();
+		private readonly Dictionary<FieldCacheKey, NumericField> numericFieldsCache = new Dictionary<FieldCacheKey, NumericField>();
 
 		public AnonymousObjectToLuceneDocumentConverter(IndexDefinition indexDefinition)
 		{
@@ -139,7 +139,7 @@ namespace Raven.Database.Indexing
 			var itemsToIndex = value as IEnumerable;
 			if( itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
 			{
-				if (nestedArray	 == false &&storage != Field.Store.NO)
+				if (nestedArray	 == false && !Equals(storage, Field.Store.NO))
 				{
 					yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
 				}
@@ -157,7 +157,8 @@ namespace Raven.Database.Indexing
 			}
 
 			var fieldIndexingOptions = indexDefinition.GetIndex(name, null);
-			if (fieldIndexingOptions == Field.Index.NOT_ANALYZED || fieldIndexingOptions == Field.Index.NOT_ANALYZED_NO_NORMS)// explicitly not analyzed
+			if (Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED) ||
+			    Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED_NO_NORMS))// explicitly not analyzed
 			{
 				if (value is DateTime)
 				{
@@ -237,12 +238,7 @@ namespace Raven.Database.Indexing
 
 			var fieldName = name + "_Range";
 			var storage = indexDefinition.GetStorage(name, defaultStorage);
-			var cacheKey = new
-			{
-				fieldName,
-				storage,
-				multipleItemsSameFieldCountSum = multipleItemsSameFieldCount.Sum()
-			};
+			var cacheKey = new FieldCacheKey(name, null, storage, multipleItemsSameFieldCount.ToArray());
 			NumericField numericField;
 			if (numericFieldsCache.TryGetValue(cacheKey, out numericField) == false)
 			{
@@ -302,12 +298,7 @@ namespace Raven.Database.Indexing
 
 		private Field CreateBinaryFieldWithCaching(string name, byte[] value, Field.Store store)
 		{
-			var cacheKey = new
-			{
-				name,
-				store,
-				multipleItemsSameFieldCountSum = multipleItemsSameFieldCount.Sum()
-			};
+			var cacheKey = new FieldCacheKey(name, null, store, multipleItemsSameFieldCount.ToArray());
 			Field field;
 			if (fieldsCache.TryGetValue(cacheKey, out field) == false)
 			{
@@ -318,15 +309,53 @@ namespace Raven.Database.Indexing
 			field.SetOmitNorms(true);
 			return field;
 		}
+
+		public class FieldCacheKey
+		{
+			private readonly string name;
+			private readonly Field.Index index;
+			private readonly Field.Store store;
+			private readonly int[] multipleItemsSameField;
+
+			public FieldCacheKey(string name, Field.Index index, Field.Store store, int[] multipleItemsSameField)
+			{
+				this.name = name;
+				this.index = index;
+				this.store = store;
+				this.multipleItemsSameField = multipleItemsSameField;
+			}
+
+
+			protected bool Equals(FieldCacheKey other)
+			{
+				return string.Equals(name, other.name) && Equals(index, other.index) && Equals(store, other.store) &&
+					multipleItemsSameField.SequenceEqual(other.multipleItemsSameField);
+			}
+
+			public override bool Equals(object obj)
+			{
+				if (ReferenceEquals(null, obj)) return false;
+				if (ReferenceEquals(this, obj)) return true;
+				if (obj.GetType() != typeof (FieldCacheKey)) return false;
+				return Equals((FieldCacheKey) obj);
+			}
+
+			public override int GetHashCode()
+			{
+				unchecked
+				{
+					int hashCode = (name != null ? name.GetHashCode() : 0);
+					hashCode = (hashCode*397) ^ (index != null ? index.GetHashCode() : 0);
+					hashCode = (hashCode*397) ^ (store != null ? store.GetHashCode() : 0);
+					hashCode = multipleItemsSameField.Aggregate(hashCode, (h, x) => h*397 ^ x);
+					return hashCode;
+				}
+			}
+		}
+
 		private Field CreateFieldWithCaching(string name, string value, Field.Store store, Field.Index index)
 		{
-			var cacheKey = new
-			{
-				name,
-				index,
-				store,
-				multipleItemsSameFieldCountSum = multipleItemsSameFieldCount.Sum()
-			};
+			var cacheKey = new FieldCacheKey(name, index, store, multipleItemsSameFieldCount.ToArray());
 			Field field;
 			if (fieldsCache.TryGetValue(cacheKey, out field) == false)
 			{

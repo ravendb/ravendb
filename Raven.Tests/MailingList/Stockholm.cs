@@ -62,7 +62,7 @@ namespace Raven.Tests.MailingList
 						Date = DateTime.Today,
 						Instructor = "instrucctors/1",
 						Location = "Stockholm",
-						Technologies = new[] { "RavenDB", "dotNet" }
+						Technologies = new[] { "dotNet", "RavenDB" }
 					};
 					session.Store(course);
 					session.SaveChanges();
