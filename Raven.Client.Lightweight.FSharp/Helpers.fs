@@ -70,3 +70,9 @@ module Linq =
         let args,body = translateExpr (QuotationEvaluator.ToLinqExpression p)
         f args body
 
+    /// Converts an F# quotation into a LINQ expression suitable for index creation.
+    let toIndexExpression (expr:Expr<seq<'a> -> seq<'b>>) =
+        let linq = QuotationEvaluator.ToLinqExpression expr
+        let body = Expression.Convert(linq, typeof<System.Collections.IEnumerable>)
+        let paramExpr = Expression.Parameter(typeof<seq<'a>>, "a")
+        Expression.Lambda<Func<seq<'a>, System.Collections.IEnumerable>>(body, paramExpr)
