@@ -389,8 +389,7 @@ namespace Raven.Bundles.Replication.Tasks
 				docDb.TransactionalStorage.Batch(actions =>
 				{
 					jsonDocuments = new RavenJArray(actions.Documents.GetDocumentsAfter(destinationsReplicationInformationForSource.LastDocumentEtag, 100)
-						.Where(destination.FilterDocuments)
-						.Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationId) // prevent replicating back to source
+						.Where(document => destination.FilterDocuments(document, destinationId))
 						.Select(x =>
 						{
 							DocumentRetriever.EnsureIdInMetadata(x);
@@ -416,9 +415,7 @@ namespace Raven.Bundles.Replication.Tasks
 				docDb.TransactionalStorage.Batch(actions =>
 				{
 					jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(destinationsReplicationInformationForSource.LastAttachmentEtag,100)
-						.Where(destination.FilterAttachments)
-						// we don't replicate stuff that was created there
-						.Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationInstanceId)
+						.Where(information => destination.FilterAttachments(information, destinationInstanceId))
 						.Select(x => new RavenJObject
 						{
 							{"@metadata", x.Metadata},
@@ -541,7 +538,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 	public class ReplicationStrategy
 	{
-		public bool FilterDocuments(JsonDocument document)
+		public bool FilterDocuments(JsonDocument document, string destinationId)
 		{
 			if (document.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)) // don't replicate system docs
 			{
@@ -551,6 +548,9 @@ namespace Raven.Bundles.Replication.Tasks
 			if (document.Metadata.ContainsKey(Constants.NotForReplication) && document.Metadata.Value<bool>(Constants.NotForReplication)) // not explicitly marked to skip
 				return false;
 			if (document.Metadata[ReplicationConstants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propagate the conflict
+				return false;
+
+			if (document.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationId) // prevent replicating back to source
 				return false;
 
 			switch (ReplicationOptionsBehavior)
@@ -564,7 +564,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		}
 
-		public bool FilterAttachments(AttachmentInformation attachment)
+		public bool FilterAttachments(AttachmentInformation attachment, string destinationInstanceId)
 		{
 			if (attachment.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase) || // don't replicate system attachments
 				attachment.Key.StartsWith("transactions/recoveryInformation", StringComparison.InvariantCultureIgnoreCase)) // don't replicate transaction recovery information
@@ -575,6 +575,10 @@ namespace Raven.Bundles.Replication.Tasks
 				return false;
 
 			if (attachment.Metadata.ContainsKey(ReplicationConstants.RavenReplicationConflict))// don't replicate conflicted documents, that just propagate the conflict
+				return false;
+
+			// we don't replicate stuff that was created there
+			if (attachment.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationInstanceId)
 				return false;
 
 			switch (ReplicationOptionsBehavior)
