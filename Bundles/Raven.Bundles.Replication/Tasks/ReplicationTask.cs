@@ -388,8 +388,21 @@ namespace Raven.Bundles.Replication.Tasks
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					jsonDocuments = new RavenJArray(actions.Documents.GetDocumentsAfter(destinationsReplicationInformationForSource.LastDocumentEtag, 100)
-						.Where(document => destination.FilterDocuments(document, destinationId))
+					var docsToReplicate = actions.Documents.GetDocumentsAfter(destinationsReplicationInformationForSource.LastDocumentEtag, 100).ToList();
+					var filteredDocsToReplicate = docsToReplicate.Where(document => destination.FilterDocuments(document, destinationId)).ToList();
+
+					if(docsToReplicate.Count != filteredDocsToReplicate.Count)
+					{
+						log.Debug(()=>
+						{
+							var diff = docsToReplicate.Except(filteredDocsToReplicate).Select(x => x.Key);
+							return string.Format("Filtered {0} documents out of {1} to replicate to {2}. [{3}]",
+							                     docsToReplicate.Count - filteredDocsToReplicate.Count, docsToReplicate.Count, destination,
+							                     string.Join(", ", diff));
+						});
+					}
+
+					jsonDocuments = new RavenJArray(filteredDocsToReplicate
 						.Select(x =>
 						{
 							DocumentRetriever.EnsureIdInMetadata(x);
@@ -598,7 +611,12 @@ namespace Raven.Bundles.Replication.Tasks
 
 		public override string ToString()
 		{
-			return string.Format("ReplicationOptionsBehavior: {0}, ConnectionStringOptions: {1}", ReplicationOptionsBehavior, ConnectionStringOptions);
+			return string.Join(" ", new[]
+			{
+				ConnectionStringOptions.Url,
+				ConnectionStringOptions.DefaultDatabase,
+				ConnectionStringOptions.ApiKey
+			}.Where(x => x != null));
 		}
 	}
 }
