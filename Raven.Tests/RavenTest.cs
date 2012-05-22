@@ -49,22 +49,32 @@ namespace Raven.Tests
 											}
 									};
 
-			ModifyStore(documentStore);
-			ModifyConfiguration(documentStore.Configuration);
-
-			if (documentStore.Configuration.RunInMemory == false)
-				IOExtensions.DeleteDirectory(path);
-			documentStore.Initialize();
-
-			CreateDefaultIndexes(documentStore);
-
-			if (allocatedMemory != null && inMemory)
+			try
 			{
-				var transactionalStorage = ((TransactionalStorage)documentStore.DocumentDatabase.TransactionalStorage);
-				transactionalStorage.EnsureCapacity(allocatedMemory.Value);
-			}
+				ModifyStore(documentStore);
+				ModifyConfiguration(documentStore.Configuration);
 
-			return documentStore;
+				if (documentStore.Configuration.RunInMemory == false)
+					IOExtensions.DeleteDirectory(path);
+				documentStore.Initialize();
+
+				CreateDefaultIndexes(documentStore);
+
+				if (allocatedMemory != null && inMemory)
+				{
+					var transactionalStorage = ((TransactionalStorage)documentStore.DocumentDatabase.TransactionalStorage);
+					transactionalStorage.EnsureCapacity(allocatedMemory.Value);
+				}
+
+				return documentStore;
+			}
+			catch
+			{
+				// We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
+				if (documentStore != null)
+					documentStore.Dispose();
+				throw;
+			}
 		}
 
 		protected virtual void CreateDefaultIndexes(IDocumentStore documentStore)
