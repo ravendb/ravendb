@@ -131,13 +131,30 @@ namespace Raven.Database.Queries
 							}
 						}
 
-						if(indexDefinition.Analyzers != null && indexDefinition.Analyzers.Count > 0)
+						if (indexDefinition.Analyzers != null && indexDefinition.Analyzers.Count > 0)
 						{
 							// none of the fields have custom analyzers
 							if (normalizedFieldsQueriedUpon.Any(indexDefinition.Analyzers.ContainsKey)) 
 								return false;
 						}
 
+						if (indexDefinition.Indexes != null && indexDefinition.Indexes.Count > 0)
+						{
+							//If any of the fields we want to query on are set to something other than "NotAnalysed", don't use the index
+							var anyFieldWithNonDefaultIndexing = normalizedFieldsQueriedUpon.Any(x =>
+							{
+								if (indexDefinition.Indexes.ContainsKey(x))
+								{
+									var analysedInfo = indexDefinition.Indexes[x];
+									if (analysedInfo != FieldIndexing.NotAnalyzed)
+										return true;
+								}
+								return false;
+							});
+
+							if (anyFieldWithNonDefaultIndexing)
+								return false;
+						}
 						return true;
 					})
 					.OrderByDescending(indexName =>
