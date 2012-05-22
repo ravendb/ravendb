@@ -449,7 +449,10 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			try
 			{
-				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl();
+				var currentEtag = Guid.Empty;
+				docDb.TransactionalStorage.Batch(accessor => currentEtag = accessor.Staleness.GetMostRecentDocumentEtag());
+				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
+				          "&currentEtag=" + currentEtag;
 				var request = httpRavenRequestFactory.Create(url, "GET", destination.ConnectionStringOptions);
 				return request.ExecuteRequest<SourceReplicationInformation>();
 			}
