@@ -34,19 +34,19 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void AsyncSimpleLogin()
 		{
-			Run<AsyncSimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 10000);
+			Run<AsyncSimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 1000);
 		}
 		
 		[Fact]
 		public void CanMergeResultFromAllPostsShards()
 		{
-			Run<CanQueryOnlyPosts>(x => x.CanMergeResultFromAllPostsShards(), 10);
+			Run<CanQueryOnlyPosts>(x => x.CanMergeResultFromAllPostsShards(), 1000);
 		}
 		
 		[Fact]
 		public void SimpleReplication()
 		{
-			Run<SimpleReplication>(x => x.Can_replicate_between_two_instances(), 10000);
+			Run<SimpleReplication>(x => x.Can_replicate_between_two_instances(), 1000);
 		}
 	}
 }

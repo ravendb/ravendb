@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -10,18 +11,25 @@ namespace Raven.Bundles.Tests.Replication
 {
 	public class FailoverBetweenTwoMultiTenantDatabases : ReplicationBase
 	{
-		[Fact]
-		public void CanReplicateBetweenTwoMultiTenantDatabases()
+		private readonly IDocumentStore store1;
+		private readonly IDocumentStore store2;
+
+		public FailoverBetweenTwoMultiTenantDatabases()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+			store1 = CreateStore();
+			store2 = CreateStore();
 
 			store1.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
 			store2.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
 
 			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"),
-			                 store2.Url + "/databases/FailoverTest");
+							 store2.Url + "/databases/FailoverTest");
+		}
 
+
+		[Fact]
+		public void CanReplicateBetweenTwoMultiTenantDatabases()
+		{
 			using (var store = new DocumentStore
 			                   	{
 			                   		DefaultDatabase = "FailoverTest",
@@ -44,7 +52,7 @@ namespace Raven.Bundles.Tests.Replication
 
 				using (var session = store.OpenSession())
 				{
-					session.Store(new Item {});
+					session.Store(new Item());
 					session.SaveChanges();
 				}
 
@@ -58,15 +66,6 @@ namespace Raven.Bundles.Tests.Replication
 		[Fact]
 		public void CanFailoverReplicationBetweenTwoMultiTenantDatabases()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-
-			store1.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
-			store2.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
-
-			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"),
-			                 store2.Url + "/databases/FailoverTest");
-
 			using (var store = new DocumentStore
 			                   	{
 			                   		DefaultDatabase = "FailoverTest",
@@ -84,10 +83,9 @@ namespace Raven.Bundles.Tests.Replication
 
 				using (var session = store.OpenSession())
 				{
-					session.Store(new Item {});
+					session.Store(new Item());
 					session.SaveChanges();
 				}
-
 
 				WaitForDocument(store2.DatabaseCommands.ForDatabase("FailoverTest"), "items/1");
 
@@ -104,15 +102,6 @@ namespace Raven.Bundles.Tests.Replication
 		[Fact]
 		public void CanFailoverReplicationBetweenTwoMultiTenantDatabases_WithExplicitUrl()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
-
-			store1.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
-			store2.DatabaseCommands.EnsureDatabaseExists("FailoverTest");
-
-			SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"),
-			                 store2.Url + "/databases/FailoverTest");
-
 			using (var store = new DocumentStore
 								{
 									DefaultDatabase = "FailoverTest",
@@ -131,7 +120,7 @@ namespace Raven.Bundles.Tests.Replication
 
 				using (var session = store.OpenSession())
 				{
-					session.Store(new Item {});
+					session.Store(new Item());
 					session.SaveChanges();
 				}
 
@@ -147,7 +136,7 @@ namespace Raven.Bundles.Tests.Replication
 			}
 		}
 
-		public class Item
+		private class Item
 		{
 		}
 	}
