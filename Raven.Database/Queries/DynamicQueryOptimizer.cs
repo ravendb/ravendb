@@ -140,13 +140,13 @@ namespace Raven.Database.Queries
 
 						if (indexDefinition.Indexes != null && indexDefinition.Indexes.Count > 0)
 						{
-							//If any of the fields we want to query on are set to something other than "NotAnalysed", don't use the index
+							//If any of the fields we want to query on are set to something other than the default, don't use the index
 							var anyFieldWithNonDefaultIndexing = normalizedFieldsQueriedUpon.Any(x =>
 							{
-								if (indexDefinition.Indexes.ContainsKey(x))
+								FieldIndexing analysedInfo;
+								if (indexDefinition.Indexes.TryGetValue(x, out analysedInfo))
 								{
-									var analysedInfo = indexDefinition.Indexes[x];
-									if (analysedInfo != FieldIndexing.NotAnalyzed)
+									if (analysedInfo != FieldIndexing.Default)
 										return true;
 								}
 								return false;
