@@ -9,7 +9,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void LazyMultiLoadOperationWouldBeInTheSession_WithNonStaleResponse()
 		{
-			Run<MultiGetQueries>(x => x.LazyMultiLoadOperationWouldBeInTheSession_WithNonStaleResponse());
+			Run<MultiGetQueries>(x => x.LazyMultiLoadOperationWouldBeInTheSession_WithNonStaleResponse(), 100);
 		}
 
 		[Fact]
