@@ -43,7 +43,8 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			docDb = database;
 			var replicationRequestTimeoutInMs =
-				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 7500;
+				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ??
+				60*1000;
 
 			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
 
@@ -239,6 +240,7 @@ namespace Raven.Bundles.Replication.Tasks
 				IncrementFailureCount(destination);
 				return false;
 			}
+			ResetFailureCount(destination);
 
 			return true;
 		}
@@ -261,6 +263,7 @@ namespace Raven.Bundles.Replication.Tasks
 				IncrementFailureCount(destination);
 				return false;
 			}
+			ResetFailureCount(destination);
 			return true;
 		}
 
@@ -275,6 +278,12 @@ namespace Raven.Bundles.Replication.Tasks
 			failureInformation.FailureCount += 1;
 			docDb.Put(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null,
 					  RavenJObject.FromObject(failureInformation), new RavenJObject(), null);
+		}
+
+		private void ResetFailureCount(ReplicationStrategy destination)
+		{
+			docDb.Delete(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null,
+			             null);
 		}
 
 		private bool IsFirstFailue(ReplicationStrategy destination)
