@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -11,7 +12,7 @@ using Raven.Abstractions;
 namespace Raven.Tests.Util
 {
 	[CLSCompliant(false)]
-	public abstract class ProcessDriver
+	public abstract class ProcessDriver : CriticalFinalizerObject, IDisposable
 	{
 		protected Process _process;
 		private string _name;
@@ -74,7 +75,13 @@ namespace Raven.Tests.Util
 
 		public void Dispose()
 		{
-			input.Dispose();
+			Dispose(true);
+		}
+
+		private void Dispose(bool disposing)
+		{
+			if (disposing)
+				input.Dispose();
 
 			if (_process != null)
 			{
@@ -85,6 +92,11 @@ namespace Raven.Tests.Util
 
 				toDispose.Dispose();
 			}
+		}
+
+		~ProcessDriver()
+		{
+			Dispose(false);
 		}
 
 		protected Match WaitForConsoleOutputMatching(string pattern, int msMaxWait = 10000, int msWaitInterval = 500)
