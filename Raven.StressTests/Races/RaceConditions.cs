@@ -17,7 +17,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void  SupportLazyOperations_LazyOperationsAreBatched()
 		{
-			Run<SupportLazyOperations>(x => x.LazyOperationsAreBatched());
+			Run<SupportLazyOperations>(x => x.LazyOperationsAreBatched(), 50);
 		}
 
 		[Fact]
@@ -47,7 +47,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void CachingOfDocumentInclude()
 		{
-			Run<CachingOfDocumentInclude>(x => x.New_query_returns_correct_value_when_cache_is_enabled_and_data_changes());
+			Run<CachingOfDocumentInclude>(x => x.New_query_returns_correct_value_when_cache_is_enabled_and_data_changes(), 100);
 		}
 
 		[Fact]
@@ -59,7 +59,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void MapReduce()
 		{
-			Run<MapReduce>(x => x.CanUpdateReduceValue_WhenChangingReduceKey());
+			Run<MapReduce>(x => x.CanUpdateReduceValue_WhenChangingReduceKey(), 100);
 		}
 
 		[Fact]
@@ -71,13 +71,13 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void AfterCommitWillNotRetainSameEtag()
 		{
-			Run<Etags>(x => x.AfterCommitWillNotRetainSameEtag());
+			Run<Etags>(x => x.AfterCommitWillNotRetainSameEtag(), 100);
 		}
 		
 		[Fact]
 		public void CanAddAndReadFileAfterReopen()
 		{
-			Run<Documents>(x => x.CanAddAndReadFileAfterReopen(), 10000);
+			Run<Documents>(x => x.CanAddAndReadFileAfterReopen(), 2000);
 		}
 		
 		[Fact]
