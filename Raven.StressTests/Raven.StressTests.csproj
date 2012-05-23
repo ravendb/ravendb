@@ -57,7 +57,6 @@
     <Compile Include="MultiThreaded\PutAndBatchOperation.cs" />
     <Compile Include="MultiThreaded\PutOperation.cs" />
     <Compile Include="Races\Tobi.cs" />
-    <Compile Include="Races\ShardsRaces.cs" />
     <Compile Include="Races\BundelsRaceConditions.cs" />
     <Compile Include="Races\RaceConditions.cs" />
     <Compile Include="Storage\MultiThreadedStress\BatchOperationStress.cs" />

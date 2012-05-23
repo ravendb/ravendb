@@ -23,13 +23,19 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void CanQueryOnlyUsers_WhenQueryingForUserById()
 		{
-			Run<CanQueryOnlyUsers>(x=>x.WhenQueryingForUserById());
+			Run<CanQueryOnlyUsers>(x => x.WhenQueryingForUserById(), 100);
+		}
+
+		[Fact]
+		public void CanQueryOnlyUsers_WhenStoringUser()
+		{
+			Run<CanQueryOnlyUsers>(x => x.WhenStoringUser(), 100);
 		}
 
 		[Fact]
 		public void IndexingEachFieldInEachDocumentSeparetedly()
 		{
-			Run<IndexingEachFieldInEachDocumentSeparetedly>(x=>x.ForIndexing(), 100000);
+			Run<IndexingEachFieldInEachDocumentSeparetedly>(x=>x.ForIndexing(), 200);
 		}
 
 		[Fact]
@@ -47,7 +53,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void CanPageThroughReduceResults()
 		{
-			Run<CanPageThroughReduceResults>(x => x.Test());
+			Run<CanPageThroughReduceResults>(x => x.Test(), 100);
 		}
 
 		[Fact]
