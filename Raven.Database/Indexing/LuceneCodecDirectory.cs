@@ -36,7 +36,7 @@ namespace Raven.Database.Indexing
 		private CodecIndexInput OpenInputInner(string name)
 		{
 			var file = GetFile(name);
-			return new CodecIndexInput(file, s => ApplyReadCodecs(file.FullName, s));
+			return new CodecIndexInput(file, s => ApplyReadCodecs(file.Name, s));
 		}
 
 		public override IndexOutput CreateOutput(string name)
@@ -46,7 +46,7 @@ namespace Raven.Database.Indexing
 			CreateDirectory();
 			DeleteFile(file);
 
-			return new CodecIndexOutput(file, s => ApplyWriteCodecs(file.FullName, s));
+			return new CodecIndexOutput(file, s => ApplyWriteCodecs(file.Name, s));
 		}
 
 		public override long FileLength(string name)

@@ -33,7 +33,7 @@ Usage: Raven.Bundles.Encryption.IndexFileCodec {method} {key} {filename} {input}
 This tool only uses standard input and output for IO.
 Method may be encrypt or decrypt.
 The key must be a base64 encryption key.
-The filename must be the full path of the file where it is used, as that is part of the encryption.
+The filename must be the name of the file (without path) where it was originally used, as that is part of the encryption.
 
 This tool will read the file contents from the specified input file, encrypt or decrypt them, and write to the specified output file.
 If decryption fails, a message will be written to standard error.
