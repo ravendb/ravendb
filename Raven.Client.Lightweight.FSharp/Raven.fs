@@ -13,7 +13,10 @@ open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Linq
 open Newtonsoft.Json
 
- [<AutoOpen>]
+// Making this auto-open hides the built-in F# 3.0 query expression operator with the query function below.
+// http://msdn.microsoft.com/en-us/library/hh225374(v=vs.110).aspx
+// Explicitly calling "open Raven.Client.Operators" will fix any code broken by this change.
+// [<AutoOpen>]
  module Operators = 
         
         let query (f : (IRavenQueryable<'a> -> #IQueryable<'b>)) (a : IDocumentSession) = 

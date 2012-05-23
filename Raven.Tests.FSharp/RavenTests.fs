@@ -3,8 +3,10 @@
 open System
 open System.Linq
 open Xunit
-open Raven.Client.Linq
 open Raven.Client
+open Raven.Client.Linq
+open Raven.Client.Operators
+open Raven.Client.Indexes
 open Raven.Tests
 open Raven.Abstractions.Extensions
 
@@ -118,7 +120,7 @@ type ``With Raven Computation Expression Builder``() =
        
 
 
-type ``Given a Initailised Document store execute using computation expression``() as test =
+type ``Given an Initailised Document store execute using computation expression``() as test =
     inherit RavenTest()
     
     let createCustomers n = 
@@ -260,3 +262,9 @@ type ``Given a Initailised Document store execute using computation expression``
         let expected = Seq.init 31 (fun i -> Customer.Create("test_"+i.ToString(), (new DateTime(2012, 1, 1)).AddDays(i |> float))) |> Seq.toList
 
         Assert.True((expected = actual))
+
+    [<Fact>]
+    let ``Should be able to create an index`` () =
+        use ds = test.NewDocumentStore()
+        IndexCreation.CreateIndexes(typeof<OrderTotalsByDay>.Assembly, ds)
+

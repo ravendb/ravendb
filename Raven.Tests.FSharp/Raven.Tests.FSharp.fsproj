@@ -31,10 +31,12 @@
     <WarningLevel>3</WarningLevel>
     <DocumentationFile>bin\Release\Raven.Tests.FSharp.XML</DocumentationFile>
   </PropertyGroup>
-  <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
-  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
+  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets" Condition="Exists('$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets')" />
+  <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition="(!Exists('$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets')) And (Exists('$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets'))" />
+  <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="(!Exists('$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets')) And (!Exists('$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets')) And (Exists('$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets'))" />
   <ItemGroup>
     <Compile Include="TestData.fs" />
+    <Compile Include="TestIndexes.fs" />
     <Compile Include="RavenTests.fs" />
     <None Include="packages.config" />
   </ItemGroup>
@@ -56,6 +58,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
@@ -81,11 +84,6 @@
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Name>Raven.Database</Name>
       <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Json\Raven.Json.csproj">
-      <Name>Raven.Json</Name>
-      <Project>{b9dd0239-3476-48cb-a541-1b3ec6679bb6}</Project>
       <Private>True</Private>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
