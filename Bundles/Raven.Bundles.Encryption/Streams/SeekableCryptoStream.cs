@@ -16,10 +16,15 @@ namespace Raven.Bundles.Encryption.Streams
 	/// Header:
 	///		- Magic: A UInt64 magic number to recognize that this is indeed an encrypted stream.
 	///		- IV: An Int32 for IV size in bytes
-	///		- BlockSize: An Int32 for block size in bytes. This should be the same for an encrypted and decrypted block.
+	///		- BlockSize: An Int32 for unecnrypted block size in bytes.
+	///		- EncryptedBlockSize: An Int32 for ecnrypted block size in bytes.
 	///	Block:
 	///		- BlockIV: byte[], Length == Header.IV
 	///		- Data: byte[], Length == Header.BlockSize
+	/// Footer:
+	///		- Length: After the last block, an Int64 length is written. This is the total length of the file.
+	///				  the length is required, because the blocks are of an all identical size. If the file ends
+	///				  in the middle of a block, this length will be used to truncate that block after decryption.
 	/// </summary>
 	internal class SeekableCryptoStream : Stream
 	{
@@ -67,7 +72,7 @@ namespace Raven.Bundles.Encryption.Streams
 				throw new ArgumentNullException("buffer");
 			if (count < 0)
 				throw new ArgumentOutOfRangeException("count");
-			if (bufferOffset + count < buffer.LongLength)
+			if (bufferOffset + count > buffer.LongLength)
 				throw new ArgumentOutOfRangeException("bufferOffset");
 
 			if (count == 0)
@@ -78,6 +83,9 @@ namespace Raven.Bundles.Encryption.Streams
 				// If the stream is used for both reading and writing, make sure we're reading everything that was written
 				WriteAnyUnwrittenData();
 
+				if (Position >= underlyingStream.Footer.TotalLength)
+					return 0;
+
 				long startingBlock = underlyingStream.Header.GetBlockNumberFromLogicalPosition(Position);
 				long blockOffset = underlyingStream.Header.GetBlockOffsetFromLogicalPosition(Position);
 
@@ -86,9 +94,12 @@ namespace Raven.Bundles.Encryption.Streams
 					currentReadingBlock = underlyingStream.ReadBlock(startingBlock);
 				}
 
-				int actualRead = Math.Min(count, CurrentBlockSize - bufferOffset);
+				int blockRead = (int)Math.Min(currentReadingBlock.TotalStreamLength - Position, CurrentBlockSize - bufferOffset);
+				int actualRead = Math.Min(count, blockRead);
 				Array.Copy(currentReadingBlock.Data, blockOffset, buffer, bufferOffset, actualRead);
 				// We use the fact that a stream doesn't have to read all data in one go to avoid a loop here.
+
+				Position += actualRead;
 				return actualRead;
 			}
 		}
@@ -133,7 +144,8 @@ namespace Raven.Bundles.Encryption.Streams
 						currentWritingBlock = new EncryptedFile.Block
 						{
 							BlockNumber = startingBlock,
-							Data = new byte[CurrentBlockSize]
+							Data = new byte[CurrentBlockSize],
+							TotalStreamLength = underlyingStream.Footer.TotalLength
 						};
 					}
 				}
@@ -168,6 +180,9 @@ namespace Raven.Bundles.Encryption.Streams
 			}
 		}
 
+		/// <summary>
+		/// Note that this is the logical position in the stream, not the physical position on disk.
+		/// </summary>
 		public override long Position
 		{
 			get
@@ -182,6 +197,8 @@ namespace Raven.Bundles.Encryption.Streams
 				lock (locker)
 				{
 					currentPosition = value;
+					if (currentWritingBlock != null && currentWritingBlock.TotalStreamLength < Position)
+						currentWritingBlock.TotalStreamLength = Position;
 				}
 			}
 		}
@@ -222,7 +239,15 @@ namespace Raven.Bundles.Encryption.Streams
 
 		public override long Length
 		{
-			get { throw new NotSupportedException(); }
+			get { 
+				var result = underlyingStream.Footer.TotalLength;
+
+				// Even if we haven't flushed a block to the BlockReaderWriter, we need to count its size as written.
+				if (currentWritingBlock != null)
+					result = Math.Max(result, currentWritingBlock.TotalStreamLength);
+
+				return result;
+			}
 		}
 
 		public override void SetLength(long value)

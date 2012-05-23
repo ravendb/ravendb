@@ -60,9 +60,17 @@ namespace Raven.Bundles.Encryption.Streams
 			}
 		}
 
+		[StructLayout(LayoutKind.Sequential, Pack = 1)]
+		internal struct Footer {
+			public long TotalLength;
+		
+			public static readonly int FooterSize = Marshal.SizeOf(typeof(Footer));
+		}
+
 		public class Block
 		{
 			public long BlockNumber;
+			public long TotalStreamLength;
 			public byte[] Data;
 		}
 	}

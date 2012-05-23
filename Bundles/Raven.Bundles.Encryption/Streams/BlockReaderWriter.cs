@@ -11,11 +11,13 @@ namespace Raven.Bundles.Encryption.Streams
 {
 	internal class BlockReaderWriter : IDisposable
 	{
-		public EncryptedFile.Header Header;
 		private readonly Stream stream;
 		private readonly string key;
 		private readonly object locker = new object();
 		private readonly bool isReadonly;
+
+		private readonly EncryptedFile.Header header;
+		private EncryptedFile.Footer footer;
 
 		public BlockReaderWriter(string key, Stream stream, int defaultBlockSize)
 		{
@@ -35,7 +37,18 @@ namespace Raven.Bundles.Encryption.Streams
 			this.key = key;
 			this.stream = stream;
 
-			this.Header = ReadOrWriteHeader(defaultBlockSize);
+			this.header = ReadOrWriteHeader(defaultBlockSize);
+			this.footer = ReadOrWriteFooter();
+		}
+
+		public EncryptedFile.Header Header
+		{
+			get { return header; }
+		}
+
+		public EncryptedFile.Footer Footer
+		{
+			get { return footer; }
 		}
 
 		private EncryptedFile.Header ReadOrWriteHeader(int defaultBlockSize)
@@ -79,6 +92,45 @@ namespace Raven.Bundles.Encryption.Streams
 			}
 		}
 
+		private EncryptedFile.Footer ReadOrWriteFooter()
+		{
+			lock (locker)
+			{
+				if (stream.Length >= EncryptedFile.Header.HeaderSize + EncryptedFile.Footer.FooterSize)
+				{
+					// Read footer
+					stream.Position = stream.Length - EncryptedFile.Footer.FooterSize;
+					var footerBytes = stream.ReadEntireBlock(EncryptedFile.Footer.FooterSize);
+					var footer = StructConverter.ConvertBitsToStruct<EncryptedFile.Footer>(footerBytes);
+
+					// Sanity check that the footer has some value that could be correct
+					var streamBlockLength = (stream.Length - (EncryptedFile.Header.HeaderSize + EncryptedFile.Footer.FooterSize)) / header.DiskBlockSize;
+					var footerBlockLength = footer.TotalLength / header.DecryptedBlockSize;
+					if (footerBlockLength != streamBlockLength - 1 && footerBlockLength != streamBlockLength)
+						throw new InvalidDataException("File is corrupted: the length written to the file doesn't match the number of blocks in it.");
+
+					return footer;
+				}
+				else
+				{
+					// Write footer
+					stream.Position = EncryptedFile.Header.HeaderSize;
+					var footer = new EncryptedFile.Footer { TotalLength = 0 };
+					WriteFooterInCurrentPosition(footer);
+
+					return footer;
+				}
+			}
+		}
+
+		private void WriteFooterInCurrentPosition(EncryptedFile.Footer footer)
+		{
+			var footerBytes = StructConverter.ConvertStructToBits(footer);
+
+			if (!isReadonly)
+				stream.Write(footerBytes, 0, EncryptedFile.Footer.FooterSize);
+		}
+
 		/// <summary>
 		/// Reads a block from its correct place in the file.
 		/// </summary>
@@ -89,34 +141,37 @@ namespace Raven.Bundles.Encryption.Streams
 				if (blockNumber < 0)
 					throw new ArgumentOutOfRangeException("blockNumber");
 
-				long position = Header.GetPhysicalPositionFromBlockNumber(blockNumber);
-				if (stream.Length <= position)
+				long position = header.GetPhysicalPositionFromBlockNumber(blockNumber);
+				if (stream.Length < position + header.IVSize + header.EncryptedBlockSize + EncryptedFile.Footer.FooterSize)
 				{
 					return new EncryptedFile.Block
 					{
 						BlockNumber = blockNumber,
-						Data = new byte[Header.DecryptedBlockSize]
+						TotalStreamLength = footer.TotalLength,
+						Data = new byte[header.DecryptedBlockSize],
 					};
 				}
 
 				stream.Position = position;
-				var iv = stream.ReadEntireBlock(Header.IVSize);
-				var encrypted = stream.ReadEntireBlock(Header.EncryptedBlockSize);
+				var iv = stream.ReadEntireBlock(header.IVSize);
+				var encrypted = stream.ReadEntireBlock(header.EncryptedBlockSize);
 
 				var decrypted = Codec.DecodeBlock(key, new Codec.EncodedBlock(iv, encrypted));
 
-				Debug.Assert(decrypted.Length == Header.DecryptedBlockSize);
+				Debug.Assert(decrypted.Length == header.DecryptedBlockSize);
 
 				return new EncryptedFile.Block
 				{
 					BlockNumber = blockNumber,
-					Data = decrypted
+					TotalStreamLength = footer.TotalLength,
+					Data = decrypted,
 				};
 			}
 		}
 
 		/// <summary>
 		/// Writes a block to its correct place in the file.
+		/// The block's TotalStreamLength is saved as the total length of the stream IF AND ONLY IF the written block is the last block in the stream.
 		/// </summary>
 		public void WriteBlock(EncryptedFile.Block block)
 		{
@@ -129,42 +184,49 @@ namespace Raven.Bundles.Encryption.Streams
 					throw new ArgumentNullException("block");
 				if (block.BlockNumber < 0)
 					throw new ArgumentOutOfRangeException("block", "Block number be non negative.");
-				if (block.Data == null || block.Data.Length != Header.DecryptedBlockSize)
-					throw new ArgumentException("Block must have data with length == " + Header.DecryptedBlockSize);
+				if (block.Data == null || block.Data.Length != header.DecryptedBlockSize)
+					throw new ArgumentException("Block must have data with length == " + header.DecryptedBlockSize);
 
-				long position = Header.GetPhysicalPositionFromBlockNumber(block.BlockNumber);
-				if (stream.Length < position)
+				long position = header.GetPhysicalPositionFromBlockNumber(block.BlockNumber);
+				if (stream.Length - EncryptedFile.Footer.FooterSize < position)
 				{
-					WriteEmptyBlocksUpTo(position);
+					throw new InvalidOperationException("Write past end of file.");
+					//WriteEmptyBlocksUpTo(position);
 				}
 
 				stream.Position = position;
 				var encrypted = Codec.EncodeBlock(key, block.Data);
 
-				Debug.Assert(encrypted.Data.Length == Header.EncryptedBlockSize);
+				Debug.Assert(encrypted.Data.Length == header.EncryptedBlockSize);
 
 				stream.Write(encrypted.IV, 0, encrypted.IV.Length);
 				stream.Write(encrypted.Data, 0, encrypted.Data.Length);
-			}
-		}
 
-		private void WriteEmptyBlocksUpTo(long position)
-		{
-			if (isReadonly)
-				throw new InvalidOperationException("The current stream is read-only.");
-
-			var emptyData = new byte[Header.DecryptedBlockSize];
-
-			while (stream.Length < position)
-			{
-				var nextBlock = Header.GetBlockNumberFromPhysicalPosition(stream.Length);
-				WriteBlock(new EncryptedFile.Block
+				if (stream.Length <= stream.Position + EncryptedFile.Footer.FooterSize)
 				{
-					BlockNumber = nextBlock,
-					Data = emptyData
-				});
+					footer.TotalLength = block.TotalStreamLength;
+					WriteFooterInCurrentPosition(footer);
+				}
 			}
 		}
+
+		//private void WriteEmptyBlocksUpTo(long position)
+		//{
+		//	if (isReadonly)
+		//		throw new InvalidOperationException("The current stream is read-only.");
+
+		//	var emptyData = new byte[Header.DecryptedBlockSize];
+
+		//	while (stream.Length < position)
+		//	{
+		//		var nextBlock = Header.GetBlockNumberFromPhysicalPosition(stream.Length);
+		//		WriteBlock(new EncryptedFile.Block
+		//		{
+		//			BlockNumber = nextBlock,
+		//			Data = emptyData
+		//		});
+		//	}
+		//}
 
 		public void Flush()
 		{
