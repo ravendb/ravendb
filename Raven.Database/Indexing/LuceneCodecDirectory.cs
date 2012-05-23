@@ -28,6 +28,11 @@ namespace Raven.Database.Indexing
 			return OpenInputInner(name);
 		}
 
+		public override IndexInput OpenInput(string name, int bufferSize)
+		{
+			return OpenInputInner(name);
+		}
+
 		private CodecIndexInput OpenInputInner(string name)
 		{
 			var file = GetFile(name);
@@ -112,11 +117,13 @@ namespace Raven.Database.Indexing
 		private class CodecIndexInput : IndexInput, IDisposable
 		{
 			private readonly FileInfo file;
+			private readonly Func<Stream, Stream> applyCodecs;
 			private readonly Stream stream;
 
 			public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs)
 			{
 				this.file = file;
+				this.applyCodecs = applyCodecs;
 				this.stream = applyCodecs(file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
 			}
 
@@ -151,6 +158,11 @@ namespace Raven.Database.Indexing
 			public override void Seek(long pos)
 			{
 				stream.Seek(pos, SeekOrigin.Begin);
+			}
+
+			public override object Clone()
+			{
+				return new CodecIndexInput(file, applyCodecs);
 			}
 
 			public void Dispose()
