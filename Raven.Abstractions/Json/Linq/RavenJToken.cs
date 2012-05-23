@@ -247,6 +247,11 @@ namespace Raven.Json.Linq
 				var curOtherReader = otherStack.Pop();
 				var curThisReader = thisStack.Pop();
 
+				if(curOtherReader == null && curThisReader == null)
+					continue; // shouldn't happen, but we got an error report from a user about this
+				if (curOtherReader == null || curThisReader == null)
+					return false;
+
 				if (curThisReader.Type == curOtherReader.Type)
 				{
 					switch (curOtherReader.Type)
