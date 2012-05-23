@@ -1,3 +1,4 @@
+using System;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
@@ -15,16 +16,18 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void CanContainSpaces()
+		public void CannotContainSpaces()
 		{
 			using (GetNewServer())
 			using (var documentStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				const string tenantName = "   Tenant with some    spaces     in it ";
-				documentStore.DatabaseCommands.EnsureDatabaseExists(tenantName);
-
+				// TODO: we better throw here.
+				documentStore.DatabaseCommands.EnsureDatabaseExists(tenantName);	
+				
 				var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
-				databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject());
+				// TODO: we better throw here with a better error message than "tenant not found".
+				Assert.Throws<InvalidOperationException>(() => databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject()));
 			}
 		}
 	}
