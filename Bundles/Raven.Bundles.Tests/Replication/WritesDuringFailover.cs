@@ -42,10 +42,8 @@ namespace Raven.Bundles.Tests.Replication
 		[Fact]
 		public void Can_disallow_failover()
 		{
-			var store1 = CreateStore();
+			var store1 = CreateStore(store => store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately);
 			var store2 = CreateStore();
-
-			store1.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 
 			TellFirstInstanceToReplicateToSecondInstance();
 

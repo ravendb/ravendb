@@ -32,7 +32,6 @@ namespace Raven.StressTests
 			{
 				for (; i < iterations; i++)
 				{
-					Console.Write(i + " ");
 					RunTest(action, i);
 				}
 			}
