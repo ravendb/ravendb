@@ -118,10 +118,6 @@ namespace Raven.Tests
 				Thread.Sleep(25);
 		}
 
-		protected virtual void ConfigureServer(RavenConfiguration configuration)
-		{
-		}
-
 		protected void WaitForUserToContinueTheTest()
 		{
 			if (Debugger.IsAttached == false)
