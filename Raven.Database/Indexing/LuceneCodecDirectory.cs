@@ -135,7 +135,7 @@ namespace Raven.Database.Indexing
 			public CodecIndexOutput(FileInfo file, Func<Stream, Stream> applyCodecs)
 			{
 				this.file = file;
-				this.stream = applyCodecs(file.Open(FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite));
+				this.stream = applyCodecs(file.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite));
 			}
 
 			public override void Close()

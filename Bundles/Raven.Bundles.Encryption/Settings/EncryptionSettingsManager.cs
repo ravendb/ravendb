@@ -16,6 +16,7 @@ namespace Raven.Bundles.Encryption.Settings
 	public static class EncryptionSettingsManager
 	{
 		internal static EncryptionSettings EncryptionSettings { get; private set; }
+		internal static bool CurrentlySettingKeyVerificationDocument { get; private set; }
 
 		public static void Initialize(DocumentDatabase database)
 		{
@@ -26,9 +27,9 @@ namespace Raven.Bundles.Encryption.Settings
 			var key = GetKeyFromBase64(database.Configuration.Settings[Constants.EncryptionKeySetting]);
 			var encryptIndexes = GetEncryptIndexesFromString(database.Configuration.Settings[Constants.EncryptIndexes], true);
 
-			VerifyEncryptionKey(database);
-
 			EncryptionSettings = new EncryptionSettings(key, type, encryptIndexes);
+
+			VerifyEncryptionKey(database);
 		}
 
 		/// <summary>
@@ -107,7 +108,8 @@ namespace Raven.Bundles.Encryption.Settings
 				if (EncryptedDocumentsExist(database))
 					throw new InvalidOperationException("The database already has existing documents, you cannot start using encryption now.");
 
-				database.Put(Constants.InDatabaseKeyVerificationDocumentName, null, Constants.InDatabaseKeyVerificationDocumentContents, new RavenJObject(), null);
+				using (CurrentlySettingKeyVerificationDocumentScope())
+					database.Put(Constants.InDatabaseKeyVerificationDocumentName, null, Constants.InDatabaseKeyVerificationDocumentContents, new RavenJObject(), null);
 			}
 		}
 
@@ -150,6 +152,12 @@ namespace Raven.Bundles.Encryption.Settings
 			{
 				throw new ConfigurationException("Invalid boolean value for setting EncryptIndexes: " + value, e);
 			}
+		}
+
+		private static IDisposable CurrentlySettingKeyVerificationDocumentScope()
+		{
+			CurrentlySettingKeyVerificationDocument = true;
+			return new DisposableAction(() => CurrentlySettingKeyVerificationDocument = false);
 		}
 	}
 }

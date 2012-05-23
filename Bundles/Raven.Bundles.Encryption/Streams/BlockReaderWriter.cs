@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -14,6 +15,7 @@ namespace Raven.Bundles.Encryption.Streams
 		private readonly Stream stream;
 		private readonly string key;
 		private readonly object locker = new object();
+		private readonly bool isReadonly;
 
 		public BlockReaderWriter(string key, Stream stream, int defaultBlockSize)
 		{
@@ -22,8 +24,13 @@ namespace Raven.Bundles.Encryption.Streams
 
 			if (stream == null)
 				throw new ArgumentNullException("stream");
-			if (!stream.CanSeek || !stream.CanWrite)
-				throw new ArgumentException("The underlying stream must be writable and seekable.");
+
+			if (!stream.CanRead)
+				throw new ArgumentException("The Underlying stream for a BlockReaderWriter must always be either read-only or read-write. Write only streams are not supported.");
+			if (!stream.CanSeek)
+				throw new ArgumentException("The Underlying stream for a BlockReaderWriter must be seekable.");
+
+			isReadonly = !stream.CanWrite;
 
 			this.key = key;
 			this.stream = stream;
@@ -40,7 +47,7 @@ namespace Raven.Bundles.Encryption.Streams
 				if (stream.Length >= EncryptedFile.Header.HeaderSize)
 				{
 					// Read header
-					
+
 					var headerBytes = stream.ReadEntireBlock(EncryptedFile.Header.HeaderSize);
 					var header = StructConverter.ConvertBitsToStruct<EncryptedFile.Header>(headerBytes);
 
@@ -53,16 +60,19 @@ namespace Raven.Bundles.Encryption.Streams
 				{
 					// Write header
 
-					var ivSize = Codec.GetIVLength();
+					var sizeTest = Codec.EncodeBlock("Dummy key", new byte[defaultBlockSize]);
+
 					var header = new EncryptedFile.Header
 					{
 						MagicNumber = EncryptedFile.DefaultMagicNumber,
-						IVSize = ivSize,
-						BlockSize = defaultBlockSize
+						DecryptedBlockSize = defaultBlockSize,
+						IVSize = sizeTest.IV.Length,
+						EncryptedBlockSize = sizeTest.Data.Length
 					};
 					var headerBytes = StructConverter.ConvertStructToBits(header);
 
-					stream.Write(headerBytes, 0, EncryptedFile.Header.HeaderSize);
+					if (!isReadonly)
+						stream.Write(headerBytes, 0, EncryptedFile.Header.HeaderSize);
 
 					return header;
 				}
@@ -85,18 +95,22 @@ namespace Raven.Bundles.Encryption.Streams
 					return new EncryptedFile.Block
 					{
 						BlockNumber = blockNumber,
-						Data = new byte[Header.BlockSize]
+						Data = new byte[Header.DecryptedBlockSize]
 					};
 				}
 
 				stream.Position = position;
 				var iv = stream.ReadEntireBlock(Header.IVSize);
-				var encrypted = stream.ReadEntireBlock(Header.BlockSize);
+				var encrypted = stream.ReadEntireBlock(Header.EncryptedBlockSize);
+
+				var decrypted = Codec.DecodeBlock(key, new Codec.EncodedBlock(iv, encrypted));
+
+				Debug.Assert(decrypted.Length == Header.DecryptedBlockSize);
 
 				return new EncryptedFile.Block
 				{
 					BlockNumber = blockNumber,
-					Data = Codec.DecodeBlock(key, new Codec.EncodedBlock(iv, encrypted))
+					Data = decrypted
 				};
 			}
 		}
@@ -106,14 +120,17 @@ namespace Raven.Bundles.Encryption.Streams
 		/// </summary>
 		public void WriteBlock(EncryptedFile.Block block)
 		{
+			if (isReadonly)
+				throw new InvalidOperationException("The current stream is read-only.");
+
 			lock (locker)
 			{
 				if (block == null)
 					throw new ArgumentNullException("block");
 				if (block.BlockNumber < 0)
 					throw new ArgumentOutOfRangeException("block", "Block number be non negative.");
-				if (block.Data == null || block.Data.Length != Header.BlockSize)
-					throw new ArgumentException("Block must have data with length == " + Header.BlockSize);
+				if (block.Data == null || block.Data.Length != Header.DecryptedBlockSize)
+					throw new ArgumentException("Block must have data with length == " + Header.DecryptedBlockSize);
 
 				long position = Header.GetPhysicalPositionFromBlockNumber(block.BlockNumber);
 				if (stream.Length < position)
@@ -123,6 +140,9 @@ namespace Raven.Bundles.Encryption.Streams
 
 				stream.Position = position;
 				var encrypted = Codec.EncodeBlock(key, block.Data);
+
+				Debug.Assert(encrypted.Data.Length == Header.EncryptedBlockSize);
+
 				stream.Write(encrypted.IV, 0, encrypted.IV.Length);
 				stream.Write(encrypted.Data, 0, encrypted.Data.Length);
 			}
@@ -130,7 +150,10 @@ namespace Raven.Bundles.Encryption.Streams
 
 		private void WriteEmptyBlocksUpTo(long position)
 		{
-			var emptyData = new byte[Header.BlockSize];
+			if (isReadonly)
+				throw new InvalidOperationException("The current stream is read-only.");
+
+			var emptyData = new byte[Header.DecryptedBlockSize];
 
 			while (stream.Length < position)
 			{

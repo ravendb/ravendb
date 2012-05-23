@@ -27,13 +27,22 @@ namespace Raven.Bundles.Encryption.Streams
 		private int CurrentBlockSize = 1024;
 
 		private readonly BlockReaderWriter underlyingStream;
-		private readonly object locker;
+		private readonly object locker = new object();
 		private EncryptedFile.Block currentReadingBlock;
 		private EncryptedFile.Block currentWritingBlock;
 		private long currentPosition;
 
+		private readonly bool isReadonly;
+
 		public SeekableCryptoStream(string key, Stream stream)
 		{
+			if (!stream.CanRead)
+				throw new ArgumentException("The Underlying stream for a SeekableCryptoStream must always be either read-only or read-write. Write only streams are not supported.");
+			if (!stream.CanSeek)
+				throw new ArgumentException("The Underlying stream for a SeekableCryptoStream must be seekable.");
+
+			isReadonly = !stream.CanWrite;
+
 			this.underlyingStream = new BlockReaderWriter(key, stream, DefaultBlockSize);
 		}
 
@@ -44,7 +53,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 		public override bool CanWrite
 		{
-			get { return true; }
+			get { return !isReadonly; }
 		}
 
 		public override bool CanSeek
@@ -86,11 +95,14 @@ namespace Raven.Bundles.Encryption.Streams
 
 		public override void Write(byte[] buffer, int bufferOffset, int count)
 		{
+			if (isReadonly)
+				throw new InvalidOperationException("The current stream is read-only.");
+
 			if (buffer == null)
 				throw new ArgumentNullException("buffer");
 			if (count < 0)
 				throw new ArgumentOutOfRangeException("count");
-			if (bufferOffset + count < buffer.LongLength)
+			if (bufferOffset + count > buffer.LongLength)
 				throw new ArgumentOutOfRangeException("bufferOffset");
 
 			if (count == 0)

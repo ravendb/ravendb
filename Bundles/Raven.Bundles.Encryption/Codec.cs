@@ -48,7 +48,7 @@ namespace Raven.Bundles.Encryption
 			return transform.TransformEntireBlock(block.Data);
 		}
 
-		public static int GetIVLength()
+		private static int GetIVLength()
 		{
 			if (encryptionIVSize == null)
 			{
@@ -77,7 +77,7 @@ namespace Raven.Bundles.Encryption
 
 			result.Key = passwordBytes.GetBytes(encryptionKeySize.Value);
 
-			if (iv != null)
+			if (iv == null)
 				iv = passwordBytes.GetBytes(encryptionIVSize.Value);
 			result.IV = iv;
 			return result;

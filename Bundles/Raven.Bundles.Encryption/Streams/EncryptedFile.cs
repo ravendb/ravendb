@@ -15,20 +15,21 @@ namespace Raven.Bundles.Encryption.Streams
 	/// </summary>
 	internal static class EncryptedFile
 	{
-		public const ulong DefaultMagicNumber = 0x4372797074656420; // "Crypted "
+		public const ulong DefaultMagicNumber = 0x2064657470797243; // "Crypted "
 
 		[StructLayout(LayoutKind.Sequential, Pack = 1)]
 		internal struct Header
 		{
 			public ulong MagicNumber;
 			public int IVSize;
-			public int BlockSize;
+			public int DecryptedBlockSize;
+			public int EncryptedBlockSize;
 
 			public static readonly int HeaderSize = Marshal.SizeOf(typeof(Header));
 
 			public int DiskBlockSize
 			{
-				get { return BlockSize + IVSize; }
+				get { return EncryptedBlockSize + IVSize; }
 			}
 
 			public long GetBlockNumberFromPhysicalPosition(long position)
@@ -38,7 +39,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 			public long GetBlockNumberFromLogicalPosition(long position)
 			{
-				return position / BlockSize;
+				return position / DecryptedBlockSize;
 			}
 
 			public long GetPhysicalPositionFromBlockNumber(long number)
@@ -48,7 +49,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 			public long GetLogicalPositionFromBlockNumber(long number)
 			{
-				return BlockSize * number;
+				return DecryptedBlockSize * number;
 			}
 
 			public long GetBlockOffsetFromLogicalPosition(long position)
