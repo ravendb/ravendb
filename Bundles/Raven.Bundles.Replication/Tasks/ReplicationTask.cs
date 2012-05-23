@@ -403,12 +403,22 @@ namespace Raven.Bundles.Replication.Tasks
 					
 					log.Debug(() =>
 					{
+						if (docsToReplicate.Count == 0)
+							return string.Format("Nothing to replicate to {0} - last replicated etag: {1}", destination,
+							                     destinationsReplicationInformationForSource.LastDocumentEtag);
+											 
+						if(docsToReplicate.Count == filteredDocsToReplicate.Count)
+							return string.Format("Replicating {0} docs [>{2}] to {1}.",
+											 docsToReplicate.Count,
+											 destinationsReplicationInformationForSource.LastDocumentEtag);
+
 						var diff = docsToReplicate.Except(filteredDocsToReplicate).Select(x => x.Key);
-						return string.Format("Will replicate {1} (out of {0}) {1} to replicate to {2}. [Not replicated: {3}]",
+						return string.Format("Replicating {1} docs (out of {0}) [>{4}] to {2}. [Not replicated: {3}]",
 						                     docsToReplicate.Count,
 											 filteredDocsToReplicate.Count, 
 											 destination,
-						                     string.Join(", ", diff));
+						                     string.Join(", ", diff),
+											 destinationsReplicationInformationForSource.LastDocumentEtag);
 					});
 
 					jsonDocuments = new RavenJArray(filteredDocsToReplicate
