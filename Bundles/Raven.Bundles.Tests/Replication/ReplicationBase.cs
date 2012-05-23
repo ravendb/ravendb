@@ -31,13 +31,13 @@ namespace Raven.Bundles.Tests.Replication
 		private const int PortRangeStart = 8079;
 		protected const int RetriesCount = 500;
 
-		public IDocumentStore CreateStore()
+		public IDocumentStore CreateStore(Action<DocumentStore> configureStore = null)
 		{
 			var port = PortRangeStart - servers.Count;
-			return CreateStoreAtPort(port);
+			return CreateStoreAtPort(port, configureStore);
 		}
 
-		private IDocumentStore CreateStoreAtPort(int port)
+		private IDocumentStore CreateStoreAtPort(int port, Action<DocumentStore> configureStore = null)
 		{
 			database::Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var assemblyCatalog = new AssemblyCatalog(typeof (replication::Raven.Bundles.Replication.Triggers.AncestryPutTrigger).Assembly);
@@ -56,10 +56,14 @@ namespace Raven.Bundles.Tests.Replication
 			var ravenDbServer = new RavenDbServer(serverConfiguration);
 			ravenDbServer.Server.SetupTenantDatabaseConfiguration += configuration => configuration.Catalog.Catalogs.Add(assemblyCatalog);
 			servers.Add(ravenDbServer);
+			
 			var documentStore = new DocumentStore {Url = ravenDbServer.Database.Configuration.ServerUrl};
 			ConfigureStore(documentStore);
+			if (configureStore != null)
+				configureStore(documentStore);
 			documentStore.Initialize();
 			documentStore.JsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers = true;
+
 			stores.Add(documentStore);
 			return documentStore;
 		}

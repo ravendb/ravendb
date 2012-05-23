@@ -1,7 +1,5 @@
 using System;
-using System.Threading;
 using Raven.Client.Document;
-using Raven.Server;
 using Xunit;
 using System.Linq;
 
@@ -12,11 +10,14 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanAggressivelyCacheLoads()
 		{
-			using(var server = GetNewServer())
-			using(var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
+			using (var server = GetNewServer())
+			using (var store = new DocumentStore
 			{
-				store.Conventions.FailoverBehavior=FailoverBehavior.FailImmediately;
-				using(var session = store.OpenSession())
+				Url = "http://localhost:8079",
+				Conventions = {FailoverBehavior = FailoverBehavior.FailImmediately}
+			}.Initialize())
+			{
+				using (var session = store.OpenSession())
 				{
 					session.Store(new User());
 					session.SaveChanges();
@@ -34,9 +35,8 @@ namespace Raven.Tests.Bugs
 							session.Load<User>("users/1");
 						}
 					}
-
 				}
-			
+
 				WaitForAllRequestsToComplete(server);
 				Assert.Equal(1, server.Server.NumberOfRequests);
 			}
