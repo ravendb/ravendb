@@ -35,6 +35,13 @@ namespace Raven.Abstractions.Extensions
 			"Raven-Timer-Request",
 			"Raven-Authenticated-User",
 
+			// COTS
+			"Access-Control-Allow-Origin",
+			"Access-Control-Max-Age",
+			"Access-Control-Allow-Methods",
+			"Access-Control-Request-Headers",
+			"Access-Control-Allow-Headers",
+
 			//proxy
 			"Reverse-Via",
 			"Persistent-Auth",
