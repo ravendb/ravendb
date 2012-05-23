@@ -3,13 +3,6 @@
 open Raven.Client
 open Raven.Client.Indexes
 
-type TotalsReduceResult = {
-    Year : int
-    Month : int
-    Day : int
-    Total : float
-}
-
 (*
     This version uses calls to the F# Seq module, and is compatible with F# 2.0
 
@@ -17,41 +10,107 @@ type TotalsReduceResult = {
 
     Test Name:	Should be able to create an index
     Test FullName:	Raven.Tests.Given an Initailised Document store execute using computation expression.Should be able to create an index
-    Test Source:	D:\Projects\ravendb\Raven.Tests.FSharp\RavenTests.fs : line 268
+    Test Source:	C:\Projects\ravendb\Raven.Tests.FSharp\RavenTests.fs : line 268
     Test Outcome:	Failed
-    Test Duration:	0:00:02.398
+    Test Duration:	0:00:06.816
 
-    Result Message:	System.InvalidOperationException : Canot understand how to parse the query
+    Result Message:	System.NullReferenceException : Object reference not set to an instance of an object.
     Result StackTrace:	
-    at Raven.Client.Indexes.IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode[TQueryRoot,TReduceResult](LambdaExpression expr, DocumentConvention convention, String querySource, Boolean translateIdentityProperty) in d:\Projects\ravendb\Raven.Client.Lightweight\Indexes\IndexDefinitionHelper.cs:line 67
-       at Raven.Client.Indexes.IndexDefinitionBuilder`2.ToIndexDefinition(DocumentConvention convention, Boolean validateMap) in d:\Projects\ravendb\Raven.Client.Lightweight\Indexes\IndexDefinitionBuilder.cs:line 98
-       at Raven.Client.Indexes.AbstractIndexCreationTask`2.CreateIndexDefinition() in d:\Projects\ravendb\Raven.Client.Lightweight\Indexes\AbstractIndexCreationTask.cs:line 173
-       at Raven.Client.Indexes.AbstractIndexCreationTask.Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention) in d:\Projects\ravendb\Raven.Client.Lightweight\Indexes\AbstractIndexCreationTask.cs:line 117
-       at Raven.Client.Indexes.IndexCreation.CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDatabaseCommands databaseCommands, DocumentConvention conventions) in d:\Projects\ravendb\Raven.Client.Lightweight\Indexes\IndexCreation.cs:line 46
-       at Raven.Client.Indexes.IndexCreation.CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore) in d:\Projects\ravendb\Raven.Client.Lightweight\Indexes\IndexCreation.cs:line 57
-       at Raven.Client.Indexes.IndexCreation.CreateIndexes(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore) in d:\Projects\ravendb\Raven.Client.Lightweight\Indexes\IndexCreation.cs:line 34
-       at Raven.Tests.Given an Initailised Document store execute using computation expression.Should be able to create an index() in D:\Projects\ravendb\Raven.Tests.FSharp\RavenTests.fs:line 269
+    at Raven.Client.Indexes.ExpressionStringBuilder.VisitMethodCall(MethodCallExpression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1226
+       at System.Linq.Expressions.MethodCallExpression.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitMethodCall(MethodCallExpression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1261
+       at System.Linq.Expressions.MethodCallExpression.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitMethodCall(MethodCallExpression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1261
+       at System.Linq.Expressions.MethodCallExpression.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitLambda[T](Expression`1 node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1021
+       at System.Linq.Expressions.Expression`1.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitMethodCall(MethodCallExpression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1217
+       at System.Linq.Expressions.MethodCallExpression.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitLambda[T](Expression`1 node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1021
+       at System.Linq.Expressions.Expression`1.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitMethodCall(MethodCallExpression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1217
+       at System.Linq.Expressions.MethodCallExpression.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitLambda[T](Expression`1 node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1021
+       at System.Linq.Expressions.Expression`1.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitMethodCall(MethodCallExpression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1217
+       at System.Linq.Expressions.MethodCallExpression.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitLambda[T](Expression`1 node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1021
+       at System.Linq.Expressions.Expression`1.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitMethodCall(MethodCallExpression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1217
+       at System.Linq.Expressions.MethodCallExpression.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitLambda[T](Expression`1 node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1021
+       at System.Linq.Expressions.Expression`1.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitMethodCall(MethodCallExpression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1217
+       at System.Linq.Expressions.MethodCallExpression.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitLambda[T](Expression`1 node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1021
+       at System.Linq.Expressions.Expression`1.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitMethodCall(MethodCallExpression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1217
+       at System.Linq.Expressions.MethodCallExpression.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitLambda[T](Expression`1 node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1021
+       at System.Linq.Expressions.Expression`1.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitMethodCall(MethodCallExpression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1261
+       at System.Linq.Expressions.MethodCallExpression.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitMethodCall(MethodCallExpression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1261
+       at System.Linq.Expressions.MethodCallExpression.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.VisitMethodCall(MethodCallExpression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 1261
+       at System.Linq.Expressions.MethodCallExpression.Accept(ExpressionVisitor visitor)
+       at System.Linq.Expressions.ExpressionVisitor.Visit(Expression node)
+       at Raven.Client.Indexes.ExpressionStringBuilder.Visit(Expression node, ExpressionOperatorPrecedence outerPrecedence) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 359
+       at Raven.Client.Indexes.ExpressionStringBuilder.ExpressionToString(DocumentConvention convention, Boolean translateIdentityProperty, Type queryRoot, String queryRootName, Expression node) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs:line 105
+       at Raven.Client.Indexes.IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode[TQueryRoot,TReduceResult](LambdaExpression expr, DocumentConvention convention, String querySource, Boolean translateIdentityProperty) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\IndexDefinitionHelper.cs:line 53
+       at Raven.Client.Indexes.IndexDefinitionBuilder`2.ToIndexDefinition(DocumentConvention convention, Boolean validateMap) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\IndexDefinitionBuilder.cs:line 98
+       at Raven.Client.Indexes.AbstractIndexCreationTask`2.CreateIndexDefinition() in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\AbstractIndexCreationTask.cs:line 173
+       at Raven.Client.Indexes.AbstractIndexCreationTask.Execute(IDatabaseCommands databaseCommands, DocumentConvention documentConvention) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\AbstractIndexCreationTask.cs:line 117
+       at Raven.Client.Indexes.IndexCreation.CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDatabaseCommands databaseCommands, DocumentConvention conventions) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\IndexCreation.cs:line 46
+       at Raven.Client.Indexes.IndexCreation.CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\IndexCreation.cs:line 57
+       at Raven.Client.Indexes.IndexCreation.CreateIndexes(Assembly assemblyToScanForIndexingTasks, IDocumentStore documentStore) in c:\Projects\ravendb\Raven.Client.Lightweight\Indexes\IndexCreation.cs:line 34
+       at Raven.Tests.Given an Initailised Document store execute using computation expression.Should be able to create an index() in C:\Projects\ravendb\Raven.Tests.FSharp\RavenTests.fs:line 269
 
 *)
 
+type Result() =
+    let mutable query : obj[] = null
+    member x.Query
+        with get () = query
+        and  set v = query <- v
 
 type OrderTotalsByDay() as this =
-    inherit AbstractIndexCreationTask<Order, TotalsReduceResult>()
+    inherit AbstractIndexCreationTask<Order, Result>()
 
     let map = 
         <@ Seq.map (fun (o:Order) -> 
-                        { Year = o.Date.Year; 
-                          Month = o.Date.Month; 
-                          Day = o.Date.Day;
-                          Total = o.Items |> Seq.sumBy (fun i -> i.Price) }) @>
+                        Result(Query =
+                            [| box o.Date.Year; 
+                               box o.Date.Month; 
+                               box o.Date.Day;
+                               box (o.Items |> Seq.sumBy (fun i -> i.Price)) |])) @>
 
     let reduce =
-        <@ Seq.groupBy (fun (result:TotalsReduceResult) -> result.Year, result.Month, result.Day)
+        <@ Seq.groupBy (fun (result:Result) -> result.Query.[0] :?> int, result.Query.[1] :?> int, result.Query.[2] :?> int)
            >> Seq.map (fun ((year, month, day), results) ->
-                           { Year = year;
-                             Month = month;
-                             Day = day;
-                             Total = results |> Seq.sumBy (fun r -> r.Total) }) @>
+                            Result(Query =
+                                [| box year; 
+                                   box month; 
+                                   box day;
+                                   box (results |> Seq.sumBy (fun r -> r.Query.[3] :?> int)) |])) @>
                         
     do
         this.Map <- Linq.toIndexExpression map
@@ -134,6 +193,13 @@ type OrderTotalsByDay() as this =
 
 *)
 
+//type TotalsReduceResult = {
+//    Year : int
+//    Month : int
+//    Day : int
+//    Total : float
+//}
+//
 //type OrderTotalsByDay() as this =
 //    inherit AbstractIndexCreationTask<Order, TotalsReduceResult>()
 //
