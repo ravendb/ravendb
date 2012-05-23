@@ -55,6 +55,13 @@ namespace Raven.Database.Indexing
 				return input.Length();
 		}
 
+		[Obsolete]
+		// Note that this method is already obsoleted by Lucene, so disallowing it is okay.
+		public override void RenameFile(string from, string to)
+		{
+			throw new NotSupportedException("Because encrypted files use their name as part of the encryption key, renaming is not supported.");
+		}
+
 		private Stream ApplyReadCodecs(string key, Stream stream)
 		{
 			try
