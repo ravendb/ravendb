@@ -25,6 +25,11 @@ namespace Raven.Database.Indexing
 
 		public override IndexInput OpenInput(string name)
 		{
+			return OpenInputInner(name);
+		}
+
+		private CodecIndexInput OpenInputInner(string name)
+		{
 			var file = GetFile(name);
 			return new CodecIndexInput(file, s => ApplyReadCodecs(file.FullName, s));
 		}
@@ -39,18 +44,40 @@ namespace Raven.Database.Indexing
 			return new CodecIndexOutput(file, s => ApplyWriteCodecs(file.FullName, s));
 		}
 
+		public override long FileLength(string name)
+		{
+			using (var input = OpenInputInner(name))
+				return input.Length();
+		}
+
 		private Stream ApplyReadCodecs(string key, Stream stream)
 		{
-			foreach (var codec in codecs)
-				stream = codec.Decode(key, stream);
-			return stream;
+			try
+			{
+				foreach (var codec in codecs)
+					stream = codec.Decode(key, stream);
+				return stream;
+			}
+			catch
+			{
+				stream.Dispose();
+				throw;
+			}
 		}
 
 		private Stream ApplyWriteCodecs(string key, Stream stream)
 		{
-			foreach (var codec in codecs)
-				stream = codec.Encode(key, stream);
-			return stream;
+			try
+			{
+				foreach (var codec in codecs)
+					stream = codec.Encode(key, stream);
+				return stream;
+			}
+			catch
+			{
+				stream.Dispose();
+				throw;
+			}
 		}
 
 		private FileInfo GetFile(string name)
@@ -82,7 +109,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private class CodecIndexInput : IndexInput
+		private class CodecIndexInput : IndexInput, IDisposable
 		{
 			private readonly FileInfo file;
 			private readonly Stream stream;
@@ -124,6 +151,11 @@ namespace Raven.Database.Indexing
 			public override void Seek(long pos)
 			{
 				stream.Seek(pos, SeekOrigin.Begin);
+			}
+
+			public void Dispose()
+			{
+				Close();
 			}
 		}
 
