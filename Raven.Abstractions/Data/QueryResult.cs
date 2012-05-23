@@ -25,6 +25,7 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The includes.</value>
 		public List<RavenJObject> Includes { get; set; }
+
 		/// <summary>
 		/// Gets or sets a value indicating whether the index is stale.
 		/// </summary>

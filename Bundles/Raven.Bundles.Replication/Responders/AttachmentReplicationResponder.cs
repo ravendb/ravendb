@@ -10,6 +10,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using NLog;
+using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Data;
@@ -190,6 +191,9 @@ namespace Raven.Bundles.Replication.Responders
 
 			var history = metadata[ReplicationConstants.RavenReplicationHistory];
 			if (history == null) // no history, not a parent
+				return false;
+
+			if (history.Type != JTokenType.Array)
 				return false;
 
 			return history.Values().Contains(version, new RavenJTokenEqualityComparer());
