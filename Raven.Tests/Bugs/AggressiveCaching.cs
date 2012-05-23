@@ -75,6 +75,7 @@ namespace Raven.Tests.Bugs
 			Assert.Equal(1, server.Server.NumberOfRequests);
 		}
 
+		// TODO: NOTE: I think this test is not complete, since the assertion here is exactly the same as in CanAggressivelyCacheQueries.
 		[Fact]
 		public void WaitForNonStaleResultsIgnoresAggressiveCaching()
 		{
