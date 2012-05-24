@@ -10,7 +10,7 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Json;
 using Raven.Json.Linq;
 
-namespace Raven.Smuggler
+namespace Raven.Abstractions.Smuggler
 {
 	public class SmugglerOptions
 	{
