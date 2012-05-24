@@ -5,11 +5,11 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{0DD9FF7B-311B-4D75-A2DD-4A5D61CC9C09}</ProjectGuid>
+    <ProjectGuid>{F41C7F7E-A287-449A-A545-E7152937EF77}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Raven.Bundles.Quotas</RootNamespace>
-    <AssemblyName>Raven.Bundles.Quotas</AssemblyName>
+    <RootNamespace>Raven.Client.IndexedProperties</RootNamespace>
+    <AssemblyName>Raven.Client.IndexedProperties</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -29,13 +29,6 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
-  </PropertyGroup>
-  <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-  <PropertyGroup>
-    <AssemblyOriginatorKeyFile>..\..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -47,36 +40,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\CommonAssemblyInfo.cs">
-      <Link>Properties\CommonAssemblyInfo.cs</Link>
-    </Compile>
-    <Compile Include="Documents\DocQuotaConfiguration.cs" />
-    <Compile Include="Documents\Triggers\DatabaseCountDocumentDeleteTrigger.cs" />
-    <Compile Include="Documents\Triggers\DatabaseCountQoutaForDocumentsPutTrigger.cs" />
-    <Compile Include="Size\SizeQuotaConfiguration.cs" />
-    <Compile Include="Size\Triggers\DatabaseSizeAttachmentDeleteTrigger.cs" />
-    <Compile Include="Size\Triggers\DatabaseSizeDocumentDeleteTrigger.cs" />
-    <Compile Include="Size\Triggers\DatabaseSizeQoutaForAttachmentsPutTrigger.cs" />
-    <Compile Include="Size\Triggers\DatabaseSizeQoutaForDocumentsPutTrigger.cs" />
+    <Compile Include="SetupDoc.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
-      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
-      <Name>Raven.Abstractions</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Raven.Database\Raven.Database.csproj">
-      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
-      <Name>Raven.Database</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\Raven.Database\RavenDB.snk">
-      <Link>RavenDB.snk</Link>
-    </None>
-  </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(MSBuildProjectDirectory)\..\..\Tools\StyleCop\StyleCop.Targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

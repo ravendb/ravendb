@@ -727,6 +727,11 @@ namespace Raven.Database.Server
 			if (string.IsNullOrEmpty(acceptEncoding))
 				return;
 
+			// The Studio xap is already a compressed file, it's a waste of time to try to compress it further.
+			var requestUrl = ctx.GetRequestUrl();
+			if (String.Equals(requestUrl, "/silverlight/Raven.Studio.xap", StringComparison.InvariantCultureIgnoreCase))
+				return;
+
 			// gzip must be first, because chrome has an issue accepting deflate data
 			// when sending it json text
 			if ((acceptEncoding.IndexOf("gzip", StringComparison.OrdinalIgnoreCase) != -1))

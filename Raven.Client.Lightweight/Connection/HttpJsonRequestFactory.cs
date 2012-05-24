@@ -41,7 +41,7 @@ namespace Raven.Client.Connection
 		internal void InvokeLogRequest(IHoldProfilingInformation sender, Func<RequestResultArgs> generateRequentResult)
 		{
 			var handler = LogRequest;
-			if (handler != null)
+			if (handler != null) 
 				handler(sender, generateRequentResult());
 		}
 
@@ -91,10 +91,10 @@ namespace Raven.Client.Connection
 			if (AggressiveCacheDuration != null)
 			{
 				var duraion = AggressiveCacheDuration.Value;
-				if (duraion.TotalSeconds > 0)
+				if(duraion.TotalSeconds > 0)
 					setHeader("Cache-Control", "max-age=" + duraion.TotalSeconds);
 
-				if ((DateTimeOffset.Now - cachedRequest.Time) < duraion) // can serve directly from local cache
+				if ((DateTimeOffset.Now - cachedRequest.Time) < duration) // can serve directly from local cache
 					skipServerCheck = true;
 			}
 
@@ -207,7 +207,7 @@ namespace Raven.Client.Connection
 
 		internal void CacheResponse(string url, RavenJToken data, NameValueCollection headers)
 		{
-			if (string.IsNullOrEmpty(headers["ETag"]))
+			if (string.IsNullOrEmpty(headers["ETag"])) 
 				return;
 
 			var clone = data.CloneToken();
@@ -228,7 +228,7 @@ namespace Raven.Client.Connection
 		{
 			if (disposed)
 				return;
-			disposed = true;
+		    disposed = true;
 			cache.Dispose();
 #if !NET35
 			aggressiveCacheDuration.Dispose();
