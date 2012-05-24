@@ -43,6 +43,15 @@ namespace Raven.Tests.Bugs
 				}
 			}.Initialize())
 			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				WaitForAllRequestsToComplete(server);
+				server.Server.ResetNumberOfRequests();
+
 				for (var i = 0; i < 5; i++)
 				{
 					using (var session = store.OpenSession())
