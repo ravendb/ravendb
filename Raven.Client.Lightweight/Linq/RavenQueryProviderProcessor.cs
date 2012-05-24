@@ -11,7 +11,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Linq
@@ -390,6 +393,7 @@ namespace Raven.Client.Linq
 				AssertNoComputation(memberExpression);
 
 				path = memberExpression.ToString();
+#if !NET35
 				var props = memberExpression.Member.GetCustomAttributes(false)
 					.Where(x => x.GetType().Name == "JsonPropertyAttribute")
 					.ToArray();
@@ -398,6 +402,14 @@ namespace Raven.Client.Linq
 					path = path.Substring(0, path.Length - memberExpression.Member.Name.Length) +
 						   ((dynamic)props[0]).PropertyName;
 				}
+#else
+				var props = memberExpression.Member.GetCustomAttributes(typeof(JsonPropertyAttribute), false);
+				if (props.Length != 0)
+				{
+					path = path.Substring(0, path.Length - memberExpression.Member.Name.Length) +
+					       ((JsonPropertyAttribute) props[0]).PropertyName;
+				}
+#endif
 				isNestedPath = memberExpression.Expression is MemberExpression;
 				memberType = memberExpression.Member.GetMemberType();
 			}
