@@ -10,11 +10,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using Newtonsoft.Json;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Linq
@@ -393,11 +390,13 @@ namespace Raven.Client.Linq
 				AssertNoComputation(memberExpression);
 
 				path = memberExpression.ToString();
-				var props = memberExpression.Member.GetCustomAttributes(typeof(JsonPropertyAttribute), false);
+				var props = memberExpression.Member.GetCustomAttributes(false)
+					.Where(x => x.GetType().Name == "JsonPropertyAttribute")
+					.ToArray();
 				if (props.Length != 0)
 				{
 					path = path.Substring(0, path.Length - memberExpression.Member.Name.Length) +
-					       ((JsonPropertyAttribute) props[0]).PropertyName;
+						   ((dynamic)props[0]).PropertyName;
 				}
 				isNestedPath = memberExpression.Expression is MemberExpression;
 				memberType = memberExpression.Member.GetMemberType();
