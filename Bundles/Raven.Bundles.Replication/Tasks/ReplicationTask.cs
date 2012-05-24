@@ -459,8 +459,7 @@ namespace Raven.Bundles.Replication.Tasks
 			var document = docDb.Get(ReplicationConstants.RavenReplicationDestinations, null);
 			if (document == null)
 			{
-				docDb.Put(ReplicationConstants.RavenReplicationDestinations, null, RavenJObject.FromObject(new ReplicationDocument()), new RavenJObject(), null);
-				document = docDb.Get(ReplicationConstants.RavenReplicationDestinations, null);
+				return new ReplicationStrategy[0];
 			}
 			return document.DataAsJson.JsonDeserialization<ReplicationDocument>()
 				.Destinations.Select(GetConnectionOptionsSafe)

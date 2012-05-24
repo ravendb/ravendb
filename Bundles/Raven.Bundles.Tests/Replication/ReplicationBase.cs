@@ -30,7 +30,7 @@ namespace Raven.Bundles.Tests.Replication
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 
 		private const int PortRangeStart = 8079;
-		protected const int RetriesCount = 300;
+		protected const int RetriesCount = 500;
 
 		public IDocumentStore CreateStore()
 		{
@@ -184,7 +184,23 @@ namespace Raven.Bundles.Tests.Replication
 					Thread.Sleep(100);
 				}
 			}
-			Assert.NotNull(document);
+			try
+			{
+				Assert.NotNull(document);
+			}
+			catch (Exception ex)
+			{
+				using (var session = store2.OpenSession())
+				{
+					Thread.Sleep(TimeSpan.FromSeconds(10));
+
+					document = session.Load<TDocument>(expectedId);
+					if (document == null)
+						throw;
+
+					throw new Exception("WaitForDocument failed, but after waiting 10 seconds more, WaitForDocument succeed. Do we have a race condition here?", ex);
+				}
+			}
 			return document;
 		}
 
