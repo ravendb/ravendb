@@ -138,23 +138,17 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("PUT", url =>
 			{
 			string requestUri = url + "/indexes/" + name;
-				if (overwrite)
-				{
-					// When overwriting, skip the check to see if the index already exists
-					return DirectPutIndexAfterHeadCheck(indexDef, requestUri);
-				}
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this,requestUri, "HEAD", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
 
-			var webRequest = (HttpWebRequest)WebRequest.Create(requestUri);
-			AddOperationHeaders(webRequest);
-			webRequest.Method = "HEAD";
-			webRequest.Credentials = credentials;
-
-			return Task<WebResponse>.Factory.FromAsync(webRequest.BeginGetResponse, webRequest.EndGetResponse, null)
+			return webRequest.ExecuteRequestAsync()
 				.ContinueWith(task =>
 				{
 					try
 					{
-						task.Result.Close();
+						task.Wait();
+						if (overwrite == false)
 							throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 
 					}
@@ -168,11 +162,12 @@ namespace Raven.Client.Connection.Async
 							throw;
 					}
 
-						return DirectPutIndexAfterHeadCheck(indexDef, requestUri);
-					}).Unwrap();
-			});
-		}
-
+					var request = jsonRequestFactory.CreateHttpJsonRequest(
+						new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
+							.AddOperationHeaders(OperationsHeaders));
+					
+					var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
+					request.AddOperationHeaders(OperationsHeaders);
 		private Task<string> DirectPutIndexAfterHeadCheck(IndexDefinition indexDef, string requestUri)
 		{
 					var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
@@ -200,8 +195,10 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("DELETE", url =>
 			{
 			string path = queryToDelete.GetIndexQueryUrl(url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "DELETE", credentials, convention);
-			request.AddOperationHeaders(OperationsHeaders);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, path, "DELETE", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
+			
 			return request.ExecuteRequestAsync()
 				.ContinueWith(task =>
 				{
@@ -244,9 +241,9 @@ namespace Raven.Client.Connection.Async
 			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
 			if (etag != null)
 				metadata["ETag"] = new RavenJValue(etag.Value.ToString());
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, method, metadata, credentials, convention);
-			request.AddOperationHeaders(OperationsHeaders);
-
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, url + "/docs/" + key, method, metadata, credentials, convention)
+						.AddOperationHeaders(OperationsHeaders));
 			
 				return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, document.ToString(), null)
 				.ContinueWith(task =>
@@ -276,14 +273,6 @@ namespace Raven.Client.Connection.Async
 				})
 				.Unwrap();
 			});
-		}
-
-		private void AddOperationHeaders(HttpWebRequest webRequest)
-		{
-			foreach (var header in OperationsHeaders)
-			{
-				webRequest.Headers[header.Key] = header.Value;
-			}
 		}
 
 		/// <summary>
@@ -342,7 +331,7 @@ namespace Raven.Client.Connection.Async
 			{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, "GET", metadata, credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/docs/" + key, "GET", metadata, credentials, convention));
 
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
@@ -401,11 +390,11 @@ namespace Raven.Client.Connection.Async
 			if (keys.Length < 128)
 			{
 				path += "&" + string.Join("&", keys.Select(x => "id=" + x).ToArray());
-				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+				request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention));
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task => CompleteMultiGetAsync(task));
 			}
-			request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
+			request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST", credentials, convention));
 			return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, new RavenJArray(keys).ToString(Formatting.None), null)
 				.ContinueWith(writeTask => request.ReadResponseJsonAsync())
 				.Unwrap()
@@ -450,7 +439,7 @@ namespace Raven.Client.Connection.Async
 			{
 
 			var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
-			return jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention)
+			return jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention))
 						.ReadResponseJsonAsync()
 						.ContinueWith(task => ((RavenJArray)task.Result)
 												.Cast<RavenJObject>()
@@ -471,8 +460,9 @@ namespace Raven.Client.Connection.Async
 			Uri.EscapeDataString(facetSetupDoc),
 			Uri.EscapeDataString(query.Query));
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
-			request.AddOperationHeaders(OperationsHeaders);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
 
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
@@ -491,8 +481,9 @@ namespace Raven.Client.Connection.Async
 		public Task<LicensingStatus> GetLicenseStatus()
 		{
 			var actualUrl = string.Format("{0}/license/status", url);
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", new RavenJObject(), credentials, convention);
-			request.AddOperationHeaders(OperationsHeaders);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
 
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task => new LicensingStatus
@@ -506,8 +497,9 @@ namespace Raven.Client.Connection.Async
 		public Task<BuildNumber> GetBuildNumber()
 		{
 			var actualUrl = string.Format("{0}/build/version", url);
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", new RavenJObject(), credentials, convention);
-			request.AddOperationHeaders(OperationsHeaders);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, actualUrl, "GET", new RavenJObject(), credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
 
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task => new BuildNumber
@@ -528,8 +520,9 @@ namespace Raven.Client.Connection.Async
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", metadata, credentials, convention);
-			request.AddOperationHeaders(OperationsHeaders);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
 
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task => SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray) task.Result).OfType<RavenJObject>()).ToArray());
@@ -544,8 +537,7 @@ namespace Raven.Client.Connection.Async
 			{
 			var multiGetOperation = new MultiGetOperation(this,  convention, url, requests);
 
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, multiGetOperation.RequestUri, "POST",
-			                                                               credentials, convention);
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.RequestUri, "POST", credentials, convention));
 
 			var requestsForServer = multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
 
@@ -606,7 +598,7 @@ namespace Raven.Client.Connection.Async
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention));
 
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
@@ -663,12 +655,13 @@ namespace Raven.Client.Connection.Async
 				Uri.EscapeUriString(index),
 				Uri.EscapeDataString(suggestionQuery.Term),
 				Uri.EscapeDataString(suggestionQuery.Field),
-				Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString()),
+				Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToString(CultureInfo.InvariantCulture)),
 				Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
-				Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
+				Uri.EscapeDataString(suggestionQuery.Accuracy.ToString(CultureInfo.InvariantCulture)));
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "GET", credentials, convention);
-			request.AddOperationHeaders(OperationsHeaders);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
 
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
@@ -693,7 +686,7 @@ namespace Raven.Client.Connection.Async
 			{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var req = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials, convention);
+			var req = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/bulk_docs", "POST", metadata, credentials, convention));
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 			var data = jArray.ToString(Formatting.None);
 

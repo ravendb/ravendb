@@ -66,7 +66,7 @@
 				if (checkDoc == null) 
 					continue;
 
-				var checkId = checkDoc.ToJson().Value<string>("Id");
+				var checkId = checkDoc.DataAsJson.Value<string>("RelatedId");
 
 				if (checkId != key)
 				{
