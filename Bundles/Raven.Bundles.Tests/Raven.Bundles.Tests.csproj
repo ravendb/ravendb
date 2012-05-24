@@ -79,6 +79,7 @@
     <Compile Include="Expiration\Expiration.cs" />
     <Compile Include="Expiration\WithCascade.cs" />
     <Compile Include="IndexedProperties\IndexedProperties.cs" />
+    <Compile Include="IndexReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisQueryParametersTests.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisTests.cs" />

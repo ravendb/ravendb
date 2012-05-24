@@ -1,14 +1,18 @@
 using System;
+using System.Threading;
+using System.Linq;
+using Raven.Client;
 using Raven.Client.Document;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
 	public class AggressiveCaching : RemoteClientTest
 	{
-		[Fact]
-		public void CanAggressivelyCacheLoads()
+		private readonly RavenDbServer server;
+		private readonly IDocumentStore store;
+
+		public AggressiveCaching()
 		{
 			using(var server = GetNewServer())
 			using (var store = new DocumentStore
@@ -28,8 +32,19 @@ namespace Raven.Tests.Bugs
 
 				WaitForAllRequestsToComplete(server);
 				server.Server.ResetNumberOfRequests();
+		}
 
-				for (var i = 0; i < 5; i++)
+		public override void Dispose()
+		{
+			store.Dispose();
+			server.Dispose();
+			base.Dispose();
+		}
+
+		[Fact]
+		public void CanAggressivelyCacheLoads()
+		{
+			for (var i = 0; i < 5; i++)
 				{
 					using (var session = store.OpenSession())
 					{
@@ -43,7 +58,6 @@ namespace Raven.Tests.Bugs
 				WaitForAllRequestsToComplete(server);
 				Assert.Equal(1, server.Server.NumberOfRequests);
 			}
-		}
 
 		[Fact]
 		public void CanAggressivelyCacheQueries()
@@ -82,10 +96,10 @@ namespace Raven.Tests.Bugs
 				WaitForAllRequestsToComplete(server);
 				Assert.Equal(1, server.Server.NumberOfRequests);
 			}
-		}
 
+		// TODO: NOTE: I think this test is not complete, since the assertion here is exactly the same as in CanAggressivelyCacheQueries.
 		[Fact]
-		public void WaitForUnstaleResultIgnoresAggressiveCaching()
+		public void WaitForNonStaleResultsIgnoresAggressiveCaching()
 		{
 			using (var server = GetNewServer())
 			using (var store = new DocumentStore
@@ -99,21 +113,10 @@ namespace Raven.Tests.Bugs
 			{
 				using (var session = store.OpenSession())
 				{
-					session.Store(new User());
-					session.SaveChanges();
-				}
-
-				WaitForAllRequestsToComplete(server);
-				server.Server.ResetNumberOfRequests();
-
-				for (int i = 0; i < 5; i++)
-				{
-					using (var session = store.OpenSession())
-					{
 						using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
 						{
 							session.Query<User>()
-								.Customize(x=>x.WaitForNonStaleResults())
+							.Customize(x => x.WaitForNonStaleResults())
 								.ToList();
 						}
 					}
@@ -124,5 +127,4 @@ namespace Raven.Tests.Bugs
 				Assert.NotEqual(1, server.Server.NumberOfRequests);
 			}
 		}
-	}
 }
