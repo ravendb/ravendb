@@ -11,6 +11,7 @@ using NLog;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using System.Linq;
+using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Queries;
 using Raven.Database.Server.Abstractions;
@@ -115,7 +116,7 @@ namespace Raven.Database.Server.Responders
 		{
 			Guid indexEtag;
 
-			QueryResult queryResult = ExecuteQuery(context, index, out indexEtag);
+			var queryResult = ExecuteQuery(context, index, out indexEtag);
 
 			if (queryResult == null)
 				return;
@@ -133,7 +134,8 @@ namespace Raven.Database.Server.Responders
 			{
 				command.Execute(result);
 			}
-			
+			command.AlsoInclude(queryResult.IdsToInclude);
+
 			context.Response.AddHeader("ETag", indexEtag.ToString());
 			if(queryResult.NonAuthoritativeInformation)
 				context.SetStatusToNonAuthoritativeInformation();
@@ -157,7 +159,7 @@ namespace Raven.Database.Server.Responders
 			});
 		}
 
-		private QueryResult ExecuteQuery(IHttpContext context, string index, out Guid indexEtag)
+		private QueryResultWithIncludes ExecuteQuery(IHttpContext context, string index, out Guid indexEtag)
 		{
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
 
@@ -188,7 +190,7 @@ namespace Raven.Database.Server.Responders
 			return result;
 		}
 
-		private QueryResult PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
+		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
 		{
 			indexEtag = Database.GetIndexEtag(index, null);
 			if (context.MatchEtag(indexEtag))
@@ -202,7 +204,7 @@ namespace Raven.Database.Server.Responders
 			return queryResult;
 		}
 
-		private QueryResult PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
+		private QueryResultWithIncludes PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
 		{
 			string entityName = null;
 			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
