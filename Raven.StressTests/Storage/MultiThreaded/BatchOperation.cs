@@ -6,7 +6,7 @@
 using Raven.Abstractions.Commands;
 using Raven.Json.Linq;
 
-namespace Raven.Tests.Storage.MultiThreaded
+namespace Raven.StressTests.Storage.MultiThreaded
 {
 	public class BatchOperation : MultiThreaded
 	{
