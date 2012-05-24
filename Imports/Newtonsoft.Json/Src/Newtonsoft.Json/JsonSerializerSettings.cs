@@ -1,4 +1,29 @@
-﻿using System;
+﻿#region License
+// Copyright (c) 2007 James Newton-King
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use,
+// copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following
+// conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+// HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
+#endregion
+
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.Serialization.Formatters;
@@ -28,12 +53,14 @@ namespace Raven.Imports.Newtonsoft.Json
     internal const DateTimeZoneHandling DefaultDateTimeZoneHandling = DateTimeZoneHandling.RoundtripKind;
     internal const DateParseHandling DefaultDateParseHandling = DateParseHandling.DateTime;
     internal static readonly CultureInfo DefaultCulture;
+    internal const bool DefaultCheckAdditionalContent = false;
 
     internal Formatting? _formatting;
     internal DateFormatHandling? _dateFormatHandling;
     internal DateTimeZoneHandling? _dateTimeZoneHandling;
     internal DateParseHandling? _dateParseHandling;
     internal CultureInfo _culture;
+    internal bool? _checkAdditionalContent;
     internal int? _maxDepth;
     internal bool _maxDepthSet;
 
@@ -187,6 +214,12 @@ namespace Raven.Imports.Newtonsoft.Json
     {
       get { return _culture ?? DefaultCulture; }
       set { _culture = value; }
+    }
+
+    public bool CheckAdditionalContent
+    {
+      get { return _checkAdditionalContent ?? DefaultCheckAdditionalContent; }
+      set { _checkAdditionalContent = value; }
     }
 
     static JsonSerializerSettings()

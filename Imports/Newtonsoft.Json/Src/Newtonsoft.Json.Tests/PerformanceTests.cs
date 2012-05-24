@@ -1,4 +1,29 @@
-﻿#if !(SILVERLIGHT || PocketPC || NET20 || NET35 || NETFX_CORE || PORTABLE)
+﻿#region License
+// Copyright (c) 2007 James Newton-King
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use,
+// copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following
+// conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+// HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
+#endregion
+
+#if !(SILVERLIGHT || PocketPC || NET20 || NET35 || NETFX_CORE || PORTABLE)
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -9,16 +34,16 @@ using System.Runtime.Serialization;
 using System.Web.Script.Serialization;
 using System.Xml.Linq;
 using System.Xml.Serialization;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json.Utilities;
 using NUnit.Framework;
 using System.Runtime.Serialization.Json;
 using System.Text;
-using Raven.Imports.Newtonsoft.Json.Bson;
+using Newtonsoft.Json.Bson;
 using System.Runtime.Serialization.Formatters.Binary;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Imports.Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Converters;
 
-namespace Raven.Imports.Newtonsoft.Json.Tests
+namespace Newtonsoft.Json.Tests
 {
   [Serializable]
   [DataContract]
@@ -68,6 +93,7 @@ namespace Raven.Imports.Newtonsoft.Json.Tests
       JsonNet,
       JsonNetWithIsoConverter,
       JsonNetBinary,
+      JsonNetLinq,
       BinaryFormatter,
       JavaScriptSerializer,
       DataContractSerializer,
@@ -105,6 +131,7 @@ namespace Raven.Imports.Newtonsoft.Json.Tests
       BenchmarkSerializeMethod(SerializeMethod.JavaScriptSerializer, value);
       BenchmarkSerializeMethod(SerializeMethod.DataContractJsonSerializer, value);
       BenchmarkSerializeMethod(SerializeMethod.JsonNet, value);
+      BenchmarkSerializeMethod(SerializeMethod.JsonNetLinq, value);
       BenchmarkSerializeMethod(SerializeMethod.JsonNetWithIsoConverter, value);
       BenchmarkSerializeMethod(SerializeMethod.JsonNetBinary, value);
     }
@@ -403,33 +430,6 @@ namespace Raven.Imports.Newtonsoft.Json.Tests
       };
     }
 
-    public string SerializeJsonNet(object value)
-    {
-      Type type = value.GetType();
-
-      Raven.Imports.Newtonsoft.Json.JsonSerializer json = new Raven.Imports.Newtonsoft.Json.JsonSerializer();
-
-      json.NullValueHandling = NullValueHandling.Ignore;
-
-      json.ObjectCreationHandling = Raven.Imports.Newtonsoft.Json.ObjectCreationHandling.Replace;
-      json.MissingMemberHandling = Raven.Imports.Newtonsoft.Json.MissingMemberHandling.Ignore;
-      json.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-
-
-      StringWriter sw = new StringWriter();
-      Raven.Imports.Newtonsoft.Json.JsonTextWriter writer = new JsonTextWriter(sw);
-
-      writer.Formatting = Formatting.None;
-
-      writer.QuoteChar = '"';
-      json.Serialize(writer, value);
-
-      string output = sw.ToString();
-      writer.Close();
-
-      return output;
-    }
-
     public string SerializeWebExtensions(object value)
     {
       JavaScriptSerializer ser = new JavaScriptSerializer();
@@ -481,6 +481,38 @@ namespace Raven.Imports.Newtonsoft.Json.Tests
         case SerializeMethod.JsonNetWithIsoConverter:
           json = JsonConvert.SerializeObject(value, new IsoDateTimeConverter());
           break;
+        case SerializeMethod.JsonNetLinq:
+          {
+            TestClass c = value as TestClass;
+            if (c != null)
+            {
+              JObject o = new JObject(
+                new JProperty("strings", new JArray(
+                                           c.strings
+                                           )),
+                new JProperty("dictionary", new JObject(c.dictionary.Select(d => new JProperty(d.Key, d.Value)))),
+                new JProperty("Name", c.Name),
+                new JProperty("Now", c.Now),
+                new JProperty("BigNumber", c.BigNumber),
+                new JProperty("Address1", new JObject(
+                                            new JProperty("Street", c.Address1.Street),
+                                            new JProperty("Phone", c.Address1.Phone),
+                                            new JProperty("Entered", c.Address1.Entered))),
+                new JProperty("Addresses", new JArray(c.Addresses.Select(a =>
+                                                                         new JObject(
+                                                                           new JProperty("Street", a.Street),
+                                                                           new JProperty("Phone", a.Phone),
+                                                                           new JProperty("Entered", a.Entered)))))
+                );
+
+              json = o.ToString(Formatting.None);
+            }
+            else
+            {
+              json = string.Empty;
+            }
+            break;
+          }
         case SerializeMethod.JsonNetBinary:
           {
             MemoryStream ms = new MemoryStream(Buffer);
@@ -553,8 +585,8 @@ namespace Raven.Imports.Newtonsoft.Json.Tests
       Type type = typeof (T);
 
       JsonSerializer serializer = new JsonSerializer();
-      serializer.ObjectCreationHandling = Raven.Imports.Newtonsoft.Json.ObjectCreationHandling.Replace;
-      serializer.MissingMemberHandling = Raven.Imports.Newtonsoft.Json.MissingMemberHandling.Ignore;
+      serializer.ObjectCreationHandling = Newtonsoft.Json.ObjectCreationHandling.Replace;
+      serializer.MissingMemberHandling = Newtonsoft.Json.MissingMemberHandling.Ignore;
       serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
       if (isoDateTimeConverter)
         serializer.Converters.Add(new IsoDateTimeConverter());
@@ -574,8 +606,8 @@ namespace Raven.Imports.Newtonsoft.Json.Tests
       Type type = typeof (T);
 
       JsonSerializer serializer = new JsonSerializer();
-      serializer.ObjectCreationHandling = Raven.Imports.Newtonsoft.Json.ObjectCreationHandling.Replace;
-      serializer.MissingMemberHandling = Raven.Imports.Newtonsoft.Json.MissingMemberHandling.Ignore;
+      serializer.ObjectCreationHandling = Newtonsoft.Json.ObjectCreationHandling.Replace;
+      serializer.MissingMemberHandling = Newtonsoft.Json.MissingMemberHandling.Ignore;
       serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
 
       return (T) serializer.Deserialize(new BsonReader(new MemoryStream(bson)), type);

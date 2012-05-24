@@ -1,3 +1,28 @@
+#region License
+// Copyright (c) 2007 James Newton-King
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use,
+// copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following
+// conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+// HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
+#endregion
+
 using System;
 using System.Collections.Generic;
 #if !NETFX_CORE
@@ -59,25 +84,25 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
     }
 
     [Test]
-    [ExpectedException(typeof(Exception)
-#if !NETFX_CORE
-      , ExpectedMessage = @"Unexpected character while parsing path indexer: ["
-#endif
-      )]
     public void BadCharactersInIndexer()
     {
-      new JPath("Blah[[0]].Two.Three[1].Four");
+      ExceptionAssert.Throws<JsonException>(
+        @"Unexpected character while parsing path indexer: [",
+        () =>
+        {
+          new JPath("Blah[[0]].Two.Three[1].Four");
+        });
     }
 
     [Test]
-    [ExpectedException(typeof(Exception)
-#if !NETFX_CORE
-      , ExpectedMessage = @"Path ended with open indexer. Expected ]"
-#endif
-      )]
     public void UnclosedIndexer()
     {
-      new JPath("Blah[0");
+      ExceptionAssert.Throws<JsonException>(
+        @"Path ended with open indexer. Expected ]",
+        () =>
+        {
+          new JPath("Blah[0");
+        });
     }
 
     [Test]
@@ -102,25 +127,25 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
     }
 
     [Test]
-    [ExpectedException(typeof(Exception)
-#if !NETFX_CORE
-      , ExpectedMessage = "Empty path indexer."
-#endif
-      )]
     public void EmptyIndexer()
     {
-      new JPath("[]");
+      ExceptionAssert.Throws<JsonException>(
+        "Empty path indexer.",
+        () =>
+        {
+          new JPath("[]");
+        });
     }
 
     [Test]
-    [ExpectedException(typeof(Exception)
-#if !NETFX_CORE
-      , ExpectedMessage = "Unexpected character while parsing path: ]"
-#endif
-      )]
     public void IndexerCloseInProperty()
     {
-      new JPath("]");
+      ExceptionAssert.Throws<JsonException>(
+        "Unexpected character while parsing path: ]",
+        () =>
+        {
+          new JPath("]");
+        });
     }
 
     [Test]
@@ -135,14 +160,14 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
     }
 
     [Test]
-    [ExpectedException(typeof(Exception)
-#if !NETFX_CORE
-      , ExpectedMessage = "Unexpected character following indexer: B"
-#endif
-      )]
     public void MissingDotAfterIndexer()
     {
-      new JPath("[1]Blah");
+      ExceptionAssert.Throws<JsonException>(
+        "Unexpected character following indexer: B",
+        () =>
+        {
+          new JPath("[1]Blah");
+        });
     }
 
     [Test]
@@ -178,17 +203,17 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
     }
 
     [Test]
-    [ExpectedException(typeof(Exception)
-#if !NETFX_CORE
-      , ExpectedMessage = @"Index 1 not valid on JObject."
-#endif
-      )]
     public void EvaluateIndexerOnObjectWithError()
     {
       JObject o = new JObject(
         new JProperty("Blah", 1));
 
-      o.SelectToken("[1]", true);
+      ExceptionAssert.Throws<JsonException>(
+        @"Index 1 not valid on JObject.",
+        () =>
+        {
+          o.SelectToken("[1]", true);
+        });
     }
 
     [Test]
@@ -201,43 +226,43 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
     }
 
     [Test]
-    [ExpectedException(typeof(Exception)
-#if !NETFX_CORE
-      , ExpectedMessage = @"Property 'BlahBlah' not valid on JArray."
-#endif
-      )]
     public void EvaluatePropertyOnArrayWithError()
     {
       JArray a = new JArray(1, 2, 3, 4, 5);
 
-      a.SelectToken("BlahBlah", true);
+      ExceptionAssert.Throws<JsonException>(
+        @"Property 'BlahBlah' not valid on JArray.",
+        () =>
+        {
+          a.SelectToken("BlahBlah", true);
+        });
     }
 
     [Test]
-    [ExpectedException(typeof(IndexOutOfRangeException)
-#if !NETFX_CORE
-      , ExpectedMessage = @"Index 1 outside the bounds of JConstructor."
-#endif
-      )]
     public void EvaluateConstructorOutOfBoundsIndxerWithError()
     {
       JConstructor c = new JConstructor("Blah");
 
-      c.SelectToken("[1]", true);
+      ExceptionAssert.Throws<IndexOutOfRangeException>(
+        @"Index 1 outside the bounds of JConstructor.",
+        () =>
+        {
+          c.SelectToken("[1]", true);
+        });
     }
 
     [Test]
-    [ExpectedException(typeof(Exception)
-#if !NETFX_CORE
-      , ExpectedMessage = "Property 'Missing' does not exist on JObject."
-#endif
-      )]
     public void EvaluateMissingPropertyWithError()
     {
       JObject o = new JObject(
         new JProperty("Blah", 1));
 
-      o.SelectToken("Missing", true);
+      ExceptionAssert.Throws<JsonException>(
+        "Property 'Missing' does not exist on JObject.",
+        () =>
+        {
+          o.SelectToken("Missing", true);
+        });
     }
 
     [Test]
@@ -250,16 +275,16 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
     }
 
     [Test]
-    [ExpectedException(typeof(IndexOutOfRangeException)
-#if !NETFX_CORE
-      , ExpectedMessage = "Index 1000 outside the bounds of JArray."
-#endif
-      )]
     public void EvaluateArrayOutOfBoundsIndxerWithError()
     {
       JArray a = new JArray(1, 2, 3, 4, 5);
 
-      a.SelectToken("[1000].Ha", true);
+      ExceptionAssert.Throws<IndexOutOfRangeException>(
+        "Index 1000 outside the bounds of JArray.",
+        () =>
+        {
+          a.SelectToken("[1000].Ha", true);
+        });
     }
 
     [Test]

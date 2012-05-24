@@ -34,7 +34,7 @@ namespace Raven.Imports.Newtonsoft.Json.Schema
 #if !(SILVERLIGHT || WINDOWS_PHONE || NETFX_CORE || PORTABLE)
   [Serializable]
 #endif
-  public class JsonSchemaException : Exception
+  public class JsonSchemaException : JsonException
   {
     /// <summary>
     /// Gets the line number indicating where the error occurred.

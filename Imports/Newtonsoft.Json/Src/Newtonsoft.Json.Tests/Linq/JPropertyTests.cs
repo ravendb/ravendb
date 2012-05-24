@@ -1,8 +1,33 @@
-﻿using System;
+﻿#region License
+// Copyright (c) 2007 James Newton-King
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use,
+// copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following
+// conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+// HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
+#endregion
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -12,7 +37,7 @@ using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 using System.IO;
 
-namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
+namespace Newtonsoft.Json.Tests.Linq
 {
   [TestFixture]
   public class JPropertyTests : TestFixtureBase
@@ -42,15 +67,15 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
       int? index = null;
 
       l.ListChanged += (sender, args) =>
-      {
-        listChangedType = args.ListChangedType;
-        index = args.NewIndex;
-      };
+        {
+          listChangedType = args.ListChangedType;
+          index = args.NewIndex;
+        };
 
       p.Value = 1;
 
       Assert.AreEqual(ListChangedType.ItemChanged, listChangedType.Value);
-      Assert.AreEqual(0, index.Value); 
+      Assert.AreEqual(0, index.Value);
     }
 #endif
 
@@ -64,45 +89,45 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
     }
 
     [Test]
-    [ExpectedException(typeof(Exception)
-#if !NETFX_CORE
-      , ExpectedMessage = "Cannot add or remove items from Raven.Imports.Newtonsoft.Json.Linq.JProperty."
-#endif
-      )]
     public void IListClear()
     {
       JProperty p = new JProperty("TestProperty", null);
       IList l = p;
 
-      l.Clear();
+      ExceptionAssert.Throws<JsonException>(
+        "Cannot add or remove items from Newtonsoft.Json.Linq.JProperty.",
+        () =>
+        {
+          l.Clear();
+        });
     }
 
     [Test]
-    [ExpectedException(typeof(Exception)
-#if !NETFX_CORE
-      , ExpectedMessage = "Newtonsoft.Json.Linq.JProperty cannot have multiple values."
-#endif
-      )]
     public void IListAdd()
     {
       JProperty p = new JProperty("TestProperty", null);
       IList l = p;
 
-      l.Add(null);
+      ExceptionAssert.Throws<JsonException>(
+        "Newtonsoft.Json.Linq.JProperty cannot have multiple values.",
+        () =>
+          {
+            l.Add(null);
+          });
     }
 
     [Test]
-    [ExpectedException(typeof(Exception)
-#if !NETFX_CORE
-      , ExpectedMessage = "Cannot add or remove items from Raven.Imports.Newtonsoft.Json.Linq.JProperty."
-#endif
-      )]
     public void IListRemove()
     {
       JProperty p = new JProperty("TestProperty", null);
       IList l = p;
 
-      l.Remove(p.Value);
+      ExceptionAssert.Throws<JsonException>(
+        "Cannot add or remove items from Newtonsoft.Json.Linq.JProperty.",
+        () =>
+          {
+            l.Remove(p.Value);
+          });
     }
 
     [Test]
@@ -136,25 +161,25 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
     [Test]
     public void MultiContentConstructor()
     {
-      JProperty p = new JProperty("error", new List<string> { "one", "two" });
+      JProperty p = new JProperty("error", new List<string> {"one", "two"});
       JArray a = (JArray) p.Value;
 
       Assert.AreEqual(a.Count, 2);
-      Assert.AreEqual("one", (string)a[0]);
-      Assert.AreEqual("two", (string)a[1]);
+      Assert.AreEqual("one", (string) a[0]);
+      Assert.AreEqual("two", (string) a[1]);
     }
 
     [Test]
-    [ExpectedException(typeof(Exception)
-#if !NETFX_CORE
-      , ExpectedMessage = "Newtonsoft.Json.Linq.JProperty cannot have multiple values."
-#endif
-      )]
     public void IListGenericAdd()
     {
-      IList<JToken> t = new JProperty("error", new List<string> { "one", "two" });
-      t.Add(1);
-      t.Add(2);
+      IList<JToken> t = new JProperty("error", new List<string> {"one", "two"});
+
+      ExceptionAssert.Throws<JsonException>(
+        "Newtonsoft.Json.Linq.JProperty cannot have multiple values.",
+        () =>
+          {
+            t.Add(1);
+          });
     }
   }
 }

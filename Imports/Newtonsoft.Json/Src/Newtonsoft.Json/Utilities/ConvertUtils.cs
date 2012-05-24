@@ -41,6 +41,7 @@ using IConvertible = Raven.Imports.Newtonsoft.Json.Utilities.Convertible;
 
 namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
+#if NETFX_CORE
   internal class Convertible
   {
     private object _underlyingValue;
@@ -120,6 +121,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
       return Convert.ToUInt64(_underlyingValue, provider);
     }
   }
+#endif
 
   internal static class ConvertUtils
   {
@@ -376,7 +378,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         return EnsureTypeAssignable(ToValue((INullable)initialValue), initialType, targetType);
 #endif
 
-      throw new Exception("Can not convert from {0} to {1}.".FormatWith(CultureInfo.InvariantCulture, initialType, targetType));
+      throw new InvalidOperationException("Can not convert from {0} to {1}.".FormatWith(CultureInfo.InvariantCulture, initialType, targetType));
     }
     #endregion
 
@@ -445,7 +447,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
           return null;
       }
 
-      throw new Exception("Could not cast or convert from {0} to {1}.".FormatWith(CultureInfo.InvariantCulture, (initialType != null) ? initialType.ToString() : "{null}", targetType));
+      throw new ArgumentException("Could not cast or convert from {0} to {1}.".FormatWith(CultureInfo.InvariantCulture, (initialType != null) ? initialType.ToString() : "{null}", targetType));
     }
 
 #if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
@@ -464,7 +466,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
       else if (nullableValue is SqlDateTime)
         return ToValue((SqlDateTime)nullableValue);
 
-      throw new Exception("Unsupported INullable type: {0}".FormatWith(CultureInfo.InvariantCulture, nullableValue.GetType()));
+      throw new ArgumentException("Unsupported INullable type: {0}".FormatWith(CultureInfo.InvariantCulture, nullableValue.GetType()));
     }
 #endif
 

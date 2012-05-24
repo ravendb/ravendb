@@ -25,33 +25,28 @@
 
 using System;
 
-namespace Raven.Imports.Newtonsoft.Json
+namespace Newtonsoft.Json
 {
   /// <summary>
-  /// Specifies type name handling options for the <see cref="JsonSerializer"/>.
+  /// Instructs the <see cref="JsonSerializer"/> how to serialize the collection.
   /// </summary>
-  [Flags]
-  public enum TypeNameHandling
+  [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface, AllowMultiple = false)]
+  public sealed class JsonDictionaryAttribute : JsonContainerAttribute
   {
     /// <summary>
-    /// Do not include the .NET type name when serializing types.
+    /// Initializes a new instance of the <see cref="JsonDictionaryAttribute"/> class.
     /// </summary>
-    None = 0,
+    public JsonDictionaryAttribute()
+    {
+    }
+
     /// <summary>
-    /// Include the .NET type name when serializing into a JSON object structure.
+    /// Initializes a new instance of the <see cref="JsonDictionaryAttribute"/> class with the specified container Id.
     /// </summary>
-    Objects = 1,
-    /// <summary>
-    /// Include the .NET type name when serializing into a JSON array structure.
-    /// </summary>
-    Arrays = 2,
-    /// <summary>
-    /// Always include the .NET type name when serializing.
-    /// </summary>
-    All = Objects | Arrays,
-    /// <summary>
-    /// Include the .NET type name when the type of the object being serialized is not the same as its declared type.
-    /// </summary>
-    Auto = 4
+    /// <param name="id">The container Id.</param>
+    public JsonDictionaryAttribute(string id)
+      : base(id)
+    {
+    }
   }
 }
