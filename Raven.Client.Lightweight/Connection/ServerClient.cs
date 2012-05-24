@@ -626,12 +626,12 @@ namespace Raven.Client.Connection
 			var checkIndexExists = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-			
 
 			try
 			{
-					// If the index doesn't exist this will throw a NotFound exception and continue with a PUT request
+				// If the index doesn't exist this will throw a NotFound exception and continue with a PUT request
 				checkIndexExists.ExecuteRequest();
+				if(!overwrite)
 					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 			}
 			catch (WebException e)
@@ -639,7 +639,6 @@ namespace Raven.Client.Connection
 				var httpWebResponse = e.Response as HttpWebResponse;
 				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
 					throw;
-			}
 			}
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
