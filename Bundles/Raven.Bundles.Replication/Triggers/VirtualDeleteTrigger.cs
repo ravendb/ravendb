@@ -24,31 +24,35 @@ namespace Raven.Bundles.Replication.Triggers
 
 		public override void OnDelete(string key, TransactionInformation transactionInformation)
 		{
-			var document = Database.Get(key, transactionInformation);
-			if (document == null)
-				return;
-			deletedHistory.Value = document.Metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ??
-			                       new RavenJArray();
-			deletedHistory.Value.Add(
-				new RavenJObject
+			using (Database.DisableAllTriggersForCurrentThread())
+			{
+				var document = Database.Get(key, transactionInformation);
+				if (document == null)
+					return;
+				deletedHistory.Value = document.Metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ??
+									   new RavenJArray();
+				deletedHistory.Value.Add(
+					new RavenJObject
 				{
 					{ReplicationConstants.RavenReplicationVersion, document.Metadata[ReplicationConstants.RavenReplicationVersion]},
 					{ReplicationConstants.RavenReplicationSource, document.Metadata[ReplicationConstants.RavenReplicationSource]}
 				});
+			}
 		}
 
 		public override void AfterDelete(string key, TransactionInformation transactionInformation)
 		{
-			var metadata = new RavenJObject
+			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				{"Raven-Delete-Marker", true},
+				var metadata = new RavenJObject
 				{
-					ReplicationConstants.RavenReplicationHistory, deletedHistory.Value
-				}
-			};
-			deletedHistory.Value = null;
-			using(Database.DisableAllTriggersForCurrentThread())
-			{
+					{"Raven-Delete-Marker", true},
+					{
+						ReplicationConstants.RavenReplicationHistory, deletedHistory.Value
+						}
+				};
+				deletedHistory.Value = null;
+
 				Database.Put(key, null, new RavenJObject(), metadata, transactionInformation);
 			}
 		}

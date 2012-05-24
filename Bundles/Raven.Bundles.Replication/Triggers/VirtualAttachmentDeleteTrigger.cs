@@ -25,32 +25,35 @@ namespace Raven.Bundles.Replication.Triggers
 
 		public override void OnDelete(string key)
 		{
-			var attachment = Database.GetStatic(key);
-			if (attachment == null)
-				return;
-			deletedHistory.Value = attachment.Metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ??
-								   new RavenJArray();
+			using(Database.DisableAllTriggersForCurrentThread())
+			{
+				var attachment = Database.GetStatic(key);
+				if (attachment == null)
+					return;
+				deletedHistory.Value = attachment.Metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ??
+									   new RavenJArray();
 
-			deletedHistory.Value.Add(
-				new RavenJObject
+				deletedHistory.Value.Add(
+					new RavenJObject
 				{
 					{ReplicationConstants.RavenReplicationVersion, attachment.Metadata[ReplicationConstants.RavenReplicationVersion]},
 					{ReplicationConstants.RavenReplicationSource, attachment.Metadata[ReplicationConstants.RavenReplicationSource]}
 				});
+			}
 		}
 
 		public override void AfterDelete(string key)
 		{
-			var metadata = new RavenJObject
-			{
-				{"Raven-Delete-Marker", true},
-				{
-					ReplicationConstants.RavenReplicationHistory, deletedHistory.Value
-				}
-			};
-			deletedHistory.Value = null;
 			using(Database.DisableAllTriggersForCurrentThread())
 			{
+				var metadata = new RavenJObject
+				{
+					{"Raven-Delete-Marker", true},
+					{
+						ReplicationConstants.RavenReplicationHistory, deletedHistory.Value
+						}
+				};
+				deletedHistory.Value = null;
 				Database.PutStatic(key, null, new MemoryStream(new byte[0]), metadata);
 			}
 		}
