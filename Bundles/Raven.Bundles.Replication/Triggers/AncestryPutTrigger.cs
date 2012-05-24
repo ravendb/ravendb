@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
@@ -24,7 +25,8 @@ namespace Raven.Bundles.Replication.Triggers
 		}
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			if (key.StartsWith("Raven/")) // we don't deal with system documents
+			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase) && // we don't deal with system documents
+				key.StartsWith("Raven/Hilo/", StringComparison.InvariantCultureIgnoreCase) == false) // except for hilos
 				return;
 			var doc = Database.Get(key, null);
 			if (doc != null)
