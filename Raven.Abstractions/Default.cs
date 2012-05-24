@@ -7,7 +7,7 @@ namespace Raven.Abstractions
 	public static class Default
 	{
 		public static string[] OnlyDateTimeFormat = new[] {"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"};
-		public static string[] DateTimeFormatsToRead = new[] { "o", "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff", "yyyy-MM-ddTHH:mm:ss.fffffffzzz" };
+		public static string[] DateTimeFormatsToRead = new[] { "o", "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff", "yyyy-MM-ddTHH:mm:ss.fffffffzzz", "yyyy-MM-ddTHH:mm:ss.fffzzz" };
 		public static string  DateTimeOffsetFormatsToWrite = "o";
 		public static string DateTimeFormatsToWrite= "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff";
 
