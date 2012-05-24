@@ -187,6 +187,9 @@ namespace Raven.Bundles.Replication.Responders
 			if (history == null || history.Type == JTokenType.Null) // no history, not a parent
 				return false;
 
+			if (history.Type != JTokenType.Array)
+				return false;
+
 			return history.Values().Contains(version, new RavenJTokenEqualityComparer());
 		}
 
