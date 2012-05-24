@@ -3,8 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Newtonsoft.Json.Linq;
 using Raven.Client.Document;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.MailingList

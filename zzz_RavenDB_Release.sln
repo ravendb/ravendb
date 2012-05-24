@@ -708,6 +708,27 @@ Global
 		{212823CD-25E1-41AC-92D1-D6DF4D53FC85}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{212823CD-25E1-41AC-92D1-D6DF4D53FC85}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{212823CD-25E1-41AC-92D1-D6DF4D53FC85}.Release|x86.ActiveCfg = Release|Any CPU
+		{012F5E7B-DDC3-4B8C-BA39-1394536D58BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{012F5E7B-DDC3-4B8C-BA39-1394536D58BE}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{012F5E7B-DDC3-4B8C-BA39-1394536D58BE}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{012F5E7B-DDC3-4B8C-BA39-1394536D58BE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{012F5E7B-DDC3-4B8C-BA39-1394536D58BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{012F5E7B-DDC3-4B8C-BA39-1394536D58BE}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{012F5E7B-DDC3-4B8C-BA39-1394536D58BE}.Release|x86.ActiveCfg = Release|Any CPU
+		{F41C7F7E-A287-449A-A545-E7152937EF77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F41C7F7E-A287-449A-A545-E7152937EF77}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{F41C7F7E-A287-449A-A545-E7152937EF77}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{F41C7F7E-A287-449A-A545-E7152937EF77}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F41C7F7E-A287-449A-A545-E7152937EF77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F41C7F7E-A287-449A-A545-E7152937EF77}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{F41C7F7E-A287-449A-A545-E7152937EF77}.Release|x86.ActiveCfg = Release|Any CPU
+		{D3485301-AA81-4F7A-BB78-CC0AD3C8BEDC}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{D3485301-AA81-4F7A-BB78-CC0AD3C8BEDC}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{D3485301-AA81-4F7A-BB78-CC0AD3C8BEDC}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{D3485301-AA81-4F7A-BB78-CC0AD3C8BEDC}.Debug|x86.ActiveCfg = Debug|x86
+		{D3485301-AA81-4F7A-BB78-CC0AD3C8BEDC}.Release|Any CPU.ActiveCfg = Release|x86
+		{D3485301-AA81-4F7A-BB78-CC0AD3C8BEDC}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{D3485301-AA81-4F7A-BB78-CC0AD3C8BEDC}.Release|x86.ActiveCfg = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

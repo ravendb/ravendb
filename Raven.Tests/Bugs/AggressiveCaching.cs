@@ -1,7 +1,5 @@
 using System;
-using System.Threading;
 using System.Linq;
-using Raven.Client;
 using Raven.Client.Document;
 using Xunit;
 
@@ -9,22 +7,19 @@ namespace Raven.Tests.Bugs
 {
 	public class AggressiveCaching : RemoteClientTest
 	{
-		private readonly RavenDbServer server;
-		private readonly IDocumentStore store;
-
 		public AggressiveCaching()
 		{
-			using(var server = GetNewServer())
+			using (var server = GetNewServer())
 			using (var store = new DocumentStore
-								{
-									Url = "http://localhost:8079",
-									Conventions =
-										{
-											FailoverBehavior = FailoverBehavior.FailImmediately
-										}
-								}.Initialize())
 			{
-				using(var session = store.OpenSession())
+				Url = "http://localhost:8079",
+				Conventions =
+				{
+					FailoverBehavior = FailoverBehavior.FailImmediately
+				}
+			}.Initialize())
+			{
+				using (var session = store.OpenSession())
 				{
 					session.Store(new User());
 					session.SaveChanges();
@@ -32,19 +27,23 @@ namespace Raven.Tests.Bugs
 
 				WaitForAllRequestsToComplete(server);
 				server.Server.ResetNumberOfRequests();
-		}
-
-		public override void Dispose()
-		{
-			store.Dispose();
-			server.Dispose();
-			base.Dispose();
+			}
 		}
 
 		[Fact]
 		public void CanAggressivelyCacheLoads()
 		{
-			for (var i = 0; i < 5; i++)
+			using (var server = GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+				Conventions =
+				{
+					FailoverBehavior = FailoverBehavior.FailImmediately
+				}
+			}.Initialize())
+			{
+				for (var i = 0; i < 5; i++)
 				{
 					using (var session = store.OpenSession())
 					{
@@ -54,10 +53,11 @@ namespace Raven.Tests.Bugs
 						}
 					}
 				}
-			
+
 				WaitForAllRequestsToComplete(server);
 				Assert.Equal(1, server.Server.NumberOfRequests);
 			}
+		}
 
 		[Fact]
 		public void CanAggressivelyCacheQueries()
@@ -67,9 +67,9 @@ namespace Raven.Tests.Bugs
 			{
 				Url = "http://localhost:8079",
 				Conventions =
-					{
-						FailoverBehavior = FailoverBehavior.FailImmediately
-					}
+				{
+					FailoverBehavior = FailoverBehavior.FailImmediately
+				}
 			}.Initialize())
 			{
 				using (var session = store.OpenSession())
@@ -92,10 +92,11 @@ namespace Raven.Tests.Bugs
 					}
 
 				}
-				
+
 				WaitForAllRequestsToComplete(server);
 				Assert.Equal(1, server.Server.NumberOfRequests);
 			}
+		}
 
 		// TODO: NOTE: I think this test is not complete, since the assertion here is exactly the same as in CanAggressivelyCacheQueries.
 		[Fact]
@@ -113,18 +114,17 @@ namespace Raven.Tests.Bugs
 			{
 				using (var session = store.OpenSession())
 				{
-						using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
-						{
-							session.Query<User>()
-							.Customize(x => x.WaitForNonStaleResults())
-								.ToList();
-						}
+					using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+					{
+						session.Query<User>()
+						.Customize(x => x.WaitForNonStaleResults())
+							.ToList();
 					}
-
 				}
-			
+
 				WaitForAllRequestsToComplete(server);
 				Assert.NotEqual(1, server.Server.NumberOfRequests);
 			}
 		}
+	}
 }

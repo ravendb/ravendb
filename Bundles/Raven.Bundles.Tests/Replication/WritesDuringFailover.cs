@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Threading;
 using Raven.Bundles.Tests.Versioning;
 using Raven.Client;
@@ -55,7 +56,7 @@ namespace Raven.Bundles.Tests.Replication
 				session.SaveChanges();
 			}
 
-			WaitForReplication(store2);
+			WaitForReplication(store2, "companies/1");
 
 			servers[0].Dispose();
 

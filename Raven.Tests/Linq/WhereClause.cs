@@ -5,12 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
-using System.Linq.Expressions;
-using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Linq;
+using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
 namespace Raven.Tests.Linq
