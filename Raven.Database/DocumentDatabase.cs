@@ -112,7 +112,6 @@ namespace Raven.Database
 			AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
 			AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
 
-			ExternalState = new ConcurrentDictionary<string, object>();
 			Name = configuration.DatabaseName;
 			if(configuration.CustomTaskScheduler != null)
 			{
@@ -284,8 +283,6 @@ namespace Raven.Database
 			}
 		}
 		
-		public ConcurrentDictionary<string, object> ExternalState { get; set; }
-
 		public InMemoryRavenConfiguration Configuration
 		{
 			get;
