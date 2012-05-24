@@ -47,7 +47,10 @@ namespace Raven.Bundles.Replication.Triggers
 				}
 			};
 			deletedHistory.Value = null;
-			Database.Put(key, null, new RavenJObject(), metadata,transactionInformation);
+			using(Database.DisableAllTriggersForCurrentThread())
+			{
+				Database.Put(key, null, new RavenJObject(), metadata, transactionInformation);
+			}
 		}
 	}
 }

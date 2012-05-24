@@ -49,7 +49,10 @@ namespace Raven.Bundles.Replication.Triggers
 				}
 			};
 			deletedHistory.Value = null;
-			Database.PutStatic(key, null, new MemoryStream(new byte[0]), metadata);
+			using(Database.DisableAllTriggersForCurrentThread())
+			{
+				Database.PutStatic(key, null, new MemoryStream(new byte[0]), metadata);
+			}
 		}
 	}
 }
