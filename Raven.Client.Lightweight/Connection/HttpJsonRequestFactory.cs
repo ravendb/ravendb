@@ -5,6 +5,7 @@ using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Util;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -78,9 +79,9 @@ namespace Raven.Client.Connection
 			bool skipServerCheck = false;
 			if (AggressiveCacheDuration != null)
 			{
-				var duraion = AggressiveCacheDuration.Value;
-				if(duraion.TotalSeconds > 0)
-					setHeader("Cache-Control", "max-age=" + duraion.TotalSeconds);
+				var duration = AggressiveCacheDuration.Value;
+				if(duration.TotalSeconds > 0)
+					setHeader("Cache-Control", "max-age=" + duration.TotalSeconds);
 
 				if ((DateTimeOffset.Now - cachedRequest.Time) < duration) // can serve directly from local cache
 					skipServerCheck = true;
