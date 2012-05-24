@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
 {
-	internal static class EnumerableExtension
+	public static class EnumerableExtension
 	{
 		public static void ApplyIfNotNull<T>(this IEnumerable<T> self, Action<T> action)
 		{
@@ -14,5 +14,12 @@ namespace Raven.Abstractions.Data
 				action(item);
 			}
 		}
+
+        public static IEnumerable<T> EmptyIfNull<T>(this IEnumerable<T> self)
+        {
+            if (self == null)
+                return new T[0];
+            return self;
+        }
 	}
 }

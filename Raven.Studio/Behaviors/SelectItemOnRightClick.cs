@@ -21,6 +21,11 @@ namespace Raven.Studio.Behaviors
 		protected override void OnDetaching()
 		{
 			base.OnDetaching();
+            if (AssociatedObject == null)
+            {
+                return;
+            }
+
 			AssociatedObject.MouseRightButtonDown -= AssociatedObjectOnMouseRightButtonDown;
 		}
 

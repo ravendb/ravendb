@@ -130,6 +130,13 @@ namespace Raven.Abstractions.Data
 			return path.ToString();
 		}
 
+        public string GetQueryString()
+        {
+            var sb = new StringBuilder();
+            AppendQueryString(sb);
+            return sb.ToString();
+        }
+
 		public void AppendQueryString(StringBuilder path)
 		{
 			path

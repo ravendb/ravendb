@@ -421,7 +421,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 			catch (Exception e)
 			{
-				log.WarnException("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastAttachmentEtag, e);
+				log.WarnException("Could not get attachments to replicate after: " + destinationsReplicationInformationForSource.LastAttachmentEtag, e);
 			}
 			return jsonAttachments;
 		}

@@ -2,7 +2,7 @@
 
 namespace Raven.Studio.Views
 {
-	public partial class IndexesErrors : View
+	public partial class IndexesErrors : PageView
 	{
 		public IndexesErrors()
 		{

@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Features.Documents.DocumentsView"
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Features.Documents.DocumentsView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Controls="clr-namespace:System.Windows.Controls"
@@ -18,7 +18,9 @@
 	<Grid>
 		<Grid.Resources>
 			<DataTemplate x:Key="DataTemplate_Document_CardView">
-				<Documents:DocumentView />
+                <Documents:DocumentView 
+                    Width="{Binding Path=Current.Width, Source={StaticResource DocumentSize}}"
+		            Height="{Binding Path=Current.Height, Source={StaticResource DocumentSize}}"/>
 			</DataTemplate>
 		</Grid.Resources>
 		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}">
@@ -153,4 +155,4 @@
 			
 		</toolkit:HeaderedContentControl>
 	</Grid>
-</Infrastructure:View>
+</Infrastructure:PageView>

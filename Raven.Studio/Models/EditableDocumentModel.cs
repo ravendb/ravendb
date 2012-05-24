@@ -6,27 +6,31 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Input;
-using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class EditableDocumentModel : ViewModel
+    public class EditableDocumentModel : PageViewModel
 	{
 		private readonly Observable<JsonDocument> document;
 		private string jsonData;
 		private bool isLoaded;
+        private int currentIndex;
+        private int totalItems;
 		public string DocumentKey { get; private set; }
 		private readonly string currentDatabase;
+        private DocumentNavigator navigator;
+        private ICommand navigateNext;
+        private ICommand navigatePrevious;
 
 		public EditableDocumentModel()
 		{
@@ -35,17 +39,50 @@ namespace Raven.Studio.Models
 			References = new ObservableCollection<LinkModel>();
 			Related = new BindableCollection<LinkModel>(model => model.Title);
 			SearchEnabled = false;
-			NeighborIds = new List<string>();
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
+            InitialiseDocument();
+
+            currentDatabase = Database.Value.Name;
+        }
+
+        private void InitialiseDocument()
+        {
 			document.Value = new JsonDocument
 								{
-									DataAsJson = { { "Name", "..." } },
+                                     DataAsJson = {{"Name", "..."}},
 									Etag = Guid.Empty
 								};
+        }
 
-			currentDatabase = Database.Value.Name;
+        private DocumentNavigator Navigator
+        {
+            get { return navigator; }
+            set
+            {
+                navigator = value;
+                OnPropertyChanged(() => Navigator);
+                OnPropertyChanged(() => CanNavigate);
+            }
+        }
+
+        public ICommand NavigateToNext
+        {
+            get
+            {
+                return navigateNext ??
+                       (navigateNext = new ActionCommand(() => UrlUtil.Navigate(Navigator.GetUrlForNext())));
+            }
+        }
+
+        public ICommand NavigateToPrevious
+        {
+            get
+            {
+                return navigatePrevious ??
+                       (navigatePrevious = new ActionCommand(() => UrlUtil.Navigate(Navigator.GetUrlForPrevious())));
+            }
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -55,70 +92,45 @@ namespace Raven.Studio.Models
 			if (url.GetQueryParam("mode") == "new")
 			{
 				Mode = DocumentMode.New;
+                InitialiseDocument();
+                Navigator = null;
+                CurrentIndex = 0;
+                TotalItems = 0;
+                SetCurrentDocumentId(null);
+
 				return;
 			}
 
-			var docId = url.GetQueryParam("id");
-			var neighbors = url.GetQueryParam("neighbors");
-			if (neighbors != null)
-				NeighborIds = neighbors.Split(',').ToList();
-			if (string.IsNullOrWhiteSpace(docId) == false)
+            Navigator = DocumentNavigator.FromUrl(url);
+
+            Navigator.GetDocument().ContinueOnSuccessInTheUIThread(
+                result =>
 			{
-				Mode = DocumentMode.DocumentWithId;
-				LocalId = docId;
-				SetCurrentDocumentKey(docId);
-				DatabaseCommands.GetAsync(docId)
-					.ContinueOnSuccessInTheUIThread(newdoc =>
-														{
-															if (newdoc == null)
+                        if (result.Document == null)
 															{
 																HandleDocumentNotFound();
 																return;
 															}
-															document.Value = newdoc;
-															isLoaded = true;
-														})
-					.Catch();
-				return;
-			}
 
-			projectionId = url.GetQueryParam("projection");
-			if (string.IsNullOrWhiteSpace(projectionId) == false)
+                        if (string.IsNullOrEmpty(result.Document.Key))
 			{
 				Mode = DocumentMode.Projection;
-				try
-				{
-					ViewableDocument viewableDocument;
-					ProjectionData.Projections.TryGetValue(projectionId, out viewableDocument);
-
-					var ravenJObject = RavenJObject.Parse(viewableDocument.InnerDocument.ToJson().ToString(Formatting.None));
-					var newdoc = ravenJObject.ToJsonDocument();
-					document.Value = newdoc;
-					LocalId = projectionId;
+                            LocalId = Guid.NewGuid().ToString();
 				}
-				catch
+                        else
 				{
-					HandleDocumentNotFound();
-					throw; // Display why we couldn't parse the projection from the URL correctly
+                            Mode = DocumentMode.DocumentWithId;
+                            LocalId = result.Document.Key;
+                            SetCurrentDocumentId(result.Document.Key);
 				}
-			}
-		}
 
-		private string projectionId;
-
-		private List<string> neighborIds;
-		public List<string> NeighborIds
-		{
-			get { return neighborIds; }
-			set
-			{
-				neighborIds = value;
-				OnPropertyChanged(() => NeighborIds);
-				OnPropertyChanged(() => CurrentIndexDisplay);
-				OnPropertyChanged(() => PrevDocument);
-				OnPropertyChanged(() => NextDocument);
+                        isLoaded = true;
+                        document.Value = result.Document;
+                        CurrentIndex = (int) result.Index;
+                        TotalItems = (int) result.TotalDocuments;
+                    })
+                .Catch();
 			}
-		}
 
 		private void HandleDocumentNotFound()
 		{
@@ -126,90 +138,87 @@ namespace Raven.Studio.Models
 			if (Mode == DocumentMode.Projection)
 				notification = new Notification("Could not parse projection correctly", NotificationLevel.Error);
 			else
-				notification = new Notification(string.Format("Could not find '{0}' document", Key), NotificationLevel.Warning);
+                notification = new Notification(string.Format("Could not find '{0}' document", Key),
+                                                NotificationLevel.Warning);
 			ApplicationModel.Current.AddNotification(notification);
 			UrlUtil.Navigate("/documents");
 		}
 
-		public FriendlyDocument PrevDocument
+        public int CurrentItemNumber
 		{
-			get
-			{
-				if (CurrentIndex < 1)
-					return null;
+            get { return CurrentIndex + 1; }
+        }
 
-				return new FriendlyDocument
+        private int CurrentIndex
+			{
+            get { return currentIndex; }
+            set
 				{
-					Id = NeighborIds[CurrentIndex - 1],
-					NeighborsIds = NeighborIds,
-					IsProjection = (!string.IsNullOrEmpty(projectionId)),
-				};
+                currentIndex = value;
+                OnPropertyChanged(() => CurrentItemNumber);
+                OnPropertyChanged(() => HasPrevious);
+                OnPropertyChanged(() => HasNext);
+                OnPropertyChanged(() => CanNavigate);
 			}
 		}
 
-		public FriendlyDocument NextDocument
+        public int TotalItems
 		{
-			get
+            get { return totalItems; }
+            set
 			{
-				if (CurrentIndex == LastIndex && CurrentIndex + 1 >= NeighborIds.Count)
-					return null;
-				return new FriendlyDocument
-				{
-					Id = NeighborIds[CurrentIndex + 1],
-					NeighborsIds = NeighborIds,
-					IsProjection = (!string.IsNullOrEmpty(projectionId)),
-				};
+                totalItems = value;
+                OnPropertyChanged(() => TotalItems);
+                OnPropertyChanged(() => HasPrevious);
+                OnPropertyChanged(() => HasNext);
+                OnPropertyChanged(() => CanNavigate);
 			}
 		}
 
-		public int CurrentIndexDisplay
+        public bool HasPrevious
 		{
-			get { return CurrentIndex + 1; }
+            get { return CurrentIndex > 0; }
 		}
 
-
-		public int CurrentIndex
+        public bool HasNext
 		{
-			get
-			{
-				if (LocalId == null)
-					return -1;
-				return NeighborIds.IndexOf(this.LocalId);
+            get { return CurrentIndex < TotalItems - 1; }
+		}
+
+        public bool CanNavigate
+		{
+            get { return Navigator != null && (HasNext || HasPrevious); }
+		}
+
+        public void PutDocumentIdInUrl(string docId)
+		{
+            if (docId != null && DocumentKey != docId)
+                UrlUtil.Navigate("/edit?id=" + docId);
+
+            SetCurrentDocumentId(docId);
 			}
-		}
 
-		public int LastIndexDisplay
+        private void SetCurrentDocumentId(string docId)
 		{
-			get { return LastIndex + 1; }
-		}
-
-		public int LastIndex
-		{
-			get
-			{
-				if (NeighborIds == null)
-					return -1;
-				return NeighborIds.Count - 1;
-			}
-		}
-
-		public void SetCurrentDocumentKey(string docId)
-		{
-			if (DocumentKey != null && DocumentKey != docId)
-				UrlUtil.Navigate("/edit?id=" + docId);
-
 			DocumentKey = Key = docId;
 		}
 
 		private void UpdateFromDocument()
 		{
 			var newdoc = document.Value;
+            RemoveNonDisplayedMetadata(newdoc.Metadata);
 			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
 			UpdateMetadata(newdoc.Metadata);
 			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
 			UpdateRelated();
 			OnEverythingChanged();
 		}
+
+        private void RemoveNonDisplayedMetadata(RavenJObject metaData)
+        {
+            metaData.Remove("@etag");
+            metaData.Remove("@id");
+        }
 
 		private void UpdateMetadata(RavenJObject metadataAsJson)
 		{
@@ -245,9 +254,7 @@ namespace Raven.Studio.Models
 			{
 				localId = value;
 				OnPropertyChanged(() => LocalId);
-				OnPropertyChanged(() => CurrentIndexDisplay);
-				OnPropertyChanged(() => PrevDocument);
-				OnPropertyChanged(() => NextDocument);
+                OnPropertyChanged(() => CurrentItemNumber);
 			}
 		}
 
@@ -265,10 +272,7 @@ namespace Raven.Studio.Models
 
 		public string Collection
 		{
-			get
-			{
-				return metadata.FirstOrDefault(x => x.Key == "Raven-Entity-Name").Value;
-			}
+            get { return metadata.FirstOrDefault(x => x.Key == "Raven-Entity-Name").Value; }
 		}
 
 		private string jsonMetadata;
@@ -313,15 +317,15 @@ namespace Raven.Studio.Models
 			{
 				double byteCount = Encoding.UTF8.GetByteCount(JsonData) + Encoding.UTF8.GetByteCount(JsonMetadata);
 				string sizeTerm = "Bytes";
-				if (byteCount > 1024 * 1024)
+                if (byteCount > 1024*1024)
 				{
 					sizeTerm = "MBytes";
-					byteCount = byteCount / 1024 * 1024;
+                    byteCount = byteCount/1024*1024;
 				}
 				else if (byteCount > 1024)
 				{
 					sizeTerm = "KBytes";
-					byteCount = byteCount / 1024;
+                    byteCount = byteCount/1024;
 
 				}
 				return string.Format("Content-Length: {0:#,#.##;;0} {1}", byteCount, sizeTerm);
@@ -330,6 +334,7 @@ namespace Raven.Studio.Models
 
 		private bool notifiedOnDelete;
 		private bool notifiedOnChange;
+
 		protected override Task LoadedTimerTickedAsync()
 		{
 			if (isLoaded == false ||
@@ -345,14 +350,16 @@ namespace Raven.Studio.Models
 						if (notifiedOnDelete)
 							return;
 						notifiedOnDelete = true;
-						ApplicationModel.Current.AddNotification(new Notification("Document " + Key + " was deleted on the server"));
+                                               ApplicationModel.Current.AddNotification(
+                                                   new Notification("Document " + Key + " was deleted on the server"));
 					}
 					else if (docOnServer.Etag != Etag)
 					{
 						if (notifiedOnChange)
 							return;
 						notifiedOnChange = true;
-						ApplicationModel.Current.AddNotification(new Notification("Document " + Key + " was changed on the server"));
+                                               ApplicationModel.Current.AddNotification(
+                                                   new Notification("Document " + Key + " was changed on the server"));
 					}
 				});
 		}
@@ -396,6 +403,7 @@ namespace Raven.Studio.Models
 									   Related.Set(linkModels);
 								   });
 		}
+
 
 		public string Key
 		{
@@ -442,11 +450,14 @@ namespace Raven.Studio.Models
 		}
 
 		private IDictionary<string, string> metadata;
+
 		public IEnumerable<KeyValuePair<string, string>> Metadata
 		{
 			get
 			{
-				return metadata.OrderBy(x => x.Key)
+				return metadata
+                    .Where(x => x.Key != "@etag" && x.Key != "@id")
+                    .OrderBy(x => x.Key)
 					.Concat(new[]
 								{
 									new KeyValuePair<string, string>("ETag", Etag.HasValue ? Etag.ToString() : ""),
@@ -590,7 +601,7 @@ namespace Raven.Studio.Models
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
 						document.Etag = result.ETag;
-						document.SetCurrentDocumentKey(result.Key);
+						document.PutDocumentIdInUrl(result.Key);
 					})
 					.ContinueOnSuccess(() => new RefreshDocumentCommand(document).Execute(null))
 					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));

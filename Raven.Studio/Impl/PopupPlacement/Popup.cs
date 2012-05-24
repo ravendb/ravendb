@@ -53,6 +53,23 @@
             typeof(Popup),
             new PropertyMetadata(null));
 
+
+
+        private static PopupWatcher GetPopupWatcher(DependencyObject obj)
+        {
+            return (PopupWatcher)obj.GetValue(PopupWatcherProperty);
+        }
+
+        private static void SetPopupWatcher(DependencyObject obj, PopupWatcher value)
+        {
+            obj.SetValue(PopupWatcherProperty, value);
+        }
+
+        // Using a DependencyProperty as the backing store for PopupWatcher.  This enables animation, styling, binding, etc...
+        private static readonly DependencyProperty PopupWatcherProperty =
+            DependencyProperty.RegisterAttached("PopupWatcher", typeof(PopupWatcher), typeof(Popup), new PropertyMetadata(null));
+
+        
         public static FrameworkElement GetPlacementTarget(Windows.Popup popup)
         {
             //popup.AssertNotNull("popup");
@@ -156,17 +173,15 @@
         private static void OnStaysOpenChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e)
         {
             var popup = dependencyObject as Windows.Popup;
-            var popupWatcher = (PopupWatcher)null;
+            var popupWatcher = GetPopupWatcher(popup); ;
             var staysOpen = (bool)e.NewValue;
-
-            popupWatcherCache.TryGetValue(popup, out popupWatcher);
 
             if (staysOpen)
             {
                 if (popupWatcher != null)
                 {
                     popupWatcher.Detach();
-                    popupWatcherCache.Remove(popup);
+                    SetPopupWatcher(popup, null);
                 }
             }
             else
@@ -174,7 +189,7 @@
                 if (popupWatcher == null)
                 {
                     popupWatcher = new PopupWatcher(popup);
-                    popupWatcherCache[popup] = popupWatcher;
+                    SetPopupWatcher(popup, popupWatcher);
                 }
 
                 popupWatcher.Attach();

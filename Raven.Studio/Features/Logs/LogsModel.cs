@@ -16,7 +16,7 @@ using System.Linq;
 
 namespace Raven.Studio.Features.Logs
 {
-	public class LogsModel : ViewModel
+	public class LogsModel : PageViewModel
 	{
 		public BindableCollection<LogItem> Logs { get; private set; }
 		public BindableCollection<LogItem> DisplayedLogs { get; private set; }

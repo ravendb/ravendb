@@ -10,64 +10,54 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
+using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class HomeModel : ViewModel
+	public class HomeModel : PageViewModel
 	{
-		private static WeakReference<Observable<DocumentsModel>> recentDocuments;
-		public static Observable<DocumentsModel> RecentDocuments
+		private DocumentsModelEnhanced recentDocuments;
+
+		public DocumentsModelEnhanced RecentDocuments
 		{
 			get
 			{
-				if (recentDocuments == null || recentDocuments.IsAlive == false)
+				if (recentDocuments == null)
 				{
-					recentDocuments = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel>
-					                                                                	{
-					                                                                		Value = new DocumentsModel
-					                                                                		        	{
-					                                                                		        		Header = "Recent Documents",
-					                                                                		        		Pager = {PageSize = 15},
-					                                                                		        	}
-					                                                                	});
-					SetTotalResults();
-					ApplicationModel.Database.PropertyChanged += (sender, args) => SetTotalResults();
+				    recentDocuments = (new DocumentsModelEnhanced(new DocumentsCollectionSource())
+				                                                      {
+				                                                          Header = "Recent Documents",
+                                                                          DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
+                                                                          Context = "AllDocuments",
+				                                                      });
 				}
-				var target = recentDocuments.Target ?? RecentDocuments;
-				return target;
+
+			    return recentDocuments;
 			}
 		}
 
-		private static void SetTotalResults()
-		{
-			recentDocuments.Target.Value.Pager.SetTotalResults(new Observable<long?>(ApplicationModel.Database.Value.Statistics, v => ((DatabaseStatistics)v).CountOfDocuments));
-		}
-
-		public HomeModel()
+	    public HomeModel()
 		{
 			ModelUrl = "/home";
-			ShowCreateSampleData = new Observable<bool>(RecentDocuments.Value.Pager.TotalResults, ShouldShowCreateSampleData);
-		}
 
-		private static bool ShouldShowCreateSampleData(object x)
-		{
-			if (x == null)
-				return false;
-			return (long)x == 0;
+			ShowCreateSampleData = new Observable<bool>() { Value = RecentDocuments.Documents.Count == 0};
+
+	        RecentDocuments.Documents.PropertyChanged +=
+                delegate { ShowCreateSampleData.Value = RecentDocuments.Documents.Count == 0; };
 		}
 
 		public override void LoadModelParameters(string parameters)
 		{
-			RecentDocuments.Value.Pager.SetSkip(new UrlParser(parameters));
+            RecentDocuments.TimerTickedAsync();
 		}
 
 		public override Task TimerTickedAsync()
 		{
-			return RecentDocuments.Value.TimerTickedAsync();
+			return RecentDocuments.TimerTickedAsync();
 		}
 
-		public static Observable<bool> ShowCreateSampleData { get; private set; }
+		public Observable<bool> ShowCreateSampleData { get; private set; }
 
 		private bool isGeneratingSampleData;
 		public bool IsGeneratingSampleData
@@ -106,7 +96,7 @@ namespace Raven.Studio.Models
 				// this code assumes a small enough dataset, and doesn't do any sort
 				// of paging or batching whatsoever.
 
-				HomeModel.ShowCreateSampleData.Value = false;
+				model.ShowCreateSampleData.Value = false;
 				model.IsGeneratingSampleData = true;
 
 				using (var sampleData = typeof(HomeModel).Assembly.GetManifestResourceStream("Raven.Studio.Assets.EmbeddedData.MvcMusicStore_Dump.json"))

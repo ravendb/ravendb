@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Xunit;
@@ -89,6 +90,30 @@ namespace Raven.Tests.Querying
 		{
 			Assert.Equal(CreateUserQuery().Search("Name", "ayende").ToString(),
 				CreateUserQuery().Search(x => x.Name, "ayende").ToString());
+		}
+	
+		[Fact]
+		public void CanUseStronglyTypedAddOrder()
+		{
+			CreateUserQuery().AddOrder(x => x.Birthday, false);
+		}
+
+		[Fact]
+		public void CanUseStronglyTypedOrderBy()
+		{
+			CreateUserQuery().OrderBy(x => x.Birthday);
+		}
+
+		[Fact]
+		public void CanUseStronglyTypedSearch()
+		{
+			CreateUserQuery().Search(x => x.Birthday, "1975");
+		}
+	
+		[Fact]
+		public void CanUseStronglyTypedGroupBy()
+		{
+			CreateUserQuery().GroupBy(AggregationOperation.None, x => x.Birthday);
 		}
 	}
 }

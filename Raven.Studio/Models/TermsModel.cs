@@ -6,7 +6,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class TermsModel : ViewModel
+	public class TermsModel : PageViewModel
 	{
 
 		public TermsModel()

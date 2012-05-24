@@ -2,7 +2,7 @@
 
 namespace Raven.Studio.Features.Documents
 {
-	public partial class DocumentView : UserControl
+	public partial class DocumentView
 	{
 		public DocumentView()
 		{

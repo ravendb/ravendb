@@ -69,8 +69,8 @@ namespace Raven.Studio.Infrastructure
 		{
 			return null;
 		}
-		
-		[ThreadStatic] 
+
+	    [ThreadStatic] 
 		protected static Action<WebRequest> onWebRequest;
 
 		public static IDisposable OnWebRequest(Action<WebRequest> action)
