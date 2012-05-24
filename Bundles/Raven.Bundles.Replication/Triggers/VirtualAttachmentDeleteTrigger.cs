@@ -22,6 +22,16 @@ namespace Raven.Bundles.Replication.Triggers
 	public class VirtualAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
 	{
 		readonly ThreadLocal<RavenJArray> deletedHistory = new ThreadLocal<RavenJArray>();
+		internal ReplicationHiLo HiLo
+		{
+			get
+			{
+				return (ReplicationHiLo)Database.ExtensionsState.GetOrAdd(typeof(ReplicationHiLo), o => new ReplicationHiLo
+				{
+					Database = Database
+				});
+			}
+		}
 
 		public override void OnDelete(string key)
 		{
@@ -49,9 +59,9 @@ namespace Raven.Bundles.Replication.Triggers
 				var metadata = new RavenJObject
 				{
 					{"Raven-Delete-Marker", true},
-					{
-						ReplicationConstants.RavenReplicationHistory, deletedHistory.Value
-						}
+					{ReplicationConstants.RavenReplicationHistory, deletedHistory.Value},
+					{ReplicationConstants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
+					{ReplicationConstants.RavenReplicationVersion, HiLo.NextId()}
 				};
 				deletedHistory.Value = null;
 				Database.PutStatic(key, null, new MemoryStream(new byte[0]), metadata);
