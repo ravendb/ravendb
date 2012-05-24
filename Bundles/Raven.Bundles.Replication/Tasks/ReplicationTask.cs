@@ -369,10 +369,18 @@ namespace Raven.Bundles.Replication.Tasks
 				var response = e.Response as HttpWebResponse;
 				if (response != null)
 				{
-					using (var streamReader = new StreamReader(response.GetResponseStream()))
+					Stream responseStream = response.GetResponseStream();
+					if (responseStream != null)
 					{
-						var error = streamReader.ReadToEnd();
-						log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
+						using (var streamReader = new StreamReader(responseStream))
+						{
+							var error = streamReader.ReadToEnd();
+							log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
+						}
+					}
+					else
+					{
+						log.WarnException("Replication to " + destination + " had failed", e);
 					}
 				}
 				else
@@ -428,9 +436,10 @@ namespace Raven.Bundles.Replication.Tasks
 							                     destinationsReplicationInformationForSource.LastDocumentEtag);
 											 
 						if(docsSinceLastReplEtag == filteredDocsToReplicate.Count)
-							return string.Format("Replicating {0} docs [>{2}] to {1}.",
+							return string.Format("Replicating {0} docs [>{1}] to {2}.",
 											 docsSinceLastReplEtag,
-											 destinationsReplicationInformationForSource.LastDocumentEtag);
+											 destinationsReplicationInformationForSource.LastDocumentEtag,
+											 destination);
 
 						var diff = docsToReplicate.Except(filteredDocsToReplicate).Select(x => x.Key);
 						return string.Format("Replicating {1} docs (out of {0}) [>{4}] to {2}. [Not replicated: {3}]",
