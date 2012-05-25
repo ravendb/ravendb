@@ -87,12 +87,8 @@ namespace Raven.Client.Document
 					if (current > currentMax.Value)
 					{
 						currentMax = new Hodler(GetNextMax());
-						incrementedCurrent = current;
 					}
-					else
-					{
-						incrementedCurrent = Interlocked.Increment(ref current);
-					}
+					return Interlocked.Increment(ref current);
 				}
 			}
 			return incrementedCurrent;
