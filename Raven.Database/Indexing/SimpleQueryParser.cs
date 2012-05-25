@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
 {
@@ -17,12 +18,12 @@ namespace Raven.Database.Indexing
 
 		static readonly Regex DynamicQueryTerms = new Regex(@"[-+]?([^\(\)\s]*[^\\\s])\:", RegexOptions.Compiled);
 
-		public static HashSet<string> GetFields(string query)
+		public static HashSet<string> GetFields(IndexQuery query)
 		{
 			return GetFieldsInternal(query, QueryTerms);
 		}
 
-		public static HashSet<Tuple<string,string>> GetFieldsForDynamicQuery(string query)
+		public static HashSet<Tuple<string,string>> GetFieldsForDynamicQuery(IndexQuery query)
 		{
 			var results = new HashSet<Tuple<string,string>>();
 			foreach (var result in GetFieldsInternal(query, DynamicQueryTerms))
@@ -31,14 +32,19 @@ namespace Raven.Database.Indexing
 					continue;
 				results.Add(Tuple.Create(TranslateField(result), result));
 			}
+			
 			return results;
 		}
-		private static HashSet<string> GetFieldsInternal(string query, Regex queryTerms)
+		private static HashSet<string> GetFieldsInternal(IndexQuery query, Regex queryTerms)
 		{
 			var fields = new HashSet<string>();
-			if(query == null)
+			if (string.IsNullOrEmpty(query.DefaultField) == false)
+			{
+				fields.Add(query.DefaultField);
+			}
+			if(query.Query == null)
 				return fields;
-			var queryTermMatches = queryTerms.Matches(query);
+			var queryTermMatches = queryTerms.Matches(query.Query);
 			for (int x = 0; x < queryTermMatches.Count; x++)
 			{
 				Match match = queryTermMatches[x];

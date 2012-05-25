@@ -548,6 +548,7 @@
     <Compile Include="Indexes\WithDecimalValue.cs" />
     <Compile Include="IndexQueryUrl.cs" />
     <Compile Include="Issues\RavenDB_301.cs" />
+    <Compile Include="Issues\RavenDB_302.cs" />
     <Compile Include="MailingList\AccesscControlHeaders.cs" />
     <Compile Include="MailingList\Ben.cs" />
     <Compile Include="MailingList\BrianVallelunga.cs" />

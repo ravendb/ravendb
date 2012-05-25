@@ -89,6 +89,7 @@ namespace Raven.Database.Queries
 													GroupBy = query.GroupBy,
 													AggregationOperation = query.AggregationOperation,
 													SortedFields = query.SortedFields,
+													DefaultField = query.DefaultField
 												});
 
 				if (!touchTemporaryIndexResult.Item2 ||

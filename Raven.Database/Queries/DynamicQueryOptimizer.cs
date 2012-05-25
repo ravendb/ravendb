@@ -38,7 +38,7 @@ namespace Raven.Database.Queries
 				return "Raven/DocumentsByEntityName";
 			}
 
-			var fieldsQueriedUpon = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2).ToArray();
+			var fieldsQueriedUpon = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery).Select(x => x.Item2).ToArray();
 			var normalizedFieldsQueriedUpon =
 				fieldsQueriedUpon.Select(DynamicQueryMapping.ReplaceIndavlidCharactersForFields).ToArray();
 			var distinctSelectManyFields = new HashSet<string>();

@@ -20,10 +20,15 @@ namespace Raven.Database.Indexing
 
 		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
 		{
+			return BuildQuery(query, null, analyzer);
+		}
+
+		public static Query BuildQuery(string query, string defaultField, PerFieldAnalyzerWrapper analyzer)
+		{
 			Analyzer keywordAnalyzer = new KeywordAnalyzer();
 			try
 			{
-				var queryParser = new RangeQueryParser(Version.LUCENE_29, string.Empty, analyzer);
+				var queryParser = new RangeQueryParser(Version.LUCENE_29, defaultField ?? string.Empty, analyzer);
 				query = PreProcessUntokenizedTerms(query, queryParser);
 				query = PreProcessSearchTerms(query);
 				queryParser.SetAllowLeadingWildcard(true); // not the recommended approach, should rather use ReverseFilter
