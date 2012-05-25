@@ -37,8 +37,10 @@ namespace Raven.Database.Config
 			Settings = new NameValueCollection(StringComparer.InvariantCultureIgnoreCase);
 
 			BackgroundTasksPriority = ThreadPriority.Normal;
-			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128*1024 : 64*1024;
+			MaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 64 * 1024;
+			MaxNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch / 2;
 			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
+			InitialNumberOfItemsToReduceInSingleBatch = InitialNumberOfItemsToIndexInSingleBatch / 2;
 
 			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory/2);
 			MaxNumberOfParallelIndexTasks = 8;
@@ -109,6 +111,19 @@ namespace Raven.Database.Config
 			{
 				InitialNumberOfItemsToIndexInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToIndexInSingleBatch),
 																	MaxNumberOfItemsToIndexInSingleBatch);
+			}
+			var maxNumberOfItemsToReduceInSingleBatch = Settings["Raven/MaxNumberOfItemsToReduceInSingleBatch"];
+			if (maxNumberOfItemsToReduceInSingleBatch != null)
+			{
+				MaxNumberOfItemsToReduceInSingleBatch = Math.Max(int.Parse(maxNumberOfItemsToReduceInSingleBatch), 128);
+				InitialNumberOfItemsToReduceInSingleBatch = Math.Min(MaxNumberOfItemsToReduceInSingleBatch,
+																	InitialNumberOfItemsToReduceInSingleBatch);
+			}
+			var initialNumberOfItemsToReduceInSingleBatch = Settings["Raven/InitialNumberOfItemsToReduceInSingleBatch"];
+			if (initialNumberOfItemsToReduceInSingleBatch != null)
+			{
+				InitialNumberOfItemsToReduceInSingleBatch = Math.Min(int.Parse(initialNumberOfItemsToReduceInSingleBatch),
+																	MaxNumberOfItemsToReduceInSingleBatch);
 			}
 
 			var maxNumberOfParallelIndexTasks = Settings["Raven/MaxNumberOfParallelIndexTasks"];
@@ -347,9 +362,21 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// The initial number of items to take when indexing a batch
-		/// Default: 5,000
+		/// Default: 512 or 256 depending on CPU architecture
 		/// </summary>
 		public int InitialNumberOfItemsToIndexInSingleBatch { get; set; }
+
+		/// <summary>
+		/// Max number of items to take for reducing in a batch
+		/// Minimum: 128
+		/// </summary>
+		public int MaxNumberOfItemsToReduceInSingleBatch { get; set; }
+
+		/// <summary>
+		/// The initial number of items to take when reducing a batch
+		/// Default: 256 or 128 depending on CPU architecture
+		/// </summary>
+		public int InitialNumberOfItemsToReduceInSingleBatch { get; set; }
 
 		/// <summary>
 		/// The maximum number of indexing tasks allowed to run in parallel

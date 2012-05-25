@@ -2,7 +2,7 @@ using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
-namespace Raven.Bundles.Quotas.Triggers
+namespace Raven.Bundles.Quotas.Size.Triggers
 {
 	public class DatabaseSizeQoutaForDocumentsPutTrigger : AbstractPutTrigger
 	{

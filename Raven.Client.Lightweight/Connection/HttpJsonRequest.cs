@@ -4,12 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -20,11 +18,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Connection;
-using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
-using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
 {
@@ -57,27 +53,23 @@ namespace Raven.Client.Connection
 		public NameValueCollection ResponseHeaders { get; set; }
 
 		internal HttpJsonRequest(
-			string url,
-			string method,
-			RavenJObject metadata,
-			ICredentials credentials,
-			HttpJsonRequestFactory factory,
-			IHoldProfilingInformation owner,
-			DocumentConvention conventions)
+			CreateHttpJsonRequestParams requestParams,
+			HttpJsonRequestFactory factory)
 		{
-			this.Url = url;
+			Url = requestParams.Url;
 			this.factory = factory;
-			this.owner = owner;
-			this.conventions = conventions;
-			this.Method = method;
-			webRequest = (HttpWebRequest)WebRequest.Create(url);
-			webRequest.Credentials = credentials;
-			webRequest.Method = method;
+			owner = requestParams.Owner;
+			conventions = requestParams.Convention;
+			Method = requestParams.Method;
+			webRequest = (HttpWebRequest)WebRequest.Create(requestParams.Url);
+			webRequest.Credentials = requestParams.Credentials;
+			webRequest.Method = requestParams.Method;
 			if (factory.DisableRequestCompression == false &&
-				(method == "POST" || method == "PUT" || method == "PATCH"))
+				(requestParams.Method == "POST" || requestParams.Method == "PUT" || requestParams.Method == "PATCH"))
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
-			WriteMetadata(metadata);
+			WriteMetadata(requestParams.Metadata);
+			requestParams.UpdateHeaders(webRequest);
 		}
 
 #if !NET_3_5
@@ -309,7 +301,7 @@ namespace Raven.Client.Connection
 			}
 #endif
 
-			ResponseHeaders = response.Headers;
+			ResponseHeaders = new NameValueCollection(response.Headers);
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
@@ -571,37 +563,6 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		/// <summary>
-		/// Adds the operation headers.
-		/// </summary>
-		/// <param name="operationsHeaders">The operations headers.</param>
-		public void AddOperationHeaders(NameValueCollection operationsHeaders)
-		{
-			foreach (string header in operationsHeaders)
-			{
-				try
-				{
-					webRequest.Headers[header] = operationsHeaders[header];
-				}
-				catch (Exception e)
-				{
-					throw new InvalidOperationException(
-						"Failed to set header '" + header + "' to the value: " + operationsHeaders[header], e);
-				}
-			}
-		}
-
-		/// <summary>
-		/// Adds the operation headers.
-		/// </summary>
-		/// <param name="operationsHeaders">The operations headers.</param>
-		public void AddOperationHeaders(IDictionary<string, string> operationsHeaders)
-		{
-			foreach (var kvp in operationsHeaders)
-			{
-				webRequest.Headers[kvp.Key] = operationsHeaders[kvp.Value];
-			}
-		}
 
 		private class ImmediateCompletionResult : IAsyncResult, IDisposable
 		{

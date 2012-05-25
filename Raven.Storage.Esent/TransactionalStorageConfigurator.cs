@@ -40,6 +40,7 @@ namespace Raven.Storage.Esent
 				Recovery = true,
 				NoInformationEvent = false,
 				CreatePathIfNotExist = true,
+				EnableIndexChecking = true,
 				TempDirectory = Path.Combine(logsPath, "temp"),
 				SystemDirectory = Path.Combine(logsPath, "system"),
 				LogFileDirectory = Path.Combine(logsPath, "logs"),
@@ -58,7 +59,7 @@ namespace Raven.Storage.Esent
 		public void LimitSystemCache()
 		{
 			var defaultCacheSize = Environment.Is64BitProcess ? 1024 : 256;
-			int cacheSizeMaxInMegabytes = GetValueFromConfiguration("Raven/Esent/CacheSizeMax",defaultCacheSize);
+			int cacheSizeMaxInMegabytes = GetValueFromConfiguration("Raven/Esent/CacheSizeMax", defaultCacheSize);
 			int cacheSizeMax = TranslateToSizeInDatabasePages(cacheSizeMaxInMegabytes, 1024 * 1024);
 			if (SystemParameters.CacheSizeMax > cacheSizeMax)
 			{
@@ -68,8 +69,10 @@ namespace Raven.Storage.Esent
 
 		private static int TranslateToSizeInDatabasePages(int sizeInMegabytes, int multiply)
 		{
-			var sizeInBytes = sizeInMegabytes * multiply;
-			return sizeInBytes / SystemParameters.DatabasePageSize;
+			//This doesn't suffer from overflow, do the division first (to make the number smaller) then multiply afterwards
+			double tempAmt = (double)sizeInMegabytes / SystemParameters.DatabasePageSize;
+			int finalSize = (int)(tempAmt * multiply);
+			return finalSize;
 		}
 
 		private int GetValueFromConfiguration(string name, int defaultValue)

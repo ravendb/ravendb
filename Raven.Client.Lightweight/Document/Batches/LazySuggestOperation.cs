@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Policy;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
 
@@ -71,6 +72,16 @@ namespace Raven.Client.Document.Batches
 		public IDisposable EnterContext()
 		{
 			return null;
+		}
+
+		public object ExecuteEmbedded(IDatabaseCommands commands)
+		{
+			return commands.Suggest(index, suggestionQuery);
+		}
+
+		public void HandleEmbeddedResponse(object result)
+		{
+			Result = result;
 		}
 	}
 #endif

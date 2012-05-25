@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs.Indexing
 																  x.LastName == last &&
 																  x.BirthDate == birthDate &&
 																  x.Country == country);
-					Assert.Equal("((-FirstName:Ayende AND FirstName:* AND LastName:Rahien) AND BirthDate:20010101000000000) AND Country:Israel", queryable.ToString());
+					Assert.Equal("(((-FirstName:Ayende AND FirstName:*) AND LastName:Rahien) AND BirthDate:20010101000000000) AND Country:Israel", queryable.ToString());
 					queryable.Any();
 
 				}

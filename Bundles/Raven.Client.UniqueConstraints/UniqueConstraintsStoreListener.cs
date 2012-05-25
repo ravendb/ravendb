@@ -10,9 +10,7 @@
 
 	public class UniqueConstraintsStoreListener : IDocumentStoreListener
 	{
-		private static readonly ConcurrentDictionary<Type, string[]> TypeProperties = new ConcurrentDictionary<Type, string[]>();
-
-		public bool BeforeStore(string key, object entityInstance, RavenJObject metadata)
+		public bool BeforeStore(string key, object entityInstance, RavenJObject metadata, RavenJObject original)
 		{
 			if (metadata[Constants.EnsureUniqueConstraints] != null)
 			{
@@ -21,13 +19,12 @@
 
 			var type = entityInstance.GetType();
 
-			string[] properties;
-			if (!TypeProperties.TryGetValue(type, out properties))
-			{
-				properties = TypeProperties.GetOrAdd(type, type.GetProperties().Where(p => Attribute.IsDefined(p, typeof(UniqueConstraintAttribute))).Select(x => x.Name).ToArray());
-			}
+			var properties = UniqueConstraintsTypeDictionary.GetProperties(type);
 
-			metadata.Add(Constants.EnsureUniqueConstraints, new RavenJArray(properties));
+			if (properties != null)
+			{
+				metadata.Add(Constants.EnsureUniqueConstraints, new RavenJArray(properties.Select(x => x.Name).ToArray()));
+			}
 
 			return true;
 		}

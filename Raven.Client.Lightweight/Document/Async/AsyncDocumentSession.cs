@@ -6,6 +6,7 @@
 #if !NET_3_5
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
@@ -44,6 +45,15 @@ namespace Raven.Client.Document.Async
 		/// </summary>
 		/// <value>The async database commands.</value>
 		public IAsyncDatabaseCommands AsyncDatabaseCommands { get; private set; }
+
+		/// <summary>
+		/// Load documents with the specified key prefix
+		/// </summary>
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25)
+		{
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, start, pageSize)
+				.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
+		}
 
 		/// <summary>
 		/// Query the specified index using Lucene syntax

@@ -9,6 +9,7 @@ using Raven.Client.Document.Batches;
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
+using System.Collections.Generic;
 using Raven.Client.Indexes;
 
 namespace Raven.Client
@@ -29,6 +30,11 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The database commands.</value>
 		IDatabaseCommands DatabaseCommands { get; }
+
+		/// <summary>
+		/// Load documents with the specified key prefix
+		/// </summary>
+		IEnumerable<T> LoadStartingWith<T>(string keyPrefix, int start = 0, int pageSize = 25);
 
 #if !NET_3_5
 		/// <summary>

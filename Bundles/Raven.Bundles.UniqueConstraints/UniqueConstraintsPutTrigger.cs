@@ -11,7 +11,7 @@
 	{
 		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, System.Guid etag, TransactionInformation transactionInformation)
 		{
-			if (key.StartsWith("Raven"))
+			if (key.StartsWith("Raven/"))
 			{
 				return;
 			}
@@ -30,7 +30,7 @@
 				Database.Put(
 					"UniqueConstraints/" + entityName + propName + "/" + document.Value<string>(propName),
 					null,
-					RavenJObject.FromObject(new { Id = key }),
+					RavenJObject.FromObject(new { RelatedId = key }),
 					constraintMetaObject,
 					transactionInformation);
 			}
@@ -38,7 +38,7 @@
 
 		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			if (key.StartsWith("Raven"))
+			if (key.StartsWith("Raven/"))
 			{
 				return VetoResult.Allowed;
 			}
@@ -66,7 +66,7 @@
 				if (checkDoc == null) 
 					continue;
 
-				var checkId = checkDoc.ToJson().Value<string>("Id");
+				var checkId = checkDoc.DataAsJson.Value<string>("RelatedId");
 
 				if (checkId != key)
 				{
@@ -85,7 +85,7 @@
 
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			if (key.StartsWith("Raven"))
+			if (key.StartsWith("Raven/"))
 			{
 				return;
 			}

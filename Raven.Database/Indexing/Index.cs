@@ -28,6 +28,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Spatial4n.Core.Query;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -170,7 +171,7 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		private static RavenJObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
+		public static RavenJObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
 		{
 			var documentFromFields = new RavenJObject();
 			var q = fieldsToFetch
@@ -693,26 +694,23 @@ namespace Raven.Database.Indexing
 					IndexSearcher indexSearcher;
 					using (parent.GetSearcher(out indexSearcher))
 					{
-						int pageSizeBestGuess = (indexQuery.Start + indexQuery.PageSize) * 2;
-						int returnedResults = 0;
-						int skippedResultsInCurrentLoop = 0;
-						int previousIntersectMatches = 0;
-
 						var subQueries = indexQuery.Query.Split(new[] { Constants.IntersectSeperator }, StringSplitOptions.RemoveEmptyEntries);
 						if (subQueries.Length <= 1)
 							throw new InvalidOperationException("Invalid INTRESECT query, must have multiple intersect clauses.");
 
-						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
-						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0]));
-
 						//Not sure how to select the page size here??? The problem is that only docs in this search can be part 
 						//of the final result because we're doing an intersection query (but we might exclude some of them)
-						var search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
-						var intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
-						var intersectMatches = 0;
+						int pageSizeBestGuess = (indexQuery.Start + indexQuery.PageSize) * 2;
+						int intersectMatches = 0, skippedResultsInCurrentLoop = 0;
+						int previousBaseQueryMatches = 0, currentBaseQueryMatches = 0;
 
-						//Keep going until we've pulled through enough intersecting docs to satisfy pageSize + start
-						//OR the current loop doesn't get us any more results, despite increasing the page size
+						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0]));
+
+						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
+						var search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
+						currentBaseQueryMatches = search.ScoreDocs.Length;
+						var intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
+
 						do
 						{
 							if (skippedResultsInCurrentLoop > 0)
@@ -721,22 +719,23 @@ namespace Raven.Database.Indexing
 								pageSizeBestGuess = pageSizeBestGuess * 2;
 
 								search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
+								previousBaseQueryMatches = currentBaseQueryMatches;
+								currentBaseQueryMatches = search.ScoreDocs.Length;
 								intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
 							}
 
-							Filter filter = indexQuery.GetFilter();
 							for (int i = 1; i < subQueries.Length; i++)
 							{
 								var luceneSubQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[i]));
-								indexSearcher.Search(luceneSubQuery, filter, intersectionCollector);
+								indexSearcher.Search(luceneSubQuery, null, intersectionCollector);
 							}
 
 							var currentIntersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
-							previousIntersectMatches = intersectMatches;
 							intersectMatches = currentIntersectResults.Count;
 							skippedResultsInCurrentLoop = pageSizeBestGuess - intersectMatches;
-
-						} while (previousIntersectMatches < intersectMatches && intersectMatches < indexQuery.PageSize);
+						} while (intersectMatches < indexQuery.PageSize && //stop if we've got enough results to satisfy the pageSize
+								 currentBaseQueryMatches < search.TotalHits && //stop if increasing the page size wouldn't make any difference
+								 previousBaseQueryMatches < currentBaseQueryMatches); //stop if increasing the page size didn't result in any more "base query" results
 
 						var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
 						//It's hard to know what to do here, the TotalHits from the base search isn't really the TotalSize, 
@@ -746,6 +745,7 @@ namespace Raven.Database.Indexing
 						indexQuery.SkippedResults.Value = skippedResultsInCurrentLoop;
 
 						//Using the final set of results in the intersectionCollector
+						int returnedResults = 0;
 						for (int i = indexQuery.Start; i < intersectResults.Count && (i - indexQuery.Start) < pageSizeBestGuess; i++)
 						{
 							Document document = indexSearcher.Doc(intersectResults[i].LuceneId);
@@ -838,9 +838,21 @@ namespace Raven.Database.Indexing
 
 			public Query GetLuceneQuery()
 			{
-				return GetLuceneQuery(indexQuery.Query);
+				var q = GetLuceneQuery(indexQuery.Query);
+				var spatialIndexQuery = indexQuery as SpatialIndexQuery;
+				if (spatialIndexQuery != null)
+				{
+					var dq = SpatialIndex.MakeQuery(spatialIndexQuery.Latitude, spatialIndexQuery.Longitude, spatialIndexQuery.Radius);
+					if (q is MatchAllDocsQuery) return dq;
+
+					var bq = new BooleanQuery();
+					bq.Add(q, BooleanClause.Occur.MUST);
+					bq.Add(dq, BooleanClause.Occur.MUST);
+					return bq;
+				}
+				return q;
 			}
-			
+
 			private Query GetLuceneQuery(string query)
 			{				
 				Query luceneQuery;
@@ -890,13 +902,12 @@ namespace Raven.Database.Indexing
 			private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize,
 										IndexQuery indexQuery)
 			{
-				Filter filter = indexQuery.GetFilter();
-				Sort sort = indexQuery.GetSort(filter, parent.indexDefinition);
+				var sort = indexQuery.GetSort(parent.indexDefinition);
 
 				if (pageSize == Int32.MaxValue) // we want all docs
 				{
 					var gatherAllCollector = new GatherAllCollector();
-					indexSearcher.Search(luceneQuery, filter, gatherAllCollector);
+					indexSearcher.Search(luceneQuery, gatherAllCollector);
 					return gatherAllCollector.ToTopDocs();
 				}
 				var minPageSize = Math.Max(pageSize + start, 1);
@@ -904,9 +915,10 @@ namespace Raven.Database.Indexing
 				// NOTE: We get Start + Pagesize results back so we have something to page on
 				if (sort != null)
 				{
-					return indexSearcher.Search(luceneQuery, filter, minPageSize, sort);
+					var ret = indexSearcher.Search(luceneQuery, null, minPageSize, sort);
+					return ret;
 				}
-				return indexSearcher.Search(luceneQuery, filter, minPageSize);
+				return indexSearcher.Search(luceneQuery, null, minPageSize);
 			}
 		}
 

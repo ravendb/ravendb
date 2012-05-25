@@ -123,7 +123,7 @@ namespace Raven.Storage.Managed
 					var resultTx = ReadMetadata(key, txEtag, resultInTx.Data, out metadata);
 					return createResult(resultTx, new JsonDocumentMetadata
 					{
-						Key = key,
+						Key = resultInTx.Key.Value<string>("key"),
 						Etag = txEtag,
 						Metadata = metadata,
 						LastModified = resultInTx.Key.Value<DateTime>("modified"),
@@ -138,7 +138,7 @@ namespace Raven.Storage.Managed
 				{
 					return createResult(Tuple.Create<MemoryStream,RavenJObject, int>(null, new RavenJObject(), 0), new JsonDocumentMetadata
 					{
-						Key = key,
+						Key = resultInTx.Key.Value<string>("key"),
 						Etag = Guid.Empty,
 						Metadata = new RavenJObject { { Constants.RavenDocumentDoesNotExists, true } },
 						NonAuthoritativeInformation = true,
@@ -152,7 +152,7 @@ namespace Raven.Storage.Managed
 			var result = ReadMetadata(key, etag, readResult.Data, out metadata);
 			return createResult(result, new JsonDocumentMetadata
 			{
-				Key = key,
+				Key = readResult.Key.Value<string>("key"),
 				Etag = etag,
 				Metadata = metadata,
 				LastModified = readResult.Key.Value<DateTime>("modified"),
@@ -295,6 +295,13 @@ namespace Raven.Storage.Managed
 				}
 				return existingEtag;
 			}
+			
+			if (etag != null && etag != Guid.Empty) // expected something to be there.
+				throw new ConcurrencyException("PUT attempted on document '" + key +
+				                               "' using a non current etag (document deleted)")
+				{
+					ExpectedETag = etag.Value
+				};
 
 			readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
 			StorageHelper.AssertNotModifiedByAnotherTransaction(storage, transactionStorageActions, key, readResult, transactionInformation);

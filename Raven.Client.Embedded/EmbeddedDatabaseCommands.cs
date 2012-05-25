@@ -23,6 +23,7 @@ using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Queries;
 using Raven.Database.Server;
+using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
@@ -340,7 +341,25 @@ namespace Raven.Client.Embedded
 			}
 			var queryResult = database.Query(index, query.Clone());
 			EnsureLocalDate(queryResult.Results);
+
+			var loadedIds = new HashSet<string>(
+					queryResult.Results
+						.Where(x => x["@metadata"] != null)
+						.Select(x => x["@metadata"].Value<string>("@id"))
+						.Where(x => x != null)
+					); 
+			var includeCmd = new AddIncludesCommand(database, TransactionInformation,
+			                                        (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
+
+			foreach (var result in queryResult.Results)
+			{
+				includeCmd.Execute(result);
+			}
+
+			includeCmd.AlsoInclude(queryResult.IdsToInclude);
+
 			EnsureLocalDate(queryResult.Includes);
+
 			return queryResult;
 		}
 
@@ -378,14 +397,22 @@ namespace Raven.Client.Embedded
 		public MultiLoadResult Get(string[] ids, string[] includes)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			return new MultiLoadResult
+
+			var multiLoadResult = new MultiLoadResult
 			{
 				Results = ids
 					.Select(id => database.Get(id, TransactionInformation))
 					.Where(document => document != null)
+					.ToArray()
 					.Select(x => EnsureLocalDate(x).ToJson())
-					.ToList()
+					.ToList(),
 			};
+			var includeCmd = new AddIncludesCommand(database, TransactionInformation, (etag, doc) => multiLoadResult.Includes.Add(doc), includes, new HashSet<string>(ids));
+			foreach (var jsonDocument in multiLoadResult.Results)
+			{
+				includeCmd.Execute(jsonDocument);
+			}
+			return multiLoadResult;
 		}
 
 		/// <summary>

@@ -6,6 +6,7 @@
 using System;
 using System.Linq;
 using System.Linq.Expressions;
+using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
@@ -27,6 +28,21 @@ namespace Raven.Tests.Linq
 				RunInMemory = true
 			}.Initialize();
 			documentSession = documentStore.OpenSession();
+		}
+
+		public class Renamed
+		{
+			[JsonProperty("Yellow")]
+			public string Name { get; set; }
+		} 
+
+		[Fact]
+		public void WillRespectRenames()
+		{
+			var q = documentSession.Query<Renamed>()
+				.Where(x => x.Name == "red")
+				.ToString();
+			Assert.Equal("Yellow:red", q);
 		}
 
 		[Fact]
@@ -162,7 +178,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where 15 != user.Age
 					select user;
-			Assert.Equal("-Age:15 AND Age:*", q.ToString());
+			Assert.Equal("(-Age:15 AND Age:*)", q.ToString());
 		}
 
 		[Fact]

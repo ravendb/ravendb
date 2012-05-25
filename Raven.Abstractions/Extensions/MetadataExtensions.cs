@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using System;
+using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Extensions
@@ -33,6 +34,13 @@ namespace Raven.Abstractions.Extensions
 			"Non-Authoritative-Information",
 			"Raven-Timer-Request",
 			"Raven-Authenticated-User",
+
+			// COTS
+			"Access-Control-Allow-Origin",
+			"Access-Control-Max-Age",
+			"Access-Control-Allow-Methods",
+			"Access-Control-Request-Headers",
+			"Access-Control-Allow-Headers",
 
 			//proxy
 			"Reverse-Via",
@@ -116,6 +124,8 @@ namespace Raven.Abstractions.Extensions
 			{
 				if(header.Key.StartsWith("Temp"))
 					continue;
+				if(header.Key == Constants.DocumentIdFieldName)
+					continue;
 				if (HeadersToIgnoreClient.Contains(header.Key))
 					continue;
 				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
@@ -173,11 +183,13 @@ namespace Raven.Abstractions.Extensions
 						continue;
 					if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header))
 						continue;
-					var values = self.GetValues(header);
+					var valuesNonDistinct = self.GetValues(header);
+					if(valuesNonDistinct == null)
+						continue;
+					var values = new HashSet<string>(valuesNonDistinct);
 					var headerName = CaptureHeaderName(header);
-					// TODO: Can values be null?
-					if (values.Length == 1)
-						metadata[headerName] = GetValue(values[0]);
+					if (values.Count == 1)
+						metadata[headerName] = GetValue(values.First());
 					else
 						metadata[headerName] = new RavenJArray(values.Select(GetValue));
 				}

@@ -89,6 +89,9 @@
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
     </Reference>
+    <Reference Include="Spatial4n.Core">
+      <HintPath>..\SharedLibs\Spatial4n.Core.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.configuration" />
@@ -120,12 +123,15 @@
     <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Config\MemoryStatistics.cs" />
+    <Compile Include="Data\QueryResultWithIncludes.cs" />
     <Compile Include="Impl\Clustering\ClusterInspecter.cs" />
     <Compile Include="Impl\Clustering\ClusterResourceState.cs" />
     <Compile Include="Impl\Clustering\ErrorCodes.cs" />
     <Compile Include="Impl\Clustering\NodeClusterState.cs" />
     <Compile Include="Impl\Clustering\RegSam.cs" />
     <Compile Include="Impl\ExceptionAggregator.cs" />
+    <Compile Include="Indexing\BaseBatchSizeAutoTuner.cs" />
+    <Compile Include="Indexing\ReduceBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\BackgroundTaskExecuter.cs" />
@@ -139,6 +145,9 @@
     <Compile Include="Indexing\Sorting\RandomFieldComparatorSource.cs" />
     <Compile Include="Indexing\Sorting\RandomFieldComparator.cs" />
     <Compile Include="Indexing\Sorting\RandomSortField.cs" />
+    <Compile Include="Indexing\Sorting\SpatialDistanceSortField.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Linq\Ast\TransformDynamicLambdaExpressions.cs" />
     <Compile Include="Plugins\Builtins\InvalidDocumentNames.cs" />
     <Compile Include="Plugins\Builtins\Tenants\ModifiedTenantDatabase.cs" />
@@ -464,6 +473,7 @@
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Server\Responders\TransactionStatus.cs" />
+    <Compile Include="Smuggler\DataDumper.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\GetMappedResultsParams.cs" />
     <Compile Include="Storage\IAttachmentsStorageActions.cs" />

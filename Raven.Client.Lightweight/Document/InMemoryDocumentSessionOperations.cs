@@ -614,7 +614,7 @@ more responsive application.
 			if (id == null || id.EndsWith("/") || !entitiesByKey.ContainsKey(id) || ReferenceEquals(entitiesByKey[id], entity))
 				return;
 
-			throw new NonUniqueObjectException("Attempted to associated a different object with id '" + id + "'.");
+			throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
 		}
 
 		/// <summary>
@@ -792,11 +792,11 @@ more responsive application.
 
 		private void PrepareForEntitiesPuts(SaveChangesData result)
 		{
-			foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)))
+			foreach (var entity in entitiesAndMetadata.Where(pair => EntityChanged(pair.Key, pair.Value)).ToArray())
 			{
 				foreach (var documentStoreListener in listeners.StoreListeners)
 				{
-					if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata))
+					if (documentStoreListener.BeforeStore(entity.Value.Key, entity.Key, entity.Value.Metadata, entity.Value.OriginalValue))
 						cachedJsonDocs.Remove(entity.Key);
 				}
 				result.Entities.Add(entity.Key);

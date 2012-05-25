@@ -17,7 +17,6 @@ namespace Raven.Database.Server.Responders
 {
 	public class AddIncludesCommand
 	{
-
 		public AddIncludesCommand(
 			DocumentDatabase database, 
 			TransactionInformation transactionInformation, 
@@ -30,6 +29,14 @@ namespace Raven.Database.Server.Responders
 			Database = database;
 			TransactionInformation = transactionInformation;
 			LoadedIds = loadedIds;
+		}
+
+		public void AlsoInclude(IEnumerable<string> ids)
+		{
+			foreach (var id in ids)
+			{
+				LoadId(id, null);
+			}	
 		}
 
 		private string[] Includes { get; set; }
@@ -46,6 +53,8 @@ namespace Raven.Database.Server.Responders
 
 		public void Execute(RavenJObject document)
 		{
+			if (Includes == null)
+				return;
 			foreach (var include in Includes)
 			{
 				if (string.IsNullOrEmpty(include))
@@ -87,26 +96,24 @@ namespace Raven.Database.Server.Responders
 				case JTokenType.Integer:
 					LoadId(token.Value<int>().ToString(CultureInfo.InvariantCulture), prefix);
 					break;
-				default:
-					// here we ignore everything else
-					// if it ain't a string or array, it is invalid
-					// as an id
-					break;
+				// here we ignore everything else
+				// if it ain't a string or array, it is invalid
+				// as an id
 			}
 		}
 
 		private void LoadId(string value, string prefix)
 		{
-			value = (prefix ?? string.Empty) + value;
+			value = (prefix != null ? prefix + value : value);
 			if (LoadedIds.Add(value) == false)
 				return;
 
 			var includedDoc = Database.Get(value, TransactionInformation);
-			if (includedDoc != null)
-			{
-				Debug.Assert(includedDoc.Etag != null);
-				Add(includedDoc.Etag.Value, includedDoc.ToJson());
-			}
+			if (includedDoc == null) 
+				return;
+
+			Debug.Assert(includedDoc.Etag != null);
+			Add(includedDoc.Etag.Value, includedDoc.ToJson());
 		}
 	}
 }

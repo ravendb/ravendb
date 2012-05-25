@@ -26,7 +26,7 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Gets or sets the radius.
 		/// </summary>
-		/// <value>The radius.</value>
+		/// <value>The radius, in miles.</value>
 		public double Radius { get; set; }
 
 		/// <summary>

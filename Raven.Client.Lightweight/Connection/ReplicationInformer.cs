@@ -32,6 +32,7 @@ namespace Raven.Client.Connection
 	{
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
 
+		private bool firstTime = true;
 		private readonly DocumentConvention conventions;
 		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 		private DateTime lastReplicationUpdate = DateTime.MinValue;
@@ -90,6 +91,19 @@ namespace Raven.Client.Connection
 				return;
 			lock (replicationLock)
 			{
+				if (firstTime)
+				{
+					var serverHash = GetServerHash(serverClient);
+
+					var document = TryLoadReplicationInformationFromLocalCache(serverHash);
+					if(document != null)
+					{
+						UpdateReplicationInformationFromDocument(document);
+					}
+				}
+
+				firstTime = false;
+
 				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 					return;
 
@@ -118,6 +132,19 @@ namespace Raven.Client.Connection
 
 			lock (replicationLock)
 			{
+				if (firstTime)
+				{
+					var serverHash = GetServerHash(serverClient);
+
+					var document = TryLoadReplicationInformationFromLocalCache(serverHash);
+					if(document != null)
+					{
+						UpdateReplicationInformationFromDocument(document);
+					}
+				}
+
+				firstTime = false;
+
 				if (lastReplicationUpdate.AddMinutes(5) > SystemTime.UtcNow)
 					return new CompletedTask();
 
@@ -277,6 +304,13 @@ namespace Raven.Client.Connection
 
 			TrySavingReplicationInformationToLocalCache(serverHash, document);
 
+			UpdateReplicationInformationFromDocument(document);
+
+			lastReplicationUpdate = SystemTime.UtcNow;
+		}
+
+		private void UpdateReplicationInformationFromDocument(JsonDocument document)
+		{
 			var replicationDocument = document.DataAsJson.JsonDeserialization<ReplicationDocument>();
 			replicationDestinations = replicationDocument.Destinations.Select(x => x.Url)
 				// filter out replication destination that don't have the url setup, we don't know how to reach them
@@ -290,8 +324,6 @@ namespace Raven.Client.Connection
 					continue;
 				failureCounts[replicationDestination] = new IntHolder();
 			}
-
-			lastReplicationUpdate = SystemTime.UtcNow;
 		}
 
 		private JsonDocument TryLoadReplicationInformationFromLocalCache(string serverHash)

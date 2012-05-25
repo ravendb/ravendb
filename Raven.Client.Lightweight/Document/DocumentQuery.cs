@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Linq;
 using Raven.Client.Listeners;
+using Raven.Client.Extensions;
 #if !NET_3_5
 using Raven.Client.Connection.Async;
 #endif
@@ -116,6 +117,17 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Adds an ordering for a specific field to the query
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "descending">if set to <c>true</c> [descending].</param>
+		public IDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending)
+		{
+			AddOrder(propertySelector.GetPropertyName(), descending);
+			return this;
+		}
+
+		/// <summary>
 		/// Order the search results randomly
 		/// </summary>
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.RandomOrdering()
@@ -176,6 +188,16 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		/// <summary>
+		/// Perform a search for documents which fields that match the searchTerms.
+		/// If there is more than a single term, each of them will be checked independently.
+		/// </summary>
+		public IDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms)
+		{
+			Search(propertySelector.GetPropertyName(), searchTerms);
+			return this;
+		}
+
 		///<summary>
 		/// Instruct the index to group by the specified fields using the specified aggregation operation
 		///</summary>
@@ -185,6 +207,18 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.GroupBy(AggregationOperation aggregationOperation, params string[] fieldsToGroupBy)
 		{
 			GroupBy(aggregationOperation, fieldsToGroupBy);
+			return this;
+		}
+
+		///<summary>
+		///  Instruct the index to group by the specified fields using the specified aggregation operation
+		///</summary>
+		///<remarks>
+		///  This is only valid on dynamic indexes queries
+		///</remarks>
+		public IDocumentQuery<T> GroupBy<TValue>(AggregationOperation aggregationOperation, params Expression<Func<T, TValue>>[] groupPropertySelectors)
+		{
+			GroupBy(aggregationOperation, groupPropertySelectors.Select(x => x.GetPropertyName()).ToArray());
 			return this;
 		}
 
@@ -285,6 +319,18 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Matches exact value
+		/// </summary>
+		/// <remarks>
+		///   Defaults to NotAnalyzed
+		/// </remarks>
+		public IDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereEquals(propertySelector.GetPropertyName(), value);
+			return this;
+		}
+
+		/// <summary>
 		/// 	Matches exact value
 		/// </summary>
 		/// <remarks>
@@ -293,6 +339,18 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(string fieldName, object value, bool isAnalyzed)
 		{
 			WhereEquals(fieldName, value, isAnalyzed);
+			return this;
+		}
+
+		/// <summary>
+		///   Matches exact value
+		/// </summary>
+		/// <remarks>
+		///   Defaults to allow wildcards only if analyzed
+		/// </remarks>
+		public IDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool isAnalyzed)
+		{
+			WhereEquals(propertySelector.GetPropertyName(), value, isAnalyzed);
 			return this;
 		}
 
@@ -308,7 +366,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches substrings of the field
 		/// </summary>
-		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		[Obsolete("Avoid using WhereContains(), use Search() instead")]
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereContains(string fieldName, object value)
 		{
 			WhereContains(fieldName, value);
@@ -318,7 +376,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches substrings of the field
 		/// </summary>
-		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		[Obsolete("Avoid using WhereContains(), use Search() instead")]
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereContains(string fieldName, params object[] values)
 		{
 			WhereContains(fieldName, values);
@@ -328,7 +386,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// 	Matches substrings of the field
 		/// </summary>
-		[Obsolete("Avoid using WhereConatins(), use Search() instead")]
+		[Obsolete("Avoid using WhereContains(), use Search() instead")]
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereContains(string fieldName, IEnumerable<object> values)
 		{
 			WhereContains(fieldName, values);
@@ -346,6 +404,15 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Check that the field has one of the specified value
+		/// </summary>
+		public IDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+		{
+			WhereIn(propertySelector.GetPropertyName(), values.Cast<object>());
+			return this;
+		}
+
+		/// <summary>
 		/// Matches fields which starts with the specified value.
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
@@ -357,6 +424,17 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Matches fields which starts with the specified value.
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "value">The value.</param>
+		public IDocumentQuery<T> WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereStartsWith(propertySelector.GetPropertyName(), value);
+			return this;
+		}
+
+		/// <summary>
 		/// Matches fields which ends with the specified value.
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
@@ -364,6 +442,17 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEndsWith(string fieldName, object value)
 		{
 			WhereEndsWith(fieldName, value);
+			return this;
+		}
+
+		/// <summary>
+		///   Matches fields which ends with the specified value.
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "value">The value.</param>
+		public IDocumentQuery<T> WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereEndsWith(propertySelector.GetPropertyName(), value);
 			return this;
 		}
 
@@ -380,6 +469,18 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Matches fields where the value is between the specified start and end, exclusive
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "start">The start.</param>
+		/// <param name = "end">The end.</param>
+		public IDocumentQuery<T> WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
+		{
+			WhereBetween(propertySelector.GetPropertyName(), start, end);
+			return this;
+		}
+
+		/// <summary>
 		/// Matches fields where the value is between the specified start and end, inclusive
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
@@ -388,6 +489,18 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereBetweenOrEqual(string fieldName, object start, object end)
 		{
 			WhereBetweenOrEqual(fieldName, start, end);
+			return this;
+		}
+
+		/// <summary>
+		///   Matches fields where the value is between the specified start and end, inclusive
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "start">The start.</param>
+		/// <param name = "end">The end.</param>
+		public IDocumentQuery<T> WhereBetweenOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
+		{
+			WhereBetweenOrEqual(propertySelector.GetPropertyName(), start, end);
 			return this;
 		}
 
@@ -403,6 +516,17 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Matches fields where the value is greater than the specified value
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "value">The value.</param>
+		public IDocumentQuery<T> WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereGreaterThan(propertySelector.GetPropertyName(), value);
+			return this;
+		}
+
+		/// <summary>
 		/// Matches fields where the value is greater than or equal to the specified value
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
@@ -410,6 +534,17 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereGreaterThanOrEqual(string fieldName, object value)
 		{
 			WhereGreaterThanOrEqual(fieldName, value);
+			return this;
+		}
+
+		/// <summary>
+		///   Matches fields where the value is greater than or equal to the specified value
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "value">The value.</param>
+		public IDocumentQuery<T> WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereGreaterThanOrEqual(propertySelector.GetPropertyName(), value);
 			return this;
 		}
 
@@ -425,6 +560,17 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		///   Matches fields where the value is less than the specified value
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "value">The value.</param>
+		public IDocumentQuery<T> WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereLessThan(propertySelector.GetPropertyName(), value);
+			return this;
+		}
+
+		/// <summary>
 		/// Matches fields where the value is less than or equal to the specified value
 		/// </summary>
 		/// <param name="fieldName">Name of the field.</param>
@@ -432,6 +578,17 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereLessThanOrEqual(string fieldName, object value)
 		{
 			WhereLessThanOrEqual(fieldName, value);
+			return this;
+		}
+
+		/// <summary>
+		///   Matches fields where the value is less than or equal to the specified value
+		/// </summary>
+		/// <param name = "propertySelector">Property selector for the field.</param>
+		/// <param name = "value">The value.</param>
+		public IDocumentQuery<T> WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+		{
+			WhereLessThanOrEqual(propertySelector.GetPropertyName(), value);
 			return this;
 		}
 
@@ -540,6 +697,18 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy(params string[] fields)
 		{
 			OrderBy(fields);
+			return this;
+		}
+
+		/// <summary>
+		///   Order the results by the specified fields
+		///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
+		///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
+		/// </summary>
+		/// <param name = "propertySelectors">Property selectors for the fields.</param>
+		public IDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
+		{
+			OrderBy(propertySelectors.Select(x => x.GetPropertyName()).ToArray());
 			return this;
 		}
 

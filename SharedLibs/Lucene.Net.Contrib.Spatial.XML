@@ -4,273 +4,370 @@
         <name>Lucene.Net.Contrib.Spatial</name>
     </assembly>
     <members>
-        <member name="T:Lucene.Net.Spatial.Tier.Projectors.SinusoidalProjector">
+        <member name="T:Lucene.Net.Spatial.Util.CachedDistanceValueSource">
             <summary>
-            Based on Sinusoidal Projections
-            Project a latitude / longitude on a 2D cartesian map
+            An implementation of the Lucene ValueSource model to support spatial relevance ranking.
             </summary>
         </member>
-        <member name="M:Lucene.Net.Spatial.Tier.DistanceFilter.Reset">
+        <member name="T:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTree">
             <summary>
-            You must call this before re-using this DistanceFilter across searches
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Geometry.Shape.Vector2D">
-            <summary>
-            2D Vector
-            </summary>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.Vector2D.#ctor(System.Double,System.Double)">
-            <summary>
-            Create a vector from the origin of the coordinate system to the given point
-            </summary>
-            <param name="x">The x.</param>
-            <param name="y">The y.</param>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.Vector2D.#ctor(Lucene.Net.Spatial.Geometry.Shape.Point2D)">
-            <summary>
-            Create a vector from the origin of the coordinate system to the given point
-            </summary>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.Vector2D.#ctor(Lucene.Net.Spatial.Geometry.Shape.Point2D,Lucene.Net.Spatial.Geometry.Shape.Point2D)">
-            <summary>
-            Create a vector from one point to another
-            </summary>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.Vector2D.NormSqr">
-            <summary>
-            Vector length (magnitude) squared
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Geometry.Shape.Point2D">
-            <summary>
-            Point class.  This type is mutable.
-            </summary>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Geometry.CartesianPoint">
-            <summary>
-            Represents lat/lngs as fixed point numbers translated so that all
-            world coordinates are in the first quadrant.  The same fixed point
-            scale as is used for FixedLatLng is employed.
-            </summary>
-        </member>
-        <member name="F:Lucene.Net.Spatial.Tier.CartesianPolyFilterBuilder.MilesFloor">
-            <summary>
-            Finer granularity than 1 mile isn't accurate with
-            standard C# math.  Also, there's already a 2nd
-            precise filter, if needed, in DistanceQueryBuilder,
-            that will make the filtering exact.
-            </summary>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Tier.DistanceQueryBuilder.#ctor(System.Double,System.Double,System.Double,System.String,System.String,System.String,System.Boolean)">
-            <summary>
-            Create a distance query using
-            a boundary box wrapper around a more precise
-            DistanceFilter.
-            </summary>
-            <param name="lat">The lat.</param>
-            <param name="lng">The Lng.</param>
-            <param name="miles">The miles.</param>
-            <param name="latField">The lat field.</param>
-            <param name="lngField">The Lng field.</param>
-            <param name="tierFieldPrefix">The tier field prefix.</param>
-            <param name="needPrecise">if set to <c>true</c> [need precise].</param>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Tier.DistanceQueryBuilder.#ctor(System.Double,System.Double,System.Double,System.String,System.String,System.Boolean)">
-            <summary>
-            Create a distance query using
-            a boundary box wrapper around a more precise
-            DistanceFilter.
-            </summary>
-            <param name="lat">The lat.</param>
-            <param name="lng">The Lng.</param>
-            <param name="miles">The miles.</param>
-            <param name="geoHashFieldPrefix">The geo hash field prefix.</param>
-            <param name="tierFieldPrefix">The tier field prefix.</param>
-            <param name="needPrecise">if set to <c>true</c> [need precise].</param>
-        </member>
-        <member name="T:Lucene.Net.Spatial.Geometry.Shape.IGeometry2D">
-            <summary>
-            Common set of operations available on 2d shapes
-            </summary>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.IGeometry2D.Translate(Lucene.Net.Spatial.Geometry.Shape.Vector2D)">
-            <summary>
-            Translate according to the vector
-            </summary>
-            <param name="vector">The 2D vector.</param>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.IGeometry2D.Contains(Lucene.Net.Spatial.Geometry.Shape.Point2D)">
-            <summary>
-            Does the shape contain the given point
-            </summary>
-            <param name="point">The 2D point.</param>
-            <returns>
-            	<c>true</c> if [contains] [the specified point]; otherwise, <c>false</c>.
-            </returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.IGeometry2D.Area">
-            <summary>
-            Return the area
-            </summary>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.IGeometry2D.Centroid">
-            <summary>
-            Return the centroid
-            </summary>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.IGeometry2D.Intersect(Lucene.Net.Spatial.Geometry.Shape.Rectangle)">
-            <summary>
-            Returns information about how this shape intersects the given rectangle
-            </summary>
-            <param name="rectangle">The rectangle.</param>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.GetTierBoxId(System.Double,System.Double)">
-            <summary>
-            TierBoxId is latitude box id + longitude box id
-            where latitude box id, and longitude box id are transposed in to position
-            coordinates.
-            </summary>
-            <param name="latitude">The latitude.</param>
-            <param name="longitude">The longitude.</param>
-            <returns></returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.GetTierFieldName">
-            <summary>
-            Get the string name representing current tier _localTier&lt;tiedId&gt;
-            </summary>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.GetTierFieldName(System.Int32)">
-            <summary>
-            Get the string name representing tierId _localTier&lt;tierId&gt;
-            </summary>
-            <param name="tierId">The tier id.</param>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.BestFit(System.Double)">
-             <summary>
-             Find the tier with the best fit for a bounding box
-             Best fit is defined as the ceiling of
-             log2 (circumference of earth / distance) 
-             distance is defined as the smallest box fitting
-             the corner between a radius and a bounding box.
+            A Spatial Prefix Tree, or Trie, which decomposes shapes into prefixed strings at variable lengths corresponding to
+            variable precision.  Each string corresponds to a spatial region.
             
-             Distances less than a mile return 15, finer granularity is
-             in accurate
-             </summary>
-             <param name="miles">The miles.</param>
-             <returns></returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.Log2(System.Double)">
-            <summary>
-            A log to the base 2 formula.
-            <code>Math.Log(value) / Math.Log(2)</code>
-            </summary>
-            <param name="value">The value.</param>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.Ellipse.#ctor(Lucene.Net.Spatial.Geometry.Shape.Point2D,Lucene.Net.Spatial.Geometry.Shape.Point2D,System.Double)">
-            <summary>
-            Constructor given bounding rectangle and a rotation.
-            </summary>
-            <param name="p1">The point 1.</param>
-            <param name="p2">The point 2.</param>
-            <param name="angle">The angle.</param>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.LatLng.ToCartesian">
-            <summary>
-            Convert the lat/lng into the cartesian coordinate plane such that all
-            world coordinates are represented in the first quadrant.
-            The x dimension corresponds to latitude and y corresponds to longitude.
-            The translation starts with the normalized latlng and adds 180 to the latitude and 
-            90 to the longitude (subject to fixed point scaling).
+            Implementations of this class should be thread-safe and immutable once initialized. 
             </summary>
         </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.LatLng.FromCartesian(Lucene.Net.Spatial.Geometry.CartesianPoint)">
-             <summary>
-            The inverse of ToCartesian().  Always returns a FixedLatLng.
-             </summary>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTree.GetMaxLevelForPrecision(Spatial4n.Core.Shapes.Shape,System.Double)">
+             See {@link com.spatial4j.core.query.SpatialArgs#getDistPrecision()}.
+             A grid level looked up via {@link #getLevelForDistance(double)} is returned.
+            
+             @param shape
+             @param precision 0-0.5
+             @return 1-maxLevels
         </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.LatLng.ArcDistance(Lucene.Net.Spatial.Geometry.LatLng)">
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTree.GetLevelForDistance(System.Double)">
+             Returns the level of the smallest grid size with a side length that is greater or equal to the provided
+             distance.
+            
+             @param dist >= 0
+             @return level [1-maxLevels]
+        </member>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTree.GetWorldNode">
+            Returns the level 0 cell which encompasses all spatial data. Equivalent to {@link #getNode(String)} with "".
+            This cell is threadsafe, just like a spatial prefix grid is, although cells aren't
+            generally threadsafe.
+            TODO rename to getTopCell or is this fine?
+        </member>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTree.GetNode(System.String)">
+            The cell for the specified token. The empty string should be equal to {@link #getWorldNode()}.
+            Precondition: Never called when token length > maxLevel.
+        </member>
+        <!-- Badly formed XML comment ignored for member "M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTree.GetNodes(Spatial4n.Core.Shapes.Shape,System.Int32,System.Boolean)" -->
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTree.GetNodesAltPoint(Spatial4n.Core.Shapes.Point,System.Int32,System.Boolean)">
+            Subclasses might override {@link #getNodes(com.spatial4j.core.shape.Shape, int, boolean)}
+            and check if the argument is a shape and if so, delegate
+            to this implementation, which calls {@link #getNode(com.spatial4j.core.shape.Point, int)} and
+            then calls {@link #getNode(String)} repeatedly if inclParents is true.
+        </member>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTree.NodesToTokenStrings(System.Collections.ObjectModel.Collection{Lucene.Net.Spatial.Prefix.Tree.Node})">
+            Will add the trailing leaf byte for leaves. This isn't particularly efficient.
+        </member>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTreeFactory.MakeSPT(System.Collections.Generic.Dictionary{System.String,System.String},Spatial4n.Core.Context.SpatialContext)">
             <summary>
-            Calculates the distance between two lat/lng's in miles.
+            The factory  is looked up via "prefixTree" in args, expecting "geohash" or "quad".
+            If its neither of these, then "geohash" is chosen for a geo context, otherwise "quad" is chosen.
             </summary>
-            <param name="latLng">The lat lng.</param>
-            <returns>Returns the distance in miles</returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.LatLng.ArcDistance(Lucene.Net.Spatial.Geometry.LatLng,Lucene.Net.Spatial.Geometry.DistanceUnits)">
-             <summary>
-            Calculates the distance between two lat/lng's in miles or meters.
-             </summary>
-             <param name="ll2">Second lat,lng position to calculate distance to.</param>
-             <param name="lUnits">Units to calculate distance, defaults to miles</param>
-             <returns>Returns the distance in meters or miles</returns>
-        </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.LatLng.CalculateMidpoint(Lucene.Net.Spatial.Geometry.LatLng)">
-            <summary>
-            Calculate the midpoint between this point an another.  Respects fixed vs floating point
-            </summary>
-            <param name="other">The other.</param>
+            <param name="args"></param>
+            <param name="ctx"></param>
             <returns></returns>
         </member>
-        <member name="T:Lucene.Net.Spatial.Tier.DistanceHandler">
-            <summary>
-            Provide a high level access point to distances
-            Used by DistanceSortSource and DistanceQuery
-            </summary>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.SpatialPrefixTreeFactory.GetLevelForDistance(System.Double)">
+            Calls {@link SpatialPrefixTree#getLevelForDistance(double)}. 
         </member>
-        <member name="T:Lucene.Net.Spatial.Geometry.Shape.LineSegment">
-            <summary>
-            2D line segment
-            </summary>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.Node.GetTokenString">
+            Note: doesn't contain a trailing leaf byte.
         </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.LineSegment.Distance(Lucene.Net.Spatial.Geometry.Shape.Point2D,Lucene.Net.Spatial.Geometry.Shape.Point2D)">
-            <summary>
-            Finds the distance of a specified point from the line segment and the
-            closest point on the segment to the specified point.
-            </summary>
-            <param name="p">The test point.</param>
-            <param name="closestPt">Closest point on the segment to c.</param>
-            <returns>Returns the distance from p to the closest point on the segment.</returns>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.Node.GetSubCells(Spatial4n.Core.Shapes.Shape)">
+             Like {@link #getSubCells()} but with the results filtered by a shape. If that shape is a {@link com.spatial4j.core.shape.Point} then it
+             must call {@link #getSubCell(com.spatial4j.core.shape.Point)};
+             Precondition: Never called when getLevel() == maxLevel.
+            
+             @param shapeFilter an optional filter for the returned cells.
+             @return A set of cells (no dups), sorted. Not Modifiable.
         </member>
-        <member name="M:Lucene.Net.Spatial.GeoHash.GeoHashDistanceFilter.#ctor(Lucene.Net.Search.Filter,System.Double,System.Double,System.Double,System.String)">
-            <summary>
-            Provide a distance filter based from a center point with a radius in miles
-            </summary>
-            <param name="startingFilter">The starting filter.</param>
-            <param name="lat">The lat.</param>
-            <param name="lng">The LNG.</param>
-            <param name="miles">The miles.</param>
-            <param name="geoHashField">The geo hash field.</param>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.Node.GetSubCell(Spatial4n.Core.Shapes.Point)">
+            Performant implementations are expected to implement this efficiently by considering the current
+            cell's boundary.
+            Precondition: Never called when getLevel() == maxLevel.
+            Precondition: this.getShape().relate(p) != DISJOINT.
         </member>
-        <member name="T:Lucene.Net.Spatial.Geometry.Shape.LLRect">
-            <summary>
-            Lat-long rect.  Instances are mutable.
-            </summary>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.Node.GetSubCells">
+             Gets the cells at the next grid cell level that cover this cell.
+             Precondition: Never called when getLevel() == maxLevel.
+            
+             @return A set of cells (no dups), sorted. Not Modifiable.
         </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.LLRect.Area">
-            <summary>
-            Return the area in units of lat-lng squared.  This is a contrived unit
-            that only has value when comparing to something else.
-            </summary>
+        <member name="M:Lucene.Net.Spatial.Prefix.Tree.Node.GetSubCellsSize">
+            {@link #getSubCells()}.size() -- usually a constant. Should be >=2
         </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.LLRect.CreateBox(Lucene.Net.Spatial.Geometry.LatLng,System.Double,System.Double)">
+        <member name="M:Lucene.Net.Spatial.SpatialStrategy`1.IsPolyField">
+            Corresponds with Solr's  FieldType.isPolyField(). 
+        </member>
+        <member name="M:Lucene.Net.Spatial.SpatialStrategy`1.CreateField(`0,Spatial4n.Core.Shapes.Shape,System.Boolean,System.Boolean)">
+             Corresponds with Solr's FieldType.createField().
+            
+             This may return a null field if it does not want to make anything.
+             This is reasonable behavior if 'ignoreIncompatibleGeometry=true' and the
+             geometry is incompatible
+        </member>
+        <member name="M:Lucene.Net.Spatial.SpatialStrategy`1.CreateFields(`0,Spatial4n.Core.Shapes.Shape,System.Boolean,System.Boolean)">
+            Corresponds with Solr's FieldType.createFields(). 
+        </member>
+        <member name="M:Lucene.Net.Spatial.SpatialStrategy`1.MakeQuery(Spatial4n.Core.Query.SpatialArgs,`0)">
             <summary>
-            Approximates a box centered at the given point with the given width and height in miles.
+            Make a query
             </summary>
-            <param name="center">The center.</param>
-            <param name="widthMi">The width mi.</param>
-            <param name="heightMi">The height mi.</param>
+            <param name="args"></param>
+            <param name="fieldInfo"></param>
             <returns></returns>
         </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.LLRect.NormLng(System.Double,System.Double)">
+        <member name="M:Lucene.Net.Spatial.SpatialStrategy`1.MakeFilter(Spatial4n.Core.Query.SpatialArgs,`0)">
             <summary>
-            Returns a normalized Lng rectangle shape for the bounding box
+            Make a Filter
+            </summary>
+            <param name="args"></param>
+            <param name="fieldInfo"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Prefix.PrefixTreeStrategy.SetDefaultFieldValuesArrayLen(System.Int32)">
+            Used in the in-memory ValueSource as a default ArrayList length for this field's array of values, per doc. 
+        </member>
+        <member name="M:Lucene.Net.Spatial.Prefix.PrefixTreeStrategy.SetDistErrPct(System.Double)">
+            See {@link SpatialPrefixTree#getMaxLevelForPrecision(com.spatial4j.core.shape.Shape, double)}. 
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.PrefixTreeStrategy.CellTokenStream">
+            <summary>
+            Outputs the tokenString of a cell, and if its a leaf, outputs it again with the leaf byte.
             </summary>
         </member>
-        <member name="M:Lucene.Net.Spatial.Geometry.Shape.LLRect.NormLat(System.Double,System.Double)">
+        <member name="T:Lucene.Net.Spatial.Util.FunctionQuery">
             <summary>
-            Returns a normalized Lat rectangle shape for the bounding box
-            If you go over the poles, you need to flip the lng value too
+            Port of Solr's FunctionQuery (v1.4)
+            
+            Returns a score for each document based on a ValueSource,
+            often some function of the value of a field.
+            
+            <b>Note: This API is experimental and may change in non backward-compatible ways in the future</b>
             </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.FunctionQuery.GetValueSource">
+            <summary>
+            
+            </summary>
+            <returns>The associated ValueSource</returns>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Util.TermsEnumCompatibility">
+            <summary>
+            Wraps Lucene 3 TermEnum to make it look like a Lucene 4 TermsEnum
+            SOLR-2155
+            @author dsmiley
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.TermsEnumCompatibility.SeekCeil(System.String)">
+            <summary>
+            Seeks to the specified term, if it exists, or to the
+            next (ceiling) term.  Returns SeekStatus to
+            indicate whether exact term was found, a different
+            term was found, or EOF was hit.  The target term may
+            be before or after the current term.  If this returns
+            SeekStatus.END, the enum is unpositioned.
+            </summary>
+            <param name="value"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.TermsEnumCompatibility.GetDocCount">
+            <summary>
+            Returns the number of documents that have at least one
+            term for this field, or -1 if this measure isn't
+            stored by the codec.  Note that, just like other term
+            measures, this measure does not take deleted documents
+            into account.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Lucene.Net.Spatial.SpatialFieldInfo">
+            <summary>
+            Information the strategy needs for the lucene fields
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Util.Bits">
+            <summary>
+            Interface for Bitset-like structures.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Util.Bits.MatchAllBits">
+            <summary>
+            Bits impl of the specified length with all bits set.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Util.Bits.MatchNoBits">
+            <summary>
+            Bits impl of the specified length with no bits set. 
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Vector.TwoDoublesStrategy.MakeWithin(Spatial4n.Core.Shapes.Rectangle,Lucene.Net.Spatial.Vector.TwoDoublesFieldInfo)">
+            <summary>
+            Constructs a query to retrieve documents that fully contain the input envelope.
+            </summary>
+            <param name="bbox"></param>
+            <param name="fieldInfo"></param>
+            <returns>The spatial query</returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Vector.TwoDoublesStrategy.MakeDisjoint(Spatial4n.Core.Shapes.Rectangle,Lucene.Net.Spatial.Vector.TwoDoublesFieldInfo)">
+            <summary>
+            Constructs a query to retrieve documents that fully contain the input envelope.
+            </summary>
+            <param name="bbox"></param>
+            <param name="fieldInfo"></param>
+            <returns>The spatial query</returns>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.RecursivePrefixTreeFilter">
+            <summary>
+            Performs a spatial intersection filter against a field indexed with {@link SpatialPrefixTree}, a Trie.
+            SPT yields terms (grids) at length 1 and at greater lengths corresponding to greater precisions.
+            This filter recursively traverses each grid length and uses methods on {@link Shape} to efficiently know
+            that all points at a prefix fit in the shape or not to either short-circuit unnecessary traversals or to efficiently
+            load all enclosed points.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Util.NumericFieldInfo">
+            <summary>
+            Hold some of the parameters used by solr...
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Util.StringListTokenizer">
+            <summary>
+            Put a list of strings directly into the token stream
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Util.OpenBitSetIterator">
+            <summary>An iterator to iterate over set bits in an OpenBitSet.
+            This is faster than nextSetBit() for iterating over the complete set of bits,
+            especially when the density of the bits set is high.
+            
+            </summary>
+            <version>  $Id$
+            </version>
+        </member>
+        <member name="F:Lucene.Net.Spatial.Util.OpenBitSetIterator.arr">
+            <summary>** the python code that generated bitlist
+            def bits2int(val):
+            arr=0
+            for shift in range(8,0,-1):
+            if val &amp; 0x80:
+            arr = (arr &lt;&lt; 4) | shift
+            val = val &lt;&lt; 1
+            return arr
+            def int_table():
+            tbl = [ hex(bits2int(val)).strip('L') for val in range(256) ]
+            return ','.join(tbl)
+            ****
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.OpenBitSetIterator.Next">
+            <deprecated> use <see cref="M:Lucene.Net.Spatial.Util.OpenBitSetIterator.NextDoc"/> instead. 
+            </deprecated>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.OpenBitSetIterator.SkipTo(System.Int32)">
+            <deprecated> use <see cref="M:Lucene.Net.Spatial.Util.OpenBitSetIterator.Advance(System.Int32)"/> instead. 
+            </deprecated>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.OpenBitSetIterator.Doc">
+            <deprecated> use <see cref="M:Lucene.Net.Spatial.Util.OpenBitSetIterator.DocID"/> instead. 
+            </deprecated>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Vector.DistanceValueSource">
+            <summary>
+            An implementation of the Lucene ValueSource model to support spatial relevance ranking.
+            </summary>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Prefix.Tree.GeohashPrefixTree">
+            <summary>
+            A SpatialPrefixGrid based on Geohashes.  Uses {@link GeohashUtils} to do all the geohash work.
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "M:Lucene.Net.Spatial.Prefix.Tree.GeohashPrefixTree.GetMaxLevelsPossible" -->
+        <member name="F:Lucene.Net.Spatial.Util.CompatibilityExtensions.nlzTable">
+            table of number of leading zeros in a byte 
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.CompatibilityExtensions.BitUtilNlz(System.Int64)">
+            <summary>
+            Returns the number of leading zero bits.
+            </summary>
+            <param name="x"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Lucene.Net.Spatial.Util.Entry">
+            <summary>
+            Expert: Every composite-key in the internal cache is of this type.
+            </summary>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.Entry.#ctor(System.String,System.Object)">
+            Creates one of these objects for a custom comparator/parser. 
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.Entry.Equals(System.Object)">
+            Two of these are equal iff they reference the same field and type. 
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.Entry.GetHashCode">
+            Composes a hashcode based on the field and type. 
+        </member>
+        <member name="T:Lucene.Net.Spatial.Util.FixedBitSet">
+            BitSet of fixed length (numBits), backed by accessible
+              ({@link #getBits}) long[], accessed with an int index,
+              implementing Bits and DocIdSet.  Unlike {@link
+              OpenBitSet} this bit set does not auto-expand, cannot
+              handle long index, and does not have fastXX/XX variants
+              (just X).
+            
+             @lucene.internal
+            
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.FixedBitSet.bits2words(System.Int32)">
+            <summary>
+            returns the number of 64 bit words it would take to hold numBits
+            </summary>
+            <param name="numBits"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.FixedBitSet.#ctor(Lucene.Net.Spatial.Util.FixedBitSet)">
+            <summary>
+            Makes full copy.
+            </summary>
+            <param name="other"></param>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.FixedBitSet.Cardinality">
+            <summary>
+            Returns number of set bits.  NOTE: this visits every
+            long in the backing bits array, and the result is not
+            internally cached!
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.FixedBitSet.NextSetBit(System.Int32)">
+            <summary>
+            Returns the index of the first set bit starting at the index specified.
+            -1 is returned if there are no more set bits.
+            </summary>
+            <param name="index"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.FixedBitSet.PrevSetBit(System.Int32)">
+            Returns the index of the last set bit before or on the index specified.
+            -1 is returned if there are no more set bits.
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.FixedBitSet.Or(Lucene.Net.Spatial.Util.FixedBitSet)">
+            this = this OR other 
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.FixedBitSet.And(Lucene.Net.Spatial.Util.FixedBitSet)">
+            this = this AND other 
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.FixedBitSet.AndNot(Lucene.Net.Spatial.Util.FixedBitSet)">
+            this = this AND NOT other 
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.FixedBitSet.Set(System.Int32,System.Int32)">
+            Sets a range of bits
+            
+             @param startIndex lower index
+             @param endIndex one-past the last bit to set
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.FixedBitSet.Clear(System.Int32,System.Int32)">
+            Clears a range of bits.
+            
+             @param startIndex lower index
+             @param endIndex one-past the last bit to clear
+        </member>
+        <member name="M:Lucene.Net.Spatial.Util.FixedBitSet.Equals(System.Object)">
+            returns true if both sets have the same bits set 
         </member>
     </members>
 </doc>

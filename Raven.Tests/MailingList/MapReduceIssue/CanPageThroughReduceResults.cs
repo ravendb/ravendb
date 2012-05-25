@@ -1,9 +1,10 @@
+using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Smuggler;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Tests.MailingList.MapReduceIssue
 {
@@ -12,13 +13,10 @@ namespace Raven.Tests.MailingList.MapReduceIssue
 		[Fact]
 		public void Test()
 		{
-			using(GetNewServer())
-			using (var store = new DocumentStore
+			using (GetNewServer())
+			using (var store = new DocumentStore {Url = "http://localhost:8079/"}.Initialize())
 			{
-				Url = "http://localhost:8079/"
-			}.Initialize())
-			{
-				using (var stream = typeof(CanPageThroughReduceResults).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.MapReduceIssue.MvcMusicStore_Dump.json"))
+				using (var stream = typeof (CanPageThroughReduceResults).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.MapReduceIssue.MvcMusicStore_Dump.json"))
 				{
 					new SmugglerApi(new RavenConnectionStringOptions {Url = store.Url}).ImportData(stream, new SmugglerOptions());
 				}
@@ -56,10 +54,10 @@ namespace Raven.Tests.MailingList.MapReduceIssue
 			}
 		}
 
-		public class Artist
+		private class Artist
 		{
-			public string Name { get; set; }
 			public string Id { get; set; }
+			public string Name { get; set; }
 		}
 	}
 }

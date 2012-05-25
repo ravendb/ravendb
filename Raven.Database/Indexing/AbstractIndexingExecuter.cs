@@ -19,15 +19,13 @@ namespace Raven.Database.Indexing
 		protected ITransactionalStorage transactionalStorage;
 		protected int workCounter;
 		protected int lastFlushedWorkCounter;
-		protected IndexBatchSizeAutoTuner autoTuner;
+		protected BaseBatchSizeAutoTuner autoTuner;
 
 		protected AbstractIndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
 		{
 			this.transactionalStorage = transactionalStorage;
 			this.context = context;
 			this.scheduler = scheduler;
-
-			autoTuner = new IndexBatchSizeAutoTuner(context);
 		}
 
 		public void Execute()
@@ -160,7 +158,7 @@ namespace Raven.Database.Indexing
 				return false;
 
 			using(context.IndexDefinitionStorage.CurrentlyIndexing())
-				ExecuteIndxingWork(indexesToWorkOn);
+				ExecuteIndexingWork(indexesToWorkOn);
 
 			return true;
 		}
@@ -169,7 +167,7 @@ namespace Raven.Database.Indexing
 
 		protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions);
 
-		protected abstract void ExecuteIndxingWork(IList<IndexToWorkOn> indexesToWorkOn);
+		protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn);
 
 		protected abstract bool IsValidIndex(IndexStats indexesStat);
 

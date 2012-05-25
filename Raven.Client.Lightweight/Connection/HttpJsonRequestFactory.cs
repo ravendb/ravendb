@@ -4,9 +4,7 @@ using System.Net;
 using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.Document;
 using Raven.Client.Util;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -53,32 +51,22 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Creates the HTTP json request.
 		/// </summary>
-		public HttpJsonRequest CreateHttpJsonRequest(IHoldProfilingInformation self, string url, string method, ICredentials credentials,
-													 DocumentConvention convention)
-		{
-			return CreateHttpJsonRequest(self, url, method, new RavenJObject(), credentials, convention);
-		}
-
-		/// <summary>
-		/// Creates the HTTP json request.
-		/// </summary>
-		public HttpJsonRequest CreateHttpJsonRequest(IHoldProfilingInformation self, string url, string method, RavenJObject metadata,
-													 ICredentials credentials, DocumentConvention convention)
+		public HttpJsonRequest CreateHttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams)
 		{
 			if (disposed)
 				throw new ObjectDisposedException(typeof (HttpJsonRequestFactory).FullName);
-			var request = new HttpJsonRequest(url, method, metadata, credentials, this, self, convention)
+			var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
 			{
-				ShouldCacheRequest = convention.ShouldCacheRequest(url)
+				ShouldCacheRequest = createHttpJsonRequestParams.Convention.ShouldCacheRequest(createHttpJsonRequestParams.Url)
 			};
 
-			if (request.ShouldCacheRequest && method == "GET" && !DisableHttpCaching)
+			if (request.ShouldCacheRequest && createHttpJsonRequestParams.Method == "GET" && !DisableHttpCaching)
 			{
-				var cachedRequestDetails = ConfigureCaching(url, request.webRequest.Headers.Set);
+				var cachedRequestDetails = ConfigureCaching(createHttpJsonRequestParams.Url, request.webRequest.Headers.Set);
 				request.CachedRequestDetails = cachedRequestDetails.CachedRequest;
 				request.SkipServerCheck = cachedRequestDetails.SkipServerCheck;
 			}
-			ConfigureRequest(self, new WebRequestEventArgs {Request = request.webRequest});
+			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs {Request = request.webRequest});
 			return request;
 		}
 
@@ -90,11 +78,11 @@ namespace Raven.Client.Connection
 			bool skipServerCheck = false;
 			if (AggressiveCacheDuration != null)
 			{
-				var duraion = AggressiveCacheDuration.Value;
-				if(duraion.TotalSeconds > 0)
-					setHeader("Cache-Control", "max-age=" + duraion.TotalSeconds);
+				var duration = AggressiveCacheDuration.Value;
+				if(duration.TotalSeconds > 0)
+					setHeader("Cache-Control", "max-age=" + duration.TotalSeconds);
 
-				if ((DateTimeOffset.Now - cachedRequest.Time) < duraion) // can serve directly from local cache
+				if ((DateTimeOffset.Now - cachedRequest.Time) < duration) // can serve directly from local cache
 					skipServerCheck = true;
 			}
 
@@ -258,6 +246,5 @@ namespace Raven.Client.Connection
 				DisableHttpCaching = oldHttpCaching;
 			});
 		}
-
 	}
 }

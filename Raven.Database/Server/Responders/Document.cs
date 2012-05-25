@@ -32,7 +32,7 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			var match = urlMatcher.Match(context.GetRequestUrl());
-			var docId = match.Groups[1].Value;
+			var docId = Uri.UnescapeDataString(match.Groups[1].Value);
 			switch (context.Request.HttpMethod)
 			{
 				case "HEAD":
@@ -124,6 +124,7 @@ namespace Raven.Database.Server.Responders
 			{
 				context.SetStatusToNonAuthoritativeInformation();
 			}
+			documentMetadata.Metadata[Constants.DocumentIdFieldName] = documentMetadata.Key;
 			documentMetadata.Metadata[Constants.LastModified] = documentMetadata.LastModified; //HACK ? to get the document's last modified value into the response headers
 			context.WriteHeaders(documentMetadata.Metadata, documentMetadata.Etag.Value);
 		}
@@ -142,6 +143,7 @@ namespace Raven.Database.Server.Responders
 			}
 			Debug.Assert(doc.Etag != null);
 			doc.Metadata[Constants.LastModified] = doc.LastModified;
+			doc.Metadata[Constants.DocumentIdFieldName] = doc.Key;
 			context.WriteData(doc.DataAsJson, doc.Metadata, doc.Etag.Value);
 		}
 

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -276,6 +277,7 @@ namespace Raven.Client.Linq
 					Equals(((ConstantExpression)expression.Right).Value, 0))
 			{
 				var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
+				luceneQuery.OpenSubclause();
 				luceneQuery.NegateNext();
 				luceneQuery.WhereEquals(new WhereParams
 				{
@@ -293,7 +295,7 @@ namespace Raven.Client.Linq
 						IsAnalyzed = true,
 						AllowWildcards = true
 					});
-
+				luceneQuery.CloseSubclause();
 				return;
 			}
 
@@ -304,7 +306,7 @@ namespace Raven.Client.Linq
 			}
 
 			var memberInfo = GetMember(expression.Left);
-
+			luceneQuery.OpenSubclause();
 			luceneQuery.NegateNext();
 			luceneQuery.WhereEquals(new WhereParams
 			{
@@ -321,6 +323,7 @@ namespace Raven.Client.Linq
 				IsAnalyzed = true,
 				AllowWildcards = true
 			});
+			luceneQuery.CloseSubclause();
 		}
 
 		private static Type GetMemberType(ExpressionInfo info)
@@ -390,6 +393,12 @@ namespace Raven.Client.Linq
 				AssertNoComputation(memberExpression);
 
 				path = memberExpression.ToString();
+				var props = memberExpression.Member.GetCustomAttributes(typeof(JsonPropertyAttribute), false);
+				if (props.Length != 0)
+				{
+					path = path.Substring(0, path.Length - memberExpression.Member.Name.Length) +
+					       ((JsonPropertyAttribute) props[0]).PropertyName;
+				}
 				isNestedPath = memberExpression.Expression is MemberExpression;
 				memberType = memberExpression.Member.GetMemberType();
 			}
