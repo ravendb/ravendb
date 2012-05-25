@@ -43,7 +43,7 @@ namespace Raven.Client.Connection
 		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 		protected DateTime lastReplicationUpdate = DateTime.MinValue;
 		private readonly object replicationLock = new object();
-		protected List<string> replicationDestinations = new List<string>();
+		private List<string> replicationDestinations = new List<string>();
 		private static readonly List<string> Empty = new List<string>();
 		protected int readStripingBase;
 
