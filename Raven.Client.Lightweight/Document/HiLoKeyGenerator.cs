@@ -69,9 +69,9 @@ namespace Raven.Client.Document
 						continue;
 
 					range = GetNextRange();
-				}
+					}
 			}
-		}
+				}
 
 		private Range GetNextRange()
 		{
