@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -545,7 +546,10 @@ namespace Raven.Database.Server
 					var requestResponder = requestResponderLazy.Value;
 					if (requestResponder.WillRespond(ctx))
 					{
+						var sp = Stopwatch.StartNew();
 						requestResponder.Respond(ctx);
+						sp.Stop();
+						ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,# ms",CultureInfo.InvariantCulture));
 						return requestResponder.IsUserInterfaceRequest;
 					}
 				}
