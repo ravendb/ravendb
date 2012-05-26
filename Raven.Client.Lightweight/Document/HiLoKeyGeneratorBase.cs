@@ -16,7 +16,8 @@ namespace Raven.Client.Document
 
 		protected readonly string tag;
 		protected long capacity;
-		protected volatile Range range;
+		private volatile RangeValue range;
+		
 		protected string lastServerPrefix;
 		protected DateTime lastRequestedUtc;
 
@@ -24,7 +25,7 @@ namespace Raven.Client.Document
 		{
 			this.tag = tag;
 			this.capacity = capacity;
-			this.range = new Range(1, 0);
+			this.range = new RangeValue(1, 0);
 		}
 
 		protected string GetDocumentKeyFromId(DocumentConvention convention, long nextId)
@@ -85,15 +86,21 @@ namespace Raven.Client.Document
 			}
 			return jsonDocument;
 		}
-		
+
+		protected RangeValue Range
+		{
+			get { return range; }
+			set { range = value; }
+		}
+
 		[System.Diagnostics.DebuggerDisplay("[{Min}-{Max}]: {Current}")]
-		protected class Range
+		protected class RangeValue
 		{
 			public readonly long Min;
 			public readonly long Max;
 			public long Current;
 
-			public Range(long min, long max)
+			public RangeValue(long min, long max)
 			{
 				this.Min = min;
 				this.Max = max;
