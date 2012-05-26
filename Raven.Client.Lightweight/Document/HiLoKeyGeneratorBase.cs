@@ -16,7 +16,6 @@ namespace Raven.Client.Document
 
 		protected readonly string tag;
 		protected long capacity;
-		[CLSCompliant(false)]
 		protected volatile Range range;
 		protected string lastServerPrefix;
 		protected DateTime lastRequestedUtc;

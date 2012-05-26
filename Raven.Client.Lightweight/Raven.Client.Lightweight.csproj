@@ -89,7 +89,7 @@
     <Compile Include="Document\AsyncMultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\AsyncHiLoKeyGenerator.cs" />
     <Compile Include="Document\Async\AsyncDocumentKeyGeneration.cs" />
-    <Compile Include="Document\HiLoKeyGeneratorBase.cs" />
+    
     <Compile Include="IAsyncDocumentSessionImpl.cs" />
     <Compile Include="DocumentStoreBase.cs" />
     <Compile Include="Document\AsyncDocumentQuery.cs" />
