@@ -360,7 +360,7 @@ namespace Raven.Client.Connection.Async
 														", conflict must be resolved before the document will be accessible")
 							{
 								ConflictedVersionIds = conflictIds,
-								Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
+								Etag = httpWebResponse.GetEtagHeader()
 							};
 						}
 						throw;
@@ -631,7 +631,7 @@ namespace Raven.Client.Connection.Async
 					{
 						IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 						IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-						IndexEtag = new Guid(request.ResponseHeaders["ETag"]),
+						IndexEtag = request.GetEtagHeader(),
 						Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
 						TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),
 						IndexName = json.Value<string>("IndexName"),
@@ -825,7 +825,7 @@ namespace Raven.Client.Connection.Async
 								{
 									Data = () => memoryStream,
 									Size = task.Result.Length,
-									Etag = new Guid(request.ResponseHeaders["ETag"]),
+									Etag = request.GetEtagHeader(),
 									Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 								};
 
@@ -849,7 +849,7 @@ namespace Raven.Client.Connection.Async
 																			", conflict must be resolved before the attachment will be accessible")
 												{
 													ConflictedVersionIds = conflictIds,
-													Etag = new Guid(response.GetResponseHeader("ETag"))
+													Etag = response.GetEtagHeader()
 												};
 										}
 									}

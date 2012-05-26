@@ -61,6 +61,7 @@
     <Compile Include="Connection\CachedRequest.cs" />
     <Compile Include="Connection\CompletedTask.cs" />
     <Compile Include="Connection\CreateHttpJsonRequestParams.cs" />
+    <Compile Include="Connection\HttpExtensions.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
     <Compile Include="Connection\IDatabaseCommands.cs" />
@@ -89,7 +90,6 @@
     <Compile Include="Document\AsyncMultiTypeHiLoKeyGenerator.cs" />
     <Compile Include="Document\AsyncHiLoKeyGenerator.cs" />
     <Compile Include="Document\Async\AsyncDocumentKeyGeneration.cs" />
-    
     <Compile Include="IAsyncDocumentSessionImpl.cs" />
     <Compile Include="DocumentStoreBase.cs" />
     <Compile Include="Document\AsyncDocumentQuery.cs" />

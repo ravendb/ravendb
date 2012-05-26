@@ -205,7 +205,7 @@ namespace Raven.Client.Connection
 				{
 					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
 					var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
-					var etag = httpWebResponse.GetResponseHeader("ETag");
+					var etag = httpWebResponse.GetEtagHeader();
 
 					throw CreateConcurrencyException(key, conflictsDoc, etag);
 				}
@@ -213,7 +213,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private static ConflictException CreateConcurrencyException(string key, RavenJObject conflictsDoc, string etag)
+		private static ConflictException CreateConcurrencyException(string key, RavenJObject conflictsDoc, Guid etag)
 		{
 			var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
@@ -221,7 +221,7 @@ namespace Raven.Client.Connection
 			                            ", conflict must be resolved before the document will be accessible")
 			{
 				ConflictedVersionIds = conflictIds,
-				Etag = new Guid(etag)
+				Etag = etag
 			};
 		}
 
@@ -414,7 +414,7 @@ namespace Raven.Client.Connection
 				{
 					Data = data,
 					Size = len,
-					Etag = new Guid(webRequest.ResponseHeaders["ETag"]),
+					Etag = webRequest.GetEtagHeader(),
 					Metadata = webRequest.ResponseHeaders.FilterHeaders(isServerDocument: false)
 				};
 			}
@@ -432,7 +432,7 @@ namespace Raven.Client.Connection
 												", conflict must be resolved before the attachment will be accessible")
 					{
 						ConflictedVersionIds = conflictIds,
-						Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
+						Etag = httpWebResponse.GetEtagHeader()
 					};
 				}
 				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
@@ -722,7 +722,7 @@ namespace Raven.Client.Connection
 				}
 				throw;
 			}
-			var directQuery = SerializationHelper.ToQueryResult(json, request.ResponseHeaders["ETag"]);
+			var directQuery = SerializationHelper.ToQueryResult(json, request.GetEtagHeader());
 			foreach (var docResult in directQuery.Results.Concat(directQuery.Includes))
 			{
 				AssertNonConflictedDocument(docResult);
@@ -819,7 +819,7 @@ namespace Raven.Client.Connection
 				return;
 
 			if (metadata.Value<int>("@Http-Status-Code") == 409)
-				throw CreateConcurrencyException(metadata.Value<string>("@id"), docResult, metadata.Value<string>("@etag"));
+				throw CreateConcurrencyException(metadata.Value<string>("@id"), docResult, HttpExtensions.EtagHeaderToGuid(metadata.Value<string>("@etag")));
 		}
 
 		/// <summary>
@@ -1200,7 +1200,7 @@ namespace Raven.Client.Connection
 												", conflict must be resolved before the document will be accessible")
 					{
 						ConflictedVersionIds = conflictIds,
-						Etag = new Guid(httpWebResponse.GetResponseHeader("ETag"))
+						Etag = httpWebResponse.GetEtagHeader()
 					};
 				}
 				throw;

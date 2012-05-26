@@ -704,6 +704,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\DocumentConventionJsonExtensions.cs">
       <Link>Imports\Connection\DocumentConventionJsonExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\HttpExtensions.cs">
+      <Link>Connection\HttpExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\ConcurrentBoundedList.cs">
       <Link>Imports\Connection\Profiling\ConcurrentBoundedList.cs</Link>
     </Compile>

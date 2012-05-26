@@ -167,7 +167,7 @@ namespace Raven.Database.Extensions
 				context.Response.StatusCode = headers.Value<int>("@Http-Status-Code");
 				context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
 			}
-			context.Response.AddHeader("ETag", etag.ToString());
+			context.Response.AddHeader("ETag", "\"" + etag + "\"");
 		}
 
 		private static string GetHeaderValue(RavenJToken header)
@@ -398,7 +398,19 @@ namespace Raven.Database.Extensions
 
 		public static bool MatchEtag(this IHttpContext context, Guid etag)
 		{
-			return context.Request.Headers["If-None-Match"] == etag.ToString();
+			return EtagHeaderToGuid(context) == etag;
+		}
+
+		internal static Guid EtagHeaderToGuid(IHttpContext context)
+		{
+			var responseHeader = context.Request.Headers["If-None-Match"];
+			if (string.IsNullOrEmpty(responseHeader))
+				return Guid.NewGuid();
+
+			if (responseHeader[0] == '\"')
+				return new Guid(responseHeader.Substring(1, responseHeader.Length - 2));
+
+			return new Guid(responseHeader);
 		}
 
 		public static void WriteEmbeddedFile(this IHttpContext context, string ravenPath, string docPath)

@@ -55,7 +55,7 @@ namespace Raven.Client.Document.Batches
 
 			var list = (from response in responses 
 						let json = (RavenJObject)response.Result
-						select SerializationHelper.ToQueryResult(json, response.Headers["ETag"]))
+						select SerializationHelper.ToQueryResult(json, response.GetEtagHeader()))
 						.ToList();
 
 			var queryResult = shardStrategy.MergeQueryResults(queryOperation.IndexQuery, list);
@@ -74,7 +74,7 @@ namespace Raven.Client.Document.Batches
 			if (response.Status == 404)
 				throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + Environment.NewLine + response.Result);
 			var json = (RavenJObject)response.Result;
-			var queryResult = SerializationHelper.ToQueryResult(json, response.Headers["ETag"]);
+			var queryResult = SerializationHelper.ToQueryResult(json, response.GetEtagHeader());
 			HandleResponse(queryResult);
 		}
 
