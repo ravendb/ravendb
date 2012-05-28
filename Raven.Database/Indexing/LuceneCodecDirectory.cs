@@ -134,8 +134,15 @@ namespace Raven.Database.Indexing
 				this.stream = applyCodecs(file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
 			}
 
+			~CodecIndexInput()
+			{
+				System.Diagnostics.Debug.WriteLine("~CodecIndexInput() " + file.FullName + "!");
+				Close();
+			}
+
 			public override void Close()
 			{
+				GC.SuppressFinalize(this);
 				stream.Close();
 			}
 
@@ -189,8 +196,15 @@ namespace Raven.Database.Indexing
 				this.stream = applyCodecs(file.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite));
 			}
 
+			~CodecIndexOutput()
+			{
+				System.Diagnostics.Debug.WriteLine("~CodecIndexOutput() " + file.FullName + "!");
+				Close();
+			}
+
 			public override void Close()
 			{
+				GC.SuppressFinalize(this);
 				stream.Close();
 			}
 

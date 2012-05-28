@@ -233,11 +233,29 @@ namespace Raven.Tests
 
 		protected void ClearDatabaseDirectory()
 		{
-			IOExtensions.DeleteDirectory(DbName);
-			IOExtensions.DeleteDirectory(DbDirectory);
+			bool isRetry = false;
 
-			// Delete tenants created using the EnsureDatabaseExists method.
-			IOExtensions.DeleteDirectory("Tenants");
+			while (true)
+			{
+				try
+				{
+					IOExtensions.DeleteDirectory(DbName);
+					IOExtensions.DeleteDirectory(DbDirectory);
+
+					// Delete tenants created using the EnsureDatabaseExists method.
+					IOExtensions.DeleteDirectory("Tenants");
+					break;
+				}
+				catch (IOException ex)
+				{
+					if (isRetry)
+						throw;
+
+					GC.Collect();
+					GC.WaitForPendingFinalizers();
+					isRetry = true;
+				}
+			}
 		}
 
 		public double Timer(Action action)
