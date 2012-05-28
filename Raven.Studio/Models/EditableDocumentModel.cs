@@ -193,10 +193,10 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public void SetCurrentDocumentKey(string docId)
+		public void SetCurrentDocumentKey(string docId, bool dontOpenNewTag = false)
 		{
 			if (DocumentKey != null && DocumentKey != docId)
-				UrlUtil.Navigate("/edit?id=" + docId);
+				UrlUtil.Navigate("/edit?id=" + docId, dontOpenNewTag);
 
 			DocumentKey = Key = docId;
 		}
@@ -595,7 +595,7 @@ namespace Raven.Studio.Models
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
 						document.Etag = result.ETag;
-						document.SetCurrentDocumentKey(result.Key);
+						document.SetCurrentDocumentKey(result.Key, dontOpenNewTag: true);
 					})
 					.ContinueOnSuccess(() => new RefreshDocumentCommand(document).Execute(null))
 					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
