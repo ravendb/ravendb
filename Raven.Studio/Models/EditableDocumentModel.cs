@@ -585,7 +585,12 @@ namespace Raven.Studio.Models
 
 				document.UpdateMetadata(metadata);
 				ApplicationModel.Current.AddNotification(new Notification("Saving document " + document.Key + " ..."));
-				DatabaseCommands.PutAsync(document.Key, document.Etag, doc, metadata)
+				var url = new UrlParser(UrlUtil.Url);
+				var docId = url.GetQueryParam("id");
+				Guid? etag = string.Equals(docId , document.Key, StringComparison.InvariantCultureIgnoreCase) ? 
+					document.Etag : Guid.Empty;
+			
+				DatabaseCommands.PutAsync(document.Key, etag, doc, metadata)
 					.ContinueOnSuccess(result =>
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
