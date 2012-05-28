@@ -74,18 +74,15 @@ namespace Raven.Database.Server.Responders
 
 		private void OnGet(IHttpContext context, string index)
 		{
-			var debug = context.Request.QueryString["debug"];
-			bool result;
-			if ("yes".Equals(context.Request.QueryString["definition"], StringComparison.InvariantCultureIgnoreCase) || 
-				bool.TryParse(context.Request.QueryString["definition"], out result) && result)
+			if (string.IsNullOrEmpty(context.Request.QueryString["definition"]) == false)
 			{
 				GetIndexDefinition(context, index);
 			}
-			if("yes".Equals(context.Request.QueryString["source"], StringComparison.InvariantCultureIgnoreCase))
+			if (string.IsNullOrEmpty(context.Request.QueryString["source"]) == false)
 			{
 				GetIndexSource(context, index);
 			}
-			else if("map".Equals(debug,StringComparison.InvariantCultureIgnoreCase))
+			else if (string.IsNullOrEmpty(context.Request.QueryString["mapresults"]) == false)
 			{
 				GetIndexMappedResult(context, index);
 			}
