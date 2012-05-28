@@ -198,6 +198,7 @@ namespace Raven.Studio.Models
 			if (DocumentKey != null && DocumentKey != docId)
 				UrlUtil.Navigate("/edit?id=" + docId, dontOpenNewTag);
 
+			Mode = DocumentMode.DocumentWithId;
 			DocumentKey = Key = docId;
 		}
 
