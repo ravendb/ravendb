@@ -19,7 +19,7 @@ namespace Raven.Bundles.Quotas.Size
 		{
 			return
 				(SizeQuotaConfiguration)
-				database.ExternalState.GetOrAddAtomically("Raven.Bundles.Quotas.SizeQuotaConfiguration", s =>
+				database.ExtensionsState.GetOrAddAtomically("Raven.Bundles.Quotas.SizeQuotaConfiguration", s =>
 				{
 					var sizeQuotaConfiguration = new SizeQuotaConfiguration(database);
 					return sizeQuotaConfiguration;

@@ -506,5 +506,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Provide statistics about the query, such as total count of matching records
 		/// </summary>
 		TSelf Statistics(out RavenQueryStatistics stats);
+
+		/// <summary>
+		/// Select the default field to use for this query
+		/// </summary>
+		TSelf UsingDefaultField(string field);
 	}
 }

@@ -29,7 +29,7 @@ namespace Raven.StressTests.Tenants
 			{
 				for (int i = 1; i <= count; i++)
 				{
-					var tenantName = "Tenant " + i;
+					var tenantName = "Tenant-" + i;
 					documentStore.DatabaseCommands.EnsureDatabaseExists(tenantName);
 				}
 
@@ -37,7 +37,7 @@ namespace Raven.StressTests.Tenants
 				{
 					for (int i = 1; i <= count; i++)
 					{
-						var tenantName = "Tenant " + i;
+						var tenantName = "Tenant-" + i;
 						var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
 						databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject());
 					}

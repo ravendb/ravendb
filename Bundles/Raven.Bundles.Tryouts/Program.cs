@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using Raven.Bundles.Tests.Expiration;
 using Raven.Bundles.Tests.Replication;
+using Raven.Bundles.Tests.Replication.Bugs;
 
 namespace Raven.Bundles.Tryouts
 {
@@ -17,14 +18,9 @@ namespace Raven.Bundles.Tryouts
 		static void Main(string[] args)
 		{
 			Console.WriteLine("starting...");
-			for (int i = 0; i < 10000; i++)
+			using (var x = new David())
 			{
-				using (var x = new SimpleReplication())
-				{
-					x.Can_replicate_between_two_instances();
-				}
-				Console.Write(i + "\r");
-
+				x.Can_replicate_between_two_instances_create_delete_create_quickly();
 			}
 		}
 	}

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Xunit;
@@ -19,7 +20,6 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 					var blogPosts = from post in session.Query<BlogPost>()
 					                where post.Tags.Any(tag => tag == "RavenDB")
 					                select post;
-
 
 					Console.WriteLine(blogPosts);
 					session.Query<User>()
@@ -162,10 +162,47 @@ namespace Raven.Tests.Bugs.QueryOptimizer
 				Assert.Equal("test2", queryResult.IndexName);
 			}
 		}
+
+		[Fact]
+		public void WillNotSelectExistingIndexIfFieldAnalyzedSettingsDontMatch()
+		{
+			//https://groups.google.com/forum/#!topic/ravendb/DYjvNjNIiho/discussion
+			using (var store = NewDocumentStore())
+			{
+				store.DatabaseCommands.PutIndex("test",
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Title, doc.BodyText }",
+													Indexes = { { "Title", FieldIndexing.Analyzed } }
+												});
+
+				var queryResult = store.DatabaseCommands.Query("dynamic",
+															   new IndexQuery
+															   {
+																   Query = "Title:Matt"
+															   },
+															   new string[0]);
+
+				//Because the "test" index has a field set to Analyzed (and the default is Non-Analysed), 
+				//it should NOT be considered a match by the query optimiser!
+				Assert.NotEqual("test", queryResult.IndexName);
+
+				queryResult = store.DatabaseCommands.Query("dynamic",
+															   new IndexQuery
+															   {
+																   Query = "BodyText:Matt"
+															   },
+															   new string[0]);
+				//This query CAN use the existing index because "BodyText" is NOT set to analyzed
+				Assert.Equal("test", queryResult.IndexName);
+			}
+		}
 	}
 
 	public class BlogPost
 	{
 		public string[] Tags { get; set; }
+		public string Title { get; set; }
+		public string BodyText { get; set; }
 	}
 }

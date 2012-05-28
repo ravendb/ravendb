@@ -356,6 +356,8 @@ namespace Raven.Client.Embedded
 				includeCmd.Execute(result);
 			}
 
+			includeCmd.AlsoInclude(queryResult.IdsToInclude);
+
 			EnsureLocalDate(queryResult.Includes);
 
 			return queryResult;

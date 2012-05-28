@@ -118,10 +118,6 @@ namespace Raven.Tests
 				Thread.Sleep(25);
 		}
 
-		protected virtual void ConfigureServer(RavenConfiguration configuration)
-		{
-		}
-
 		protected void WaitForUserToContinueTheTest()
 		{
 			if (Debugger.IsAttached == false)
@@ -168,11 +164,11 @@ namespace Raven.Tests
 			{
 				using (var documentStore = new DocumentStore
 											{
+												Url = "http://localhost:" + port,
 												Conventions =
 													{
 														FailoverBehavior = FailoverBehavior.FailImmediately
 													},
-												Url = "http://localhost:" + port
 											}.Initialize())
 				{
 					CreateDefaultIndexes(documentStore);

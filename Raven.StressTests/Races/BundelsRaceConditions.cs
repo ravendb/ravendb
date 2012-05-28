@@ -10,7 +10,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void FailoverBetweenTwoMultiTenantDatabases_CanReplicateBetweenTwoMultiTenantDatabases()
 		{
-			Run<FailoverBetweenTwoMultiTenantDatabases>(x => x.CanReplicateBetweenTwoMultiTenantDatabases(), 2000);
+			Run<FailoverBetweenTwoMultiTenantDatabases>(x => x.CanReplicateBetweenTwoMultiTenantDatabases(), 100);
 		}
 		
 		[Fact]
@@ -28,25 +28,25 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void SimpleLogin()
 		{
-			Run<SimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists());
+			Run<SimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 40);
 		}
 
 		[Fact]
 		public void AsyncSimpleLogin()
 		{
-			Run<AsyncSimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 10000);
+			Run<AsyncSimpleLogin>(x => x.WillGetAnErrorWhenTryingToLoginIfUserDoesNotExists(), 40);
 		}
 		
 		[Fact]
 		public void CanMergeResultFromAllPostsShards()
 		{
-			Run<CanQueryOnlyPosts>(x => x.CanMergeResultFromAllPostsShards(), 10000);
+			Run<CanQueryOnlyPosts>(x => x.CanMergeResultFromAllPostsShards(), 10);
 		}
 		
 		[Fact]
 		public void SimpleReplication()
 		{
-			Run<SimpleReplication>(x => x.Can_replicate_between_two_instances(), 10000);
+			Run<SimpleReplication>(x => x.Can_replicate_between_two_instances(), 200);
 		}
 	}
 }

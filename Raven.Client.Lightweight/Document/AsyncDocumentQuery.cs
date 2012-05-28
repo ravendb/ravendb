@@ -23,14 +23,14 @@ namespace Raven.Client.Document
 		/// </summary>
 		public AsyncDocumentQuery(InMemoryDocumentSessionOperations session,
 #if !SILVERLIGHT
-			IDatabaseCommands databaseCommands,
+	IDatabaseCommands databaseCommands,
 #endif
-			IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] projectionFields, IDocumentQueryListener[] queryListeners)
-			: base(session, 
+	IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] projectionFields, IDocumentQueryListener[] queryListeners)
+			: base(session,
 #if !SILVERLIGHT
-			databaseCommands, 
+	databaseCommands,
 #endif
-			asyncDatabaseCommands, indexName, projectionFields, queryListeners)
+	asyncDatabaseCommands, indexName, projectionFields, queryListeners)
 		{
 		}
 
@@ -603,12 +603,12 @@ namespace Raven.Client.Document
 		{
 			var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(theSession,
 #if !SILVERLIGHT
-																		 theDatabaseCommands,
+	theDatabaseCommands,
 #endif
 #if !NET_3_5
-																		 theAsyncDatabaseCommands,
+	theAsyncDatabaseCommands,
 #endif
-																		 indexName, fields, queryListeners)
+	indexName, fields, queryListeners)
 										{
 											pageSize = pageSize,
 											theQueryText = new StringBuilder(theQueryText.ToString()),
@@ -763,6 +763,12 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Statistics(out RavenQueryStatistics stats)
 		{
 			Statistics(out stats);
+			return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.UsingDefaultField(string field)
+		{
+			UsingDefaultField(field);
 			return this;
 		}
 	}

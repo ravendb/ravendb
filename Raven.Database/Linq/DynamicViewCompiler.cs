@@ -489,8 +489,10 @@ Reduce only fields: {2}
 			TransformQueryToClass();
 			
 			GeneratedType = QueryParsingUtils.Compile(CompiledQueryText, CSharpSafeName, CompiledQueryText, extensions, basePath);
-			
-			return (AbstractViewGenerator) Activator.CreateInstance(GeneratedType);
+
+			var abstractViewGenerator = (AbstractViewGenerator) Activator.CreateInstance(GeneratedType);
+			abstractViewGenerator.SourceCode = CompiledQueryText;
+			return abstractViewGenerator;
 		}
 	}
 }

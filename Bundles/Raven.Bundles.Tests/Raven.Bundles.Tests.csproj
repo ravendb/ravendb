@@ -67,6 +67,7 @@
     <Compile Include="Authentication\SmugglerOAuth.cs" />
     <Compile Include="Authentication\UsingDatabaseCommands.cs" />
     <Compile Include="Authorization\AuthorizationTest.cs" />
+    <Compile Include="Authorization\Bugs\fampinheiro.cs" />
     <Compile Include="Authorization\Bugs\Jalchr.cs" />
     <Compile Include="Authorization\Bugs\Kwal.cs" />
     <Compile Include="Authorization\Bugs\LoadingSavedInfo.cs" />
@@ -81,6 +82,7 @@
     <Compile Include="Expiration\Expiration.cs" />
     <Compile Include="Expiration\WithCascade.cs" />
     <Compile Include="IndexedProperties\IndexedProperties.cs" />
+    <Compile Include="IndexReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisQueryParametersTests.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisTests.cs" />
@@ -88,6 +90,7 @@
     <Compile Include="MoreLikeThis\TestWithInMemoryDatabase.cs" />
     <Compile Include="Replication\AttachmentReplication.cs" />
     <Compile Include="Replication\AttachmentReplicationBugs.cs" />
+    <Compile Include="Replication\Bugs\David.cs" />
     <Compile Include="Replication\Bugs\MultipleWritesInReplicationWindow.cs" />
     <Compile Include="Replication\Bugs\ReplicatingDanish.cs" />
     <Compile Include="Replication\Bugs\SameEtagFromDifferentServers.cs" />
@@ -103,6 +106,7 @@
     <Compile Include="Replication\WritesDuringFailover.cs" />
     <Compile Include="UniqueConstraints\Bugs\Lars.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy.cs" />
+    <Compile Include="UniqueConstraints\Bugs\Troy2.cs" />
     <Compile Include="UniqueConstraints\CreateTests.cs" />
     <Compile Include="UniqueConstraints\DeleteTests.cs" />
     <Compile Include="UniqueConstraints\ExtensionCheckTests.cs" />

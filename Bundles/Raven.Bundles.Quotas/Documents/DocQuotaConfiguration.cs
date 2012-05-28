@@ -18,7 +18,7 @@ namespace Raven.Bundles.Quotas.Documents
 		{
 			return
 				(DocQuotaConfiguration)
-				database.ExternalState.GetOrAddAtomically("Raven.Bundles.Quotas.DocQuotaConfiguration", s =>
+				database.ExtensionsState.GetOrAddAtomically("Raven.Bundles.Quotas.DocQuotaConfiguration", s =>
 				{
 					var sizeQuotaConfiguration = new DocQuotaConfiguration(database);
 					return sizeQuotaConfiguration;

@@ -112,7 +112,6 @@ namespace Raven.Database
 			AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
 			AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
 
-			ExternalState = new ConcurrentDictionary<string, object>();
 			Name = configuration.DatabaseName;
 			if(configuration.CustomTaskScheduler != null)
 			{
@@ -284,8 +283,6 @@ namespace Raven.Database
 			}
 		}
 		
-		public ConcurrentDictionary<string, object> ExternalState { get; set; }
-
 		public InMemoryRavenConfiguration Configuration
 		{
 			get;
@@ -769,7 +766,7 @@ namespace Raven.Database
 			return findIndexCreationOptions;
 		}
 
-		public QueryResult Query(string index, IndexQuery query)
+		public QueryResultWithIncludes Query(string index, IndexQuery query)
 		{
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
@@ -777,6 +774,7 @@ namespace Raven.Database
 			Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
 			Guid resultEtag = Guid.Empty;
 			var nonAuthoritativeInformation = false;
+			var idsToLoad = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 			TransactionalStorage.Batch(
 				actions =>
 				{
@@ -794,7 +792,7 @@ namespace Raven.Database
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					var docRetriever = new DocumentRetriever(actions, ReadTriggers);
+					var docRetriever = new DocumentRetriever(actions, ReadTriggers, idsToLoad);
 					var indexDefinition = GetIndexDefinition(index);
 					var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
 														  viewGenerator.ReduceDefinition == null
@@ -840,9 +838,8 @@ namespace Raven.Database
 					{
 						throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
 					}
-
 				});
-			return new QueryResult
+			return new QueryResultWithIncludes
 			{
 				IndexName = index,
 				Results = list,
@@ -852,7 +849,8 @@ namespace Raven.Database
 				TotalResults = query.TotalSize.Value,
 				IndexTimestamp = indexTimestamp.Item1,
 				IndexEtag = indexTimestamp.Item2,
-				ResultEtag = resultEtag
+				ResultEtag = resultEtag,
+				IdsToInclude = idsToLoad
 			};
 		}
 

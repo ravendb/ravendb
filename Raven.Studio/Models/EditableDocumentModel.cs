@@ -193,11 +193,12 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public void SetCurrentDocumentKey(string docId)
+		public void SetCurrentDocumentKey(string docId, bool dontOpenNewTag = false)
 		{
 			if (DocumentKey != null && DocumentKey != docId)
-				UrlUtil.Navigate("/edit?id=" + docId);
+				UrlUtil.Navigate("/edit?id=" + docId, dontOpenNewTag);
 
+			Mode = DocumentMode.DocumentWithId;
 			DocumentKey = Key = docId;
 		}
 
@@ -585,12 +586,17 @@ namespace Raven.Studio.Models
 
 				document.UpdateMetadata(metadata);
 				ApplicationModel.Current.AddNotification(new Notification("Saving document " + document.Key + " ..."));
-				DatabaseCommands.PutAsync(document.Key, document.Etag, doc, metadata)
+				var url = new UrlParser(UrlUtil.Url);
+				var docId = url.GetQueryParam("id");
+				Guid? etag = string.Equals(docId , document.Key, StringComparison.InvariantCultureIgnoreCase) ? 
+					document.Etag : Guid.Empty;
+			
+				DatabaseCommands.PutAsync(document.Key, etag, doc, metadata)
 					.ContinueOnSuccess(result =>
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
 						document.Etag = result.ETag;
-						document.SetCurrentDocumentKey(result.Key);
+						document.SetCurrentDocumentKey(result.Key, dontOpenNewTag: true);
 					})
 					.ContinueOnSuccess(() => new RefreshDocumentCommand(document).Execute(null))
 					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));

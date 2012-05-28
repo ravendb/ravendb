@@ -52,18 +52,17 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="MultiThreaded\BatchOperation.cs" />
-    <Compile Include="MultiThreaded\MultiThreaded.cs" />
-    <Compile Include="MultiThreaded\PutAndBatchOperation.cs" />
-    <Compile Include="MultiThreaded\PutOperation.cs" />
+    <Compile Include="Storage\MultiThreaded\BatchOperation.cs" />
+    <Compile Include="Storage\MultiThreaded\MultiThreaded.cs" />
+    <Compile Include="Storage\MultiThreaded\PutAndBatchOperation.cs" />
+    <Compile Include="Storage\MultiThreaded\PutOperation.cs" />
     <Compile Include="Races\Tobi.cs" />
-    <Compile Include="Races\ShardsRaces.cs" />
     <Compile Include="Races\BundelsRaceConditions.cs" />
     <Compile Include="Races\RaceConditions.cs" />
-    <Compile Include="Storage\MultiThreadedStress\BatchOperationStress.cs" />
-    <Compile Include="Storage\MultiThreadedStress\PutOperationStress.cs" />
+    <Compile Include="Storage\MultiThreaded\Stress\BatchOperationStress.cs" />
+    <Compile Include="Storage\MultiThreaded\Stress\PutAndBatchOperationStress.cs" />
+    <Compile Include="Storage\MultiThreaded\Stress\PutOperationStress.cs" />
     <Compile Include="StressTest.cs" />
-    <Compile Include="Storage\MultiThreadedStress\PutAndBatchOperationStress.cs" />
     <Compile Include="Tenants\ConcurrentlyOpenedTenantsUsingEsent.cs" />
   </ItemGroup>
   <ItemGroup>

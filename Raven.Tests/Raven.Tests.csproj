@@ -438,6 +438,7 @@
     <Compile Include="Bugs\Stacey\InServerDatabase.cs" />
     <Compile Include="Bugs\Stacey\Models.cs" />
     <Compile Include="Bugs\Stacey\Aspects.cs" />
+    <Compile Include="Bugs\TenantsName.cs" />
     <Compile Include="Bugs\tmp.cs" />
     <Compile Include="Bugs\TransformResults\SortHintTester.cs" />
     <Compile Include="Bugs\SortingById.cs" />
@@ -546,6 +547,10 @@
     <Compile Include="Indexes\UsingCustomLuceneAnalyzer.cs" />
     <Compile Include="Indexes\WithDecimalValue.cs" />
     <Compile Include="IndexQueryUrl.cs" />
+    <Compile Include="Issues\RavenDB_299.cs" />
+    <Compile Include="Issues\RavenDB_301.cs" />
+    <Compile Include="Issues\RavenDB_302.cs" />
+    <Compile Include="MailingList\AccesscControlHeaders.cs" />
     <Compile Include="MailingList\Ben.cs" />
     <Compile Include="MailingList\BrianVallelunga.cs" />
     <Compile Include="MailingList\Bruno.cs" />
@@ -589,6 +594,7 @@
     <Compile Include="MailingList\Idsa\IdsaTest.cs" />
     <Compile Include="MailingList\IndexWhereClause .cs" />
     <Compile Include="MailingList\JamesCrowley.cs" />
+    <Compile Include="MailingList\Joel.cs" />
     <Compile Include="MailingList\Johnson.cs" />
     <Compile Include="MailingList\Jorre.cs" />
     <Compile Include="MailingList\Mark2.cs" />
@@ -606,6 +612,7 @@
     <Compile Include="MailingList\LazyWithIncludes.cs" />
     <Compile Include="MailingList\PhilJones_Search.cs" />
     <Compile Include="MailingList\PhilJones\Projections.cs" />
+    <Compile Include="MailingList\PhilJones_SelectMany_NoResults.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
     <Compile Include="MailingList\RecreatingIndexes.cs" />
     <Compile Include="MailingList\RobinM\AttachmentsStatic.cs" />
@@ -618,6 +625,7 @@
     <Compile Include="MailingList\Stacey\InServerTesting.cs" />
     <Compile Include="MailingList\StartsWith.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
+    <Compile Include="MailingList\Stockholm.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />
     <Compile Include="MailingList\WallaceTurner.cs" />

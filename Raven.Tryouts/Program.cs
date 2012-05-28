@@ -1,93 +1,30 @@
-﻿
-using System;
+﻿using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading;
 using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
 
 namespace Raven.Tryouts
 {
-	public class Foo
-	{
-		public string Bar { get; set; }
-	}
-
-	public class SimpleReduceResult
-	{
-		public string Bar { get; set; }
-		public long Count { get; set; }
-	}
-
-	public class SimpleMRIndex : AbstractIndexCreationTask<Foo,SimpleReduceResult>
-	{
-		public SimpleMRIndex()
-		{
-			Map = foos => from foo in foos
-						  select new
-						  {
-							  Bar = foo.Bar,
-							  Count = 1L
-						  };
-
-			Reduce = results => from result in results
-								group result by result.Bar
-									into g
-									select new
-									{
-										Bar = g.Key,
-										Count = g.Sum(c => c.Count)
-									};
-		}
-	}
-
 	class Program
 	{
 		static void Main(string[] args)
 		{
-			using (var store = new EmbeddableDocumentStore
+			using(var docStore = new DocumentStore
 			{
-				DataDirectory = @"~\data",
-				UseEmbeddedHttpServer = true
+				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-
-				var sp = Stopwatch.StartNew();
-				for (int i = 0; i < 5000; i++)
+				Console.WriteLine("Ready...");
+				for (int i = 0; i < 1000; i++)
 				{
-					using (var session = store.OpenSession())
+					Console.ReadLine();
+					using (var session = docStore.OpenSession())
 					{
-						for (int j = 0; j < 100; j++)
-						{
-							session.Store(new Foo { Bar = "IamBar" });
-						}
-						session.SaveChanges();
-					}
-					if(i % 100 == 0)
-					{
-						Console.Write(".");
+						var sp = Stopwatch.StartNew();
+						var user = session.Load<dynamic>("users/ayende");
+						Console.WriteLine("{0} - {1} - {2}", i, user.Name, sp.ElapsedMilliseconds);
 					}
 				}
-
-				Console.Clear();
-				Console.WriteLine("Wrote 500,000 docs in " + sp.Elapsed);
-				Console.WriteLine("Done inserting data");
-
-				sp.Restart();
-				new SimpleMRIndex().Execute(store);
-				Console.WriteLine("indexing...");
-
-				while (store.DatabaseCommands.GetStatistics().StaleIndexes.Length > 0)
-				{
-					Console.Write("\r{0:#,#} - {1:#,#}",store.DatabaseCommands.GetStatistics().Indexes[0].IndexingAttempts, store.DatabaseCommands.GetStatistics().Indexes[0].ReduceIndexingAttempts);
-					Thread.Sleep(100);
-				}
-				Console.WriteLine();
-				Console.WriteLine("Indexed 500,000 docs in " + sp.Elapsed);
-
-				Console.ReadLine();
 			}
-		}
+		} 
 	}
 }

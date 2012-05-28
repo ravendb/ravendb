@@ -29,7 +29,7 @@ namespace Raven.Database.Queries
 			temporaryIndexes = new ConcurrentDictionary<string, TemporaryIndexInfo>();
 		}
 
-		public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery query)
+		public QueryResultWithIncludes ExecuteDynamicQuery(string entityName, IndexQuery query)
 		{
 			// Create the map
 			var map = DynamicQueryMapping.Create(documentDatabase, query, entityName);
@@ -71,10 +71,10 @@ namespace Raven.Database.Queries
 			}
 		}
 
-		private QueryResult ExecuteActualQuery(IndexQuery query, DynamicQueryMapping map, Tuple<string, bool> touchTemporaryIndexResult, string realQuery)
+		private QueryResultWithIncludes ExecuteActualQuery(IndexQuery query, DynamicQueryMapping map, Tuple<string, bool> touchTemporaryIndexResult, string realQuery)
 		{
 			// Perform the query until we have some results at least
-			QueryResult result;
+			QueryResultWithIncludes result;
 			var sp = Stopwatch.StartNew();
 			while (true)
 			{
@@ -89,6 +89,7 @@ namespace Raven.Database.Queries
 													GroupBy = query.GroupBy,
 													AggregationOperation = query.AggregationOperation,
 													SortedFields = query.SortedFields,
+													DefaultField = query.DefaultField
 												});
 
 				if (!touchTemporaryIndexResult.Item2 ||

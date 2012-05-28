@@ -38,6 +38,8 @@ namespace Raven.Database.Linq
 		private static readonly Regex selectManyOrFrom = new Regex(@"( (?<!^)\s from \s ) | ( \.SelectMany\( )", 
 			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
+		public string SourceCode { get; set; }
+
 		public int CountOfSelectMany
 		{
 			get

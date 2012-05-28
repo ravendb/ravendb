@@ -20,7 +20,7 @@ namespace Raven.Studio.Infrastructure
 			Execute.OnTheUI(() => Application.Current.Host.NavigationState = source.ToString());
 		}
 
-		public static void Navigate(string url)
+		public static void Navigate(string url, bool dontOpenNewTag = false)
 		{
 			if (url == null)
 				return;
@@ -29,7 +29,7 @@ namespace Raven.Studio.Infrastructure
 
 			Execute.OnTheUI(() =>
 			                	{
-			                		if (Keyboard.Modifiers == ModifierKeys.Control)
+									if (Keyboard.Modifiers == ModifierKeys.Control && dontOpenNewTag == false)
 			                		{
 			                			OpenUrlOnANewTab(url);
 										return;

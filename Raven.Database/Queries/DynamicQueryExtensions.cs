@@ -11,7 +11,7 @@ namespace Raven.Database.Queries
 {
 	public static class DynamicQueryExtensions
 	{
-		public static QueryResult ExecuteDynamicQuery(this DocumentDatabase self, string entityName, IndexQuery indexQuery)
+		public static QueryResultWithIncludes ExecuteDynamicQuery(this DocumentDatabase self, string entityName, IndexQuery indexQuery)
 		{
 			var dynamicQueryRunner = (DynamicQueryRunner)self.ExtensionsState.GetOrAddAtomically(typeof(DynamicQueryExtensions), o => new DynamicQueryRunner(self));
 			return dynamicQueryRunner.ExecuteDynamicQuery(entityName, indexQuery);
