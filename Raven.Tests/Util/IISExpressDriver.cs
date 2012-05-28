@@ -12,7 +12,7 @@ namespace Raven.Tests.Util
 		{
 			var sitePhysicalDirectory = physicalPath;
 
-			foreach (var process in Process.GetProcessesByName("iisexpress.exd"))
+			foreach (var process in Process.GetProcessesByName("iisexpress"))
 			{
 				process.Kill();
 			}
