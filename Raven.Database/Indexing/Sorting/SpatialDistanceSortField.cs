@@ -54,7 +54,7 @@ namespace Raven.Database.Indexing.Sorting
 			public SpatialDistanceFieldComparator(double lat, double lng, int numHits)
 			{
 				values = new double[numHits];
-				originPt = SpatialIndex.RavenSpatialContext.MakePoint(lng, lat);
+				originPt = SpatialIndex.Context.MakePoint(lng, lat);
 			}
 
 			public override int Compare(int slot1, int slot2)
@@ -123,7 +123,7 @@ namespace Raven.Database.Indexing.Sorting
 						Shape termval;
 						try
 						{
-							termval = SpatialIndex.RavenSpatialContext.ReadShape(term.Text()); // read shape
+							termval = SpatialIndex.Context.ReadShape(term.Text()); // read shape
 						}
 						catch (InvalidShapeException)
 						{
@@ -134,7 +134,7 @@ namespace Raven.Database.Indexing.Sorting
 						if (pt == null)
 							continue;
 
-						var distance = SpatialIndex.RavenSpatialContext.GetDistCalc().Distance(pt, originPt);
+						var distance = SpatialIndex.Context.GetDistCalc().Distance(pt, originPt);
 
 						if (retArray == null)
 							// late init
