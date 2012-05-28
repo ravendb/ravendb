@@ -78,7 +78,7 @@ namespace Raven.Database.Server.Responders
 			{
 				GetIndexDefinition(context, index);
 			}
-			if (string.IsNullOrEmpty(context.Request.QueryString["source"]) == false)
+			else if (string.IsNullOrEmpty(context.Request.QueryString["source"]) == false)
 			{
 				GetIndexSource(context, index);
 			}
