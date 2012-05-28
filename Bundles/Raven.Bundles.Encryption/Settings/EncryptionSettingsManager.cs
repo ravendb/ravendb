@@ -42,7 +42,9 @@ namespace Raven.Bundles.Encryption.Settings
 					+ "The key should be in base 64, and should be at least " + Constants.MinimumAcceptableEncryptionKeyLength
 					+ " bytes long. You may use EncryptionSettings.GenerateRandomEncryptionKey() to generate a key.\n"
 					+ "If you'd like, here's a key that was randomly generated:\n"
-					+ Convert.ToBase64String(EncryptionSettings.GenerateRandomEncryptionKey()));
+					+ "<add key=\"Raven/Encryption/Key\" value=\""
+					+ Convert.ToBase64String(EncryptionSettings.GenerateRandomEncryptionKey())
+					+ "\" />");
 
 			try
 			{
