@@ -96,7 +96,7 @@ namespace Raven.Studio.Models
                 Navigator = null;
                 CurrentIndex = 0;
                 TotalItems = 0;
-                SetCurrentDocumentId(null);
+				SetCurrentDocumentKey(null);
 
 				return;
 			}
@@ -121,7 +121,7 @@ namespace Raven.Studio.Models
 				{
                             Mode = DocumentMode.DocumentWithId;
                             LocalId = result.Document.Key;
-                            SetCurrentDocumentId(result.Document.Key);
+							SetCurrentDocumentKey(result.Document.Key);
 				}
 
                         isLoaded = true;
@@ -195,7 +195,7 @@ namespace Raven.Studio.Models
             if (docId != null && DocumentKey != docId)
                 UrlUtil.Navigate("/edit?id=" + docId);
 
-            SetCurrentDocumentId(docId);
+			SetCurrentDocumentKey(docId);
 		}
 
 		public void SetCurrentDocumentKey(string docId, bool dontOpenNewTag = false)
@@ -235,6 +235,8 @@ namespace Raven.Studio.Models
 			OnPropertyChanged(() => Metadata);
 			JsonMetadata = metadataAsJson.ToString(Formatting.Indented);
 		}
+
+
 
 		public ObservableCollection<LinkModel> References { get; private set; }
 		public BindableCollection<LinkModel> Related { get; private set; }
