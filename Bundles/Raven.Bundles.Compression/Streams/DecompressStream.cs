@@ -124,7 +124,8 @@ namespace Raven.Bundles.Compression.Streams
 
 		public override void Close()
 		{
-			deflateStream.Close();
+			if (deflateStream != null)
+				deflateStream.Close();
 			underlyingStream.Close();
 		}
 	}
