@@ -61,6 +61,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Encryption", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Encryption.IndexFileCodec", "Raven.Bundles.Encryption.IndexFileCodec\Raven.Bundles.Encryption.IndexFileCodec.csproj", "{1BB3D982-9675-400D-A247-547C071FBE35}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests", "..\Raven.Tests\Raven.Tests.csproj", "{267AC60C-751E-42E9-AA18-66035DEFF63A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Compression", "Raven.Bundles.Compression\Raven.Bundles.Compression.csproj", "{DA091139-CA30-4322-891E-96AE7CF238CA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -141,6 +145,16 @@ Global
 		{22BCC20F-FC1F-4523-A717-77CDF8519C1D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{22BCC20F-FC1F-4523-A717-77CDF8519C1D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{22BCC20F-FC1F-4523-A717-77CDF8519C1D}.Release|x86.ActiveCfg = Release|Any CPU
+		{267AC60C-751E-42E9-AA18-66035DEFF63A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{267AC60C-751E-42E9-AA18-66035DEFF63A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{267AC60C-751E-42E9-AA18-66035DEFF63A}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{267AC60C-751E-42E9-AA18-66035DEFF63A}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{267AC60C-751E-42E9-AA18-66035DEFF63A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{267AC60C-751E-42E9-AA18-66035DEFF63A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{267AC60C-751E-42E9-AA18-66035DEFF63A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{267AC60C-751E-42E9-AA18-66035DEFF63A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{267AC60C-751E-42E9-AA18-66035DEFF63A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{267AC60C-751E-42E9-AA18-66035DEFF63A}.Release|x86.ActiveCfg = Release|Any CPU
 		{2728BBA7-5142-445E-BAA5-142A25E0666D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2728BBA7-5142-445E-BAA5-142A25E0666D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2728BBA7-5142-445E-BAA5-142A25E0666D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -321,6 +335,16 @@ Global
 		{D9CCC62F-0B4E-4B37-BE7E-203D34B4EC4F}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{D9CCC62F-0B4E-4B37-BE7E-203D34B4EC4F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{D9CCC62F-0B4E-4B37-BE7E-203D34B4EC4F}.Release|x86.ActiveCfg = Release|Any CPU
+		{DA091139-CA30-4322-891E-96AE7CF238CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA091139-CA30-4322-891E-96AE7CF238CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA091139-CA30-4322-891E-96AE7CF238CA}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{DA091139-CA30-4322-891E-96AE7CF238CA}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{DA091139-CA30-4322-891E-96AE7CF238CA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DA091139-CA30-4322-891E-96AE7CF238CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA091139-CA30-4322-891E-96AE7CF238CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA091139-CA30-4322-891E-96AE7CF238CA}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{DA091139-CA30-4322-891E-96AE7CF238CA}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{DA091139-CA30-4322-891E-96AE7CF238CA}.Release|x86.ActiveCfg = Release|Any CPU
 		{DA99A419-E137-40DB-9495-0C363B479D4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DA99A419-E137-40DB-9495-0C363B479D4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DA99A419-E137-40DB-9495-0C363B479D4B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
