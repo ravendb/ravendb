@@ -55,6 +55,7 @@ namespace Raven.Studio.Behaviors
         private bool isLoaded;
         private bool internalColumnUpdate;
         private Dictionary<object, double> columnWidths;
+        private ColumnsModel cachedColumnsModel;
 
         public ColumnsModel Columns
         {
@@ -92,7 +93,7 @@ namespace Raven.Studio.Behaviors
         {
             base.OnDetaching();
 
-            StopObservingColumnsModel(Columns);
+            StopObservingColumnsModel();
 
             AssociatedObject.Loaded -= HandleLoaded;
             AssociatedObject.Unloaded -= HandleUnloaded;
@@ -108,7 +109,7 @@ namespace Raven.Studio.Behaviors
             }
 
             isLoaded = false;
-            StopObservingColumnsModel(Columns);
+            StopObservingColumnsModel();
         }
 
         private void HandleLoaded(object sender, RoutedEventArgs e)
@@ -128,7 +129,8 @@ namespace Raven.Studio.Behaviors
         {
             if (columnsModel != null)
             {
-                columnsModel.Columns.CollectionChanged += HandleColumnsChanged;
+                cachedColumnsModel = columnsModel;
+                cachedColumnsModel.Columns.CollectionChanged += HandleColumnsChanged;
             }
         }
 
@@ -139,11 +141,12 @@ namespace Raven.Studio.Behaviors
                 .ToDictionary(c => c.Header, c => c.ActualWidth);
         }
 
-        private void StopObservingColumnsModel(ColumnsModel columnsModel)
+        private void StopObservingColumnsModel()
         {
-            if (columnsModel != null)
+            if (cachedColumnsModel != null)
             {
-                columnsModel.Columns.CollectionChanged -= HandleColumnsChanged;
+                cachedColumnsModel.Columns.CollectionChanged -= HandleColumnsChanged;
+                cachedColumnsModel = null;
             }
         }
 
@@ -349,10 +352,7 @@ namespace Raven.Studio.Behaviors
         {
             var behavior = d as BindColumnsToColumnSetBehavior;
 
-            if (e.OldValue != null)
-            {
-                behavior.StopObservingColumnsModel(e.OldValue as ColumnsModel);
-            }
+            behavior.StopObservingColumnsModel();
 
             if (behavior.isLoaded)
             {
