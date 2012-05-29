@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using NLog;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
@@ -136,8 +137,17 @@ namespace Raven.Database.Indexing
 
 			~CodecIndexInput()
 			{
-				System.Diagnostics.Debug.WriteLine("~CodecIndexInput() " + file.FullName + "!");
-				Close();
+				var log = LogManager.GetCurrentClassLogger();
+				try
+				{
+					log.Log(LogLevel.Error, "~CodecIndexInput() " + file.FullName + "!");
+					Close();
+				}
+				catch (Exception e)
+				{
+					// Can't throw exceptions from the finalizer thread
+					log.LogException(LogLevel.Error, "Cannot dispose of CodecIndexInput: " + e.Message, e);
+				}
 			}
 
 			public override void Close()
@@ -198,8 +208,17 @@ namespace Raven.Database.Indexing
 
 			~CodecIndexOutput()
 			{
-				System.Diagnostics.Debug.WriteLine("~CodecIndexOutput() " + file.FullName + "!");
-				Close();
+				var log = LogManager.GetCurrentClassLogger();
+				try
+				{
+					log.Log(LogLevel.Error, "~CodecIndexOutput() " + file.FullName + "!");
+					Close();
+				}
+				catch (Exception e)
+				{
+					// Can't throw exceptions from the finalizer thread
+					log.LogException(LogLevel.Error, "Cannot dispose of CodecIndexOutput: " + e.Message, e);
+				}
 			}
 
 			public override void Close()
