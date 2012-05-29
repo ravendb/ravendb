@@ -26,7 +26,7 @@
             
             <DataTemplate x:Key="DataTemplate_List_CardView">
                 <ListBox x:Name="DocumentsList"
-						ItemsSource="{Binding Documents}"
+						ItemsSource="{Binding DocumentsWeak}"
 						Style="{StaticResource StealthPagingDocumentList}"
 						Margin="10"
 						ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
@@ -64,20 +64,6 @@
                 </ListBox>
             </DataTemplate>
 
-            <Style x:Key="InvalidBindingColumnHeaderStyle" TargetType="sdk:DataGridColumnHeader" BasedOn="{StaticResource Style_DataGridColumnHeader_Default}">
-                <Setter Property="ContentTemplate">
-                    <Setter.Value>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <Image Source="{StaticResource Image_Error_Tiny}" Stretch="None" Margin="2" 
-                                       ToolTipService.ToolTip="{Binding Binding, StringFormat='{}{0} is not a valid column binding'}"/>
-                                <TextBlock Text="{Binding Header}" Margin="2"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-            
             <DataTemplate x:Key="DataTemplate_List_DetailsView">
                 <sdk:DataGrid x:Name="DocumentsList"
 						ItemsSource="{Binding Documents}"
@@ -87,7 +73,23 @@
                         RowHeight="28" 
                         ClipboardCopyMode="IncludeHeader"
                         SelectionMode="Extended">
-
+                    <sdk:DataGrid.Resources>
+                        <!-- We embed the style in the DataGrid's own Resources dictionary because otherwise referencing it in BindColumnsToColumnSetBehavior
+                        causes a memory leak-->
+                        <Style x:Key="InvalidBindingColumnHeaderStyle" TargetType="sdk:DataGridColumnHeader" BasedOn="{StaticResource Style_DataGridColumnHeader_Default}">
+                            <Setter Property="ContentTemplate">
+                                <Setter.Value>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Image Source="{StaticResource Image_Error_Tiny}" Stretch="None" Margin="2" 
+                                       ToolTipService.ToolTip="{Binding Binding, StringFormat='{}{0} is not a valid column binding'}"/>
+                                            <TextBlock Text="{Binding Header}" Margin="2"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </sdk:DataGrid.Resources>
                     <i:Interaction.Triggers>
                         <!--<Behaviors:StudioKeyTrigger Key="Delete">
                             <i:InvokeCommandAction Command="{StaticResource DeleteDocumentsCommand}"

@@ -27,6 +27,12 @@ namespace Raven.Studio.Models
 
         public VirtualCollection<ViewableDocument> Documents { get; private set; }
         
+        /// <summary>
+        /// This property is used to give bound views a wrapper around the actual VirtualCollection to prevent memory leaks where
+        /// a ListBox subscribes to the ICollectionView.CurrentChanged event, and doesn't unsubscribe
+        /// </summary>
+        public WeakCollectionViewWrapper<VirtualCollection<ViewableDocument>> DocumentsWeak { get { return new WeakCollectionViewWrapper<VirtualCollection<ViewableDocument>>(Documents); } }
+ 
         private ColumnsModel columns;
 
         public bool SkipAutoRefresh { get; set; }
