@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
@@ -8,19 +9,37 @@ using Lucene.Net.Store;
 using Raven.Abstractions.Data;
 using Raven.Database.Indexing;
 using SpellChecker.Net.Search.Spell;
+using Directory = Lucene.Net.Store.Directory;
 
 namespace Raven.Database.Queries
 {
 	public class SuggestionQueryIndexExtension : IIndexExtension
 	{
+		private readonly string key;
 		private readonly string field;
-		private readonly Directory directory = new RAMDirectory();
+		private readonly Directory directory;
 		private readonly SpellChecker.Net.Search.Spell.SpellChecker spellChecker;
 
 		[CLSCompliant(false)]
-		public SuggestionQueryIndexExtension(StringDistance distance, string field, float accuracy)
+		public SuggestionQueryIndexExtension(
+			string key,
+			IndexReader reader,
+			StringDistance distance, 
+			string field, 
+			float accuracy)
 		{
+			this.key = key;
 			this.field = field;
+			
+			if(reader.Directory() is RAMDirectory)
+			{
+				directory = new RAMDirectory();
+			}
+			else
+			{
+				directory = FSDirectory.Open(new DirectoryInfo(key));
+			}
+
 			this.spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(directory, distance);
 			this.spellChecker.SetAccuracy(accuracy);
 		}
