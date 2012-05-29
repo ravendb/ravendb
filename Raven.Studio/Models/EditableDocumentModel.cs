@@ -107,7 +107,7 @@ namespace Raven.Studio.Models
                 result =>
 			{
                         if (result.Document == null)
-															{
+														{
 																HandleDocumentNotFound();
 																return;
 															}
@@ -122,7 +122,7 @@ namespace Raven.Studio.Models
                             Mode = DocumentMode.DocumentWithId;
                             LocalId = result.Document.Key;
 							SetCurrentDocumentKey(result.Document.Key);
-				}
+			}
 
                         isLoaded = true;
                         document.Value = result.Document;
@@ -130,7 +130,7 @@ namespace Raven.Studio.Models
                         TotalItems = (int) result.TotalDocuments;
                     })
                 .Catch();
-		}
+			}
 
 		private void HandleDocumentNotFound()
 		{
@@ -323,12 +323,12 @@ namespace Raven.Studio.Models
 			{
 				double byteCount = Encoding.UTF8.GetByteCount(JsonData) + Encoding.UTF8.GetByteCount(JsonMetadata);
 				string sizeTerm = "Bytes";
-                if (byteCount > 1024*1024)
+				if (byteCount >= 1024 * 1024)
 				{
 					sizeTerm = "MBytes";
-                    byteCount = byteCount/1024*1024;
+					byteCount = byteCount / (1024 * 1024);
 				}
-				else if (byteCount > 1024)
+				else if (byteCount >= 1024)
 				{
 					sizeTerm = "KBytes";
                     byteCount = byteCount/1024;

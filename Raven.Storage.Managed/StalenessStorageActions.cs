@@ -141,6 +141,16 @@ namespace Raven.Storage.Managed
 			return Guid.Empty;
 		}
 
+		public Guid GetMostRecentAttachmentEtag()
+		{
+			foreach (var doc in storage.Attachments["ByEtag"].SkipFromEnd(0))
+			{
+				var docEtag = doc.Value<byte[]>("etag");
+				return new Guid(docEtag);
+			}
+			return Guid.Empty;
+		}
+
 		public Guid? GetMostRecentReducedEtag(string name)
 		{
 			var keyWithHighestEqualTo = storage.MappedResults["ByViewAndEtag"]

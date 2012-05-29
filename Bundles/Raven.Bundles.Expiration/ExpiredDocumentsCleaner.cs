@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using NLog;
@@ -60,45 +61,43 @@ namespace Raven.Bundles.Expiration
 			executing = true;
 			try
 			{
-
 				string nowAsStr;
 				DateTime currentTime;
 				UpdateTimes(out nowAsStr, out currentTime);
-				
+				logger.Debug("Trying to find expired documents to delete");
+				var query = "Expiry:[* TO " + nowAsStr + "]";
+
+				var list = new List<string>();
+				int start = 0;
 				while (true)
 				{
-					
+					const int pageSize = 1024;
 					var queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
 					{
-						PageSize = 1024,
+						Start = start,
+						PageSize = pageSize,
 						Cutoff = currentTime,
-						Query = "Expiry:[* TO " + nowAsStr + "]",
+						Query = query,
 						FieldsToFetch = new[] { "__document_id" }
 					});
 
-					if (queryResult.IsStale)
-					{
-						Thread.Sleep(100);
-						continue;
-					}
+					if(queryResult.Results.Count == 0)
+						break;
 
-					if (queryResult.Results.Count == 0)
-						return;
+					start += pageSize;
 
-					var docIds = queryResult.Results.Select(result => result.Value<string>("__document_id")).ToArray();
+					list.AddRange(queryResult.Results.Select(result => result.Value<string>("__document_id")).Where(x=>string.IsNullOrEmpty(x) == false));
+				}
 
-					logger.Debug(()=> string.Format("Deleting {0} expired documents: [{1}]", queryResult.Results.Count, string.Join(", ", docIds)));
+				if (list.Count == 0)
+					return;
 
-					var deleted = false;
-					Database.TransactionalStorage.Batch(accessor => // delete all expired items in a single tx
-					{
-						deleted = docIds.Aggregate(deleted, (current, docId) => current | Database.Delete(docId, null, null));
-					});
+				logger.Debug(
+					() => string.Format("Deleting {0} expired documents: [{1}]", list.Count, string.Join(", ", list)));
 
-					if (deleted == false)
-						return;
-
-					UpdateTimes(out nowAsStr, out currentTime); // update the staleness cutoff point for the index, to reflect the newly deleted documents
+				foreach (var id in list)
+				{
+					Database.Delete(id, null, null);
 				}
 			}
 			catch (Exception e)
