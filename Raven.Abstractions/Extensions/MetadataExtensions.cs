@@ -191,7 +191,7 @@ namespace Raven.Abstractions.Extensions
 					if (values.Count == 1)
 						metadata[headerName] = GetValue(values.First());
 					else
-						metadata[headerName] = new RavenJArray(values.Select(GetValue));
+						metadata[headerName] = new RavenJArray(values.Select(GetValue).Take(15));
 				}
 				catch (Exception exc)
 				{
