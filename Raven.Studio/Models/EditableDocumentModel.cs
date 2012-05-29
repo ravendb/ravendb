@@ -314,12 +314,12 @@ namespace Raven.Studio.Models
 			{
 				double byteCount = Encoding.UTF8.GetByteCount(JsonData) + Encoding.UTF8.GetByteCount(JsonMetadata);
 				string sizeTerm = "Bytes";
-				if (byteCount > 1024 * 1024)
+				if (byteCount >= 1024 * 1024)
 				{
 					sizeTerm = "MBytes";
-					byteCount = byteCount / 1024 * 1024;
+					byteCount = byteCount / (1024 * 1024);
 				}
-				else if (byteCount > 1024)
+				else if (byteCount >= 1024)
 				{
 					sizeTerm = "KBytes";
 					byteCount = byteCount / 1024;
