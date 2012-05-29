@@ -246,7 +246,7 @@ namespace Raven.Tests
 					IOExtensions.DeleteDirectory("Tenants");
 					break;
 				}
-				catch (IOException ex)
+				catch (IOException)
 				{
 					if (isRetry)
 						throw;
