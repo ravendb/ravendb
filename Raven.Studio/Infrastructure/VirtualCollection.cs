@@ -205,7 +205,10 @@ namespace Raven.Studio.Infrastructure
                 }
             }
 
-            OnItemsRealized(new ItemsRealizedEventArgs(startIndex, results.Count));
+            if (results.Count > 0)
+            {
+                OnItemsRealized(new ItemsRealizedEventArgs(startIndex, results.Count));
+            }
         }
 
         void INotifyOnDataFetchErrors.Retry()
