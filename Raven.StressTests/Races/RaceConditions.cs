@@ -40,7 +40,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void ConcurrentlyOpenedTenantsUsingEsent()
 		{
-			Run<ConcurrentlyOpenedTenantsUsingEsent>(x => x.CanConcurrentlyPutDocsToDifferentTenants());
+			Run<ConcurrentlyOpenedTenantsUsingEsent>(x => x.CanConcurrentlyPutDocsToDifferentTenants(), 100);
 		}
 
 		[Fact]
