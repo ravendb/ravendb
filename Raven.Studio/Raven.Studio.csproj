@@ -141,14 +141,17 @@
     </Compile>
     <Compile Include="Behaviors\BindColumnsToColumnSetBehavior.cs" />
     <Compile Include="Behaviors\BindColumnVisibility.cs" />
+    <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
+    <Compile Include="Behaviors\SelectRowOnRightClickBehavior.cs" />
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Commands\ResetIndexCommand.cs" />
+    <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
     <Compile Include="Controls\DataFetchErrorNotifier.xaml.cs">
       <DependentUpon>DataFetchErrorNotifier.xaml</DependentUpon>
     </Compile>
@@ -207,6 +210,8 @@
     <Compile Include="Infrastructure\FrameworkElementExtensions.cs" />
     <Compile Include="Infrastructure\IEnquireAboutItemVisibility.cs" />
     <Compile Include="Infrastructure\INotifyOnDataFetchErrors.cs" />
+    <Compile Include="Infrastructure\ItemSelection.cs" />
+    <Compile Include="Infrastructure\ItemSelection`1.cs" />
     <Compile Include="Infrastructure\IVirtualCollectionSource.cs" />
     <Compile Include="Infrastructure\MarkupExtensions\StaticExtension.cs" />
     <Compile Include="Infrastructure\MostRecentUsedList.cs" />
