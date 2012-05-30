@@ -12,6 +12,7 @@ using System.Windows.Shapes;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Client.Connection;
@@ -43,15 +44,20 @@ namespace Raven.Studio.Models
 
         private ICommand editColumns;
         private bool documentsHaveId;
+        private ICommand deleteSelectedDocuments;
+        private ICommand copyIdsToClipboard;
 
         public DocumentsModelEnhanced(VirtualCollectionSource<ViewableDocument> collectionSource)
         {
             Documents = new VirtualCollection<ViewableDocument>(collectionSource, 25, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified));
             Documents.ItemsRealized += HandleItemsRealized;
             ShowEditControls = true;
+            ItemSelection = new ItemSelection<VirtualItem<ViewableDocument>>();
 
             Context = "Default";
         }
+
+        public ItemSelection<VirtualItem<ViewableDocument>> ItemSelection { get; private set; }
 
         private void HandleItemsRealized(object sender, ItemsRealizedEventArgs e)
         {
@@ -136,6 +142,16 @@ namespace Raven.Studio.Models
         public ICommand EditColumns
         {
             get { return editColumns ?? (editColumns = new ActionCommand(HandleEditColumns)); }
+        }
+
+        public ICommand DeleteSelectedDocuments
+        {
+            get { return deleteSelectedDocuments ?? (deleteSelectedDocuments = new DeleteDocumentsCommand(ItemSelection)); }
+        }
+
+        public ICommand CopyIdsToClipboard
+        {
+            get { return copyIdsToClipboard ?? (copyIdsToClipboard = new CopyDocumentsIdsCommand(ItemSelection)); }
         }
 
         protected override void OnViewLoaded()
