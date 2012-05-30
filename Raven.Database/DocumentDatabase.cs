@@ -273,6 +273,9 @@ namespace Raven.Database
 
 				TransactionalStorage.Batch(actions =>
 				{
+					result.LastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
+					result.LastAttachmentEtag = actions.Staleness.GetMostRecentAttachmentEtag();
+
 					result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
 					result.CountOfDocuments = actions.Documents.GetDocumentsCount();
 					result.StaleIndexes = IndexStorage.Indexes

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Raven.Database;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Abstractions.Extensions;
@@ -11,25 +12,43 @@ namespace Raven.Bundles.Authentication
 		{
 			allowedDatabases = new AccessTokenBody.DatabaseAccess[0];
 
-			var jsonDocument = currentStore.Get("Raven/Users/"+username, null);
+			var jsonDocument = currentStore.Get("Raven/Users/" + username, null);
 			if (jsonDocument == null)
 			{
 				return false;
 			}
-
 			var user = jsonDocument.DataAsJson.JsonDeserialization<AuthenticationUser>();
 
 			var validatePassword = user.ValidatePassword(password);
-			if (validatePassword)
+			if (!validatePassword)
+				return false;
+
+			var dbs = Enumerable.Empty<AccessTokenBody.DatabaseAccess>();
+			if (user.AllowedDatabases != null)
 			{
-				allowedDatabases = user.AllowedDatabases.Select(tenantId=> new AccessTokenBody.DatabaseAccess
+				var accesses = user.AllowedDatabases.Select(tenantId => new AccessTokenBody.DatabaseAccess
 				{
 					TenantId = tenantId,
-					Admin = user.Admin
-				}).ToArray();
+					Admin = user.Admin,
+					ReadOnly = false
+				});
+				dbs = dbs.Concat(accesses);
 			}
 
-			return validatePassword;
+			if (user.Databases != null)
+			{
+				var accesses = user.Databases.Select(x => new AccessTokenBody.DatabaseAccess
+				{
+					Admin = user.Admin | x.Admin,
+					ReadOnly = x.ReadOnly,
+					TenantId = x.Name
+				});
+				dbs = dbs.Concat(accesses);
+			}
+
+			allowedDatabases = dbs.ToArray();
+
+			return true;
 		}
 
 	}

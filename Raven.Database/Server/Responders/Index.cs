@@ -74,15 +74,15 @@ namespace Raven.Database.Server.Responders
 
 		private void OnGet(IHttpContext context, string index)
 		{
-			var definition = context.Request.QueryString["definition"];
-			var debug = context.Request.QueryString["debug"];
-			bool result;
-			if ("yes".Equals(definition, StringComparison.InvariantCultureIgnoreCase) || 
-				bool.TryParse(definition, out result) && result)
+			if (string.IsNullOrEmpty(context.Request.QueryString["definition"]) == false)
 			{
 				GetIndexDefinition(context, index);
 			}
-			else if("map".Equals(debug,StringComparison.InvariantCultureIgnoreCase))
+			else if (string.IsNullOrEmpty(context.Request.QueryString["source"]) == false)
+			{
+				GetIndexSource(context, index);
+			}
+			else if (string.IsNullOrEmpty(context.Request.QueryString["mapresults"]) == false)
 			{
 				GetIndexMappedResult(context, index);
 			}
@@ -157,6 +157,18 @@ namespace Raven.Database.Server.Responders
 			{
 				Index = indexDefinition,
 			});
+		}
+
+		private void GetIndexSource(IHttpContext context, string index)
+		{
+			var viewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(index);
+			if (viewGenerator == null)
+			{
+				context.SetStatusToNotFound();
+				return;
+			}
+
+			context.Write(viewGenerator.SourceCode);
 		}
 
 		private QueryResultWithIncludes ExecuteQuery(IHttpContext context, string index, out Guid indexEtag)

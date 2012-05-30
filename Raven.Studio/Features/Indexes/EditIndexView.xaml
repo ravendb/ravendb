@@ -176,26 +176,6 @@
                             </Button.Content>
                         </Button>
                         
-                        <Button x:Name="MappedResults"
-                                Style="{StaticResource Style_Button_MouseOverChrome}"
-                                Command="{StaticResource NavigateToExternalUrlCommand}"
-                                CommandParameter="{Binding Name, StringFormat='/indexes/{0}?debug=map'}"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Left"
-                                Margin="0">
-                            <Button.Content>
-                                <StackPanel Orientation="Horizontal"
-                                            VerticalAlignment="Center">
-                                    <Image Source="{StaticResource Image_ChangeView_Tiny}"
-                                           Stretch="None"
-                                           VerticalAlignment="Center" />
-                                    <TextBlock Text="Mapped Results"
-                                               VerticalAlignment="Center"
-                                               Margin="2,0,0,0" />
-                                </StackPanel>
-                            </Button.Content>
-                        </Button>
-
                         <Button x:Name="Query"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 HorizontalAlignment="Left"
