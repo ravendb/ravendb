@@ -371,7 +371,7 @@ namespace Raven.Studio.Models
 			public override void Execute(object parameter)
 			{
 				model.Query.Value = model.Query.Value.Replace(fieldAndTerm.Term, fieldAndTerm.SuggestedTerm);
-				model.Execute.Execute(null);
+				model.Requery();
 			}
 		}
 
