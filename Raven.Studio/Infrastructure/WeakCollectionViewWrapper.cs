@@ -23,7 +23,7 @@ namespace Raven.Studio.Infrastructure
     /// that subscribes using weak events.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class WeakCollectionViewWrapper<T> : IList, ICollectionView where T:IList,ICollectionView
+    public class WeakCollectionViewWrapper<T> : IList, ICollectionView, IEnquireAboutItemVisibility where T : IList, ICollectionView
     {
         private readonly T innerCollection;
 
@@ -32,13 +32,13 @@ namespace Raven.Studio.Infrastructure
             this.innerCollection = innerCollection;
 
             var currentChangedListener = new WeakEventListener<WeakCollectionViewWrapper<T>, object, EventArgs>(this)
-                                             {
-                                                 OnEventAction =
-                                                     (instance, source, eventArgs) =>
-                                                     instance.OnCurrentChanged(eventArgs),
-                                                 OnDetachAction =
-                                                     listener => innerCollection.CurrentChanged -= listener.OnEvent
-                                             };
+            {
+                OnEventAction =
+                    (instance, source, eventArgs) =>
+                    instance.OnCurrentChanged(eventArgs),
+                OnDetachAction =
+                    listener => innerCollection.CurrentChanged -= listener.OnEvent
+            };
 
             innerCollection.CurrentChanged += currentChangedListener.OnEvent;
 
@@ -63,21 +63,37 @@ namespace Raven.Studio.Infrastructure
             };
 
             innerCollection.CollectionChanged += propertyChangedListener.OnEvent;
+
+            var enquireAboutItemVisibility = innerCollection as IEnquireAboutItemVisibility;
+            if (enquireAboutItemVisibility != null)
+            {
+                var queryItemVisibilityListener =
+                    new WeakEventListener<WeakCollectionViewWrapper<T>, object, QueryItemVisibilityEventArgs>(this)
+                    {
+                        OnEventAction =
+                            (instance, source, eventArgs) =>
+                            instance.OnQueryItemVisibility(eventArgs),
+                        OnDetachAction =
+                            listener => enquireAboutItemVisibility.QueryItemVisibility -= listener.OnEvent
+                    };
+
+                enquireAboutItemVisibility.QueryItemVisibility += queryItemVisibilityListener.OnEvent;
+            }
         }
 
         public IEnumerator GetEnumerator()
         {
-            return ((IEnumerable) innerCollection).GetEnumerator();
+            return ((IEnumerable)innerCollection).GetEnumerator();
         }
 
         public void CopyTo(Array array, int index)
         {
-            ((ICollection) innerCollection).CopyTo(array, index);
+            ((ICollection)innerCollection).CopyTo(array, index);
         }
 
         public object SyncRoot
         {
-            get { return ((ICollection) innerCollection).SyncRoot; }
+            get { return ((ICollection)innerCollection).SyncRoot; }
         }
 
         public bool IsSynchronized
@@ -87,27 +103,27 @@ namespace Raven.Studio.Infrastructure
 
         public int Add(object value)
         {
-            return ((IList) innerCollection).Add(value);
+            return ((IList)innerCollection).Add(value);
         }
 
         bool ICollectionView.Contains(object value)
         {
-            return ((IList) innerCollection).Contains(value);
+            return ((IList)innerCollection).Contains(value);
         }
 
         public int IndexOf(object value)
         {
-            return ((IList) innerCollection).IndexOf(value);
+            return ((IList)innerCollection).IndexOf(value);
         }
 
         public void Insert(int index, object value)
         {
-            ((IList) innerCollection).Insert(index, value);
+            ((IList)innerCollection).Insert(index, value);
         }
 
         public void Remove(object value)
         {
-            ((IList) innerCollection).Remove(value);
+            ((IList)innerCollection).Remove(value);
         }
 
         object IList.this[int index]
@@ -118,7 +134,7 @@ namespace Raven.Studio.Infrastructure
 
         public bool IsFixedSize
         {
-            get { return ((IList) innerCollection).IsFixedSize; }
+            get { return ((IList)innerCollection).IsFixedSize; }
         }
 
         public event NotifyCollectionChangedEventHandler CollectionChanged;
@@ -267,6 +283,14 @@ namespace Raven.Studio.Infrastructure
         public void RemoveAt(int index)
         {
             innerCollection.RemoveAt(index);
+        }
+
+        public event EventHandler<QueryItemVisibilityEventArgs> QueryItemVisibility;
+
+        protected void OnQueryItemVisibility(QueryItemVisibilityEventArgs e)
+        {
+            EventHandler<QueryItemVisibilityEventArgs> handler = QueryItemVisibility;
+            if (handler != null) handler(this, e);
         }
     }
 }
