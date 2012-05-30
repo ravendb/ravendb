@@ -203,6 +203,7 @@
     <Compile Include="Infrastructure\Converters\RedIfError.cs" />
     <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
     <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
+    <Compile Include="Infrastructure\ProvideVisibleItemRangeFromDataGridBehavior.cs" />
     <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
     <Compile Include="Infrastructure\DeferredActionInvoker.cs" />
     <Compile Include="Infrastructure\DialogView.cs" />
@@ -224,7 +225,7 @@
     <Compile Include="Infrastructure\VirtualCollection.cs" />
     <Compile Include="Infrastructure\VirtualCollectionSource.cs" />
     <Compile Include="Infrastructure\VirtualItem.cs" />
-    <Compile Include="Infrastructure\ProvideVisibleItemRangeBehavior.cs" />
+    <Compile Include="Infrastructure\ProvideVisibleItemRangeFromItemsControlBehavior.cs" />
     <Compile Include="Infrastructure\WeakEventListener.cs" />
     <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />

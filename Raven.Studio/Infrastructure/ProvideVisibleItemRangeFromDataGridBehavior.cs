@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,17 +16,18 @@ using Raven.Studio.Controls;
 
 namespace Raven.Studio.Infrastructure
 {
-    public class ProvideVisibleItemRangeBehavior : Behavior<ItemsControl>
+    public class ProvideVisibleItemRangeFromDataGridBehavior : Behavior<DataGrid>
     {
         private static readonly DependencyProperty ItemsSourceProperty =
-            DependencyProperty.Register("ItemsSource", typeof (object), typeof (ProvideVisibleItemRangeBehavior), new PropertyMetadata(default(object), HandleItemsSourceChanged));
+            DependencyProperty.Register("ItemsSource", typeof(object), typeof(ProvideVisibleItemRangeFromDataGridBehavior), new PropertyMetadata(default(object), HandleItemsSourceChanged));
 
         private IEnquireAboutItemVisibility _cachedEnquirer;
         private bool _isLoaded;
+        private HashSet<int> _loadedRows = new HashSet<int>();
 
         private static void HandleItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            var behavior = d as ProvideVisibleItemRangeBehavior;
+            var behavior = d as ProvideVisibleItemRangeFromDataGridBehavior;
 
             behavior.HandleItemsSourceChanged();
         }
@@ -40,12 +43,7 @@ namespace Raven.Studio.Infrastructure
 
         private void HandleQueryItemVisibility(object sender, QueryItemVisibilityEventArgs e)
         {
-            var wrapPanel = AssociatedObject.GetItemsHost() as VirtualizingWrapPanel;
-            if (wrapPanel != null)
-            {
-                var range = wrapPanel.GetVisibleItemsRange();
-                e.SetVisibleRange(range.FirstRealizedItemIndex, range.LastRealizedItemIndex);
-            }
+            e.SetVisibleRange(_loadedRows.Min(), _loadedRows.Max());
         }
 
         protected override void OnAttached()
@@ -57,6 +55,18 @@ namespace Raven.Studio.Infrastructure
 
             AssociatedObject.Loaded += HandleLoaded;
             AssociatedObject.Unloaded += HandleUnloaded;
+            AssociatedObject.LoadingRow += HandleLoadingRow;
+            AssociatedObject.UnloadingRow += HandleUnloadingRow;
+        }
+
+        private void HandleUnloadingRow(object sender, DataGridRowEventArgs e)
+        {
+            _loadedRows.Remove(e.Row.GetIndex());
+        }
+
+        private void HandleLoadingRow(object sender, DataGridRowEventArgs e)
+        {
+            _loadedRows.Add(e.Row.GetIndex());
         }
 
         private void HandleLoaded(object sender, RoutedEventArgs e)
@@ -88,6 +98,8 @@ namespace Raven.Studio.Infrastructure
 
            AssociatedObject.Loaded -= HandleLoaded;
            AssociatedObject.Unloaded -= HandleUnloaded;
+           AssociatedObject.LoadingRow -= HandleLoadingRow;
+           AssociatedObject.UnloadingRow -= HandleUnloadingRow;
 
            DetachFromCachedEnquirer();
         }

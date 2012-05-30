@@ -39,7 +39,7 @@
 
                     <i:Interaction.Behaviors>
                         <Behaviors:SelectItemOnRightClick />
-                        <Infrastructure:ProvideVisibleItemRangeBehavior/>
+                        <Infrastructure:ProvideVisibleItemRangeFromItemsControlBehavior/>
                         <Behaviors:BindSelectedItemsBehavior Target="{Binding ItemSelection}"/>
                     </i:Interaction.Behaviors>
 
@@ -96,7 +96,7 @@
 
                     <i:Interaction.Behaviors>
                         <Behaviors:SelectRowOnRightClickBehavior />
-                        <!--<Infrastructure:ProvideVisibleItemRangeBehavior/>-->
+                        <Infrastructure:ProvideVisibleItemRangeFromDataGridBehavior/>
                         <Behaviors:BindSelectedItemsBehavior Target="{Binding ItemSelection}"/> 
                         <Behaviors:BindColumnsToColumnSetBehavior Columns="{Binding Columns}" InvalidBindingHeaderStyle="{StaticResource InvalidBindingColumnHeaderStyle}"/>
                         <Behaviors:DataGridRowDoubleClickCommandBehavior Command="{Binding EditDocument}"/>
