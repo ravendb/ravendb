@@ -124,41 +124,38 @@ namespace Raven.Database.Indexing
 
 		private class CodecIndexInput : IndexInput, IDisposable
 		{
-			private readonly FileInfo file;
-			private readonly Func<Stream, Stream> applyCodecs;
 			private readonly Stream stream;
+			private bool isStreamOwned;
+			private long position;
 
 			public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs)
-			{
-				this.file = file;
-				this.applyCodecs = applyCodecs;
-				this.stream = applyCodecs(file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
-			}
+				: this(
+					stream: applyCodecs(file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite)),
+					position: 0,
+					isStreamOwned: true
+				)
+			{ }
 
-			~CodecIndexInput()
+			private CodecIndexInput(Stream stream, long position, bool isStreamOwned)
 			{
-				var log = LogManager.GetCurrentClassLogger();
-				try
-				{
-					log.Log(LogLevel.Error, "~CodecIndexInput() " + file.FullName + "!");
-					Close();
-				}
-				catch (Exception e)
-				{
-					// Can't throw exceptions from the finalizer thread
-					log.LogException(LogLevel.Error, "Cannot dispose of CodecIndexInput: " + e.Message, e);
-				}
+				this.stream = stream;
+				this.position = position;
+				this.isStreamOwned = isStreamOwned;
+
+				if (!isStreamOwned)
+					GC.SuppressFinalize(this);
 			}
 
 			public override void Close()
 			{
 				GC.SuppressFinalize(this);
-				stream.Close();
+				if (isStreamOwned)
+					stream.Close();
 			}
 
 			public override long GetFilePointer()
 			{
-				return stream.Position;
+				return position;
 			}
 
 			public override long Length()
@@ -168,25 +165,33 @@ namespace Raven.Database.Indexing
 
 			public override byte ReadByte()
 			{
+				stream.Position = position;
+
 				int value = stream.ReadByte();
 				if (value == -1)
 					throw new EndOfStreamException();
+
+				position = stream.Position;
 				return (byte)value;
 			}
 
 			public override void ReadBytes(byte[] b, int offset, int len)
 			{
+				stream.Position = position;
+
 				stream.ReadEntireBlock(b, offset, len);
+
+				position = stream.Position;
 			}
 
-			public override void Seek(long pos)
+			public override void Seek(long newPosition)
 			{
-				stream.Seek(pos, SeekOrigin.Begin);
+				stream.Position = this.position = newPosition;
 			}
 
 			public override object Clone()
 			{
-				return new CodecIndexInput(file, applyCodecs);
+				return new CodecIndexInput(stream, position, false);
 			}
 
 			public void Dispose()
