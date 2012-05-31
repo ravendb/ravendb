@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -52,6 +54,7 @@ namespace Raven.Studio.Models
         public DocumentsModelEnhanced(VirtualCollectionSource<ViewableDocument> collectionSource)
         {
             Documents = new VirtualCollection<ViewableDocument>(collectionSource, 30, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified));
+            Documents.PropertyChanged += HandleDocumentsPropertyChanged;
 
             Observable.FromEventPattern<ItemsRealizedEventArgs>(h => Documents.ItemsRealized += h,
                                                                 h => Documents.ItemsRealized -= h)
@@ -65,11 +68,25 @@ namespace Raven.Studio.Models
             Context = "Default";
         }
 
+        private void HandleDocumentsPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == "Count" && Documents.Count == 0)
+            {
+                mostRecentDocuments.Clear();
+            }
+        }
+
         public ItemSelection<VirtualItem<ViewableDocument>> ItemSelection { get; private set; }
 
         private void HandleItemsRealized(object sender, ItemsRealizedEventArgs e)
         {
-            DocumentsHaveId = !string.IsNullOrEmpty(Documents[e.StartingIndex].Item.Id);
+            var viewableDocument = Documents[e.StartingIndex].Item;
+            
+            // collection may have been reset (and hence the item cleared) since the event was raised, thus the null check
+            if (viewableDocument != null)
+            {
+                DocumentsHaveId = !string.IsNullOrEmpty(viewableDocument.Id);
+            }
 
             // When a view is refreshed, items can be realized in different orders (depending on the order the query responses come back from the db)
             // So to stabilise the column set, we keep a list of 60 most recently used documents, and then sort them in index order. 

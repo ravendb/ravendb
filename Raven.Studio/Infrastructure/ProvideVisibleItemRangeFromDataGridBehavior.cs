@@ -43,7 +43,10 @@ namespace Raven.Studio.Infrastructure
 
         private void HandleQueryItemVisibility(object sender, QueryItemVisibilityEventArgs e)
         {
-            e.SetVisibleRange(_loadedRows.Min(), _loadedRows.Max());
+            if (_loadedRows.Count > 0)
+            {
+                e.SetVisibleRange(_loadedRows.Min(), _loadedRows.Max());
+            }
         }
 
         protected override void OnAttached()
