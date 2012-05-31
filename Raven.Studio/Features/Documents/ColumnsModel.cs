@@ -15,6 +15,12 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Documents
 {
+    public enum ColumnsSource
+    {
+        Automatic,
+        User
+    }
+
     public class ColumnsModel : Model
     {
         public ObservableCollection<ColumnDefinition> Columns { get; private set; }
@@ -23,6 +29,8 @@ namespace Raven.Studio.Features.Documents
         {
             Columns = new ObservableCollection<ColumnDefinition>();
         }
+
+        public ColumnsSource Source { get; set; }
 
         public void LoadFromColumnDefinitions(IEnumerable<ColumnDefinition> columnDefinitions)
         {

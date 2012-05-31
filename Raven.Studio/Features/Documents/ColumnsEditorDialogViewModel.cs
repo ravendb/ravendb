@@ -18,7 +18,8 @@ namespace Raven.Studio.Features.Documents
     {
         private readonly ColumnsModel columns;
         private readonly string context;
-        private readonly Func<Task<IList<string>>> suggestedBindingLoader;
+        private readonly Func<IList<string>> suggestedBindingLoader;
+        private readonly Func<IList<ColumnDefinition>> automaticColumnsFetcher;
         private ObservableCollection<ColumnEditorViewModel> columnEditorViewModels;
         private ICommand applyCommand;
         private ColumnEditorViewModel selectedColumn;
@@ -28,16 +29,26 @@ namespace Raven.Studio.Features.Documents
         private ICommand saveAsDefault;
         private ICommand okCommand;
         private ICommand cancelCommand;
+        private bool isCustomChoice;
 
-        public ColumnsEditorDialogViewModel(ColumnsModel columns, string context, Func<Task<IList<string>>> suggestedBindingLoader)
+        public ColumnsEditorDialogViewModel(ColumnsModel columns, string context, Func<IList<string>> suggestedBindingLoader, Func<IList<ColumnDefinition>> automaticColumnsFetcher)
         {
             this.columns = columns;
             this.context = context;
             this.suggestedBindingLoader = suggestedBindingLoader;
-            columnEditorViewModels = new ObservableCollection<ColumnEditorViewModel>(this.columns.Columns.Select(c => new ColumnEditorViewModel(c)));
+            this.automaticColumnsFetcher = automaticColumnsFetcher;
+
+            columnEditorViewModels = new ObservableCollection<ColumnEditorViewModel>(ColumnEditorViewModelsFromColumns(this.columns.Columns));
+            AddEmptyRow();
+
             SuggestedBindings = new ObservableCollection<string>();
 
-            AddEmptyRow();
+            IsCustomChoice = columns.Source == ColumnsSource.User;
+        }
+
+        private IEnumerable<ColumnEditorViewModel> ColumnEditorViewModelsFromColumns(IEnumerable<ColumnDefinition> observableCollection)
+        {
+            return observableCollection.Select(c => new ColumnEditorViewModel(c));
         }
 
         private void AddEmptyRow()
@@ -87,6 +98,27 @@ namespace Raven.Studio.Features.Documents
                 return moveSelectedColumnDown ??
                        (moveSelectedColumnDown = new ActionCommand(() => HandleMoveSelectedColumn(1)));
             }
+        }
+
+        public bool IsCustomChoice
+        {
+            get { return isCustomChoice; }
+            set
+            {
+                isCustomChoice = value;
+                if (!isCustomChoice)
+                {
+                    RepopuplateColumnsFromAutomaticChoice();
+                }
+                OnPropertyChanged(() => IsCustomChoice);
+            }
+        }
+
+        private void RepopuplateColumnsFromAutomaticChoice()
+        {
+            columnEditorViewModels.Clear();
+            columnEditorViewModels.AddRange(ColumnEditorViewModelsFromColumns(automaticColumnsFetcher()));
+            AddEmptyRow();
         }
 
         public ICommand SaveAsDefault
@@ -190,12 +222,8 @@ namespace Raven.Studio.Features.Documents
 
             var actualColumns = GetCurrentColumnDefinitions();
 
-            columns.Columns.Clear();
-
-            foreach (var column in actualColumns)
-            {
-                columns.Columns.Add(column);
-            }
+            columns.LoadFromColumnDefinitions(actualColumns);
+            columns.Source = IsCustomChoice ? ColumnsSource.User : ColumnsSource.Automatic;
 
             return true;
         }
@@ -209,7 +237,7 @@ namespace Raven.Studio.Features.Documents
 
         private void PopulateSuggestedColumns()
         {
-            suggestedBindingLoader()
+            Task.Factory.StartNew(suggestedBindingLoader)
                 .ContinueOnSuccessInTheUIThread(UpdateSuggestedColumns);
         }
 

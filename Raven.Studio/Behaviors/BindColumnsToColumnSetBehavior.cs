@@ -80,6 +80,13 @@ namespace Raven.Studio.Behaviors
             return AssociatedObject.GetVisualDescendants().OfType<DataGridColumnHeadersPresenter>().FirstOrDefault();
         }
 
+        private void HandleColumnHeadersMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // we need to ensure that the column set doesn't get changed whilst the user is interacting with one
+            // of the columns
+            Columns.Source = ColumnsSource.User;
+        }
+
         private void HandleColumnHeadersMouseLeftButtonUp(object sender, RoutedEventArgs e)
         {
             internalColumnUpdate = true;
@@ -106,6 +113,7 @@ namespace Raven.Studio.Behaviors
             if (columnHeadersPresenter != null)
             {
                 columnHeadersPresenter.RemoveHandler(UIElement.MouseLeftButtonUpEvent, new MouseButtonEventHandler(HandleColumnHeadersMouseLeftButtonUp));
+                columnHeadersPresenter.RemoveHandler(UIElement.MouseLeftButtonDownEvent, new MouseButtonEventHandler(HandleColumnHeadersMouseLeftButtonDown));
             }
 
             isLoaded = false;
@@ -118,6 +126,7 @@ namespace Raven.Studio.Behaviors
             if (columnHeadersPresenter != null)
             {
                 columnHeadersPresenter.AddHandler(UIElement.MouseLeftButtonUpEvent, new MouseButtonEventHandler(HandleColumnHeadersMouseLeftButtonUp), true);
+                columnHeadersPresenter.AddHandler(UIElement.MouseLeftButtonDownEvent, new MouseButtonEventHandler(HandleColumnHeadersMouseLeftButtonDown), true);
             }
 
             isLoaded = true;
