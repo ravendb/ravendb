@@ -151,6 +151,7 @@
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\CopyDocumentsToClipboardCommand.cs" />
     <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
     <Compile Include="Controls\DataFetchErrorNotifier.xaml.cs">

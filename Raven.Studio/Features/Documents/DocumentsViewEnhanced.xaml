@@ -47,6 +47,8 @@
                         <Controls:ContextMenu x:Name="DocumentsContextMenu">
                             <Controls:MenuItem Header="Copy Document Id(s) to Clipboard"
 											Command="{Binding CopyIdsToClipboard}"/>
+                            <Controls:MenuItem Header="Copy Document(s) to Clipboard"
+											Command="{Binding CopyDocumentTextToClipboard}"/>
                             <Controls:MenuItem Header="Delete"
 											Command="{Binding DeleteSelectedDocuments}" />
                         </Controls:ContextMenu>
@@ -114,6 +116,8 @@
                         <Controls:ContextMenu x:Name="DocumentsContextMenu">
                             <Controls:MenuItem Header="Copy Document Id(s) to Clipboard"
 											Command="{Binding CopyIdsToClipboard}"/>
+                            <Controls:MenuItem Header="Copy Document(s) to Clipboard"
+											Command="{Binding CopyDocumentTextToClipboard}"/>
                             <Controls:MenuItem Header="Delete"
 											Command="{Binding DeleteSelectedDocuments}" />
                         </Controls:ContextMenu>

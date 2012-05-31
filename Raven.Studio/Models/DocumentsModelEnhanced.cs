@@ -50,7 +50,8 @@ namespace Raven.Studio.Models
         private ICommand deleteSelectedDocuments;
         private ICommand copyIdsToClipboard;
         private MostRecentUsedList<VirtualItem<ViewableDocument>> mostRecentDocuments = new MostRecentUsedList<VirtualItem<ViewableDocument>>(60);
-        
+        private ICommand copyDocumentTextToClipboard;
+
         public DocumentsModelEnhanced(VirtualCollectionSource<ViewableDocument> collectionSource)
         {
             Documents = new VirtualCollection<ViewableDocument>(collectionSource, 30, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified));
@@ -209,6 +210,15 @@ namespace Raven.Studio.Models
         public ICommand CopyIdsToClipboard
         {
             get { return copyIdsToClipboard ?? (copyIdsToClipboard = new CopyDocumentsIdsCommand(ItemSelection)); }
+        }
+
+        public ICommand CopyDocumentTextToClipboard
+        {
+            get
+            {
+                return copyDocumentTextToClipboard ??
+                       (copyDocumentTextToClipboard = new CopyDocumentsToClipboardCommand(ItemSelection));
+            }
         }
 
         protected override void OnViewLoaded()
