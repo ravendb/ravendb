@@ -34,11 +34,11 @@ namespace Raven.Abstractions.Linq
 
 		public IEnumerator<object> GetEnumerator()
 		{
-			return 
+			return
 				(
 					from item in inner
-			        where item.Key[0] != '$'
-			        select new KeyValuePair<string, object>(item.Key, TransformToValue(item.Value))
+					where item.Key[0] != '$'
+					select new KeyValuePair<string, object>(item.Key, TransformToValue(item.Value))
 				)
 				.Cast<object>().GetEnumerator();
 		}
@@ -148,7 +148,7 @@ namespace Raven.Abstractions.Linq
 						return new DynamicList(this, values.Select(TransformToValue).ToArray());
 					}
 					var refId = jObject.Value<string>("$ref");
-					if(refId != null)
+					if (refId != null)
 					{
 						var ravenJObject = FindReference(refId);
 						if (ravenJObject != null)
@@ -156,7 +156,7 @@ namespace Raven.Abstractions.Linq
 					}
 					return new DynamicJsonObject(this, jObject);
 				case JTokenType.Array:
-					var ar = (RavenJArray) jToken; 
+					var ar = (RavenJArray)jToken;
 					return new DynamicList(this, ar.Select(TransformToValue).ToArray());
 				case JTokenType.Date:
 					return jToken.Value<DateTime>();
@@ -175,7 +175,9 @@ namespace Raven.Abstractions.Linq
 					{
 						DateTime dateTime;
 						if (DateTime.TryParseExact(s, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
+						{
 							return dateTime;
+						}
 						DateTimeOffset dateTimeOffset;
 						if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
 						{
