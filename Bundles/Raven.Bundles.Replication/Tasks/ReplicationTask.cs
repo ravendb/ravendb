@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -592,10 +593,13 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				Url = url,
 				ApiKey = x.ApiKey,
-				Credentials = string.IsNullOrEmpty(x.Domain) ?
-																new NetworkCredential(x.Username, x.Password) :
-																												new NetworkCredential(x.Username, x.Password, x.Domain),
 			};
+			if(string.IsNullOrEmpty(x.Username) == false)
+			{
+				replicationStrategy.ConnectionStringOptions.Credentials = string.IsNullOrEmpty(x.Domain)
+				    ? new NetworkCredential(x.Username, x.Password)
+				    : new NetworkCredential(x.Username, x.Password, x.Domain);
+			}
 			return replicationStrategy;
 		}
 	}
