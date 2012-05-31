@@ -151,7 +151,13 @@
                                                      ItemsSource="{Binding DataContext.SuggestedBindings, RelativeSource={RelativeSource AncestorType=sdk:DataGrid}}"
                                                      IsTextCompletionEnabled="True"
                                                      MinimumPrefixLength="0"
-                                                     Style="{StaticResource Style_AutoCompleteBox_Default}"/>
+                                                     Style="{StaticResource Style_AutoCompleteBox_Default}">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="GotFocus">
+                                            <Behaviors:OpenDropDownAction/>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </sdk:AutoCompleteBox>
                             </Grid>
                         </DataTemplate>
                     </sdk:DataGridTemplateColumn.CellEditingTemplate>

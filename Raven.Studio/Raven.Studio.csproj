@@ -145,6 +145,7 @@
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
+    <Compile Include="Behaviors\OpenDropDownAction.cs" />
     <Compile Include="Behaviors\SelectRowOnRightClickBehavior.cs" />
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
