@@ -101,6 +101,11 @@ namespace Raven.Bundles.IndexReplication
 						var parameter = cmd.CreateParameter();
 						parameter.ParameterName = GetParameterName(mapping.Key);
 						var field = document.GetFieldable(mapping.Key);
+
+						var numericfield = document.GetFieldable(String.Concat(mapping.Key, "_Range"));
+						if (numericfield != null)
+							field = numericfield;
+						
 						if (field == null)
 							parameter.Value = DBNull.Value;
 						else if(field is NumericField)
