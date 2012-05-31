@@ -49,7 +49,12 @@ namespace Raven.Abstractions.Connection
 				request.Headers["Content-Encoding"] = "gzip";
 			request.Headers["Accept-Encoding"] = "deflate,gzip";
 			request.ContentType = "application/json; charset=utf-8";
-			request.UseDefaultCredentials = true;
+
+			if (connectionStringOptions.Credentials != null)
+				request.Credentials = connectionStringOptions.Credentials;
+			else
+				request.UseDefaultCredentials = true;
+
 			configureRequest(connectionStringOptions, request);
 			return request;
 		}
