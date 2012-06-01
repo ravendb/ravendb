@@ -158,7 +158,8 @@
                 <Delay:SplitButton Command="{StaticResource NavigateToCommand}"
 								CommandParameter="/edit?mode=new"
                         DropDownToolTip="More Options"
-                                   Margin="12,6,4,6" Foreground="#FF666666" Padding="4,3">
+                                   Margin="12,6,4,6" Foreground="#FF666666" Padding="4,4" 
+                                   VerticalAlignment="Center">
                     <Delay:SplitButton.ButtonMenuItemsSource>
                         <Controls:MenuItem Header="New Document" Command="{StaticResource NavigateToCommand}" CommandParameter="/edit?mode=new">
                           <Controls:MenuItem.Icon>
