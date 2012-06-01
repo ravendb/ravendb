@@ -1,0 +1,1 @@
+﻿Code in this folder came from http://timheuer.com/blog/archive/2008/10/22/silverlight-watermark-text-box-control.aspx

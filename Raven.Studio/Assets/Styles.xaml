@@ -20,6 +20,7 @@
 		<ResourceDictionary Source="DataGridStyles.xaml" />
 		<ResourceDictionary Source="TreeViewStyles.xaml" />
 		<ResourceDictionary Source="SplitButton.xaml" />
+		<ResourceDictionary Source="WatermarkedTextBox.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style TargetType="ScrollBar">

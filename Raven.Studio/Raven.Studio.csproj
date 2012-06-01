@@ -199,6 +199,8 @@
     <Compile Include="Impl\SplitButton\GlobalSuppressions.cs" />
     <Compile Include="Impl\SplitButton\MenuButton.cs" />
     <Compile Include="Impl\SplitButton\SplitButton.cs" />
+    <Compile Include="Impl\WatermarkedTextBox\VisualStateHelper.cs" />
+    <Compile Include="Impl\WatermarkedTextBox\WatermarkedTextBox.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
     <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\NegatingBoolConverter.cs" />
@@ -506,6 +508,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Assets\WatermarkedTextBox.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Controls\DataFetchErrorNotifier.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -728,6 +734,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Impl\SplitButton\Credits.txt" />
+    <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
     <Resource Include="Assets\Images\RavenDBLogo.png" />
     <Resource Include="Assets\Images\FooterTexture.png" />
