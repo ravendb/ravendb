@@ -2176,79 +2176,8 @@
 		<Setter Property="Template" Value="{StaticResource ControlTemplate_ListBox_MainPageTabs}"/>
 		<Setter Property="ItemContainerStyle" Value="{StaticResource Style_ListBoxItem_MainPageTab}"/>
 	</Style>
-	
-	<Style x:Key="Style_Button" TargetType="Button">
-		<Setter Property="FontWeight" Value="Bold"/>
-		<Setter Property="FontSize" Value="13"/>
-		<Setter Property="FontFamily" Value="Tahoma"/>
-		<Setter Property="MinWidth" Value="40"/>
-		<Setter Property="Padding" Value="4,0"/>
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="Button">
-					<Border CornerRadius="17" Height="34" BorderBrush="#FFDFDAD5" BorderThickness="1">
-						<Border.Background>
-							<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-								<GradientStop Color="#FFE7E2E8" Offset="0"/>
-								<GradientStop Color="#FFC7BFB7" Offset="1"/>
-							</LinearGradientBrush>
-						</Border.Background>
-						<VisualStateManager.VisualStateGroups>
-							<VisualStateGroup x:Name="CommonStates">
-								<VisualState x:Name="Normal"/>
-								<VisualState x:Name="MouseOver">
-									<Storyboard>
-									<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(Border.Background)" Storyboard.TargetName="border">
-												<DiscreteObjectKeyFrame KeyTime="0">
-													<DiscreteObjectKeyFrame.Value>
-													<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-														<GradientStop Color="#FFFAFAFA" Offset="0.044"/>
-														<GradientStop Color="LightGray" Offset="0.89"/>
-													</LinearGradientBrush>
-												</DiscreteObjectKeyFrame.Value>
-												</DiscreteObjectKeyFrame>
-											</ObjectAnimationUsingKeyFrames>
-										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(Border.Background)" Storyboard.TargetName="innermost">
-											<DiscreteObjectKeyFrame KeyTime="0">
-												<DiscreteObjectKeyFrame.Value>
-													<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-														<GradientStop Color="#FFFAFAFA" Offset="0.89"/>
-														<GradientStop Color="LightGray" Offset="0.044"/>
-													</LinearGradientBrush>
-												</DiscreteObjectKeyFrame.Value>
-											</DiscreteObjectKeyFrame>
-										</ObjectAnimationUsingKeyFrames>
-									</Storyboard>
-								</VisualState>
-								<VisualState x:Name="Pressed"/>
-								<VisualState x:Name="Disabled"/>
-							</VisualStateGroup>
-						</VisualStateManager.VisualStateGroups>
-						<Border x:Name="border"  CornerRadius="13" Height="26" BorderThickness="0" Margin="3,0" VerticalAlignment="Center" BorderBrush="Gainsboro">
-							<Border.Background>
-								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-									<GradientStop Color="#FFFAFAFA" Offset="0.89"/>
-									<GradientStop Color="LightGray" Offset="0.044"/>
-								</LinearGradientBrush>
-							</Border.Background>
-							<Border x:Name="innermost" CornerRadius="12" BorderThickness="0" Margin="1" BorderBrush="Gainsboro">
-								<Border.Background>
-									<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-										<GradientStop Color="#FFFAFAFA" Offset="0.044"/>
-										<GradientStop Color="LightGray" Offset="0.89"/>
-									</LinearGradientBrush>
-								</Border.Background>
-								<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
-							</Border>
-						</Border>
-					</Border>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-		<Setter Property="Foreground" Value="#FF666666"/>
-	</Style>
 
-	<!-- Link Style -->
+  <!-- Link Style -->
 	<Style x:Key="Style_Link_Command" TargetType="HyperlinkButton">
 		<Setter Property="Background" Value="Transparent"/>
 		<Setter Property="BorderThickness" Value="1"/>

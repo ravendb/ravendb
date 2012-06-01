@@ -42,7 +42,6 @@
                     HorizontalAlignment="Left"
                     Command="{Binding Action}"
                     Padding="8,4"
-                    Style="{StaticResource Style_Button}"
                     MinWidth="100"
                     Margin="0,10" />
                 <TextBlock Text="{Binding TaskStatus, Converter={StaticResource TaskStatusConverter},Mode=TwoWay}" VerticalAlignment="Center" FontSize="21.333" Margin="100,0,0,0"/>
