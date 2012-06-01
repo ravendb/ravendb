@@ -258,21 +258,28 @@ namespace Raven.Studio.Controls
                 return new ItemLayoutInfo();
             }
 
-            var precedingLines = (int) Math.Floor(VerticalOffset/itemHeight);
-            
-            var firstRealizedIndex = extentInfo.ItemsPerLine*precedingLines;
-            var firstRealizedLineTop = precedingLines*itemHeight - VerticalOffset;
+            // we need to ensure that there is one realized item prior to the first visible item, and one after the last visible item,
+            // so that keyboard navigation works properly. For example, when focus is on the first visible item, and the user
+            // navigates up, the ListBox selects the previous item, and the scrolls that into view - and this triggers the loading of the rest of the items
 
-            var realizedLines = (int) Math.Ceiling((availableSize.Height - firstRealizedLineTop)/itemHeight);
-            var lastRealizedIndex = Math.Min(firstRealizedIndex + realizedLines*extentInfo.ItemsPerLine - 1, _itemsControl.Items.Count - 1);
+            var firstVisibleLine = (int)Math.Floor(VerticalOffset / itemHeight);
+
+            var firstRealizedIndex = Math.Max(extentInfo.ItemsPerLine * firstVisibleLine - 1, 0);
+            var firstRealizedItemLeft = firstRealizedIndex % extentInfo.ItemsPerLine * ItemWidth - HorizontalOffset;
+            var firstRealizedItemTop = (firstRealizedIndex / extentInfo.ItemsPerLine) * itemHeight - VerticalOffset;
+
+            var firstCompleteLineTop = (firstVisibleLine == 0 ? firstRealizedItemTop : firstRealizedItemTop + ItemHeight);
+            var completeRealizedLines = (int)Math.Ceiling((availableSize.Height - firstCompleteLineTop) / itemHeight);
+
+            var lastRealizedIndex = Math.Min(firstRealizedIndex + completeRealizedLines * extentInfo.ItemsPerLine + 2, _itemsControl.Items.Count - 1);
 
             return new ItemLayoutInfo
-                       {
-                           FirstRealizedItemIndex = firstRealizedIndex,
-                           FirstRealizedItemLeft = -HorizontalOffset,
-                           FirstRealizedLineTop = firstRealizedLineTop,
-                           LastRealizedItemIndex = lastRealizedIndex,
-                       };
+            {
+                FirstRealizedItemIndex = firstRealizedIndex,
+                FirstRealizedItemLeft = firstRealizedItemLeft,
+                FirstRealizedLineTop = firstRealizedItemTop,
+                LastRealizedItemIndex = lastRealizedIndex,
+            };
         }
 
         private ExtentInfo GetExtentInfo(Size viewPortSize, double itemHeight)

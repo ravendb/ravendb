@@ -2155,6 +2155,21 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="ItemContainerStyle"
 				Value="{StaticResource Style_ListBoxItem_Document}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border CornerRadius="2" 
+			                BorderBrush="{TemplateBinding BorderBrush}"
+			                BorderThickness="{TemplateBinding BorderThickness}">
+                        <!-- We set the TabNavigation to Cycle on this ScrollViewer to work around a bug which causes the ListBox to loose focus when navigating down (with Down Arrow or Page Down) from the last visible item
+                        (or even when navigating Up/Down on an item that is only partially visible at the bottom of the screen) -->
+                        <ScrollViewer x:Name="ScrollViewer" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="0" TabNavigation="Cycle" IsTabStop="False">
+                            <ItemsPresenter />
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="Style_ListBox_MainTabs" TargetType="ListBox">
