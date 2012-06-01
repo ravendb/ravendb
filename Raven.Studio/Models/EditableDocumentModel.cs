@@ -85,44 +85,44 @@ namespace Raven.Studio.Models
             }
 		}
 
-		public override void LoadModelParameters(string parameters)
-		{
-			var url = new UrlParser(UrlUtil.Url);
+        public override void LoadModelParameters(string parameters)
+        {
+            var url = new UrlParser(UrlUtil.Url);
 
-			if (url.GetQueryParam("mode") == "new")
-			{
-				Mode = DocumentMode.New;
+            if (url.GetQueryParam("mode") == "new")
+            {
+                Mode = DocumentMode.New;
                 InitialiseDocument();
                 Navigator = null;
                 CurrentIndex = 0;
                 TotalItems = 0;
-				SetCurrentDocumentKey(null);
+                SetCurrentDocumentKey(null);
 
-				return;
-			}
+                return;
+            }
 
             Navigator = DocumentNavigator.FromUrl(url);
 
             Navigator.GetDocument().ContinueOnSuccessInTheUIThread(
                 result =>
-			{
+                    {
                         if (result.Document == null)
-														{
-																HandleDocumentNotFound();
-																return;
-															}
+                        {
+                            HandleDocumentNotFound();
+                            return;
+                        }
 
                         if (string.IsNullOrEmpty(result.Document.Key))
-			{
-				Mode = DocumentMode.Projection;
+                        {
+                            Mode = DocumentMode.Projection;
                             LocalId = Guid.NewGuid().ToString();
-				}
+                        }
                         else
-				{
+                        {
                             Mode = DocumentMode.DocumentWithId;
                             LocalId = result.Document.Key;
-							SetCurrentDocumentKey(result.Document.Key);
-			}
+                            SetCurrentDocumentKey(result.Document.Key);
+                        }
 
                         isLoaded = true;
                         document.Value = result.Document;
@@ -130,9 +130,9 @@ namespace Raven.Studio.Models
                         TotalItems = (int) result.TotalDocuments;
                     })
                 .Catch();
-			}
+        }
 
-		private void HandleDocumentNotFound()
+        private void HandleDocumentNotFound()
 		{
 			Notification notification;
 			if (Mode == DocumentMode.Projection)
@@ -190,21 +190,21 @@ namespace Raven.Studio.Models
             get { return Navigator != null && (HasNext || HasPrevious); }
 		}
 
-        public void PutDocumentIdInUrl(string docId)
-		{
-            if (docId != null && DocumentKey != docId)
-                UrlUtil.Navigate("/edit?id=" + docId);
-
-			SetCurrentDocumentKey(docId);
-		}
-
 		public void SetCurrentDocumentKey(string docId, bool dontOpenNewTag = false)
 		{
-			if (DocumentKey != null && DocumentKey != docId)
+			if (docId != null && DocumentKey != docId)
 				UrlUtil.Navigate("/edit?id=" + docId, dontOpenNewTag);
 
-			Mode = DocumentMode.DocumentWithId;
-			DocumentKey = Key = docId;
+            if (docId != null)
+            {
+                Mode = DocumentMode.DocumentWithId;
+            }
+            else
+            {
+                Mode = DocumentMode.New;
+            }
+
+		    DocumentKey = Key = docId;
 		}
 
 		private void UpdateFromDocument()
