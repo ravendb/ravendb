@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Browser;
@@ -46,6 +47,11 @@ namespace Raven.Studio.Models
 
 		private void Initialize()
 		{
+            if (DesignerProperties.IsInDesignTool)
+            {
+                return;
+            }
+
 			documentStore = new DocumentStore
 			{
 				Url = Url
@@ -117,6 +123,11 @@ namespace Raven.Studio.Models
 
 		private static string DetermineUri()
 		{
+            if (DesignerProperties.IsInDesignTool)
+            {
+                return string.Empty;
+            }
+
 			if (HtmlPage.Document.DocumentUri.Scheme == "file")
 			{
 				return "http://localhost:8080";
