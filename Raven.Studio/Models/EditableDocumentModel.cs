@@ -190,11 +190,8 @@ namespace Raven.Studio.Models
             get { return Navigator != null && (HasNext || HasPrevious); }
 		}
 
-		public void SetCurrentDocumentKey(string docId, bool dontOpenNewTag = false)
+		public void SetCurrentDocumentKey(string docId)
 		{
-			if (docId != null && DocumentKey != docId)
-				UrlUtil.Navigate("/edit?id=" + docId, dontOpenNewTag);
-
             if (docId != null)
             {
                 Mode = DocumentMode.DocumentWithId;
@@ -207,7 +204,13 @@ namespace Raven.Studio.Models
 		    DocumentKey = Key = docId;
 		}
 
-		private void UpdateFromDocument()
+        private void PutDocumentKeyInUrl(string docId, bool dontOpenNewTab)
+        {
+            if (docId != null && DocumentKey != docId)
+                UrlUtil.Navigate("/edit?id=" + docId, dontOpenNewTab);
+        }
+
+        private void UpdateFromDocument()
 		{
 			var newdoc = document.Value;
             RemoveNonDisplayedMetadata(newdoc.Metadata);
@@ -540,28 +543,28 @@ namespace Raven.Studio.Models
 
 		private class SaveDocumentCommand : Command
 		{
-			private readonly EditableDocumentModel document;
+			private readonly EditableDocumentModel parentModel;
 
 			public string Seperator
 			{
 				get
 				{
-					if (document.Key.Contains("/"))
+					if (parentModel.Key.Contains("/"))
 						return "/";
-					if (document.Key.Contains("-"))
+					if (parentModel.Key.Contains("-"))
 						return "-";
 					return null;
 				}
 			}
 
-			public SaveDocumentCommand(EditableDocumentModel document)
+			public SaveDocumentCommand(EditableDocumentModel parentModel)
 			{
-				this.document = document;
+				this.parentModel = parentModel;
 			}
 
 			public override void Execute(object parameter)
 			{
-				if (document.Key != null && document.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+				if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
 				{
 					AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
 						.ContinueWhenTrue(SaveDocument);
@@ -578,11 +581,11 @@ namespace Raven.Studio.Models
 
 				try
 				{
-					doc = RavenJObject.Parse(document.JsonData);
-					metadata = RavenJObject.Parse(document.JsonMetadata);
-					if (document.Key != null && Seperator != null && metadata.Value<string>(Constants.RavenEntityName) == null)
+					doc = RavenJObject.Parse(parentModel.JsonData);
+					metadata = RavenJObject.Parse(parentModel.JsonMetadata);
+					if (parentModel.Key != null && Seperator != null && metadata.Value<string>(Constants.RavenEntityName) == null)
 					{
-						var entityName = document.Key.Split(new[] { Seperator }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+						var entityName = parentModel.Key.Split(new[] { Seperator }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
 
 						if (entityName != null && entityName.Length > 1)
 						{
@@ -600,21 +603,21 @@ namespace Raven.Studio.Models
 					return;
 				}
 
-				document.UpdateMetadata(metadata);
-				ApplicationModel.Current.AddNotification(new Notification("Saving document " + document.Key + " ..."));
-				var url = new UrlParser(UrlUtil.Url);
-				var docId = url.GetQueryParam("id");
-				Guid? etag = string.Equals(docId , document.Key, StringComparison.InvariantCultureIgnoreCase) ? 
-					document.Etag : Guid.Empty;
+				parentModel.UpdateMetadata(metadata);
+				ApplicationModel.Current.AddNotification(new Notification("Saving document " + parentModel.Key + " ..."));
+
+				Guid? etag = string.Equals(parentModel.DocumentKey , parentModel.Key, StringComparison.InvariantCultureIgnoreCase) ? 
+					parentModel.Etag : Guid.Empty;
 			
-				DatabaseCommands.PutAsync(document.Key, etag, doc, metadata)
+				DatabaseCommands.PutAsync(parentModel.Key, etag, doc, metadata)
 					.ContinueOnSuccess(result =>
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
-						document.Etag = result.ETag;
-						document.SetCurrentDocumentKey(result.Key, dontOpenNewTag: true);
+						parentModel.Etag = result.ETag;
+					    parentModel.PutDocumentKeyInUrl(result.Key, dontOpenNewTab:true);
+					    parentModel.SetCurrentDocumentKey(result.Key);
 					})
-					.ContinueOnSuccess(() => new RefreshDocumentCommand(document).Execute(null))
+					.ContinueOnSuccess(() => new RefreshDocumentCommand(parentModel).Execute(null))
 					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
 			}
 		}
