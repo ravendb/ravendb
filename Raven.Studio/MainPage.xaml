@@ -11,7 +11,8 @@
 			 xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-             xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure">
+             xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" xmlns:Delay="clr-namespace:Delay"
+             xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
@@ -93,7 +94,7 @@
 						   Height="25" />
 				</HyperlinkButton>
 
-				<Databases:DatabaseSelectionView VerticalAlignment="Bottom"
+				<Databases:DatabaseSelectionView VerticalAlignment="Center"
 												 HorizontalAlignment="Right" />
 			</Grid>
 
@@ -153,7 +154,34 @@
 								 CommandParameter="/logs"
 								 Style="{StaticResource Style_Text_HeaderLink}" />
 				<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}" />
-			</StackPanel>
+
+                <Delay:SplitButton Command="{StaticResource NavigateToCommand}"
+								CommandParameter="/edit?mode=new"
+                        DropDownToolTip="More Options"
+                                   Margin="12,6,4,6" Foreground="#FF666666" Padding="4,3">
+                    <Delay:SplitButton.ButtonMenuItemsSource>
+                        <Controls:MenuItem Header="New Document" Command="{StaticResource NavigateToCommand}" CommandParameter="/edit?mode=new">
+                          <Controls:MenuItem.Icon>
+                                <Image Source="{StaticResource Image_Document_Tiny}"/>
+                          </Controls:MenuItem.Icon>
+                        </Controls:MenuItem>
+                      <Controls:MenuItem Header="New Index" Command="{StaticResource NavigateToCommand}" CommandParameter="/indexes/new?mode=new">
+                            <Controls:MenuItem.Icon>
+                                <Image Source="{StaticResource Image_DocumentIndex_Tiny}"/>
+                            </Controls:MenuItem.Icon>
+                      </Controls:MenuItem>
+                    </Delay:SplitButton.ButtonMenuItemsSource>
+                    <StackPanel Orientation="Horizontal" Background="Transparent" ToolTipService.ToolTip="Create a New Document">
+                        <Path Data="M0,4.5 L9,4.5 M4.5,0 L4.5,9" StrokeThickness="3" Stroke="#B8214A"
+										   Stretch="Fill"
+										   VerticalAlignment="Center"
+										   Margin="0,0,4,0"
+                                           Width="14" Height="14" />
+                        <TextBlock Text="New" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Delay:SplitButton>
+
+            </StackPanel>
 		</Grid>
 
 		<Grid x:Name="ContentGrid"

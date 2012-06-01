@@ -19,7 +19,7 @@
         <ResourceDictionary Source="Images/Images.xaml" />
 		<ResourceDictionary Source="DataGridStyles.xaml" />
 		<ResourceDictionary Source="TreeViewStyles.xaml" />
-
+		<ResourceDictionary Source="SplitButton.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style TargetType="ScrollBar">
@@ -1501,7 +1501,7 @@
 		<Setter Property="FontSize" Value="12"/>
 		<Setter Property="Foreground" Value="#FF666666"/>
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
-		<Setter Property="Padding" Value="16,6"/>
+		<Setter Property="Padding" Value="14,6"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="HyperlinkButton">
@@ -1581,15 +1581,15 @@
 			<Setter.Value>
 				<ControlTemplate TargetType="Controls:Separator">
 					<StackPanel Orientation="Horizontal">
-						<Path Data="M0,0 L0,1" Stretch="Fill" UseLayoutRounding="False">
+						<Path Data="M0,0 L0,1" Stretch="Fill" UseLayoutRounding="True">
 							<Path.Stroke>
 								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-									<GradientStop Color="#FFDEDEDE" Offset="0"/>
-									<GradientStop Color="#FFDEDEDE" Offset="1"/>
+									<GradientStop Color="#EBEBEB" Offset="0"/>
+                                    <GradientStop Color="#EBEBEB" Offset="1"/>
 								</LinearGradientBrush>
 							</Path.Stroke>
 						</Path>
-						<Path Data="M0,0 L0,1" Stretch="Fill" UseLayoutRounding="False">
+                        <Path Data="M0,0 L0,1" Stretch="Fill" UseLayoutRounding="True">
 							<Path.Stroke>
 								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
 									<GradientStop Color="White" Offset="0"/>

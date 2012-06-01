@@ -196,6 +196,9 @@
     <Compile Include="Features\Terms\TermsView.xaml.cs">
       <DependentUpon>TermsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Impl\SplitButton\GlobalSuppressions.cs" />
+    <Compile Include="Impl\SplitButton\MenuButton.cs" />
+    <Compile Include="Impl\SplitButton\SplitButton.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
     <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\NegatingBoolConverter.cs" />
@@ -491,6 +494,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Assets\SplitButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Assets\TextBoxStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -522,6 +529,10 @@
     <Page Include="Features\Terms\TermsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Impl\SplitButton\Themes\generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Terms.xaml">
       <SubType>Designer</SubType>
@@ -716,6 +727,7 @@
     <EmbeddedResource Include="Settings.dat" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Impl\SplitButton\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
     <Resource Include="Assets\Images\RavenDBLogo.png" />
     <Resource Include="Assets\Images\FooterTexture.png" />
