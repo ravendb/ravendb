@@ -76,34 +76,50 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 				TestUtil.WaitForIndexing(documentStore);
 			}
+
+			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(keyOfDocumentToCompareAgainst);
 		}
 
 		[Fact]
 		public void Can_compare_documents_with_integer_identifiers()
 		{
-			string keyToQueryFor;
+			string firstKeyToQueryFor;
+			string secondKeyToQueryFor;
 
 			using (var session = documentStore.OpenSession())
 			{
-				new DataIndex().Execute(documentStore);
+				new OtherDataIndex().Execute(documentStore);
 
-				var dataQueriedFor = new DataWithIntegerId
+				var dataQueriedFor = new DataWithIntegerId { Id = 123, Body = "This is a test. Isn't it great? I hope I pass my test!" };
+
+				var list = new List<DataWithIntegerId>
 				{
-					Id = 123,
-					Body = "This is a test. Isn't it great? I hope I pass my test!"
+					dataQueriedFor,
+					new DataWithIntegerId { Id = 234, Body = "I have a test tomorrow. I hate having a test"},
+					new DataWithIntegerId { Id = 3456, Body = "Cake is great."},
+					new DataWithIntegerId { Id = 3457, Body = "This document has the word test only once"},
+					new DataWithIntegerId { Id = 3458, Body = "test"},
+					new DataWithIntegerId { Id = 3459, Body = "test"},
 				};
-
-				session.Store(dataQueriedFor);
-				session.Store(new DataWithIntegerId() { Id = 234, Body = "I have a test tomorrow. I hate having a test" });
+				list.ForEach(session.Store);
 
 				session.SaveChanges();
 
-				keyToQueryFor = session.Advanced.GetDocumentId(dataQueriedFor);
+				firstKeyToQueryFor = session.Advanced.GetDocumentId(dataQueriedFor).ToLower();
 
 				TestUtil.WaitForIndexing(documentStore);
 			}
 
-			AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(keyToQueryFor);
+			using (var session2 = documentStore.OpenSession())
+			{
+				var target = session2.Query<DataWithIntegerId>().Where(d => d.Id == 123).Single();
+				secondKeyToQueryFor = session2.Advanced.GetDocumentId(target);
+			}
+
+			Console.WriteLine("querying for {0}, {1}", firstKeyToQueryFor, secondKeyToQueryFor);
+
+			AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(firstKeyToQueryFor);
+			AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(secondKeyToQueryFor);
 		}
 		
 		[Fact]
@@ -436,9 +452,9 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			public string WhitespaceAnalyzerField { get; set; }
 		}
 
-		public class DataWithIntegerId
+		public class DataWithIntegerId 
 		{
-			public int Id { get; set; }
+			public long Id;
 			public string Body { get; set; }
 		}
 
