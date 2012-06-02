@@ -103,7 +103,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 				TestUtil.WaitForIndexing(documentStore);
 			}
 
-			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(keyToQueryFor);
+			AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(keyToQueryFor);
 		}
 		
 		[Fact]
