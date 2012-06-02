@@ -558,6 +558,7 @@
     <Compile Include="MailingList\Bruno.cs" />
     <Compile Include="MailingList\BrunoLopes.cs" />
     <Compile Include="MailingList\ChrisH.cs" />
+    <Compile Include="MailingList\DynamicFieldSorting.cs" />
     <Compile Include="MailingList\IdCasing.cs" />
     <Compile Include="MailingList\IndexTest.cs" />
     <Compile Include="Issues\RavenDB_187.cs" />
