@@ -13,6 +13,7 @@ using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing.Sorting;
+using Raven.Database.Server;
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Extensions
@@ -117,16 +118,22 @@ namespace Raven.Database.Extensions
 		public static SortOptions? GetSortOption(this IndexDefinition self, string name)
 		{
 			SortOptions value;
-			if (!self.SortOptions.TryGetValue(name, out value))
+			if (self.SortOptions.TryGetValue(name, out value))
+				return value;
+			
+			if (name.EndsWith("_Range"))
 			{
-				if (!name.EndsWith("_Range"))
-				{
-					return null;
-				}
 				string nameWithoutRange = name.Substring(0, name.Length - "_Range".Length);
-				if (!self.SortOptions.TryGetValue(nameWithoutRange, out value))
-					return null;
+				if (self.SortOptions.TryGetValue(nameWithoutRange, out value))
+					return value;
 			}
+			if (CurrentOperationContext.Headers.Value == null)
+				return value;
+
+			var hint = CurrentOperationContext.Headers.Value["SortHint-" + name];
+			if (string.IsNullOrEmpty(hint))
+				return value;
+			Enum.TryParse(hint, true, out value);
 			return value;
 		}
 	}
