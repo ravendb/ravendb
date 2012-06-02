@@ -70,7 +70,7 @@ namespace Raven.Bundles.MoreLikeThis
 
 				if (!string.IsNullOrEmpty(parameters.DocumentId))
 				{
-					documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, parameters.DocumentId)),
+					documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, parameters.DocumentId.ToLower())),
 					                  Lucene.Net.Search.BooleanClause.Occur.MUST);
 				}
 
