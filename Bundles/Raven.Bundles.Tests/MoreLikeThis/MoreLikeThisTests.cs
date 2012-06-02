@@ -49,13 +49,67 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		[Fact]
 		public void Can_Get_Results()
 		{
-			const string key = "datas/1";
+			string keyOfDocumentToCompareAgainst;
 
-			using(var session = documentStore.OpenSession())
+			using (var session = documentStore.OpenSession())
 			{
-				session.Store(new KeyValuePair<string,string>("hi", "there"));
+				new DataIndex().Execute(documentStore);
+
+				var dataQueriedFor = new Data { Body = "This is a test. Isn't it great? I hope I pass my test!" };
+
+				var list = new List<Data>
+				{
+					dataQueriedFor,
+					new Data {Body = "I have a test tomorrow. I hate having a test"},
+					new Data {Body = "Cake is great."},
+					new Data {Body = "This document has the word test only once"},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"},
+					new Data {Body = "test"}
+				};
+				list.ForEach(session.Store);
+
 				session.SaveChanges();
+
+				keyOfDocumentToCompareAgainst = session.Advanced.GetDocumentId(dataQueriedFor);
+
+				TestUtil.WaitForIndexing(documentStore);
 			}
+		}
+
+		[Fact]
+		public void Can_compare_documents_with_integer_identifiers()
+		{
+			string keyToQueryFor;
+
+			using (var session = documentStore.OpenSession())
+			{
+				new DataIndex().Execute(documentStore);
+
+				var dataQueriedFor = new DataWithIntegerId
+				{
+					Id = 123,
+					Body = "This is a test. Isn't it great? I hope I pass my test!"
+				};
+
+				session.Store(dataQueriedFor);
+				session.Store(new DataWithIntegerId() { Id = 234, Body = "I have a test tomorrow. I hate having a test" });
+
+				session.SaveChanges();
+
+				keyToQueryFor = session.Advanced.GetDocumentId(dataQueriedFor);
+
+				TestUtil.WaitForIndexing(documentStore);
+			}
+
+			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(keyToQueryFor);
+		}
+		
+		[Fact]
+		public void Can_Get_Results_when_index_has_slash_in_it()
+		{
+			const string key = "datas/1";
 
 			using (var session = documentStore.OpenSession())
 			{
@@ -76,62 +130,10 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 				session.SaveChanges();
 
-				//Ensure non stale index
-				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-				Assert.NotNull(testObj);
+				TestUtil.WaitForIndexing(documentStore);
 			}
 
-			using (var session = documentStore.OpenSession())
-			{
-				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
-				{
-					DocumentId = key,
-					Fields = new[] { "Body" }
-				});
-
-				Assert.NotEmpty(list);
-			}
-		}
-
-		[Fact]
-		public void Can_Get_Results_when_index_has_slash_in_it()
-		{
-			const string key = "datas/1";
-
-			using (var session = documentStore.OpenSession())
-			{
-				new Data_Index().Execute(documentStore);
-
-				var list = new List<Data>
-				{
-					new Data {Body = "This is a test. Isn't it great? I hope I pass my test!"},
-					new Data {Body = "I have a test tomorrow. I hate having a test"},
-					new Data {Body = "Cake is great."},
-					new Data {Body = "This document has the word test only once"},
-					new Data {Body = "test"},
-					new Data {Body = "test"},
-					new Data {Body = "test"},
-					new Data {Body = "test"}
-				};
-				list.ForEach(session.Store);
-
-				session.SaveChanges();
-
-				//Ensure non stale index
-				var testObj = session.Query<Data, Data_Index>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-				Assert.NotNull(testObj);
-			}
-
-			using (var session = documentStore.OpenSession())
-			{
-				var list = session.Advanced.MoreLikeThis<Data, Data_Index>(new MoreLikeThisQueryParameters
-				{
-					DocumentId = key,
-					Fields = new[] { "Body" }
-				});
-
-				Assert.NotEmpty(list);
-			}
+			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(key);
 		}
 
 		[Fact]
@@ -158,22 +160,10 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 				session.SaveChanges();
 
-				//Ensure non stale index
-				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-				Assert.NotNull(testObj);
+				TestUtil.WaitForIndexing(documentStore);
 			}
 
-			using (var session = documentStore.OpenSession())
-			{
-				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
-				{
-					DocumentId = key,
-					Fields = new[] { "Body" }
-				});
-
-				Assert.Empty(list);
-			}
-		}
+			using (var session = documentStore.OpenSession())			{				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters				{					DocumentId = key,					Fields = new[] { "Body" }				});				TestUtil.WaitForIndexing(documentStore);				Assert.Empty(list);			}		}
 
 		[Fact]
 		public void Test_With_Lots_Of_Random_Data()
@@ -190,21 +180,10 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 				}
 				session.SaveChanges();
 
-				//Ensure non stale index
-				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-				Assert.NotNull(testObj);
+				TestUtil.WaitForIndexing(documentStore);
 			}
 
-			using (var session = documentStore.OpenSession())
-			{
-				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
-				{
-					DocumentId = key,
-					Fields = new[] { "Body" }
-				});
-
-				Assert.NotEmpty(list);
-			}
+			AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(key);
 		}
 
 		[Fact]
@@ -222,9 +201,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 				}
 				session.SaveChanges();
 
-				//Ensure non stale index
-				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-				Assert.NotNull(testObj);
+				TestUtil.WaitForIndexing(documentStore);
 			}
 
 			using (var session = documentStore.OpenSession())
@@ -250,9 +227,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 				}
 				session.SaveChanges();
 
-				//Ensure non stale index
-				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-				Assert.NotNull(testObj);
+				TestUtil.WaitForIndexing(documentStore);
 			}
 
 			using (var session = documentStore.OpenSession())
@@ -274,9 +249,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 				}
 				session.SaveChanges();
 
-				//Ensure non stale index
-				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-				Assert.NotNull(testObj);
+				TestUtil.WaitForIndexing(documentStore);
 			}
 
 			using (var session = documentStore.OpenSession())
@@ -307,9 +280,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 				session.SaveChanges();
 
-				//Ensure non stale index
-				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-				Assert.NotNull(testObj);
+				TestUtil.WaitForIndexing(documentStore);
 			}
 
 			using (var session = documentStore.OpenSession())
@@ -344,9 +315,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 				session.SaveChanges();
 
-				//Ensure non stale index
-				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-				Assert.NotNull(testObj);
+				TestUtil.WaitForIndexing(documentStore);
 			}
 
 			using (var session = documentStore.OpenSession())
@@ -392,9 +361,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 				session.SaveChanges();
 
-				//Ensure non stale index
-				var testObj = session.Query<Data, DataIndex>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Id == key).SingleOrDefault();
-				Assert.NotNull(testObj);
+				TestUtil.WaitForIndexing(documentStore);
 			}
 
 			using (var session = documentStore.OpenSession())
@@ -411,6 +378,20 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		}
 
 		#endregion
+
+		void AssetMoreLikeThisHasMatchesFor<T, TIndex>(string documentKey) where TIndex : AbstractIndexCreationTask, new()
+		{
+			using (var session = documentStore.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<T, TIndex>(new MoreLikeThisQueryParameters
+				{
+					DocumentId = documentKey,
+					Fields = new[] { "Body" }
+				});
+
+				Assert.NotEmpty(list);
+			}
+		}
 
 		#region Private Methods - Does NOT work!
 
@@ -455,6 +436,12 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			public string WhitespaceAnalyzerField { get; set; }
 		}
 
+		public class DataWithIntegerId
+		{
+			public int Id { get; set; }
+			public string Body { get; set; }
+		}
+
 		#endregion
 
 		#region Indexes
@@ -490,32 +477,26 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 			}
 		}
-		public class Data_Index : AbstractIndexCreationTask<Data>
+
+		public class OtherDataIndex : AbstractIndexCreationTask<DataWithIntegerId>
 		{
-			public Data_Index()
+			public OtherDataIndex()
 			{
 				Map = docs => from doc in docs
-							  select new { doc.Body, doc.WhitespaceAnalyzerField };
+							  select new { doc.Body};
 
-				Analyzers = new Dictionary<Expression<Func<Data, object>>, string>
+				Analyzers = new Dictionary<Expression<Func<DataWithIntegerId, object>>, string>
 				{
 					{
 						x => x.Body,
 						typeof (StandardAnalyzer).FullName
-						},
-					{
-						x => x.WhitespaceAnalyzerField,
-						typeof (WhitespaceAnalyzer).FullName
 						}
 				};
 
-				Stores = new Dictionary<Expression<Func<Data, object>>, FieldStorage>
+				Stores = new Dictionary<Expression<Func<DataWithIntegerId, object>>, FieldStorage>
 				{
 					{
 						x => x.Body, FieldStorage.Yes
-						},
-					{
-						x => x.WhitespaceAnalyzerField, FieldStorage.Yes
 						}
 				};
 
