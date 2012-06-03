@@ -1,4 +1,5 @@
 using Raven.Abstractions.Json;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions
 {
