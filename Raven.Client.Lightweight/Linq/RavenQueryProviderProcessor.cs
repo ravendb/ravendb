@@ -545,7 +545,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
 			{
-				VisitLessThanOrEqual(Expression.LessThanOrEqual(expression.Right, expression.Left));
+				VisitLessThan(Expression.LessThan(expression.Right, expression.Left));
 				return;
 			}
 			var memberInfo = GetMember(expression.Left);
@@ -560,7 +560,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
 			{
-				VisitLessThan(Expression.LessThan(expression.Right, expression.Left));
+				VisitLessThanOrEqual(Expression.LessThanOrEqual(expression.Right, expression.Left));
 				return;
 			}
 
@@ -576,7 +576,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
 			{
-				VisitGreaterThanOrEqual(Expression.GreaterThanOrEqual(expression.Right, expression.Left));
+				VisitGreaterThan(Expression.GreaterThan(expression.Right, expression.Left));
 				return;
 			}
 			var memberInfo = GetMember(expression.Left);
@@ -591,7 +591,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
 			{
-				VisitGreaterThan(Expression.GreaterThan(expression.Right, expression.Left));
+				VisitGreaterThanOrEqual(Expression.GreaterThanOrEqual(expression.Right, expression.Left));
 				return;
 			}
 			var memberInfo = GetMember(expression.Left);
