@@ -1025,6 +1025,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			if (identityProperty != null && identityProperty.Name == docField)
 			{
 				FieldsToFetch.Add(Constants.DocumentIdFieldName);
+				docField = Constants.DocumentIdFieldName;
 			}
 			else
 			{
