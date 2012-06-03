@@ -23,11 +23,11 @@ namespace Raven.Studio.Features.Documents
 
         }
 
-        public static void Show(ColumnsModel columns, string context, Func<Task<IList<string>>> bindingSuggestions)
+        public static void Show(ColumnsModel columns, string context, Func<IList<string>> bindingSuggestions, Func<IList<ColumnDefinition>> automaticColumnsFetcher)
         {
             var dialog = new ColumnsEditorDialog()
                              {
-                                 DataContext = new ColumnsEditorDialogViewModel(columns, context, bindingSuggestions)
+                                 DataContext = new ColumnsEditorDialogViewModel(columns, context, bindingSuggestions, automaticColumnsFetcher)
                              };
             dialog.Show();
         }

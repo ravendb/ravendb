@@ -39,7 +39,6 @@ namespace Raven.Studio.Features.Documents
 				LastModified = LastModified.ToLocalTime();
 			ClrType = inner.Metadata.IfPresent<string>(Constants.RavenClrType);
 			CollectionType = DetermineCollectionType(inner.Metadata);
-			ToolTipText = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, 10);
 		}
 
 		Brush fill;
@@ -56,12 +55,7 @@ namespace Raven.Studio.Features.Documents
 		private string toolTipText;
 		public string ToolTipText
 		{
-			get { return toolTipText; }
-			set
-			{
-				toolTipText = value;
-				OnPropertyChanged(() => ToolTipText);
-			}
+            get { return toolTipText ?? (toolTipText = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, 10)); }
 		}
 
 		private string data;

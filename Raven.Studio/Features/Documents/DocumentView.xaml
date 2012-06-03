@@ -30,7 +30,7 @@
 				<ColumnDefinition Width="*" />
 			</Grid.ColumnDefinitions>
 
-            <Rectangle Margin="-5,-3,0,-3"
+            <Rectangle Margin="-2,-3,0,-3"
                        HorizontalAlignment="Left"
                        Fill="#06000000"
                        Width="7"
@@ -41,7 +41,7 @@
 			<Rectangle HorizontalAlignment="Left"
 					   Width="3"
 					   Fill="{Binding Path=Fill}"
-					   Margin="-3,0,0,0"
+					   Margin="0,0,0,0"
 					   RadiusX="1"
 					   RadiusY="1"
 					   Grid.RowSpan="3">

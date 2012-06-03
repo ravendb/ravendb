@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Windows.Input;
@@ -14,6 +15,9 @@ namespace Raven.Studio.Models
 {
 	public class QueryModel : PageViewModel, IHasPageTitle
 	{
+        private string error;
+        private ICommand executeQuery;
+
         public QueryDocumentsCollectionSource CollectionSource { get; private set; }
 
 		private QueryIndexAutoComplete queryIndexAutoComplete;
@@ -162,6 +166,8 @@ namespace Raven.Studio.Models
 
 		private void SetSortByOptions(ICollection<string> items)
 		{
+            SortByOptions.Clear();
+
 			foreach (var item in items)
 			{
 				SortByOptions.Add(item);
@@ -234,13 +240,29 @@ namespace Raven.Studio.Models
             Query = new Observable<string>();
 
 			SortBy = new BindableCollection<StringRef>(x => x.Value);
+		    SortBy.CollectionChanged += HandleSortByChanged;
 			SortByOptions = new BindableCollection<string>(x => x);
 			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
 			DynamicSelectedOption = DynamicOptions[0];
 		}
 
-		public override void LoadModelParameters(string parameters)
+	    private void HandleSortByChanged(object sender, NotifyCollectionChangedEventArgs e)
+	    {
+	        if (e.Action == NotifyCollectionChangedAction.Add)
+	        {
+	            (e.NewItems[0] as StringRef).PropertyChanged += delegate { Requery(); };
+	        }
+
+            Requery();
+	    }
+
+	    private void Requery()
+	    {
+	        Execute.Execute(null);
+	    }
+
+	    public override void LoadModelParameters(string parameters)
 		{
 			var urlParser = new UrlParser(parameters);
 
@@ -290,7 +312,7 @@ namespace Raven.Studio.Models
 			Execute.Execute(null);
 		}
 
-		public ICommand Execute { get { return new ExecuteQueryCommand(this); } }
+		public ICommand Execute { get { return executeQuery ?? (executeQuery = new ExecuteQueryCommand(this)); } }
 
 		public Observable<string> Query { get; set; }
 
@@ -315,8 +337,8 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private string error;
-		public string Error
+
+	    public string Error
 		{
 			get { return error; }
 			set { error = value; OnPropertyChanged(() => Error); }
@@ -349,7 +371,7 @@ namespace Raven.Studio.Models
 			public override void Execute(object parameter)
 			{
 				model.Query.Value = model.Query.Value.Replace(fieldAndTerm.Term, fieldAndTerm.SuggestedTerm);
-				model.Execute.Execute(null);
+				model.Requery();
 			}
 		}
 

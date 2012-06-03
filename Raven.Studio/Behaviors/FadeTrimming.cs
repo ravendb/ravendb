@@ -222,21 +222,10 @@ namespace Raven.Studio.Behaviors
                         toolTip = new ToolTip();
                         ToolTipService.SetToolTip(_textBlock, toolTip);
 
-                        toolTip.SetBinding(FrameworkElement.StyleProperty,
-                                           new Binding()
-                                               {
-                                                   Path = new PropertyPath(ToolTipStyleProperty), 
-                                                   Source = _textBlock
-                                               });
+                        toolTip.Style = _textBlock.GetValue(ToolTipStyleProperty) as Style;
                     }
-                        
-                    toolTip.SetBinding(ContentControl.ContentProperty,
-                                        new Binding()
-                                        {
-                                            Path = new PropertyPath(TextBlock.TextProperty),
-                                            Source = _textBlock
-                                        });
-                        
+
+                    toolTip.Content = _textBlock.Text;                        
                 }
 
                 // here's the real magic: if the TextBlock is clipped

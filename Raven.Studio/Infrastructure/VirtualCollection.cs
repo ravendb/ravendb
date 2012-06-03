@@ -205,7 +205,10 @@ namespace Raven.Studio.Infrastructure
                 }
             }
 
-            OnItemsRealized(new ItemsRealizedEventArgs(startIndex, results.Count));
+            if (results.Count > 0)
+            {
+                OnItemsRealized(new ItemsRealizedEventArgs(startIndex, results.Count));
+            }
         }
 
         void INotifyOnDataFetchErrors.Retry()
@@ -525,19 +528,13 @@ namespace Raven.Studio.Infrastructure
             if (handler != null) handler(this, e);
         }
 
-        public event EventHandler CurrentChanged
-        {
-            add { 
-                // don't raise CurrentChanged events
-                // ListBox causes a memory leak by not unsubscribing
-            }
-            remove {  }
-        }
+        public event EventHandler CurrentChanged;
+       
 
         protected void OnCurrentChanged(EventArgs e)
         {
-            //EventHandler handler = CurrentChanged;
-            //if (handler != null) handler(this, e);
+            EventHandler handler = CurrentChanged;
+            if (handler != null) handler(this, e);
         }
 
         public IEnumerator<VirtualItem<T>> GetEnumerator()
@@ -578,7 +575,7 @@ namespace Raven.Studio.Infrastructure
             get { throw new NotImplementedException(); }
         }
 
-        bool ICollection.IsSynchronized
+        public bool IsSynchronized
         {
             get { throw new NotImplementedException(); }
         }
