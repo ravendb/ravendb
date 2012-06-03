@@ -94,6 +94,7 @@ namespace Raven.Tests.MailingList
 			var foos =
 				Session
 					.Query<Foo>()
+					.Customize(x=>x.WaitForNonStaleResults())
 					.Where(foo => foo.Data > 1)
 					.Select(foo => new FooWithFooId
 					{
