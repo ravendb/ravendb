@@ -460,7 +460,7 @@ namespace Raven.Client.Linq
 		{
 			var unaryExpression = expression as UnaryExpression;
 			if (unaryExpression != null)
-				expression = unaryExpression.Operand;
+				return GetMemberExpression(unaryExpression.Operand);
 
 			var lambdaExpression = expression as LambdaExpression;
 			if (lambdaExpression != null)
