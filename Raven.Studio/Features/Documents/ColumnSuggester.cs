@@ -20,8 +20,6 @@ namespace Raven.Studio.Features.Documents
 {
     public class ColumnSuggester
     {
-        private readonly IVirtualCollectionSource<ViewableDocument> source;
-        private readonly string context;
         private static string[] ImportantProperties = new[]
                                                         {
                                                             "Name",
@@ -30,20 +28,18 @@ namespace Raven.Studio.Features.Documents
                                                             "Status"
                                                         };
 
-        public ColumnSuggester(IVirtualCollectionSource<ViewableDocument> source, string context)
+        public ColumnSuggester()
         {
-            this.source = source;
-            this.context = context;
         }
 
-        public Task<IList<string>> AutoSuggest()
+        public IList<string> AutoSuggest(IEnumerable<ViewableDocument> sampleDocuments, string context)
         {
-            return GetSampleDocuments().ContinueWith(t => PickLikelyColumns(t.Result));
+            return PickLikelyColumns(sampleDocuments.Select(v => v.Document).ToArray(), context);
         }
 
-        public Task<IList<string>> AllSuggestions()
+        public IList<string> AllSuggestions(IEnumerable<ViewableDocument> sampleDocuments)
         {
-            return GetSampleDocuments().ContinueWith(t => CreateSuggestedBindingsFromDocuments(t.Result));
+            return CreateSuggestedBindingsFromDocuments(sampleDocuments.Select(v => v.Document).ToArray());
         }
 
         private IEnumerable<string> GetPropertiesFromDocuments(JsonDocument[] jsonDocuments, bool includeNestedPropeties)
@@ -101,13 +97,14 @@ namespace Raven.Studio.Features.Documents
             return bindings;
         }
 
-        private IList<string> PickLikelyColumns(JsonDocument[] sampleDocuments)
+        private IList<string> PickLikelyColumns(JsonDocument[] sampleDocuments, string context)
         {
             var columns= GetPropertiesFromDocuments(sampleDocuments, includeNestedPropeties: false)
                 .GroupBy(p => p)
                 .Select(g => new {Property = g.Key, Occurence = g.Count()/(double) sampleDocuments.Length})
-                .Select(p => new {p.Property, Occurence = p.Occurence + ImportanceBoost(p.Property)})
-                .OrderByDescending(p => p.Occurence)
+                .Select(p => new { p.Property, Importance = p.Occurence + ImportanceBoost(p.Property, context) })
+                .OrderByDescending(p => p.Importance)
+                .ThenBy(p => p.Property)
                 .Select(p => p.Property)
                 .Take(6)
                 .ToList();
@@ -115,19 +112,19 @@ namespace Raven.Studio.Features.Documents
             return columns;
         }
 
-        private double ImportanceBoost(string property)
+        private double ImportanceBoost(string property, string context)
         {
-            if (GetIndexName().Contains(property))
+            if (GetIndexName(context).Contains(property))
             {
                 return 1;
             }
             else
             {
-                return ImportantProperties.Any(importantProperty => Regex.IsMatch(property, importantProperty, RegexOptions.IgnoreCase)) ? 0.5 : 0;
+                return ImportantProperties.Any(importantProperty => Regex.IsMatch(property, importantProperty, RegexOptions.IgnoreCase)) ? 0.75 : 0;
             }
         }
 
-        private string GetIndexName()
+        private string GetIndexName(string context)
         {
             if (context.StartsWith("Index/"))
             {
@@ -137,12 +134,6 @@ namespace Raven.Studio.Features.Documents
             {
                 return "";
             }
-        }
-
-        private Task<JsonDocument[]> GetSampleDocuments()
-        {
-            return source.GetPageAsync(0, 10, null)
-                          .ContinueWith(t => t.Result.Select(d => d.Document).ToArray());
         }
     }
 }

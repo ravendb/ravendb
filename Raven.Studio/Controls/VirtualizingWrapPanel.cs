@@ -39,6 +39,7 @@ namespace Raven.Studio.Controls
             DependencyProperty.Register("DeferScrolling", typeof(bool), typeof(VirtualizingWrapPanel), new PropertyMetadata(default(bool)));
 
         private DeferredActionInvoker _deferredMeasureInvalidation;
+        private bool _isInMeasure;
 
         public bool DeferScrolling
         {
@@ -102,7 +103,7 @@ namespace Raven.Studio.Controls
             }
 
             _deferredMeasureInvalidation.Cancel();
-
+            _isInMeasure = true;
             _childLayouts.Clear();
 
             var extentInfo = GetExtentInfo(availableSize, ItemHeight);
@@ -186,6 +187,8 @@ namespace Raven.Studio.Controls
             var desiredSize = new Size(double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width,
                                        double.IsInfinity(availableSize.Height) ? 0 : availableSize.Height);
 
+            _isInMeasure = false;
+
             return desiredSize;
         }
 
@@ -255,21 +258,28 @@ namespace Raven.Studio.Controls
                 return new ItemLayoutInfo();
             }
 
-            var precedingLines = (int) Math.Floor(VerticalOffset/itemHeight);
-            
-            var firstRealizedIndex = extentInfo.ItemsPerLine*precedingLines;
-            var firstRealizedLineTop = precedingLines*itemHeight - VerticalOffset;
+            // we need to ensure that there is one realized item prior to the first visible item, and one after the last visible item,
+            // so that keyboard navigation works properly. For example, when focus is on the first visible item, and the user
+            // navigates up, the ListBox selects the previous item, and the scrolls that into view - and this triggers the loading of the rest of the items
 
-            var realizedLines = (int) Math.Ceiling((availableSize.Height - firstRealizedLineTop)/itemHeight);
-            var lastRealizedIndex = Math.Min(firstRealizedIndex + realizedLines*extentInfo.ItemsPerLine - 1, _itemsControl.Items.Count - 1);
+            var firstVisibleLine = (int)Math.Floor(VerticalOffset / itemHeight);
+
+            var firstRealizedIndex = Math.Max(extentInfo.ItemsPerLine * firstVisibleLine - 1, 0);
+            var firstRealizedItemLeft = firstRealizedIndex % extentInfo.ItemsPerLine * ItemWidth - HorizontalOffset;
+            var firstRealizedItemTop = (firstRealizedIndex / extentInfo.ItemsPerLine) * itemHeight - VerticalOffset;
+
+            var firstCompleteLineTop = (firstVisibleLine == 0 ? firstRealizedItemTop : firstRealizedItemTop + ItemHeight);
+            var completeRealizedLines = (int)Math.Ceiling((availableSize.Height - firstCompleteLineTop) / itemHeight);
+
+            var lastRealizedIndex = Math.Min(firstRealizedIndex + completeRealizedLines * extentInfo.ItemsPerLine + 2, _itemsControl.Items.Count - 1);
 
             return new ItemLayoutInfo
-                       {
-                           FirstRealizedItemIndex = firstRealizedIndex,
-                           FirstRealizedItemLeft = -HorizontalOffset,
-                           FirstRealizedLineTop = firstRealizedLineTop,
-                           LastRealizedItemIndex = lastRealizedIndex,
-                       };
+            {
+                FirstRealizedItemIndex = firstRealizedIndex,
+                FirstRealizedItemLeft = firstRealizedItemLeft,
+                FirstRealizedLineTop = firstRealizedItemTop,
+                LastRealizedItemIndex = lastRealizedIndex,
+            };
         }
 
         private ExtentInfo GetExtentInfo(Size viewPortSize, double itemHeight)
@@ -354,14 +364,25 @@ namespace Raven.Studio.Controls
 
         public void SetHorizontalOffset(double offset)
         {
+            if (_isInMeasure)
+            {
+                return;
+            }
+
             offset = Clamp(offset, 0, ExtentWidth - ViewportWidth);
             _offset = new Point(offset, _offset.Y);
 
+            InvalidateScrollInfo();
             InvalidateMeasure();
         }
 
         public void SetVerticalOffset(double offset)
         {
+            if (_isInMeasure)
+            {
+                return;
+            }
+
             offset = Clamp(offset, 0, ExtentHeight - ViewportHeight);
             _offset = new Point(_offset.X, offset);
 

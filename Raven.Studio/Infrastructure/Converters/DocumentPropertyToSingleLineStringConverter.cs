@@ -9,22 +9,38 @@ namespace Raven.Studio.Infrastructure.Converters
     public class DocumentPropertyToSingleLineStringConverter : IValueConverter
     {
         public static readonly DocumentPropertyToSingleLineStringConverter Default = new DocumentPropertyToSingleLineStringConverter();
+        public static readonly DocumentPropertyToSingleLineStringConverter Trimmed = new DocumentPropertyToSingleLineStringConverter() { MaxLength = 200};
+
+        public int MaxLength { get; set; }
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
+            string stringValue;
+
             if (value is string)
             {
-                var stringValue = value as string;
-                return stringValue.Replace(Environment.NewLine, " ").Trim('"');
+                stringValue = value as string;
+                stringValue = stringValue.Replace(Environment.NewLine, " ").Trim('"');
             }
             else if (value is RavenJToken)
             {
-                return (value as RavenJToken).ToString(Formatting.None).Trim('"');
+                stringValue = (value as RavenJToken).ToString(Formatting.None).Trim('"');
+            }
+            else if (value != null)
+            {
+                stringValue = value.ToString();
             }
             else
             {
-                return value;
+                stringValue = "";
             }
+
+            if (MaxLength > 0 && stringValue.Length > MaxLength)
+            {
+                stringValue = stringValue.Substring(0,MaxLength) + "...";
+            }
+
+            return stringValue;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

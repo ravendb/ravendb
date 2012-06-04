@@ -47,6 +47,12 @@ namespace Raven.Tests.MailingList
 			{
 				public string SongId { get; set; }
 				public NumericAttribute[] NumericAttributes { get; set; }
+
+				public override string ToString()
+				{
+					return string.Format("SongId: {0}, N1: {1}", SongId,
+						NumericAttributes.First(x => x.Name == "N1").Value);
+				}
 			}
 
 			public WithDynamicIndex()
@@ -72,7 +78,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanSortDynamicaly()
 		{
-			using(var store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
 				new WithDynamicIndex().Execute(store);
 				using (var session = store.OpenSession())
@@ -104,6 +110,43 @@ namespace Raven.Tests.MailingList
 						Assert.Equal("songs/" + counter, item.SongId);
 						counter++;
 					}
+				}
+			}
+		}
+
+		[Fact]
+		public void CanSortDynamicaly_Desc()
+		{
+			using (var Store = NewDocumentStore())
+			{
+				new WithDynamicIndex().Execute(Store);
+				using (var session = Store.OpenSession())
+				{
+					session.Store(new DataSet
+					{
+						Items = Enumerable.Range(1, 50).Select(x =>
+									new Item
+									{
+										SongId = "songs/" + x,
+										NumericAttributes = new[]
+									{
+										new NumericAttribute("N1",x*0.99d),
+										new NumericAttribute("N4",x*0.01d),
+									}
+									}).ToList()
+					});
+					session.SaveChanges();
+				}
+
+				using (var s = Store.OpenSession())
+				{
+					var items = s.Advanced.LuceneQuery<WithDynamicIndex.ProjectionItem, WithDynamicIndex>()
+						.WaitForNonStaleResults()
+						.AddOrder("N1_Range", true, typeof(double))
+						.SelectFields<WithDynamicIndex.ProjectionItem>("SongId", "NumericAttributes")
+						.ToList();
+					Assert.Equal(50, items.Count);
+					Assert.Equal("songs/50", items.First().SongId);
 				}
 			}
 		}

@@ -460,7 +460,7 @@ namespace Raven.Client.Linq
 		{
 			var unaryExpression = expression as UnaryExpression;
 			if (unaryExpression != null)
-				expression = unaryExpression.Operand;
+				return GetMemberExpression(unaryExpression.Operand);
 
 			var lambdaExpression = expression as LambdaExpression;
 			if (lambdaExpression != null)
@@ -1025,6 +1025,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			if (identityProperty != null && identityProperty.Name == docField)
 			{
 				FieldsToFetch.Add(Constants.DocumentIdFieldName);
+				if (identityProperty.Name != renamedField)
+				{
+					docField = Constants.DocumentIdFieldName;
+				}
 			}
 			else
 			{
@@ -1032,6 +1036,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}
 			if(docField != renamedField)
 			{
+				if(identityProperty == null)
+				{
+					var idPropName = luceneQuery.DocumentConvention.FindIdentityPropertyNameFromEntityName(luceneQuery.DocumentConvention.GetTypeTagName(typeof (T)));
+					if(docField == idPropName)
+					{
+						FieldsToRename[Constants.DocumentIdFieldName] = renamedField;
+					}
+				}
 				FieldsToRename[docField] = renamedField;
 			}
 		}

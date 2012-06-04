@@ -19,7 +19,8 @@
         <ResourceDictionary Source="Images/Images.xaml" />
 		<ResourceDictionary Source="DataGridStyles.xaml" />
 		<ResourceDictionary Source="TreeViewStyles.xaml" />
-
+		<ResourceDictionary Source="SplitButton.xaml" />
+		<ResourceDictionary Source="WatermarkedTextBox.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style TargetType="ScrollBar">
@@ -1501,7 +1502,7 @@
 		<Setter Property="FontSize" Value="12"/>
 		<Setter Property="Foreground" Value="#FF666666"/>
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
-		<Setter Property="Padding" Value="16,6"/>
+		<Setter Property="Padding" Value="14,6"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="HyperlinkButton">
@@ -1581,15 +1582,15 @@
 			<Setter.Value>
 				<ControlTemplate TargetType="Controls:Separator">
 					<StackPanel Orientation="Horizontal">
-						<Path Data="M0,0 L0,1" Stretch="Fill" UseLayoutRounding="False">
+						<Path Data="M0,0 L0,1" Stretch="Fill" UseLayoutRounding="True">
 							<Path.Stroke>
 								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-									<GradientStop Color="#FFDEDEDE" Offset="0"/>
-									<GradientStop Color="#FFDEDEDE" Offset="1"/>
+									<GradientStop Color="#EBEBEB" Offset="0"/>
+                                    <GradientStop Color="#EBEBEB" Offset="1"/>
 								</LinearGradientBrush>
 							</Path.Stroke>
 						</Path>
-						<Path Data="M0,0 L0,1" Stretch="Fill" UseLayoutRounding="False">
+                        <Path Data="M0,0 L0,1" Stretch="Fill" UseLayoutRounding="True">
 							<Path.Stroke>
 								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
 									<GradientStop Color="White" Offset="0"/>
@@ -2155,85 +2156,29 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="ItemContainerStyle"
 				Value="{StaticResource Style_ListBoxItem_Document}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border CornerRadius="2" 
+			                BorderBrush="{TemplateBinding BorderBrush}"
+			                BorderThickness="{TemplateBinding BorderThickness}">
+                        <!-- We set the TabNavigation to Cycle on this ScrollViewer to work around a bug which causes the ListBox to loose focus when navigating down (with Down Arrow or Page Down) from the last visible item
+                        (or even when navigating Up/Down on an item that is only partially visible at the bottom of the screen) -->
+                        <ScrollViewer x:Name="ScrollViewer" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="0" TabNavigation="Cycle" IsTabStop="False">
+                            <ItemsPresenter />
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="Style_ListBox_MainTabs" TargetType="ListBox">
 		<Setter Property="Template" Value="{StaticResource ControlTemplate_ListBox_MainPageTabs}"/>
 		<Setter Property="ItemContainerStyle" Value="{StaticResource Style_ListBoxItem_MainPageTab}"/>
 	</Style>
-	
-	<Style x:Key="Style_Button" TargetType="Button">
-		<Setter Property="FontWeight" Value="Bold"/>
-		<Setter Property="FontSize" Value="13"/>
-		<Setter Property="FontFamily" Value="Tahoma"/>
-		<Setter Property="MinWidth" Value="40"/>
-		<Setter Property="Padding" Value="4,0"/>
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="Button">
-					<Border CornerRadius="17" Height="34" BorderBrush="#FFDFDAD5" BorderThickness="1">
-						<Border.Background>
-							<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-								<GradientStop Color="#FFE7E2E8" Offset="0"/>
-								<GradientStop Color="#FFC7BFB7" Offset="1"/>
-							</LinearGradientBrush>
-						</Border.Background>
-						<VisualStateManager.VisualStateGroups>
-							<VisualStateGroup x:Name="CommonStates">
-								<VisualState x:Name="Normal"/>
-								<VisualState x:Name="MouseOver">
-									<Storyboard>
-									<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(Border.Background)" Storyboard.TargetName="border">
-												<DiscreteObjectKeyFrame KeyTime="0">
-													<DiscreteObjectKeyFrame.Value>
-													<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-														<GradientStop Color="#FFFAFAFA" Offset="0.044"/>
-														<GradientStop Color="LightGray" Offset="0.89"/>
-													</LinearGradientBrush>
-												</DiscreteObjectKeyFrame.Value>
-												</DiscreteObjectKeyFrame>
-											</ObjectAnimationUsingKeyFrames>
-										<ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(Border.Background)" Storyboard.TargetName="innermost">
-											<DiscreteObjectKeyFrame KeyTime="0">
-												<DiscreteObjectKeyFrame.Value>
-													<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-														<GradientStop Color="#FFFAFAFA" Offset="0.89"/>
-														<GradientStop Color="LightGray" Offset="0.044"/>
-													</LinearGradientBrush>
-												</DiscreteObjectKeyFrame.Value>
-											</DiscreteObjectKeyFrame>
-										</ObjectAnimationUsingKeyFrames>
-									</Storyboard>
-								</VisualState>
-								<VisualState x:Name="Pressed"/>
-								<VisualState x:Name="Disabled"/>
-							</VisualStateGroup>
-						</VisualStateManager.VisualStateGroups>
-						<Border x:Name="border"  CornerRadius="13" Height="26" BorderThickness="0" Margin="3,0" VerticalAlignment="Center" BorderBrush="Gainsboro">
-							<Border.Background>
-								<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-									<GradientStop Color="#FFFAFAFA" Offset="0.89"/>
-									<GradientStop Color="LightGray" Offset="0.044"/>
-								</LinearGradientBrush>
-							</Border.Background>
-							<Border x:Name="innermost" CornerRadius="12" BorderThickness="0" Margin="1" BorderBrush="Gainsboro">
-								<Border.Background>
-									<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-										<GradientStop Color="#FFFAFAFA" Offset="0.044"/>
-										<GradientStop Color="LightGray" Offset="0.89"/>
-									</LinearGradientBrush>
-								</Border.Background>
-								<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
-							</Border>
-						</Border>
-					</Border>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-		<Setter Property="Foreground" Value="#FF666666"/>
-	</Style>
 
-	<!-- Link Style -->
+  <!-- Link Style -->
 	<Style x:Key="Style_Link_Command" TargetType="HyperlinkButton">
 		<Setter Property="Background" Value="Transparent"/>
 		<Setter Property="BorderThickness" Value="1"/>

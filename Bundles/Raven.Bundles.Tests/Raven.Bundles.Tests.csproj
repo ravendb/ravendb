@@ -111,6 +111,7 @@
     <Compile Include="Replication\SimpleReplication.cs" />
     <Compile Include="Replication\WritesDuringFailover.cs" />
     <Compile Include="Replication\WritesDuringFailover2.cs" />
+    <Compile Include="TestUtil.cs" />
     <Compile Include="UniqueConstraints\Bugs\Lars.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy2.cs" />

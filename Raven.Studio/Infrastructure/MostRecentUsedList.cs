@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using Raven.Studio.Features.Documents;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -76,6 +77,14 @@ namespace Raven.Studio.Infrastructure
         {
             EventHandler<ItemEvictedEventArgs<T>> handler = ItemEvicted;
             if (handler != null) handler(this, e);
+        }
+
+        public void AddRange(IEnumerable<T> items)
+        {
+            foreach (var item in items)
+            {
+                Add(item);
+            }
         }
     }
 
