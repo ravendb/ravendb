@@ -31,6 +31,7 @@ namespace Raven.Abstractions.Extensions
 		{
 			// Raven internal headers
 			"Raven-Server-Build",
+			"Raven-Client-Version",
 			"Non-Authoritative-Information",
 			"Raven-Timer-Request",
 			"Raven-Authenticated-User",

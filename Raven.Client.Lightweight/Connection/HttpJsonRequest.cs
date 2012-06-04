@@ -45,6 +45,7 @@ namespace Raven.Client.Connection
 		public object Headers;
 		private Stream postedStream;
 		private bool writeCalled;
+		private static readonly string ClientVersion = typeof (HttpJsonRequest).Assembly.GetName().Version.ToString();
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -68,6 +69,7 @@ namespace Raven.Client.Connection
 				(requestParams.Method == "POST" || requestParams.Method == "PUT" || requestParams.Method == "PATCH"))
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
+			webRequest.Headers.Add("Raven-Client-Version", ClientVersion);
 			WriteMetadata(requestParams.Metadata);
 			requestParams.UpdateHeaders(webRequest);
 		}

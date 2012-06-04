@@ -167,7 +167,7 @@ namespace Raven.Database.Extensions
 				context.Response.StatusCode = headers.Value<int>("@Http-Status-Code");
 				context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
 			}
-			context.Response.AddHeader("ETag", "\"" + etag + "\"");
+			context.WriteETag(etag);
 		}
 
 		private static string GetHeaderValue(RavenJToken header)
@@ -444,7 +444,7 @@ namespace Raven.Database.Extensions
 				}
 				bytes = resource.ReadData();
 			}
-			context.Response.AddHeader("ETag", currentFileEtag);
+			context.WriteETag(currentFileEtag);
 			context.Response.OutputStream.Write(bytes, 0, bytes.Length);
 		}
 
@@ -457,8 +457,25 @@ namespace Raven.Database.Extensions
 				context.SetStatusToNotModified();
 				return;
 			}
-			context.Response.AddHeader("ETag", fileEtag);
+			context.WriteETag(fileEtag);
 			context.Response.WriteFile(filePath);
+		}
+
+
+		public static void WriteETag(this IHttpContext context, Guid etag)
+		{
+			context.WriteETag(etag.ToString());
+		}
+		public static void WriteETag(this IHttpContext context, string etag)
+		{
+			var clientVersion = context.Request.Headers["Raven-Client-Version"];
+			if (string.IsNullOrEmpty(clientVersion))
+			{
+				context.Response.AddHeader("ETag", etag);
+				return;
+			}
+
+			context.Response.AddHeader("ETag", "\"" + etag + "\"");
 		}
 
 		public static bool IsAdministrator(this IPrincipal principal)
