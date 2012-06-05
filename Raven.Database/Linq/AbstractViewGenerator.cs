@@ -132,10 +132,27 @@ namespace Raven.Database.Linq
 					break;
 
 				resultsOrdered.Add(item);
-				item = func(item);
+				item = NullIfEmptyEnumerable(func(item));
 			}
 
 			return new DynamicList(resultsOrdered.ToArray());
+		}
+
+		private static object NullIfEmptyEnumerable(object item)
+		{
+			var enumerable = item as IEnumerable<object>;
+			if (enumerable == null)
+				return item;
+			var enumerator = enumerable.GetEnumerator();
+			return enumerator.MoveNext() == false ? null : new DynamicList(Yield(enumerator));
+		}
+
+		private static IEnumerable<object> Yield(IEnumerator<object> enumerator)
+		{
+			do
+			{
+				yield return enumerator.Current;
+			} while (enumerator.MoveNext());
 		}
 
 		public void AddQueryParameterForMap(string field)
