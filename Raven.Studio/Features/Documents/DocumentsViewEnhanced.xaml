@@ -185,22 +185,6 @@
 								   Margin="6,0" />
                     </StackPanel>
 
-                    <Button Grid.Column="2" Command="{StaticResource NavigateToDocumentByIdCommand}"
-							Style="{StaticResource Style_Button_MouseOverChrome}"
-							Visibility="{Binding ShowEditControls, Converter={StaticResource BooleanToVisibility}}">
-                        <Button.Content>
-                            <StackPanel Orientation="Horizontal">
-                                <Image Width="20" Height="20" Source="{StaticResource Image_OpenDocument_Small}"
-									   Stretch="UniformToFill"
-									   VerticalAlignment="Center"
-									   Margin="4,0,4,0" />
-                                <TextBlock Text="Edit Document By ID"
-										   FontSize="14"
-										   VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Button.Content>
-                    </Button>
-
                     <StackPanel Grid.Column="4"
 								Orientation="Horizontal"
 								VerticalAlignment="Center"

@@ -157,6 +157,9 @@
     <Compile Include="Controls\DataFetchErrorNotifier.xaml.cs">
       <DependentUpon>DataFetchErrorNotifier.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\GoToDocumentControl.xaml.cs">
+      <DependentUpon>GoToDocumentControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
     <Compile Include="Controls\VirtualizingWrapPanel.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
@@ -241,6 +244,7 @@
     <Compile Include="Models\ApplicationState.cs" />
     <Compile Include="Models\DocumentSize.cs" />
     <Compile Include="Models\DocumentViewStateStore.cs" />
+    <Compile Include="Models\GoToDocumentModel.cs" />
     <Compile Include="Models\IHasPageTitle.cs" />
     <Compile Include="Models\DocumentsModelEnhanced.cs" />
     <Compile Include="Models\PerDatabaseState.cs" />
@@ -515,6 +519,10 @@
     <Page Include="Controls\DataFetchErrorNotifier.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\GoToDocumentControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\Taggers.xaml">
       <SubType>Designer</SubType>
