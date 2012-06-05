@@ -35,6 +35,8 @@ namespace Raven.Abstractions.Json
 					{
 						if (time.Kind == DateTimeKind.Unspecified)
 							return DateTime.SpecifyKind(time, DateTimeKind.Local);
+						if (s.EndsWith("+00:00"))
+							return time.ToUniversalTime();
 						return time;
 					}
 				}
