@@ -6,6 +6,7 @@
 extern alias database;
 using System.Net;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
 using Raven.Bundles.Authentication;
 using Raven.Smuggler;
 using Xunit;

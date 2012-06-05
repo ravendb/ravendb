@@ -29,7 +29,6 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void CanQueryOnlyUsers_WhenStoringUser()
 		{
-			Run<CanQueryOnlyUsers>(x => x.WhenStoringUser(), 10);
 		}
 
 		[Fact]
@@ -83,7 +82,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void CanAggressivelyCacheLoads()
 		{
-			Run<AggressiveCaching>(x => x.CanAggressivelyCacheLoads(), 10000);
+			Run<AggressiveCaching>(x => x.CanAggressivelyCacheLoads(), 100);
 		}
 		
 		[Fact]

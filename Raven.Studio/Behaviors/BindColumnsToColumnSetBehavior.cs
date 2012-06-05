@@ -55,6 +55,7 @@ namespace Raven.Studio.Behaviors
         private bool isLoaded;
         private bool internalColumnUpdate;
         private Dictionary<object, double> columnWidths;
+        private ColumnsModel cachedColumnsModel;
 
         public ColumnsModel Columns
         {
@@ -79,6 +80,13 @@ namespace Raven.Studio.Behaviors
             return AssociatedObject.GetVisualDescendants().OfType<DataGridColumnHeadersPresenter>().FirstOrDefault();
         }
 
+        private void HandleColumnHeadersMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // we need to ensure that the column set doesn't get changed whilst the user is interacting with one
+            // of the columns
+            Columns.Source = ColumnsSource.User;
+        }
+
         private void HandleColumnHeadersMouseLeftButtonUp(object sender, RoutedEventArgs e)
         {
             internalColumnUpdate = true;
@@ -92,7 +100,7 @@ namespace Raven.Studio.Behaviors
         {
             base.OnDetaching();
 
-            StopObservingColumnsModel(Columns);
+            StopObservingColumnsModel();
 
             AssociatedObject.Loaded -= HandleLoaded;
             AssociatedObject.Unloaded -= HandleUnloaded;
@@ -105,10 +113,11 @@ namespace Raven.Studio.Behaviors
             if (columnHeadersPresenter != null)
             {
                 columnHeadersPresenter.RemoveHandler(UIElement.MouseLeftButtonUpEvent, new MouseButtonEventHandler(HandleColumnHeadersMouseLeftButtonUp));
+                columnHeadersPresenter.RemoveHandler(UIElement.MouseLeftButtonDownEvent, new MouseButtonEventHandler(HandleColumnHeadersMouseLeftButtonDown));
             }
 
             isLoaded = false;
-            StopObservingColumnsModel(Columns);
+            StopObservingColumnsModel();
         }
 
         private void HandleLoaded(object sender, RoutedEventArgs e)
@@ -117,6 +126,7 @@ namespace Raven.Studio.Behaviors
             if (columnHeadersPresenter != null)
             {
                 columnHeadersPresenter.AddHandler(UIElement.MouseLeftButtonUpEvent, new MouseButtonEventHandler(HandleColumnHeadersMouseLeftButtonUp), true);
+                columnHeadersPresenter.AddHandler(UIElement.MouseLeftButtonDownEvent, new MouseButtonEventHandler(HandleColumnHeadersMouseLeftButtonDown), true);
             }
 
             isLoaded = true;
@@ -128,7 +138,8 @@ namespace Raven.Studio.Behaviors
         {
             if (columnsModel != null)
             {
-                columnsModel.Columns.CollectionChanged += HandleColumnsChanged;
+                cachedColumnsModel = columnsModel;
+                cachedColumnsModel.Columns.CollectionChanged += HandleColumnsChanged;
             }
         }
 
@@ -139,11 +150,12 @@ namespace Raven.Studio.Behaviors
                 .ToDictionary(c => c.Header, c => c.ActualWidth);
         }
 
-        private void StopObservingColumnsModel(ColumnsModel columnsModel)
+        private void StopObservingColumnsModel()
         {
-            if (columnsModel != null)
+            if (cachedColumnsModel != null)
             {
-                columnsModel.Columns.CollectionChanged -= HandleColumnsChanged;
+                cachedColumnsModel.Columns.CollectionChanged -= HandleColumnsChanged;
+                cachedColumnsModel = null;
             }
         }
 
@@ -293,7 +305,7 @@ namespace Raven.Studio.Behaviors
                 @"<DataTemplate  xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:Behaviors=""clr-namespace:Raven.Studio.Behaviors;assembly=Raven.Studio""
  xmlns:m=""clr-namespace:Raven.Studio.Infrastructure.MarkupExtensions;assembly=Raven.Studio""
                                     xmlns:Converters=""clr-namespace:Raven.Studio.Infrastructure.Converters;assembly=Raven.Studio"">
-                                    <TextBlock Text=""{Binding Item.Document.$$$BindingPath$$$, Converter={m:Static Member=Converters:DocumentPropertyToSingleLineStringConverter.Default}}""
+                                    <TextBlock Text=""{Binding Item.Document.$$$BindingPath$$$, Converter={m:Static Member=Converters:DocumentPropertyToSingleLineStringConverter.Trimmed}}""
                                                Behaviors:FadeTrimming.IsEnabled=""True"" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed=""True""
                                                VerticalAlignment=""Center""
                                                Margin=""5,0""/>
@@ -349,10 +361,7 @@ namespace Raven.Studio.Behaviors
         {
             var behavior = d as BindColumnsToColumnSetBehavior;
 
-            if (e.OldValue != null)
-            {
-                behavior.StopObservingColumnsModel(e.OldValue as ColumnsModel);
-            }
+            behavior.StopObservingColumnsModel();
 
             if (behavior.isLoaded)
             {

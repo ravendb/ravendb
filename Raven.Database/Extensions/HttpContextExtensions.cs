@@ -68,6 +68,7 @@ namespace Raven.Database.Extensions
 				SkipTransformResults = context.GetSkipTransformResults(),
 				FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
 				GroupBy = context.Request.QueryString.GetValues("groupBy"),
+				DefaultField = context.Request.QueryString["defaultField"],
 				AggregationOperation = context.GetAggregationOperation(),
 				SortedFields = context.Request.QueryString.GetValues("sort")
 					.EmptyIfNull()

@@ -240,6 +240,11 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.UsingDefaultField(string field)
+		{
+			UsingDefaultField(field);
+			return this;
+		}
 
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path

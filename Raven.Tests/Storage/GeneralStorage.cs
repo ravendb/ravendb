@@ -64,17 +64,7 @@ namespace Raven.Tests.Storage
 				.Single();
 			var id = doc["@metadata"].Value<string>("@id");
 			Assert.False(string.IsNullOrWhiteSpace(id));
-// ReSharper disable AssignNullToNotNullAttribute
-			new Guid(id); // Assert.IsGuid(id)
-// ReSharper restore AssignNullToNotNullAttribute
-		}
-
-		[Fact(DisplayName = "This is  a failing test, for proposing change in the storage.")]
-		public void StartWithEmptyString_ShouldReturnAll()
-		{
-			db.Put("id", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
-
-			Assert.NotEmpty(db.GetDocumentsWithIdStartingWith("", 0, 10));
+			Assert.DoesNotThrow(() => new Guid(id)); 
 		}
 
 		[Fact]

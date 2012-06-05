@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.IsolatedStorage;
 using System.Linq;
@@ -14,7 +15,6 @@ using System.Text;
 using System.Threading;
 #if !NET35
 using System.Threading.Tasks;
-using Raven.Client.Extensions;
 #endif
 using NLog;
 using Raven.Abstractions;
@@ -39,13 +39,13 @@ namespace Raven.Client.Connection
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		private bool firstTime = true;
-		private readonly DocumentConvention conventions;
+		protected readonly DocumentConvention conventions;
 		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
-		private DateTime lastReplicationUpdate = DateTime.MinValue;
+		protected DateTime lastReplicationUpdate = DateTime.MinValue;
 		private readonly object replicationLock = new object();
 		private List<string> replicationDestinations = new List<string>();
 		private static readonly List<string> Empty = new List<string>();
-		private int readStripingBase;
+		protected int readStripingBase;
 
 		/// <summary>
 		/// Notify when the failover status changed
@@ -195,7 +195,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Should execute the operation using the specified operation URL
 		/// </summary>
-		public bool ShouldExecuteUsing(string operationUrl, int currentRequest, string method, bool primary)
+		public virtual bool ShouldExecuteUsing(string operationUrl, int currentRequest, string method, bool primary)
 		{
 			if (primary == false)
 				AssertValidOperation(method);
@@ -216,7 +216,7 @@ namespace Raven.Client.Connection
 			return true;
 		}
 
-		private void AssertValidOperation(string method)
+		protected void AssertValidOperation(string method)
 		{
 			switch (conventions.FailoverBehaviorWithoutFlags)
 			{
@@ -478,23 +478,23 @@ namespace Raven.Client.Connection
 
 		#region ExecuteWithReplication
 
-		public T ExecuteWithReplication<T>(string method, string primaryUrl, int currentRequest, int readStripingBase, Func<string, T> operation)
+		public virtual T ExecuteWithReplication<T>(string method, string primaryUrl, int currentRequest, int currentReadStripingBase, Func<string, T> operation)
 		{
 			T result;
-			var replicationDestinations = ReplicationDestinations; // thread safe copy
+			var localReplicationDestinations = ReplicationDestinations; // thread safe copy
 
 			var shouldReadFromAllServers = ((conventions.FailoverBehavior & FailoverBehavior.ReadFromAllServers) == FailoverBehavior.ReadFromAllServers);
 			if (shouldReadFromAllServers && method == "GET")
 			{
-				var replicationIndex = readStripingBase % (replicationDestinations.Count + 1);
+				var replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count + 1);
 				// if replicationIndex == destinations count, then we want to use the master
 				// if replicationIndex < 0, then we were explicitly instructed to use the master
-				if (replicationIndex < replicationDestinations.Count && replicationIndex >= 0)
+				if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
 				{
 					// if it is failing, ignore that, and move to the master or any of the replicas
-					if (ShouldExecuteUsing(replicationDestinations[replicationIndex], currentRequest, method, false))
+					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], currentRequest, method, false))
 					{
-						if (TryOperation(operation, replicationDestinations[replicationIndex], true, out result))
+						if (TryOperation(operation, localReplicationDestinations[replicationIndex], true, out result))
 							return result;
 					}
 				}
@@ -504,29 +504,29 @@ namespace Raven.Client.Connection
 			{
 				if (TryOperation(operation, primaryUrl, true, out result))
 					return result;
-				if (IsFirstFailure(primaryUrl) && TryOperation(operation, primaryUrl, replicationDestinations.Count > 0, out result))
+				if (IsFirstFailure(primaryUrl) && TryOperation(operation, primaryUrl, localReplicationDestinations.Count > 0, out result))
 					return result;
 				IncrementFailureCount(primaryUrl);
 			}
 
-			for (var i = 0; i < replicationDestinations.Count; i++)
+			for (var i = 0; i < localReplicationDestinations.Count; i++)
 			{
-				var replicationDestination = replicationDestinations[i];
+				var replicationDestination = localReplicationDestinations[i];
 				if (ShouldExecuteUsing(replicationDestination, currentRequest, method, false) == false)
 					continue;
 				if (TryOperation(operation, replicationDestination, true, out result))
 					return result;
-				if (IsFirstFailure(replicationDestination) && TryOperation(operation, replicationDestination, replicationDestinations.Count > i + 1, out result))
+				if (IsFirstFailure(replicationDestination) && TryOperation(operation, replicationDestination, localReplicationDestinations.Count > i + 1, out result))
 					return result;
 				IncrementFailureCount(replicationDestination);
 			}
 			// this should not be thrown, but since I know the value of should...
 			throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
 There is a high probability of a network problem preventing access to all the replicas.
-Failed to get in touch with any of the " + (1 + replicationDestinations.Count) + " Raven instances.");
+Failed to get in touch with any of the " + (1 + localReplicationDestinations.Count) + " Raven instances.");
 		}
 
-		private bool TryOperation<T>(Func<string, T> operation, string operationUrl, bool avoidThrowing, out T result)
+		protected virtual bool TryOperation<T>(Func<string, T> operation, string operationUrl, bool avoidThrowing, out T result)
 		{
 			try
 			{
@@ -549,9 +549,9 @@ Failed to get in touch with any of the " + (1 + replicationDestinations.Count) +
 #if !NET35
 		#region ExecuteWithReplicationAsync
 
-		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, int currentRequest, int readStripingBase, Func<string, Task<T>> operation)
+		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, int currentRequest, int currentReadStripingBase, Func<string, Task<T>> operation)
 		{
-			return ExecuteWithReplicationAsync(new ExecuteWithReplicationState<T>(method, primaryUrl, currentRequest, readStripingBase, operation));
+			return ExecuteWithReplicationAsync(new ExecuteWithReplicationState<T>(method, primaryUrl, currentRequest, currentReadStripingBase, operation));
 		}
 
 		private Task<T> ExecuteWithReplicationAsync<T>(ExecuteWithReplicationState<T> state)
@@ -639,7 +639,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			}
 		}
 
-		private Task<T> AttemptOperationAndOnFailureCallExecuteWithReplication<T>(string url, ExecuteWithReplicationState<T> state)
+		protected virtual Task<T> AttemptOperationAndOnFailureCallExecuteWithReplication<T>(string url, ExecuteWithReplicationState<T> state)
 		{
 			Task<Task<T>> finalTask = state.Operation(url).ContinueWith(task =>
 			{
@@ -656,6 +656,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 						return tcs.Task;
 
 					case TaskStatus.Faulted:
+						Debug.Assert(task.Exception != null);
 						if (IsServerDown(task.Exception))
 							return ExecuteWithReplicationAsync(state);
 
@@ -670,17 +671,17 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			return finalTask.Unwrap();
 		}
 
-		private class ExecuteWithReplicationState<T>
+		protected class ExecuteWithReplicationState<T>
 		{
 			public ExecuteWithReplicationState(string method, string primaryUrl, int currentRequest, int readStripingBase, Func<string, Task<T>> operation)
 			{
-				this.Method = method;
-				this.PrimaryUrl = primaryUrl;
-				this.CurrentRequest = currentRequest;
-				this.ReadStripingBase = readStripingBase;
-				this.Operation = operation;
+				Method = method;
+				PrimaryUrl = primaryUrl;
+				CurrentRequest = currentRequest;
+				ReadStripingBase = readStripingBase;
+				Operation = operation;
 
-				this.State = ExecuteWithReplicationStates.Start;
+				State = ExecuteWithReplicationStates.Start;
 			}
 
 			public readonly string Method;
@@ -695,12 +696,12 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 			public ExecuteWithReplicationState<T> With(ExecuteWithReplicationStates state)
 			{
-				this.State = state;
+				State = state;
 				return this;
 			}
 		}
 
-		private enum ExecuteWithReplicationStates
+		protected enum ExecuteWithReplicationStates
 		{
 			Start,
 			AfterTryingWithStripedServer,
@@ -715,10 +716,10 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		#endregion
 #endif
 
-		private static bool IsServerDown(Exception e)
+		protected virtual bool IsServerDown(Exception e)
 		{
 #if !NET35
-			AggregateException aggregateException = e as AggregateException;
+			var aggregateException = e as AggregateException;
 			if (aggregateException != null)
 			{
 				e = aggregateException.ExtractSingleInnerException();
@@ -729,7 +730,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 				e.InnerException is IOException;
 		}
 
-		public void Dispose()
+		public virtual void Dispose()
 		{
 #if !NET35
 			var replicationInformationTaskCopy = refreshReplicationInformationTask;

@@ -10,7 +10,7 @@
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 					 xmlns:Controls="clr-namespace:System.Windows.Controls" xmlns:Models="clr-namespace:Raven.Studio.Models"
-                         mc:Ignorable="d"
+                         xmlns:Controls1="clr-namespace:Microsoft.Windows.Controls" mc:Ignorable="d"
 					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel">
 
 	<Grid Margin="{StaticResource Margin_ContentPage}"
@@ -200,7 +200,8 @@
 			<Border Background="{StaticResource Brush_SubtleBackground2}"
 					Grid.RowSpan="2" />
 
-			<TextBox Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+			<Controls1:WatermarkedTextBox Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Watermark="Document Id?"
 					 Grid.Row="0"
 					 Margin="5,10,10,0" />
 
@@ -208,18 +209,18 @@
 							Margin="5,8,10,10"
 							x:Name="TabControl">
 				<sdk:TabItem Header="Data">
-					<Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay}"
+					<Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 										x:Name="EditorCtrl" />
 				</sdk:TabItem>
 				<sdk:TabItem Header="Metadata">
-					<Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay}" />
+					<Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 				</sdk:TabItem>
 			</sdk:TabControl>
 		</Grid>
 
 		<ScrollViewer Grid.Column="1"
 					  Grid.Row="2"
-					  Style="{StaticResource Style_ScrollViewer_Unintrusive}">
+					  Style="{StaticResource Style_ScrollViewer_Unintrusive}" TextOptions.TextHintingMode="Animated">
 			<Grid x:Name="details">
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto" />

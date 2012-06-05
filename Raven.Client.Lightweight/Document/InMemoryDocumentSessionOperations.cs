@@ -360,7 +360,7 @@ more responsive application.
 				OriginalValue = document,
 				Metadata = metadata,
 				OriginalMetadata = (RavenJObject)metadata.CloneToken(),
-				ETag = new Guid(etag),
+				ETag = HttpExtensions.EtagHeaderToGuid(etag),
 				Key = key
 			};
 			entitiesByKey[key] = entity;

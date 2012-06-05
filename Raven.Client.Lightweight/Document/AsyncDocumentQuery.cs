@@ -119,7 +119,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// 	Matches exact value
+		///   Matches exact value
 		/// </summary>
 		/// <remarks>
 		///   Defaults to NotAnalyzed
@@ -143,7 +143,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// 	Matches exact value
+		///   Matches exact value
 		/// </summary>
 		/// <remarks>
 		///   Defaults to allow wildcards only if analyzed
@@ -603,29 +603,29 @@ namespace Raven.Client.Document
 		{
 			var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(theSession,
 #if !SILVERLIGHT
-			                                                             theDatabaseCommands,
+																		 theDatabaseCommands,
 #endif
 #if !NET35
-			                                                             theAsyncDatabaseCommands,
+																		 theAsyncDatabaseCommands,
 #endif
-			                                                             indexName, fields, queryListeners)
-			                         	{
-			                         		pageSize = pageSize,
-			                         		theQueryText = new StringBuilder(theQueryText.ToString()),
-			                         		start = start,
-			                         		timeout = timeout,
-			                         		cutoff = cutoff,
-			                         		theWaitForNonStaleResults = theWaitForNonStaleResults,
-			                         		sortByHints = sortByHints,
-			                         		orderByFields = orderByFields,
-			                         		groupByFields = groupByFields,
-			                         		aggregationOp = aggregationOp,
-			                         		transformResultsFunc = transformResultsFunc,
+																		 indexName, fields, queryListeners)
+										{
+											pageSize = pageSize,
+											theQueryText = new StringBuilder(theQueryText.ToString()),
+											start = start,
+											timeout = timeout,
+											cutoff = cutoff,
+											theWaitForNonStaleResults = theWaitForNonStaleResults,
+											sortByHints = sortByHints,
+											orderByFields = orderByFields,
+											groupByFields = groupByFields,
+											aggregationOp = aggregationOp,
+											transformResultsFunc = transformResultsFunc,
 											includes = new HashSet<string>(includes),
 											negate = negate,
 											queryOperation = queryOperation,
 											queryStats = queryStats
-			                         	};
+										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;
 		}
@@ -763,6 +763,12 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Statistics(out RavenQueryStatistics stats)
 		{
 			Statistics(out stats);
+			return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.UsingDefaultField(string field)
+		{
+			UsingDefaultField(field);
 			return this;
 		}
 	}

@@ -157,6 +157,17 @@ namespace Raven.Storage.Esent.StorageActions
 			return new Guid(lastEtag);
 		}
 
+		public Guid GetMostRecentAttachmentEtag()
+		{
+			Api.JetSetCurrentIndex(session, Files, "by_etag");
+			if (!Api.TryMoveLast(session, Files))
+			{
+				return Guid.Empty;
+			}
+			var lastEtag = Api.RetrieveColumn(session, Files, tableColumnsCache.DocumentsColumns["etag"]);
+			return new Guid(lastEtag);
+		}
+
 		public int GetIndexTouchCount(string name)
 		{
 			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");

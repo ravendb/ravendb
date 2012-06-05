@@ -43,13 +43,13 @@
                         <Rectangle Margin="0"
                        HorizontalAlignment="Left"
                        Fill="#06000000"
-                       Width="9"
+                       Width="7"
                        RadiusX="1"
 					   RadiusY="1"
                        Grid.RowSpan="3"/>
 
                         <Rectangle HorizontalAlignment="Left"
-					   Width="6"
+					   Width="4"
 					   Fill="{Binding Path=Fill}"
 					   Margin="3"
 					   RadiusX="1"
@@ -57,9 +57,9 @@
 					   Grid.RowSpan="3">
                         </Rectangle>
 
-                        <StackPanel Margin="10">
+                        <StackPanel Margin="12,10,10,10">
                             <TextBlock Text="{Binding Name}"
-										    FontSize="14.667" HorizontalAlignment="Center"/>
+										    FontSize="12" HorizontalAlignment="Center"/>
                             <TextBlock Text="{Binding Count, StringFormat='\{0:#,#;;0\}'}"
 										    FontStyle="Italic"
 										    Foreground="#9000"

@@ -43,7 +43,7 @@ namespace Raven.Database.Server.Responders
 				context.SetStatusToNotModified();
 				return;
 			}
-			context.Response.AddHeader("ETag", etag.ToString());
+			context.WriteETag(etag);
 			context.WriteJson(Database.ExecuteGetTermsQuery(index, indexQuery, facetSetupDoc));
 		}
 

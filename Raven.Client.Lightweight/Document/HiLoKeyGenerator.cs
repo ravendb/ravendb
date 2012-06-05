@@ -56,7 +56,7 @@ namespace Raven.Client.Document
 		{
 			while (true)
 			{
-				var myRange = range; // thread safe copy
+				var myRange = Range; // thread safe copy
 
 				var current = Interlocked.Increment(ref myRange.Current);
 				if (current <= myRange.Max)
@@ -64,16 +64,16 @@ namespace Raven.Client.Document
 
 				lock (generatorLock)
 				{
-					if (range != myRange)
+					if (Range != myRange)
 						// Lock was contended, and the max has already been changed. Just get a new id as usual.
 						continue;
 
-					range = GetNextRange();
+					Range = GetNextRange();
 				}
 			}
 		}
 
-		private Range GetNextRange()
+		private RangeValue GetNextRange()
 		{
 			using (new TransactionScope(TransactionScopeOption.Suppress))
 			{
@@ -82,7 +82,7 @@ namespace Raven.Client.Document
 				{
 					try
 					{
-						var minNextMax = range.Max;
+						var minNextMax = Range.Max;
 						JsonDocument document;
 
 						try
@@ -131,7 +131,7 @@ namespace Raven.Client.Document
 						}
 						PutDocument(document);
 
-						return new Range(min, max);
+						return new RangeValue(min, max);
 					}
 					catch (ConcurrencyException)
 					{

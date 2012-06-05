@@ -1,9 +1,10 @@
+using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using Raven.Smuggler;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Tests.MailingList.MapReduceIssue
 {
@@ -55,8 +56,8 @@ namespace Raven.Tests.MailingList.MapReduceIssue
 
 		private class Artist
 		{
-			public string Name { get; set; }
 			public string Id { get; set; }
+			public string Name { get; set; }
 		}
 	}
 }

@@ -14,26 +14,22 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
-	public class DeleteDocumentsCommand : ListBoxCommand<VirtualItem<ViewableDocument>>
+	public class DeleteDocumentsCommand : VirtualItemSelectionCommand<ViewableDocument>
 	{
-		public override bool CanExecute(object parameter)
-		{
-			if (base.CanExecute(parameter))
-			{
-				var documentsIds = SelectedItems.FirstOrDefault();
+	    public DeleteDocumentsCommand(ItemSelection<VirtualItem<ViewableDocument>> itemSelection) : base(itemSelection)
+	    {
+	    }
 
-				if (documentsIds != null && documentsIds.Item != null && documentsIds.Item.Id != null)
-					return true;
-			}
+        protected override bool CanExecuteOverride(IList<ViewableDocument> items)
+        {
+            var document = items.FirstOrDefault();
+            return document != null && document.Id != null;
+        }
 
-			return false;
-		}
-
-		public override void Execute(object parameter)
-		{
-			var documentsIds = SelectedItems
-                .Where(v => v.IsRealized)
-				.Select(x => x.Item.Id)
+        protected override void ExecuteOverride(IList<ViewableDocument> realizedItems)
+        {
+            var documentsIds = realizedItems
+				.Select(x => x.Id)
 				.ToList();
 
 			AskUser.ConfirmationAsync("Confirm Delete", documentsIds.Count > 1

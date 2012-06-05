@@ -167,7 +167,7 @@ namespace Raven.Database.Extensions
 				context.Response.StatusCode = headers.Value<int>("@Http-Status-Code");
 				context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
 			}
-			context.Response.AddHeader("ETag", etag.ToString());
+			context.WriteETag(etag);
 		}
 
 		private static string GetHeaderValue(RavenJToken header)
@@ -398,7 +398,19 @@ namespace Raven.Database.Extensions
 
 		public static bool MatchEtag(this IHttpContext context, Guid etag)
 		{
-			return context.Request.Headers["If-None-Match"] == etag.ToString();
+			return EtagHeaderToGuid(context) == etag;
+		}
+
+		internal static Guid EtagHeaderToGuid(IHttpContext context)
+		{
+			var responseHeader = context.Request.Headers["If-None-Match"];
+			if (string.IsNullOrEmpty(responseHeader))
+				return Guid.NewGuid();
+
+			if (responseHeader[0] == '\"')
+				return new Guid(responseHeader.Substring(1, responseHeader.Length - 2));
+
+			return new Guid(responseHeader);
 		}
 
 		public static void WriteEmbeddedFile(this IHttpContext context, string ravenPath, string docPath)
@@ -432,7 +444,7 @@ namespace Raven.Database.Extensions
 				}
 				bytes = resource.ReadData();
 			}
-			context.Response.AddHeader("ETag", currentFileEtag);
+			context.WriteETag(currentFileEtag);
 			context.Response.OutputStream.Write(bytes, 0, bytes.Length);
 		}
 
@@ -445,8 +457,25 @@ namespace Raven.Database.Extensions
 				context.SetStatusToNotModified();
 				return;
 			}
-			context.Response.AddHeader("ETag", fileEtag);
+			context.WriteETag(fileEtag);
 			context.Response.WriteFile(filePath);
+		}
+
+
+		public static void WriteETag(this IHttpContext context, Guid etag)
+		{
+			context.WriteETag(etag.ToString());
+		}
+		public static void WriteETag(this IHttpContext context, string etag)
+		{
+			var clientVersion = context.Request.Headers["Raven-Client-Version"];
+			if (string.IsNullOrEmpty(clientVersion))
+			{
+				context.Response.AddHeader("ETag", etag);
+				return;
+			}
+
+			context.Response.AddHeader("ETag", "\"" + etag + "\"");
 		}
 
 		public static bool IsAdministrator(this IPrincipal principal)

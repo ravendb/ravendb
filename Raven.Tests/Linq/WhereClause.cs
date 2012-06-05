@@ -5,11 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Linq;
-using System.Linq.Expressions;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Linq;
+using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
 namespace Raven.Tests.Linq
@@ -27,6 +27,21 @@ namespace Raven.Tests.Linq
 				RunInMemory = true
 			}.Initialize();
 			documentSession = documentStore.OpenSession();
+		}
+
+		public class Renamed
+		{
+			[JsonProperty("Yellow")]
+			public string Name { get; set; }
+		} 
+
+		[Fact]
+		public void WillRespectRenames()
+		{
+			var q = documentSession.Query<Renamed>()
+				.Where(x => x.Name == "red")
+				.ToString();
+			Assert.Equal("Yellow:red", q);
 		}
 
 		[Fact]
@@ -112,7 +127,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where 15 > user.Age
 					select user;
-			Assert.Equal("Age_Range:[* TO 0x0000000F]", q.ToString());
+			Assert.Equal("Age_Range:{* TO 0x0000000F}", q.ToString());
 		}
 
 		[Fact]
@@ -122,7 +137,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where 15 >= user.Age
 					select user;
-			Assert.Equal("Age_Range:{* TO 0x0000000F}", q.ToString());
+			Assert.Equal("Age_Range:[* TO 0x0000000F]", q.ToString());
 		}
 
 		[Fact]
@@ -132,7 +147,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where 15 < user.Age
 					select user;
-			Assert.Equal("Age_Range:[0x0000000F TO NULL]", q.ToString());
+			Assert.Equal("Age_Range:{0x0000000F TO NULL}", q.ToString());
 		}
 
 		[Fact]
@@ -142,7 +157,7 @@ namespace Raven.Tests.Linq
 			var q = from user in indexedUsers
 					where 15 <= user.Age
 					select user;
-			Assert.Equal("Age_Range:{0x0000000F TO NULL}", q.ToString());
+			Assert.Equal("Age_Range:[0x0000000F TO NULL]", q.ToString());
 		}
 
 		[Fact]

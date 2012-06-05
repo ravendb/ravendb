@@ -4,19 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Search;
-using Lucene.Net.Util;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Database.Data;
-using Raven.Database.Indexing;
 using Raven.Database.Indexing.Sorting;
+using Raven.Database.Server;
 using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Database.Extensions
@@ -39,25 +36,6 @@ namespace Raven.Database.Extensions
 					"Could not create new analyzer instance '" + name + "' for field: " +
 						name, e);
 			}
-		}
-
-		public static Filter GetFilter(this IndexQuery self)
-		{
-			var spatialIndexQuery = self as SpatialIndexQuery;
-			if(spatialIndexQuery != null)
-			{
-				var dq = new Lucene.Net.Spatial.Tier.DistanceQueryBuilder(
-					spatialIndexQuery.Latitude,
-					spatialIndexQuery.Longitude,
-					spatialIndexQuery.Radius,
-					SpatialIndex.LatField,
-					SpatialIndex.LngField,
-					Lucene.Net.Spatial.Tier.Projectors.CartesianTierPlotter.DefaltFieldPrefix,
-					true);
-
-				return dq.Filter;
-			}
-			return null;
 		}
 
 		public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index defaultIndex)
@@ -107,11 +85,13 @@ namespace Raven.Database.Extensions
 			}
 		}
 
-		public static Sort GetSort(this IndexQuery self, Filter filter, IndexDefinition indexDefinition)
+		public static Sort GetSort(this IndexQuery self, IndexDefinition indexDefinition)
 		{
 			if (self.SortedFields == null || self.SortedFields.Length <= 0)
 				return null;
-			var isSpatialIndexQuery = self is SpatialIndexQuery;
+
+			var spatialQuery = self as SpatialIndexQuery;
+
 			return new Sort(self.SortedFields
 							.Select(sortedField =>
 							{
@@ -122,9 +102,9 @@ namespace Raven.Database.Extensions
 										return new RandomSortField(Guid.NewGuid().ToString());
 									return new RandomSortField(parts[1]);
 								}
-								if (isSpatialIndexQuery && sortedField.Field == Constants.DistanceFieldName)
+								if (spatialQuery != null && sortedField.Field == Constants.DistanceFieldName)
 								{
-									var dsort = new Lucene.Net.Spatial.Tier.DistanceFieldComparatorSource((Lucene.Net.Spatial.Tier.DistanceFilter)filter);
+									var dsort = new SpatialDistanceFieldComparatorSource(spatialQuery.Latitude, spatialQuery.Longitude);
 									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
 								}
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);
@@ -138,16 +118,22 @@ namespace Raven.Database.Extensions
 		public static SortOptions? GetSortOption(this IndexDefinition self, string name)
 		{
 			SortOptions value;
-			if (!self.SortOptions.TryGetValue(name, out value))
+			if (self.SortOptions.TryGetValue(name, out value))
+				return value;
+			
+			if (name.EndsWith("_Range"))
 			{
-				if (!name.EndsWith("_Range"))
-				{
-					return null;
-				}
 				string nameWithoutRange = name.Substring(0, name.Length - "_Range".Length);
-				if (!self.SortOptions.TryGetValue(nameWithoutRange, out value))
-					return null;
+				if (self.SortOptions.TryGetValue(nameWithoutRange, out value))
+					return value;
 			}
+			if (CurrentOperationContext.Headers.Value == null)
+				return value;
+
+			var hint = CurrentOperationContext.Headers.Value["SortHint-" + name];
+			if (string.IsNullOrEmpty(hint))
+				return value;
+			Enum.TryParse(hint, true, out value);
 			return value;
 		}
 	}

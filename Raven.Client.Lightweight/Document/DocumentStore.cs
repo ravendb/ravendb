@@ -564,7 +564,8 @@ namespace Raven.Client.Document
 			};
 #endif
 		}
-
+		
+		
 		public ReplicationInformer GetReplicationInformerForDatabase(string dbName = null)
 		{
 			var key = Url;
@@ -585,7 +586,7 @@ namespace Raven.Client.Document
 				return result;
 			}
 #else
-			return replicationInformers.GetOrAddAtomically(key, s => new ReplicationInformer(Conventions));
+			return replicationInformers.GetOrAddAtomically(key, Conventions.ReplicationInformerFactory);
 #endif
 		}
 

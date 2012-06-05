@@ -53,7 +53,7 @@ namespace Raven.Database.Indexing
 		}
 
 
-		protected override void ExecuteIndxingWork(IList<IndexToWorkOn> indexesToWorkOn)
+		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
 
@@ -73,8 +73,6 @@ namespace Raven.Database.Indexing
 						})
 						.ToArray();
 				});
-
-				
 
 				log.Debug("Found a total of {0} documents that requires indexing since etag: {1}",
 										  jsonDocs.Length, lastIndexedGuidForAllIndexes);

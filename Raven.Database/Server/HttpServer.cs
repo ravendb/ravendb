@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -142,7 +143,7 @@ namespace Raven.Database.Server
 			if (@event.Database != DefaultResourceStore)
 				return; // we ignore anything that isn't from the root db
 
-			CleanupDatabase(@event.Name);
+			CleanupDatabase(@event.Name, skipIfActive: false);
 		}
 
 		
@@ -228,12 +229,12 @@ namespace Raven.Database.Server
 			{
 				// intentionally inside the loop, so we get better concurrency overall
 				// since shutting down a database can take a while
-				CleanupDatabase(db);
+				CleanupDatabase(db, skipIfActive: true);
 
 			}
 		}
 
-		protected void CleanupDatabase(string db)
+		protected void CleanupDatabase(string db, bool skipIfActive)
 		{
 			lock (ResourcesStoresCache)
 			{
@@ -244,7 +245,7 @@ namespace Raven.Database.Server
 					databaseLastRecentlyUsed.TryRemove(db, out time);
 					return;
 				}
-				if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
+				if (skipIfActive && (SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
 				{
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
@@ -545,7 +546,10 @@ namespace Raven.Database.Server
 					var requestResponder = requestResponderLazy.Value;
 					if (requestResponder.WillRespond(ctx))
 					{
+						var sp = Stopwatch.StartNew();
 						requestResponder.Respond(ctx);
+						sp.Stop();
+						ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,# ms",CultureInfo.InvariantCulture));
 						return requestResponder.IsUserInterfaceRequest;
 					}
 				}
@@ -725,6 +729,11 @@ namespace Raven.Database.Server
 			var acceptEncoding = ctx.Request.Headers["Accept-Encoding"];
 
 			if (string.IsNullOrEmpty(acceptEncoding))
+				return;
+
+			// The Studio xap is already a compressed file, it's a waste of time to try to compress it further.
+			var requestUrl = ctx.GetRequestUrl();
+			if (String.Equals(requestUrl, "/silverlight/Raven.Studio.xap", StringComparison.InvariantCultureIgnoreCase))
 				return;
 
 			// gzip must be first, because chrome has an issue accepting deflate data

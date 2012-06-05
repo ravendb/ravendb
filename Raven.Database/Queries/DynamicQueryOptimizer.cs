@@ -38,7 +38,7 @@ namespace Raven.Database.Queries
 				return "Raven/DocumentsByEntityName";
 			}
 
-			var fieldsQueriedUpon = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery.Query).Select(x => x.Item2).ToArray();
+			var fieldsQueriedUpon = SimpleQueryParser.GetFieldsForDynamicQuery(indexQuery).Select(x => x.Item2).ToArray();
 			var normalizedFieldsQueriedUpon =
 				fieldsQueriedUpon.Select(DynamicQueryMapping.ReplaceIndavlidCharactersForFields).ToArray();
 			var distinctSelectManyFields = new HashSet<string>();
@@ -131,13 +131,30 @@ namespace Raven.Database.Queries
 							}
 						}
 
-						if(indexDefinition.Analyzers != null && indexDefinition.Analyzers.Count > 0)
+						if (indexDefinition.Analyzers != null && indexDefinition.Analyzers.Count > 0)
 						{
 							// none of the fields have custom analyzers
 							if (normalizedFieldsQueriedUpon.Any(indexDefinition.Analyzers.ContainsKey)) 
 								return false;
 						}
 
+						if (indexDefinition.Indexes != null && indexDefinition.Indexes.Count > 0)
+						{
+							//If any of the fields we want to query on are set to something other than the default, don't use the index
+							var anyFieldWithNonDefaultIndexing = normalizedFieldsQueriedUpon.Any(x =>
+							{
+								FieldIndexing analysedInfo;
+								if (indexDefinition.Indexes.TryGetValue(x, out analysedInfo))
+								{
+									if (analysedInfo != FieldIndexing.Default)
+										return true;
+								}
+								return false;
+							});
+
+							if (anyFieldWithNonDefaultIndexing)
+								return false;
+						}
 						return true;
 					})
 					.OrderByDescending(indexName =>

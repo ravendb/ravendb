@@ -85,44 +85,44 @@ namespace Raven.Studio.Models
             }
 		}
 
-		public override void LoadModelParameters(string parameters)
-		{
-			var url = new UrlParser(UrlUtil.Url);
+        public override void LoadModelParameters(string parameters)
+        {
+            var url = new UrlParser(UrlUtil.Url);
 
-			if (url.GetQueryParam("mode") == "new")
-			{
-				Mode = DocumentMode.New;
+            if (url.GetQueryParam("mode") == "new")
+            {
+                Mode = DocumentMode.New;
                 InitialiseDocument();
                 Navigator = null;
                 CurrentIndex = 0;
                 TotalItems = 0;
-                SetCurrentDocumentId(null);
+                SetCurrentDocumentKey(null);
 
-				return;
-			}
+                return;
+            }
 
             Navigator = DocumentNavigator.FromUrl(url);
 
             Navigator.GetDocument().ContinueOnSuccessInTheUIThread(
                 result =>
-			{
+                    {
                         if (result.Document == null)
-															{
-																HandleDocumentNotFound();
-																return;
-															}
+                        {
+                            HandleDocumentNotFound();
+                            return;
+                        }
 
                         if (string.IsNullOrEmpty(result.Document.Key))
-			{
-				Mode = DocumentMode.Projection;
+                        {
+                            Mode = DocumentMode.Projection;
                             LocalId = Guid.NewGuid().ToString();
-				}
+                        }
                         else
-				{
+                        {
                             Mode = DocumentMode.DocumentWithId;
                             LocalId = result.Document.Key;
-                            SetCurrentDocumentId(result.Document.Key);
-				}
+                            SetCurrentDocumentKey(result.Document.Key);
+                        }
 
                         isLoaded = true;
                         document.Value = result.Document;
@@ -130,9 +130,9 @@ namespace Raven.Studio.Models
                         TotalItems = (int) result.TotalDocuments;
                     })
                 .Catch();
-			}
+        }
 
-		private void HandleDocumentNotFound()
+        private void HandleDocumentNotFound()
 		{
 			Notification notification;
 			if (Mode == DocumentMode.Projection)
@@ -183,27 +183,34 @@ namespace Raven.Studio.Models
         public bool HasNext
 		{
             get { return CurrentIndex < TotalItems - 1; }
-		}
+			}
 
         public bool CanNavigate
 		{
             get { return Navigator != null && (HasNext || HasPrevious); }
 		}
 
-        public void PutDocumentIdInUrl(string docId)
+		public void SetCurrentDocumentKey(string docId)
 		{
-            if (docId != null && DocumentKey != docId)
-                UrlUtil.Navigate("/edit?id=" + docId);
+            if (docId != null)
+            {
+                Mode = DocumentMode.DocumentWithId;
+            }
+            else
+            {
+                Mode = DocumentMode.New;
+            }
 
-            SetCurrentDocumentId(docId);
-			}
-
-        private void SetCurrentDocumentId(string docId)
-		{
-			DocumentKey = Key = docId;
+		    DocumentKey = Key = docId;
 		}
 
-		private void UpdateFromDocument()
+        private void PutDocumentKeyInUrl(string docId, bool dontOpenNewTab)
+        {
+            if (docId != null && DocumentKey != docId)
+                UrlUtil.Navigate("/edit?id=" + docId, dontOpenNewTab);
+        }
+
+        private void UpdateFromDocument()
 		{
 			var newdoc = document.Value;
             RemoveNonDisplayedMetadata(newdoc.Metadata);
@@ -231,6 +238,8 @@ namespace Raven.Studio.Models
 			OnPropertyChanged(() => Metadata);
 			JsonMetadata = metadataAsJson.ToString(Formatting.Indented);
 		}
+
+
 
 		public ObservableCollection<LinkModel> References { get; private set; }
 		public BindableCollection<LinkModel> Related { get; private set; }
@@ -317,12 +326,12 @@ namespace Raven.Studio.Models
 			{
 				double byteCount = Encoding.UTF8.GetByteCount(JsonData) + Encoding.UTF8.GetByteCount(JsonMetadata);
 				string sizeTerm = "Bytes";
-                if (byteCount > 1024*1024)
+				if (byteCount >= 1024 * 1024)
 				{
 					sizeTerm = "MBytes";
-                    byteCount = byteCount/1024*1024;
+					byteCount = byteCount / (1024 * 1024);
 				}
-				else if (byteCount > 1024)
+				else if (byteCount >= 1024)
 				{
 					sizeTerm = "KBytes";
                     byteCount = byteCount/1024;
@@ -534,28 +543,28 @@ namespace Raven.Studio.Models
 
 		private class SaveDocumentCommand : Command
 		{
-			private readonly EditableDocumentModel document;
+			private readonly EditableDocumentModel parentModel;
 
 			public string Seperator
 			{
 				get
 				{
-					if (document.Key.Contains("/"))
+					if (parentModel.Key.Contains("/"))
 						return "/";
-					if (document.Key.Contains("-"))
+					if (parentModel.Key.Contains("-"))
 						return "-";
 					return null;
 				}
 			}
 
-			public SaveDocumentCommand(EditableDocumentModel document)
+			public SaveDocumentCommand(EditableDocumentModel parentModel)
 			{
-				this.document = document;
+				this.parentModel = parentModel;
 			}
 
 			public override void Execute(object parameter)
 			{
-				if (document.Key != null && document.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+				if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
 				{
 					AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
 						.ContinueWhenTrue(SaveDocument);
@@ -572,11 +581,11 @@ namespace Raven.Studio.Models
 
 				try
 				{
-					doc = RavenJObject.Parse(document.JsonData);
-					metadata = RavenJObject.Parse(document.JsonMetadata);
-					if (document.Key != null && Seperator != null && metadata.Value<string>(Constants.RavenEntityName) == null)
+					doc = RavenJObject.Parse(parentModel.JsonData);
+					metadata = RavenJObject.Parse(parentModel.JsonMetadata);
+					if (parentModel.Key != null && Seperator != null && metadata.Value<string>(Constants.RavenEntityName) == null)
 					{
-						var entityName = document.Key.Split(new[] { Seperator }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+						var entityName = parentModel.Key.Split(new[] { Seperator }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
 
 						if (entityName != null && entityName.Length > 1)
 						{
@@ -594,16 +603,21 @@ namespace Raven.Studio.Models
 					return;
 				}
 
-				document.UpdateMetadata(metadata);
-				ApplicationModel.Current.AddNotification(new Notification("Saving document " + document.Key + " ..."));
-				DatabaseCommands.PutAsync(document.Key, document.Etag, doc, metadata)
+				parentModel.UpdateMetadata(metadata);
+				ApplicationModel.Current.AddNotification(new Notification("Saving document " + parentModel.Key + " ..."));
+
+				Guid? etag = string.Equals(parentModel.DocumentKey , parentModel.Key, StringComparison.InvariantCultureIgnoreCase) ? 
+					parentModel.Etag : Guid.Empty;
+			
+				DatabaseCommands.PutAsync(parentModel.Key, etag, doc, metadata)
 					.ContinueOnSuccess(result =>
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
-						document.Etag = result.ETag;
-						document.PutDocumentIdInUrl(result.Key);
+						parentModel.Etag = result.ETag;
+					    parentModel.PutDocumentKeyInUrl(result.Key, dontOpenNewTab:true);
+					    parentModel.SetCurrentDocumentKey(result.Key);
 					})
-					.ContinueOnSuccess(() => new RefreshDocumentCommand(document).Execute(null))
+					.ContinueOnSuccess(() => new RefreshDocumentCommand(parentModel).Execute(null))
 					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
 			}
 		}

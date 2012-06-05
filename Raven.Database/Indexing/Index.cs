@@ -28,6 +28,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Spatial4n.Core.Query;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -703,7 +704,7 @@ namespace Raven.Database.Indexing
 						int intersectMatches = 0, skippedResultsInCurrentLoop = 0;
 						int previousBaseQueryMatches = 0, currentBaseQueryMatches = 0;
 
-						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0]));
+						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0], indexQuery.DefaultField));
 
 						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
 						var search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
@@ -723,11 +724,10 @@ namespace Raven.Database.Indexing
 								intersectionCollector = new IntersectionCollector(indexSearcher, search.ScoreDocs);
 							}
 
-							Filter filter = indexQuery.GetFilter();
 							for (int i = 1; i < subQueries.Length; i++)
 							{
-								var luceneSubQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[i]));
-								indexSearcher.Search(luceneSubQuery, filter, intersectionCollector);
+								var luceneSubQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[i], indexQuery.DefaultField));
+								indexSearcher.Search(luceneSubQuery, null, intersectionCollector);
 							}
 
 							var currentIntersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
@@ -805,7 +805,7 @@ namespace Raven.Database.Indexing
 
 			private void AssertQueryDoesNotContainFieldsThatAreNotIndexes()
 			{
-				HashSet<string> hashSet = SimpleQueryParser.GetFields(indexQuery.Query);
+				HashSet<string> hashSet = SimpleQueryParser.GetFields(indexQuery);
 				foreach (string field in hashSet)
 				{
 					string f = field;
@@ -838,10 +838,22 @@ namespace Raven.Database.Indexing
 
 			public Query GetLuceneQuery()
 			{
-				return GetLuceneQuery(indexQuery.Query);
+				var q = GetLuceneQuery(indexQuery.Query, indexQuery.DefaultField);
+				var spatialIndexQuery = indexQuery as SpatialIndexQuery;
+				if (spatialIndexQuery != null)
+				{
+					var dq = SpatialIndex.MakeQuery(spatialIndexQuery.Latitude, spatialIndexQuery.Longitude, spatialIndexQuery.Radius);
+					if (q is MatchAllDocsQuery) return dq;
+
+					var bq = new BooleanQuery();
+					bq.Add(q, BooleanClause.Occur.MUST);
+					bq.Add(dq, BooleanClause.Occur.MUST);
+					return bq;
+				}
+				return q;
 			}
-			
-			private Query GetLuceneQuery(string query)
+
+			private Query GetLuceneQuery(string query, string defaultField)
 			{				
 				Query luceneQuery;
 				if (String.IsNullOrEmpty(query))
@@ -866,7 +878,7 @@ namespace Raven.Database.Indexing
 							}
 							return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
 						});
-						luceneQuery = QueryBuilder.BuildQuery(query, searchAnalyzer);
+						luceneQuery = QueryBuilder.BuildQuery(query, defaultField, searchAnalyzer);
 					}
 					finally
 					{
@@ -890,13 +902,12 @@ namespace Raven.Database.Indexing
 			private TopDocs ExecuteQuery(IndexSearcher indexSearcher, Query luceneQuery, int start, int pageSize,
 										IndexQuery indexQuery)
 			{
-				Filter filter = indexQuery.GetFilter();
-				Sort sort = indexQuery.GetSort(filter, parent.indexDefinition);
+				var sort = indexQuery.GetSort(parent.indexDefinition);
 
 				if (pageSize == Int32.MaxValue) // we want all docs
 				{
 					var gatherAllCollector = new GatherAllCollector();
-					indexSearcher.Search(luceneQuery, filter, gatherAllCollector);
+					indexSearcher.Search(luceneQuery, gatherAllCollector);
 					return gatherAllCollector.ToTopDocs();
 				}
 				var minPageSize = Math.Max(pageSize + start, 1);
@@ -904,9 +915,10 @@ namespace Raven.Database.Indexing
 				// NOTE: We get Start + Pagesize results back so we have something to page on
 				if (sort != null)
 				{
-					return indexSearcher.Search(luceneQuery, filter, minPageSize, sort);
+					var ret = indexSearcher.Search(luceneQuery, null, minPageSize, sort);
+					return ret;
 				}
-				return indexSearcher.Search(luceneQuery, filter, minPageSize);
+				return indexSearcher.Search(luceneQuery, null, minPageSize);
 			}
 		}
 

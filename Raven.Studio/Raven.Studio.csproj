@@ -141,14 +141,19 @@
     </Compile>
     <Compile Include="Behaviors\BindColumnsToColumnSetBehavior.cs" />
     <Compile Include="Behaviors\BindColumnVisibility.cs" />
+    <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
+    <Compile Include="Behaviors\OpenDropDownAction.cs" />
+    <Compile Include="Behaviors\SelectRowOnRightClickBehavior.cs" />
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\CopyDocumentsToClipboardCommand.cs" />
     <Compile Include="Commands\ResetIndexCommand.cs" />
+    <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
     <Compile Include="Controls\DataFetchErrorNotifier.xaml.cs">
       <DependentUpon>DataFetchErrorNotifier.xaml</DependentUpon>
     </Compile>
@@ -191,8 +196,14 @@
     <Compile Include="Features\Terms\TermsView.xaml.cs">
       <DependentUpon>TermsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Impl\SplitButton\GlobalSuppressions.cs" />
+    <Compile Include="Impl\SplitButton\MenuButton.cs" />
+    <Compile Include="Impl\SplitButton\SplitButton.cs" />
+    <Compile Include="Impl\WatermarkedTextBox\VisualStateHelper.cs" />
+    <Compile Include="Impl\WatermarkedTextBox\WatermarkedTextBox.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
     <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
+    <Compile Include="Infrastructure\Converters\NegatingBoolConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringValueToObjectConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringValueConversion.cs" />
     <Compile Include="Infrastructure\Converters\StringValueConversionCollection.cs" />
@@ -200,6 +211,7 @@
     <Compile Include="Infrastructure\Converters\RedIfError.cs" />
     <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
     <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
+    <Compile Include="Infrastructure\ProvideVisibleItemRangeFromDataGridBehavior.cs" />
     <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
     <Compile Include="Infrastructure\DeferredActionInvoker.cs" />
     <Compile Include="Infrastructure\DialogView.cs" />
@@ -207,6 +219,8 @@
     <Compile Include="Infrastructure\FrameworkElementExtensions.cs" />
     <Compile Include="Infrastructure\IEnquireAboutItemVisibility.cs" />
     <Compile Include="Infrastructure\INotifyOnDataFetchErrors.cs" />
+    <Compile Include="Infrastructure\ItemSelection.cs" />
+    <Compile Include="Infrastructure\ItemSelection`1.cs" />
     <Compile Include="Infrastructure\IVirtualCollectionSource.cs" />
     <Compile Include="Infrastructure\MarkupExtensions\StaticExtension.cs" />
     <Compile Include="Infrastructure\MostRecentUsedList.cs" />
@@ -219,10 +233,11 @@
     <Compile Include="Infrastructure\VirtualCollection.cs" />
     <Compile Include="Infrastructure\VirtualCollectionSource.cs" />
     <Compile Include="Infrastructure\VirtualItem.cs" />
-    <Compile Include="Infrastructure\ProvideVisibleItemRangeBehavior.cs" />
+    <Compile Include="Infrastructure\ProvideVisibleItemRangeFromItemsControlBehavior.cs" />
     <Compile Include="Infrastructure\WeakEventListener.cs" />
     <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />
+    <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
     <Compile Include="Models\ApplicationState.cs" />
     <Compile Include="Models\DocumentSize.cs" />
     <Compile Include="Models\DocumentViewStateStore.cs" />
@@ -481,6 +496,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Assets\SplitButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Assets\TextBoxStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -488,6 +507,10 @@
     <Page Include="Assets\TreeViewStyles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\WatermarkedTextBox.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Controls\DataFetchErrorNotifier.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -512,6 +535,10 @@
     <Page Include="Features\Terms\TermsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Impl\SplitButton\Themes\generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Terms.xaml">
       <SubType>Designer</SubType>
@@ -706,6 +733,8 @@
     <EmbeddedResource Include="Settings.dat" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Impl\SplitButton\Credits.txt" />
+    <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
     <Resource Include="Assets\Images\RavenDBLogo.png" />
     <Resource Include="Assets\Images\FooterTexture.png" />

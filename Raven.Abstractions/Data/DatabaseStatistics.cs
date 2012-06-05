@@ -10,6 +10,8 @@ namespace Raven.Abstractions.Data
 {
 	public class DatabaseStatistics
 	{
+		public Guid LastDocEtag { get; set; }
+		public Guid LastAttachmentEtag { get; set; }
 		public int CountOfIndexes { get; set; }
 
 		public long ApproximateTaskCount { get; set; }

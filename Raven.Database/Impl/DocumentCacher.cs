@@ -43,7 +43,18 @@ namespace Raven.Database.Impl
 
 		public CachedDocument GetCachedDocument(string key, Guid etag)
 		{
-			var cachedDocument = (CachedDocument)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
+			CachedDocument cachedDocument;
+			try
+			{
+				cachedDocument = (CachedDocument)cachedSerializedDocuments.Get("Doc/" + key + "/" + etag);
+			}
+			catch (OverflowException)
+			{
+				// this is a bug in the framework
+				// http://connect.microsoft.com/VisualStudio/feedback/details/735033/memorycache-set-fails-with-overflowexception-exception-when-key-is-u7337-u7f01-u2117-exception-message-negating-the-minimum-value-of-a-twos-complement-number-is-invalid 
+				// in this case, we just threat it as uncachable
+				return null;
+			}
 			if (cachedDocument == null)
 				return null;
 			return new CachedDocument
@@ -63,21 +74,39 @@ namespace Raven.Database.Impl
 			documentClone.EnsureSnapshot();
 			var metadataClone = ((RavenJObject)metadata.CloneToken());
 			metadataClone.EnsureSnapshot();
-			cachedSerializedDocuments.Set("Doc/" + key + "/" + etag, new CachedDocument
+			try
 			{
-				Document = documentClone,
-				Metadata = metadataClone,
-				Size = size
-			}, new CacheItemPolicy
+				cachedSerializedDocuments.Set("Doc/" + key + "/" + etag, new CachedDocument
+				{
+					Document = documentClone,
+					Metadata = metadataClone,
+					Size = size
+				}, new CacheItemPolicy
+				{
+					SlidingExpiration = configuration.MemoryCacheExpiration,
+				});
+			}
+			catch (OverflowException)
 			{
-				SlidingExpiration = configuration.MemoryCacheExpiration,
-			});
+				// this is a bug in the framework
+				// http://connect.microsoft.com/VisualStudio/feedback/details/735033/memorycache-set-fails-with-overflowexception-exception-when-key-is-u7337-u7f01-u2117-exception-message-negating-the-minimum-value-of-a-twos-complement-number-is-invalid 
+				// in this case, we just threat it as uncachable
+			}
 
 		}
 
 		public void RemoveCachedDocument(string key, Guid etag)
 		{
-			cachedSerializedDocuments.Remove("Doc/" + key + "/" + etag);
+			try
+			{
+				cachedSerializedDocuments.Remove("Doc/" + key + "/" + etag);
+			}
+			catch (OverflowException)
+			{
+				// this is a bug in the framework
+				// http://connect.microsoft.com/VisualStudio/feedback/details/735033/memorycache-set-fails-with-overflowexception-exception-when-key-is-u7337-u7f01-u2117-exception-message-negating-the-minimum-value-of-a-twos-complement-number-is-invalid 
+				// in this case, we just threat it as uncachable
+			}
 		}
 
 		public void Dispose()

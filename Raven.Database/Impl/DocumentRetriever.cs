@@ -33,11 +33,14 @@ namespace Raven.Database.Impl
 		private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly IStorageActionsAccessor actions;
 		private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
+		private readonly HashSet<string> itemsToInclude;
 
-		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers)
+		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
+			HashSet<string> itemsToInclude = null)
 		{
 			this.actions = actions;
 			this.triggers = triggers;
+			this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
 		}
 
 		public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
@@ -203,6 +206,39 @@ namespace Raven.Database.Impl
 			}
 
 			return document;
+		}
+
+		public dynamic Include(object maybeId)
+		{
+			if (maybeId == null || maybeId is DynamicNullObject)
+				return new DynamicNullObject();
+			var id = maybeId as string;
+			if (id != null)
+				return Include(id);
+			var jId = maybeId as RavenJValue;
+			if (jId != null)
+				return Include(jId.Value.ToString());
+
+			foreach (var itemId in (IEnumerable)maybeId)
+			{
+				Include(itemId);
+			}
+			return new DynamicNullObject();
+
+		}
+		public dynamic Include(string id)
+		{
+			itemsToInclude.Add(id);
+			return new DynamicNullObject();
+		}
+		
+		public dynamic Include(IEnumerable<string> ids)
+		{
+			foreach (var id in ids)
+			{
+				itemsToInclude.Add(id);
+			}
+			return new DynamicNullObject();
 		}
 
 		public dynamic Load(string id)

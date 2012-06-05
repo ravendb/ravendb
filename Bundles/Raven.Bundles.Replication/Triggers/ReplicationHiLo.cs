@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Database;
@@ -14,55 +15,72 @@ namespace Raven.Bundles.Replication.Triggers
 {
 	internal class ReplicationHiLo
 	{
-		private long currentLo = Capacity + 1;
 		private readonly object generatorLock = new object();
-		private long currentHi;
-		private const long Capacity = 1024 * 16;
-
+		private volatile Hodler currentMax = new Hodler(0);
+		private long capacity = 256;
+		private long current;
+		private DateTime lastRequestedUtc;
 		public DocumentDatabase Database { get; set; }
-		
+
+		private class Hodler
+		{
+			public readonly long Value;
+
+			public Hodler(long value)
+			{
+				Value = value;
+			}
+		}
+
 		public long NextId()
 		{
-			var incrementedCurrentLow = Interlocked.Increment(ref currentLo);
-			if (incrementedCurrentLow > Capacity)
+			long incrementedCurrent = Interlocked.Increment(ref current);
+			while (incrementedCurrent > currentMax.Value)
 			{
 				lock (generatorLock)
 				{
-					if (Thread.VolatileRead(ref currentLo) > Capacity)
+					if (current > currentMax.Value)
 					{
-						currentHi = GetNextHi();
-						currentLo = 1;
-						incrementedCurrentLow = 1;
+						currentMax = new Hodler(GetNextMax());
 					}
+					return Interlocked.Increment(ref current);
 				}
 			}
-			return (currentHi - 1) * Capacity + (incrementedCurrentLow);
+			return incrementedCurrent;
+
 		}
 
-		private long GetNextHi()
+		private long GetNextMax()
 		{
+			var span = DateTime.UtcNow - lastRequestedUtc;
+			if (span.TotalSeconds < 1)
+			{
+				capacity *= 2;
+			}
+			lastRequestedUtc = DateTime.UtcNow;
 			while (true)
 			{
 				try
 				{
+					var minNextMax = currentMax.Value;
 					var document = Database.Get(ReplicationConstants.RavenReplicationVersionHiLo, null);
 					if (document == null)
 					{
 						Database.Put(ReplicationConstants.RavenReplicationVersionHiLo,
 									 Guid.Empty,
 									 // sending empty guid means - ensure the that the document does NOT exists
-									 RavenJObject.FromObject(new HiLoKey { ServerHi = 2 }),
+									 RavenJObject.FromObject(RavenJObject.FromObject(new { Max = minNextMax + capacity })),
 									 new RavenJObject(),
 									 null);
-						return 1;
+						return minNextMax + capacity;
 					}
-					var hiLoKey = document.DataAsJson.JsonDeserialization<HiLoKey>();
-					var newHi = hiLoKey.ServerHi;
-					hiLoKey.ServerHi += 1;
+					var max = GetMaxFromDocument(document, minNextMax);
+					document.DataAsJson["Max"] = max + capacity;
 					Database.Put(ReplicationConstants.RavenReplicationVersionHiLo, document.Etag,
-								 RavenJObject.FromObject(hiLoKey),
+								 document.DataAsJson,
 								 document.Metadata, null);
-					return newHi;
+					current = max + 1;
+					return max + capacity;
 				}
 				catch (ConcurrencyException)
 				{
@@ -71,11 +89,19 @@ namespace Raven.Bundles.Replication.Triggers
 			}
 		}
 
-
-		private class HiLoKey
+		private long GetMaxFromDocument(JsonDocument document, long minMax)
 		{
-			public long ServerHi { get; set; }
-
+			long max;
+			if (document.DataAsJson.ContainsKey("ServerHi")) // convert from hi to max
+			{
+				var hi = document.DataAsJson.Value<long>("ServerHi");
+				max = ((hi - 1) * capacity);
+				document.DataAsJson.Remove("ServerHi");
+				document.DataAsJson["Max"] = max;
+			}
+			max = document.DataAsJson.Value<long>("Max");
+			return Math.Max(max, minMax);
 		}
+
 	}
 }

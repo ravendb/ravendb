@@ -20,7 +20,6 @@ namespace Raven.Bundles.Tests.Replication
 			serverConfiguration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(AuthenticationUser).Assembly));
 		}
 
-
 		protected override void ConfigureStore(Client.Document.DocumentStore documentStore)
 		{
 			documentStore.Credentials = new NetworkCredential("Ayende", "abc");

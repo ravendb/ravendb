@@ -138,7 +138,7 @@ namespace Raven.Bundles.Replication.Responders
 				
 			// we have a new conflict
 			// move the existing doc to a conflict and create a conflict document
-			var existingDocumentConflictId = id + "/conflicts/" + Database.TransactionalStorage.Id + "/" + existingDoc.Etag;
+			var existingDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(existingDoc.Etag ?? Guid.Empty);
 			
 			existingDoc.Metadata.Add(ReplicationConstants.RavenReplicationConflict, RavenJToken.FromObject(true));
 			actions.Documents.AddDocument(existingDocumentConflictId, null, existingDoc.DataAsJson, existingDoc.Metadata);
@@ -166,6 +166,15 @@ namespace Raven.Bundles.Replication.Responders
 			}
 		}
 
+		private  string HashReplicationIdentifier(Guid existingEtag)
+		{
+			using (var md5 = MD5.Create())
+			{
+				var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
+				return new Guid(md5.ComputeHash(bytes)).ToString();
+			}
+		}
+
 		private static bool IsDirectChildOfCurrentDocument(JsonDocument existingDoc, RavenJObject metadata)
 		{
 			var version = new RavenJObject
@@ -176,6 +185,9 @@ namespace Raven.Bundles.Replication.Responders
 
 			var history = metadata[ReplicationConstants.RavenReplicationHistory];
 			if (history == null || history.Type == JTokenType.Null) // no history, not a parent
+				return false;
+
+			if (history.Type != JTokenType.Array)
 				return false;
 
 			return history.Values().Contains(version, new RavenJTokenEqualityComparer());

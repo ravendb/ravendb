@@ -1,15 +1,7 @@
-﻿
-using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading;
+using System.Globalization;
 using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
 
 namespace Raven.Tryouts
 {
@@ -17,7 +9,18 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			
-		}
+			var val = "2012-05-31T20:58:43.9785585Z";
+			var formats = new[] { "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff", "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK" };
+
+			try
+			{
+				var dateTime = DateTime.ParseExact(val, formats, CultureInfo.InvariantCulture, DateTimeStyles.None);
+				Console.WriteLine(dateTime.Kind);
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
+			}
+		} 
 	}
 }
