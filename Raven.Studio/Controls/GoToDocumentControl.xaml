@@ -7,24 +7,100 @@
              xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
              xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" xmlns:Models="clr-namespace:Raven.Studio.Models"
-             mc:Ignorable="d"
+             xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400" Infrastructure:ModelAttacher.AttachObservableModel="GoToDocumentModel">
-    
+    <UserControl.Resources>
+        
+        <Style TargetType="sdk:AutoCompleteBox">
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="sdk:AutoCompleteBox">
+                        <Grid Margin="{TemplateBinding Padding}"
+                      Background="{TemplateBinding Background}">
+                            <Controls:WatermarkedTextBox Watermark="Go To Document" IsTabStop="True" x:Name="Text" Margin="0">
+                                <i:Interaction.Triggers>
+                                    <Behaviors:StudioKeyTrigger Key="Enter">
+                                        <i:InvokeCommandAction Command="{Binding GoToDocument}"/>
+                                    </Behaviors:StudioKeyTrigger>
+                                    <Behaviors:StudioKeyTrigger Key="Enter" Modifiers="Control">
+                                        <i:InvokeCommandAction Command="{Binding GoToDocument}"/>
+                                    </Behaviors:StudioKeyTrigger>
+                                </i:Interaction.Triggers>
+                            </Controls:WatermarkedTextBox>
+                          <Popup x:Name="Popup">
+                                <Border x:Name="PopupBorder" HorizontalAlignment="Stretch" Opacity="0.0" BorderThickness="0" CornerRadius="3">
+                                    <Border.RenderTransform>
+                                        <TranslateTransform X="1" Y="1" />
+                                    </Border.RenderTransform>
+                                    <Border.Background>
+                                        <SolidColorBrush Color="#11000000" />
+                                    </Border.Background>
+                                    <Border
+                                HorizontalAlignment="Stretch"
+                                Opacity="1.0"
+                                Padding="0"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                CornerRadius="3">
+                                        <Border.RenderTransform>
+                                            <TransformGroup>
+                                                <TranslateTransform X="-1" Y="-1" />
+                                            </TransformGroup>
+                                        </Border.RenderTransform>
+                                        <Border.Background>
+                                            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                                <GradientStop Color="#FFDDDDDD" Offset="0"/>
+                                                <GradientStop Color="#AADDDDDD" Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <ListBox x:Name="Selector" 
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Auto" 
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto" 
+                                                 ItemContainerStyle="{TemplateBinding ItemContainerStyle}" 
+                                                 Background="{TemplateBinding Background}" 
+                                                 Foreground="{TemplateBinding Foreground}" 
+                                                 BorderThickness="0" 
+                                                 ItemTemplate="{TemplateBinding ItemTemplate}" />
+                                    </Border>
+                                </Border>
+                            </Popup>
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="PopupStates">
+                                    <VisualStateGroup.Transitions>
+                                        <VisualTransition GeneratedDuration="0:0:0.1" To="PopupOpened" />
+                                        <VisualTransition GeneratedDuration="0:0:0.2" To="PopupClosed" />
+                                    </VisualStateGroup.Transitions>
+                                    <VisualState x:Name="PopupOpened">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="PopupBorder" Storyboard.TargetProperty="Opacity" To="1.0" />
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="PopupClosed">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="PopupBorder" Storyboard.TargetProperty="Opacity" To="0.0" />
+                                        </Storyboard>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
     <Grid x:Name="LayoutRoot" Background="White" DataContext="{Binding Value}" d:DataContext="{d:DesignInstance Models:GoToDocumentModel}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
         
-        <Controls:WatermarkedTextBox Watermark="Go to Document" Text="{Binding DocumentId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-            <i:Interaction.Triggers>
-                <Behaviors:StudioKeyTrigger Key="Enter">
-                    <i:InvokeCommandAction Command="{Binding GoToDocument}"/>
-                </Behaviors:StudioKeyTrigger>
-                <Behaviors:StudioKeyTrigger Key="Enter" Modifiers="Control">
-                    <i:InvokeCommandAction Command="{Binding GoToDocument}"/>
-                </Behaviors:StudioKeyTrigger>
-            </i:Interaction.Triggers>
-        </Controls:WatermarkedTextBox>
+        <sdk:AutoCompleteBox Text="{Binding DocumentId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                             MinimumPrefixLength="1"
+                             ItemsSource="{Binding Suggestions}">
+            
+        </sdk:AutoCompleteBox>
     </Grid>
 </UserControl>
