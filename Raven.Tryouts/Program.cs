@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Globalization;
 using Raven.Client.Document;
 
 namespace Raven.Tryouts
@@ -8,22 +9,17 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			using(var docStore = new DocumentStore
+			var val = "2012-05-31T20:58:43.9785585Z";
+			var formats = new[] { "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff", "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK" };
+
+			try
 			{
-				Url = "http://localhost:8079"
-			}.Initialize())
+				var dateTime = DateTime.ParseExact(val, formats, CultureInfo.InvariantCulture, DateTimeStyles.None);
+				Console.WriteLine(dateTime.Kind);
+			}
+			catch (Exception e)
 			{
-				Console.WriteLine("Ready...");
-				for (int i = 0; i < 1000; i++)
-				{
-					Console.ReadLine();
-					using (var session = docStore.OpenSession())
-					{
-						var sp = Stopwatch.StartNew();
-						var user = session.Load<dynamic>("users/ayende");
-						Console.WriteLine("{0} - {1} - {2}", i, user.Name, sp.ElapsedMilliseconds);
-					}
-				}
+				Console.WriteLine(e);
 			}
 		} 
 	}

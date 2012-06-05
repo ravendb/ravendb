@@ -70,14 +70,14 @@ namespace Raven.Bundles.MoreLikeThis
 
 				if (!string.IsNullOrEmpty(parameters.DocumentId))
 				{
-					documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, parameters.DocumentId)),
-					                  Lucene.Net.Search.BooleanClause.Occur.MUST);
+					documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, parameters.DocumentId.ToLowerInvariant())),
+					                  BooleanClause.Occur.MUST);
 				}
 
 				foreach (string key in parameters.MapGroupFields.Keys)
 				{
 					documentQuery.Add(new TermQuery(new Term(key, parameters.MapGroupFields[key])),
-					                  Lucene.Net.Search.BooleanClause.Occur.MUST);
+					                  BooleanClause.Occur.MUST);
 				}
 
 				var td = searcher.Search(documentQuery, 1);

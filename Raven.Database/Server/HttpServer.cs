@@ -143,7 +143,7 @@ namespace Raven.Database.Server
 			if (@event.Database != DefaultResourceStore)
 				return; // we ignore anything that isn't from the root db
 
-			CleanupDatabase(@event.Name);
+			CleanupDatabase(@event.Name, skipIfActive: false);
 		}
 
 		
@@ -229,12 +229,12 @@ namespace Raven.Database.Server
 			{
 				// intentionally inside the loop, so we get better concurrency overall
 				// since shutting down a database can take a while
-				CleanupDatabase(db);
+				CleanupDatabase(db, skipIfActive: true);
 
 			}
 		}
 
-		protected void CleanupDatabase(string db)
+		protected void CleanupDatabase(string db, bool skipIfActive)
 		{
 			lock (ResourcesStoresCache)
 			{
@@ -245,7 +245,7 @@ namespace Raven.Database.Server
 					databaseLastRecentlyUsed.TryRemove(db, out time);
 					return;
 				}
-				if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
+				if (skipIfActive && (SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
 				{
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
