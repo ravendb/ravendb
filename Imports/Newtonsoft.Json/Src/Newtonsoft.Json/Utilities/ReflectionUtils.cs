@@ -31,16 +31,18 @@ using System.Globalization;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters;
 using System.Text;
-#if NETFX_CORE || PORTABLE
+#if NETFX_CORE
 using IConvertible = Raven.Imports.Newtonsoft.Json.Utilities.Convertible;
+#endif
+#if NETFX_CORE || PORTABLE
 using ICustomAttributeProvider = Raven.Imports.Newtonsoft.Json.Utilities.CustomAttributeProvider;
 #endif
 #if NET20
-using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
+using Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
-using Raven.Imports.Newtonsoft.Json.Serialization;
+using Newtonsoft.Json.Serialization;
 
 namespace Raven.Imports.Newtonsoft.Json.Utilities
 {

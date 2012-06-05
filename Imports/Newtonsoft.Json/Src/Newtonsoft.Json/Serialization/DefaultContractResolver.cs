@@ -870,7 +870,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       // warning - this method use to cause errors with Intellitrace. Retest in VS Ultimate after changes
       IValueProvider valueProvider;
 
-#if !(SILVERLIGHT || PORTABLE)
+#if !(SILVERLIGHT || PORTABLE || NETFX_CORE)
       if (DynamicCodeGeneration)
         valueProvider = new DynamicValueProvider(member);
       else
@@ -1066,6 +1066,18 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     protected internal virtual string ResolvePropertyName(string propertyName)
     {
       return propertyName;
+    }
+
+    /// <summary>
+    /// Gets the resolved name of the property.
+    /// </summary>
+    /// <param name="propertyName">Name of the property.</param>
+    /// <returns>Name of the property.</returns>
+    public string GetResolvedPropertyName(string propertyName)
+    {
+      // this is a new method rather than changing the visibility of ResolvePropertyName to avoid
+      // a breaking change for anyone who has overidden the method
+      return ResolvePropertyName(propertyName);
     }
   }
 }

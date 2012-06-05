@@ -57,6 +57,7 @@ using Newtonsoft.Json.Converters;
 using System.Runtime.Serialization.Json;
 #endif
 using Newtonsoft.Json.Serialization;
+using Newtonsoft.Json.Tests.Linq;
 using Newtonsoft.Json.Tests.TestObjects;
 using System.Runtime.Serialization;
 using System.Globalization;
@@ -1434,6 +1435,31 @@ keyword such as type of business.""
     }
 
     [Test]
+    public void DeserializePropertiesOnToNonDefaultConstructorWithReferenceTracking()
+    {
+      SubKlass i = new SubKlass("my subprop");
+      i.SuperProp = "overrided superprop";
+
+      string json = JsonConvert.SerializeObject(i, new JsonSerializerSettings
+        {
+          PreserveReferencesHandling = PreserveReferencesHandling.Objects
+        });
+
+      Assert.AreEqual(@"{""$id"":""1"",""SubProp"":""my subprop"",""SuperProp"":""overrided superprop""}", json);
+
+      SubKlass ii = JsonConvert.DeserializeObject<SubKlass>(json, new JsonSerializerSettings
+        {
+          PreserveReferencesHandling = PreserveReferencesHandling.Objects
+        });
+
+      string newJson = JsonConvert.SerializeObject(ii, new JsonSerializerSettings
+      {
+        PreserveReferencesHandling = PreserveReferencesHandling.Objects
+      });
+      Assert.AreEqual(@"{""$id"":""1"",""SubProp"":""my subprop"",""SuperProp"":""overrided superprop""}", newJson);
+    }
+
+    [Test]
     public void SerializeJsonPropertyWithHandlingValues()
     {
       JsonPropertyWithHandlingValues o = new JsonPropertyWithHandlingValues();
@@ -2017,12 +2043,115 @@ keyword such as type of business.""
       string json = @"[]";
 
       ExceptionAssert.Throws<JsonSerializationException>(
-        @"Cannot deserialize JSON array (i.e. [1,2,3]) into type 'Newtonsoft.Json.Tests.TestObjects.Person'.
-The deserialized type must be an array or implement a collection interface like IEnumerable, ICollection or IList.
-To force JSON arrays to deserialize add the JsonArrayAttribute to the type. Path '', line 1, position 1.",
+        @"Cannot deserialize the current JSON array (e.g. [1,2,3]) into type 'Newtonsoft.Json.Tests.TestObjects.Person' because the type requires a JSON object (e.g. {""name"":""value""}) to deserialize correctly.
+To fix this error either change the JSON to a JSON object (e.g. {""name"":""value""}) or change the deserialized type to an array or a type that implements a collection interface (e.g. ICollection, IList) like List<T> that can be deserialized from a JSON array. JsonArrayAttribute can also be added to the type to force it to deserialize from a JSON array.
+Path '', line 1, position 1.",
         () =>
         {
           JsonConvert.DeserializeObject<Person>(json);
+        });
+    }
+
+    [Test]
+    public void CannotDeserializeArrayIntoDictionary()
+    {
+      string json = @"[]";
+
+      ExceptionAssert.Throws<JsonSerializationException>(
+        @"Cannot deserialize the current JSON array (e.g. [1,2,3]) into type 'System.Collections.Generic.Dictionary`2[System.String,System.String]' because the type requires a JSON object (e.g. {""name"":""value""}) to deserialize correctly.
+To fix this error either change the JSON to a JSON object (e.g. {""name"":""value""}) or change the deserialized type to an array or a type that implements a collection interface (e.g. ICollection, IList) like List<T> that can be deserialized from a JSON array. JsonArrayAttribute can also be added to the type to force it to deserialize from a JSON array.
+Path '', line 1, position 1.",
+        () =>
+        {
+          JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+        });
+    }
+
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+    [Test]
+    public void CannotDeserializeArrayIntoSerializable()
+    {
+      string json = @"[]";
+
+      ExceptionAssert.Throws<JsonSerializationException>(
+        @"Cannot deserialize the current JSON array (e.g. [1,2,3]) into type 'System.Exception' because the type requires a JSON object (e.g. {""name"":""value""}) to deserialize correctly.
+To fix this error either change the JSON to a JSON object (e.g. {""name"":""value""}) or change the deserialized type to an array or a type that implements a collection interface (e.g. ICollection, IList) like List<T> that can be deserialized from a JSON array. JsonArrayAttribute can also be added to the type to force it to deserialize from a JSON array.
+Path '', line 1, position 1.",
+        () =>
+        {
+          JsonConvert.DeserializeObject<Exception>(json);
+        });
+    }
+#endif
+
+    [Test]
+    public void CannotDeserializeArrayIntoDouble()
+    {
+      string json = @"[]";
+
+      ExceptionAssert.Throws<JsonSerializationException>(
+        @"Cannot deserialize the current JSON array (e.g. [1,2,3]) into type 'System.Double' because the type requires a JSON primitive value (e.g. string, number, boolean, null) to deserialize correctly.
+To fix this error either change the JSON to a JSON primitive value (e.g. string, number, boolean, null) or change the deserialized type to an array or a type that implements a collection interface (e.g. ICollection, IList) like List<T> that can be deserialized from a JSON array. JsonArrayAttribute can also be added to the type to force it to deserialize from a JSON array.
+Path '', line 1, position 1.",
+        () =>
+        {
+          JsonConvert.DeserializeObject<double>(json);
+        });
+    }
+
+#if !(NET35 || NET20 || WINDOWS_PHONE || PORTABLE)
+    [Test]
+    public void CannotDeserializeArrayIntoDynamic()
+    {
+      string json = @"[]";
+
+      ExceptionAssert.Throws<JsonSerializationException>(
+        @"Cannot deserialize the current JSON array (e.g. [1,2,3]) into type 'Newtonsoft.Json.Tests.Linq.DynamicDictionary' because the type requires a JSON object (e.g. {""name"":""value""}) to deserialize correctly.
+To fix this error either change the JSON to a JSON object (e.g. {""name"":""value""}) or change the deserialized type to an array or a type that implements a collection interface (e.g. ICollection, IList) like List<T> that can be deserialized from a JSON array. JsonArrayAttribute can also be added to the type to force it to deserialize from a JSON array.
+Path '', line 1, position 1.",
+        () =>
+        {
+          JsonConvert.DeserializeObject<DynamicDictionary>(json);
+        });
+    }
+#endif
+
+    [Test]
+    public void CannotDeserializeArrayIntoLinqToJson()
+    {
+      string json = @"[]";
+
+      ExceptionAssert.Throws<InvalidCastException>(
+        @"Unable to cast object of type 'Newtonsoft.Json.Linq.JArray' to type 'Newtonsoft.Json.Linq.JObject'.",
+        () =>
+        {
+          JsonConvert.DeserializeObject<JObject>(json);
+        });
+    }
+
+    [Test]
+    public void CannotDeserializeConstructorIntoObject()
+    {
+      string json = @"new Constructor(123)";
+
+      ExceptionAssert.Throws<JsonSerializationException>(
+        @"Error converting value ""Constructor"" to type 'Newtonsoft.Json.Tests.TestObjects.Person'. Path '', line 1, position 16.",
+        () =>
+        {
+          JsonConvert.DeserializeObject<Person>(json);
+        });
+    }
+
+    [Test]
+    public void CannotDeserializeConstructorIntoObjectNested()
+    {
+      string json = @"[new Constructor(123)]";
+
+      ExceptionAssert.Throws<JsonSerializationException>(
+        @"Error converting value ""Constructor"" to type 'Newtonsoft.Json.Tests.TestObjects.Person'. Path '[0]', line 1, position 17.",
+        () =>
+        {
+          JsonConvert.DeserializeObject<List<Person>>(json);
         });
     }
 
@@ -2032,9 +2161,9 @@ To force JSON arrays to deserialize add the JsonArrayAttribute to the type. Path
       string json = @"{}";
 
       ExceptionAssert.Throws<JsonSerializationException>(
-        @"Cannot deserialize JSON object (i.e. {""name"":""value""}) into type 'System.Collections.Generic.List`1[Newtonsoft.Json.Tests.TestObjects.Person]'.
-The deserialized type should be a normal .NET type (i.e. not a primitive type like integer, not a collection type like an array or List<T>) or a dictionary type (i.e. Dictionary<TKey, TValue>).
-To force JSON objects to deserialize add the JsonObjectAttribute to the type. Path '', line 1, position 2.",
+        @"Cannot deserialize the current JSON object (e.g. {""name"":""value""}) into type 'System.Collections.Generic.List`1[Newtonsoft.Json.Tests.TestObjects.Person]' because the type requires a JSON array (e.g. [1,2,3]) to deserialize correctly.
+To fix this error either change the JSON to a JSON array (e.g. [1,2,3]) or change the deserialized type so that it is a normal .NET type (e.g. not a primitive type like integer, not a collection type like an array or List<T>) that can be deserialized from a JSON object. JsonObjectAttribute can also be added to the type to force it to deserialize from a JSON object.
+Path '', line 1, position 2.",
         () =>
         {
           JsonConvert.DeserializeObject<List<Person>>(json);
@@ -2927,7 +3056,8 @@ To force JSON objects to deserialize add the JsonObjectAttribute to the type. Pa
       {
         ExceptionAssert.Throws<JsonSerializationException>(
           @"Type 'Newtonsoft.Json.Tests.Serialization.JsonSerializerTest+ISerializableTestObject' implements ISerializable but cannot be deserialized using the ISerializable interface because the current application is not fully trusted and ISerializable can expose secure data.
-To fix this error either change the environment to be fully trusted, change the application to not deserialize the type, add to JsonObjectAttribute to the type or change the JsonSerializer setting ContractResolver to use a new DefaultContractResolver with IgnoreSerializableInterface set to true. Path 'booleanValue', line 1, position 14.",
+To fix this error either change the environment to be fully trusted, change the application to not deserialize the type, add JsonObjectAttribute to the type or change the JsonSerializer setting ContractResolver to use a new DefaultContractResolver with IgnoreSerializableInterface set to true.
+Path 'booleanValue', line 1, position 14.",
           () =>
           {
             JsonTypeReflector.SetFullyTrusted(false);
@@ -2948,7 +3078,7 @@ To fix this error either change the environment to be fully trusted, change the 
       {
         ExceptionAssert.Throws<JsonSerializationException>(
           @"Type 'Newtonsoft.Json.Tests.Serialization.JsonSerializerTest+ISerializableTestObject' implements ISerializable but cannot be serialized using the ISerializable interface because the current application is not fully trusted and ISerializable can expose secure data.
-To fix this error either change the environment to be fully trusted, change the application to not deserialize the type, add to JsonObjectAttribute to the type or change the JsonSerializer setting ContractResolver to use a new DefaultContractResolver with IgnoreSerializableInterface set to true. Path ''.",
+To fix this error either change the environment to be fully trusted, change the application to not deserialize the type, add JsonObjectAttribute to the type or change the JsonSerializer setting ContractResolver to use a new DefaultContractResolver with IgnoreSerializableInterface set to true. Path ''.",
           () =>
           {
             JsonTypeReflector.SetFullyTrusted(false);
@@ -6277,6 +6407,94 @@ Parameter name: value",
           {
             s.Deserialize<Dictionary<string, int>>(new JsonTextReader(new StringReader(json)));
           });
+    }
+
+ #if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+   [Test]
+    public void DeserializeException()
+    {
+      string json = @"{ ""ClassName"" : ""System.InvalidOperationException"",
+  ""Data"" : null,
+  ""ExceptionMethod"" : ""8\nLogin\nAppBiz, Version=4.0.0.0, Culture=neutral, PublicKeyToken=null\nMyApp.LoginBiz\nMyApp.User Login()"",
+  ""HResult"" : -2146233079,
+  ""HelpURL"" : null,
+  ""InnerException"" : { ""ClassName"" : ""System.Exception"",
+      ""Data"" : null,
+      ""ExceptionMethod"" : null,
+      ""HResult"" : -2146233088,
+      ""HelpURL"" : null,
+      ""InnerException"" : null,
+      ""Message"" : ""Inner exception..."",
+      ""RemoteStackIndex"" : 0,
+      ""RemoteStackTraceString"" : null,
+      ""Source"" : null,
+      ""StackTraceString"" : null,
+      ""WatsonBuckets"" : null
+    },
+  ""Message"" : ""Outter exception..."",
+  ""RemoteStackIndex"" : 0,
+  ""RemoteStackTraceString"" : null,
+  ""Source"" : ""AppBiz"",
+  ""StackTraceString"" : "" at MyApp.LoginBiz.Login() in C:\\MyApp\\LoginBiz.cs:line 44\r\n at MyApp.LoginSvc.Login() in C:\\MyApp\\LoginSvc.cs:line 71\r\n at SyncInvokeLogin(Object , Object[] , Object[] )\r\n at System.ServiceModel.Dispatcher.SyncMethodInvoker.Invoke(Object instance, Object[] inputs, Object[]& outputs)\r\n at System.ServiceModel.Dispatcher.DispatchOperationRuntime.InvokeBegin(MessageRpc& rpc)\r\n at System.ServiceModel.Dispatcher.ImmutableDispatchRuntime.ProcessMessage5(MessageRpc& rpc)\r\n at System.ServiceModel.Dispatcher.ImmutableDispatchRuntime.ProcessMessage41(MessageRpc& rpc)\r\n at System.ServiceModel.Dispatcher.ImmutableDispatchRuntime.ProcessMessage4(MessageRpc& rpc)\r\n at System.ServiceModel.Dispatcher.ImmutableDispatchRuntime.ProcessMessage31(MessageRpc& rpc)\r\n at System.ServiceModel.Dispatcher.ImmutableDispatchRuntime.ProcessMessage3(MessageRpc& rpc)\r\n at System.ServiceModel.Dispatcher.ImmutableDispatchRuntime.ProcessMessage2(MessageRpc& rpc)\r\n at System.ServiceModel.Dispatcher.ImmutableDispatchRuntime.ProcessMessage11(MessageRpc& rpc)\r\n at System.ServiceModel.Dispatcher.ImmutableDispatchRuntime.ProcessMessage1(MessageRpc& rpc)\r\n at System.ServiceModel.Dispatcher.MessageRpc.Process(Boolean isOperationContextSet)"",
+  ""WatsonBuckets"" : null
+}";
+
+      InvalidOperationException exception = JsonConvert.DeserializeObject<InvalidOperationException>(json);
+      Assert.IsNotNull(exception);
+      CustomAssert.IsInstanceOfType(typeof(InvalidOperationException), exception);
+
+      Assert.AreEqual("Outter exception...", exception.Message);
+    }
+#endif
+
+    [Test]
+    public void DeserializeRelativeUri()
+    {
+      IList<Uri> uris = JsonConvert.DeserializeObject<IList<Uri>>(@"[""http://localhost/path?query#hash""]");
+      Assert.AreEqual(1, uris.Count);
+      Assert.AreEqual(new Uri("http://localhost/path?query#hash"), uris[0]);
+
+      Uri uri = JsonConvert.DeserializeObject<Uri>(@"""http://localhost/path?query#hash""");
+      Assert.IsNotNull(uri);
+
+      Uri i1 = new Uri("http://localhost/path?query#hash", UriKind.RelativeOrAbsolute);
+      Uri i2 = new Uri("http://localhost/path?query#hash");
+      Assert.AreEqual(i1, i2);
+
+      uri = JsonConvert.DeserializeObject<Uri>(@"""/path?query#hash""");
+      Assert.IsNotNull(uri);
+      Assert.AreEqual(new Uri("/path?query#hash", UriKind.RelativeOrAbsolute), uri);
+    }
+
+    public class MyConverter : JsonConverter
+    {
+      public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+      {
+        writer.WriteValue("X");
+      }
+
+      public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+      {
+        return "X";
+      }
+
+      public override bool CanConvert(Type objectType)
+      {
+        return true;
+      }
+    }
+
+    public class MyType
+    {
+      [JsonProperty(ItemConverterType = typeof(MyConverter))]
+      public Dictionary<string, object> MyProperty { get; set; }
+    }
+
+    [Test]
+    public void DeserializeDictionaryItemConverter()
+    {
+      var actual = JsonConvert.DeserializeObject<MyType>(@"{ ""MyProperty"":{""Key"":""Y""}}");
+      Assert.AreEqual("X", actual.MyProperty["Key"]);
     }
   }
 

@@ -23,7 +23,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-#if !(SILVERLIGHT || PORTABLE)
+#if !(SILVERLIGHT || PORTABLE || NETFX_CORE)
 using System;
 using System.Collections.Generic;
 #if NET20
@@ -44,7 +44,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     {
       DynamicMethod dynamicMethod = !owner.IsInterface()
         ? new DynamicMethod(name, returnType, parameterTypes, owner, true)
-        : new DynamicMethod(name, returnType, parameterTypes, owner.Module(), true);
+        : new DynamicMethod(name, returnType, parameterTypes, owner.Module, true);
 
       return dynamicMethod;
     }

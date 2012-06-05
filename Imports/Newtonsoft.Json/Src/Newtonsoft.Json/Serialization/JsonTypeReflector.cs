@@ -448,7 +448,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     {
       get
       {
-#if !(SILVERLIGHT || PORTABLE)
+#if !(SILVERLIGHT || PORTABLE || NETFX_CORE)
         if (DynamicCodeGeneration)
           return DynamicReflectionDelegateFactory.Instance;
 #endif
