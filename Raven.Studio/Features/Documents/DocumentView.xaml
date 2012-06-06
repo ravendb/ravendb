@@ -57,11 +57,11 @@
 					   Grid.Row="1"
 					   Grid.Column="3" />
 
-			<TextBlock Text="{Binding Data}"
+			<TextBlock Text="{Binding TrimmedDocumentView}"
 					   Grid.Row="2"
 					   HorizontalAlignment="Left"
 					   VerticalAlignment="Top"
-					   Visibility="{Binding Data, Converter={StaticResource HiddenWhenNull}}"
+					   Visibility="{Binding TrimmedDocumentView, Converter={StaticResource HiddenWhenNull}}"
 					   Grid.Column="3" />
 
 			<Button VerticalAlignment="Bottom"
