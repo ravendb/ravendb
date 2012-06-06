@@ -18,7 +18,7 @@ namespace Raven.Studio.Models
 		public Observable<CollectionModel> SelectedCollection { get; set; }
 
 	    private CollectionDocumentsCollectionSource collectionSource; 
-		private DocumentsModelEnhanced documentsForSelectedCollection;
+		private DocumentsModel documentsForSelectedCollection;
 
         public CollectionDocumentsCollectionSource CollectionSource
 		{
@@ -35,12 +35,12 @@ namespace Raven.Studio.Models
 	        return SelectedCollection.Value != null ? SelectedCollection.Value.Name  : "";
 	    }
 
-	    public DocumentsModelEnhanced DocumentsForSelectedCollection
+	    public DocumentsModel DocumentsForSelectedCollection
 	    {
 	        get
 	        {
 	            if (documentsForSelectedCollection == null)
-                    documentsForSelectedCollection = new DocumentsModelEnhanced(CollectionSource);
+                    documentsForSelectedCollection = new DocumentsModel(CollectionSource);
 	            return documentsForSelectedCollection;
 	        }
 	    }

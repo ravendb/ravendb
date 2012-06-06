@@ -185,8 +185,8 @@
     <Compile Include="Features\Documents\DocumentNavigationStrategy.cs" />
     <Compile Include="Features\Documents\DocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
-    <Compile Include="Features\Documents\DocumentsViewEnhanced.xaml.cs">
-      <DependentUpon>DocumentsViewEnhanced.xaml</DependentUpon>
+    <Compile Include="Features\Documents\DocumentsView.xaml.cs">
+      <DependentUpon>DocumentsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Features\Documents\EditVirtualDocumentCommand.cs" />
     <Compile Include="Features\Documents\IndexDocumentsNavigator.cs" />
@@ -249,7 +249,7 @@
     <Compile Include="Models\DocumentViewStateStore.cs" />
     <Compile Include="Models\GoToDocumentModel.cs" />
     <Compile Include="Models\IHasPageTitle.cs" />
-    <Compile Include="Models\DocumentsModelEnhanced.cs" />
+    <Compile Include="Models\DocumentsModel.cs" />
     <Compile Include="Models\PerDatabaseState.cs" />
     <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
@@ -530,7 +530,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Features\Documents\DocumentsViewEnhanced.xaml">
+    <Page Include="Features\Documents\DocumentsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

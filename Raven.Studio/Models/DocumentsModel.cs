@@ -24,7 +24,7 @@ using System.Reactive.Linq;
 
 namespace Raven.Studio.Models
 {
-    public class DocumentsModelEnhanced : ViewModel
+    public class DocumentsModel : ViewModel
     {
         private EditVirtualDocumentCommand editDocument;
         private Func<string, int, DocumentNavigator> documentNavigatorFactory;
@@ -52,7 +52,7 @@ namespace Raven.Studio.Models
         private MostRecentUsedList<VirtualItem<ViewableDocument>> mostRecentDocuments = new MostRecentUsedList<VirtualItem<ViewableDocument>>(60);
         private ICommand copyDocumentTextToClipboard;
 
-        public DocumentsModelEnhanced(VirtualCollectionSource<ViewableDocument> collectionSource)
+        public DocumentsModel(VirtualCollectionSource<ViewableDocument> collectionSource)
         {
             Documents = new VirtualCollection<ViewableDocument>(collectionSource, 30, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified));
             Documents.PropertyChanged += HandleDocumentsPropertyChanged;

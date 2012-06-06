@@ -268,7 +268,7 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <Documents:DocumentsViewEnhanced DataContext="{Binding DocumentsResult}" Grid.RowSpan="2"/>
+                        <Documents:DocumentsView DataContext="{Binding DocumentsResult}" Grid.RowSpan="2"/>
 
                         <TextBlock Visibility="{Binding Path=DocumentsResult.Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
 								   Text="There are no results for this query." VerticalAlignment="Top" HorizontalAlignment="Center"

@@ -12,9 +12,9 @@ using System.Windows.Shapes;
 
 namespace Raven.Studio.Features.Documents
 {
-    public partial class DocumentsViewEnhanced
+    public partial class DocumentsView
     {
-        public DocumentsViewEnhanced()
+        public DocumentsView()
         {
             InitializeComponent();
         }
