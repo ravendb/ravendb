@@ -40,7 +40,6 @@ namespace Raven.Studio.Models
         private ColumnsModel columns;
 
         public bool SkipAutoRefresh { get; set; }
-        public bool ShowEditControls { get; set; }
 
         private string header;
         private string context;
@@ -63,7 +62,6 @@ namespace Raven.Studio.Models
                 .ObserveOnDispatcher()
                 .Subscribe(e => HandleItemsRealized(e.Sender, e.EventArgs));
 
-            ShowEditControls = true;
             ItemSelection = new ItemSelection<VirtualItem<ViewableDocument>>();
 
             Context = "Default";
