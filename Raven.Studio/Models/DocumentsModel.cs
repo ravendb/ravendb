@@ -21,11 +21,13 @@ using Raven.Studio.Infrastructure;
 using Raven.Client.Connection;
 using Raven.Studio.Extensions;
 using System.Reactive.Linq;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
     public class DocumentsModel : ViewModel
     {
+        private const string PriorityPropertiesDocumentName = "Raven/Studio/PriorityProperties";
         private EditVirtualDocumentCommand editDocument;
         private Func<string, int, DocumentNavigator> documentNavigatorFactory;
 
@@ -50,6 +52,7 @@ namespace Raven.Studio.Models
         private ICommand copyIdsToClipboard;
         private MostRecentUsedList<VirtualItem<ViewableDocument>> mostRecentDocuments = new MostRecentUsedList<VirtualItem<ViewableDocument>>(60);
         private ICommand copyDocumentTextToClipboard;
+        private IList<string> priorityProperties;
 
         public DocumentsModel(VirtualCollectionSource<ViewableDocument> collectionSource)
         {
@@ -106,7 +109,7 @@ namespace Raven.Studio.Models
         {
             var suggester = new ColumnSuggester();
             var newColumns =
-                suggester.AutoSuggest(GetMostRecentDocuments(), Context).Select(
+                suggester.AutoSuggest(GetMostRecentDocuments(), Context, priorityProperties).Select(
                     s => new ColumnDefinition() {Binding = s, Header = s}).ToList();
 
             return newColumns;
@@ -223,10 +226,43 @@ namespace Raven.Studio.Models
         {
             UpdateColumnSet();
 
+            BeginLoadPriorityProperties();
+
             ApplicationModel.Database
                 .ObservePropertyChanged()
                 .TakeUntil(Unloaded)
-                .Subscribe(_ => UpdateColumnSet());
+                .Subscribe(_ =>
+                               {
+                                   BeginLoadPriorityProperties();
+                                   UpdateColumnSet();
+                               });
+        }
+
+        private void BeginLoadPriorityProperties()
+        {
+            ApplicationModel.Database.Value
+                .AsyncDatabaseCommands
+                .GetAsync(PriorityPropertiesDocumentName)
+                .ContinueOnSuccessInTheUIThread(CompleteLoadPriorityProperties);
+        }
+
+        private void CompleteLoadPriorityProperties(JsonDocument document)
+        {
+            if (document != null)
+            {
+                var priorityColumnsDocument = document.DataAsJson.Deserialize<PriorityProperties>(new DocumentConvention());
+                priorityProperties = priorityColumnsDocument.PropertyNamePatterns.Where(p => p.IsValidRegex()).ToList();
+
+                if (priorityColumnsDocument.PropertyNamePatterns.Count != priorityProperties.Count)
+                {
+                    ApplicationModel.Current.AddNotification(
+                        new Notification(string.Format("'{0}' contained some patterns which are not valid regular expressions", PriorityPropertiesDocumentName), NotificationLevel.Error));
+                }
+            }
+            else
+            {
+                priorityProperties = null;
+            }
         }
 
         private void TryLoadDefaultColumnSet()
@@ -234,7 +270,7 @@ namespace Raven.Studio.Models
             var contextWhenRequested = Context;
 
             ApplicationModel.DatabaseCommands
-                .GetAsync("Raven/Studio/Columns/" + contextWhenRequested)
+                .GetAsync("Raven/Studio/Columns/" + Context)
                 .ContinueOnSuccessInTheUIThread(result => UpdateColumns(result, contextWhenRequested));
         }
 

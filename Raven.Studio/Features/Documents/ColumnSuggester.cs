@@ -32,9 +32,9 @@ namespace Raven.Studio.Features.Documents
         {
         }
 
-        public IList<string> AutoSuggest(IEnumerable<ViewableDocument> sampleDocuments, string context)
+        public IList<string> AutoSuggest(IEnumerable<ViewableDocument> sampleDocuments, string context, IList<string> priorityColumns = null)
         {
-            return PickLikelyColumns(sampleDocuments.Select(v => v.Document).ToArray(), context);
+            return PickLikelyColumns(sampleDocuments.Select(v => v.Document).ToArray(), context, priorityColumns);
         }
 
         public IList<string> AllSuggestions(IEnumerable<ViewableDocument> sampleDocuments)
@@ -97,12 +97,17 @@ namespace Raven.Studio.Features.Documents
             return bindings;
         }
 
-        private IList<string> PickLikelyColumns(JsonDocument[] sampleDocuments, string context)
+        private IList<string> PickLikelyColumns(JsonDocument[] sampleDocuments, string context, IList<string> priorityColumns)
         {
+            if (priorityColumns == null || priorityColumns.Count == 0)
+            {
+                priorityColumns = ImportantProperties;
+            }
+
             var columns= GetPropertiesFromDocuments(sampleDocuments, includeNestedPropeties: false)
                 .GroupBy(p => p)
                 .Select(g => new {Property = g.Key, Occurence = g.Count()/(double) sampleDocuments.Length})
-                .Select(p => new { p.Property, Importance = p.Occurence + ImportanceBoost(p.Property, context) })
+                .Select(p => new { p.Property, Importance = p.Occurence + ImportanceBoost(p.Property, context, priorityColumns) })
                 .OrderByDescending(p => p.Importance)
                 .ThenBy(p => p.Property)
                 .Select(p => p.Property)
@@ -112,7 +117,7 @@ namespace Raven.Studio.Features.Documents
             return columns;
         }
 
-        private double ImportanceBoost(string property, string context)
+        private double ImportanceBoost(string property, string context, IEnumerable<string> priorityColumns)
         {
             if (GetIndexName(context).Contains(property))
             {
@@ -120,7 +125,7 @@ namespace Raven.Studio.Features.Documents
             }
             else
             {
-                return ImportantProperties.Any(importantProperty => Regex.IsMatch(property, importantProperty, RegexOptions.IgnoreCase)) ? 0.75 : 0;
+                return priorityColumns.Any(importantProperty => Regex.IsMatch(property, importantProperty, RegexOptions.IgnoreCase)) ? 0.75 : 0;
             }
         }
 

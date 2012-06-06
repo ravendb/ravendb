@@ -31,5 +31,23 @@ namespace Raven.Studio.Extensions
 
 			return RegexWhitespaces.Replace(str, " ").Trim();
 		}
+
+        public static bool IsValidRegex(this string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return false;
+            }
+
+            try
+            {
+                Regex.IsMatch(" ", value);
+                return true;
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
+        }
 	}
 }
