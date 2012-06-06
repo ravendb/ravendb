@@ -15,12 +15,14 @@
             <Setter Property="IsTabStop" Value="False" />
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Brush_TextBoxBorder}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="sdk:AutoCompleteBox">
                         <Grid Margin="{TemplateBinding Padding}"
                       Background="{TemplateBinding Background}">
-                            <Controls:WatermarkedTextBox Watermark="Go To Document" IsTabStop="True" x:Name="Text" Margin="0">
+                            <Controls:WatermarkedTextBox Watermark="Go To Document" IsTabStop="True" x:Name="Text" Margin="0"
+                                                         Padding="3,3,18,3">
                                 <i:Interaction.Triggers>
                                     <Behaviors:StudioKeyTrigger Key="Enter">
                                         <i:InvokeCommandAction Command="{Binding GoToDocument}"/>
@@ -28,10 +30,13 @@
                                     <Behaviors:StudioKeyTrigger Key="Enter" Modifiers="Control">
                                         <i:InvokeCommandAction Command="{Binding GoToDocument}"/>
                                     </Behaviors:StudioKeyTrigger>
+                                    <i:EventTrigger EventName="GotFocus">
+                                        <Behaviors:SelectAllAction/>
+                                    </i:EventTrigger>
                                 </i:Interaction.Triggers>
                             </Controls:WatermarkedTextBox>
                           <Popup x:Name="Popup">
-                                <Border x:Name="PopupBorder" HorizontalAlignment="Stretch" Opacity="0.0" BorderThickness="0" CornerRadius="3">
+                                <Border x:Name="PopupBorder" HorizontalAlignment="Stretch" Opacity="0.0" BorderThickness="0" CornerRadius="0" TextOptions.TextHintingMode="Animated">
                                     <Border.RenderTransform>
                                         <TranslateTransform X="1" Y="1" />
                                     </Border.RenderTransform>
@@ -39,24 +44,18 @@
                                         <SolidColorBrush Color="#11000000" />
                                     </Border.Background>
                                     <Border
-                                HorizontalAlignment="Stretch"
-                                Opacity="1.0"
-                                Padding="0"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                CornerRadius="3">
+                                        HorizontalAlignment="Stretch"
+                                        Opacity="1.0"
+                                        Padding="0"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        CornerRadius="0" Background="White">
                                         <Border.RenderTransform>
                                             <TransformGroup>
                                                 <TranslateTransform X="-1" Y="-1" />
                                             </TransformGroup>
                                         </Border.RenderTransform>
-                                        <Border.Background>
-                                            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-                                                <GradientStop Color="#FFDDDDDD" Offset="0"/>
-                                                <GradientStop Color="#AADDDDDD" Offset="1"/>
-                                            </LinearGradientBrush>
-                                        </Border.Background>
-                                        <ListBox x:Name="Selector" 
+                                      <ListBox x:Name="Selector" 
                                                  ScrollViewer.HorizontalScrollBarVisibility="Auto" 
                                                  ScrollViewer.VerticalScrollBarVisibility="Auto" 
                                                  ItemContainerStyle="{TemplateBinding ItemContainerStyle}" 
@@ -91,16 +90,28 @@
             </Setter>
         </Style>
     </UserControl.Resources>
-    <Grid x:Name="LayoutRoot" Background="White" DataContext="{Binding Value}" d:DataContext="{d:DesignInstance Models:GoToDocumentModel}">
+    <Grid x:Name="LayoutRoot" DataContext="{Binding Value}" d:DataContext="{d:DesignInstance Models:GoToDocumentModel}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
         
         <sdk:AutoCompleteBox Text="{Binding DocumentId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                              MinimumPrefixLength="1"
-                             ItemsSource="{Binding Suggestions}">
-            
+                             IsTextCompletionEnabled="True"
+                             VerticalAlignment="Center"
+                             >
+            <i:Interaction.Behaviors>
+                <Behaviors:BindSuggestionsProvider SuggestionProvider="{Binding}"/>
+            </i:Interaction.Behaviors>
         </sdk:AutoCompleteBox>
+        
+        <Button Style="{StaticResource Style_Button_MouseOverChrome}" 
+                Command="{Binding GoToDocument}"
+                HorizontalAlignment="Right" Margin="0,0,3,0"
+                VerticalAlignment="Center"
+                ToolTipService.ToolTip="Go to Document"
+                Visibility="{Binding DocumentId, Converter={StaticResource HiddenWhenStringEmptyOrNull}}">
+            <Image Source="{StaticResource Image_GoToDocument_Tiny}" Stretch="None"/>
+        </Button>
     </Grid>
 </UserControl>

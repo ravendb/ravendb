@@ -104,7 +104,7 @@
                 </Grid>
             </Border>
         </DataTemplate>
-        <Style TargetType="TextBox">
+        <Style TargetType="TextBox" BasedOn="{StaticResource Style_TextBox_Default}">
             <Setter Property="Background"
                     Value="{StaticResource Brush_TextBox_Background}" />
         </Style>

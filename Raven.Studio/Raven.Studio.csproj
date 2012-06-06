@@ -142,10 +142,13 @@
     <Compile Include="Behaviors\BindColumnsToColumnSetBehavior.cs" />
     <Compile Include="Behaviors\BindColumnVisibility.cs" />
     <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
+    <Compile Include="Behaviors\BindSuggestionsProvider.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
+    <Compile Include="Behaviors\IAutoCompleteSuggestionProvider.cs" />
     <Compile Include="Behaviors\OpenDropDownAction.cs" />
+    <Compile Include="Behaviors\SelectAllAction.cs" />
     <Compile Include="Behaviors\SelectRowOnRightClickBehavior.cs" />
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />

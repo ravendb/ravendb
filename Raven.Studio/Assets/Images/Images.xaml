@@ -33,5 +33,6 @@
     <BitmapImage x:Key="Image_ChangeView_Tiny" UriSource="ChangeView.png"/>
     <BitmapImage x:Key="Image_Up_Tiny" UriSource="Up.png"/>
     <BitmapImage x:Key="Image_Down_Tiny" UriSource="Down.png"/>
+    <BitmapImage x:Key="Image_GoToDocument_Tiny" UriSource="Shortcut.png"/>
     
 </ResourceDictionary>
