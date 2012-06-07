@@ -10,8 +10,8 @@
 					xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 					xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
 					xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-                    xmlns:RavenControls="clr-namespace:Raven.Studio.Controls" 
-                    mc:Ignorable="d">
+                    xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
+                    xmlns:syntaxeditor="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor" mc:Ignorable="d">
 
 	<ResourceDictionary.MergedDictionaries>
 		<ResourceDictionary Source="Brushes.xaml" />
@@ -1473,22 +1473,14 @@
 				Value="0,2,2,2" />
 	</Style>
 
-	<Style TargetType="Editors:LinqEditor">
-		<Setter Property="Background"
+    <Style x:Key="Style_SyntaxEditor_Default" TargetType="syntaxeditor:SyntaxEditor">
+        <Setter Property="Background"
 				Value="{StaticResource Brush_TextBox_Background}" />
-	</Style>
-	<Style TargetType="Editors:JsonEditor">
-		<Setter Property="Background"
-				Value="{StaticResource Brush_TextBox_Background}" />
-	</Style>
-	<Style TargetType="Editors:QueryEditor">
-		<Setter Property="Background"
-				Value="{StaticResource Brush_TextBox_Background}" />
-	</Style>
-	<Style TargetType="Editors:XamlEditor">
-		<Setter Property="Background"
-				Value="{StaticResource Brush_TextBox_Background}" />
-	</Style>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_TextBoxBorder}"/>
+    </Style>
+
+    <Style TargetType="syntaxeditor:SyntaxEditor" BasedOn="{StaticResource Style_SyntaxEditor_Default}">
+    </Style>
 
 	<Style x:Key="PagePadding"
 		   TargetType="Grid">

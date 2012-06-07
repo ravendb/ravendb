@@ -108,7 +108,7 @@
             <Setter Property="Background"
                     Value="{StaticResource Brush_TextBox_Background}" />
         </Style>
-        <Style TargetType="Editors:LinqEditor">
+        <Style TargetType="Editors:LinqEditor" BasedOn="{StaticResource Style_SyntaxEditor_Default}">
             <Setter Property="MinHeight"
                     Value="100" />
         </Style>
