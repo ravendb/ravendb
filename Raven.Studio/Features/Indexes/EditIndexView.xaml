@@ -20,6 +20,11 @@
                     Margin="10"
                     VerticalAlignment="Center"
                     HorizontalAlignment="Center">
+                <Border.Resources>
+                    <Style TargetType="ComboBox" BasedOn="{StaticResource Style_ComboBox_DefaultStyle}">
+                        <Setter Property="MinHeight" Value="26"/>
+                    </Style>
+                </Border.Resources>
                 <Grid Margin="4,4,4,4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -30,9 +35,9 @@
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="4" />
+                        <RowDefinition Height="6" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="4" />
+                        <RowDefinition Height="6" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
@@ -68,7 +73,7 @@
                               SelectedItem="{Binding Storage, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
                               Grid.Row="2"
                               Grid.Column="1"
-                              MinWidth="80"
+                              MinWidth="90"
                               VerticalAlignment="Center" />
 
                     <TextBlock Text="Indexing"
