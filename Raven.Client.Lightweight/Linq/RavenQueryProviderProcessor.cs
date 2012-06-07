@@ -399,8 +399,12 @@ namespace Raven.Client.Linq
 					.ToArray();
 				if (props.Length != 0)
 				{
-					path = path.Substring(0, path.Length - memberExpression.Member.Name.Length) +
-						   ((dynamic)props[0]).PropertyName;
+					string propertyName = ((dynamic) props[0]).PropertyName;
+					if (string.IsNullOrEmpty(propertyName) == false)
+					{
+						path = path.Substring(0, path.Length - memberExpression.Member.Name.Length) +
+						       propertyName;
+					}
 				}
 #else
 				var props = memberExpression.Member.GetCustomAttributes(typeof(JsonPropertyAttribute), false);
