@@ -1089,13 +1089,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitCount()
 		{
-			luceneQuery.Take(1);
+			luceneQuery.Take(0);
 			queryType = SpecialQueryType.Count;
 		}
 
 		private void VisitLongCount()
 		{
-			luceneQuery.Take(1);
+			luceneQuery.Take(0);
 			queryType = SpecialQueryType.LongCount;
 		}
 
