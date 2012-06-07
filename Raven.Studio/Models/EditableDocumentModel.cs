@@ -567,7 +567,7 @@ namespace Raven.Studio.Models
 				if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
 				{
 					AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
-						.ContinueWhenTrue(SaveDocument);
+						.ContinueWhenTrueInTheUIThread(SaveDocument);
 					return;
 				}
 
@@ -597,9 +597,9 @@ namespace Raven.Studio.Models
 						}
 					}
 				}
-				catch (JsonReaderException ex)
+				catch (Exception ex)
 				{
-					ErrorPresenter.Show(ex.Message);
+					ErrorPresenter.Show(ex, null, "Could not parse JSON");
 					return;
 				}
 
