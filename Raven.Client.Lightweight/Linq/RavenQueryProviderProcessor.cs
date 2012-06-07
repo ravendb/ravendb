@@ -899,6 +899,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						VisitCount();
 						break;
 					}
+				case "LongCount":
+					{
+						VisitExpression(expression.Arguments[0]);
+						if (expression.Arguments.Count == 2)
+						{
+							VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+						}
+
+						VisitLongCount();
+						break;
+					}
 				case "Distinct":
 					luceneQuery.GroupBy(AggregationOperation.Distinct);
 					VisitExpression(expression.Arguments[0]);
@@ -1053,6 +1064,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			luceneQuery.Take(1);
 			queryType = SpecialQueryType.Count;
+		}
+
+		private void VisitLongCount()
+		{
+			luceneQuery.Take(1);
+			queryType = SpecialQueryType.LongCount;
 		}
 
 		private void VisitSingle()
@@ -1341,8 +1358,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						var queryResultAsync = finalQuery.QueryResult;
 						return queryResultAsync.TotalResults;
 					}
+				case SpecialQueryType.LongCount:
+					{
+						var queryResultAsync = finalQuery.QueryResult;
+						return (long)queryResultAsync.TotalResults;
+					}
 #else
 				case SpecialQueryType.Count:
+					{
+						throw new NotImplementedException("not done yet");
+					}
+				case SpecialQueryType.LongCount:
 					{
 						throw new NotImplementedException("not done yet");
 					}
@@ -1378,6 +1404,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			/// </summary>
 			Count,
 			/// <summary>
+			/// Get count of items for the query as an Int64
+			/// </summary>
+			LongCount,
+			/// <summary>
 			/// Get only the first item
 			/// </summary>
 			First,
@@ -1392,7 +1422,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			/// <summary>
 			/// Get only the first item (or throw if there are more than one) or null if empty
 			/// </summary>
-			SingleOrDefault
+			SingleOrDefault,
 		}
 
 		#endregion
