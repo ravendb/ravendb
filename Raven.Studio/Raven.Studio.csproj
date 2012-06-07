@@ -218,6 +218,7 @@
     <Compile Include="Infrastructure\Converters\TaskStatusConverter.cs" />
     <Compile Include="Infrastructure\Converters\RedIfError.cs" />
     <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
+    <Compile Include="Infrastructure\Converters\TrimmedStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
     <Compile Include="Infrastructure\FlexibleTemplateItemsControl.cs" />
     <Compile Include="Infrastructure\ProvideVisibleItemRangeFromDataGridBehavior.cs" />

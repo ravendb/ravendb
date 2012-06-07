@@ -79,11 +79,11 @@
                                     <TextBlock x:Name="Arrow" Text=">"
 							       VerticalAlignment="Center"
 							       Margin="4,0" />
-                                  <HyperlinkButton Content="{Binding Name}"
+                                  <HyperlinkButton Content="{Binding Name, Converter={StaticResource TrimmedString}, ConverterParameter=35}"
+                                         ToolTipService.ToolTip="{Binding Name}"
 									     Style="{StaticResource Style_Link_Breadcrumb_Initial}"
 									     Command="{StaticResource NavigateToCommand}"
 									     CommandParameter="{Binding Url}"
-                                         MaxWidth="200"
                                          Margin="4,0" VerticalAlignment="Center" VerticalContentAlignment="Center"/>
                                 </StackPanel>
                             </DataTemplate>
