@@ -16,6 +16,7 @@ using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Studio.Models
 {
@@ -43,6 +44,8 @@ namespace Raven.Studio.Models
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
             InitialiseDocument();
+
+            ParentPathSegments = new ObservableCollection<PathSegment>();
 
             currentDatabase = Database.Value.Name;
         }
@@ -97,7 +100,8 @@ namespace Raven.Studio.Models
                 CurrentIndex = 0;
                 TotalItems = 0;
                 SetCurrentDocumentKey(null);
-
+                ParentPathSegments.Clear();
+                ParentPathSegments.Add(new PathSegment() { Name = "Documents", Url = "/documents"});
                 return;
             }
 
@@ -128,6 +132,9 @@ namespace Raven.Studio.Models
                         document.Value = result.Document;
                         CurrentIndex = (int) result.Index;
                         TotalItems = (int) result.TotalDocuments;
+
+                        ParentPathSegments.Clear();
+                        ParentPathSegments.AddRange(Navigator.GetParentPath());
                     })
                 .Catch();
         }
@@ -189,6 +196,8 @@ namespace Raven.Studio.Models
 		{
             get { return Navigator != null && (HasNext || HasPrevious); }
 		}
+
+        public ObservableCollection<PathSegment> ParentPathSegments { get; private set; } 
 
 		public void SetCurrentDocumentKey(string docId)
 		{
@@ -413,6 +422,47 @@ namespace Raven.Studio.Models
 								   });
 		}
 
+        private void HandleDeleteDocument()
+        {
+            if (string.IsNullOrEmpty(DocumentKey))
+            {
+                return;
+            }
+
+            AskUser.ConfirmationAsync("Confirm Delete", string.Format("Are you sure you want do delete {0} ?", DocumentKey))
+                .ContinueWhenTrueInTheUIThread(() => DoDeleteDocument(DocumentKey));
+        }
+
+        private void DoDeleteDocument(string documentKey)
+        {
+            DatabaseCommands.DeleteDocumentAsync(documentKey)
+                .ContinueOnSuccessInTheUIThread(() =>
+                {
+                    ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was deleted", documentKey)));
+                    if (CanNavigate && HasNext)
+                    {
+                        // navigate to the current index because the document has just been deleted, so another will move up to take its place
+                        var url = Navigator.GetUrlForCurrentIndex();
+                        if (url == UrlUtil.Url)
+                        {
+                            LoadModelParameters(string.Empty);
+                        }
+                        else
+                        {
+                            UrlUtil.Navigate(url);
+                        }
+                    }
+                    else if (CanNavigate)
+                    {
+                        UrlUtil.Navigate(Navigator.GetUrlForPrevious());
+                    }
+                    else
+                    {
+                        UrlUtil.Navigate(Navigator.GetParentPath().Last().Url);
+                    }
+                })
+                .Catch();
+        }
 
 		public string Key
 		{
@@ -459,8 +509,9 @@ namespace Raven.Studio.Models
 		}
 
 		private IDictionary<string, string> metadata;
+        
 
-		public IEnumerable<KeyValuePair<string, string>> Metadata
+        public IEnumerable<KeyValuePair<string, string>> Metadata
 		{
 			get
 			{
@@ -480,9 +531,10 @@ namespace Raven.Studio.Models
 			get { return new SaveDocumentCommand(this); }
 		}
 
+        private ICommand deleteCommand;
 		public ICommand Delete
 		{
-			get { return new DeleteDocumentCommand(Key, true); }
+            get { return deleteCommand ?? (deleteCommand = new ActionCommand(HandleDeleteDocument)); }
 		}
 
 		public ICommand Prettify

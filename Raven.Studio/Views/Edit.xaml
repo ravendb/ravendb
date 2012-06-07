@@ -10,7 +10,9 @@
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 					 xmlns:Controls="clr-namespace:System.Windows.Controls" xmlns:Models="clr-namespace:Raven.Studio.Models"
-                         xmlns:Controls1="clr-namespace:Microsoft.Windows.Controls" mc:Ignorable="d"
+                         xmlns:Controls1="clr-namespace:Microsoft.Windows.Controls"
+                         xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
+                         xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions" mc:Ignorable="d"
 					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel">
 
 	<Grid Margin="{StaticResource Margin_ContentPage}"
@@ -65,27 +67,53 @@
 				</Grid.ColumnDefinitions>
 
 				<StackPanel Orientation="Horizontal">
-					<Image Source="{StaticResource Image_Document_Tiny}"
-						   Stretch="None"
-						   VerticalAlignment="Center"
-						   Margin="4,0,4,0" />
-					<HyperlinkButton Content="Documents"
-									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-									 Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="/documents" />
+                        <Infrastructure:FlexibleTemplateItemsControl ItemsSource="{Binding ParentPathSegments}" VerticalAlignment="Center">
+                        <Infrastructure:FlexibleTemplateItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </Infrastructure:FlexibleTemplateItemsControl.ItemsPanel>
+                        <Infrastructure:FlexibleTemplateItemsControl.ItemTemplate>
+                            <DataTemplate DataType="Documents:PathSegment">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock x:Name="Arrow" Text=">"
+							       VerticalAlignment="Center"
+							       Margin="4,0" />
+                                  <HyperlinkButton Content="{Binding Name}"
+									     Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+									     Command="{StaticResource NavigateToCommand}"
+									     CommandParameter="{Binding Url}"
+                                         MaxWidth="200"
+                                         Margin="4,0" VerticalAlignment="Center" VerticalContentAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </Infrastructure:FlexibleTemplateItemsControl.ItemTemplate>
+                        <Infrastructure:FlexibleTemplateItemsControl.FirstItemTemplate>
+                            <DataTemplate DataType="Documents:PathSegment">
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Source="{StaticResource Image_Document_Tiny}" Stretch="None" Margin="4,0" VerticalAlignment="Center">
+                                        <i:Interaction.Triggers>
+                                            <ei:DataTrigger Binding="{Binding Name}" Value="Indexes" Comparison="Equal">
+                                                <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_DocumentIndex_Tiny}"/>
+                                            </ei:DataTrigger>
+                                            <ei:DataTrigger Binding="{Binding Name}" Value="Documents" Comparison="Equal">
+                                                <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Document_Tiny}"/>
+                                            </ei:DataTrigger>
+                                        </i:Interaction.Triggers>
+                                    </Image>
+                                    <HyperlinkButton Content="{Binding Name}"
+									     Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+									     Command="{StaticResource NavigateToCommand}"
+									     CommandParameter="{Binding Url}"
+                                         Margin="4,0" VerticalAlignment="Center" VerticalContentAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </Infrastructure:FlexibleTemplateItemsControl.FirstItemTemplate>
+                    </Infrastructure:FlexibleTemplateItemsControl>
+                    
 					<TextBlock Text=">"
 							   VerticalAlignment="Center"
-							   Margin="4,0" />
-
-					<HyperlinkButton Content="{Binding Collection}"
-									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-									 Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="{Binding Collection, StringFormat='/collections?name=\{0\}'}"
-									 Visibility="{Binding Collection, Converter={StaticResource HiddenWhenStringEmptyOrNull}}" />
-					<TextBlock Text=">"
-							   VerticalAlignment="Center"
-							   Margin="4,0"
-							   Visibility="{Binding Collection, Converter={StaticResource HiddenWhenStringEmptyOrNull}}" />
+							   Margin="4,0"/>
 
 					<TextBlock Text="{Binding DisplayId}"
 							   Style="{StaticResource Style_TextBlock_Breadcrumb}"

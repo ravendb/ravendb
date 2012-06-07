@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
@@ -75,20 +76,33 @@ namespace Raven.Studio.Features.Documents
 
         public override string GetUrlForNext()
         {
-            var builder = GetBaseUrl();
-
-            builder.SetQueryParam("navigationMode", "allDocs");
-            builder.SetQueryParam("itemIndex", itemIndex + 1);
-
-            return builder.BuildUrl();
+            return GetUrlForIndex(itemIndex + 1);
         }
 
         public override string GetUrlForPrevious()
         {
+            return GetUrlForIndex(itemIndex - 1);
+        }
+
+        public override string GetUrlForCurrentIndex()
+        {
+            return GetUrlForIndex(itemIndex);
+        }
+
+        public override IList<PathSegment> GetParentPath()
+        {
+            return new[]
+                       {
+                           new PathSegment() { Name = "Documents", Url = "/documents"}
+                       };
+        }
+
+        private string GetUrlForIndex(int index)
+        {
             var builder = GetBaseUrl();
 
             builder.SetQueryParam("navigationMode", "allDocs");
-            builder.SetQueryParam("itemIndex", itemIndex - 1);
+            builder.SetQueryParam("itemIndex", index);
 
             return builder.BuildUrl();
         }
