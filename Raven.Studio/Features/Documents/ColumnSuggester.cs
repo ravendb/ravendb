@@ -20,19 +20,19 @@ namespace Raven.Studio.Features.Documents
 {
     public class ColumnSuggester
     {
-        private static string[] ImportantProperties = new[]
+        private static PriorityColumn[] DefaultPriorityColumns = new[]
                                                         {
-                                                            "Name",
-                                                            "Title",
-                                                            "Description",
-                                                            "Status"
+                                                            new PriorityColumn() { PropertyNamePattern = "Name"},
+                                                            new PriorityColumn() { PropertyNamePattern = "Title"},
+                                                            new PriorityColumn() { PropertyNamePattern = "Description"},
+                                                            new PriorityColumn() { PropertyNamePattern = "Status"},
                                                         };
 
         public ColumnSuggester()
         {
         }
 
-        public IList<string> AutoSuggest(IEnumerable<ViewableDocument> sampleDocuments, string context, IList<string> priorityColumns = null)
+        public IList<ColumnDefinition> AutoSuggest(IEnumerable<ViewableDocument> sampleDocuments, string context, IList<PriorityColumn> priorityColumns = null)
         {
             return PickLikelyColumns(sampleDocuments.Select(v => v.Document).ToArray(), context, priorityColumns);
         }
@@ -97,11 +97,11 @@ namespace Raven.Studio.Features.Documents
             return bindings;
         }
 
-        private IList<string> PickLikelyColumns(JsonDocument[] sampleDocuments, string context, IList<string> priorityColumns)
+        private IList<ColumnDefinition> PickLikelyColumns(JsonDocument[] sampleDocuments, string context, IList<PriorityColumn> priorityColumns)
         {
             if (priorityColumns == null || priorityColumns.Count == 0)
             {
-                priorityColumns = ImportantProperties;
+                priorityColumns = DefaultPriorityColumns;
             }
 
             var columns= GetPropertiesFromDocuments(sampleDocuments, includeNestedPropeties: false)
@@ -110,14 +110,30 @@ namespace Raven.Studio.Features.Documents
                 .Select(p => new { p.Property, Importance = p.Occurence + ImportanceBoost(p.Property, context, priorityColumns) })
                 .OrderByDescending(p => p.Importance)
                 .ThenBy(p => p.Property)
-                .Select(p => p.Property)
+                .Select(p => new ColumnDefinition()
+                                 {
+                                     Binding = p.Property, 
+                                     Header = p.Property, 
+                                     DefaultWidth = GetDefaultColumnWidth(p.Property, priorityColumns)
+                                 })
                 .Take(6)
                 .ToList();
 
             return columns;
         }
 
-        private double ImportanceBoost(string property, string context, IEnumerable<string> priorityColumns)
+        private string GetDefaultColumnWidth(string property, IList<PriorityColumn> priorityColumns)
+        {
+            var matchingColumn =
+                priorityColumns.FirstOrDefault(
+                    column => Regex.IsMatch(property, column.PropertyNamePattern, RegexOptions.IgnoreCase));
+
+            return matchingColumn != null && matchingColumn.DefaultWidth.HasValue
+                       ? matchingColumn.DefaultWidth.Value.ToString()
+                       : "";
+        }
+
+        private double ImportanceBoost(string property, string context, IEnumerable<PriorityColumn> priorityColumns)
         {
             if (GetIndexName(context).Contains(property))
             {
@@ -125,7 +141,7 @@ namespace Raven.Studio.Features.Documents
             }
             else
             {
-                return priorityColumns.Any(importantProperty => Regex.IsMatch(property, importantProperty, RegexOptions.IgnoreCase)) ? 0.75 : 0;
+                return priorityColumns.Any(column => Regex.IsMatch(property, column.PropertyNamePattern, RegexOptions.IgnoreCase)) ? 0.75 : 0;
             }
         }
 

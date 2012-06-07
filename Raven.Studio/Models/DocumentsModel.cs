@@ -27,7 +27,7 @@ namespace Raven.Studio.Models
 {
     public class DocumentsModel : ViewModel
     {
-        private const string PriorityPropertiesDocumentName = "Raven/Studio/PriorityProperties";
+        private const string PriorityColumnsDocumentName = "Raven/Studio/PriorityColumns";
         private EditVirtualDocumentCommand editDocument;
         private Func<string, int, DocumentNavigator> documentNavigatorFactory;
 
@@ -52,7 +52,7 @@ namespace Raven.Studio.Models
         private ICommand copyIdsToClipboard;
         private MostRecentUsedList<VirtualItem<ViewableDocument>> mostRecentDocuments = new MostRecentUsedList<VirtualItem<ViewableDocument>>(60);
         private ICommand copyDocumentTextToClipboard;
-        private IList<string> priorityProperties;
+        private List<PriorityColumn> priorityColumns;
 
         public DocumentsModel(VirtualCollectionSource<ViewableDocument> collectionSource)
         {
@@ -108,9 +108,7 @@ namespace Raven.Studio.Models
         private IList<ColumnDefinition> GetCurrentColumnsSuggestion()
         {
             var suggester = new ColumnSuggester();
-            var newColumns =
-                suggester.AutoSuggest(GetMostRecentDocuments(), Context, priorityProperties).Select(
-                    s => new ColumnDefinition() {Binding = s, Header = s}).ToList();
+            var newColumns = suggester.AutoSuggest(GetMostRecentDocuments(), Context, priorityColumns);
 
             return newColumns;
         }
@@ -242,7 +240,7 @@ namespace Raven.Studio.Models
         {
             ApplicationModel.Database.Value
                 .AsyncDatabaseCommands
-                .GetAsync(PriorityPropertiesDocumentName)
+                .GetAsync(PriorityColumnsDocumentName)
                 .ContinueOnSuccessInTheUIThread(CompleteLoadPriorityProperties);
         }
 
@@ -250,18 +248,28 @@ namespace Raven.Studio.Models
         {
             if (document != null)
             {
-                var priorityColumnsDocument = document.DataAsJson.Deserialize<PriorityProperties>(new DocumentConvention());
-                priorityProperties = priorityColumnsDocument.PropertyNamePatterns.Where(p => p.IsValidRegex()).ToList();
+                var unvalidatedPriorityColumns = document.DataAsJson.Deserialize<ListContainer<PriorityColumn>>(new DocumentConvention()).Items.EmptyIfNull();
 
-                if (priorityColumnsDocument.PropertyNamePatterns.Count != priorityProperties.Count)
+                var validatedPriorityColumns = new List<PriorityColumn>();
+
+                foreach (var priorityColumn in unvalidatedPriorityColumns)
                 {
-                    ApplicationModel.Current.AddNotification(
-                        new Notification(string.Format("'{0}' contained some patterns which are not valid regular expressions", PriorityPropertiesDocumentName), NotificationLevel.Error));
+                    if (!priorityColumn.PropertyNamePattern.IsValidRegex())
+                    {
+                        ApplicationModel.Current.AddNotification(
+                            new Notification(string.Format("Pattern '{0}' in '{1}' is not a valid regular expression", priorityColumn.PropertyNamePattern, PriorityColumnsDocumentName), NotificationLevel.Error));
+                    }
+                    else
+                    {
+                        validatedPriorityColumns.Add(priorityColumn);
+                    }
                 }
+
+                priorityColumns = validatedPriorityColumns;
             }
             else
             {
-                priorityProperties = null;
+                priorityColumns = null;
             }
         }
 

@@ -190,7 +190,7 @@
     </Compile>
     <Compile Include="Features\Documents\EditVirtualDocumentCommand.cs" />
     <Compile Include="Features\Documents\IndexDocumentsNavigator.cs" />
-    <Compile Include="Features\Documents\PriorityProperties.cs" />
+    <Compile Include="Features\Documents\PriorityColumn.cs" />
     <Compile Include="Features\Documents\SingleDocumentNavigator.cs" />
     <Compile Include="Features\Query\IndexQueryHelpers.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
@@ -208,6 +208,7 @@
     <Compile Include="Impl\SplitButton\SplitButton.cs" />
     <Compile Include="Impl\WatermarkedTextBox\VisualStateHelper.cs" />
     <Compile Include="Impl\WatermarkedTextBox\WatermarkedTextBox.cs" />
+    <Compile Include="Infrastructure\ArrayContainer.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
     <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\NegatingBoolConverter.cs" />
