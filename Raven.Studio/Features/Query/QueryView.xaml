@@ -304,7 +304,7 @@
                         <toolkit:WrapPanel Margin="3">
                             <toolkit:WrapPanel.Resources>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Margin" Value="0,0,25,0"/>
+                                    <Setter Property="Margin" Value="0,2,25,2"/>
                                 </Style>
                             </toolkit:WrapPanel.Resources>
                             <TextBlock>

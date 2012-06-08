@@ -1085,6 +1085,27 @@
 		<Setter Property="BorderThickness"
 				Value="0" />
 	</Style>
+    
+    <Style x:Name="Style_ItemsControl_TermsList" TargetType="ItemsControl">
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  BorderThickness="0">
+                        <ItemsPresenter/>
+                    </ScrollViewer>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
 	<Style x:Name="Style_ItemsControl_IndexFields"
 		   TargetType="ItemsControl">
