@@ -689,6 +689,9 @@
     <Compile Include="..\Raven.Abstractions\Json\Utilities\Tuple.cs">
       <Link>Imports\Json\Utilities\Tuple.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Linq\DynamicList.cs">
+      <Link>Imports\Linq\DynamicList.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Linq\DynamicNullObject.cs">
       <Link>Imports\Linq\DynamicNullObject.cs</Link>
     </Compile>
