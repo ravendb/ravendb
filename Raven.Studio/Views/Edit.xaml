@@ -267,7 +267,7 @@
             </Border>
 
             <Grid x:Name="document"
-			  Margin="0"
+			  Margin="5,5,0,0"
 			  Grid.Row="2">
 
                 <Grid.RowDefinitions>
@@ -295,6 +295,7 @@
 
             <ScrollViewer Grid.Column="1"
 					  Grid.Row="2"
+                          Margin="5"
 					  Style="{StaticResource Style_ScrollViewer_Unintrusive}" TextOptions.TextHintingMode="Animated">
                 <Grid x:Name="details">
                     <Grid.RowDefinitions>
