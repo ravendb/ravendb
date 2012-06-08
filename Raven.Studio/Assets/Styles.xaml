@@ -2545,7 +2545,7 @@
 							<RowDefinition Height="Auto"/>
 							<RowDefinition Height="Auto" MinHeight="40"/>
 						</Grid.RowDefinitions>
-						<Border BorderThickness="1" CornerRadius="4" Grid.RowSpan="2" BorderBrush="#FFEAE7E4"/>
+                        <Border BorderThickness="1" CornerRadius="4" Grid.RowSpan="2" BorderBrush="{StaticResource Brush_HeaderBorder}"/>
 						<Border BorderThickness="0" Margin="1" CornerRadius="4,4,0,0" Background="{StaticResource Brush_HeaderBackground}">
 						</Border>
 						<ContentPresenter Grid.Row="0" Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}"/>
@@ -2565,7 +2565,7 @@
 							<RowDefinition Height="Auto" MinHeight="30"/>
 							<RowDefinition Height="*" MinHeight="40"/>
 						</Grid.RowDefinitions>
-                        <Border BorderThickness="1" CornerRadius="4" Grid.RowSpan="2" BorderBrush="#FFEBE2E6"/>
+                        <Border BorderThickness="1" CornerRadius="4" Grid.RowSpan="2" BorderBrush="{StaticResource Brush_HeaderBorder}"/>
 						<Border BorderThickness="0" Margin="1,1,1,0" CornerRadius="4,4,0,0" Background="{StaticResource Brush_HeaderBackground}">
 						</Border>
 						<ContentPresenter Grid.Row="0" Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}"/>
@@ -3144,7 +3144,7 @@
 						<!-- Focus Visual -->
 						<Rectangle x:Name="FocusVisual" StrokeThickness="1" Opacity="0" IsHitTestVisible="false" >
 							<Rectangle.Stroke>
-								<SolidColorBrush Color="#6E9A002B"/>
+                                <SolidColorBrush Color="#F2F2F2"/>
 							</Rectangle.Stroke>
 						</Rectangle>
 					</Grid>
@@ -3152,6 +3152,8 @@
 			</Setter.Value>
 		</Setter>
 	</Style>
+    
+    <Style TargetType="sdk:GridSplitter" BasedOn="{StaticResource Style_GridSplitter_Transparent}"/>
 
 	<Style x:Name="HyperlinkButton_FooterLinks" TargetType="HyperlinkButton">
 		<Setter Property="Margin"

@@ -131,6 +131,7 @@
 	<SolidColorBrush x:Key="Brush_ContrastColor" Color="{StaticResource Color_Contrast}"/>
 
     <SolidColorBrush x:Key="Brush_ToolbarBackground" Color="#FFE2D9D9"/>
+    <SolidColorBrush x:Key="Brush_HeaderBorder" Color="#FFEBE2E6"/>
     
     <LinearGradientBrush x:Key="Brush_HeaderBackground"  EndPoint="0.5,1" StartPoint="0.5,0">
         <GradientStop Color="#FFF4F0F1"/>

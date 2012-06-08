@@ -188,7 +188,7 @@
                     <StackPanel Grid.Column="4"
 								Orientation="Horizontal"
 								VerticalAlignment="Center"
-								Margin="0,0,10,0">
+								Margin="0,0,4,0">
 
                         <Controls1:ViewSizeControl ViewSize="{Binding Path=Current.IndicatorPosition, Source={StaticResource DocumentSize}, Mode=TwoWay}" />
                     </StackPanel>
