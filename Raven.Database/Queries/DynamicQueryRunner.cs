@@ -42,7 +42,10 @@ namespace Raven.Database.Queries
 												   (current, mapItem) => current.Replace(mapItem.QueryFrom, mapItem.To));
 
 			UpdateFieldNamesForSortedFields(query, map);
-			UpdateFieldsInArray(map, query.FieldsToFetch);
+
+			// We explicitly do NOT want to update the field names of FieldsToFetch - that reads directly from the document
+			//UpdateFieldsInArray(map, query.FieldsToFetch);
+			
 			UpdateFieldsInArray(map, query.GroupBy);
 
 			return ExecuteActualQuery(query, map, touchTemporaryIndexResult, realQuery);
@@ -94,7 +97,7 @@ namespace Raven.Database.Queries
 
 				if (!touchTemporaryIndexResult.Item2 ||
 					!result.IsStale ||
-					result.Results.Count >= query.PageSize ||
+					(result.Results.Count >= query.PageSize && query.PageSize > 0) ||
 					sp.Elapsed.TotalSeconds > 15)
 				{
 					return result;
