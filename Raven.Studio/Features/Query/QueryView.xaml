@@ -26,14 +26,14 @@
 				Margin="0,0,0,0"
 				CornerRadius="4,4,0,0"
                 BorderThickness="1,1,1,0"
+                MinHeight="30"
 				Grid.Row="0">
-			<toolkit:DockPanel Margin="4"
-							   LastChildFill="False">
+			<toolkit:DockPanel LastChildFill="False">
 				<StackPanel Orientation="Horizontal">
 					<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
 						   Stretch="None"
 						   VerticalAlignment="Center"
-						   Margin="2" />
+						   Margin="4,0" />
 					<HyperlinkButton Content="Indexes"
 									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
 									 Command="{StaticResource NavigateToCommand}"

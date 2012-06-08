@@ -153,7 +153,8 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
+              <RowDefinition Height="*"/>
+              <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <Border Background="{StaticResource Brush_ToolbarBackground}">
                     <StackPanel  VerticalAlignment="Center" Orientation="Horizontal" Margin="0,5">
@@ -488,19 +489,26 @@
                               ItemTemplate="{StaticResource IndexFieldTemplate}">
                     </ItemsControl>
 
-                    <Grid Grid.Row="10"
-                      Grid.Column="2">
-                        <StackPanel>
-                            <HyperlinkButton Content="{Binding ErrorsCount, StringFormat=\{0\} errors}"
-                                         Visibility="{Binding ErrorsCount, Converter={StaticResource HiddenWhenEmpty}}"
-                                         Command="{StaticResource NavigateToCommand}"
-                                         CommandParameter="{Binding Name, StringFormat=/indexes-errors/\{0\}}" />
-                        </StackPanel>
-
-                    </Grid>
-
                 </Grid>
             </ScrollViewer>
+
+            <Grid Grid.Row="2">
+                <Border Visibility="{Binding ErrorsCount, Converter={StaticResource HiddenWhenEmpty}}">
+                    <Border.Background>
+                        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                            <GradientStop Color="#D67171"/>
+                            <GradientStop Color="#C25858" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <StackPanel Margin="5">
+                        <HyperlinkButton Content="{Binding ErrorsCount, StringFormat='\{0\} errors encountered when processing index'}"
+                                         
+                                             Command="{StaticResource NavigateToCommand}"
+                                             CommandParameter="{Binding Name, StringFormat=/indexes-errors/\{0\}}" 
+                                         Foreground="White" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Grid>
     </toolkit:HeaderedContentControl>
 </UserControl>
