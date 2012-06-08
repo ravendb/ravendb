@@ -97,7 +97,7 @@ namespace Raven.Database.Queries
 
 				if (!touchTemporaryIndexResult.Item2 ||
 					!result.IsStale ||
-					result.Results.Count >= query.PageSize ||
+					(result.Results.Count >= query.PageSize && query.PageSize > 0) ||
 					sp.Elapsed.TotalSeconds > 15)
 				{
 					return result;
