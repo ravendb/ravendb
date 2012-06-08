@@ -1419,7 +1419,13 @@
     <Style TargetType="syntaxeditor:SyntaxEditor" BasedOn="{StaticResource Style_SyntaxEditor_Default}">
     </Style>
 
-	<Style x:Key="PagePadding"
+    <Style TargetType="Editors:JsonEditor" BasedOn="{StaticResource Style_SyntaxEditor_Default}">
+    </Style>
+
+    <Style TargetType="Editors:QueryEditor" BasedOn="{StaticResource Style_SyntaxEditor_Default}">
+    </Style>
+
+    <Style x:Key="PagePadding"
 		   TargetType="Grid">
 		<Setter Property="Margin"
 				Value="58,0,58,0" />
@@ -2740,7 +2746,7 @@
 							  </VisualState>
 							  <VisualState x:Name="Disabled">
 								  <Storyboard>
-									  <DoubleAnimation Duration="0" Storyboard.TargetName="DisabledVisualElement" Storyboard.TargetProperty="Opacity" To=".55"/>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="contentPresenter" Storyboard.TargetProperty="Opacity" To=".35"/>
 								  </Storyboard>
 							  </VisualState>
 						  </VisualStateGroup>
