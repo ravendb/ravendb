@@ -2534,11 +2534,11 @@
 				<ControlTemplate TargetType="toolkit:HeaderedContentControl">
 					<Grid>
 						<Grid.RowDefinitions>
-							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="Auto" MinHeight="30"/>
 							<RowDefinition Height="*" MinHeight="40"/>
 						</Grid.RowDefinitions>
-						<Border BorderThickness="1" CornerRadius="4" Grid.RowSpan="2" BorderBrush="#FFEAE7E4"/>
-						<Border BorderThickness="0" Margin="1" CornerRadius="4,4,0,0" Background="{StaticResource Brush_HeaderBackground}">
+                        <Border BorderThickness="1" CornerRadius="4" Grid.RowSpan="2" BorderBrush="#FFEBE2E6"/>
+						<Border BorderThickness="0" Margin="1,1,1,0" CornerRadius="4,4,0,0" Background="{StaticResource Brush_HeaderBackground}">
 						</Border>
 						<ContentPresenter Grid.Row="0" Content="{TemplateBinding Header}" ContentTemplate="{TemplateBinding HeaderTemplate}"/>
 						<ContentPresenter Grid.Row="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"/>

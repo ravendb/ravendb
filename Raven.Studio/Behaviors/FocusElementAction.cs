@@ -3,11 +3,11 @@ using System.Windows.Interactivity;
 
 namespace Raven.Studio.Behaviors
 {
-    public class SelectAllAction : TargetedTriggerAction<TextBox>
+    public class FocusElementAction : TargetedTriggerAction<Control>
     {
         protected override void Invoke(object parameter)
         {
-            Target.SelectAll();
+            Target.Focus();
         }
     }
 }

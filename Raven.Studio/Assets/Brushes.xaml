@@ -129,9 +129,13 @@
 
 	<Color x:Key="Color_Contrast">#FF9A002B</Color>
 	<SolidColorBrush x:Key="Brush_ContrastColor" Color="{StaticResource Color_Contrast}"/>
+
+    <SolidColorBrush x:Key="Brush_ToolbarBackground" Color="#FFE2D9D9"/>
+    
     <LinearGradientBrush x:Key="Brush_HeaderBackground"  EndPoint="0.5,1" StartPoint="0.5,0">
-        <GradientStop Color="#C5F7F7F7" Offset="0.049"/>
-        <GradientStop Color="#C1E8E8E8" Offset="0.74"/>
+        <GradientStop Color="#FFF4F0F1"/>
+        <GradientStop Color="#FFE7E4E5" Offset="0.286"/>
+        <GradientStop Color="#FFE6E4E5" Offset="0.815"/>
     </LinearGradientBrush>
 	
 	<LinearGradientBrush x:Key="Brush_SubtleBackground1" EndPoint="0.5,1" StartPoint="0.5,0">
