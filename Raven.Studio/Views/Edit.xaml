@@ -16,7 +16,8 @@
                          xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          mc:Ignorable="d"
-					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel">
+					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel"
+                         Title="Edit Document">
     <Infrastructure:PageView.Resources>
         <Storyboard x:Key="ShowSearch">
             <DoubleAnimation Storyboard.TargetName="SearchBorder" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.1"/>
