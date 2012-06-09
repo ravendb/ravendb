@@ -1,3 +1,4 @@
+#if !NET35
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -212,3 +213,4 @@ namespace Raven.Abstractions.Linq
 		}
 	}
 }
+#endif
