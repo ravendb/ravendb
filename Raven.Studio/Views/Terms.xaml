@@ -7,8 +7,9 @@
                      xmlns:Terms="clr-namespace:Raven.Studio.Features.Terms"
                      d:DesignWidth="640"
                      d:DesignHeight="480"
-                     Title="Terms Page"
-                     Infrastructure:ModelAttacher.AttachObservableModel="TermsModel">
+                     Title="Index Terms"
+                     Infrastructure:ModelAttacher.AttachObservableModel="TermsModel"
+                         >
 
     <Grid DataContext="{Binding Value}">
         <Terms:TermsView />

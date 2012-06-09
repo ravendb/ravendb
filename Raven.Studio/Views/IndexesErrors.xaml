@@ -6,7 +6,8 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Indexes="clr-namespace:Raven.Studio.Features.Indexes"
 					 mc:Ignorable="d"
-					 Infrastructure:ModelAttacher.AttachObservableModel="IndexesErrorsModel">
+					 Infrastructure:ModelAttacher.AttachObservableModel="IndexesErrorsModel"
+                         Title="Index Errors">
 
 	<Grid DataContext="{Binding Value}">
 		<Indexes:IndexesErrorsView />

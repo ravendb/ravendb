@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
@@ -40,6 +41,19 @@ namespace Raven.Studio.Features.Documents
                                                                            TotalDocuments = 1,
                                                                            Index = 0,
                                                                        });
+        }
+
+        public override string GetUrlForCurrentIndex()
+        {
+            return base.GetUrlForCurrentIndex();
+        }
+
+        public override IList<PathSegment> GetParentPath()
+        {
+            return new[]
+                       {
+                           new PathSegment() { Name = "Documents", Url = "/documents"}
+                       };
         }
     }
 }

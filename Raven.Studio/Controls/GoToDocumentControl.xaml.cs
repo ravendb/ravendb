@@ -10,11 +10,11 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 
-namespace Raven.Studio.Features.Documents
+namespace Raven.Studio.Controls
 {
-    public partial class DocumentsViewEnhanced
+    public partial class GoToDocumentControl : UserControl
     {
-        public DocumentsViewEnhanced()
+        public GoToDocumentControl()
         {
             InitializeComponent();
         }

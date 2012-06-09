@@ -5,5 +5,5 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 DataContext="{Binding Path=DocumentsForSelectedCollection}">
 
-	<Documents:DocumentsViewEnhanced Visibility="{Binding Converter={StaticResource HiddenWhenNull}}" />
+	<Documents:DocumentsView Visibility="{Binding Converter={StaticResource HiddenWhenNull}}" />
 </Infrastructure:PageView>
