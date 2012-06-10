@@ -69,9 +69,9 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       if (reader.TokenType == JsonToken.StartArray)
       {
         if (contract.ContractType == JsonContractType.Array)
-          PopulateList(CollectionUtils.CreateCollectionWrapper(target), reader, null, (JsonArrayContract) contract);
+          PopulateList(CollectionUtils.CreateCollectionWrapper(target), reader, (JsonArrayContract) contract, null, null);
         else
-          throw CreateSerializationException(reader, "Cannot populate JSON array onto type '{0}'.".FormatWith(CultureInfo.InvariantCulture, objectType));
+          throw JsonSerializationException.Create(reader, "Cannot populate JSON array onto type '{0}'.".FormatWith(CultureInfo.InvariantCulture, objectType));
       }
       else if (reader.TokenType == JsonToken.StartObject)
       {
@@ -86,15 +86,15 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         }
 
         if (contract.ContractType == JsonContractType.Dictionary)
-          PopulateDictionary(CollectionUtils.CreateDictionaryWrapper(target), reader, (JsonDictionaryContract) contract, id);
+          PopulateDictionary(CollectionUtils.CreateDictionaryWrapper(target), reader, (JsonDictionaryContract) contract, null, id);
         else if (contract.ContractType == JsonContractType.Object)
-          PopulateObject(target, reader, (JsonObjectContract) contract, id);
+          PopulateObject(target, reader, (JsonObjectContract) contract, null, id);
         else
-          throw CreateSerializationException(reader, "Cannot populate JSON object onto type '{0}'.".FormatWith(CultureInfo.InvariantCulture, objectType));
+          throw JsonSerializationException.Create(reader, "Cannot populate JSON object onto type '{0}'.".FormatWith(CultureInfo.InvariantCulture, objectType));
       }
       else
       {
-        throw CreateSerializationException(reader, "Unexpected initial token '{0}' when populating object. Expected JSON object or array.".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+        throw JsonSerializationException.Create(reader, "Unexpected initial token '{0}' when populating object. Expected JSON object or array.".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
       }
     }
 
@@ -106,24 +106,52 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       return Serializer.ContractResolver.ResolveContract(type);
     }
 
-    public object Deserialize(JsonReader reader, Type objectType)
+    public object Deserialize(JsonReader reader, Type objectType, bool checkAdditionalContent)
     {
       if (reader == null)
         throw new ArgumentNullException("reader");
 
       JsonContract contract = GetContractSafe(objectType);
 
-      JsonConverter converter = GetConverter(contract, null);
-
-      if (reader.TokenType == JsonToken.None && !ReadForType(reader, contract, converter != null, false))
+      try
       {
-        if (contract != null && !contract.IsNullable)
-          throw CreateSerializationException(reader, "No JSON content found and type '{0}' is not nullable.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
+        JsonConverter converter = GetConverter(contract, null, null, null);
 
-        return null;
+        if (reader.TokenType == JsonToken.None && !ReadForType(reader, contract, converter != null))
+        {
+          if (contract != null && !contract.IsNullable)
+            throw JsonSerializationException.Create(reader, "No JSON content found and type '{0}' is not nullable.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
+
+          return null;
+        }
+
+        object deserializedValue;
+
+        if (converter != null && converter.CanRead)
+          deserializedValue = converter.ReadJson(reader, objectType, null, GetInternalSerializer());
+        else
+          deserializedValue = CreateValueInternal(reader, objectType, contract, null, null, null, null);
+
+        if (checkAdditionalContent)
+        {
+          if (reader.Read() && reader.TokenType != JsonToken.Comment)
+            throw new JsonSerializationException("Additional text found in JSON string after finishing deserializing object.");
+        }
+
+        return deserializedValue;
       }
-
-      return CreateValueNonProperty(reader, objectType, contract, converter);
+      catch (Exception ex)
+      {
+        if (IsErrorHandled(null, contract, null, reader.Path, ex))
+        {
+          HandleError(reader, false, 0);
+          return null;
+        }
+        else
+        {
+          throw;
+        }
+      }
     }
 
     private JsonSerializerProxy GetInternalSerializer()
@@ -186,51 +214,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       return token;
     }
 
-    private object CreateValueProperty(JsonReader reader, JsonProperty property, JsonConverter propertyConverter, object target, bool gottenCurrentValue, object currentValue)
-    {
-      JsonContract contract;
-      JsonConverter converter;
-
-      if (property.PropertyContract == null)
-        property.PropertyContract = GetContractSafe(property.PropertyType);
-
-      if (currentValue == null)
-      {
-        contract = property.PropertyContract;
-        converter = propertyConverter;
-      }
-      else
-      {
-        contract = GetContractSafe(currentValue.GetType());
-
-        if (contract != property.PropertyContract)
-          converter = GetConverter(contract, property.MemberConverter);
-        else
-          converter = propertyConverter;
-      }
-
-      Type objectType = property.PropertyType;
-
-      if (converter != null && converter.CanRead)
-      {
-        if (!gottenCurrentValue && target != null && property.Readable)
-          currentValue = property.ValueProvider.GetValue(target);
-
-        return converter.ReadJson(reader, objectType, currentValue, GetInternalSerializer());
-      }
-
-      return CreateValueInternal(reader, objectType, contract, property, currentValue);
-    }
-
-    private object CreateValueNonProperty(JsonReader reader, Type objectType, JsonContract contract, JsonConverter converter)
-    {
-      if (converter != null && converter.CanRead)
-        return converter.ReadJson(reader, objectType, null, GetInternalSerializer());
-
-      return CreateValueInternal(reader, objectType, contract, null, null);
-    }
-
-    private object CreateValueInternal(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, object existingValue)
+    private object CreateValueInternal(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, JsonContainerContract containerContract, JsonProperty containerMember, object existingValue)
     {
       if (contract != null && contract.ContractType == JsonContractType.Linq)
         return CreateJToken(reader, contract);
@@ -242,7 +226,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             // populate a typed object or generic dictionary/array
             // depending upon whether an objectType was supplied
           case JsonToken.StartObject:
-            return CreateObject(reader, objectType, contract, member, existingValue);
+            return CreateObject(reader, objectType, contract, member, containerContract, containerMember, existingValue);
           case JsonToken.StartArray:
             return CreateList(reader, objectType, contract, member, existingValue, null);
           case JsonToken.Integer:
@@ -253,7 +237,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             return EnsureType(reader, reader.Value, CultureInfo.InvariantCulture, contract, objectType);
           case JsonToken.String:
             // convert empty string to null automatically for nullable types
-            if (string.IsNullOrEmpty((string)reader.Value) && objectType != typeof(string) && objectType != typeof(object) && contract.IsNullable)
+            if (string.IsNullOrEmpty((string)reader.Value) && objectType != typeof(string) && objectType != typeof(object) && contract != null && contract.IsNullable)
               return null;
 
             // string that needs to be returned as a byte array should be base 64 decoded
@@ -262,10 +246,9 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 
             return EnsureType(reader, reader.Value, CultureInfo.InvariantCulture, contract, objectType);
           case JsonToken.StartConstructor:
-          case JsonToken.EndConstructor:
             string constructorName = reader.Value.ToString();
 
-            return constructorName;
+            return EnsureType(reader, constructorName, CultureInfo.InvariantCulture, contract, objectType);
           case JsonToken.Null:
           case JsonToken.Undefined:
 #if !(NETFX_CORE || PORTABLE)
@@ -280,37 +263,52 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             // ignore
             break;
           default:
-            throw CreateSerializationException(reader, "Unexpected token while deserializing object: " + reader.TokenType);
+            throw JsonSerializationException.Create(reader, "Unexpected token while deserializing object: " + reader.TokenType);
         }
       } while (reader.Read());
 
-      throw CreateSerializationException(reader, "Unexpected end when deserializing object.");
+      throw JsonSerializationException.Create(reader, "Unexpected end when deserializing object.");
     }
 
-    private JsonSerializationException CreateSerializationException(JsonReader reader, string message)
+    internal string GetExpectedDescription(JsonContract contract)
     {
-      return CreateSerializationException(reader, message, null);
+      switch (contract.ContractType)
+      {
+        case JsonContractType.Object:
+        case JsonContractType.Dictionary:
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+        case JsonContractType.Serializable:
+#endif
+#if !(NET35 || NET20 || WINDOWS_PHONE || PORTABLE)
+        case JsonContractType.Dynamic:
+#endif
+          return @"JSON object (e.g. {""name"":""value""})";
+        case JsonContractType.Array:
+          return @"JSON array (e.g. [1,2,3])";
+        case JsonContractType.Primitive:
+          return @"JSON primitive value (e.g. string, number, boolean, null)";
+        case JsonContractType.String:
+          return @"JSON string value";
+        default:
+          throw new ArgumentOutOfRangeException();
+      }
     }
 
-    private JsonSerializationException CreateSerializationException(JsonReader reader, string message, Exception ex)
-    {
-      return CreateSerializationException(reader as IJsonLineInfo, message, ex);
-    }
-
-    private JsonSerializationException CreateSerializationException(IJsonLineInfo lineInfo, string message, Exception ex)
-    {
-      message = JsonReader.FormatExceptionMessage(lineInfo, message);
-
-      return new JsonSerializationException(message, ex);
-    }
-
-    private JsonConverter GetConverter(JsonContract contract, JsonConverter memberConverter)
+    private JsonConverter GetConverter(JsonContract contract, JsonConverter memberConverter, JsonContainerContract containerContract, JsonProperty containerProperty)
     {
       JsonConverter converter = null;
       if (memberConverter != null)
       {
         // member attribute converter
         converter = memberConverter;
+      }
+      else if (containerProperty != null && containerProperty.ItemConverter != null)
+      {
+        converter = containerProperty.ItemConverter;
+      }
+      else if (containerContract != null && containerContract.ItemConverter != null)
+      {
+        converter = containerContract.ItemConverter;
       }
       else if (contract != null)
       {
@@ -328,11 +326,79 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       return converter;
     }
 
-    private object CreateObject(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, object existingValue)
+    private object CreateObject(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, JsonContainerContract containerContract, JsonProperty containerMember, object existingValue)
     {
       CheckedRead(reader);
 
-      string id = null;
+      string id;
+      object newValue;
+      if (ReadSpecialProperties(reader, ref objectType, ref contract, member, containerContract, containerMember, existingValue, out newValue, out id))
+        return newValue;
+
+      if (!HasDefinedType(objectType))
+        return CreateJObject(reader);
+
+      if (contract == null)
+        throw JsonSerializationException.Create(reader, "Could not resolve type '{0}' to a JsonContract.".FormatWith(CultureInfo.InvariantCulture, objectType));
+
+      switch (contract.ContractType)
+      {
+        case JsonContractType.Object:
+          bool createdFromNonDefaultConstructor = false;
+          JsonObjectContract objectContract = (JsonObjectContract) contract;
+          object targetObject;
+          if (existingValue != null)
+            targetObject = existingValue;
+          else
+            targetObject = CreateNewObject(reader, objectContract, member, containerMember, id, out createdFromNonDefaultConstructor);
+
+          // don't populate if read from non-default constructor because the object has already been read
+          if (createdFromNonDefaultConstructor)
+            return targetObject;
+
+          return PopulateObject(targetObject, reader, objectContract, member, id);
+        case JsonContractType.Primitive:
+          JsonPrimitiveContract primitiveContract = (JsonPrimitiveContract) contract;
+          // if the content is inside $value then read past it
+          if (reader.TokenType == JsonToken.PropertyName && string.Equals(reader.Value.ToString(), JsonTypeReflector.ValuePropertyName, StringComparison.Ordinal))
+          {
+            CheckedRead(reader);
+            object value = CreateValueInternal(reader, objectType, primitiveContract, member, null, null, existingValue);
+
+            CheckedRead(reader);
+            return value;
+          }
+          break;
+        case JsonContractType.Dictionary:
+          JsonDictionaryContract dictionaryContract = (JsonDictionaryContract) contract;
+          object targetDictionary;
+          if (existingValue != null)
+            targetDictionary = existingValue;
+          else
+            targetDictionary = CreateNewDictionary(reader, dictionaryContract);
+
+          return PopulateDictionary(dictionaryContract.CreateWrapper(targetDictionary), reader, dictionaryContract, member, id);
+#if !(NET35 || NET20 || WINDOWS_PHONE || PORTABLE)
+        case JsonContractType.Dynamic:
+          JsonDynamicContract dynamicContract = (JsonDynamicContract) contract;
+          return CreateDynamic(reader, dynamicContract, member, id);
+#endif
+#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
+        case JsonContractType.Serializable:
+          JsonISerializableContract serializableContract = (JsonISerializableContract) contract;
+          return CreateISerializable(reader, serializableContract, id);
+#endif
+      }
+
+      throw JsonSerializationException.Create(reader, @"Cannot deserialize the current JSON object (e.g. {{""name"":""value""}}) into type '{0}' because the type requires a {1} to deserialize correctly.
+To fix this error either change the JSON to a {1} or change the deserialized type so that it is a normal .NET type (e.g. not a primitive type like integer, not a collection type like an array or List<T>) that can be deserialized from a JSON object. JsonObjectAttribute can also be added to the type to force it to deserialize from a JSON object.
+".FormatWith(CultureInfo.InvariantCulture, objectType, GetExpectedDescription(contract)));
+    }
+
+    private bool ReadSpecialProperties(JsonReader reader, ref Type objectType, ref JsonContract contract, JsonProperty member, JsonContainerContract containerContract, JsonProperty containerMember, object existingValue, out object newValue, out string id)
+    {
+      id = null;
+      newValue = null;
 
       if (reader.TokenType == JsonToken.PropertyName)
       {
@@ -352,7 +418,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
             {
               CheckedRead(reader);
               if (reader.TokenType != JsonToken.String && reader.TokenType != JsonToken.Null)
-                throw CreateSerializationException(reader, "JSON reference {0} property must have a string or null value.".FormatWith(CultureInfo.InvariantCulture, JsonTypeReflector.RefPropertyName));
+                throw JsonSerializationException.Create(reader, "JSON reference {0} property must have a string or null value.".FormatWith(CultureInfo.InvariantCulture, JsonTypeReflector.RefPropertyName));
 
               string reference = (reader.Value != null) ? reader.Value.ToString() : null;
 
@@ -361,9 +427,12 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
               if (reference != null)
               {
                 if (reader.TokenType == JsonToken.PropertyName)
-                  throw CreateSerializationException(reader, "Additional content found in JSON reference object. A JSON reference object should only have a {0} property.".FormatWith(CultureInfo.InvariantCulture, JsonTypeReflector.RefPropertyName));
+                  throw JsonSerializationException.Create(reader, "Additional content found in JSON reference object. A JSON reference object should only have a {0} property.".FormatWith(CultureInfo.InvariantCulture, JsonTypeReflector.RefPropertyName));
 
-                return Serializer.ReferenceResolver.ResolveReference(this, reference);
+                {
+                  newValue = Serializer.ReferenceResolver.ResolveReference(this, reference);
+                  return true;
+                }
               }
               else
               {
@@ -375,7 +444,13 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
               CheckedRead(reader);
               string qualifiedTypeName = reader.Value.ToString();
 
-              if ((((member != null) ? member.TypeNameHandling : null) ?? Serializer.TypeNameHandling) != TypeNameHandling.None)
+              TypeNameHandling resolvedTypeNameHandling =
+                ((member != null) ? member.TypeNameHandling : null)
+                ?? ((containerContract != null) ? containerContract.ItemTypeNameHandling : null)
+                ?? ((containerMember != null) ? containerMember.ItemTypeNameHandling : null)
+                ?? Serializer.TypeNameHandling;
+
+              if (resolvedTypeNameHandling != TypeNameHandling.None)
               {
                 string typeName;
                 string assemblyName;
@@ -388,14 +463,18 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                 }
                 catch (Exception ex)
                 {
-                  throw CreateSerializationException(reader, "Error resolving type specified in JSON '{0}'.".FormatWith(CultureInfo.InvariantCulture, qualifiedTypeName), ex);
+                  throw JsonSerializationException.Create(reader, "Error resolving type specified in JSON '{0}'.".FormatWith(CultureInfo.InvariantCulture, qualifiedTypeName), ex);
                 }
 
                 if (specifiedType == null)
-                  throw CreateSerializationException(reader, "Type specified in JSON '{0}' was not resolved.".FormatWith(CultureInfo.InvariantCulture, qualifiedTypeName));
+                  throw JsonSerializationException.Create(reader, "Type specified in JSON '{0}' was not resolved.".FormatWith(CultureInfo.InvariantCulture, qualifiedTypeName));
 
-                if (objectType != null && !objectType.IsAssignableFrom(specifiedType))
-                  throw CreateSerializationException(reader, "Type specified in JSON '{0}' is not compatible with '{1}'.".FormatWith(CultureInfo.InvariantCulture, specifiedType.AssemblyQualifiedName, objectType.AssemblyQualifiedName));
+                if (objectType != null
+#if !(NET35 || NET20 || WINDOWS_PHONE || PORTABLE)
+                    && objectType != typeof (IDynamicMetaObjectProvider)
+#endif
+                    && !objectType.IsAssignableFrom(specifiedType))
+                  throw JsonSerializationException.Create(reader, "Type specified in JSON '{0}' is not compatible with '{1}'.".FormatWith(CultureInfo.InvariantCulture, specifiedType.AssemblyQualifiedName, objectType.AssemblyQualifiedName));
 
                 objectType = specifiedType;
                 contract = GetContractSafe(specifiedType);
@@ -419,7 +498,8 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
               CheckedRead(reader);
               object list = CreateList(reader, objectType, contract, member, existingValue, id);
               CheckedRead(reader);
-              return list;
+              newValue = list;
+              return true;
             }
             else
             {
@@ -429,66 +509,19 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
                    && reader.TokenType == JsonToken.PropertyName);
         }
       }
-
-      if (!HasDefinedType(objectType))
-        return CreateJObject(reader);
-
-      if (contract == null)
-        throw CreateSerializationException(reader, "Could not resolve type '{0}' to a JsonContract.".FormatWith(CultureInfo.InvariantCulture, objectType));
-
-      switch (contract.ContractType)
-      {
-        case JsonContractType.Object:
-          JsonObjectContract objectContract = (JsonObjectContract) contract;
-          if (existingValue == null)
-            return CreateAndPopulateObject(reader, objectContract, id);
-
-          return PopulateObject(existingValue, reader, objectContract, id);
-        case JsonContractType.Primitive:
-          JsonPrimitiveContract primitiveContract = (JsonPrimitiveContract) contract;
-          // if the content is inside $value then read past it
-          if (reader.TokenType == JsonToken.PropertyName && string.Equals(reader.Value.ToString(), JsonTypeReflector.ValuePropertyName, StringComparison.Ordinal))
-          {
-            CheckedRead(reader);
-            object value = CreateValueInternal(reader, objectType, primitiveContract, member, existingValue);
-
-            CheckedRead(reader);
-            return value;
-          }
-          break;
-        case JsonContractType.Dictionary:
-          JsonDictionaryContract dictionaryContract = (JsonDictionaryContract) contract;
-          if (existingValue == null)
-            return CreateAndPopulateDictionary(reader, dictionaryContract, id);
-
-          return PopulateDictionary(dictionaryContract.CreateWrapper(existingValue), reader, dictionaryContract, id);
-#if !(NET35 || NET20 || WINDOWS_PHONE || PORTABLE)
-        case JsonContractType.Dynamic:
-          JsonDynamicContract dynamicContract = (JsonDynamicContract) contract;
-          return CreateDynamic(reader, dynamicContract, id);
-#endif
-#if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
-        case JsonContractType.Serializable:
-          JsonISerializableContract serializableContract = (JsonISerializableContract) contract;
-          return CreateISerializable(reader, serializableContract, id);
-#endif
-      }
-
-      throw CreateSerializationException(reader, @"Cannot deserialize JSON object (i.e. {{""name"":""value""}}) into type '{0}'.
-The deserialized type should be a normal .NET type (i.e. not a primitive type like integer, not a collection type like an array or List<T>) or a dictionary type (i.e. Dictionary<TKey, TValue>).
-To force JSON objects to deserialize add the JsonObjectAttribute to the type.".FormatWith(CultureInfo.InvariantCulture, objectType));
+      return false;
     }
 
     private JsonArrayContract EnsureArrayContract(JsonReader reader, Type objectType, JsonContract contract)
     {
       if (contract == null)
-        throw CreateSerializationException(reader, "Could not resolve type '{0}' to a JsonContract.".FormatWith(CultureInfo.InvariantCulture, objectType));
+        throw JsonSerializationException.Create(reader, "Could not resolve type '{0}' to a JsonContract.".FormatWith(CultureInfo.InvariantCulture, objectType));
 
       JsonArrayContract arrayContract = contract as JsonArrayContract;
       if (arrayContract == null)
-        throw CreateSerializationException(reader, @"Cannot deserialize JSON array (i.e. [1,2,3]) into type '{0}'.
-The deserialized type must be an array or implement a collection interface like IEnumerable, ICollection or IList.
-To force JSON arrays to deserialize add the JsonArrayAttribute to the type.".FormatWith(CultureInfo.InvariantCulture, objectType));
+        throw JsonSerializationException.Create(reader, @"Cannot deserialize the current JSON array (e.g. [1,2,3]) into type '{0}' because the type requires a {1} to deserialize correctly.
+To fix this error either change the JSON to a {1} or change the deserialized type to an array or a type that implements a collection interface (e.g. ICollection, IList) like List<T> that can be deserialized from a JSON array. JsonArrayAttribute can also be added to the type to force it to deserialize from a JSON array.
+".FormatWith(CultureInfo.InvariantCulture, objectType, GetExpectedDescription(contract)));
 
       return arrayContract;
     }
@@ -496,10 +529,10 @@ To force JSON arrays to deserialize add the JsonArrayAttribute to the type.".For
     private void CheckedRead(JsonReader reader)
     {
       if (!reader.Read())
-        throw CreateSerializationException(reader, "Unexpected end when deserializing object.");
+        throw JsonSerializationException.Create(reader, "Unexpected end when deserializing object.");
     }
 
-    private object CreateList(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, object existingValue, string reference)
+    private object CreateList(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, object existingValue, string id)
     {
       object value;
       if (HasDefinedType(objectType))
@@ -507,9 +540,41 @@ To force JSON arrays to deserialize add the JsonArrayAttribute to the type.".For
         JsonArrayContract arrayContract = EnsureArrayContract(reader, objectType, contract);
 
         if (existingValue == null)
-          value = CreateAndPopulateList(reader, reference, arrayContract);
+        {
+          bool isTemporaryListReference;
+          IList list = CollectionUtils.CreateList(contract.CreatedType, out isTemporaryListReference);
+
+          if (id != null && isTemporaryListReference)
+            throw JsonSerializationException.Create(reader, "Cannot preserve reference to array or readonly list: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
+
+#if !PocketPC
+          if (contract.OnSerializing != null && isTemporaryListReference)
+            throw JsonSerializationException.Create(reader, "Cannot call OnSerializing on an array or readonly list: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
+#endif
+          if (contract.OnError != null && isTemporaryListReference)
+            throw JsonSerializationException.Create(reader, "Cannot call OnError on an array or readonly list: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
+
+          PopulateList(arrayContract.CreateWrapper(list), reader, arrayContract, member, id);
+
+          // create readonly and fixed sized collections using the temporary list
+          if (isTemporaryListReference)
+          {
+            if (contract.CreatedType.IsArray)
+              list = CollectionUtils.ToArray(((List<object>)list).ToArray(), ReflectionUtils.GetCollectionItemType(contract.CreatedType));
+            else if (ReflectionUtils.InheritsGenericDefinition(contract.CreatedType, typeof(ReadOnlyCollection<>)))
+              list = (IList)ReflectionUtils.CreateInstance(contract.CreatedType, list);
+          }
+          else if (list is IWrappedCollection)
+          {
+            return ((IWrappedCollection)list).UnderlyingCollection;
+          }
+
+          value = list;
+        }
         else
-          value = PopulateList(arrayContract.CreateWrapper(existingValue), reader, reference, arrayContract);
+        {
+          value = PopulateList(arrayContract.CreateWrapper(existingValue), reader, arrayContract, member, id);
+        }
       }
       else
       {
@@ -560,7 +625,7 @@ To force JSON arrays to deserialize add the JsonArrayAttribute to the type.".For
         }
         catch (Exception ex)
         {
-          throw CreateSerializationException(reader, "Error converting value {0} to type '{1}'.".FormatWith(CultureInfo.InvariantCulture, FormatValueForPrint(value), targetType), ex);
+          throw JsonSerializationException.Create(reader, "Error converting value {0} to type '{1}'.".FormatWith(CultureInfo.InvariantCulture, FormatValueForPrint(value), targetType), ex);
         }
       }
 
@@ -578,58 +643,29 @@ To force JSON arrays to deserialize add the JsonArrayAttribute to the type.".For
       return value.ToString();
     }
 
-    private void SetPropertyValue(JsonProperty property, JsonConverter propertyConverter, JsonReader reader, object target)
+    private void SetPropertyValue(JsonProperty property, JsonConverter propertyConverter, JsonContainerContract containerContract, JsonProperty containerProperty, JsonReader reader, object target)
     {
-      if (property.Ignored)
-      {
-        reader.Skip();
+      object currentValue;
+      bool useExistingValue;
+      JsonContract propertyContract;
+      bool gottenCurrentValue;
+
+      if (CalculatePropertyDetails(property, ref propertyConverter, containerContract, containerProperty, reader, target, out useExistingValue, out currentValue, out propertyContract, out gottenCurrentValue))
         return;
-      }
 
-      object currentValue = null;
-      bool useExistingValue = false;
-      bool gottenCurrentValue = false;
+      object value;
 
-      ObjectCreationHandling objectCreationHandling =
-        property.ObjectCreationHandling.GetValueOrDefault(Serializer.ObjectCreationHandling);
-
-      if ((objectCreationHandling == ObjectCreationHandling.Auto || objectCreationHandling == ObjectCreationHandling.Reuse)
-        && (reader.TokenType == JsonToken.StartArray || reader.TokenType == JsonToken.StartObject)
-          && property.Readable)
+      if (propertyConverter != null && propertyConverter.CanRead)
       {
-        currentValue = property.ValueProvider.GetValue(target);
-        gottenCurrentValue = true;
+        if (!gottenCurrentValue && target != null && property.Readable)
+          currentValue = property.ValueProvider.GetValue(target);
 
-        useExistingValue = (currentValue != null
-          && !property.PropertyType.IsArray
-            && !ReflectionUtils.InheritsGenericDefinition(property.PropertyType, typeof (ReadOnlyCollection<>))
-              && !property.PropertyType.IsValueType());
+        value = propertyConverter.ReadJson(reader, property.PropertyType, currentValue, GetInternalSerializer());
       }
-
-      if (!property.Writable && !useExistingValue)
+      else
       {
-        reader.Skip();
-        return;
+        value = CreateValueInternal(reader, property.PropertyType, propertyContract, property, containerContract, containerProperty, (useExistingValue) ? currentValue : null);
       }
-
-      // test tokentype here because null might not be convertable to some types, e.g. ignoring null when applied to DateTime
-      if (property.NullValueHandling.GetValueOrDefault(Serializer.NullValueHandling) == NullValueHandling.Ignore && reader.TokenType == JsonToken.Null)
-      {
-        reader.Skip();
-        return;
-      }
-
-      // test tokentype here because default value might not be convertable to actual type, e.g. default of "" for DateTime
-      if (HasFlag(property.DefaultValueHandling.GetValueOrDefault(Serializer.DefaultValueHandling), DefaultValueHandling.Ignore)
-        && JsonReader.IsPrimitiveToken(reader.TokenType)
-          && MiscellaneousUtils.ValueEquals(reader.Value, property.DefaultValue))
-      {
-        reader.Skip();
-        return;
-      }
-
-      object existingValue = (useExistingValue) ? currentValue : null;
-      object value = CreateValueProperty(reader, property, propertyConverter, target, gottenCurrentValue, existingValue);
 
       // always set the value if useExistingValue is false,
       // otherwise also set it if CreateValue returns a new value compared to the currentValue
@@ -642,6 +678,75 @@ To force JSON arrays to deserialize add the JsonArrayAttribute to the type.".For
         if (property.SetIsSpecified != null)
           property.SetIsSpecified(target, true);
       }
+    }
+
+    private bool CalculatePropertyDetails(JsonProperty property, ref JsonConverter propertyConverter, JsonContainerContract containerContract, JsonProperty containerProperty, JsonReader reader, object target, out bool useExistingValue, out object currentValue, out JsonContract propertyContract, out bool gottenCurrentValue)
+    {
+      currentValue = null;
+      useExistingValue = false;
+      propertyContract = null;
+      gottenCurrentValue = false;
+
+      if (property.Ignored)
+      {
+        reader.Skip();
+        return true;
+      }
+
+      ObjectCreationHandling objectCreationHandling =
+        property.ObjectCreationHandling.GetValueOrDefault(Serializer.ObjectCreationHandling);
+
+      if ((objectCreationHandling == ObjectCreationHandling.Auto || objectCreationHandling == ObjectCreationHandling.Reuse)
+          && (reader.TokenType == JsonToken.StartArray || reader.TokenType == JsonToken.StartObject)
+          && property.Readable)
+      {
+        currentValue = property.ValueProvider.GetValue(target);
+        gottenCurrentValue = true;
+
+        useExistingValue = (currentValue != null
+                            && !property.PropertyType.IsArray
+                            && !ReflectionUtils.InheritsGenericDefinition(property.PropertyType, typeof (ReadOnlyCollection<>))
+                            && !property.PropertyType.IsValueType());
+      }
+
+      if (!property.Writable && !useExistingValue)
+      {
+        reader.Skip();
+        return true;
+      }
+
+      // test tokentype here because null might not be convertable to some types, e.g. ignoring null when applied to DateTime
+      if (property.NullValueHandling.GetValueOrDefault(Serializer.NullValueHandling) == NullValueHandling.Ignore && reader.TokenType == JsonToken.Null)
+      {
+        reader.Skip();
+        return true;
+      }
+
+      // test tokentype here because default value might not be convertable to actual type, e.g. default of "" for DateTime
+      if (HasFlag(property.DefaultValueHandling.GetValueOrDefault(Serializer.DefaultValueHandling), DefaultValueHandling.Ignore)
+          && JsonReader.IsPrimitiveToken(reader.TokenType)
+          && MiscellaneousUtils.ValueEquals(reader.Value, property.DefaultValue))
+      {
+        reader.Skip();
+        return true;
+      }
+
+      if (property.PropertyContract == null)
+        property.PropertyContract = GetContractSafe(property.PropertyType);
+
+      if (currentValue == null)
+      {
+        propertyContract = property.PropertyContract;
+      }
+      else
+      {
+        propertyContract = GetContractSafe(currentValue.GetType());
+
+        if (propertyContract != property.PropertyContract)
+          propertyConverter = GetConverter(propertyContract, property.MemberConverter, containerContract, containerProperty);
+      }
+
+      return false;
     }
 
     private bool HasFlag(DefaultValueHandling value, DefaultValueHandling flag)
@@ -664,7 +769,7 @@ To force JSON arrays to deserialize add the JsonArrayAttribute to the type.".For
       return true;
     }
 
-    private object CreateAndPopulateDictionary(JsonReader reader, JsonDictionaryContract contract, string id)
+    public object CreateNewDictionary(JsonReader reader, JsonDictionaryContract contract)
     {
       object dictionary;
 
@@ -672,23 +777,29 @@ To force JSON arrays to deserialize add the JsonArrayAttribute to the type.".For
         (!contract.DefaultCreatorNonPublic || Serializer.ConstructorHandling == ConstructorHandling.AllowNonPublicDefaultConstructor))
         dictionary = contract.DefaultCreator();
       else
-        throw CreateSerializationException(reader, "Unable to find a default constructor to use for type {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
+        throw JsonSerializationException.Create(reader, "Unable to find a default constructor to use for type {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
 
-      IWrappedDictionary dictionaryWrapper = contract.CreateWrapper(dictionary);
-
-      PopulateDictionary(dictionaryWrapper, reader, contract, id);
-
-      return dictionaryWrapper.UnderlyingDictionary;
+      return dictionary;
     }
 
-    private object PopulateDictionary(IWrappedDictionary dictionary, JsonReader reader, JsonDictionaryContract contract, string id)
+    private object PopulateDictionary(IWrappedDictionary wrappedDictionary, JsonReader reader, JsonDictionaryContract contract, JsonProperty containerProperty, string id)
     {
-      if (id != null)
-        Serializer.ReferenceResolver.AddReference(this, id, dictionary.UnderlyingDictionary);
+      object dictionary = wrappedDictionary.UnderlyingDictionary;
 
-      contract.InvokeOnDeserializing(dictionary.UnderlyingDictionary, Serializer.Context);
+      if (id != null)
+        Serializer.ReferenceResolver.AddReference(this, id, dictionary);
+
+      contract.InvokeOnDeserializing(dictionary, Serializer.Context);
 
       int initialDepth = reader.Depth;
+
+      if (contract.KeyContract == null)
+        contract.KeyContract = GetContractSafe(contract.DictionaryKeyType);
+
+      if (contract.ItemContract == null)
+        contract.ItemContract = GetContractSafe(contract.DictionaryValueType);
+
+      JsonConverter dictionaryValueConverter = contract.ItemConverter ?? GetConverter(contract.ItemContract, null, contract, containerProperty);
 
       do
       {
@@ -698,32 +809,30 @@ To force JSON arrays to deserialize add the JsonArrayAttribute to the type.".For
             object keyValue = reader.Value;
             try
             {
-              if (contract.DictionaryKeyContract == null)
-                contract.DictionaryKeyContract = GetContractSafe(contract.DictionaryKeyType);
-              
               try
               {
-                keyValue = EnsureType(reader, keyValue, CultureInfo.InvariantCulture, contract.DictionaryKeyContract, contract.DictionaryKeyType);
+                keyValue = EnsureType(reader, keyValue, CultureInfo.InvariantCulture, contract.KeyContract, contract.DictionaryKeyType);
               }
               catch (Exception ex)
               {
-                throw CreateSerializationException(reader, "Could not convert string '{0}' to dictionary key type '{1}'. Create a TypeConverter to convert from the string to the key type object.".FormatWith(CultureInfo.InvariantCulture, reader.Value, contract.DictionaryKeyType), ex);
+                throw JsonSerializationException.Create(reader, "Could not convert string '{0}' to dictionary key type '{1}'. Create a TypeConverter to convert from the string to the key type object.".FormatWith(CultureInfo.InvariantCulture, reader.Value, contract.DictionaryKeyType), ex);
               }
 
-              if (contract.DictionaryValueContract == null)
-                contract.DictionaryValueContract = GetContractSafe(contract.DictionaryValueType);
+              if (!ReadForType(reader, contract.ItemContract, dictionaryValueConverter != null))
+                throw JsonSerializationException.Create(reader, "Unexpected end when deserializing object.");
 
-              JsonConverter dictionaryValueConverter = GetConverter(contract.DictionaryValueContract, null);
+              object itemValue;
+              if (dictionaryValueConverter != null && dictionaryValueConverter.CanRead)
+                itemValue = dictionaryValueConverter.ReadJson(reader, contract.DictionaryValueType, null, GetInternalSerializer());
+              else
+                itemValue = CreateValueInternal(reader, contract.DictionaryValueType, contract.ItemContract, null, contract, containerProperty, null);
 
-              if (!ReadForType(reader, contract.DictionaryValueContract, dictionaryValueConverter != null, false))
-                throw CreateSerializationException(reader, "Unexpected end when deserializing object.");
-
-              dictionary[keyValue] = CreateValueNonProperty(reader, contract.DictionaryValueType, contract.DictionaryValueContract, dictionaryValueConverter);
+              wrappedDictionary[keyValue] = itemValue;
             }
             catch (Exception ex)
             {
               if (IsErrorHandled(dictionary, contract, keyValue, reader.Path, ex))
-                HandleError(reader, initialDepth);
+                HandleError(reader, true, initialDepth);
               else
                 throw;
             }
@@ -731,73 +840,61 @@ To force JSON arrays to deserialize add the JsonArrayAttribute to the type.".For
           case JsonToken.Comment:
             break;
           case JsonToken.EndObject:
-            contract.InvokeOnDeserialized(dictionary.UnderlyingDictionary, Serializer.Context);
+            contract.InvokeOnDeserialized(dictionary, Serializer.Context);
 
-            return dictionary.UnderlyingDictionary;
+            return dictionary;
           default:
-            throw CreateSerializationException(reader, "Unexpected token when deserializing object: " + reader.TokenType);
+            throw JsonSerializationException.Create(reader, "Unexpected token when deserializing object: " + reader.TokenType);
         }
       } while (reader.Read());
 
-      throw CreateSerializationException(reader, "Unexpected end when deserializing object.");
+      throw JsonSerializationException.Create(reader, "Unexpected end when deserializing object.");
     }
 
-    private object CreateAndPopulateList(JsonReader reader, string reference, JsonArrayContract contract)
-    {
-      return CollectionUtils.CreateAndPopulateList(contract.CreatedType, (l, isTemporaryListReference) =>
-        {
-          if (reference != null && isTemporaryListReference)
-            throw CreateSerializationException(reader, "Cannot preserve reference to array or readonly list: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
-
-#if !PocketPC
-          if (contract.OnSerializing != null && isTemporaryListReference)
-            throw CreateSerializationException(reader, "Cannot call OnSerializing on an array or readonly list: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
-#endif
-          if (contract.OnError != null && isTemporaryListReference)
-            throw CreateSerializationException(reader, "Cannot call OnError on an array or readonly list: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
-
-          PopulateList(contract.CreateWrapper(l), reader, reference, contract);
-        });
-    }
-
-    private object PopulateList(IWrappedCollection wrappedList, JsonReader reader, string reference, JsonArrayContract contract)
+    private object PopulateList(IWrappedCollection wrappedList, JsonReader reader, JsonArrayContract contract, JsonProperty containerProperty, string id)
     {
       object list = wrappedList.UnderlyingCollection;
+
+      if (id != null)
+        Serializer.ReferenceResolver.AddReference(this, id, list);
 
       // can't populate an existing array
       if (wrappedList.IsFixedSize)
       {
         reader.Skip();
-        return wrappedList.UnderlyingCollection;
+        return list;
       }
-
-      if (reference != null)
-        Serializer.ReferenceResolver.AddReference(this, reference, list);
 
       contract.InvokeOnDeserializing(list, Serializer.Context);
 
       int initialDepth = reader.Depth;
-      int index = 0;
 
       JsonContract collectionItemContract = GetContractSafe(contract.CollectionItemType);
-      JsonConverter collectionItemConverter = GetConverter(collectionItemContract, null);
+      JsonConverter collectionItemConverter = GetConverter(collectionItemContract, null, contract, containerProperty);
+
+      int? previousErrorIndex = null;
 
       while (true)
       {
         try
         {
-          if (ReadForType(reader, collectionItemContract, collectionItemConverter != null, true))
+          if (ReadForType(reader, collectionItemContract, collectionItemConverter != null))
           {
             switch (reader.TokenType)
             {
               case JsonToken.EndArray:
                 contract.InvokeOnDeserialized(list, Serializer.Context);
 
-                return wrappedList.UnderlyingCollection;
+                return list;
               case JsonToken.Comment:
                 break;
               default:
-                object value = CreateValueNonProperty(reader, contract.CollectionItemType, collectionItemContract, collectionItemConverter);
+                object value;
+
+                if (collectionItemConverter != null && collectionItemConverter.CanRead)
+                  value = collectionItemConverter.ReadJson(reader, contract.CollectionItemType, null, GetInternalSerializer());
+                else
+                  value = CreateValueInternal(reader, contract.CollectionItemType, collectionItemContract, null, contract, containerProperty, null);
 
                 wrappedList.Add(value);
                 break;
@@ -810,18 +907,31 @@ To force JSON arrays to deserialize add the JsonArrayAttribute to the type.".For
         }
         catch (Exception ex)
         {
-          if (IsErrorHandled(list, contract, index, reader.Path, ex))
-            HandleError(reader, initialDepth);
+          JsonPosition errorPosition = reader.GetPosition(initialDepth);
+
+          if (IsErrorHandled(list, contract, errorPosition.Position, reader.Path, ex))
+          {
+            HandleError(reader, true, initialDepth);
+
+            if (previousErrorIndex != null && previousErrorIndex == errorPosition.Position)
+            {
+              // reader index has not moved since previous error handling
+              // break out of reading array to prevent infinite loop
+              throw JsonSerializationException.Create(reader, "Infinite loop detected from error handling.", ex);
+            }
+            else
+            {
+              previousErrorIndex = errorPosition.Position;
+            }
+          }
           else
+          {
             throw;
-        }
-        finally
-        {
-          index++;
+          }
         }
       }
 
-      throw CreateSerializationException(reader, "Unexpected end when deserializing array.");
+      throw JsonSerializationException.Create(reader, "Unexpected end when deserializing array.");
     }
 
 #if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
@@ -831,8 +941,9 @@ To force JSON arrays to deserialize add the JsonArrayAttribute to the type.".For
 
       if (!JsonTypeReflector.FullyTrusted)
       {
-        throw CreateSerializationException(reader, @"Type '{0}' implements ISerializable but cannot be deserialized using the ISerializable interface because the current application is not fully trusted and ISerializable can expose secure data.
-To fix this error either change the environment to be fully trusted, change the application to not deserialize the type, add to JsonObjectAttribute to the type or change the JsonSerializer setting ContractResolver to use a new DefaultContractResolver with IgnoreSerializableInterface set to true.".FormatWith(CultureInfo.InvariantCulture, objectType));
+        throw JsonSerializationException.Create(reader, @"Type '{0}' implements ISerializable but cannot be deserialized using the ISerializable interface because the current application is not fully trusted and ISerializable can expose secure data.
+To fix this error either change the environment to be fully trusted, change the application to not deserialize the type, add JsonObjectAttribute to the type or change the JsonSerializer setting ContractResolver to use a new DefaultContractResolver with IgnoreSerializableInterface set to true.
+".FormatWith(CultureInfo.InvariantCulture, objectType));
       }
 
       SerializationInfo serializationInfo = new SerializationInfo(contract.UnderlyingType, GetFormatterConverter());
@@ -845,7 +956,7 @@ To fix this error either change the environment to be fully trusted, change the 
           case JsonToken.PropertyName:
             string memberName = reader.Value.ToString();
             if (!reader.Read())
-              throw CreateSerializationException(reader, "Unexpected end when setting {0}'s value.".FormatWith(CultureInfo.InvariantCulture, memberName));
+              throw JsonSerializationException.Create(reader, "Unexpected end when setting {0}'s value.".FormatWith(CultureInfo.InvariantCulture, memberName));
 
             serializationInfo.AddValue(memberName, JToken.ReadFrom(reader));
             break;
@@ -855,19 +966,19 @@ To fix this error either change the environment to be fully trusted, change the 
             exit = true;
             break;
           default:
-            throw CreateSerializationException(reader, "Unexpected token when deserializing object: " + reader.TokenType);
+            throw JsonSerializationException.Create(reader, "Unexpected token when deserializing object: " + reader.TokenType);
         }
       } while (!exit && reader.Read());
 
       if (contract.ISerializableCreator == null)
-        throw CreateSerializationException(reader, "ISerializable type '{0}' does not have a valid constructor. To correctly implement ISerializable a constructor that takes SerializationInfo and StreamingContext parameters should be present.".FormatWith(CultureInfo.InvariantCulture, objectType));
+        throw JsonSerializationException.Create(reader, "ISerializable type '{0}' does not have a valid constructor. To correctly implement ISerializable a constructor that takes SerializationInfo and StreamingContext parameters should be present.".FormatWith(CultureInfo.InvariantCulture, objectType));
 
       object createdObject = contract.ISerializableCreator(serializationInfo, Serializer.Context);
 
       if (id != null)
         Serializer.ReferenceResolver.AddReference(this, id, createdObject);
 
-      // these are together because OnDeserializing takes an object but for an ISerializable the object is full created in the constructor
+      // these are together because OnDeserializing takes an object but for an ISerializable the object is fully created in the constructor
       contract.InvokeOnDeserializing(createdObject, Serializer.Context);
       contract.InvokeOnDeserialized(createdObject, Serializer.Context);
 
@@ -876,18 +987,18 @@ To fix this error either change the environment to be fully trusted, change the 
 #endif
 
 #if !(NET35 || NET20 || WINDOWS_PHONE || PORTABLE)
-    private object CreateDynamic(JsonReader reader, JsonDynamicContract contract, string id)
+    private object CreateDynamic(JsonReader reader, JsonDynamicContract contract, JsonProperty member, string id)
     {
-      IDynamicMetaObjectProvider newObject = null;
+      IDynamicMetaObjectProvider newObject;
 
       if (contract.UnderlyingType.IsInterface() || contract.UnderlyingType.IsAbstract())
-        throw CreateSerializationException(reader, "Could not create an instance of type {0}. Type is an interface or abstract class and cannot be instantated.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
+        throw JsonSerializationException.Create(reader, "Could not create an instance of type {0}. Type is an interface or abstract class and cannot be instantated.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
 
       if (contract.DefaultCreator != null &&
         (!contract.DefaultCreatorNonPublic || Serializer.ConstructorHandling == ConstructorHandling.AllowNonPublicDefaultConstructor))
         newObject = (IDynamicMetaObjectProvider) contract.DefaultCreator();
       else
-        throw CreateSerializationException(reader, "Unable to find a default constructor to use for type {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
+        throw JsonSerializationException.Create(reader, "Unable to find a default constructor to use for type {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
 
       if (id != null)
         Serializer.ReferenceResolver.AddReference(this, id, newObject);
@@ -907,7 +1018,7 @@ To fix this error either change the environment to be fully trusted, change the 
             try
             {
               if (!reader.Read())
-                throw CreateSerializationException(reader, "Unexpected end when setting {0}'s value.".FormatWith(CultureInfo.InvariantCulture, memberName));
+                throw JsonSerializationException.Create(reader, "Unexpected end when setting {0}'s value.".FormatWith(CultureInfo.InvariantCulture, memberName));
 
               // first attempt to find a settable property, otherwise fall back to a dynamic set without type
               JsonProperty property = contract.Properties.GetClosestMatchProperty(memberName);
@@ -917,18 +1028,22 @@ To fix this error either change the environment to be fully trusted, change the 
                 if (property.PropertyContract == null)
                   property.PropertyContract = GetContractSafe(property.PropertyType);
 
-                JsonConverter propertyConverter = GetConverter(property.PropertyContract, property.MemberConverter);
+                JsonConverter propertyConverter = GetConverter(property.PropertyContract, property.MemberConverter, null, null);
 
-                SetPropertyValue(property, propertyConverter, reader, newObject);
+                SetPropertyValue(property, propertyConverter, null, member, reader, newObject);
               }
               else
               {
                 Type t = (JsonReader.IsPrimitiveToken(reader.TokenType)) ? reader.ValueType : typeof (IDynamicMetaObjectProvider);
 
                 JsonContract dynamicMemberContract = GetContractSafe(t);
-                JsonConverter dynamicMemberConverter = GetConverter(dynamicMemberContract, null);
+                JsonConverter dynamicMemberConverter = GetConverter(dynamicMemberContract, null, null, member);
 
-                object value = CreateValueNonProperty(reader, t, dynamicMemberContract, dynamicMemberConverter);
+                object value;
+                if (dynamicMemberConverter != null && dynamicMemberConverter.CanRead)
+                  value = dynamicMemberConverter.ReadJson(reader, t, null, GetInternalSerializer());
+                else
+                  value = CreateValueInternal(reader, t, dynamicMemberContract, null, null, member, null);
 
                 newObject.TrySetMember(memberName, value);
               }
@@ -936,7 +1051,7 @@ To fix this error either change the environment to be fully trusted, change the 
             catch (Exception ex)
             {
               if (IsErrorHandled(newObject, contract, memberName, reader.Path, ex))
-                HandleError(reader, initialDepth);
+                HandleError(reader, true, initialDepth);
               else
                 throw;
             }
@@ -945,7 +1060,7 @@ To fix this error either change the environment to be fully trusted, change the 
             exit = true;
             break;
           default:
-            throw CreateSerializationException(reader, "Unexpected token when deserializing object: " + reader.TokenType);
+            throw JsonSerializationException.Create(reader, "Unexpected token when deserializing object: " + reader.TokenType);
         }
       } while (!exit && reader.Read());
 
@@ -955,48 +1070,13 @@ To fix this error either change the environment to be fully trusted, change the 
     }
 #endif
 
-    private object CreateAndPopulateObject(JsonReader reader, JsonObjectContract contract, string id)
-    {
-      object newObject = null;
-
-      if (contract.UnderlyingType.IsInterface() || contract.UnderlyingType.IsAbstract())
-        throw CreateSerializationException(reader, "Could not create an instance of type {0}. Type is an interface or abstract class and cannot be instantated.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
-
-      if (contract.OverrideConstructor != null)
-      {
-        if (contract.OverrideConstructor.GetParameters().Length > 0)
-          return CreateObjectFromNonDefaultConstructor(reader, contract, contract.OverrideConstructor, id);
-
-        newObject = contract.OverrideConstructor.Invoke(null);
-      }
-      else if (contract.DefaultCreator != null &&
-        (!contract.DefaultCreatorNonPublic || Serializer.ConstructorHandling == ConstructorHandling.AllowNonPublicDefaultConstructor || contract.ParametrizedConstructor == null))
-      {
-        // use the default constructor if it is...
-        // public
-        // non-public and the user has change constructor handling settings
-        // non-public and there is no other constructor
-        newObject = contract.DefaultCreator();
-      }
-      else if (contract.ParametrizedConstructor != null)
-      {
-        return CreateObjectFromNonDefaultConstructor(reader, contract, contract.ParametrizedConstructor, id);
-      }
-
-      if (newObject == null)
-        throw CreateSerializationException(reader, "Unable to find a constructor to use for type {0}. A class should either have a default constructor, one constructor with arguments or a constructor marked with the JsonConstructor attribute.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
-
-      PopulateObject(newObject, reader, contract, id);
-      return newObject;
-    }
-
-    private object CreateObjectFromNonDefaultConstructor(JsonReader reader, JsonObjectContract contract, ConstructorInfo constructorInfo, string id)
+    private object CreateObjectFromNonDefaultConstructor(JsonReader reader, JsonObjectContract contract, JsonProperty containerProperty, ConstructorInfo constructorInfo, string id)
     {
       ValidationUtils.ArgumentNotNull(constructorInfo, "constructorInfo");
 
       Type objectType = contract.UnderlyingType;
 
-      IDictionary<JsonProperty, object> propertyValues = ResolvePropertyAndConstructorValues(contract, reader, objectType);
+      IDictionary<JsonProperty, object> propertyValues = ResolvePropertyAndConstructorValues(contract, containerProperty, reader, objectType);
 
       IDictionary<ParameterInfo, object> constructorParameters = constructorInfo.GetParameters().ToDictionary(p => p, p => (object) null);
       IDictionary<JsonProperty, object> remainingPropertyValues = new Dictionary<JsonProperty, object>();
@@ -1034,7 +1114,7 @@ To fix this error either change the environment to be fully trusted, change the 
 
           if (propertyContract.ContractType == JsonContractType.Array)
           {
-            JsonArrayContract propertyArrayContract = propertyContract as JsonArrayContract;
+            JsonArrayContract propertyArrayContract = (JsonArrayContract)propertyContract;
 
             object createdObjectCollection = property.ValueProvider.GetValue(createdObject);
             if (createdObjectCollection != null)
@@ -1050,7 +1130,7 @@ To fix this error either change the environment to be fully trusted, change the 
           }
           else if (propertyContract.ContractType == JsonContractType.Dictionary)
           {
-            JsonDictionaryContract jsonDictionaryContract = propertyContract as JsonDictionaryContract;
+            JsonDictionaryContract jsonDictionaryContract = (JsonDictionaryContract)propertyContract;
 
             object createdObjectDictionary = property.ValueProvider.GetValue(createdObject);
             if (createdObjectDictionary != null)
@@ -1071,7 +1151,7 @@ To fix this error either change the environment to be fully trusted, change the 
       return createdObject;
     }
 
-    private IDictionary<JsonProperty, object> ResolvePropertyAndConstructorValues(JsonObjectContract contract, JsonReader reader, Type objectType)
+    private IDictionary<JsonProperty, object> ResolvePropertyAndConstructorValues(JsonObjectContract contract, JsonProperty containerProperty, JsonReader reader, Type objectType)
     {
       IDictionary<JsonProperty, object> propertyValues = new Dictionary<JsonProperty, object>();
       bool exit = false;
@@ -1092,23 +1172,36 @@ To fix this error either change the environment to be fully trusted, change the 
               if (property.PropertyContract == null)
                 property.PropertyContract = GetContractSafe(property.PropertyType);
 
-              JsonConverter propertyConverter = GetConverter(property.PropertyContract, property.MemberConverter);
+              JsonConverter propertyConverter = GetConverter(property.PropertyContract, property.MemberConverter, contract, containerProperty);
 
-              if (!ReadForType(reader, property.PropertyContract, propertyConverter != null, false))
-                throw CreateSerializationException(reader, "Unexpected end when setting {0}'s value.".FormatWith(CultureInfo.InvariantCulture, memberName));
+              if (!ReadForType(reader, property.PropertyContract, propertyConverter != null))
+                throw JsonSerializationException.Create(reader, "Unexpected end when setting {0}'s value.".FormatWith(CultureInfo.InvariantCulture, memberName));
 
               if (!property.Ignored)
-                propertyValues[property] = CreateValueProperty(reader, property, propertyConverter, null, true, null);
+              {
+                if (property.PropertyContract == null)
+                  property.PropertyContract = GetContractSafe(property.PropertyType);
+
+                object propertyValue;
+                if (propertyConverter != null && propertyConverter.CanRead)
+                  propertyValue = propertyConverter.ReadJson(reader, property.PropertyType, null, GetInternalSerializer());
+                else
+                  propertyValue = CreateValueInternal(reader, property.PropertyType, property.PropertyContract, property, contract, containerProperty, null);
+
+                propertyValues[property] = propertyValue;
+              }
               else
+              {
                 reader.Skip();
+              }
             }
             else
             {
               if (!reader.Read())
-                throw CreateSerializationException(reader, "Unexpected end when setting {0}'s value.".FormatWith(CultureInfo.InvariantCulture, memberName));
+                throw JsonSerializationException.Create(reader, "Unexpected end when setting {0}'s value.".FormatWith(CultureInfo.InvariantCulture, memberName));
 
               if (Serializer.MissingMemberHandling == MissingMemberHandling.Error)
-                throw CreateSerializationException(reader, "Could not find member '{0}' on object of type '{1}'".FormatWith(CultureInfo.InvariantCulture, memberName, objectType.Name));
+                throw JsonSerializationException.Create(reader, "Could not find member '{0}' on object of type '{1}'".FormatWith(CultureInfo.InvariantCulture, memberName, objectType.Name));
 
               reader.Skip();
             }
@@ -1119,14 +1212,14 @@ To fix this error either change the environment to be fully trusted, change the 
             exit = true;
             break;
           default:
-            throw CreateSerializationException(reader, "Unexpected token when deserializing object: " + reader.TokenType);
+            throw JsonSerializationException.Create(reader, "Unexpected token when deserializing object: " + reader.TokenType);
         }
       } while (!exit && reader.Read());
 
       return propertyValues;
     }
 
-    private bool ReadForType(JsonReader reader, JsonContract contract, bool hasConverter, bool inArray)
+    private bool ReadForType(JsonReader reader, JsonContract contract, bool hasConverter)
     {
       // don't read properties with converters as a specific value
       // the value might be a string which will then get converted which will error if read as date for example
@@ -1172,12 +1265,53 @@ To fix this error either change the environment to be fully trusted, change the 
       return (reader.TokenType != JsonToken.None);
     }
 
-    private object PopulateObject(object newObject, JsonReader reader, JsonObjectContract contract, string id)
+    public object CreateNewObject(JsonReader reader, JsonObjectContract objectContract, JsonProperty containerMember, JsonProperty containerProperty, string id, out bool createdFromNonDefaultConstructor)
+    {
+      object newObject = null;
+
+      if (objectContract.UnderlyingType.IsInterface() || objectContract.UnderlyingType.IsAbstract())
+        throw JsonSerializationException.Create(reader, "Could not create an instance of type {0}. Type is an interface or abstract class and cannot be instantated.".FormatWith(CultureInfo.InvariantCulture, objectContract.UnderlyingType));
+
+      if (objectContract.OverrideConstructor != null)
+      {
+        if (objectContract.OverrideConstructor.GetParameters().Length > 0)
+        {
+          createdFromNonDefaultConstructor = true;
+          return CreateObjectFromNonDefaultConstructor(reader, objectContract, containerMember, objectContract.OverrideConstructor, id);
+        }
+
+        newObject = objectContract.OverrideConstructor.Invoke(null);
+      }
+      else if (objectContract.DefaultCreator != null &&
+        (!objectContract.DefaultCreatorNonPublic || Serializer.ConstructorHandling == ConstructorHandling.AllowNonPublicDefaultConstructor || objectContract.ParametrizedConstructor == null))
+      {
+        // use the default constructor if it is...
+        // public
+        // non-public and the user has change constructor handling settings
+        // non-public and there is no other constructor
+        newObject = objectContract.DefaultCreator();
+      }
+      else if (objectContract.ParametrizedConstructor != null)
+      {
+        createdFromNonDefaultConstructor = true;
+        return CreateObjectFromNonDefaultConstructor(reader, objectContract, containerMember, objectContract.ParametrizedConstructor, id);
+      }
+
+      if (newObject == null)
+        throw JsonSerializationException.Create(reader, "Unable to find a constructor to use for type {0}. A class should either have a default constructor, one constructor with arguments or a constructor marked with the JsonConstructor attribute.".FormatWith(CultureInfo.InvariantCulture, objectContract.UnderlyingType));
+
+      createdFromNonDefaultConstructor = false;
+      return newObject;
+    }
+
+    private object PopulateObject(object newObject, JsonReader reader, JsonObjectContract contract, JsonProperty member, string id)
     {
       contract.InvokeOnDeserializing(newObject, Serializer.Context);
 
-      Dictionary<JsonProperty, PropertyPresence> propertiesPresence =
-        contract.Properties.ToDictionary(m => m, m => PropertyPresence.None);
+      // only need to keep a track of properies presence if they are required or a value should be defaulted if missing
+      Dictionary<JsonProperty, PropertyPresence> propertiesPresence = (contract.HasRequiredOrDefaultValueProperties || HasFlag(Serializer.DefaultValueHandling, DefaultValueHandling.Populate))
+        ? contract.Properties.ToDictionary(m => m, m => PropertyPresence.None)
+        : null;
 
       if (id != null)
         Serializer.ReferenceResolver.AddReference(this, id, newObject);
@@ -1201,7 +1335,7 @@ To fix this error either change the environment to be fully trusted, change the 
                 if (property == null)
                 {
                   if (Serializer.MissingMemberHandling == MissingMemberHandling.Error)
-                    throw CreateSerializationException(reader, "Could not find member '{0}' on object of type '{1}'".FormatWith(CultureInfo.InvariantCulture, memberName, contract.UnderlyingType.Name));
+                    throw JsonSerializationException.Create(reader, "Could not find member '{0}' on object of type '{1}'".FormatWith(CultureInfo.InvariantCulture, memberName, contract.UnderlyingType.Name));
 
                   reader.Skip();
                   continue;
@@ -1210,19 +1344,19 @@ To fix this error either change the environment to be fully trusted, change the 
                 if (property.PropertyContract == null)
                   property.PropertyContract = GetContractSafe(property.PropertyType);
 
-                JsonConverter propertyConverter = GetConverter(property.PropertyContract, property.MemberConverter);
+                JsonConverter propertyConverter = GetConverter(property.PropertyContract, property.MemberConverter, contract, member);
 
-                if (!ReadForType(reader, property.PropertyContract, propertyConverter != null, false))
-                  throw CreateSerializationException(reader, "Unexpected end when setting {0}'s value.".FormatWith(CultureInfo.InvariantCulture, memberName));
+                if (!ReadForType(reader, property.PropertyContract, propertyConverter != null))
+                  throw JsonSerializationException.Create(reader, "Unexpected end when setting {0}'s value.".FormatWith(CultureInfo.InvariantCulture, memberName));
 
                 SetPropertyPresence(reader, property, propertiesPresence);
 
-                SetPropertyValue(property, propertyConverter, reader, newObject);
+                SetPropertyValue(property, propertyConverter, contract, member, reader, newObject);
               }
               catch (Exception ex)
               {
                 if (IsErrorHandled(newObject, contract, memberName, reader.Path, ex))
-                  HandleError(reader, initialDepth);
+                  HandleError(reader, true, initialDepth);
                 else
                   throw;
               }
@@ -1230,43 +1364,7 @@ To fix this error either change the environment to be fully trusted, change the 
             break;
           case JsonToken.EndObject:
             {
-              foreach (KeyValuePair<JsonProperty, PropertyPresence> propertyPresence in propertiesPresence)
-              {
-                JsonProperty property = propertyPresence.Key;
-                PropertyPresence presence = propertyPresence.Value;
-
-                if (presence == PropertyPresence.None || presence == PropertyPresence.Null)
-                {
-                  try
-                  {
-                    switch (presence)
-                    {
-                      case PropertyPresence.None:
-                        if (property.Required == Required.AllowNull || property.Required == Required.Always)
-                          throw CreateSerializationException(reader, "Required property '{0}' not found in JSON.".FormatWith(CultureInfo.InvariantCulture, property.PropertyName));
-
-                        if (property.PropertyContract == null)
-                          property.PropertyContract = GetContractSafe(property.PropertyType);
-
-                        if (HasFlag(property.DefaultValueHandling.GetValueOrDefault(Serializer.DefaultValueHandling), DefaultValueHandling.Populate)
-                            && property.Writable)
-                          property.ValueProvider.SetValue(newObject, EnsureType(reader, property.DefaultValue, CultureInfo.InvariantCulture, property.PropertyContract, property.PropertyType));
-                        break;
-                      case PropertyPresence.Null:
-                        if (property.Required == Required.Always)
-                          throw CreateSerializationException(reader, "Required property '{0}' expects a value but got null.".FormatWith(CultureInfo.InvariantCulture, property.PropertyName));
-                        break;
-                    }
-                  }
-                  catch (Exception ex)
-                  {
-                    if (IsErrorHandled(newObject, contract, property.PropertyName, reader.Path, ex))
-                      HandleError(reader, initialDepth);
-                    else
-                      throw;
-                  }
-                }
-              }
+              EndObject(newObject, reader, contract, initialDepth, propertiesPresence);
 
               contract.InvokeOnDeserialized(newObject, Serializer.Context);
               return newObject;
@@ -1275,16 +1373,61 @@ To fix this error either change the environment to be fully trusted, change the 
             // ignore
             break;
           default:
-            throw CreateSerializationException(reader, "Unexpected token when deserializing object: " + reader.TokenType);
+            throw JsonSerializationException.Create(reader, "Unexpected token when deserializing object: " + reader.TokenType);
         }
       } while (reader.Read());
 
-      throw CreateSerializationException(reader, "Unexpected end when deserializing object.");
+      throw JsonSerializationException.Create(reader, "Unexpected end when deserializing object.");
+    }
+
+    private void EndObject(object newObject, JsonReader reader, JsonObjectContract contract, int initialDepth, Dictionary<JsonProperty, PropertyPresence> propertiesPresence)
+    {
+      if (propertiesPresence != null)
+      {
+        foreach (KeyValuePair<JsonProperty, PropertyPresence> propertyPresence in propertiesPresence)
+        {
+          JsonProperty property = propertyPresence.Key;
+          PropertyPresence presence = propertyPresence.Value;
+
+          if (presence == PropertyPresence.None || presence == PropertyPresence.Null)
+          {
+            try
+            {
+              Required resolvedRequired = property._required ?? contract.ItemRequired ?? Required.Default;
+
+              switch (presence)
+              {
+                case PropertyPresence.None:
+                  if (resolvedRequired == Required.AllowNull || resolvedRequired == Required.Always)
+                    throw JsonSerializationException.Create(reader, "Required property '{0}' not found in JSON.".FormatWith(CultureInfo.InvariantCulture, property.PropertyName));
+
+                  if (property.PropertyContract == null)
+                    property.PropertyContract = GetContractSafe(property.PropertyType);
+
+                  if (HasFlag(property.DefaultValueHandling.GetValueOrDefault(Serializer.DefaultValueHandling), DefaultValueHandling.Populate) && property.Writable)
+                    property.ValueProvider.SetValue(newObject, EnsureType(reader, property.DefaultValue, CultureInfo.InvariantCulture, property.PropertyContract, property.PropertyType));
+                  break;
+                case PropertyPresence.Null:
+                  if (resolvedRequired == Required.Always)
+                    throw JsonSerializationException.Create(reader, "Required property '{0}' expects a value but got null.".FormatWith(CultureInfo.InvariantCulture, property.PropertyName));
+                  break;
+              }
+            }
+            catch (Exception ex)
+            {
+              if (IsErrorHandled(newObject, contract, property.PropertyName, reader.Path, ex))
+                HandleError(reader, true, initialDepth);
+              else
+                throw;
+            }
+          }
+        }
+      }
     }
 
     private void SetPropertyPresence(JsonReader reader, JsonProperty property, Dictionary<JsonProperty, PropertyPresence> requiredProperties)
     {
-      if (property != null)
+      if (property != null && requiredProperties != null)
       {
         requiredProperties[property] = (reader.TokenType == JsonToken.Null || reader.TokenType == JsonToken.Undefined)
           ? PropertyPresence.Null
@@ -1292,15 +1435,18 @@ To fix this error either change the environment to be fully trusted, change the 
       }
     }
 
-    private void HandleError(JsonReader reader, int initialDepth)
+    private void HandleError(JsonReader reader, bool readPastError, int initialDepth)
     {
       ClearErrorContext();
 
-      reader.Skip();
-
-      while (reader.Depth > (initialDepth + 1))
+      if (readPastError)
       {
-        reader.Read();
+        reader.Skip();
+
+        while (reader.Depth > (initialDepth + 1))
+        {
+          reader.Read();
+        }
       }
     }
 

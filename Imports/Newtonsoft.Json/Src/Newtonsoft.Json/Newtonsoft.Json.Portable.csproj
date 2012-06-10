@@ -29,6 +29,7 @@
     <DefineConstants>TRACE;PORTABLE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\Portable\Newtonsoft.Json.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -77,6 +78,8 @@
     <Compile Include="JsonConverter.cs" />
     <Compile Include="JsonConverterAttribute.cs" />
     <Compile Include="JsonConverterCollection.cs" />
+    <Compile Include="JsonDictionaryAttribute.cs" />
+    <Compile Include="JsonException.cs" />
     <Compile Include="JsonIgnoreAttribute.cs" />
     <Compile Include="JsonObjectAttribute.cs" />
     <Compile Include="JsonPosition.cs" />
@@ -147,6 +150,7 @@
     <Compile Include="Serialization\IReferenceResolver.cs" />
     <Compile Include="Serialization\IValueProvider.cs" />
     <Compile Include="Serialization\JsonArrayContract.cs" />
+    <Compile Include="Serialization\JsonContainerContract.cs" />
     <Compile Include="Serialization\JsonContract.cs" />
     <Compile Include="Serialization\JsonDictionaryContract.cs" />
     <Compile Include="Serialization\JsonDynamicContract.cs" />

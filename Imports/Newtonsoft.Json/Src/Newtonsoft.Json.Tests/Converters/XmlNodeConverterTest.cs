@@ -114,6 +114,35 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
       return node;
     }
 
+#if !NET20
+    [Test]
+    public void SerializeEmptyDocument()
+    {
+      XmlDocument doc = new XmlDocument();
+      doc.LoadXml("<root />");
+
+      string json = JsonConvert.SerializeXmlNode(doc, Formatting.Indented, true);
+      Assert.AreEqual("null", json);
+
+      doc = new XmlDocument();
+      doc.LoadXml("<root></root>");
+
+      json = JsonConvert.SerializeXmlNode(doc, Formatting.Indented, true);
+      Assert.AreEqual("null", json);
+
+
+      XDocument doc1 = XDocument.Parse("<root />");
+
+      json = JsonConvert.SerializeXNode(doc1, Formatting.Indented, true);
+      Assert.AreEqual("null", json);
+
+      doc1 = XDocument.Parse("<root></root>");
+
+      json = JsonConvert.SerializeXNode(doc1, Formatting.Indented, true);
+      Assert.AreEqual("null", json);
+    }
+#endif
+
     [Test]
     public void DocumentSerializeIndented()
     {
@@ -491,17 +520,25 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
     }
 
     [Test]
-    [ExpectedException(typeof(JsonSerializationException), ExpectedMessage = "XmlNodeConverter can only convert JSON that begins with an object.")]
     public void NoRootObject()
     {
-      XmlDocument newDoc = (XmlDocument)JsonConvert.DeserializeXmlNode(@"[1]");
+      ExceptionAssert.Throws<JsonSerializationException>(
+        "XmlNodeConverter can only convert JSON that begins with an object.",
+        () =>
+          {
+            XmlDocument newDoc = (XmlDocument)JsonConvert.DeserializeXmlNode(@"[1]");
+          });
     }
 
     [Test]
-    [ExpectedException(typeof(JsonSerializationException), ExpectedMessage = "JSON root object has multiple properties. The root object must have a single property in order to create a valid XML document. Consider specifing a DeserializeRootElementName.")]
     public void RootObjectMultipleProperties()
     {
-      XmlDocument newDoc = (XmlDocument)JsonConvert.DeserializeXmlNode(@"{Prop1:1,Prop2:2}");
+      ExceptionAssert.Throws<JsonSerializationException>(
+        "JSON root object has multiple properties. The root object must have a single property in order to create a valid XML document. Consider specifing a DeserializeRootElementName.",
+        () =>
+        {
+          XmlDocument newDoc = (XmlDocument)JsonConvert.DeserializeXmlNode(@"{Prop1:1,Prop2:2}");
+        });
     }
 
     [Test]
@@ -613,22 +650,30 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
     }
 
     [Test]
-    [ExpectedException(typeof(JsonSerializationException), ExpectedMessage = "JSON root object has multiple properties. The root object must have a single property in order to create a valid XML document. Consider specifing a DeserializeRootElementName.")]
     public void MultipleRootPropertiesXmlDocument()
     {
       string json = @"{""count"": 773840,""photos"": null}";
 
-      JsonConvert.DeserializeXmlNode(json);
+      ExceptionAssert.Throws<JsonSerializationException>(
+        "JSON root object has multiple properties. The root object must have a single property in order to create a valid XML document. Consider specifing a DeserializeRootElementName.",
+        () =>
+        {
+          JsonConvert.DeserializeXmlNode(json);
+        });
     }
 
 #if !NET20
     [Test]
-    [ExpectedException(typeof(JsonSerializationException), ExpectedMessage = "JSON root object has multiple properties. The root object must have a single property in order to create a valid XML document. Consider specifing a DeserializeRootElementName.")]
     public void MultipleRootPropertiesXDocument()
     {
       string json = @"{""count"": 773840,""photos"": null}";
 
-      JsonConvert.DeserializeXNode(json);
+      ExceptionAssert.Throws<JsonSerializationException>(
+        "JSON root object has multiple properties. The root object must have a single property in order to create a valid XML document. Consider specifing a DeserializeRootElementName.",
+        () =>
+        {
+          JsonConvert.DeserializeXNode(json);
+        });
     }
 #endif
 
@@ -1008,7 +1053,6 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
     }
 
     [Test]
-    [ExpectedException(typeof(JsonSerializationException), ExpectedMessage = "XmlNodeConverter cannot convert JSON with an empty property name to XML.")]
     public void EmptyPropertyName()
     {
       string json = @"{
@@ -1090,7 +1134,12 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Converters
   }
 }";
 
-      DeserializeXmlNode(json);
+      ExceptionAssert.Throws<JsonSerializationException>(
+        "XmlNodeConverter cannot convert JSON with an empty property name to XML.",
+        () =>
+        {
+          DeserializeXmlNode(json);
+        });
     }
 
     [Test]

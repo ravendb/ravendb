@@ -24,11 +24,8 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
+using Newtonsoft.Json.Tests.TestObjects;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -37,11 +34,12 @@ using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttrib
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
 
-namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
+namespace Newtonsoft.Json.Tests.Serialization
 {
   [TestFixture]
   public class NullValueHandlingTests : TestFixtureBase
   {
+#if !NET20
     [Test]
     public void DeserializeNullIntoDateTime()
     {
@@ -55,6 +53,7 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
       DateTimeTestClass c = JsonConvert.DeserializeObject<DateTimeTestClass>(@"{DateTimeField:""""}", new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
       Assert.AreEqual(c.DateTimeField, default(DateTime));
     }
+#endif
 
     [Test]
     public void NullValueHandlingSerialization()

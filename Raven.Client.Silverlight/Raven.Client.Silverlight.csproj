@@ -194,6 +194,12 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonConverterCollection.cs">
       <Link>Imports\Imports\Newtonsoft.Json\JsonConverterCollection.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\JsonDictionaryAttribute.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\JsonDictionaryAttribute.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\JsonException.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\JsonException.cs</Link>
+    </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\JsonIgnoreAttribute.cs">
       <Link>Imports\Imports\Newtonsoft.Json\JsonIgnoreAttribute.cs</Link>
     </Compile>
@@ -400,6 +406,9 @@
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonArrayContract.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonArrayContract.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\JsonContainerContract.cs">
+      <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonContainerContract.cs</Link>
     </Compile>
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\serialization\JsonContract.cs">
       <Link>Imports\Imports\Newtonsoft.Json\Serialization\JsonContract.cs</Link>

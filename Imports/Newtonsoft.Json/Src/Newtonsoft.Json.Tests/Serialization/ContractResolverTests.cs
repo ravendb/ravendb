@@ -1,8 +1,31 @@
-﻿using System;
+﻿#region License
+// Copyright (c) 2007 James Newton-King
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use,
+// copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following
+// conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+// HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
+#endregion
+
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Serialization;
-using System.Text;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -10,13 +33,18 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Raven.Imports.Newtonsoft.Json.Serialization;
-using Raven.Imports.Newtonsoft.Json.Tests.TestObjects;
+#if NET20
+using Newtonsoft.Json.Utilities.LinqBridge;
+#else
+using System.Linq;
+#endif
+using Newtonsoft.Json.Serialization;
+using Newtonsoft.Json.Tests.TestObjects;
 using System.Reflection;
-using Raven.Imports.Newtonsoft.Json.Utilities;
+using Newtonsoft.Json.Utilities;
 using System.Globalization;
 
-namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
+namespace Newtonsoft.Json.Tests.Serialization
 {
   public class DynamicContractResolver : DefaultContractResolver
   {
@@ -59,16 +87,19 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
     }
   }
 
+#if !NET20
   public class AddressWithDataMember
   {
     [DataMember(Name = "CustomerAddress1")]
     public string AddressLine1 { get; set; }
 
   }
+#endif
 
   [TestFixture]
   public class ContractResolverTests : TestFixtureBase
   {
+#if !NET20
     [Test]
     public void DeserializeDataMemberClassWithNoDataContract()
     {
@@ -77,6 +108,7 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
 
       Assert.AreEqual("AddressLine1", contract.Properties[0].PropertyName);
     }
+#endif
 
     [Test]
     public void ResolveProperties_IgnoreStatic()

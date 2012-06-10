@@ -1,4 +1,29 @@
-﻿#if !(NET35 || NET20 || WINDOWS_PHONE || PORTABLE)
+﻿#region License
+// Copyright (c) 2007 James Newton-King
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Software"), to deal in the Software without
+// restriction, including without limitation the rights to use,
+// copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following
+// conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+// OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+// HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
+#endregion
+
+#if !(NET35 || NET20 || WINDOWS_PHONE || PORTABLE)
 
 using System;
 using System.Collections.Generic;
@@ -44,7 +69,7 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
       while (reader.TokenType == JsonToken.Comment)
       {
         if (!reader.Read())
-          throw new Exception("Unexpected end.");
+          throw JsonSerializationException.Create(reader, "Unexpected end when reading ExpandoObject.");
       }
 
       switch (reader.TokenType)
@@ -57,7 +82,7 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
           if (JsonReader.IsPrimitiveToken(reader.TokenType))
             return reader.Value;
 
-          throw new Exception("Unexpected token when converting ExpandoObject: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
+          throw JsonSerializationException.Create(reader, "Unexpected token when converting ExpandoObject: {0}".FormatWith(CultureInfo.InvariantCulture, reader.TokenType));
       }
     }
 
@@ -81,7 +106,7 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
         }
       }
 
-      throw new Exception("Unexpected end.");
+      throw JsonSerializationException.Create(reader, "Unexpected end when reading ExpandoObject.");
     }
 
     private object ReadObject(JsonReader reader)
@@ -96,7 +121,7 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
             string propertyName = reader.Value.ToString();
 
             if (!reader.Read())
-              throw new Exception("Unexpected end.");
+              throw JsonSerializationException.Create(reader, "Unexpected end when reading ExpandoObject.");
 
             object v = ReadValue(reader);
 
@@ -109,7 +134,7 @@ namespace Raven.Imports.Newtonsoft.Json.Converters
         }
       }
 
-      throw new Exception("Unexpected end.");
+      throw JsonSerializationException.Create(reader, "Unexpected end when reading ExpandoObject.");
     }
 
     /// <summary>

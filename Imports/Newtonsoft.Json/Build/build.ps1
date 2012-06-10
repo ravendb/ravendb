@@ -1,7 +1,7 @@
 ﻿properties { 
-  $zipFileName = "Json45r3.zip"
+  $zipFileName = "Json45r6.zip"
   $majorVersion = "4.5"
-  $majorWithReleaseVersion = "4.5.3"
+  $majorWithReleaseVersion = "4.5.6"
   $version = GetVersion $majorWithReleaseVersion
   $signAssemblies = $false
   $signKeyPath = "D:\Development\Releases\newtonsoft.snk"
@@ -99,7 +99,7 @@ task Package -depends Build {
       }
     }
   
-    exec { .\Tools\NuGet\NuGet.exe pack $workingDir\NuGet\Newtonsoft.Json.nuspec }
+    exec { .\Tools\NuGet\NuGet.exe pack $workingDir\NuGet\Newtonsoft.Json.nuspec -Symbols }
     move -Path .\*.nupkg -Destination $workingDir\NuGet
   }
   

@@ -53,10 +53,9 @@ namespace Raven.Client.Document.Batches
 				throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + " in " + count + " shards");
 			}
 
-			var list = (from response in responses 
-						let json = (RavenJObject)response.Result
-						select SerializationHelper.ToQueryResult(json, response.GetEtagHeader()))
-						.ToList();
+			var list = responses
+				.Select(response => SerializationHelper.ToQueryResult((RavenJObject) response.Result, response.GetEtagHeader()))
+				.ToList();
 
 			var queryResult = shardStrategy.MergeQueryResults(queryOperation.IndexQuery, list);
 

@@ -23,7 +23,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-#if !(SILVERLIGHT || PORTABLE)
+#if !(SILVERLIGHT || PORTABLE || NETFX_CORE)
 using System;
 using System.Collections.Generic;
 #if NET20
@@ -44,7 +44,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     {
       DynamicMethod dynamicMethod = !owner.IsInterface()
         ? new DynamicMethod(name, returnType, parameterTypes, owner, true)
-        : new DynamicMethod(name, returnType, parameterTypes, owner.Module(), true);
+        : new DynamicMethod(name, returnType, parameterTypes, owner.Module, true);
 
       return dynamicMethod;
     }
@@ -130,7 +130,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
                               ReflectionUtils.EmptyTypes, null);
 
         if (constructorInfo == null)
-          throw new Exception("Could not get constructor for {0}.".FormatWith(CultureInfo.InvariantCulture, type));
+          throw new ArgumentException("Could not get constructor for {0}.".FormatWith(CultureInfo.InvariantCulture, type));
 
         generator.Emit(OpCodes.Newobj, constructorInfo);
       }
@@ -152,7 +152,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     {
       MethodInfo getMethod = propertyInfo.GetGetMethod(true);
       if (getMethod == null)
-        throw new Exception("Property '{0}' does not have a getter.".FormatWith(CultureInfo.InvariantCulture, propertyInfo.Name));
+        throw new ArgumentException("Property '{0}' does not have a getter.".FormatWith(CultureInfo.InvariantCulture, propertyInfo.Name));
 
       if (!getMethod.IsStatic)
         generator.PushInstance(propertyInfo.DeclaringType);

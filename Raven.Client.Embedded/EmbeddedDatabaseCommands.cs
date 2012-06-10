@@ -677,7 +677,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns>
-		/// The document metadata for the specifed document, or null if the document does not exist
+		/// The document metadata for the specified document, or null if the document does not exist
 		/// </returns>
 		public JsonDocumentMetadata Head(string key)
 		{
@@ -687,7 +687,7 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
-		/// Perform a single POST requst containing multiple nested GET requests
+		/// Perform a single POST request containing multiple nested GET requests
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{

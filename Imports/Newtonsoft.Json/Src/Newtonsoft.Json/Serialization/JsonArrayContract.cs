@@ -39,15 +39,13 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
   /// <summary>
   /// Contract details for a <see cref="Type"/> used by the <see cref="JsonSerializer"/>.
   /// </summary>
-  public class JsonArrayContract : JsonContract
+  public class JsonArrayContract : JsonContainerContract
   {
     /// <summary>
     /// Gets the <see cref="Type"/> of the collection items.
     /// </summary>
     /// <value>The <see cref="Type"/> of the collection items.</value>
     public Type CollectionItemType { get; private set; }
-
-    internal JsonContract CollectionItemContract { get; set; }
 
     private readonly bool _isCollectionItemTypeNullableType;
     private readonly Type _genericCollectionDefinitionType;
