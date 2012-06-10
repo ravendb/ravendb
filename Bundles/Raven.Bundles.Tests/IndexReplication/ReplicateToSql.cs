@@ -27,7 +27,10 @@ namespace Raven.Bundles.Tests.IndexReplication
 		private readonly string path;
 		private readonly RavenDbServer ravenDbServer;
 
-		public ConnectionStringSettings ConnectionString { get; set; }
+		private ConnectionStringSettings ConnectionString
+		{
+			get { return FactIfSqlServerIsAvailable.ConnectionStringSettings; }
+		}
 
 		public ReplicateToSql()
 		{
