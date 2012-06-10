@@ -15,6 +15,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Bundles.Expiration;
 using Raven.Bundles.IndexReplication;
 using Raven.Bundles.IndexReplication.Data;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Server;
 using Xunit;
@@ -23,7 +24,7 @@ namespace Raven.Bundles.Tests.IndexReplication
 {
 	public class CanReplicateToSql : IDisposable
 	{
-		private readonly DocumentStore documentStore;
+		private readonly IDocumentStore documentStore;
 		private readonly string path;
 		private readonly RavenDbServer ravenDbServer;
 
@@ -52,11 +53,7 @@ namespace Raven.Bundles.Tests.IndexReplication
 						},
 				});
 			ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
-			documentStore = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			};
-			documentStore.Initialize();
+			documentStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize();
 
 			documentStore.DatabaseCommands.PutIndex(
 				"Questions/Votes",
