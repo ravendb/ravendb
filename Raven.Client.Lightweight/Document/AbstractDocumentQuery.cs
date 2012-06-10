@@ -203,7 +203,7 @@ namespace Raven.Client.Document
 		}
 
 		protected Action<QueryResult> afterQueryExecutedCallback;
-		private Guid? cutoffEtag;
+		protected Guid? cutoffEtag;
 
 		private TimeSpan DefaultTimeout
 		{
