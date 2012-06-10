@@ -23,7 +23,7 @@ namespace Raven.StressTests.Tenants
 		[Fact]
 		public void CanConcurrentlyPutDocsToDifferentTenants()
 		{
-			const int count = 1000;
+			const int count = 100;
 			using (GetNewServer())
 			using (var documentStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
