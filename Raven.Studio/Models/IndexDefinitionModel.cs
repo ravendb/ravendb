@@ -53,7 +53,7 @@ namespace Raven.Studio.Models
 			var urlParser = new UrlParser(parameters);
 			if (urlParser.GetQueryParam("mode") == "new")
 			{
-				Header = "Create an Index";
+				Header = "New Index";
 				return;
 			}
 
@@ -61,7 +61,7 @@ namespace Raven.Studio.Models
 			if (string.IsNullOrWhiteSpace(name))
 				HandleIndexNotFound(null);
 
-			Header = "Edit Index: " + name;
+			Header = name;
 			DatabaseCommands.GetIndexAsync(name)
 				.ContinueOnSuccessInTheUIThread(index1 =>
 				                   {

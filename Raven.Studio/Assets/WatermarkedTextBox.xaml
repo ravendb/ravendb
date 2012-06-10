@@ -13,6 +13,9 @@
         <Setter Property="Foreground" Value="#FF000000" />
         <Setter Property="Padding" Value="3" />
         <Setter Property="BorderBrush" Value="{StaticResource Brush_TextBoxBorder}"/>
+        <Setter Property="SelectionBackground" Value="#E4DEDE"/>
+        <Setter Property="SelectionForeground" Value="Black"/>
+        <Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Controls:WatermarkedTextBox">
@@ -115,8 +118,8 @@
                                     FontStretch="{TemplateBinding FontStretch}"
                                     FontStyle="{TemplateBinding FontStyle}"
                                     FontWeight="{TemplateBinding FontWeight}"
-                                    Padding="{TemplateBinding Padding}"
-                                    Margin="0,0,0,0"
+                                    Padding="0"
+                                    Margin="{TemplateBinding Padding}"
                                     VerticalAlignment="Center"
                                     VerticalContentAlignment="Center"
                                     />

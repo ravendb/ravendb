@@ -15,7 +15,9 @@
 
 		<Border 
 			Grid.Row="0"
-			Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0">
+			Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0"
+            BorderBrush="{StaticResource Brush_HeaderBorder}"
+            BorderThickness="1">
 			<toolkit:DockPanel Margin="4" LastChildFill="False">
 				<StackPanel Orientation="Horizontal">
 					<HyperlinkButton Content="Summary"

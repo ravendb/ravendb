@@ -399,8 +399,12 @@ namespace Raven.Client.Linq
 					.ToArray();
 				if (props.Length != 0)
 				{
-					path = path.Substring(0, path.Length - memberExpression.Member.Name.Length) +
-						   ((dynamic)props[0]).PropertyName;
+					string propertyName = ((dynamic) props[0]).PropertyName;
+					if (string.IsNullOrEmpty(propertyName) == false)
+					{
+						path = path.Substring(0, path.Length - memberExpression.Member.Name.Length) +
+						       propertyName;
+					}
 				}
 #else
 				var props = memberExpression.Member.GetCustomAttributes(typeof(JsonPropertyAttribute), false);
@@ -910,6 +914,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						VisitCount();
 						break;
 					}
+				case "LongCount":
+					{
+						VisitExpression(expression.Arguments[0]);
+						if (expression.Arguments.Count == 2)
+						{
+							VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+						}
+
+						VisitLongCount();
+						break;
+					}
 				case "Distinct":
 					luceneQuery.GroupBy(AggregationOperation.Distinct);
 					VisitExpression(expression.Arguments[0]);
@@ -1074,8 +1089,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitCount()
 		{
-			luceneQuery.Take(1);
+			luceneQuery.Take(0);
 			queryType = SpecialQueryType.Count;
+		}
+
+		private void VisitLongCount()
+		{
+			luceneQuery.Take(0);
+			queryType = SpecialQueryType.LongCount;
 		}
 
 		private void VisitSingle()
@@ -1364,8 +1385,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						var queryResultAsync = finalQuery.QueryResult;
 						return queryResultAsync.TotalResults;
 					}
+				case SpecialQueryType.LongCount:
+					{
+						var queryResultAsync = finalQuery.QueryResult;
+						return (long)queryResultAsync.TotalResults;
+					}
 #else
 				case SpecialQueryType.Count:
+					{
+						throw new NotImplementedException("not done yet");
+					}
+				case SpecialQueryType.LongCount:
 					{
 						throw new NotImplementedException("not done yet");
 					}
@@ -1401,6 +1431,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			/// </summary>
 			Count,
 			/// <summary>
+			/// Get count of items for the query as an Int64
+			/// </summary>
+			LongCount,
+			/// <summary>
 			/// Get only the first item
 			/// </summary>
 			First,
@@ -1415,7 +1449,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			/// <summary>
 			/// Get only the first item (or throw if there are more than one) or null if empty
 			/// </summary>
-			SingleOrDefault
+			SingleOrDefault,
 		}
 
 		#endregion

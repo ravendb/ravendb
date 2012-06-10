@@ -17,15 +17,15 @@ namespace Raven.Studio.Models
 {
 	public class HomeModel : PageViewModel
 	{
-		private DocumentsModelEnhanced recentDocuments;
+		private DocumentsModel recentDocuments;
 
-		public DocumentsModelEnhanced RecentDocuments
+		public DocumentsModel RecentDocuments
 		{
 			get
 			{
 				if (recentDocuments == null)
 				{
-				    recentDocuments = (new DocumentsModelEnhanced(new DocumentsCollectionSource())
+				    recentDocuments = (new DocumentsModel(new DocumentsCollectionSource())
 				                                                      {
 				                                                          Header = "Recent Documents",
                                                                           DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
