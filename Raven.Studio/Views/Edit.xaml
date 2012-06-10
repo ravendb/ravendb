@@ -10,308 +10,380 @@
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
 					 xmlns:Controls="clr-namespace:System.Windows.Controls" xmlns:Models="clr-namespace:Raven.Studio.Models"
-                         xmlns:Controls1="clr-namespace:Microsoft.Windows.Controls" mc:Ignorable="d"
-					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel">
-
-	<Grid Margin="{StaticResource Margin_ContentPage}"
+                         xmlns:Controls1="clr-namespace:Microsoft.Windows.Controls"
+                         xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
+                         xmlns:z="clr-namespace:Raven.Studio.Infrastructure.MarkupExtensions"
+                         xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+                         xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                         mc:Ignorable="d"
+					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel"
+                         Title="Edit Document">
+    <Infrastructure:PageView.Resources>
+        <Storyboard x:Key="ShowSearch">
+            <DoubleAnimation Storyboard.TargetName="SearchBorder" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.1"/>
+            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="SearchBorder" Storyboard.TargetProperty="Visibility">
+                <DiscreteObjectKeyFrame KeyTime="0:0:0" Value="{z:Static Member=Visibility.Visible}"/>
+            </ObjectAnimationUsingKeyFrames>
+        </Storyboard>
+        <Storyboard x:Key="HideSearch">
+            <DoubleAnimation Storyboard.TargetName="SearchBorder" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.1"/>
+            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="SearchBorder" Storyboard.TargetProperty="Visibility">
+                <DiscreteObjectKeyFrame KeyTime="0:0:0.1" Value="{z:Static Member=Visibility.Collapsed}"/>
+            </ObjectAnimationUsingKeyFrames>
+        </Storyboard>
+    </Infrastructure:PageView.Resources>
+        <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}"
+                                   Margin="{StaticResource Margin_ContentPage}"
 		  DataContext="{Binding Value}" d:DataContext="{d:DesignInstance Models:EditableDocumentModel}">
+        <i:Interaction.Triggers>
+            <Behaviors:StudioKeyTrigger Key="S" Modifiers="Control">
+                <i:InvokeCommandAction Command="{Binding Save}" />
+            </Behaviors:StudioKeyTrigger>
 
-		<i:Interaction.Triggers>
-			<Behaviors:StudioKeyTrigger Key="S" Modifiers="Control">
-				<i:InvokeCommandAction Command="{Binding Save}" />
-			</Behaviors:StudioKeyTrigger>
-
-			<Behaviors:StudioKeyTrigger Key="R"
+            <Behaviors:StudioKeyTrigger Key="R"
 										Modifiers="Control">
-				<i:InvokeCommandAction Command="{Binding Refresh}" />
-			</Behaviors:StudioKeyTrigger>
+                <i:InvokeCommandAction Command="{Binding Refresh}" />
+            </Behaviors:StudioKeyTrigger>
 
-			<Behaviors:StudioKeyTrigger Key="F"
+            <Behaviors:StudioKeyTrigger Key="F"
 										Modifiers="Control">
-				<i:InvokeCommandAction Command="{Binding EnableSearch}" />
-			</Behaviors:StudioKeyTrigger>
+                <i:InvokeCommandAction Command="{Binding EnableSearch}" />
+            </Behaviors:StudioKeyTrigger>
 
-			<Behaviors:StudioKeyTrigger Key="Escape">
-				<i:InvokeCommandAction Command="{Binding DisableSearch}" />
-			</Behaviors:StudioKeyTrigger>
-		</i:Interaction.Triggers>
+            <Behaviors:StudioKeyTrigger Key="Escape">
+                <i:InvokeCommandAction Command="{Binding DisableSearch}" />
+            </Behaviors:StudioKeyTrigger>
+        </i:Interaction.Triggers>
+        <Controls:ContextMenuService.ContextMenu>
+            <Controls:ContextMenu>
+                <Controls:MenuItem Header="Copy Document Id to Clipboard" />
+            </Controls:ContextMenu>
+        </Controls:ContextMenuService.ContextMenu>
+        <toolkit:HeaderedContentControl.Header>
+            <StackPanel Orientation="Horizontal">
+                <Infrastructure:FlexibleTemplateItemsControl ItemsSource="{Binding ParentPathSegments}" VerticalAlignment="Center">
+                    <Infrastructure:FlexibleTemplateItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </Infrastructure:FlexibleTemplateItemsControl.ItemsPanel>
+                    <Infrastructure:FlexibleTemplateItemsControl.ItemTemplate>
+                        <DataTemplate DataType="Documents:PathSegment">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="Arrow" Text=">"
+							       VerticalAlignment="Center"
+							       Margin="4,0" />
+                                <HyperlinkButton Content="{Binding Name, Converter={StaticResource TrimmedString}, ConverterParameter=35}"
+                                         ToolTipService.ToolTip="{Binding Name}"
+									     Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+									     Command="{StaticResource NavigateToCommand}"
+									     CommandParameter="{Binding Url}"
+                                         Margin="4,0" VerticalAlignment="Center" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </Infrastructure:FlexibleTemplateItemsControl.ItemTemplate>
+                    <Infrastructure:FlexibleTemplateItemsControl.FirstItemTemplate>
+                        <DataTemplate DataType="Documents:PathSegment">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource Image_Document_Tiny}" Stretch="None" Margin="4,0" VerticalAlignment="Center">
+                                    <i:Interaction.Triggers>
+                                        <ei:DataTrigger Binding="{Binding Name}" Value="Indexes" Comparison="Equal">
+                                            <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_DocumentIndex_Tiny}"/>
+                                        </ei:DataTrigger>
+                                        <ei:DataTrigger Binding="{Binding Name}" Value="Documents" Comparison="Equal">
+                                            <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Document_Tiny}"/>
+                                        </ei:DataTrigger>
+                                    </i:Interaction.Triggers>
+                                </Image>
+                                <HyperlinkButton Content="{Binding Name}"
+									     Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+									     Command="{StaticResource NavigateToCommand}"
+									     CommandParameter="{Binding Url}"
+                                         Margin="4,0" VerticalAlignment="Center" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </Infrastructure:FlexibleTemplateItemsControl.FirstItemTemplate>
+                </Infrastructure:FlexibleTemplateItemsControl>
 
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="1.8*" />
-			<ColumnDefinition Width="1*" />
-		</Grid.ColumnDefinitions>
-
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="*" />
-		</Grid.RowDefinitions>
-
-		<Controls:ContextMenuService.ContextMenu>
-			<Controls:ContextMenu>
-				<Controls:MenuItem Header="Copy Document Id to Clipboard" />
-			</Controls:ContextMenu>
-		</Controls:ContextMenuService.ContextMenu>
-
-		<Border Grid.Row="0"
-				Grid.ColumnSpan="3"
-				Background="{StaticResource Brush_HeaderBackground}"
-				CornerRadius="4,4,0,0">
-			<Grid Margin="4">
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto" />
-					<ColumnDefinition Width="*" />
-					<ColumnDefinition Width="Auto" />
-				</Grid.ColumnDefinitions>
-
-				<StackPanel Orientation="Horizontal">
-					<Image Source="{StaticResource Image_Document_Tiny}"
-						   Stretch="None"
-						   VerticalAlignment="Center"
-						   Margin="4,0,4,0" />
-					<HyperlinkButton Content="Documents"
-									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-									 Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="/documents" />
-					<TextBlock Text=">"
+                <TextBlock Text=">"
 							   VerticalAlignment="Center"
-							   Margin="4,0" />
+							   Margin="4,0"/>
 
-					<HyperlinkButton Content="{Binding Collection}"
-									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
-									 Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="{Binding Collection, StringFormat='/collections?name=\{0\}'}"
-									 Visibility="{Binding Collection, Converter={StaticResource HiddenWhenStringEmptyOrNull}}" />
-					<TextBlock Text=">"
-							   VerticalAlignment="Center"
-							   Margin="4,0"
-							   Visibility="{Binding Collection, Converter={StaticResource HiddenWhenStringEmptyOrNull}}" />
-
-					<TextBlock Text="{Binding DisplayId}"
+                <TextBlock Text="{Binding DisplayId}"
 							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
 							   VerticalAlignment="Center" />
-				</StackPanel>
+            </StackPanel>
+        </toolkit:HeaderedContentControl.Header>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.8*" />
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
 
-				<StackPanel Orientation="Horizontal"
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+				Grid.ColumnSpan="3"
+				Background="{StaticResource Brush_ToolbarBackground}"
+				CornerRadius="0">
+                <Grid>
+                    <StackPanel Orientation="Horizontal"
 							Grid.Column="2"
-							VerticalAlignment="Center">
+							VerticalAlignment="Center"
+                            Margin="0,4">
 
-					<Studio:SearchControl x:Name="SearchTool"
-										  Width="Auto"
-										  Visibility="Collapsed"
-										  VerticalAlignment="Bottom"
-										  HorizontalAlignment="Left"
-										  IsActive="{Binding SearchEnabled, Mode=TwoWay}" />
-
-					<Button Command="{Binding ToggleSearch}"
+                    <Button Command="{Binding Save}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							Margin="4,0"
-							ToolTipService.ToolTip="Search">
-						<Image Source="{StaticResource Image_Search_Small}"
+							ToolTipService.ToolTip="Save Document (Ctrl-S)">
+                        <Image Source="{StaticResource Image_Save_Small}"
 							   Stretch="None" />
-					</Button>
+                    </Button>
 
-					<Button Command="{Binding Save}"
-							Style="{StaticResource Style_Button_MouseOverChrome}"
-							Margin="4,0"
-							ToolTipService.ToolTip="Save Document">
-						<Image Source="{StaticResource Image_Save_Small}"
-							   Stretch="None" />
-					</Button>
-
-					<Button Command="{Binding Prettify}"
+                    <Button Command="{Binding Prettify}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							Margin="4,0"
 							ToolTipService.ToolTip="Reformat Document">
-						<Image Source="{StaticResource Image_Reformat_Small}"
+                        <Image Source="{StaticResource Image_Reformat_Small}"
 							   Stretch="None" />
-					</Button>
+                    </Button>
 
-					<Button Command="{Binding Delete}"
+                    <Button Command="{Binding Refresh}"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							Margin="4,0"
+							ToolTipService.ToolTip="Refresh Document (Ctrl-R)">
+                        <Image Source="{StaticResource Image_Refresh_Small}"
+							   Stretch="None" />
+                    </Button>
+
+                    <Button Command="{Binding Delete}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							Margin="4,0"
 							ToolTipService.ToolTip="Delete Document">
-						<Image Source="{StaticResource Image_Delete_Small}"
+                        <Image Source="{StaticResource Image_Delete_Small}"
 							   Stretch="None" />
-					</Button>
+                    </Button>
 
-					<Button Command="{Binding Refresh}"
+                        <Button Command="{Binding ToggleSearch}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							Margin="4,0"
-							ToolTipService.ToolTip="Refresh Document">
-						<Image Source="{StaticResource Image_Refresh_Small}"
+							ToolTipService.ToolTip="Search (Ctrl-F)">
+                            <Image Source="{StaticResource Image_Search_Small}"
 							   Stretch="None" />
-					</Button>
+                        </Button>
 
-				</StackPanel>
-			</Grid>
-		</Border>
+                </StackPanel>
 
-        <Border Grid.Row="1" 
-                Grid.ColumnSpan="3"
-                Visibility="{Binding CanNavigate, Converter={StaticResource BooleanToVisibility}}"
-                Background="#C0CBB8">
-            <StackPanel HorizontalAlignment="Center"
-							Orientation="Horizontal"
-                        Margin="0,1">
+                    <Border HorizontalAlignment="Center"
+                            Visibility="{Binding CanNavigate, Converter={StaticResource BooleanToVisibility}}"
+                            Background="#DCCFCF">
+                        <StackPanel Orientation="Horizontal" Margin="5,0">
 
-                <HyperlinkButton Command="{Binding NavigateToPrevious}"
+                            <HyperlinkButton Command="{Binding NavigateToPrevious}"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
                                      IsEnabled="{Binding HasPrevious}"
-									 ToolTipService.ToolTip="Previous Document">
-                    <HyperlinkButton.Content>
-                        <Image Source="{StaticResource Image_PreviousPage_Tiny}"
+									 ToolTipService.ToolTip="Previous Document"
+                                     VerticalAlignment="Center"
+                                     VerticalContentAlignment="Center">
+                                <HyperlinkButton.Content>
+                                    <Image Source="{StaticResource Image_PreviousPage_Tiny}"
 								   Stretch="None"
 								   VerticalAlignment="Center" />
-                    </HyperlinkButton.Content>
-                </HyperlinkButton>
+                                </HyperlinkButton.Content>
+                            </HyperlinkButton>
 
-                <TextBlock Text="Document "
+                            <TextBlock Text="Document "
 							   VerticalAlignment="Center" />
-                <TextBlock Text="{Binding CurrentItemNumber}"
+                            <TextBlock Text="{Binding CurrentItemNumber}"
 							   VerticalAlignment="Center" />
-                <TextBlock Text=" of "
+                            <TextBlock Text=" of "
 							   VerticalAlignment="Center" />
-                <TextBlock Text="{Binding TotalItems}"
+                            <TextBlock Text="{Binding TotalItems}"
 							   VerticalAlignment="Center" />
-                <HyperlinkButton Command="{Binding NavigateToNext}"
+                            <HyperlinkButton Command="{Binding NavigateToNext}"
                                      IsEnabled="{Binding HasNext}"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
-									 ToolTipService.ToolTip="Next Document">
-                    <HyperlinkButton.Content>
-                        <Image Source="{StaticResource Image_NextPage_Tiny}"
+									 ToolTipService.ToolTip="Next Document"
+                                      VerticalAlignment="Center"
+                                      VerticalContentAlignment="Center">
+                                <HyperlinkButton.Content>
+                                    <Image Source="{StaticResource Image_NextPage_Tiny}"
 								   Stretch="None"
 								   VerticalAlignment="Center" />
-                    </HyperlinkButton.Content>
-                </HyperlinkButton>
+                                </HyperlinkButton.Content>
+                            </HyperlinkButton>
 
-            </StackPanel>
-        </Border>
-        
-		<Grid x:Name="document"
-			  Margin="0"
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="{StaticResource Brush_ToolbarBackground}"
+                            x:Name="SearchBorder"
+                            Opacity="0"
+                            Visibility="Collapsed">
+                        <i:Interaction.Triggers>
+                            <ei:DataTrigger Binding="{Binding SearchEnabled}" Value="True" Comparison="Equal">
+                                <ei:ControlStoryboardAction Storyboard="{StaticResource ShowSearch}" ControlStoryboardOption="Play"/>
+                                <Behaviors:SelectAllAction TargetObject="{Binding ElementName=searchField}"/>
+                                <Behaviors:FocusElementAction TargetObject="{Binding ElementName=searchField}"/>
+                            </ei:DataTrigger>
+                            <ei:DataTrigger Binding="{Binding SearchEnabled}" Value="False" Comparison="Equal">
+                                <ei:ControlStoryboardAction Storyboard="{StaticResource HideSearch}" ControlStoryboardOption="Play"/>
+                                <ei:ChangePropertyAction TargetObject="{Binding ElementName=searchField}" PropertyName="Text" Value=""/>
+                            </ei:DataTrigger>
+                        </i:Interaction.Triggers>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Image Source="{StaticResource Image_Search_Small}"
+							   Stretch="None" 
+                                   VerticalAlignment="Center"
+                                   Margin="5,0"/>
+                            <TextBox x:Name="searchField"
+					             Grid.Column="1"
+					             HorizontalAlignment="Stretch"
+					             TextWrapping="NoWrap"
+					             VerticalAlignment="Center"
+                                 Padding="2,2,18,2"
+                                 Margin="0,0,5,0"    
+					             Text="{Binding Source={StaticResource WordHighlightTagger}, Path=HighlightedString, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button HorizontalAlignment="Right"
+					            Grid.Column="1"
+					            Margin="0,0,5,0"
+					            VerticalAlignment="Center"
+                                Command="{Binding ToggleSearch}"    
+                                Style="{StaticResource Style_Button_MouseOverChrome}"
+                                    ToolTipService.ToolTip="Clear Search">
+                                <Image Source="{StaticResource Image_Remove_Tiny}"
+					                   Stretch="Fill"
+                                       Width="12" Height="12"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Grid x:Name="document"
+			  Margin="5,5,0,0"
 			  Grid.Row="2">
 
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="*" />
-			</Grid.RowDefinitions>
-
-			<Border Background="{StaticResource Brush_SubtleBackground2}"
-					Grid.RowSpan="2" />
-
-			<Controls1:WatermarkedTextBox Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                
+                <Controls1:WatermarkedTextBox Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                           Watermark="Document Id?"
 					 Grid.Row="0"
 					 Margin="5,10,10,0" />
 
-			<sdk:TabControl Grid.Row="1"
+                <sdk:TabControl Grid.Row="1"
 							Margin="5,8,10,10"
 							x:Name="TabControl">
-				<sdk:TabItem Header="Data">
-					<Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    <sdk:TabItem Header="Data">
+                        <Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 										x:Name="EditorCtrl" />
-				</sdk:TabItem>
-				<sdk:TabItem Header="Metadata">
-					<Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-				</sdk:TabItem>
-			</sdk:TabControl>
-		</Grid>
+                    </sdk:TabItem>
+                    <sdk:TabItem Header="Metadata">
+                        <Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </sdk:TabItem>
+                </sdk:TabControl>
+            </Grid>
 
-		<ScrollViewer Grid.Column="1"
+            <ScrollViewer Grid.Column="1"
 					  Grid.Row="2"
+                          Margin="5"
 					  Style="{StaticResource Style_ScrollViewer_Unintrusive}" TextOptions.TextHintingMode="Animated">
-			<Grid x:Name="details">
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-				</Grid.RowDefinitions>
+                <Grid x:Name="details">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-				<Border Background="{StaticResource Brush_SubtleBackground2}"
-						Grid.RowSpan="3" />
-
-				<TextBlock Text="Metadata"
+                    <TextBlock Text="Metadata"
 						   Margin="10,10,5,6"
 						   Style="{StaticResource Style_TextBlock_PagePartHeader}"
 						   Grid.Row="1" />
-				<sdk:DataGrid x:Name="Metadata"
+                    <sdk:DataGrid x:Name="Metadata"
 							  Grid.Row="2"
 							  ItemsSource="{Binding Metadata}"
 							  Margin="10,0,5,12"
 							  Style="{StaticResource Style_DataGrid_NoChrome_NoHeader}"
 							  FrozenColumnCount="1">
-					<sdk:DataGrid.Columns>
-						<sdk:DataGridTextColumn FontStyle="Italic"
+                        <sdk:DataGrid.Columns>
+                            <sdk:DataGridTextColumn FontStyle="Italic"
 												Binding="{Binding Key}"
 												Foreground="{StaticResource Brush_ContrastColor}" />
-						<sdk:DataGridTextColumn Binding="{Binding Value}" />
-					</sdk:DataGrid.Columns>
-				</sdk:DataGrid>
+                            <sdk:DataGridTextColumn Binding="{Binding Value}" />
+                        </sdk:DataGrid.Columns>
+                    </sdk:DataGrid>
 
-				<Border Background="{StaticResource Brush_SubtleBackground2}"
-						Grid.Row="4"
-						Grid.RowSpan="2" />
-
-				<TextBlock Text="{Binding DocumentSize}"
+                    <TextBlock Text="{Binding DocumentSize}"
 						   Margin="10,6,5,6"
 						   Grid.Row="4"
 						   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
-				<Border Background="{StaticResource Brush_SubtleBackground2}"
-						Grid.Row="5"
+                    <Border Grid.Row="5"
 						Visibility="{Binding References.Count, Converter={StaticResource HiddenWhenEmpty}}">
-					<StackPanel>
-						<TextBlock Text="References"
+                        <StackPanel>
+                            <TextBlock Text="References"
 								   Margin="10,6,5,6"
 								   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
-						<ItemsControl x:Name="References"
+                            <ItemsControl x:Name="References"
 									  ItemsSource="{Binding References}"
 									  Style="{StaticResource Style_ItemsControl_References}"
 									  Margin="10,0,5,12">
-							<ItemsControl.ItemTemplate>
-								<DataTemplate>
-									<HyperlinkButton Content="{Binding Title}"
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <HyperlinkButton Content="{Binding Title}"
 													 Command="{StaticResource NavigateToCommand}"
 													 CommandParameter="{Binding HRef}"
 													 Style="{StaticResource Style_Link_Shortcut}"
 													 HorizontalAlignment="Left" />
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
-					</StackPanel>
-				</Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
 
-				<Border Background="{StaticResource Brush_SubtleBackground2}"
+                    <Border 
 						Grid.Row="6"
 						Visibility="{Binding Related.Count, Converter={StaticResource HiddenWhenEmpty}}">
-					<StackPanel>
-						<TextBlock Text="Related"
+                        <StackPanel>
+                            <TextBlock Text="Related"
 								   Margin="10,6,5,6"
 								   Style="{StaticResource Style_TextBlock_PagePartHeader}" />
 
-						<ItemsControl x:Name="Related"
+                            <ItemsControl x:Name="Related"
 									  Style="{StaticResource Style_ItemsControl_References}"
 									  ItemsSource="{Binding Related}"
 									  Margin="10,0,5,10">
-							<ItemsControl.ItemTemplate>
-								<DataTemplate>
-									<HyperlinkButton Content="{Binding Title}"
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <HyperlinkButton Content="{Binding Title}"
 													 Command="{StaticResource NavigateToCommand}"
 													 CommandParameter="{Binding HRef}"
 													 Style="{StaticResource Style_Link_Shortcut}"
 													 HorizontalAlignment="Left" />
-								</DataTemplate>
-							</ItemsControl.ItemTemplate>
-						</ItemsControl>
-					</StackPanel>
-				</Border>
-			</Grid>
-		</ScrollViewer>
-	</Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+    </toolkit:HeaderedContentControl>
+    
+	
 </Infrastructure:PageView>

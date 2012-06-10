@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using System.Windows;
@@ -23,6 +24,13 @@ namespace Raven.Studio.Features.Documents
         public long Index { get; set; }
 
         public long TotalDocuments { get; set; }
+    }
+
+    public class PathSegment
+    {
+        public string Name { get; set; }
+
+        public string Url { get; set; }
     }
 
     public abstract class DocumentNavigator
@@ -73,6 +81,16 @@ namespace Raven.Studio.Features.Documents
         {
             return string.Empty;
         }
+
+        public virtual string GetUrlForCurrentIndex()
+        {
+            return string.Empty;
+        }
+
+        public virtual IList<PathSegment> GetParentPath()
+        {
+            return new PathSegment[0];
+        } 
 
         protected UrlParser GetBaseUrl()
         {

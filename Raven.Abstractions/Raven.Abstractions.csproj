@@ -620,6 +620,7 @@
     <Compile Include="Json\Utilities\MiscellaneousUtils.cs" />
     <Compile Include="Json\Utilities\StringUtils.cs" />
     <Compile Include="Json\Utilities\Tuple.cs" />
+    <Compile Include="Linq\DynamicList.cs" />
     <Compile Include="Linq\DynamicNullObject.cs" />
     <Compile Include="MEF\IPartMetadata.cs" />
     <Compile Include="MEF\OrderedPartCollection.cs" />

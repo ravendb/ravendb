@@ -229,9 +229,8 @@ namespace Raven.Studio.Models
 		                           Results = e.EventArgs.Statistics;
 		                       });
 
-		    DocumentsResult = new DocumentsModelEnhanced(CollectionSource)
+		    DocumentsResult = new DocumentsModel(CollectionSource)
 		                          {
-		                              ShowEditControls = false,
                                       Header = "Results",
                                       SkipAutoRefresh = true,
                                       DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index, IndexName, CollectionSource.TemplateQuery),
@@ -344,7 +343,7 @@ namespace Raven.Studio.Models
 			set { error = value; OnPropertyChanged(() => Error); }
 		}
 
-		public DocumentsModelEnhanced DocumentsResult { get; private set; }
+		public DocumentsModel DocumentsResult { get; private set; }
 
 		public BindableCollection<FieldAndTerm> Suggestions { get; private set; }
 		public ICommand RepairTermInQuery

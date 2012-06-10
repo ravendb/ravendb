@@ -140,27 +140,6 @@ namespace Microsoft.Windows.Controls
 
         #region Public
 
-        #region IsEnabled
-
-        /// <summary>
-        /// IsEnabled dependency property
-        /// </summary>
-        public static readonly DependencyProperty IsEnabledProperty = DependencyProperty.Register(
-            "IsEnabled", typeof(bool), typeof(WatermarkedTextBox), new PropertyMetadata(OnIsEnabledPropertyChanged));
-
-        /// <summary>
-        /// Gets or sets a value indicating whether this element is enabled in the user interface (UI).  This is a dependency property.
-        /// </summary>
-        /// <value></value>
-        /// <returns>true if the element is enabled; otherwise, false. The default value is true.</returns>
-        public bool IsEnabled
-        {
-            get { return (bool)GetValue(IsEnabledProperty); }
-            set { SetValue(IsEnabledProperty, value); }
-        }
-
-        #endregion
-
         #region Watermark
         /// <summary>
         /// Watermark dependency property

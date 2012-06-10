@@ -87,7 +87,7 @@
 								 HorizontalAlignment="Left"
 								 Margin="0,5,5,1"
 								 Command="{StaticResource NavigateToExternalUrlCommand}"
-								 CommandParameter="http://beta.ravendb.net/"
+								 CommandParameter="http://ravendb.net/"
 								 TargetName="_blank">
 					<Image Source="{StaticResource Image_RavenDBLogo}"
 						   Stretch="Uniform"
@@ -158,7 +158,7 @@
                 <Delay:SplitButton Command="{StaticResource NavigateToCommand}"
 								CommandParameter="/edit?mode=new"
                         DropDownToolTip="More Options"
-                                   Margin="12,6,4,6" Foreground="#FF666666" Padding="4,4" 
+                                   Margin="12,6,4,6" Foreground="#FF666666" Padding="4,5" 
                                    VerticalAlignment="Center">
                     <Delay:SplitButton.ButtonMenuItemsSource>
                         <Controls:MenuItem Header="New Document" Command="{StaticResource NavigateToCommand}" CommandParameter="/edit?mode=new">
@@ -182,6 +182,7 @@
                     </StackPanel>
                 </Delay:SplitButton>
 
+                <RavenControls:GoToDocumentControl Margin="6,6,4,6" Width="200"/>
             </StackPanel>
 		</Grid>
 

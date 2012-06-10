@@ -14,7 +14,7 @@
 		  ToolTipService.ToolTip="{Binding ToolTipText}">
 
 		<i:Interaction.Behaviors>
-            <Behaviors:DoubleClickBehavior Command="{Binding Path=DataContext.EditDocument, RelativeSource={RelativeSource AncestorType=Documents:DocumentsViewEnhanced}}" 
+            <Behaviors:DoubleClickBehavior Command="{Binding Path=DataContext.EditDocument, RelativeSource={RelativeSource AncestorType=Documents:DocumentsView}}" 
                                            CommandParameter="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
 		</i:Interaction.Behaviors>
 
@@ -57,18 +57,18 @@
 					   Grid.Row="1"
 					   Grid.Column="3" />
 
-			<TextBlock Text="{Binding Data}"
+			<TextBlock Text="{Binding TrimmedDocumentView}"
 					   Grid.Row="2"
 					   HorizontalAlignment="Left"
 					   VerticalAlignment="Top"
-					   Visibility="{Binding Data, Converter={StaticResource HiddenWhenNull}}"
+					   Visibility="{Binding TrimmedDocumentView, Converter={StaticResource HiddenWhenNull}}"
 					   Grid.Column="3" />
 
 			<Button VerticalAlignment="Bottom"
 					HorizontalAlignment="Right"
 					Style="{StaticResource Style_Button_MouseOverChrome}"
 					Padding="4"
-					Command="{Binding Path=DataContext.EditDocument, RelativeSource={RelativeSource AncestorType=Documents:DocumentsViewEnhanced}}"
+					Command="{Binding Path=DataContext.EditDocument, RelativeSource={RelativeSource AncestorType=Documents:DocumentsView}}"
 					CommandParameter="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
                     ToolTipService.ToolTip="click here to edit the document"
 					Grid.Row="0"

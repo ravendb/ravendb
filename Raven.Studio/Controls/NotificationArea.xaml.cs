@@ -61,12 +61,24 @@ namespace Raven.Studio.Controls
                     RemoveOldNotification();
                 }
 
-                currentNotification = new NotificationView() { DataContext = e.NewItems[0], MinWidth = minWidth};
+                var item = e.NewItems[0] as Notification;
+
+                currentNotification = new NotificationView() { DataContext = item, MinWidth = minWidth};
                 currentNotification.MouseLeftButtonUp +=
                     delegate { if (currentNotification != null) RemoveOldNotification(); };
 
                 LayoutRoot.Children.Add(currentNotification);
                 currentNotification.Display(replaceExisting);
+
+                if (item != null && item.Level == NotificationLevel.Error)
+                {
+                    timer.Interval = TimeSpan.FromSeconds(6);
+                }
+                else
+                {
+                    timer.Interval = TimeSpan.FromSeconds(3);
+                }
+
                 timer.Start();
             }
         }

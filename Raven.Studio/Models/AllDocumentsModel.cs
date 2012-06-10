@@ -12,16 +12,16 @@ namespace Raven.Studio.Models
 			ModelUrl = "/documents";
 		}
 
-		private static WeakReference<Observable<DocumentsModelEnhanced>> documents;
-        public static Observable<DocumentsModelEnhanced> Documents
+		private static WeakReference<Observable<DocumentsModel>> documents;
+        public static Observable<DocumentsModel> Documents
 		{
 			get
 			{
 				if (documents == null || documents.IsAlive == false)
 				{
-                    documents = new WeakReference<Observable<DocumentsModelEnhanced>>(new Observable<DocumentsModelEnhanced>
+                    documents = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel>
                                                                                           {
-                                                                                              Value = new DocumentsModelEnhanced(new DocumentsCollectionSource())
+                                                                                              Value = new DocumentsModel(new DocumentsCollectionSource())
                                                                                                           {
                                                                                                               DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
                                                                                                               Context = "AllDocuments",

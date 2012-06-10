@@ -6,6 +6,7 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Stats="clr-namespace:Raven.Studio.Features.Stats" 
 					 mc:Ignorable="d"
+                         Title="Statistics"
 					 Infrastructure:ModelAttacher.AttachObservableModel="StatisticsModel">
 
 	<Grid DataContext="{Binding Value}">

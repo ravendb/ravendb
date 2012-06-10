@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reactive.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
 using Raven.Imports.Newtonsoft.Json;
@@ -24,6 +25,8 @@ namespace Raven.Studio.Features.Documents
 
 	public class ViewableDocument : ViewModel
 	{
+	    private const double CharacterWidth = 7;
+	    private const double LineHeight = 5;
 		private readonly JsonDocument inner;
 		private string id;
 		private string clrType;
@@ -55,30 +58,37 @@ namespace Raven.Studio.Features.Documents
 		private string toolTipText;
 		public string ToolTipText
 		{
-            get { return toolTipText ?? (toolTipText = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, 10)); }
+            get { return toolTipText ?? (toolTipText = ShortViewOfJson.GetContentTrimmedToDimensions(inner.DataAsJson, 60, 70)); }
 		}
 
-		private string data;
-		public string Data
+		private string trimmedDocumentView;
+		public string TrimmedDocumentView
 		{
-			get { return data; }
-			set
+			get
 			{
-				data = value;
-				OnPropertyChanged(() => Data);
+                if (trimmedDocumentViewNeedsRecalculation)
+                {
+                    trimmedDocumentViewNeedsRecalculation = false;
+                    ProduceTrimmedDocumentView();
+                }
+			    return trimmedDocumentView;
+			}
+			private set
+			{
+				trimmedDocumentView = value;
+				OnPropertyChanged(() => TrimmedDocumentView);
 			}
 		}
 
-		private void CalculateData()
-		{
-			string d = null;
-			if (DocumentSize.Current.Height >= DocumentSize.CardMinimumHeight)
-			{
-				var margin = Math.Sqrt(DocumentSize.Current.Width) - 4;
-				d = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, (int)margin);
-			}
-			Execute.OnTheUI(() => Data = d);
-		}
+	    private void ProduceTrimmedDocumentView()
+	    {
+	        var widthInCharacters = (int)(DocumentSize.Current.Width/CharacterWidth);
+	        var heightInLines = (int)(DocumentSize.Current.Height/LineHeight);
+
+	        Task.Factory.StartNew(
+	            () => ShortViewOfJson.GetContentTrimmedToDimensions(inner.DataAsJson, widthInCharacters, heightInLines))
+	            .ContinueOnSuccessInTheUIThread(v => TrimmedDocumentView = v);
+	    }
 
 		public string DisplayId
 		{
@@ -178,7 +188,9 @@ namespace Raven.Studio.Features.Documents
 		}
 
 		private DateTime lastModified;
-		public DateTime LastModified
+	    private bool trimmedDocumentViewNeedsRecalculation;
+
+	    public DateTime LastModified
 		{
 			get { return lastModified; }
 			set { lastModified = value; OnPropertyChanged(() => LastModified); }
@@ -221,9 +233,16 @@ namespace Raven.Studio.Features.Documents
             Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentSize.Current.SizeChanged += e, e => DocumentSize.Current.SizeChanged -= e)
                 .Throttle(TimeSpan.FromSeconds(0.5))
                 .TakeUntil(Unloaded)
-                .Subscribe(_ => CalculateData());
+                .ObserveOnDispatcher()
+                .Subscribe(_ => InvalidateData());
 
-            CalculateData();
+            InvalidateData();
         }
+
+	    private void InvalidateData()
+	    {
+	        trimmedDocumentViewNeedsRecalculation  = true;
+            OnPropertyChanged(() => TrimmedDocumentView);
+	    }
 	}
 }

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -38,13 +40,9 @@ namespace Raven.Studio.Features.Documents
 
         public override string GetUrl()
         {
-            var builder = GetBaseUrl();
+            var builder = GetUrlBuilder(itemIndex);
 
             builder.SetQueryParam("id", id);
-            builder.SetQueryParam("navigationMode", "index");
-            builder.SetQueryParam("itemIndex", itemIndex);
-            builder.SetQueryParam("indexName", indexName);
-            builder.SetQueryParam("query", GetQueryString());
 
             return builder.BuildUrl();
         }
@@ -100,26 +98,76 @@ namespace Raven.Studio.Features.Documents
 
         public override string GetUrlForNext()
         {
-            var builder = GetBaseUrl();
+            return GetUrlForIndex(itemIndex + 1);
+        }
 
-            builder.SetQueryParam("navigationMode", "index");
-            builder.SetQueryParam("itemIndex", itemIndex + 1);
-            builder.SetQueryParam("indexName", indexName);
-            builder.SetQueryParam("query", GetQueryString());
+        private string GetUrlForIndex(int index)
+        {
+            var builder = GetUrlBuilder(index);
 
             return builder.BuildUrl();
         }
 
-        public override string GetUrlForPrevious()
+        private UrlParser GetUrlBuilder(int index)
         {
             var builder = GetBaseUrl();
 
             builder.SetQueryParam("navigationMode", "index");
-            builder.SetQueryParam("itemIndex", itemIndex - 1);
+            builder.SetQueryParam("itemIndex", index);
             builder.SetQueryParam("indexName", indexName);
             builder.SetQueryParam("query", GetQueryString());
 
-            return builder.BuildUrl();
+            return builder;
+        }
+
+        public override string GetUrlForPrevious()
+        {
+            return GetUrlForIndex(itemIndex - 1);
+        }
+
+        public override string GetUrlForCurrentIndex()
+        {
+            return GetUrlForIndex(itemIndex);
+        }
+
+        public override IList<PathSegment> GetParentPath()
+        {
+            if (indexName == "Raven/DocumentsByEntityName")
+            {
+                var collectionName = GetCollectionName(templateQuery);
+                if (collectionName != null)
+                {
+                    return new[]
+                               {
+                                   new PathSegment() {Name = "Documents", Url = "/documents"},
+                                   new PathSegment()
+                                       {Name = collectionName, Url = "/collections?name=" + collectionName}
+                               };
+                }
+            }
+
+            return new[]
+                       {
+                           new PathSegment() { Name = "Indexes", Url = "/Indexes"},
+                           new PathSegment() { Name = indexName, Url = "/indexes/" + indexName},
+                           new PathSegment() { Name = "Query", Url = "/query/" + indexName},
+                       };
+        }
+
+        private string GetCollectionName(IndexQuery indexQuery)
+        {
+            if (indexQuery == null || indexQuery.Query == null)
+            {
+                return null;
+            }
+
+            var matches = Regex.Match(indexQuery.Query, @"Tag:(\w+)");
+            if (matches.Success)
+            {
+                return matches.Groups[1].Value;
+            }
+
+            return null;
         }
 
         public static DocumentNavigator IndexNavigatorFromUrl(UrlParser parser)
