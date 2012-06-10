@@ -21,7 +21,7 @@ using Xunit;
 
 namespace Raven.Bundles.Tests.IndexReplication
 {
-	public class ReplicateToSql : IDisposable
+	public class CanReplicateToSql : IDisposable
 	{
 		private readonly DocumentStore documentStore;
 		private readonly string path;
@@ -32,7 +32,7 @@ namespace Raven.Bundles.Tests.IndexReplication
 			get { return FactIfSqlServerIsAvailable.ConnectionStringSettings; }
 		}
 
-		public ReplicateToSql()
+		public CanReplicateToSql()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
@@ -122,7 +122,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 		}
 
 		[FactIfSqlServerIsAvailable]
-		public void Can_replicate_to_sql()
+		public void WhenInserted()
 		{
 			CreateRdbmsSchema();
 
@@ -191,7 +191,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 		}
 
 		[FactIfSqlServerIsAvailable]
-		public void Can_replicate_to_sql_when_document_is_updated()
+		public void WhenUpdated()
 		{
 			CreateRdbmsSchema();
 			
@@ -287,7 +287,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 			}
 		}
 
-		public class QuestionSummary
+		private class QuestionSummary
 		{
 			public string Id { get; set; }
 			public string Title { get; set; }
@@ -295,7 +295,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 			public int DownVotes { get; set; }
 		}
 
-		public class Question
+		private class Question
 		{
 			public string Id { get; set; }
 			public string Title { get; set; }
@@ -303,11 +303,10 @@ CREATE TABLE [dbo].[QuestionSummaries]
 			public Vote[] Votes { get; set; }
 		}
 
-		public class Vote
+		private class Vote
 		{
 			public bool Up { get; set; }
 			public string Comment { get; set; }
 		}
-
 	}
 }
