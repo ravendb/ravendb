@@ -1,4 +1,5 @@
 using Raven.Bundles.Tests.Authentication;
+using Raven.Bundles.Tests.IndexReplication;
 using Raven.Bundles.Tests.Replication;
 using Raven.Tests.Shard.BlogModel;
 using Xunit;
@@ -47,6 +48,12 @@ namespace Raven.StressTests.Races
 		public void SimpleReplication()
 		{
 			Run<SimpleReplication>(x => x.Can_replicate_between_two_instances(), 200);
+		}
+		
+		[FactIfSqlServerIsAvailable]
+		public void CanReplicateToSqlWhenInserted()
+		{
+			Run<CanReplicateToSql>(x => x.WhenInserted(), 100);
 		}
 	}
 }

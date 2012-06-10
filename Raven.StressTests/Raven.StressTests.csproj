@@ -103,6 +103,7 @@
     <EmbeddedResource Include="DefaultLogging.config" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
