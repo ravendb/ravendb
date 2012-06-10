@@ -29,6 +29,7 @@ using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -186,7 +187,7 @@ namespace Raven.Client.Connection
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-			
+
 			try
 			{
 				var responseJson = request.ReadResponseJson();
@@ -218,7 +219,7 @@ namespace Raven.Client.Connection
 			var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 			return new ConflictException("Conflict detected on " + key +
-			                            ", conflict must be resolved before the document will be accessible")
+										", conflict must be resolved before the document will be accessible")
 			{
 				ConflictedVersionIds = conflictIds,
 				Etag = etag
@@ -499,7 +500,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + name, "RESET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-			
+
 			httpJsonRequest.ReadResponseJson();
 			return null;
 		}
@@ -509,7 +510,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-			
+
 			var responseJson = httpJsonRequest.ReadResponseJson();
 			return ((RavenJArray)responseJson).Select(x => x.Value<string>()).ToArray();
 		}
@@ -530,7 +531,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + indexName + "?definition=yes", "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-			
+
 			RavenJToken indexDef;
 			try
 			{
@@ -559,7 +560,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-			
+
 			try
 			{
 				httpJsonRequest.ExecuteRequest();
@@ -631,7 +632,7 @@ namespace Raven.Client.Connection
 			{
 				// If the index doesn't exist this will throw a NotFound exception and continue with a PUT request
 				checkIndexExists.ExecuteRequest();
-				if(!overwrite)
+				if (!overwrite)
 					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
 			}
 			catch (WebException e)
@@ -644,7 +645,7 @@ namespace Raven.Client.Connection
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-			
+
 			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
 
 
@@ -745,7 +746,7 @@ namespace Raven.Client.Connection
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + name, "DELETE", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-			
+
 			request.ExecuteRequest();
 		}
 
@@ -793,7 +794,7 @@ namespace Raven.Client.Connection
 				request.Write(new RavenJArray(uniqueIds).ToString(Formatting.None));
 			}
 
-			
+
 			var result = (RavenJObject)request.ReadResponseJson();
 
 			var results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList();
@@ -804,7 +805,7 @@ namespace Raven.Client.Connection
 			};
 			foreach (var docResult in multiLoadResult.Results.Concat(multiLoadResult.Includes))
 			{
-				
+
 				AssertNonConflictedDocument(docResult);
 			}
 			return multiLoadResult;
@@ -815,7 +816,7 @@ namespace Raven.Client.Connection
 			if (docResult == null)
 				return;
 			var metadata = docResult[Constants.Metadata];
-			if(metadata == null)
+			if (metadata == null)
 				return;
 
 			if (metadata.Value<int>("@Http-Status-Code") == 409)
@@ -839,7 +840,7 @@ namespace Raven.Client.Connection
 			var req = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/bulk_docs", "POST", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-			
+
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 			req.Write(jArray.ToString(Formatting.None));
 
@@ -877,7 +878,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/commit?tx=" + txId, "POST", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-			
+
 			httpJsonRequest.ReadResponseJson();
 		}
 
@@ -944,7 +945,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-			
+
 			httpJsonRequest.ReadResponseJson();
 		}
 
@@ -1085,7 +1086,7 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, path, "PATCH", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
-				
+
 				request.Write(new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented));
 				try
 				{
@@ -1126,7 +1127,7 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
-				
+
 
 				RavenJObject json = (RavenJObject)request.ReadResponseJson();
 
@@ -1177,7 +1178,7 @@ namespace Raven.Client.Connection
 			HttpJsonRequest request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-			
+
 			try
 			{
 				request.ExecuteRequest();
@@ -1236,6 +1237,15 @@ namespace Raven.Client.Connection
 											  var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(
 																				  new RavenJTokenReader(results));
 
+											  // 1.0 servers return result as string, not as an object, need to convert here
+											  foreach (var response in responses.Where(r => r != null && r.Result != null && r.Result.Type == JTokenType.String))
+											  {
+												  var value = response.Result.Value<string>();
+												  response.Result = string.IsNullOrEmpty(value) ?
+													RavenJToken.FromObject(null) :
+													RavenJObject.Parse(value);
+											  }
+
 											  return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
 										  });
 		}
@@ -1259,7 +1269,7 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
-				
+
 
 				return request.ReadResponseJson().Values<string>();
 			});
@@ -1284,7 +1294,7 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
-				
+
 				var json = (RavenJObject)request.ReadResponseJson();
 				return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
 			});
