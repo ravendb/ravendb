@@ -35,38 +35,40 @@ namespace Raven.Database.Linq
 				current = queue.Dequeue();
 
 				var list = current as IEnumerable<object>;
-				if(list != null && AnonymousObjectToLuceneDocumentConverter.ShouldTreatAsEnumerable(current))
+				if (list != null && AnonymousObjectToLuceneDocumentConverter.ShouldTreatAsEnumerable(current))
 				{
 					foreach (var o in list)
 					{
-						AddItem(func, o);
+						AddItem(o);
 					}
 				}
 				else
 				{
-					AddItem(func, current);
+					AddItem(current);
 				}
 			}
 
 			return new DynamicList(resultsOrdered.ToArray());
 		}
 
-		private void AddItem(Func<object, object> func, object current)
+		private void AddItem(object current)
 		{
 			if (results.Add(current) == false)
 				return;
 
 			resultsOrdered.Add(current);
 			var result = NullIfEmptyEnumerable(func(current));
-			if(result != null)
+			if (result != null)
 				queue.Enqueue(result);
 		}
 
 		private static object NullIfEmptyEnumerable(object item)
 		{
 			var enumerable = item as IEnumerable<object>;
-			if (enumerable == null)
+			if (enumerable == null ||
+				AnonymousObjectToLuceneDocumentConverter.ShouldTreatAsEnumerable(item) == false)
 				return item;
+
 			var enumerator = enumerable.GetEnumerator();
 			return enumerator.MoveNext() == false ? null : new DynamicList(Yield(enumerator));
 		}
