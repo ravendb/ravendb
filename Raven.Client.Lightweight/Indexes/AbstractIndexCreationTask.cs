@@ -82,6 +82,14 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
+		/// Allows to use lambdas recursively
+		/// </summary>
+		protected IEnumerable<TResult> Recurse<TSource, TResult>(TSource source, Func<TSource, IEnumerable<TResult>> func)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
+
+		/// <summary>
 		/// Allow to get to the metadata of the document
 		/// </summary>
 		protected RavenJObject MetadataFor(object doc)

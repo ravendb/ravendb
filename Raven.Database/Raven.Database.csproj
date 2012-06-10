@@ -145,6 +145,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Linq\Ast\TransformDynamicLambdaExpressions.cs" />
+    <Compile Include="Linq\RecursiveFunction.cs" />
     <Compile Include="Plugins\Builtins\InvalidDocumentNames.cs" />
     <Compile Include="Plugins\Builtins\Tenants\ModifiedTenantDatabase.cs" />
     <Compile Include="Plugins\Builtins\Tenants\TenantDatabaseModified.cs" />

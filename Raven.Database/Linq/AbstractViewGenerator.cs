@@ -10,6 +10,7 @@ using System.ComponentModel.Composition;
 using System.Text;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Lucene.Net.Documents;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Indexing;
@@ -116,45 +117,7 @@ namespace Raven.Database.Linq
 				}
 			}
 		}
-
-		protected IEnumerable<dynamic> Recurse(object item, Func<dynamic ,dynamic> func)
-		{
-			if (item == null)
-				return Enumerable.Empty<dynamic>();
-
-			var resultsOrdered = new List<dynamic>();
-
-			var results = new HashSet<object>();
-			item = func(item);
-			while (item != null)
-			{
-				if (results.Add(item) == false)
-					break;
-
-				resultsOrdered.Add(item);
-				item = NullIfEmptyEnumerable(func(item));
-			}
-
-			return new DynamicList(resultsOrdered.ToArray());
-		}
-
-		private static object NullIfEmptyEnumerable(object item)
-		{
-			var enumerable = item as IEnumerable<object>;
-			if (enumerable == null)
-				return item;
-			var enumerator = enumerable.GetEnumerator();
-			return enumerator.MoveNext() == false ? null : new DynamicList(Yield(enumerator));
-		}
-
-		private static IEnumerable<object> Yield(IEnumerator<object> enumerator)
-		{
-			do
-			{
-				yield return enumerator.Current;
-			} while (enumerator.MoveNext());
-		}
-
+		
 		public void AddQueryParameterForMap(string field)
 		{
 			mapFields.Add(field);
@@ -191,6 +154,11 @@ namespace Raven.Database.Linq
 		protected void AddMapDefinition(IndexingFunc mapDef)
 		{
 			MapDefinitions.Add(mapDef);
+		}
+		
+		protected IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)
+		{
+			return new RecursiveFunction(item, func).Execute();
 		}
 	}
 }

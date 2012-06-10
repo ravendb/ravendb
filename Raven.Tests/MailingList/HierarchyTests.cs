@@ -24,7 +24,6 @@ namespace Raven.Tests.MailingList
 
 				using (var session = documentStore.OpenSession())
 				{
-					WaitForUserToContinueTheTest(documentStore);
 					Assert.NotNull(session.Query<Navigation_ByNavigationId.Result, Navigation_ByNavigationId>()
 						.Customize(x => x.WaitForNonStaleResults())
 						.Where(x => x.NavigationId == "4")
@@ -89,8 +88,8 @@ namespace Raven.Tests.MailingList
 									 NavigationId = new object[]
 			                     	{
 										navigation.Id,
-										Recurse(navigation.NavigationItems, x=>x.SelectMany(y=>y.NavigationItems))
-											.SelectMany(x=>x.SelectMany(y=>y.Id))
+										Recurse(navigation, x=>x.NavigationItems.AsEnumerable())
+											.Select(x=>x.Id)
 			                     	}
 								 };
 
