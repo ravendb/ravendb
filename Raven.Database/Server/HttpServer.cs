@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -16,6 +17,8 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
+using Raven.Database.Plugins;
+using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server.Responders;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
@@ -723,6 +726,16 @@ namespace Raven.Database.Server
 				config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
 
 				config.DatabaseName = tenantId;
+
+				var activeBundles = config.Settings["Raven/ActiveBundles"];
+
+				if(activeBundles != null)
+				{
+					var bundles = activeBundles.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries)
+						.Select(x => x.Trim())
+						.ToArray();
+					config.Catalog = new AggregateCatalog(new BundlesFilteredCatalog(config.Catalog, bundles));
+				}
 
 				config.Initialize();
 				config.CopyParentSettings(DefaultConfiguration);
