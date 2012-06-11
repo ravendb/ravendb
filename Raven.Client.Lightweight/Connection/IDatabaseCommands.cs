@@ -102,7 +102,7 @@ namespace Raven.Client.Connection
 		/// Returns the names of all tenant databases on the RavenDB server
 		/// </summary>
 		/// <returns>List of tenant database names</returns>
-		string[] GetDatabaseNames(int pageSize);
+		string[] GetDatabaseNames(int pageSize, int start = 0);
 
 		/// <summary>
 		/// Returns the names of all indexes that exist on the server

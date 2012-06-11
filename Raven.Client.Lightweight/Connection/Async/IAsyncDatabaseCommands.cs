@@ -177,7 +177,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Gets the list of databases from the server asynchronously
 		/// </summary>
-		Task<string[]> GetDatabaseNamesAsync(int pageSize);
+		Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0);
 
 		/// <summary>
 		/// Puts the attachment with the specified key asynchronously
