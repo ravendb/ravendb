@@ -45,7 +45,7 @@ namespace Raven.Database.Queries
 				var indexReader = currentSearcher.GetIndexReader();
 
 				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(GetStringDistance(suggestionQuery), suggestionQuery.Field, suggestionQuery.Accuracy);
-				suggestionQueryIndexExtension.Init(indexReader);
+				suggestionQueryIndexExtension.Init(indexReader); // TODO: This is completely innefficient, need to use distance matching on terms instead of re-indexing using grams
 
 				_database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
 
