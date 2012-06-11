@@ -19,6 +19,7 @@ using System.Web;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
+using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Database.Util;
@@ -60,6 +61,8 @@ namespace Raven.Database.Config
 		{
 			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
 				SetupOAuth();
+
+			FilterActiveBundles();
 		}
 
 		public void Initialize()
@@ -198,7 +201,28 @@ namespace Raven.Database.Config
 			AuthenticationMode = Settings["Raven/AuthenticationMode"] ?? AuthenticationMode ?? "windows";
 
 			AllowLocalAccessWithoutAuthorization = GetConfigurationValue<bool>("Raven/AllowLocalAccessWithoutAuthorization") ?? false;
+
 			PostInit();
+		}
+
+		private void FilterActiveBundles()
+		{
+			var activeBundles = Settings["Raven/ActiveBundles"];
+
+			if (activeBundles != null)
+			{
+				var bundles = activeBundles.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+					.Select(x => x.Trim())
+					.ToArray();
+				var catalog =
+					Catalog.Catalogs.Count == 1
+						? Catalog.Catalogs.First()
+						: new AggregateCatalog(Catalog.Catalogs);
+
+				Catalog.Catalogs.Clear();
+
+				Catalog.Catalogs.Add(new BundlesFilteredCatalog(catalog, bundles));
+			}
 		}
 
 		public TaskScheduler CustomTaskScheduler { get; set; }

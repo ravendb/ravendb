@@ -727,16 +727,6 @@ namespace Raven.Database.Server
 
 				config.DatabaseName = tenantId;
 
-				var activeBundles = config.Settings["Raven/ActiveBundles"];
-
-				if(activeBundles != null)
-				{
-					var bundles = activeBundles.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries)
-						.Select(x => x.Trim())
-						.ToArray();
-					config.Catalog = new AggregateCatalog(new BundlesFilteredCatalog(config.Catalog, bundles));
-				}
-
 				config.Initialize();
 				config.CopyParentSettings(DefaultConfiguration);
 				var documentDatabase = new DocumentDatabase(config);

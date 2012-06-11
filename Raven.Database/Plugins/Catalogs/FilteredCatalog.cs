@@ -14,6 +14,12 @@ namespace Raven.Database.Plugins.Catalogs
 			this.catalogToFilter = catalogToFilter;
 		}
 
+		protected override void Dispose(bool disposing)
+		{
+			catalogToFilter.Dispose();
+			base.Dispose(disposing);
+		}
+
 		public override IQueryable<ComposablePartDefinition> Parts
 		{
 			get
