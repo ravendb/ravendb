@@ -8,11 +8,14 @@ using System.IO;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
+using Raven.Database.Plugins.Catalogs;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
+	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10000)]
+	[InheritedExport(typeof(AbstractAttachmentPutTrigger))]
 	public class RemoveConflictOnAttachmentPutTrigger : AbstractAttachmentPutTrigger
 	{
 		public override void OnPut(string key, Stream data, RavenJObject metadata)

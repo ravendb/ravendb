@@ -5,13 +5,15 @@
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
 using System.IO;
-using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Bundles.Replication.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
+	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10000)]
+	[InheritedExport(typeof(AbstractAttachmentPutTrigger))]
 	public class AttachmentAncestryPutTrigger : AbstractAttachmentPutTrigger
 	{
 		internal ReplicationHiLo HiLo

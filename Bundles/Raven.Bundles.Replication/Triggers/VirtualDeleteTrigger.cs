@@ -6,6 +6,7 @@
 using System.ComponentModel.Composition;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Bundles.Replication.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
@@ -17,7 +18,9 @@ namespace Raven.Bundles.Replication.Triggers
 	/// we allow the delete but don't do actual delete, we replace it 
 	/// with a delete marker instead
 	/// </summary>
+	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10000)]
+	[InheritedExport(typeof(AbstractDeleteTrigger))]
 	public class VirtualDeleteTrigger : AbstractDeleteTrigger
 	{
 		readonly ThreadLocal<RavenJArray> deletedHistory = new ThreadLocal<RavenJArray>();

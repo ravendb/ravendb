@@ -10,7 +10,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
+	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10000)]
+	[InheritedExport(typeof(AbstractReadTrigger))]
 	public class HideVirtuallyDeletedDocumentsReadTrigger : AbstractReadTrigger
 	{
 		public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation,
