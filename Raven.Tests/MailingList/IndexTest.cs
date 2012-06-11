@@ -64,7 +64,7 @@ namespace Raven.Tests.MailingList
 				{
 					var categories = session
 						.Query<IndexResult, RatingByCategoryIndex>()
-						.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+						.Customize(x => x.WaitForNonStaleResults())
 						.ToList();
 
 					Assert.NotNull(categories);

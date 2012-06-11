@@ -19,7 +19,7 @@ namespace Raven.Tests.MailingList
 
 				docStore.DatabaseCommands.EnsureDatabaseExists("test");
 
-				dbNames = docStore.DatabaseCommands.GetDatabaseNames(25);
+				dbNames = docStore.DatabaseCommands.GetDatabaseNames(25, 0);
 
 				Assert.NotEmpty(dbNames);
 
