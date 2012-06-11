@@ -8,7 +8,7 @@ namespace Raven.Database.Server.Security.Windows
 {
 	public class WindowsAuthConfigureHttpListener : IConfigureHttpListener
 	{
-		public static Regex IsAdminRequest = new Regex(@"(^/admin)|(^/databases/\w+/admin)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+		public static Regex IsAdminRequest = new Regex(@"(^/admin)|(^/databases/[\w.-_\d]+/admin)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
 		public void Configure(HttpListener listener, InMemoryRavenConfiguration config)
 		{
