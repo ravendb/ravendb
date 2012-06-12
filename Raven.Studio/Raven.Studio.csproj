@@ -240,6 +240,8 @@
     <Compile Include="Infrastructure\SparseList.cs" />
     <Compile Include="Infrastructure\Validation.cs" />
     <Compile Include="Infrastructure\Validators\DataGridLengthAttribute.cs" />
+    <Compile Include="Infrastructure\Validators\IValidationSuppressible.cs" />
+    <Compile Include="Infrastructure\Validators\RequiredStringAttribute.cs" />
     <Compile Include="Infrastructure\View.cs" />
     <Compile Include="Infrastructure\ViewModel.cs" />
     <Compile Include="Infrastructure\VirtualCollection.cs" />
