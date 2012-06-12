@@ -163,7 +163,7 @@
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							Margin="4,0"
 							ToolTipService.ToolTip="Delete Document">
-                        <Image Source="{StaticResource Image_Delete_Small}"
+                        <Image Source="{StaticResource Image_Delete_Tiny}"
 							   Stretch="None" />
                     </Button>
 

@@ -5,34 +5,36 @@
     <BitmapImage x:Key="Image_RavenDBLogo" UriSource="RavenDBLogo.png"/>
     <BitmapImage x:Key="Image_FooterTexture" UriSource="FooterTexture.png"/>
 
-    <BitmapImage x:Key="Image_DocumentIndex_Tiny" UriSource="document-index-icon.png"/>
-    <BitmapImage x:Key="Image_Document_Tiny" UriSource="document.png"/>
-    <BitmapImage x:Key="Image_Add_Tiny" UriSource="add.png"/>
-    <BitmapImage x:Key="Image_AddDocument_Tiny" UriSource="document-new.png"/>
-    <BitmapImage x:Key="Image_Remove_Tiny" UriSource="RemoveGray.png"/>
-    <BitmapImage x:Key="Image_Save_Small" UriSource="Save.png"/>
-    <BitmapImage x:Key="Image_Search_Small" UriSource="Search.png" />
-    <BitmapImage x:Key="Image_Undo_Small" UriSource="Undo.png"/>
-    <BitmapImage x:Key="Image_Query_Small" UriSource="Query.png"/>
-    <BitmapImage x:Key="Image_Edit_Small" UriSource="Edit.png"/>
+    <BitmapImage x:Key="Image_DocumentIndex_Tiny" UriSource="index_tiny.png"/>
+    <BitmapImage x:Key="Image_DocumentIndex_Small" UriSource="index_small.png"/>
+    <BitmapImage x:Key="Image_Document_Tiny" UriSource="document_tiny.png"/>
+    <BitmapImage x:Key="Image_Add_Tiny" UriSource="add_tiny.png"/>
+    <BitmapImage x:Key="Image_AddDocument_Tiny" UriSource="document_add_tiny.png"/>
+    <BitmapImage x:Key="Image_Remove_Tiny" UriSource="remove_tiny.png"/>
+    <BitmapImage x:Key="Image_Save_Small" UriSource="save_tiny.png"/>
+    <BitmapImage x:Key="Image_Search_Small" UriSource="search_tiny.png" />
+    <BitmapImage x:Key="Image_Undo_Small" UriSource="undo_tiny.png"/>
+    <BitmapImage x:Key="Image_Query_Small" UriSource="index_query_tiny.png"/>
+    <BitmapImage x:Key="Image_Edit_Small" UriSource="edit_tiny.png"/>
     <BitmapImage x:Key="Image_OpenDocument_Small" UriSource="edit_pencil_write_icon.png"/>
-    <BitmapImage x:Key="Image_Reformat_Small" UriSource="HtmlBalanceBracesHS.png"/>
-    <BitmapImage x:Key="Image_Delete_Small" UriSource="DeleteHS.png"/>
-    <BitmapImage x:Key="Image_Refresh_Small" UriSource="RefreshSmall.png"/>
-    <BitmapImage x:Key="Image_Shortcut_Tiny" UriSource="Shortcut.png"/>
-    <BitmapImage x:Key="Image_Debug_Tiny" UriSource="Debug.png"/>
-    <BitmapImage x:Key="Image_Info_Tiny" UriSource="Info.png"/>
-    <BitmapImage x:Key="Image_Warning_Tiny" UriSource="Warning.png"/>
-    <BitmapImage x:Key="Image_Error_Tiny" UriSource="Error.png"/>
-    <BitmapImage x:Key="Image_NextPage_Tiny" UriSource="document_page_next.png"/>
-    <BitmapImage x:Key="Image_PreviousPage_Tiny" UriSource="document_page_previous.png"/>
-    <BitmapImage x:Key="Image_Database_Tiny" UriSource="database.png"/>
-    <BitmapImage x:Key="Image_AddDatabase_Tiny" UriSource="database_add.png"/>
-    <BitmapImage x:Key="Image_AddIndex_Tiny" UriSource="document_prepare.png"/>
-    <BitmapImage x:Key="Image_ExecuteQuery_Small" UriSource="ExecuteQuery.png"/>
-    <BitmapImage x:Key="Image_ChangeView_Tiny" UriSource="ChangeView.png"/>
-    <BitmapImage x:Key="Image_Up_Tiny" UriSource="Up.png"/>
-    <BitmapImage x:Key="Image_Down_Tiny" UriSource="Down.png"/>
-    <BitmapImage x:Key="Image_GoToDocument_Tiny" UriSource="Shortcut.png"/>
+    <BitmapImage x:Key="Image_Reformat_Small" UriSource="reformatjson_tiny.png"/>
+    <BitmapImage x:Key="Image_Delete_Tiny" UriSource="remove_tiny.png"/>
+    <BitmapImage x:Key="Image_Refresh_Small" UriSource="refresh_tiny.png"/>
+    <BitmapImage x:Key="Image_Debug_Tiny" UriSource="debug_tiny.png"/>
+    <BitmapImage x:Key="Image_Info_Tiny" UriSource="info_tiny.png"/>
+    <BitmapImage x:Key="Image_Warning_Tiny" UriSource="warning_tiny.png"/>
+    <BitmapImage x:Key="Image_Error_Tiny" UriSource="error_tiny.png"/>
+    <BitmapImage x:Key="Image_NextPage_Tiny" UriSource="next_tiny.png"/>
+    <BitmapImage x:Key="Image_PreviousPage_Tiny" UriSource="previous_tiny.png"/>
+    <BitmapImage x:Key="Image_Database_Tiny" UriSource="database_tiny.png"/>
+    <BitmapImage x:Key="Image_AddDatabase_Tiny" UriSource="database_add_tiny.png"/>
+    <BitmapImage x:Key="Image_AddIndex_Tiny" UriSource="index_add_tiny.png"/>
+    <BitmapImage x:Key="Image_ExecuteQuery_Small" UriSource="execute_query_tiny.png"/>
+    <BitmapImage x:Key="Image_ChangeView_Tiny" UriSource="changeview_tiny.png"/>
+    <BitmapImage x:Key="Image_Up_Tiny" UriSource="Up_tiny.png"/>
+    <BitmapImage x:Key="Image_Down_Tiny" UriSource="Down_tiny.png"/>
+    <BitmapImage x:Key="Image_GoToDocument_Tiny" UriSource="navigateto_tiny.png"/>
+    <BitmapImage x:Key="Image_EditColumns_Tiny" UriSource="edit_columns_tiny.png"/>
+    <BitmapImage x:Key="Image_CopyToClipboard_Tiny" UriSource="copy_to_clipboard_tiny.png"/>
     
 </ResourceDictionary>

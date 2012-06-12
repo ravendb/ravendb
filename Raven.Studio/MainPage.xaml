@@ -163,21 +163,19 @@
                     <Delay:SplitButton.ButtonMenuItemsSource>
                         <Controls:MenuItem Header="New Document" Command="{StaticResource NavigateToCommand}" CommandParameter="/edit?mode=new">
                           <Controls:MenuItem.Icon>
-                                <Image Source="{StaticResource Image_Document_Tiny}"/>
+                                <Image Source="{StaticResource Image_AddDocument_Tiny}"/>
                           </Controls:MenuItem.Icon>
                         </Controls:MenuItem>
                       <Controls:MenuItem Header="New Index" Command="{StaticResource NavigateToCommand}" CommandParameter="/indexes/new?mode=new">
                             <Controls:MenuItem.Icon>
-                                <Image Source="{StaticResource Image_DocumentIndex_Tiny}"/>
+                                <Image Source="{StaticResource Image_AddIndex_Tiny}"/>
                             </Controls:MenuItem.Icon>
                       </Controls:MenuItem>
                     </Delay:SplitButton.ButtonMenuItemsSource>
                     <StackPanel Orientation="Horizontal" Background="Transparent" ToolTipService.ToolTip="Create a New Document">
-                        <Path Data="M0,4.5 L9,4.5 M4.5,0 L4.5,9" StrokeThickness="3" Stroke="#B8214A"
-										   Stretch="Fill"
-										   VerticalAlignment="Center"
-										   Margin="0,0,4,0"
-                                           Width="14" Height="14" />
+                        <Image Source="{StaticResource Image_Add_Tiny}" Width="14" Height="14"
+                               VerticalAlignment="Center"
+								Margin="0,0,4,0"/>
                         <TextBlock Text="New" VerticalAlignment="Center" />
                     </StackPanel>
                 </Delay:SplitButton>

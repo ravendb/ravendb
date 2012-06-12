@@ -37,15 +37,19 @@
         </RadioButton>
 
       <RadioButton Content="Custom" IsChecked="{Binding IsCustomChoice, Mode=TwoWay}"
-                     Grid.Row="1" Margin="0,5,0,5"/>
+                     Grid.Row="1" Margin="0,5,0,8"/>
         
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="2">
+        <Border Background="{StaticResource Brush_ToolbarBackground}"
+                BorderBrush="{StaticResource Brush_HeaderBorder}"
+                BorderThickness="1,1,1,0"
+                Grid.Row="2">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,2">
             <StackPanel.Resources>
                 <Style TargetType="Button" BasedOn="{StaticResource Style_Button_MouseOverChrome}">
                 </Style>
             </StackPanel.Resources>
             <Button ToolTipService.ToolTip="Delete Selected Column" Command="{Binding DeleteSelectedColumn}" IsEnabled="{Binding IsCustomChoice}">
-                <Image Source="{StaticResource Image_Delete_Small}" Stretch="None"/>
+                <Image Source="{StaticResource Image_Delete_Tiny}" Stretch="None"/>
             </Button>
             <Button ToolTipService.ToolTip="Move Selected Column Up" Command="{Binding MoveSelectedColumnUp}" IsEnabled="{Binding IsCustomChoice}">
                 <Image Source="{StaticResource Image_Up_Tiny}" Stretch="None"/>
@@ -54,7 +58,7 @@
                 <Image Source="{StaticResource Image_Down_Tiny}" Stretch="None"/>
             </Button>
         </StackPanel>
-        
+        </Border>
         <sdk:DataGrid x:Name="DataGrid"  Grid.Row="3" ItemsSource="{Binding Columns}" IsReadOnly="False" AutoGenerateColumns="False" SelectedItem="{Binding SelectedColumn, Mode=TwoWay}"
                       CanUserSortColumns="False"
                       CanUserReorderColumns="False"

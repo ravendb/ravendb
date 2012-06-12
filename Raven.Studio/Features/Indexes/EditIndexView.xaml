@@ -301,7 +301,7 @@
                                 Margin="4 0 0 0"
                                 ToolTipService.ToolTip="Delete this index"
                                 Command="{Binding DeleteIndex}">
-                        <Image Source="{StaticResource Image_Delete_Small}"
+                        <Image Source="{StaticResource Image_Delete_Tiny}"
                                    Stretch="None" />
                     </Button>
                 </StackPanel>

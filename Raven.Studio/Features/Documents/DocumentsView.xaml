@@ -48,9 +48,17 @@
                             <Controls:MenuItem Header="Copy Document Id(s) to Clipboard"
 											Command="{Binding CopyIdsToClipboard}"/>
                             <Controls:MenuItem Header="Copy Document(s) to Clipboard"
-											Command="{Binding CopyDocumentTextToClipboard}"/>
-                            <Controls:MenuItem Header="Delete"
-											Command="{Binding DeleteSelectedDocuments}" />
+											Command="{Binding CopyDocumentTextToClipboard}">
+                                <Controls:MenuItem.Icon>
+                                    <Image Source="{StaticResource Image_CopyToClipboard_Tiny}"/>
+                                </Controls:MenuItem.Icon>
+                            </Controls:MenuItem>
+                          <Controls:MenuItem Header="Delete"
+											Command="{Binding DeleteSelectedDocuments}">
+                                <Controls:MenuItem.Icon>
+                                    <Image Source="{StaticResource Image_Delete_Tiny}"/>
+                                </Controls:MenuItem.Icon>
+                            </Controls:MenuItem>
                         </Controls:ContextMenu>
                     </Controls:ContextMenuService.ContextMenu>
 
@@ -105,7 +113,11 @@
                         <Behaviors:ColumnHeaderContextMenu>
                             <Behaviors:ColumnHeaderContextMenu.ContextMenu>
                                 <Controls:ContextMenu>
-                                    <Controls:MenuItem Header="Choose Columns" Command="{Binding EditColumns}"/>
+                                    <Controls:MenuItem Header="Choose Columns" Command="{Binding EditColumns}">
+                                        <Controls:MenuItem.Icon>
+                                            <Image Source="{StaticResource Image_EditColumns_Tiny}"/>
+                                        </Controls:MenuItem.Icon>
+                                    </Controls:MenuItem>
                                 </Controls:ContextMenu>
                             </Behaviors:ColumnHeaderContextMenu.ContextMenu>
                         </Behaviors:ColumnHeaderContextMenu>
@@ -117,9 +129,17 @@
                             <Controls:MenuItem Header="Copy Document Id(s) to Clipboard"
 											Command="{Binding CopyIdsToClipboard}"/>
                             <Controls:MenuItem Header="Copy Document(s) to Clipboard"
-											Command="{Binding CopyDocumentTextToClipboard}"/>
+											Command="{Binding CopyDocumentTextToClipboard}">
+                                <Controls:MenuItem.Icon>
+                                    <Image Source="{StaticResource Image_CopyToClipboard_Tiny}"/>
+                                </Controls:MenuItem.Icon>
+                            </Controls:MenuItem>
                             <Controls:MenuItem Header="Delete"
-											Command="{Binding DeleteSelectedDocuments}" />
+											Command="{Binding DeleteSelectedDocuments}">
+                                <Controls:MenuItem.Icon>
+                                    <Image Source="{StaticResource Image_Delete_Tiny}"/>
+                                </Controls:MenuItem.Icon>
+                            </Controls:MenuItem>
                         </Controls:ContextMenu>
                     </Controls:ContextMenuService.ContextMenu>
                     <sdk:DataGrid.Columns>
