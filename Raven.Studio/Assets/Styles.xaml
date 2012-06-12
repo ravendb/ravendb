@@ -2644,7 +2644,7 @@
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="HyperlinkButton">
-					<Grid x:Name="ButtonGrid" Cursor="{TemplateBinding Cursor}">
+					<Grid x:Name="ButtonGrid" Cursor="{TemplateBinding Cursor}" >
 						<VisualStateManager.VisualStateGroups>
 							<VisualStateGroup x:Name="CommonStates">
 								<VisualState x:Name="Normal"/>
@@ -2739,7 +2739,7 @@
 						<Rectangle x:Name="FocusVisualElement" Stroke="{TemplateBinding BorderBrush}" StrokeThickness="2" Opacity="0" Margin="-1" RadiusX="1" RadiusY="1"/>
 						<Border x:Name="ActiveBorder" MinWidth="{TemplateBinding MinWidth}" MinHeight="{TemplateBinding MinHeight}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="1" Opacity="0" Margin="{TemplateBinding Padding}"/>
 						<Border x:Name="ContentBorder" MinWidth="{TemplateBinding MinWidth}" MinHeight="{TemplateBinding MinHeight}" Opacity="1" Margin="{TemplateBinding Padding}">
-							<ContentPresenter x:Name="ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Opacity="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+							<ContentPresenter x:Name="ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Opacity="1" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
 						</Border>
 						<Border x:Name="InteractiveBorder" MinWidth="{TemplateBinding MinWidth}" MinHeight="{TemplateBinding MinHeight}" BorderThickness="1,1,1,1" Opacity="0" CornerRadius="1,1,1,1" Margin="{TemplateBinding Padding}"/>
 						<Border x:Name="InteractiveElementBorder" Visibility="Collapsed" Margin="{TemplateBinding Padding}">
@@ -2752,6 +2752,14 @@
 		</Setter>
 		<Setter Property="FontWeight" Value="Normal"/>
 	</Style>
+    
+    <Style x:Key="Style_Link_Breadcrumb_Header" TargetType="HyperlinkButton" BasedOn="{StaticResource Style_Link_Breadcrumb_Initial}">
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Margin" Value="6"/>
+        <Setter Property="FontFamily" Value="Arial"/>
+    </Style>
+    
 	<ControlTemplate x:Key="ControlTemplate_Button" TargetType="Button"/>
 	
 	<Style x:Key="Style_Button_MouseOverChrome" TargetType="ButtonBase">

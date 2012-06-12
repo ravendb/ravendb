@@ -139,7 +139,7 @@
                            VerticalAlignment="Center"
                            Margin="4,0,4,0" />
                 <HyperlinkButton Content="Indexes"
-                                     Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+                                     Style="{StaticResource Style_Link_Breadcrumb_Header}"
                                      Command="{StaticResource NavigateToCommand}"
                                      CommandParameter="/Indexes" />
                 <TextBlock Text=">"

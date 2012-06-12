@@ -61,7 +61,7 @@
         </Controls:ContextMenuService.ContextMenu>
         <toolkit:HeaderedContentControl.Header>
             <StackPanel Orientation="Horizontal">
-                <Infrastructure:FlexibleTemplateItemsControl ItemsSource="{Binding ParentPathSegments}" VerticalAlignment="Center">
+                <Infrastructure:FlexibleTemplateItemsControl ItemsSource="{Binding ParentPathSegments}" VerticalAlignment="Center" VerticalContentAlignment="Center">
                     <Infrastructure:FlexibleTemplateItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal"/>
@@ -96,10 +96,10 @@
                                     </i:Interaction.Triggers>
                                 </Image>
                                 <HyperlinkButton Content="{Binding Name}"
-									     Style="{StaticResource Style_Link_Breadcrumb_Initial}"
+									     Style="{StaticResource Style_Link_Breadcrumb_Header}"
 									     Command="{StaticResource NavigateToCommand}"
 									     CommandParameter="{Binding Url}"
-                                         Margin="4,0" VerticalAlignment="Center" VerticalContentAlignment="Center"/>
+                                         VerticalAlignment="Center" VerticalContentAlignment="Center"/>
                             </StackPanel>
                         </DataTemplate>
                     </Infrastructure:FlexibleTemplateItemsControl.FirstItemTemplate>
