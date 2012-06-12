@@ -54,7 +54,7 @@ namespace Raven.Studio.Behaviors
         
         private bool isLoaded;
         private bool internalColumnUpdate;
-        private Dictionary<object, double> columnWidths;
+        private Dictionary<ColumnDefinition, double> columnWidths;
         private ColumnsModel cachedColumnsModel;
 
         public ColumnsModel Columns
@@ -143,11 +143,11 @@ namespace Raven.Studio.Behaviors
             }
         }
 
-        private Dictionary<object, double> GetCurrentColumnWidths()
+        private Dictionary<ColumnDefinition, double> GetCurrentColumnWidths()
         {
             return AssociatedObject.Columns
                 .Where(c => GetAssociatedColumn(c) != null)
-                .ToDictionary(c => c.Header, c => c.ActualWidth);
+                .ToDictionary(c => GetAssociatedColumn(c), c => c.ActualWidth);
         }
 
         private void StopObservingColumnsModel()
@@ -375,14 +375,14 @@ namespace Raven.Studio.Behaviors
 
         private IList<ColumnDefinition> GetColumnDefinitionsFromColumns()
         {
-            var previousColumnWidths = columnWidths ?? new Dictionary<object, double>();
+            var previousColumnWidths = columnWidths ?? new Dictionary<ColumnDefinition, double>();
 
             var boundColumns = from column in AssociatedObject.Columns
                                let columnDefinition = GetAssociatedColumn(column)
                                where columnDefinition != null
                                let widthChanged = column.Width.IsAbsolute
-                                                  && previousColumnWidths.ContainsKey(column.Header)
-                                                  && !previousColumnWidths[column.Header].IsCloseTo(column.ActualWidth)
+                                                  && previousColumnWidths.ContainsKey(columnDefinition)
+                                                  && !previousColumnWidths[columnDefinition].IsCloseTo(column.ActualWidth)
                                let displayIndex = column.DisplayIndex
                                orderby displayIndex
                                select widthChanged
