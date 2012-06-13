@@ -237,6 +237,7 @@
     <Compile Include="Infrastructure\MarkupExtensions\StaticExtension.cs" />
     <Compile Include="Infrastructure\MostRecentUsedList.cs" />
     <Compile Include="Infrastructure\RecyclingContentLoader.cs" />
+    <Compile Include="Infrastructure\Schedulers.cs" />
     <Compile Include="Infrastructure\SparseList.cs" />
     <Compile Include="Infrastructure\Validation.cs" />
     <Compile Include="Infrastructure\Validators\DataGridLengthAttribute.cs" />

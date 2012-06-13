@@ -276,20 +276,20 @@ namespace Raven.Studio.Models
 			IndexName = urlParser.Path.Trim('/');
 
 			DatabaseCommands.GetIndexAsync(IndexName)
-				.ContinueOnSuccessInTheUIThread(definition =>
+				.ContinueOnUIThread(task =>
 				{
-					if (definition == null)
+					if (task.IsFaulted || task.Result  == null)
 					{
 						IndexDefinitionModel.HandleIndexNotFound(IndexName);
 						return;
 					}
-					var fields = definition.Fields;
+                    var fields = task.Result.Fields;
 					QueryIndexAutoComplete = new QueryIndexAutoComplete(IndexName, Query, fields);
 					
 					const string spatialindexGenerate = "SpatialIndex.Generate";
 					IsSpatialQuerySupported =
-						definition.Maps.Any(x => x.Contains(spatialindexGenerate)) ||
-						(definition.Reduce != null && definition.Reduce.Contains(spatialindexGenerate));
+                        task.Result.Maps.Any(x => x.Contains(spatialindexGenerate)) ||
+                        (task.Result.Reduce != null && task.Result.Reduce.Contains(spatialindexGenerate));
 
 					SetSortByOptions(fields);
 					Execute.Execute(string.Empty);

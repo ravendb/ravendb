@@ -63,15 +63,15 @@ namespace Raven.Studio.Models
 
 			Header = name;
 			DatabaseCommands.GetIndexAsync(name)
-				.ContinueOnSuccessInTheUIThread(index1 =>
+				.ContinueOnUIThread(task =>
 				                   {
-				                   	if (index1 == null)
-				                   	{
+                                       if (task.IsFaulted || task.Result == null)
+                                       {
 										HandleIndexNotFound(name);
 				                   		return;
-				                   	}
-									originalIndex = JsonConvert.SerializeObject(index);
-									UpdateFromIndex(index1);
+				                   	    }
+									    originalIndex = JsonConvert.SerializeObject(index);
+									    UpdateFromIndex(task.Result);
 				                   }).Catch();
 		}
 

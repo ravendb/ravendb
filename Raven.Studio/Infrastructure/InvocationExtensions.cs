@@ -11,6 +11,8 @@ namespace Raven.Studio.Infrastructure
 {
 	public static class InvocationExtensions
 	{
+        
+
 		public static Task ContinueOnSuccess<T>(this Task<T> parent, Action<T> action)
 		{
 			return parent.ContinueWith(task => action(task.Result));
@@ -48,6 +50,16 @@ namespace Raven.Studio.Infrastructure
 				return TaskEx.Run(action);
 			}).Unwrap();
 		}
+
+        public static Task ContinueOnUIThread(this Task parent, Action<Task> action)
+        {
+            return parent.ContinueWith(action, Schedulers.UIScheduler);
+        }
+
+        public static Task ContinueOnUIThread<T>(this Task<T> parent, Action<Task<T>> action)
+        {
+            return parent.ContinueWith(action, Schedulers.UIScheduler);
+        }
 
 		public static Task ContinueOnSuccessInTheUIThread(this Task parent, Action action)
 		{
