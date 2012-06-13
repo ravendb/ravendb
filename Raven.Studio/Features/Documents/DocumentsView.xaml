@@ -185,10 +185,7 @@
             <toolkit:HeaderedContentControl.Header>
                 <Grid>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                        <Image Source="{StaticResource Image_Document_Tiny}"
-							   Stretch="None"
-							   VerticalAlignment="Center"
-							   Margin="6" />
+                        <Image Style="{StaticResource Style_Image_DocumentsPageHeader}"/>
                         <TextBlock x:Name="HeaderText"
 								   Style="{StaticResource Style_Text_Header}"
 								   Text="{Binding Header}"

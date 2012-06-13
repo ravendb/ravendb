@@ -85,13 +85,13 @@
                     <Infrastructure:FlexibleTemplateItemsControl.FirstItemTemplate>
                         <DataTemplate DataType="Documents:PathSegment">
                             <StackPanel Orientation="Horizontal">
-                                <Image Source="{StaticResource Image_Document_Tiny}" Stretch="None" Margin="4,0" VerticalAlignment="Center">
+                                <Image Style="{StaticResource Style_Image_DocumentsPageHeader}" >
                                     <i:Interaction.Triggers>
                                         <ei:DataTrigger Binding="{Binding Name}" Value="Indexes" Comparison="Equal">
-                                            <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_DocumentIndex_Tiny}"/>
+                                            <ei:ChangePropertyAction PropertyName="Style" Value="{StaticResource Style_Image_IndexPageHeader}"/>
                                         </ei:DataTrigger>
                                         <ei:DataTrigger Binding="{Binding Name}" Value="Documents" Comparison="Equal">
-                                            <ei:ChangePropertyAction PropertyName="Source" Value="{StaticResource Image_Document_Tiny}"/>
+                                            <ei:ChangePropertyAction PropertyName="Style" Value="{StaticResource Style_Image_DocumentsPageHeader}"/>
                                         </ei:DataTrigger>
                                     </i:Interaction.Triggers>
                                 </Image>
@@ -99,7 +99,8 @@
 									     Style="{StaticResource Style_Link_Breadcrumb_Header}"
 									     Command="{StaticResource NavigateToCommand}"
 									     CommandParameter="{Binding Url}"
-                                         VerticalAlignment="Center" VerticalContentAlignment="Center"/>
+                                         VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                                 Margin="6"/>
                             </StackPanel>
                         </DataTemplate>
                     </Infrastructure:FlexibleTemplateItemsControl.FirstItemTemplate>

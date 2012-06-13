@@ -8,6 +8,7 @@
     <BitmapImage x:Key="Image_DocumentIndex_Tiny" UriSource="index_tiny.png"/>
     <BitmapImage x:Key="Image_DocumentIndex_Small" UriSource="index_small.png"/>
     <BitmapImage x:Key="Image_Document_Tiny" UriSource="document_tiny.png"/>
+    <BitmapImage x:Key="Image_Document_Small" UriSource="document_small.png"/>
     <BitmapImage x:Key="Image_Add_Tiny" UriSource="add_tiny.png"/>
     <BitmapImage x:Key="Image_AddDocument_Tiny" UriSource="document_add_tiny.png"/>
     <BitmapImage x:Key="Image_Remove_Tiny" UriSource="remove_tiny.png"/>
@@ -36,5 +37,7 @@
     <BitmapImage x:Key="Image_GoToDocument_Tiny" UriSource="navigateto_tiny.png"/>
     <BitmapImage x:Key="Image_EditColumns_Tiny" UriSource="edit_columns_tiny.png"/>
     <BitmapImage x:Key="Image_CopyToClipboard_Tiny" UriSource="copy_to_clipboard_tiny.png"/>
+    <BitmapImage x:Key="Image_Logs_Small" UriSource="logs_small.png"/>
+    <BitmapImage x:Key="Image_Tasks_Small" UriSource="tasks_small.png"/>
     
 </ResourceDictionary>

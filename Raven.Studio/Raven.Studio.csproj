@@ -776,6 +776,9 @@
     <Resource Include="Assets\Images\edit_columns_tiny.png" />
     <Resource Include="Assets\Images\copy_to_clipboard_tiny.png" />
     <Resource Include="Assets\Images\changeview_tiny.png" />
+    <Resource Include="Assets\Images\document_small.png" />
+    <Resource Include="Assets\Images\logs_small.png" />
+    <Resource Include="Assets\Images\tasks_small.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
