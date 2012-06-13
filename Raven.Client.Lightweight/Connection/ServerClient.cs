@@ -452,9 +452,9 @@ namespace Raven.Client.Connection
 			ExecuteWithReplication("DELETE", operationUrl => DirectDeleteAttachment(key, etag, operationUrl));
 		}
 
-		public string[] GetDatabaseNames(int pageSize)
+		public string[] GetDatabaseNames(int pageSize, int start = 0)
 		{
-			var result = ExecuteGetRequest("".Databases(pageSize).NoCache());
+			var result = ExecuteGetRequest("".Databases(pageSize, start).NoCache());
 
 			var json = (RavenJArray)result;
 
@@ -462,6 +462,18 @@ namespace Raven.Client.Connection
 				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
 				.ToArray();
 		}
+
+		public IDictionary<string, RavenJToken> GetDatabases(int pageSize, int start = 0)
+        {
+            var result = ExecuteGetRequest("".Databases(pageSize, start).NoCache());
+
+            var json = (RavenJArray)result;
+
+        	return json
+        		.ToDictionary(
+        			x =>
+        			x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty));
+        }
 
 		private void DirectDeleteAttachment(string key, Guid? etag, string operationUrl)
 		{

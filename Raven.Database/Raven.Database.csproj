@@ -145,9 +145,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Linq\Ast\TransformDynamicLambdaExpressions.cs" />
+    <Compile Include="Linq\RecursiveFunction.cs" />
     <Compile Include="Plugins\Builtins\InvalidDocumentNames.cs" />
     <Compile Include="Plugins\Builtins\Tenants\ModifiedTenantDatabase.cs" />
     <Compile Include="Plugins\Builtins\Tenants\TenantDatabaseModified.cs" />
+    <Compile Include="Plugins\Catalogs\BundlesFilteredCatalog.cs" />
+    <Compile Include="Plugins\Catalogs\FilteredCatalog.cs" />
     <Compile Include="Rhino.Licensing\AbstractLicenseValidator.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryClient.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryHost.cs" />
@@ -191,6 +194,7 @@
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
     <Compile Include="Server\Responders\AdminRunIdleOperations.cs" />
+    <Compile Include="Server\Responders\AdminStats.cs" />
     <Compile Include="Server\Responders\DatabaseSize.cs" />
     <Compile Include="Server\Responders\Favicon.cs" />
     <Compile Include="Server\Responders\Licensing.cs" />

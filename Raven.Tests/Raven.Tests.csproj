@@ -559,7 +559,9 @@
     <Compile Include="MailingList\Bruno.cs" />
     <Compile Include="MailingList\BrunoLopes.cs" />
     <Compile Include="MailingList\ChrisH.cs" />
+    <Compile Include="MailingList\Daniel.cs" />
     <Compile Include="MailingList\DynamicFieldSorting.cs" />
+    <Compile Include="MailingList\HierarchyTests.cs" />
     <Compile Include="MailingList\IdCasing.cs" />
     <Compile Include="MailingList\IndexTest.cs" />
     <Compile Include="Issues\RavenDB_187.cs" />
@@ -618,6 +620,7 @@
     <Compile Include="MailingList\PhilJones_Search.cs" />
     <Compile Include="MailingList\PhilJones_SelectMany_NoResults.cs" />
     <Compile Include="MailingList\ProjectionTests.cs" />
+    <Compile Include="MailingList\QueryNotAnyTest.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
     <Compile Include="MailingList\RavenDB252.cs" />
     <Compile Include="MailingList\RecreatingIndexes.cs" />

@@ -86,6 +86,7 @@ namespace Raven.Database.Config
 			// Plugins
 			{"Raven/PluginsDirectory", "string", null, "The location of the plugins directory for this database. Default: ~\\Plugins."},
 			{"Raven/BundlesSearchPattern", "string", null, "Allow to limit the loaded plugins by specifying a search pattern, such as Raven.*.dll. Multiple values can be specified, separated by a semi column (;)."},
+			{"Raven/ActiveBundles", "string", null, "Semi-column separated list of bundles names, such as: 'Replication;Versioning' If the value isn't there, all the available bundles are installed."},
 
 			// Obsolete
 			{"Raven/WebDir", "string", null, "The location of the web directory for known files that makes up the RavenDB internal website. Default: Raven/WebUI"},

@@ -27,6 +27,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Tasks
 {
+	[ExportMetadata("Bundle", "Replication")]
+	[InheritedExport(typeof(IStartupTask))]
 	public class ReplicationTask : IStartupTask
 	{
 		public class IntHolder

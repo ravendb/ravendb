@@ -7,11 +7,10 @@ using System;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
 using Raven.Database;
 using Raven.Json.Linq;
 
-namespace Raven.Bundles.Replication.Triggers
+namespace Raven.Bundles.Replication.Impl
 {
 	internal class ReplicationHiLo
 	{
