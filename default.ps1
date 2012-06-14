@@ -8,7 +8,7 @@ properties {
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
-	$configuration = "Debug"
+	$global:configuration = "Debug"
 	
 	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Newtonsoft.Json), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Spatial4n.Core.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???",
@@ -130,8 +130,8 @@ task Compile -depends Init {
 	
 	try { 
 		ExecuteTask("BeforeCompile")
-		Write-Host "Compiling with '$configuration' configuration" -ForegroundColor Yellow
-		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$configuration }
+		Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
+		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$global:configuration }
 	} catch {
 		Throw
 	} finally { 
@@ -186,12 +186,12 @@ task ReleaseNoTests -depends Stable,DoRelease {
 }
 
 task Unstable {
-	$configuration = "Release"
+	$global:configuration = "Release"
 	$global:uploadCategory = "RavenDB-Unstable"
 }
 
 task Stable {
-	$configuration = "Release"
+	$global:configuration = "Release"
 	$global:uploadCategory = "RavenDB"
 }
 
