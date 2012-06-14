@@ -67,7 +67,8 @@ namespace Raven.Studio.Features.Documents
                                      {
                                          Document = t.Result.Results.Count > 0 ? t.Result.Results[0].ToJsonDocument() : null,
                                          TotalDocuments = t.Result.TotalResults,
-                                         Index = itemIndex
+                                         Index = itemIndex,
+                                         ParentPath = GetParentPath(),
                                      });
             }
             else
@@ -82,6 +83,7 @@ namespace Raven.Studio.Features.Documents
                                           Document = getDocumentTask.Result,
                                           Index = itemIndex,
                                           TotalDocuments = getStatisticsTask.Result.TotalResults,
+                                          ParentPath = GetParentPath(),
                                       }
                     );
             }
@@ -130,7 +132,7 @@ namespace Raven.Studio.Features.Documents
             return GetUrlForIndex(itemIndex);
         }
 
-        public override IList<PathSegment> GetParentPath()
+        protected IList<PathSegment> GetParentPath()
         {
             if (indexName == "Raven/DocumentsByEntityName")
             {

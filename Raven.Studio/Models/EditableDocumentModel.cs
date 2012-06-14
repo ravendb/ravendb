@@ -45,7 +45,10 @@ namespace Raven.Studio.Models
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
             InitialiseDocument();
 
-            ParentPathSegments = new ObservableCollection<PathSegment>();
+            ParentPathSegments = new ObservableCollection<PathSegment>()
+                                     {
+                                         new PathSegment() { Name="Documents", Url = "/documents"}
+                                     };
 
             currentDatabase = Database.Value.Name;
         }
@@ -134,7 +137,7 @@ namespace Raven.Studio.Models
                         TotalItems = (int) result.TotalDocuments;
 
                         ParentPathSegments.Clear();
-                        ParentPathSegments.AddRange(Navigator.GetParentPath());
+                        ParentPathSegments.AddRange(result.ParentPath);
                     })
                 .Catch();
         }
@@ -458,7 +461,7 @@ namespace Raven.Studio.Models
                     }
                     else
                     {
-                        UrlUtil.Navigate(Navigator.GetParentPath().Last().Url);
+                        UrlUtil.Navigate(ParentPathSegments.Last().Url);
                     }
                 })
                 .Catch();

@@ -24,6 +24,8 @@ namespace Raven.Studio.Features.Documents
         public long Index { get; set; }
 
         public long TotalDocuments { get; set; }
+
+        public IList<PathSegment> ParentPath { get; set; } 
     }
 
     public class PathSegment
@@ -86,11 +88,6 @@ namespace Raven.Studio.Features.Documents
         {
             return string.Empty;
         }
-
-        public virtual IList<PathSegment> GetParentPath()
-        {
-            return new PathSegment[0];
-        } 
 
         protected UrlParser GetBaseUrl()
         {
