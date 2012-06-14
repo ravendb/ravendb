@@ -71,6 +71,9 @@
     <Reference Include="ICSharpCode.NRefactory">
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>
+    <Reference Include="log4net">
+      <HintPath>..\packages\log4net.2.0.0\lib\net40-full\log4net.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net, Version=2.9.1.2, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
@@ -120,6 +123,12 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Abstractions\Logging\LoggerExecutionWrapperTests.cs" />
+    <Compile Include="Abstractions\Logging\LogProviders\Log4NetLogProviderLoggingDisabledTests.cs" />
+    <Compile Include="Abstractions\Logging\LogProviders\Log4NetLogProviderLoggingEnabledTests.cs" />
+    <Compile Include="Abstractions\Logging\LogProviders\NLogLogProviderLoggingDisabedTests.cs" />
+    <Compile Include="Abstractions\Logging\LogProviders\NLogLogProviderLoggingEnabledTests.cs" />
+    <Compile Include="Abstractions\Logging\LogProviderTests.cs" />
     <Compile Include="Bugs\Account.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AdHocProjections.cs" />
