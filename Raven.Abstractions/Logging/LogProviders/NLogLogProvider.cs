@@ -48,7 +48,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 			MethodCallExpression methodCall = Expression.Call(null, method, new Expression[] {resultValue = keyParam});
 			return Expression.Lambda<Func<string, object>>(methodCall, new[] {resultValue}).Compile();
 		}
-#if !NET_3_5		 
+#if !NET35		 
 		public class NLogLogger : ILog
 		{
 			private readonly dynamic logger;
