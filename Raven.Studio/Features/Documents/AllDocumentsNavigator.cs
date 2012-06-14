@@ -45,26 +45,47 @@ namespace Raven.Studio.Features.Documents
             {
                 return DatabaseCommands.GetDocumentsAsync(itemIndex, 1)
                     .ContinueWith(t =>
-                                  new DocumentAndNavigationInfo
                                       {
-                                          TotalDocuments = GetTotalDocuments(),
-                                          Index = itemIndex,
-                                          Document = t.Result.Length > 0 ? t.Result[0] : null,
-                                          ParentPath = GetParentPath(t.Result[0]),
+                                          var totalDocuments = GetTotalDocuments();
+                                          return new DocumentAndNavigationInfo
+                                              {
+                                                  TotalDocuments = totalDocuments,
+                                                  Index = itemIndex,
+                                                  Document = t.Result.Length > 0 ? t.Result[0] : null,
+                                                  ParentPath = GetParentPath(t.Result[0]),
+                                                  UrlForFirst = GetUrlForIndex(0),
+                                                  UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
+                                                  UrlForNext =
+                                                      itemIndex < totalDocuments - 1
+                                                          ? GetUrlForIndex(itemIndex + 1)
+                                                          : null,
+                                                  UrlForLast = GetUrlForIndex(totalDocuments - 1),
+                                              };
                                       }
                     );
             }
             else
             {
-                return DatabaseCommands.GetAsync(id).ContinueWith(t =>
-                                  new DocumentAndNavigationInfo
-                                  {
-                                      TotalDocuments = GetTotalDocuments(),
-                                      Index = itemIndex,
-                                      Document = t.Result,
-                                      ParentPath = GetParentPath(t.Result),
-                                  }
-                    ); ;
+                return DatabaseCommands.GetAsync(id).ContinueWith
+                    (t =>
+                         {
+                             var totalDocuments = GetTotalDocuments();
+                             return new DocumentAndNavigationInfo
+                                        {
+                                            TotalDocuments = GetTotalDocuments(),
+                                            Index = itemIndex,
+                                            Document = t.Result,
+                                            ParentPath = GetParentPath(t.Result),
+                                            UrlForFirst = GetUrlForIndex(0),
+                                            UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
+                                            UrlForNext =
+                                                itemIndex < totalDocuments - 1
+                                                    ? GetUrlForIndex(itemIndex + 1)
+                                                    : null,
+                                            UrlForLast = GetUrlForIndex(totalDocuments - 1),
+                                        };
+                         }
+                    );
             }
         }
 
@@ -116,7 +137,7 @@ namespace Raven.Studio.Features.Documents
                        };
         }
 
-        private string GetUrlForIndex(int index)
+        private string GetUrlForIndex(long index)
         {
             var builder = GetBaseUrl();
 

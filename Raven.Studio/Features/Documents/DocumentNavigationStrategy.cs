@@ -25,7 +25,15 @@ namespace Raven.Studio.Features.Documents
 
         public long TotalDocuments { get; set; }
 
-        public IList<PathSegment> ParentPath { get; set; } 
+        public IList<PathSegment> ParentPath { get; set; }
+
+        public string UrlForFirst { get; set; }
+
+        public string UrlForPrevious { get; set; }
+
+        public string UrlForNext { get; set; }
+
+        public string UrlForLast { get; set; }
     }
 
     public class PathSegment

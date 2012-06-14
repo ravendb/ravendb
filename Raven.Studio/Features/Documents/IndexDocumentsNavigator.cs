@@ -69,6 +69,10 @@ namespace Raven.Studio.Features.Documents
                                          TotalDocuments = t.Result.TotalResults,
                                          Index = itemIndex,
                                          ParentPath = GetParentPath(),
+                                         UrlForFirst = GetUrlForIndex(0),
+                                         UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
+                                         UrlForNext = itemIndex < t.Result.TotalResults - 1 ? GetUrlForIndex(itemIndex + 1) : null,
+                                         UrlForLast = GetUrlForIndex(t.Result.TotalResults - 1),
                                      });
             }
             else
@@ -84,6 +88,10 @@ namespace Raven.Studio.Features.Documents
                                           Index = itemIndex,
                                           TotalDocuments = getStatisticsTask.Result.TotalResults,
                                           ParentPath = GetParentPath(),
+                                          UrlForFirst = GetUrlForIndex(0),
+                                          UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
+                                          UrlForNext = itemIndex < getStatisticsTask.Result.TotalResults - 1 ? GetUrlForIndex(itemIndex + 1) : null,
+                                          UrlForLast = GetUrlForIndex(getStatisticsTask.Result.TotalResults - 1),
                                       }
                     );
             }

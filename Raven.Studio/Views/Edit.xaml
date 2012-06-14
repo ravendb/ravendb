@@ -183,6 +183,19 @@
                             Background="#DCCFCF">
                         <StackPanel Orientation="Horizontal" Margin="5,0">
 
+                            <HyperlinkButton Command="{Binding NavigateToFirst}"
+									 Style="{StaticResource Style_Link_MouseOverChrome}"
+                                     IsEnabled="{Binding HasPrevious}"
+									 ToolTipService.ToolTip="First Document"
+                                     VerticalAlignment="Center"
+                                     VerticalContentAlignment="Center">
+                                <HyperlinkButton.Content>
+                                    <Image Source="{StaticResource Image_FirstPage_Tiny}"
+								   Stretch="None"
+								   VerticalAlignment="Center" />
+                                </HyperlinkButton.Content>
+                            </HyperlinkButton>
+                            
                             <HyperlinkButton Command="{Binding NavigateToPrevious}"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
                                      IsEnabled="{Binding HasPrevious}"
@@ -204,6 +217,7 @@
 							   VerticalAlignment="Center" />
                             <TextBlock Text="{Binding TotalItems}"
 							   VerticalAlignment="Center" />
+                            
                             <HyperlinkButton Command="{Binding NavigateToNext}"
                                      IsEnabled="{Binding HasNext}"
 									 Style="{StaticResource Style_Link_MouseOverChrome}"
@@ -212,6 +226,19 @@
                                       VerticalContentAlignment="Center">
                                 <HyperlinkButton.Content>
                                     <Image Source="{StaticResource Image_NextPage_Tiny}"
+								   Stretch="None"
+								   VerticalAlignment="Center" />
+                                </HyperlinkButton.Content>
+                            </HyperlinkButton>
+
+                            <HyperlinkButton Command="{Binding NavigateToLast}"
+									 Style="{StaticResource Style_Link_MouseOverChrome}"
+                                     IsEnabled="{Binding HasNext}"
+									 ToolTipService.ToolTip="Last Document"
+                                     VerticalAlignment="Center"
+                                     VerticalContentAlignment="Center">
+                                <HyperlinkButton.Content>
+                                    <Image Source="{StaticResource Image_LastPage_Tiny}"
 								   Stretch="None"
 								   VerticalAlignment="Center" />
                                 </HyperlinkButton.Content>

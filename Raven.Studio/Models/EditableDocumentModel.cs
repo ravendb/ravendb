@@ -32,6 +32,10 @@ namespace Raven.Studio.Models
         private DocumentNavigator navigator;
         private ICommand navigateNext;
         private ICommand navigatePrevious;
+        private string urlForFirst;
+        private string urlForPrevious;
+        private string urlForNext;
+        private string urlForLast;
 
 		public EditableDocumentModel()
 		{
@@ -78,7 +82,7 @@ namespace Raven.Studio.Models
             get
             {
                 return navigateNext ??
-                       (navigateNext = new ActionCommand(() => UrlUtil.Navigate(Navigator.GetUrlForNext())));
+                       (navigateNext = new ActionCommand(() => HandleNavigation(urlForNext)));
             }
         }
 
@@ -87,9 +91,35 @@ namespace Raven.Studio.Models
             get
             {
                 return navigatePrevious ??
-                       (navigatePrevious = new ActionCommand(() => UrlUtil.Navigate(Navigator.GetUrlForPrevious())));
+                       (navigatePrevious = new ActionCommand(() => HandleNavigation(urlForPrevious)));
             }
 		}
+
+        public ICommand NavigateToFirst
+        {
+            get
+            {
+                return navigateFirst ??
+                       (navigateFirst = new ActionCommand(() => HandleNavigation(urlForFirst)));
+            }
+        }
+
+        public ICommand NavigateToLast
+        {
+            get
+            {
+                return navigateLast ??
+                       (navigateLast = new ActionCommand(() => HandleNavigation(urlForLast)));
+            }
+        }
+
+        private void HandleNavigation(string url)
+        {
+            if (!string.IsNullOrEmpty(url))
+            {
+                UrlUtil.Navigate(url);
+            }
+        }
 
         public override void LoadModelParameters(string parameters)
         {
@@ -130,6 +160,11 @@ namespace Raven.Studio.Models
                             LocalId = result.Document.Key;
                             SetCurrentDocumentKey(result.Document.Key);
                         }
+
+                        urlForFirst = result.UrlForFirst;
+                        urlForPrevious = result.UrlForPrevious;
+                        urlForLast = result.UrlForLast;
+                        urlForNext = result.UrlForNext;
 
                         isLoaded = true;
                         document.Value = result.Document;
@@ -187,13 +222,13 @@ namespace Raven.Studio.Models
 
         public bool HasPrevious
 		{
-            get { return CurrentIndex > 0; }
+            get { return !string.IsNullOrEmpty(urlForPrevious); }
 		}
 
         public bool HasNext
-		{
-            get { return CurrentIndex < TotalItems - 1; }
-			}
+        {
+            get { return !string.IsNullOrEmpty(urlForNext); }
+        }
 
         public bool CanNavigate
 		{
@@ -535,7 +570,9 @@ namespace Raven.Studio.Models
 		}
 
         private ICommand deleteCommand;
-		public ICommand Delete
+        private ICommand navigateFirst;
+        private ICommand navigateLast;
+        public ICommand Delete
 		{
             get { return deleteCommand ?? (deleteCommand = new ActionCommand(HandleDeleteDocument)); }
 		}

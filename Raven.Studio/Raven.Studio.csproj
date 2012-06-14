@@ -792,6 +792,8 @@
     <Resource Include="Assets\Images\tasks_small.png" />
     <Resource Include="Assets\Images\error_medium.png" />
     <Resource Include="Assets\Images\error_small.png" />
+    <Resource Include="Assets\Images\navigate_first_tiny.png" />
+    <Resource Include="Assets\Images\navigate_last_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
