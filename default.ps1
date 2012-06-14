@@ -130,7 +130,7 @@ task Compile -depends Init {
 	
 	try { 
 		ExecuteTask("BeforeCompile")
-		Write-Host "Compiling with '$configuration' configuration"
+		Write-Host "Compiling with '$configuration' configuration" -ForegroundColor Yellow
 		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$configuration }
 	} catch {
 		Throw
