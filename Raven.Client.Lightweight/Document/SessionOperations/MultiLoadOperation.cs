@@ -2,15 +2,15 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using NLog;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Client.Connection;
 
 namespace Raven.Client.Document.SessionOperations
 {
 	public class MultiLoadOperation
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogProvider.GetCurrentClassLogger();
 
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		internal Func<IDisposable> disableAllCaching { get; set; }
@@ -42,7 +42,7 @@ namespace Raven.Client.Document.SessionOperations
 			if (ids == null)
 				return;
 
-			log.Debug("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), sessionOperations.StoreIdentifier);
+			log.DebugFormat("Bulk loading ids [{0}] from {1}", string.Join(", ", ids), sessionOperations.StoreIdentifier);
 		}
 
 		public IDisposable EnterMultiLoadContext()

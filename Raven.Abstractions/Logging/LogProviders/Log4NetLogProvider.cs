@@ -1,13 +1,14 @@
 namespace Raven.Abstractions.Logging.LogProviders
 {
 	using System;
+	using System.Linq;
 	using System.Linq.Expressions;
 	using System.Reflection;
 
 	public class Log4NetLogProvider : ILogProvider
 	{
 		private readonly Func<string, object> getLoggerByNameDelegate;
-		private static bool providerAvailabilityOverride = true;
+		private static bool providerIsAvailabileOverride = true;
 
 		public Log4NetLogProvider()
 		{
@@ -18,10 +19,10 @@ namespace Raven.Abstractions.Logging.LogProviders
 			getLoggerByNameDelegate = GetGetLoggerMethodCall();
 		}
 
-		public static bool ProviderAvailabilityOverride
+		public static bool ProviderIsAvailabileOverride
 		{
-			get { return providerAvailabilityOverride; }
-			set { providerAvailabilityOverride = value; }
+			get { return providerIsAvailabileOverride; }
+			set { providerIsAvailabileOverride = value; }
 		}
 
 		public ILog GetLogger(string name)
@@ -31,12 +32,14 @@ namespace Raven.Abstractions.Logging.LogProviders
 
 		public static bool IsLoggerAvailable()
 		{
-			return ProviderAvailabilityOverride && GetLogManagerType() != null;
+			return ProviderIsAvailabileOverride && GetLogManagerType() != null;
 		}
 
 		private static Type GetLogManagerType()
 		{
-			return Type.GetType("log4net.LogManager, log4net");
+			Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+			Assembly nlogAssembly = assemblies.FirstOrDefault(assembly => assembly.FullName.StartsWith("log4net,"));
+			return nlogAssembly != null ? nlogAssembly.GetType("log4net.LogManager") : Type.GetType("NLog.LogManager, log4net");
 		}
 
 		private static Func<string, object> GetGetLoggerMethodCall()
@@ -48,7 +51,7 @@ namespace Raven.Abstractions.Logging.LogProviders
 			MethodCallExpression methodCall = Expression.Call(null, method, new Expression[] {resultValue = keyParam});
 			return Expression.Lambda<Func<string, object>>(methodCall, new[] {resultValue}).Compile();
 		}
-#if !NET_3_5
+#if !NET35
 		public class Log4NetLogger : ILog
 		{
 			private readonly dynamic logger;

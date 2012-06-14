@@ -16,10 +16,10 @@ using System.Threading;
 #if !NET35
 using System.Threading.Tasks;
 #endif
-using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using System.Net;
@@ -31,12 +31,14 @@ using Raven.Client.Silverlight.MissingFromSilverlight;
 
 namespace Raven.Client.Connection
 {
+	
+
 	/// <summary>
 	/// Replication and failover management on the client side
 	/// </summary>
 	public class ReplicationInformer : IDisposable
 	{
-		private readonly Logger log = LogManager.GetCurrentClassLogger();
+		private readonly ILog log = LogProvider.GetCurrentClassLogger();
 
 		private bool firstTime = true;
 		protected readonly DocumentConvention conventions;

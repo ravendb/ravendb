@@ -64,9 +64,6 @@
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\Microsoft.CSharp.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
-    <Reference Include="NLog">
-      <HintPath>..\packages\NLog.2.0.0.2000\lib\sl4\NLog.dll</HintPath>
-    </Reference>
     <Reference Include="System.ComponentModel.Composition, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\System.ComponentModel.Composition.dll</HintPath>
@@ -704,6 +701,30 @@
     <Compile Include="..\Raven.Abstractions\Linq\DynamicNullObject.cs">
       <Link>Imports\Linq\DynamicNullObject.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\ILog.cs">
+      <Link>Imports\Logging\ILog.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\ILogExtensions.cs">
+      <Link>Imports\Logging\ILogExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\ILogProvider.cs">
+      <Link>Imports\Logging\ILogProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\LoggerExecutionWrapper.cs">
+      <Link>Imports\Logging\LoggerExecutionWrapper.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\LogLevel.cs">
+      <Link>Imports\Logging\LogLevel.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\LogProvider.cs">
+      <Link>Imports\Logging\LogProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\Log4NetLogProvider.cs">
+      <Link>Imports\Logging\LogProviders\Log4NetLogProvider.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogProvider.cs">
+      <Link>Imports\Logging\LogProviders\NLogLogProvider.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\SystemTime.cs">
       <Link>Imports\SystemTime.cs</Link>
     </Compile>
@@ -908,7 +929,6 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>Imports\RavenDB.snk</Link>
     </None>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Raven.Abstractions\Commands\DeleteCommandData.cs">
@@ -1245,6 +1265,7 @@
       <Link>Imports\Util\ObjectReferenceEqualityComparerer.cs</Link>
     </Compile>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->
   <ProjectExtensions>
