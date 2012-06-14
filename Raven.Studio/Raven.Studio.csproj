@@ -122,6 +122,7 @@
     <Reference Include="System.Windows.Controls.Toolkit, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\System.Windows.Controls.Toolkit.dll</HintPath>
     </Reference>
+    <Reference Include="System.Windows.Data, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Interactivity">
       <HintPath>..\SharedLibs\Silverlight\System.Windows.Interactivity.dll</HintPath>
     </Reference>
@@ -158,6 +159,7 @@
     <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Commands\CopyDocumentsToClipboardCommand.cs" />
     <Compile Include="Commands\ResetIndexCommand.cs" />
+    <Compile Include="Commands\ShowErrorListWindowCommand.cs" />
     <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
     <Compile Include="Controls\DataFetchErrorNotifier.xaml.cs">
       <DependentUpon>DataFetchErrorNotifier.xaml</DependentUpon>
@@ -204,6 +206,9 @@
     </Compile>
     <Compile Include="Features\Terms\TermsView.xaml.cs">
       <DependentUpon>TermsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Util\ErrorListWindow.xaml.cs">
+      <DependentUpon>ErrorListWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Impl\SplitButton\GlobalSuppressions.cs" />
     <Compile Include="Impl\SplitButton\MenuButton.cs" />
@@ -256,6 +261,7 @@
     <Compile Include="Models\ApplicationState.cs" />
     <Compile Include="Models\DocumentSize.cs" />
     <Compile Include="Models\DocumentViewStateStore.cs" />
+    <Compile Include="Models\StudioErrorListModel.cs" />
     <Compile Include="Models\GoToDocumentModel.cs" />
     <Compile Include="Models\IHasPageTitle.cs" />
     <Compile Include="Models\DocumentsModel.cs" />
@@ -555,6 +561,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\Util\ErrorListWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Impl\SplitButton\Themes\generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -780,6 +790,8 @@
     <Resource Include="Assets\Images\document_small.png" />
     <Resource Include="Assets\Images\logs_small.png" />
     <Resource Include="Assets\Images\tasks_small.png" />
+    <Resource Include="Assets\Images\error_medium.png" />
+    <Resource Include="Assets\Images\error_small.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

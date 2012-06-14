@@ -1225,7 +1225,44 @@
 		</Setter>
 	</Style>
 
-	<Style x:Name="Style_ListBox_Indexes"
+    <Style x:Key="Style_ListBoxItem_ErrorDetails" TargetType="ListBoxItem">
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0,0,0,10"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Grid d:DesignWidth="241" d:DesignHeight="112">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="SelectionStates">
+                                <VisualState x:Name="Unselected"/>
+                                <VisualState x:Name="Selected">
+                                </VisualState>
+                                <VisualState x:Name="SelectedUnfocused"/>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <ContentPresenter VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style x:Name="Style_ListBox_ErrorDetails"
+		   TargetType="ListBox">
+        <Setter Property="BorderBrush" Value="#FFEAE7E4"/>
+        <Setter Property="ItemContainerStyle" Value="{StaticResource Style_ListBoxItem_ErrorDetails}"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <StackPanel/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style x:Name="Style_ListBox_Indexes"
 		   BasedOn="{StaticResource Style_ListBox_VerticalFluid}"
 		   TargetType="ListBox">
 		<Setter Property="Background"
@@ -1594,7 +1631,7 @@
 	<Thickness x:Key="Margin_ContentPage">0,15,0,0</Thickness>
 		
 	<Style x:Key="Style_ComboBox_MouseOverOnlyChrome" TargetType="ComboBox">
-		<Setter Property="Padding" Value="6,2,25,2"/>
+		<Setter Property="Padding" Value="6,2,20,2"/>
 		<Setter Property="Background" Value="Transparent"/>
 		<Setter Property="HorizontalContentAlignment" Value="Left"/>
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -3276,5 +3313,164 @@
 
     <Style x:Key="Style_Image_DocumentsPageHeader" TargetType="Image" BasedOn="{StaticResource Style_Image_PageHeader}">
         <Setter Property="Source" Value="{StaticResource Image_Document_Small}"/>
+    </Style>
+
+
+    <Style TargetType="toolkit:Expander">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="toolkit:Expander">
+                    <Grid>
+                        <Grid.Resources>
+                            <ControlTemplate x:Key="ExpanderDownHeaderTemplate" TargetType="ToggleButton">
+                                <Grid>
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="CheckStates">
+                                            <VisualStateGroup.Transitions>
+                                                <VisualTransition GeneratedDuration="00:00:00"/>
+                                            </VisualStateGroup.Transitions>
+                                            <VisualState x:Name="Checked">
+                                                <Storyboard>
+                                                    <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Duration="00:00:00.0010000" Storyboard.TargetName="arrowDown" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)">
+                                                        <SplineDoubleKeyFrame KeyTime="00:00:00" Value="-1"/>
+                                                    </DoubleAnimationUsingKeyFrames>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Unchecked"/>
+                                        </VisualStateGroup>
+                                        <VisualStateGroup x:Name="CommonStates">
+                                            <VisualStateGroup.Transitions>
+                                                <VisualTransition GeneratedDuration="0"/>
+                                                <VisualTransition GeneratedDuration="00:00:00.1" To="MouseOver"/>
+                                                <VisualTransition GeneratedDuration="00:00:00.1" To="Pressed"/>
+                                            </VisualStateGroup.Transitions>
+                                            <VisualState x:Name="Normal"/>
+                                            <VisualState x:Name="MouseOver">
+                                                <Storyboard>
+                                                  
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Pressed">
+                                                <Storyboard>
+                                                 
+                                                </Storyboard>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                        <VisualStateGroup x:Name="FocusStates">
+                                            <VisualState x:Name="Focused">
+                                                <Storyboard>
+                                                    
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Unfocused"/>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+                                    <Border Background="{TemplateBinding Background}">
+                                        <Grid Margin="{TemplateBinding Padding}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="18"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid Height="18" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                                <Path x:Name="arrowDown" Stroke="Black" StrokeThickness="2" Data="M 1,1.5 L 4.5,5 L 8,1.5" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                                    <Path.RenderTransform>
+                                                        <TransformGroup>
+                                                            <ScaleTransform/>
+                                                            <SkewTransform/>
+                                                            <RotateTransform/>
+                                                            <TranslateTransform/>
+                                                        </TransformGroup>
+                                                    </Path.RenderTransform>
+                                                </Path>
+                                            </Grid>
+                                            <ContentPresenter x:Name="header" Margin="4,0,0,0" Grid.Column="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="false"/>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </ControlTemplate>
+                        </Grid.Resources>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0"/>
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0" Storyboard.TargetName="DisabledVisualElement" Storyboard.TargetProperty="(UIElement.Opacity)" To="1"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused">
+                                    <Storyboard/>
+                                </VisualState>
+                                <VisualState x:Name="Unfocused"/>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ExpansionStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0"/>
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Collapsed"/>
+                                <VisualState x:Name="Expanded">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Duration="0" Storyboard.TargetName="ExpandSite" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="Visible"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ExpandDirectionStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0"/>
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="ExpandDown">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Duration="0" Storyboard.TargetName="rd1" Storyboard.TargetProperty="Height">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="*"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Duration="0" Storyboard.TargetName="cd0" Storyboard.TargetProperty="Width">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="*"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="ExpandUp">
+                                   
+                                </VisualState>
+                                <VisualState x:Name="ExpandLeft">
+                                    
+                                </VisualState>
+                                <VisualState x:Name="ExpandRight">
+                                    
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" x:Name="cd0"/>
+                                <ColumnDefinition Width="Auto" x:Name="cd1"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" x:Name="rd0"/>
+                                <RowDefinition Height="Auto" x:Name="rd1"/>
+                            </Grid.RowDefinitions>
+                            <ToggleButton x:Name="ExpanderButton" Grid.Column="0" Grid.Row="0" MinHeight="0" MinWidth="0" Content="{TemplateBinding Header}" FontFamily="{TemplateBinding FontFamily}" FontSize="{TemplateBinding FontSize}" FontStretch="{TemplateBinding FontStretch}" FontStyle="{TemplateBinding FontStyle}" FontWeight="{TemplateBinding FontWeight}" Foreground="{TemplateBinding Foreground}" Padding="{TemplateBinding Padding}" Template="{StaticResource ExpanderDownHeaderTemplate}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" IsChecked="{TemplateBinding IsExpanded}"
+                                          Background="{TemplateBinding Background}"/>
+                            <Border x:Name="ExpandSite" Grid.Column="0" Grid.Row="1" Padding="0" Visibility="Collapsed">
+                                <ContentControl Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" FontFamily="{TemplateBinding FontFamily}" FontSize="{TemplateBinding FontSize}" FontStretch="{TemplateBinding FontStretch}" FontStyle="{TemplateBinding FontStyle}" FontWeight="{TemplateBinding FontWeight}" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            </Border>
+                        </Grid>
+                        <Border x:Name="DisabledVisualElement" IsHitTestVisible="false" Background="#A5FFFFFF" Opacity="0"/>
+                        <Border x:Name="FocusVisualElement" IsHitTestVisible="false" BorderBrush="#00FFFFFF" BorderThickness="1" Visibility="Collapsed"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 </ResourceDictionary>

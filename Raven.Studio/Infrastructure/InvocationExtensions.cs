@@ -6,6 +6,7 @@ using System.Windows;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Extensions;
 using System.Threading.Tasks;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -106,7 +107,7 @@ namespace Raven.Studio.Infrastructure
 					return task;
 
 				var ex = task.Exception.ExtractSingleInnerException();
-				Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
+                Execute.OnTheUI(() => ApplicationModel.Current.AddErrorNotification(ex, null, stackTrace))
 					.ContinueWith(_ => action(task.Exception));
 				return task;
 			}).Unwrap();
@@ -126,7 +127,7 @@ namespace Raven.Studio.Infrastructure
 			        return;
 
 			    var ex = task.Exception.ExtractSingleInnerException();
-			    Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
+			    Execute.OnTheUI(() => ApplicationModel.Current.AddErrorNotification(ex, null, stackTrace))
 			        .ContinueWith(_ => action(task.Exception));
 			});
 

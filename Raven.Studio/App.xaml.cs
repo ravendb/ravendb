@@ -49,7 +49,7 @@ namespace Raven.Studio
 			if (System.Diagnostics.Debugger.IsAttached) return;
 			
 			e.Handled = true;
-			ErrorPresenter.Show(e.ExceptionObject);
+			ApplicationModel.Current.AddErrorNotification(e.ExceptionObject, "An unhandled exception occurred: " + e.ExceptionObject.Message);
 		}
 	}
 }

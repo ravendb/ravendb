@@ -80,10 +80,11 @@
 				  x:Name="Logo">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="34" />
 					<ColumnDefinition Width="Auto" />
 				</Grid.ColumnDefinitions>
 
-				<HyperlinkButton Grid.Column="1"
+				<HyperlinkButton Grid.Column="2"
 								 HorizontalAlignment="Left"
 								 Margin="0,5,5,1"
 								 Command="{StaticResource NavigateToExternalUrlCommand}"
@@ -94,7 +95,18 @@
 						   Height="25" />
 				</HyperlinkButton>
 
-				<Databases:DatabaseSelectionView VerticalAlignment="Center"
+                <Button Grid.Column="1"
+                        Command="{StaticResource ShowErrorListWindowCommand}"
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        ToolTipService.ToolTip="Show recent errors"
+                        Visibility="{Binding ErrorCount, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}">
+                    <Image Source="{StaticResource Image_Error_Small}"
+                           Stretch="Fill" Width="24" Height="24"/>
+                </Button>
+                
+			  <Databases:DatabaseSelectionView VerticalAlignment="Center"
 												 HorizontalAlignment="Right" />
 			</Grid>
 

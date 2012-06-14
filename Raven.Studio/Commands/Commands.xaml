@@ -15,4 +15,5 @@
 	<Commands:DeleteIndexCommand x:Name="DeleteIndexCommand" />
 	<Commands:PromoteToAutoIndexCommand x:Name="PromoteToAutoIndexCommand" />
 	<Commands:ResetIndexCommand x:Name="ResetIndexCommand" />
+	<Commands:ShowErrorListWindowCommand x:Name="ShowErrorListWindowCommand" />
 </ResourceDictionary>

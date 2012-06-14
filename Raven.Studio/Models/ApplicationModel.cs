@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Raven.Studio.Models
 {
-	public class ApplicationModel
+    public class ApplicationModel : NotifyPropertyChangedBase
 	{
 		public static ApplicationModel Current { get; private set; }
 
@@ -20,6 +20,7 @@ namespace Raven.Studio.Models
 		private ApplicationModel()
 		{
 			Notifications = new BindableCollection<Notification>(x=>x.Message);
+		    Notifications.CollectionChanged += delegate { OnPropertyChanged(() => ErrorCount); };
 			LastNotification = new Observable<string>();
 			Server = new Observable<ServerModel> {Value = new ServerModel()};
 		    State = new ApplicationState();
@@ -46,7 +47,7 @@ namespace Raven.Studio.Models
 			Execute.OnTheUI(() =>
 			                	{
 			                		Notifications.Add(notification);
-			                		if (Notifications.Count > 5)
+			                		if (Notifications.Count > 10)
 			                		{
 			                			Notifications.RemoveAt(0);
 			                		}
@@ -54,10 +55,27 @@ namespace Raven.Studio.Models
 			                	});
 		}
 
+        public void AddInfoNotification(string message)
+        {
+            AddNotification(new Notification(message, NotificationLevel.Info));
+        }
+
+        public void AddWarningNotification(string message)
+        {
+            AddNotification(new Notification(message, NotificationLevel.Warning));
+        }
+
+        public void AddErrorNotification(Exception exception, string message = null, params object[] details)
+        {
+            AddNotification(new Notification(message ?? exception.Message, NotificationLevel.Error, exception, details));
+        }
+
 		public Observable<string> LastNotification { get; set; }
 
 		public BindableCollection<Notification> Notifications { get; set; }
 
+
+        public int ErrorCount {get { return Notifications.Count(n => n.Level == NotificationLevel.Error); }}
 
 		public string AssemblyVersion
 		{

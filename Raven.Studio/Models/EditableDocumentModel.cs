@@ -651,7 +651,7 @@ namespace Raven.Studio.Models
 				}
 				catch (Exception ex)
 				{
-					ErrorPresenter.Show(ex, null, "Could not parse JSON");
+                    ApplicationModel.Current.AddErrorNotification(ex, "Could not parse JSON");
 					return;
 				}
 

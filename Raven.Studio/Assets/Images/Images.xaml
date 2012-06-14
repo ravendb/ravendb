@@ -25,6 +25,8 @@
     <BitmapImage x:Key="Image_Info_Tiny" UriSource="info_tiny.png"/>
     <BitmapImage x:Key="Image_Warning_Tiny" UriSource="warning_tiny.png"/>
     <BitmapImage x:Key="Image_Error_Tiny" UriSource="error_tiny.png"/>
+    <BitmapImage x:Key="Image_Error_Small" UriSource="error_small.png"/>
+    <BitmapImage x:Key="Image_Error_Medium" UriSource="error_medium.png"/>
     <BitmapImage x:Key="Image_NextPage_Tiny" UriSource="next_tiny.png"/>
     <BitmapImage x:Key="Image_PreviousPage_Tiny" UriSource="previous_tiny.png"/>
     <BitmapImage x:Key="Image_Database_Tiny" UriSource="database_tiny.png"/>

@@ -1,0 +1,60 @@
+﻿<Infrastructure:DialogView x:Class="Raven.Studio.Features.Util.ErrorListWindow"
+           xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+           xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+                      xmlns:Messages="clr-namespace:Raven.Studio.Messages" Width="700" Height="500" 
+           Title="Recent Errors" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                      xmlns:Models="clr-namespace:Raven.Studio.Models"
+                      xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                     xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" mc:Ignorable="d"
+                      d:DataContext="{d:DesignInstance Models:StudioErrorListModel}">
+
+    <Grid x:Name="LayoutRoot" Margin="2">
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ListBox ItemsSource="{Binding Errors}" Style="{StaticResource Style_ListBox_ErrorDetails}" TextOptions.TextHintingMode="Animated"
+                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="Messages:Notification">
+                    <toolkit:Expander IsExpanded="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}, Mode=TwoWay}"
+                                      Background="{StaticResource Brush_ErrorBackground}">
+                        <toolkit:Expander.Header>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Message}" Foreground="White" Margin="0,0,15,0"  TextWrapping="Wrap"/>
+                               
+                            </Grid>
+                        </toolkit:Expander.Header>
+                        <Grid>
+                            <Button ToolTipService.ToolTip="Copy details to clipboard"
+                                        Command="{Binding DataContext.CopyErrorDetailsToClipboard, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                        CommandParameter="{Binding}"
+                                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Margin="0,-25,0,0">
+                                <Image Source="{StaticResource Image_CopyToClipboard_Tiny}" Stretch="None"/>
+                            </Button>
+                            <TextBox IsReadOnly="True" Style="{StaticResource Style_TextBox_NoChrome}" Text="{Binding Details}" Padding="5" Background="#E3BEBE" 
+                                     VerticalScrollBarVisibility="Disabled" 
+                                     HorizontalScrollBarVisibility="Auto"/>
+                        </Grid>
+                    </toolkit:Expander>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <HyperlinkButton Content="Report an Issue" Grid.Row="1" Margin="0,5,0,5" 
+                         NavigateUri="http://issues.hibernatingrhinos.com/issues/RavenDB?#newissue=yes" 
+                         TargetName="_blank"/>
+
+      <Button x:Name="ClearButton" Content="Clear" Command="{Binding Clear}" Width="75" Height="23" HorizontalAlignment="Left" Margin="0,12,0,0" Grid.Row="2" />
+        <Button x:Name="CancelButton" Content="Close" Command="{Binding CloseCommand}" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,0,0" Grid.Row="2" />
+    </Grid>
+</Infrastructure:DialogView>
