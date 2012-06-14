@@ -6,12 +6,15 @@
 using System;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Data;
+using Raven.Bundles.Replication.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
+	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10000)]
+	[InheritedExport(typeof(AbstractPutTrigger))]
 	public class AncestryPutTrigger : AbstractPutTrigger
 	{
 		internal ReplicationHiLo HiLo

@@ -31,7 +31,9 @@ namespace Raven.Tests.Linq
 
 				using (var session = store.OpenSession())
 				{
-					long count = session.Query<TestDoc>().LongCount();
+					long count = session.Query<TestDoc>()
+						.Customize(x=>x.WaitForNonStaleResults())
+						.LongCount();
 					Assert.Equal(1, count);
 				}
 			}

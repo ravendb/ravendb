@@ -63,6 +63,7 @@ namespace Raven.Client.Connection
 			conventions = requestParams.Convention;
 			Method = requestParams.Method;
 			webRequest = (HttpWebRequest)WebRequest.Create(requestParams.Url);
+			webRequest.UseDefaultCredentials = true;
 			webRequest.Credentials = requestParams.Credentials;
 			webRequest.Method = requestParams.Method;
 			if (factory.DisableRequestCompression == false &&

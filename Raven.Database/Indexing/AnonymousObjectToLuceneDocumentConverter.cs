@@ -261,7 +261,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private static bool ShouldTreatAsEnumerable(object itemsToIndex)
+		public static bool ShouldTreatAsEnumerable(object itemsToIndex)
 	    {
 			if (itemsToIndex == null)
 				return false;

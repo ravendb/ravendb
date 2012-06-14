@@ -28,6 +28,9 @@ namespace Raven.Abstractions.Linq
 		{
 			switch (binder.Name)
 			{
+				case "AsEnumerable":
+					result = this;
+					return true;
 				case "Count":
 					if (args.Length == 0)
 					{

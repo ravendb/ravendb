@@ -10,6 +10,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using NLog;
+using Raven.Database.Server;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -23,6 +24,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Responders
 {
+	[ExportMetadata("Bundle", "Replication")]
+	[InheritedExport(typeof(AbstractRequestResponder))]
 	public class DocumentReplicationResponder : RequestResponder
 	{
 		private readonly Logger log = LogManager.GetCurrentClassLogger();

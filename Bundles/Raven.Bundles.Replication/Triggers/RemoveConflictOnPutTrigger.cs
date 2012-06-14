@@ -11,7 +11,9 @@ using System.Linq;
 
 namespace Raven.Bundles.Replication.Triggers
 {
+	[ExportMetadata("Bundle", "Replication")]
 	[ExportMetadata("Order", 10000)]
+	[InheritedExport(typeof(AbstractPutTrigger))]
 	public class RemoveConflictOnPutTrigger : AbstractPutTrigger
 	{
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
