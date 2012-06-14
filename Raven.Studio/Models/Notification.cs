@@ -5,7 +5,7 @@ namespace Raven.Studio.Messages
 {
 	public class Notification
 	{
-		public Notification(string message, NotificationLevel level = NotificationLevel.Info)
+		public Notification(string message, NotificationLevel level = NotificationLevel.Info, Exception exception = null)
 		{
 			Message = message;
 			Level = level;
