@@ -68,7 +68,7 @@ properties {
 }
 include .\psake_ext.ps1
 
-task default -depends OpenSource,Release
+task default -depends Stable,Release
 
 task Verify40 {
 	if( (ls "$env:windir\Microsoft.NET\Framework\v4.0*") -eq $null ) {
@@ -181,7 +181,7 @@ task TestSilverlight -depends Compile, CopyServer {
 	}
 }
 
-task ReleaseNoTests -depends OpenSource,DoRelease {
+task ReleaseNoTests -depends Stable,DoRelease {
 
 }
 
@@ -190,7 +190,7 @@ task Unstable {
 	$global:uploadCategory = "RavenDB-Unstable"
 }
 
-task OpenSource {
+task Stable {
 	$configuration = "Release"
 	$global:uploadCategory = "RavenDB"
 }
@@ -398,7 +398,7 @@ task Upload -depends DoRelease {
 	}
 }	
 
-task UploadOpenSource -depends OpenSource, DoRelease, Upload	
+task UploadStable -depends Stable, DoRelease, Upload	
 
 task UploadUnstable -depends Unstable, DoRelease, Upload
 
