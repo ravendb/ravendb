@@ -161,8 +161,8 @@
     <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Commands\ShowErrorListWindowCommand.cs" />
     <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
-    <Compile Include="Controls\DataFetchErrorNotifier.xaml.cs">
-      <DependentUpon>DataFetchErrorNotifier.xaml</DependentUpon>
+    <Compile Include="Controls\BusynessIndicator.xaml.cs">
+      <DependentUpon>BusynessIndicator.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\GoToDocumentControl.xaml.cs">
       <DependentUpon>GoToDocumentControl.xaml</DependentUpon>
@@ -228,6 +228,7 @@
     <Compile Include="Infrastructure\Converters\TrimmedStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
     <Compile Include="Infrastructure\FlexibleTemplateItemsControl.cs" />
+    <Compile Include="Infrastructure\INotifyBusyness.cs" />
     <Compile Include="Infrastructure\ItemsRealizedEventArgs.cs" />
     <Compile Include="Infrastructure\ProvideVisibleItemRangeFromDataGridBehavior.cs" />
     <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
@@ -535,7 +536,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Controls\DataFetchErrorNotifier.xaml">
+    <Page Include="Controls\BusynessIndicator.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

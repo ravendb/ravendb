@@ -28,7 +28,8 @@
                 <ListBox x:Name="DocumentsList"
 						ItemsSource="{Binding DocumentsWeak}"
 						Style="{StaticResource StealthPagingDocumentList}"
-						Margin="10"
+						Margin="0"
+                        Padding="10,10,10,0"
 						ItemTemplate="{StaticResource DataTemplate_Document_CardView}">
 
                     <i:Interaction.Triggers>
@@ -209,9 +210,9 @@
                 <ContentControl Content="{Binding }" 
                             ContentTemplate="{Binding Path=Current.DisplayStyle, Source={StaticResource DocumentSize}, Converter={StaticResource Converter_DisplayStyleToTemplate}}"
                             HorizontalContentAlignment="Stretch"
-                            VerticalContentAlignment="Stretch" Margin="0,0,0,10"/>
+                            VerticalContentAlignment="Stretch" Margin="0,0,0,4"/>
 
-                <Controls1:DataFetchErrorNotifier ErrorSource="{Binding Documents}" VerticalAlignment="Bottom"/>
+                <Controls1:BusynessIndicator BusyBody="{Binding Documents.Source}" VerticalAlignment="Bottom"/>
             </Grid>
         </toolkit:HeaderedContentControl>
     </Grid>

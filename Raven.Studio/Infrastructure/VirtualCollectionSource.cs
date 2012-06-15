@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Studio.Infrastructure
 {
-    public abstract class VirtualCollectionSource<T> : IVirtualCollectionSource<T>
+    public abstract class VirtualCollectionSource<T> : IVirtualCollectionSource<T>, INotifyBusyness
     {
         private readonly object lockObject = new object();
         public event EventHandler<VirtualCollectionSourceChangedEventArgs> CollectionChanged;
@@ -77,7 +77,7 @@ namespace Raven.Studio.Infrastructure
 
         protected void DecrementOutstandingTasks()
         {
-            IsBusy = Interlocked.Decrement(ref _outstandingTasks) == 0;
+            IsBusy = Interlocked.Decrement(ref _outstandingTasks) > 0;
         }
 
         public virtual void Refresh(RefreshMode mode)
