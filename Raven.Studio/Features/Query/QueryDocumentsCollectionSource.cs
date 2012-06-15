@@ -27,6 +27,7 @@ namespace Raven.Studio.Features.Query
         private string _indexName;
         private readonly object _lockObject = new object();
 
+        public event EventHandler<QueryErrorEventArgs> QueryError;
         public event EventHandler<QueryStatisticsUpdatedEventArgs> QueryStatisticsUpdated;
 
         public IndexQuery TemplateQuery
@@ -58,7 +59,7 @@ namespace Raven.Studio.Features.Query
                               TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        public override Task<IList<ViewableDocument>> GetPageAsync(int start, int pageSize, IList<SortDescription> sortDescriptions)
+        protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)
         {
             return GetQueryResults(start, pageSize)
                 .ContinueWith(task =>
@@ -134,13 +135,24 @@ namespace Raven.Studio.Features.Query
                                                                                    Statistics = statistics
                                                                                });
 
+                                                  if (task.IsFaulted)
+                                                  {
+                                                      OnQueryError(new QueryErrorEventArgs() { Exception = task.Exception});
+                                                  }
+
                                                   return task.Result;
                                               }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         protected void OnQueryStatisticsUpdated(QueryStatisticsUpdatedEventArgs e)
         {
-            EventHandler<QueryStatisticsUpdatedEventArgs> handler = QueryStatisticsUpdated;
+            var handler = QueryStatisticsUpdated;
+            if (handler != null) handler(this, e);
+        }
+
+        protected void OnQueryError(QueryErrorEventArgs e)
+        {
+            var handler = QueryError;
             if (handler != null) handler(this, e);
         }
     }
@@ -150,5 +162,10 @@ namespace Raven.Studio.Features.Query
         public RavenQueryStatistics Statistics { get; set; }
 
         public TimeSpan QueryTime { get; set; }
+    }
+
+    public class QueryErrorEventArgs : EventArgs
+    {
+        public Exception Exception { get; set; }
     }
 }

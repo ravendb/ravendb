@@ -12,10 +12,18 @@
 					 xmlns:Controls="clr-namespace:System.Windows.Controls"
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-                         xmlns:Models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d"
+                         xmlns:Models="clr-namespace:Raven.Studio.Models"
+                         xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
                          d:DataContext="{d:DesignInstance Models:QueryModel}">
-
-	<Grid Margin="{StaticResource Margin_ContentPage}">
+    <Infrastructure:PageView.Resources>
+        <Storyboard x:Key="ShowErrorPanel">
+            <DoubleAnimation Storyboard.TargetName="QueryErrorPanel" Storyboard.TargetProperty="Height" To="50" Duration="0:0:0.1"/>
+        </Storyboard>
+        <Storyboard x:Key="HideErrorPanel">
+            <DoubleAnimation Storyboard.TargetName="QueryErrorPanel" Storyboard.TargetProperty="Height" To="0" Duration="0:0:0.1"/>
+        </Storyboard>
+    </Infrastructure:PageView.Resources>
+        <Grid Margin="{StaticResource Margin_ContentPage}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -147,6 +155,24 @@
 					</i:Interaction.Triggers>
 				</Editors:QueryEditor>
 
+                <Border Background="{StaticResource Brush_ErrorBackground}"
+                        Grid.Row="1" Height="0"
+                        VerticalAlignment="Bottom"
+                        x:Name="QueryErrorPanel">
+                    <i:Interaction.Triggers>
+                        <ei:DataTrigger Binding="{Binding IsErrorVisible.Value}" Value="True" Comparison="Equal">
+                            <ei:ControlStoryboardAction Storyboard="{StaticResource ShowErrorPanel}" ControlStoryboardOption="Play"/>
+                        </ei:DataTrigger>
+                        <ei:DataTrigger Binding="{Binding IsErrorVisible.Value}" Value="False" Comparison="Equal">
+                            <ei:ControlStoryboardAction Storyboard="{StaticResource HideErrorPanel}" ControlStoryboardOption="Play"/>
+                        </ei:DataTrigger>
+                    </i:Interaction.Triggers>
+                    <TextBlock Text="{Binding QueryErrorMessage.Value}" Foreground="White" Margin="5" VerticalAlignment="Top" 
+                               TextWrapping="Wrap"
+                               Behaviors:FadeTrimming.IsEnabled="True"
+                               Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"/>    
+                </Border>
+                
 				<Grid Grid.Row="2">
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="*" />
@@ -241,14 +267,6 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-					<TextBlock Grid.Row="0"
-                               Text="Error"
-							   Style="{StaticResource Style_TextBlock_PagePartHeader}"
-							   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
-
-                    <TextBlock Grid.Row="1"
-                               Text="{Binding Error}"
-							   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
 					<Grid Grid.Row="2">
                         <Grid.RowDefinitions>

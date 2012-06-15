@@ -18,19 +18,20 @@ namespace Raven.Studio.Infrastructure
     /// <typeparam name="T"></typeparam>
     /// <remarks>The trick to ensuring that the silverlight datagrid doesn't attempt to enumerate all
     /// items from its DataSource in one shot is to implement both IList and ICollectionView.</remarks>
-    public class VirtualCollection<T> : IList<VirtualItem<T>>, IList, ICollectionView, INotifyPropertyChanged, INotifyOnDataFetchErrors, IEnquireAboutItemVisibility where T : class
+    public class VirtualCollection<T> : IList<VirtualItem<T>>, IList, ICollectionView, INotifyPropertyChanged, IEnquireAboutItemVisibility where T : class
     {
-        private readonly IVirtualCollectionSource<T> _source;
-        private readonly int _pageSize;
-        private readonly IEqualityComparer<T> _equalityComparer;
-        public event NotifyCollectionChangedEventHandler CollectionChanged;
-        public event EventHandler<DataFetchErrorEventArgs> DataFetchError;
-        public event EventHandler<EventArgs> FetchStarting;
+        const int IndividualItemNotificationLimit = 100;
 
-        public event EventHandler<EventArgs> FetchCompleted;
+        public event NotifyCollectionChangedEventHandler CollectionChanged;
+
         public event PropertyChangedEventHandler PropertyChanged;
         public event EventHandler<QueryItemVisibilityEventArgs> QueryItemVisibility;
         public event EventHandler<ItemsRealizedEventArgs> ItemsRealized;
+        public event CurrentChangingEventHandler CurrentChanging;
+        public event EventHandler CurrentChanged;
+        private readonly IVirtualCollectionSource<T> _source;
+        private readonly int _pageSize;
+        private readonly IEqualityComparer<T> _equalityComparer;
 
         private volatile uint _state; // used to ensure that data-requests are not stale
 
@@ -64,7 +65,6 @@ namespace Raven.Studio.Infrastructure
 
             _source = source;
             _source.CollectionChanged += HandleSourceCollectionChanged;
-            _source.DataFetchError += HandleSourceDataFetchError;
             _pageSize = pageSize;
             _equalityComparer = equalityComparer;
             _virtualItems = CreateItemsCache(pageSize);
@@ -74,6 +74,122 @@ namespace Raven.Studio.Infrastructure
             _mostRecentlyRequestedPages.ItemEvicted += HandlePageEvicted;
 
             (_sortDescriptions as INotifyCollectionChanged).CollectionChanged += HandleSortDescriptionsChanged;
+        }
+
+        public IVirtualCollectionSource<T> Source { get { return _source; } }
+        public CultureInfo Culture { get; set; }
+
+        public IEnumerable SourceCollection
+        {
+            get { return this; }
+        }
+
+        public Predicate<object> Filter
+        {
+            get { throw new NotImplementedException(); }
+            set { throw new NotImplementedException(); }
+        }
+
+        public bool CanFilter
+        {
+            get { return false; }
+        }
+
+        public SortDescriptionCollection SortDescriptions
+        {
+            get { return _sortDescriptions; }
+        }
+
+        public bool CanSort
+        {
+            get { return true; }
+        }
+
+        public bool CanGroup
+        {
+            get { return false; }
+        }
+
+        public ObservableCollection<GroupDescription> GroupDescriptions
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public ReadOnlyObservableCollection<object> Groups
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public bool IsEmpty
+        {
+            get { return _itemCount == 0; }
+        }
+
+        public object CurrentItem
+        {
+            get { return 0 < CurrentPosition && CurrentPosition < _itemCount ? this[CurrentPosition] : null; }
+        }
+
+        public int CurrentPosition
+        {
+            get { return _currentItem; }
+            private set
+            {
+                _currentItem = value;
+                OnCurrentChanged(EventArgs.Empty);
+            }
+        }
+        public bool IsCurrentAfterLast
+        {
+            get { return CurrentPosition >= _itemCount; }
+        }
+
+        public bool IsCurrentBeforeFirst
+        {
+            get { return CurrentPosition < 0; }
+        }
+        public int Count
+        {
+            get { return _itemCount; }
+        }
+
+        object ICollection.SyncRoot
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public bool IsSynchronized
+        {
+            get { return false; }
+        }
+
+        public bool IsReadOnly
+        {
+            get { return true; }
+        }
+
+        bool IList.IsFixedSize
+        {
+            get { return false; }
+        }
+
+        public void RealizeItemRequested(int index)
+        {
+            var page = index / _pageSize;
+            BeginGetPage(page);
+        }
+
+        public void Refresh()
+        {
+            Refresh(RefreshMode.PermitStaleDataWhilstRefreshing);
+        }
+
+        public void Refresh(RefreshMode mode)
+        {
+            if (!_isRefreshDeferred)
+            {
+                _source.Refresh(mode);
+            }
         }
 
         private void HandlePageEvicted(object sender, ItemEvictedEventArgs<int> e)
@@ -99,11 +215,6 @@ namespace Raven.Studio.Infrastructure
             }
 
             return new SparseList<VirtualItem<T>>(pageSize);
-        }
-
-        private void HandleSourceDataFetchError(object sender, DataFetchErrorEventArgs e)
-        {
-            Task.Factory.StartNew(() => OnDataFetchError(e), CancellationToken.None, TaskCreationOptions.None, _synchronizationContextScheduler);
         }
 
         private void HandleSortDescriptionsChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -159,17 +270,42 @@ namespace Raven.Studio.Infrastructure
             _source.GetPageAsync(page*_pageSize, _pageSize, _sortDescriptions).ContinueWith(
                 t =>
                     {
-                        OnFetchCompleted(EventArgs.Empty);
                         if (!t.IsFaulted)
                         {
                             UpdatePage(page, t.Result, stateWhenRequestInitiated);
                         }
                         else
                         {
-                            OnDataFetchError(new DataFetchErrorEventArgs(t.Exception));
+                            InvalidatePage(page, stateWhenRequestInitiated);
                         }
                     },
                 _synchronizationContextScheduler);
+        }
+
+        private void InvalidatePage(int page, uint stateWhenRequestInitiated)
+        {
+            if (stateWhenRequestInitiated != _state)
+            {
+                return;
+            }
+
+            bool stillRelevant = _requestedPages.Remove(page);
+            if (!stillRelevant)
+            {
+                return;
+            }
+
+            var startIndex = page * _pageSize;
+
+            for (int i = 0; i < _pageSize; i++)
+            {
+                var index = startIndex + i;
+                var virtualItem = _virtualItems[index];
+                if (virtualItem != null)
+                {
+                    virtualItem.Item = null;
+                }
+            }
         }
 
         private bool IsPageAlreadyRequested(int page)
@@ -208,45 +344,6 @@ namespace Raven.Studio.Infrastructure
             if (results.Count > 0)
             {
                 OnItemsRealized(new ItemsRealizedEventArgs(startIndex, results.Count));
-            }
-        }
-
-        void INotifyOnDataFetchErrors.Retry()
-        {
-            Refresh();
-        }
-
-        public IVirtualCollectionSource<T> Source { get { return _source; } }
-
-        public void RealizeItemRequested(int index)
-        {
-            var page = index / _pageSize;
-            BeginGetPage(page);
-        }
-
-        public bool Contains(object item)
-        {
-            if (item is VirtualItem<T>)
-            {
-                return Contains(item as VirtualItem<T>);
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        public void Refresh()
-        {
-           Refresh(RefreshMode.PermitStaleDataWhilstRefreshing);
-        }
-
-        public void Refresh(RefreshMode mode)
-        {
-            if (!_isRefreshDeferred)
-            {
-                OnFetchStarting(EventArgs.Empty);
-                _source.Refresh(mode);
             }
         }
 
@@ -346,7 +443,7 @@ namespace Raven.Studio.Infrastructure
 
             OnPropertyChanged(new PropertyChangedEventArgs("Count"));
 
-            if (Math.Abs(delta) > 100)
+            if (Math.Abs(delta) > IndividualItemNotificationLimit)
             {
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
             }
@@ -374,10 +471,16 @@ namespace Raven.Studio.Infrastructure
             return item.Index;
         }
 
-        protected void OnQueryItemVisibility(QueryItemVisibilityEventArgs e)
+        public bool Contains(object item)
         {
-            EventHandler<QueryItemVisibilityEventArgs> handler = QueryItemVisibility;
-            if (handler != null) handler(this, e);
+            if (item is VirtualItem<T>)
+            {
+                return Contains(item as VirtualItem<T>);
+            }
+            else
+            {
+                return false;
+            }
         }
 
         object IList.this[int index]
@@ -433,69 +536,6 @@ namespace Raven.Studio.Infrastructure
             return UpdateCurrentPosition(position);
         }
 
-        public CultureInfo Culture { get; set; }
-
-        public IEnumerable SourceCollection
-        {
-            get { return this; }
-        }
-
-        public Predicate<object> Filter
-        {
-            get { throw new NotImplementedException(); }
-            set { throw new NotImplementedException(); }
-        }
-
-        public bool CanFilter
-        {
-            get { return false; }
-        }
-
-        public SortDescriptionCollection SortDescriptions
-        {
-            get { return _sortDescriptions; }
-        }
-
-        public bool CanSort
-        {
-            get { return true; }
-        }
-
-        public bool CanGroup
-        {
-            get { return false; }
-        }
-
-        public ObservableCollection<GroupDescription> GroupDescriptions
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        public ReadOnlyObservableCollection<object> Groups
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        public bool IsEmpty
-        {
-            get { return _itemCount == 0; }
-        }
-
-        public object CurrentItem
-        {
-            get { return 0 < CurrentPosition && CurrentPosition < _itemCount ? this[CurrentPosition] : null; }
-        }
-
-        public int CurrentPosition
-        {
-            get { return _currentItem; }
-            private set
-            {
-                _currentItem = value;
-                OnCurrentChanged(EventArgs.Empty);
-            }
-        }
-
         private bool UpdateCurrentPosition(int newCurrentPosition, bool allowCancel = true)
         {
             var changingEventArgs = new CurrentChangingEventArgs(allowCancel);
@@ -510,30 +550,40 @@ namespace Raven.Studio.Infrastructure
             return !IsCurrentBeforeFirst && !IsCurrentAfterLast;
         }
 
-        public bool IsCurrentAfterLast
-        {
-            get { return CurrentPosition >= _itemCount; }
-        }
-
-        public bool IsCurrentBeforeFirst
-        {
-            get { return CurrentPosition < 0; }
-        }
-
-        public event CurrentChangingEventHandler CurrentChanging;
-
         protected void OnCurrentChanging(CurrentChangingEventArgs e)
         {
             CurrentChangingEventHandler handler = CurrentChanging;
             if (handler != null) handler(this, e);
         }
 
-        public event EventHandler CurrentChanged;
-       
 
         protected void OnCurrentChanged(EventArgs e)
         {
             EventHandler handler = CurrentChanged;
+            if (handler != null) handler(this, e);
+        }
+
+        protected void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
+        {
+            NotifyCollectionChangedEventHandler handler = CollectionChanged;
+            if (handler != null) handler(this, e);
+        }
+
+        protected void OnPropertyChanged(PropertyChangedEventArgs e)
+        {
+            PropertyChangedEventHandler handler = PropertyChanged;
+            if (handler != null) handler(this, e);
+        }
+
+        protected void OnItemsRealized(ItemsRealizedEventArgs e)
+        {
+            EventHandler<ItemsRealizedEventArgs> handler = ItemsRealized;
+            if (handler != null) handler(this, e);
+        }
+
+        protected void OnQueryItemVisibility(QueryItemVisibilityEventArgs e)
+        {
+            EventHandler<QueryItemVisibilityEventArgs> handler = QueryItemVisibility;
             if (handler != null) handler(this, e);
         }
 
@@ -564,71 +614,6 @@ namespace Raven.Studio.Infrastructure
         {
             throw new NotImplementedException();
         }
-
-        public int Count
-        {
-            get { return _itemCount; }
-        }
-
-        object ICollection.SyncRoot
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        public bool IsSynchronized
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        public bool IsReadOnly
-        {
-            get { return true; }
-        }
-
-        bool IList.IsFixedSize
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        #region Not Implemented IList methods
-
-
-        protected void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
-        {
-            NotifyCollectionChangedEventHandler handler = CollectionChanged;
-            if (handler != null) handler(this, e);
-        }
-
-        protected void OnPropertyChanged(PropertyChangedEventArgs e)
-        {
-            PropertyChangedEventHandler handler = PropertyChanged;
-            if (handler != null) handler(this, e);
-        }
-
-        protected void OnDataFetchError(DataFetchErrorEventArgs e)
-        {
-            EventHandler<DataFetchErrorEventArgs> handler = DataFetchError;
-            if (handler != null) handler(this, e);
-        }
-
-        protected void OnItemsRealized(ItemsRealizedEventArgs e)
-        {
-            EventHandler<ItemsRealizedEventArgs> handler = ItemsRealized;
-            if (handler != null) handler(this, e);
-        }
-
-        protected void OnFetchStarting(EventArgs e)
-        {
-            EventHandler<EventArgs> handler = FetchStarting;
-            if (handler != null) handler(this, e);
-        }
-
-        protected void OnFetchCompleted(EventArgs e)
-        {
-            EventHandler<EventArgs> handler = FetchCompleted;
-            if (handler != null) handler(this, e);
-        }
-
 
         public void Add(VirtualItem<T> item)
         {
@@ -694,27 +679,5 @@ namespace Raven.Studio.Infrastructure
         {
             throw new NotImplementedException();
         }
-
-        #endregion
-
-
-    }
-
-    public class ItemsRealizedEventArgs : EventArgs
-    {
-        public ItemsRealizedEventArgs(int startIndex, int count)
-        {
-            StartingIndex = startIndex;
-            Count = count;
-        }
-
-        public int StartingIndex { get; private set; }
-        public int Count { get; private set; }
-    }
-
-    public enum RefreshMode
-    {
-        PermitStaleDataWhilstRefreshing,
-        ClearStaleData,
     }
 }

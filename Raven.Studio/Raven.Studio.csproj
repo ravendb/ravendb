@@ -228,6 +228,7 @@
     <Compile Include="Infrastructure\Converters\TrimmedStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
     <Compile Include="Infrastructure\FlexibleTemplateItemsControl.cs" />
+    <Compile Include="Infrastructure\ItemsRealizedEventArgs.cs" />
     <Compile Include="Infrastructure\ProvideVisibleItemRangeFromDataGridBehavior.cs" />
     <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
     <Compile Include="Infrastructure\DeferredActionInvoker.cs" />
@@ -242,6 +243,7 @@
     <Compile Include="Infrastructure\MarkupExtensions\StaticExtension.cs" />
     <Compile Include="Infrastructure\MostRecentUsedList.cs" />
     <Compile Include="Infrastructure\RecyclingContentLoader.cs" />
+    <Compile Include="Infrastructure\RefreshMode.cs" />
     <Compile Include="Infrastructure\Schedulers.cs" />
     <Compile Include="Infrastructure\SparseList.cs" />
     <Compile Include="Infrastructure\Validation.cs" />

@@ -8,7 +8,6 @@ namespace Raven.Studio.Infrastructure
     public interface IVirtualCollectionSource<T>
     {
         event EventHandler<VirtualCollectionSourceChangedEventArgs> CollectionChanged;
-        event EventHandler<DataFetchErrorEventArgs> DataFetchError;
 
         int Count { get; }
 
@@ -29,7 +28,13 @@ namespace Raven.Studio.Infrastructure
 
     public enum ChangeType
     {
+        /// <summary>
+        /// Current data is invalid and should be cleared
+        /// </summary>
         Reset,
+        /// <summary>
+        /// Current data may still be valid, and can be shown whilst refreshing
+        /// </summary>
         Refresh,
     }
 }

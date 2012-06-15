@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Raven.Studio.Infrastructure
@@ -9,9 +10,11 @@ namespace Raven.Studio.Infrastructure
     {
         private readonly object lockObject = new object();
         public event EventHandler<VirtualCollectionSourceChangedEventArgs> CollectionChanged;
-        public event EventHandler<DataFetchErrorEventArgs> DataFetchError;
+        public event EventHandler<EventArgs> IsBusyChanged;
 
-        private int count;
+        private int _count;
+        private bool _isBusy;
+        private int _outstandingTasks;
 
         public virtual int Count
         {
@@ -19,13 +22,63 @@ namespace Raven.Studio.Infrastructure
             {
                 lock (lockObject)
                 {
-                    return count;
+                    return _count;
+                }
+            }
+        }
+
+        public bool IsBusy
+        {
+            get
+            {
+                lock(lockObject)
+                {
+                    return _isBusy;
+                }
+            }
+            private set
+            {
+                bool hasChanged;
+
+                lock (lockObject)
+                {
+                    hasChanged = (_isBusy != value);
+                    _isBusy = value;
+                }
+
+                if (hasChanged)
+                {
+                    OnIsBusyChanged(EventArgs.Empty);
                 }
             }
         }
 
         protected abstract Task<int> GetCount();
-        public abstract Task<IList<T>> GetPageAsync(int start, int pageSize, IList<SortDescription> sortDescriptions);
+
+        public Task<IList<T>> GetPageAsync(int start, int pageSize, IList<SortDescription> sortDescriptions)
+        {
+            IncrementOutstandingTasks();
+
+            return GetPageAsyncOverride(start, pageSize, sortDescriptions)
+                .ContinueWith(t =>
+                                  {
+                                      DecrementOutstandingTasks();
+                                      return t.Result;
+                                  }, TaskContinuationOptions.ExecuteSynchronously);
+        }
+
+        protected abstract Task<IList<T>> GetPageAsyncOverride(int start, int pageSize,
+                                                               IList<SortDescription> sortDescriptions);
+
+        protected void IncrementOutstandingTasks()
+        {
+            IsBusy = Interlocked.Increment(ref _outstandingTasks) > 0;
+        }
+
+        protected void DecrementOutstandingTasks()
+        {
+            IsBusy = Interlocked.Decrement(ref _outstandingTasks) == 0;
+        }
 
         public virtual void Refresh(RefreshMode mode)
         {
@@ -39,9 +92,13 @@ namespace Raven.Studio.Infrastructure
 
         private void BeginGetCount()
         {
+            IncrementOutstandingTasks();
+
             GetCount()
                 .ContinueWith(t =>
                 {
+                    DecrementOutstandingTasks();
+
                     if (!t.IsFaulted)
                     {
                         SetCount(t.Result, forceCollectionChangeNotification: true);
@@ -49,7 +106,6 @@ namespace Raven.Studio.Infrastructure
                     else
                     {
                         SetCount(0, forceCollectionChangeNotification: true);
-                        OnDataFetchError(new DataFetchErrorEventArgs(t.Exception));
                     }
                 },
                 TaskContinuationOptions.ExecuteSynchronously);
@@ -61,9 +117,9 @@ namespace Raven.Studio.Infrastructure
             if (handler != null) handler(this, e);
         }
 
-        protected void OnDataFetchError(DataFetchErrorEventArgs e)
+        protected void OnIsBusyChanged(EventArgs e)
         {
-            var handler = DataFetchError;
+            var handler = IsBusyChanged;
             if (handler != null) handler(this, e);
         }
 
@@ -73,8 +129,8 @@ namespace Raven.Studio.Infrastructure
 
             lock (lockObject)
             {
-                fileCountChanged = newCount != count;
-                count = newCount;
+                fileCountChanged = newCount != _count;
+                _count = newCount;
             }
 
             if (fileCountChanged || forceCollectionChangeNotification)

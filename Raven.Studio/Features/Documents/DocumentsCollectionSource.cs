@@ -26,14 +26,15 @@ namespace Raven.Studio.Features.Documents
             }
         }
 
-        public override Task<IList<ViewableDocument>> GetPageAsync(int start, int pageSize, IList<SortDescription> sortDescriptions)
+        protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)
         {
             return ApplicationModel.DatabaseCommands.GetDocumentsAsync(start, pageSize)
                 .ContinueWith(t =>
                 {
                     var docs = (IList<ViewableDocument>)t.Result.Select(x => new ViewableDocument(x)).ToArray();
                     return docs;
-                });
+                })
+                .Catch();
         }
     }
 }
