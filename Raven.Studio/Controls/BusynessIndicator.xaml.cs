@@ -32,6 +32,18 @@ namespace Raven.Studio.Controls
 
         private void IsBusyChanged(object sender, EventArgs e)
         {
+            if (Dispatcher.CheckAccess())
+            {
+                UpdateState();
+            }
+            else
+            {
+                Dispatcher.BeginInvoke(UpdateState);
+            }
+        }
+
+        private void UpdateState()
+        {
             if (BusyBody != null && BusyBody.IsBusy)
             {
                 VisualStateManager.GoToState(this, "Busy", true);
