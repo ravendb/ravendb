@@ -77,7 +77,7 @@ namespace Raven.Tests.Faceted
 						x => x.Price > 49.99 && x.Price < 99.99, 
 						x => x.Price > 99.99
 					}
-				},                
+				}
 			};
 
 			Assert.Equal(true, AreFacetsEqual(oldFacets[0], newFacets[0]));
@@ -88,7 +88,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void NewAPIThrowsExceptionsForInvalidExpressions()
 		{
-			//Create an invalid lamba and check it throws an exception!!			
+			//Create an invalid lamba and check it throws an exception!!
 			Assert.Throws<InvalidOperationException>(() => 
 				TriggerConversion(new Facet<Test>
 				{
@@ -112,7 +112,35 @@ namespace Raven.Tests.Faceted
 					//Name = x => x.Cost,
 					Ranges = { x => x.Cost > 200m }
 				}));
-		}        
+
+			Assert.Throws<InvalidOperationException>(() =>
+				TriggerConversion(new Facet<Test>
+				{
+					Name = x => x.Cost,
+					//Ranges must be on the same field!!!
+					Ranges = { x => x.Price > 9.99 && x.Cost < 49.99m }
+				}));
+		}
+
+		[Fact]
+		public void AdvancedAPIAdvancedEdgeCases()
+		{
+			var testDateTime = new DateTime(2001, 12, 5);
+			var edgeCaseFacet = new Facet<Test>
+			{
+				Name = x => x.Date,
+				Ranges =
+				{
+					x => x.Date < DateTime.Now,
+					x => x.Date > new DateTime(2010, 12, 5) && x.Date < testDateTime
+				}
+			};
+			
+			var facet = TriggerConversion(edgeCaseFacet);
+			Assert.Equal(2, facet.Ranges.Count);
+			Assert.False(String.IsNullOrWhiteSpace(facet.Ranges[0]));
+			Assert.Equal("Date_Range:[20101205000000000 TO 20011205000000000]", facet.Ranges[1]);
+		}
 
 		private bool AreFacetsEqual(Facet left, Facet right)
 		{

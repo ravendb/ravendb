@@ -37,8 +37,7 @@ namespace Raven.Abstractions.Data
 				throw new InvalidOperationException();
 
 			var ranges = other.Ranges.Select(x => Facet<T>.Parse(x)).ToList();
-
-			var type = typeof(T);
+			
 			var shouldUseRanges = other.Ranges != null &&
 								other.Ranges.Count > 0 &&
 								other.Name.Body.Type != typeof(string);
@@ -134,26 +133,9 @@ namespace Raven.Abstractions.Data
 					var property = right.Member as PropertyInfo;
 					if (property != null && right.Member != null)
 					{
-						//This chokes on annonomyous types!?
-						try
-						{
-							//var value = property.GetValue(right.Member, null);
-							var value = property.GetValue(property, null);
-							return value;
-						}
-						catch (TargetException tEx)
-						{
-							//var properties = TypeDescriptor.GetProperties(right.Member.ReflectedType);
-							//foreach (PropertyDescriptor prop in properties)
-							//{
-							//    var testProp = prop.GetValue(right.Member);
-							//}
-
-							var test = tEx.Message;
-							var newProp = (right.Expression as MemberExpression).Member.ReflectedType.GetProperty("AnonDate");
-							var value = newProp.GetValue(right.Member, null);
-							return value;
-						}
+						//This chokes on annonomyous types!?													
+						var value = property.GetValue(property, null);
+						return value;						
 					}
 				}
 			}
