@@ -4,6 +4,8 @@ using System.Linq;
 using System;
 using System.Globalization;
 using System.Reflection;
+using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 
 namespace Raven.Abstractions.Data
 {
@@ -31,21 +33,42 @@ namespace Raven.Abstractions.Data
 
 		public static implicit operator Facet(Facet<T> other)
 		{
+			if (other.Name == null)
+				throw new InvalidOperationException();
+
 			var ranges = other.Ranges.Select(x => Facet<T>.Parse(x)).ToList();
+
+			var type = typeof(T);
+			var shouldUseRanges = other.Ranges != null &&
+								other.Ranges.Count > 0 &&
+								other.Name.Body.Type != typeof(string);
+			var mode = shouldUseRanges ? FacetMode.Ranges: FacetMode.Default;
+
+			var name = String.Empty;
+			if (other.Name.Body is MemberExpression)
+			{
+				name = (other.Name.Body as MemberExpression).Member.Name;
+			}
+			else if (other.Name.Body is UnaryExpression)
+			{
+				var operand = (other.Name.Body as UnaryExpression).Operand;
+				if (operand is MemberExpression)
+				{
+					name = (operand as MemberExpression).Member.Name;
+				}
+			}
 
 			return new Facet
 			{
-				Name = other.ToString(),
-				Mode = (other.Ranges == null || other.Ranges.Count == 0) ?
-								FacetMode.Default : FacetMode.Ranges,
+				Name = mode == FacetMode.Default ? name : name + "_Range",
+				Mode = mode,
 				Ranges = ranges
 			};
 		}
 
 		public static string Parse(Expression<Func<T, bool>> expr)
-		{           
+		{
 			Expression body = expr.Body;
-			Console.WriteLine("\n{0}: {1}", body.GetType().Name, body.ToString());
 
 			var param = (ParameterExpression)expr.Parameters[0];
 			var operation = (BinaryExpression)expr.Body;
@@ -58,9 +81,9 @@ namespace Raven.Abstractions.Data
 				return expression;
 			}
 
-			if (body is BinaryExpression)            
+			if (body is BinaryExpression)
 			{
-				var method = body as BinaryExpression;                
+				var method = body as BinaryExpression;
 				var left = method.Left as BinaryExpression;
 				var right = method.Right as BinaryExpression;
 				if ((left == null && right == null) || method.NodeType != ExpressionType.AndAlso)
@@ -72,8 +95,8 @@ namespace Raven.Abstractions.Data
 									(left.NodeType == ExpressionType.GreaterThan && right.NodeType == ExpressionType.LessThan);
 				var validMemberNames = leftMember != null && rightMember != null && 
 										leftMember.Member.Name == rightMember.Member.Name;
-				if (validOperators && validMemberNames)                    
-				{                    
+				if (validOperators && validMemberNames)
+				{
 					return GetStringRepresentation(leftMember.Member.Name, right.NodeType, 
 													ParseSubExpression(left), ParseSubExpression(right));
 				}
@@ -171,30 +194,27 @@ namespace Raven.Abstractions.Data
 
 		private static string GetStringValue<U>(U value)
 		{
-			//Once this code is in RavenDB, the calls to GetValue(..) below will be replaced with calls to NumberUtil.NumberToString(..)
-			//see https://github.com/ayende/ravendb/blob/master/Raven.Abstractions/Indexing/NumberUtil.cs#L14  
-
 			var valueAsStr = String.Empty;
 			switch (value.GetType().FullName)
 			{
 				//The nullable stuff here it a bit wierd, but it helps with trying to cast Value types
 				case "System.DateTime":
-					valueAsStr = GetValue(value as DateTime?);
+					valueAsStr = DateTools.DateToString((value as DateTime?).Value, DateTools.Resolution.MILLISECOND);
 					break;
 				case "System.Int32":
-					valueAsStr = GetValue(value as Int32?);
+					valueAsStr = NumberUtil.NumberToString((value as Int32?).Value);
 					break;
 				case "System.Int64":
-					valueAsStr = GetValue(value as Int64?);
+					valueAsStr = NumberUtil.NumberToString((value as Int64?).Value);
 					break;
 				case "System.Single":
-					valueAsStr = GetValue(value as Single?);
+					valueAsStr = NumberUtil.NumberToString((value as Single?).Value);
 					break;
 				case "System.Double":
-					valueAsStr = GetValue(value as Double?);
+					valueAsStr = NumberUtil.NumberToString((value as Double?).Value);
 					break;
 				case "System.Decimal":
-					valueAsStr = GetValue(value as Decimal?);
+					valueAsStr = NumberUtil.NumberToString((double)((value as Decimal?).Value));
 					break;
 				case "System.String":
 					valueAsStr = value.ToString();
@@ -203,36 +223,6 @@ namespace Raven.Abstractions.Data
 					throw new InvalidOperationException("Unable to parse the given type " + value.GetType().Name + ", into a facet range!!! ");
 			}
 			return valueAsStr;
-		}        
-
-		private static string GetValue(DateTime? value)
-		{
-			return value.Value.ToString("yyyyMMddHHmmss");
-		}
-
-		private static string GetValue(Int32? value) //int
-		{
-			return string.Format("0x{0:X8}", value.Value);
-		}
-
-		private static string GetValue(Int64? value) //long
-		{
-			return string.Format("0x{0:X16}", value.Value);
-		}
-
-		private static string GetValue(Single? value) //float
-		{
-			return "Fx" + value.Value.ToString("G", CultureInfo.InvariantCulture);
-		}
-
-		private static string GetValue(Double? value) //double
-		{
-			return "Dx" + value.Value.ToString("G", CultureInfo.InvariantCulture);
-		}
-
-		private static string GetValue(Decimal? value) //decimal
-		{
-			return "Dx" + value.Value.ToString("G", CultureInfo.InvariantCulture);
 		}
 	}
 }
