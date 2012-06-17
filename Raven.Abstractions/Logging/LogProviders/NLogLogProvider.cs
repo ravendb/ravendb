@@ -37,9 +37,13 @@ namespace Raven.Abstractions.Logging.LogProviders
 
 		private static Type GetLogManagerType()
 		{
+#if !SL_4
 			Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
 			Assembly nlogAssembly = assemblies.FirstOrDefault(assembly => assembly.FullName.StartsWith("NLog,"));
 			return nlogAssembly != null ? nlogAssembly.GetType("NLog.LogManager") : Type.GetType("NLog.LogManager, nlog");
+#else
+			return Type.GetType("NLog.LogManager, nlog");
+#endif
 		}
 
 		private static Func<string, object> GetGetLoggerMethodCall()
