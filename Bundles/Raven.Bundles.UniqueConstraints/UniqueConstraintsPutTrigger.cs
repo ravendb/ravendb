@@ -1,4 +1,6 @@
-﻿namespace Raven.Bundles.UniqueConstraints
+﻿using System;
+
+namespace Raven.Bundles.UniqueConstraints
 {
 	using System.Linq;
 	using System.Text;
@@ -6,6 +8,7 @@
 	using Abstractions.Data;
 	using Database.Plugins;
 	using Json.Linq;
+	using Raven.Database.Extensions;
 
 	public class UniqueConstraintsPutTrigger : AbstractPutTrigger
 	{
@@ -27,8 +30,10 @@
 			foreach (var property in properties)
 			{
 				var propName = ((RavenJValue)property).Value.ToString();
+				string documentName = "UniqueConstraints/" + entityName + propName + "/" +
+									  Uri.EscapeDataString(document.Value<string>(propName));
 				Database.Put(
-					"UniqueConstraints/" + entityName + propName + "/" + document.Value<string>(propName),
+					documentName,
 					null,
 					RavenJObject.FromObject(new { RelatedId = key }),
 					constraintMetaObject,
@@ -61,7 +66,8 @@
 			foreach (var property in properties)
 			{
 				var propName = ((RavenJValue)property).Value.ToString();
-				var checkKey = "UniqueConstraints/" + entityName + propName + "/" + document.Value<string>(propName);
+				var checkKey = "UniqueConstraints/" + entityName + propName + "/" +
+							   Uri.EscapeDataString(document.Value<string>(propName));
 				var checkDoc = Database.Get(checkKey, transactionInformation);
 				if (checkDoc == null) 
 					continue;
@@ -113,7 +119,9 @@
 				// Handle Updates in the Constraint
 				if (!oldJson.Value<string>(propName).Equals(document.Value<string>(propName)))
 				{
-					Database.Delete("UniqueConstraints/" + entityName + propName + "/" + oldJson.Value<string>(propName), null, transactionInformation);
+					Database.Delete(
+						"UniqueConstraints/" + entityName + propName + "/" + Uri.EscapeDataString(oldJson.Value<string>(propName)),
+						null, transactionInformation);
 				}
 			}
 		}
