@@ -82,7 +82,7 @@ namespace Raven.Storage.Esent.StorageActions
 				var timeout = Api.RetrieveColumnAsDateTime(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
 				if (SystemTime.UtcNow > timeout)// the timeout for the transaction has passed
 				{
-					RollbackTransaction(guid);
+					RollbackTransaction(new Guid(docTxId));
 					return;
 				}
 
