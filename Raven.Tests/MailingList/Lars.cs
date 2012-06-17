@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="Joel.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="Lars.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class Joel : RavenTest
+	public class Lars : RavenTest
 	{
 		public class Item
 		{
@@ -21,28 +21,38 @@ namespace Raven.Tests.MailingList
 		{
 			public class Result
 			{
-				public object Query { get; set; }
+				public int Age { get; set; }
 			}
 
 			public Index()
 			{
 				Map = items =>
 					  from item in items
-					  select new Result
+					  select new
 					  {
-						  Query = new object[] { item.Age, item.Name }
+						  item.Age
 					  };
+
+				Reduce = results =>
+						 from r in results
+						 group r by 1
+							 into g
+							 let items = g.ToArray()
+							 select new { Age = items.Sum(x => x.Age) };
 			}
 		}
 
 		[Fact]
-		public void CanCreateIndexWithExplicitType()
+		public void EnumerableMethodsShouldBeExtenalStaticCalls()
 		{
 			using (var s = NewDocumentStore())
 			{
 				new Index().Execute(s);
 				var indexDefinition = s.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition("Index");
-				Assert.Equal("docs.Items\r\n\t.Select(item => new () {Query = new System.Object []{((System.Object)(item.Age)), item.Name}})", indexDefinition.Map);
+				Assert.Equal(@"results
+	.GroupBy(r => 1)
+	.Select(g => new {g = g, items = Enumerable.ToArray(g)})
+	.Select(__h__TransparentIdentifier0 => new {Age = Enumerable.Sum(__h__TransparentIdentifier0.items, x => ((System.Int32)(x.Age)))})", indexDefinition.Reduce);
 			}
 		}
 	}
