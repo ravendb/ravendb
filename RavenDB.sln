@@ -67,7 +67,9 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Raven.Tests.FSharp", "Raven
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.MvcIntegration", "Raven.Client.MvcIntegration\Raven.Client.MvcIntegration.csproj", "{AA580048-17C7-4B1E-AA3A-321157CF3511}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Silverlight", "..\ravendb\Raven.Tests.Silverlight\Raven.Tests.Silverlight.csproj", "{129E5462-F398-499C-B69B-FC07666C6A31}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Silverlight", "Raven.Tests.Silverlight\Raven.Tests.Silverlight.csproj", "{129E5462-F398-499C-B69B-FC07666C6A31}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Silverlight.UnitTestProvider", "Raven.Tests.Silverlight.UnitTestProvider\Raven.Tests.Silverlight.UnitTestProvider.csproj", "{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -279,6 +281,16 @@ Global
 		{129E5462-F398-499C-B69B-FC07666C6A31}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{129E5462-F398-499C-B69B-FC07666C6A31}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{129E5462-F398-499C-B69B-FC07666C6A31}.Release|x86.ActiveCfg = Release|Any CPU
+		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

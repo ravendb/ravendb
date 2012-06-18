@@ -435,7 +435,7 @@ Enjoy...
 			else
 			{
 				ManagedInstallerClass.InstallHelper(new[] { Assembly.GetExecutingAssembly().Location });
-				SetRecoveryOptions("RavenDB");
+				SetRecoveryOptions(ProjectInstaller.SERVICE_NAME);
 				var startController = new ServiceController(ProjectInstaller.SERVICE_NAME);
 				startController.Start();
 			}

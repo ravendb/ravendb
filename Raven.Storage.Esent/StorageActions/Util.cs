@@ -79,6 +79,13 @@ namespace Raven.Storage.Esent.StorageActions
 			byte[] docTxId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
 			if (new Guid(docTxId) != txId)
 			{
+				var timeout = Api.RetrieveColumnAsDateTime(session, Transactions, tableColumnsCache.TransactionsColumns["timeout"]);
+				if (SystemTime.UtcNow > timeout)// the timeout for the transaction has passed
+				{
+					RollbackTransaction(new Guid(docTxId));
+					return;
+				}
+
 				throw new ConcurrencyException("A document with key: '" + key + "' is currently created in another transaction");
 			}
 		}

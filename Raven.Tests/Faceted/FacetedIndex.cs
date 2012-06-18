@@ -188,8 +188,6 @@ namespace Raven.Tests.Faceted
 						.ToFacets("facets/CameraFacets");
 					facetQueryTimer.Stop();
 
-					PrintFacetResults(facetResults);
-
 					var filteredData = _data.Where(exp.Compile()).ToList();
 					CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
 				}
@@ -296,20 +294,6 @@ namespace Raven.Tests.Faceted
 				Assert.NotNull(facets);
 				Assert.Equal(expectedCount, facets.Count);
 			}
-		}
-
-		private static void Log(string text, params object[] args)
-		{
-			Trace.WriteLine(String.Format(text, args));
-			Console.WriteLine(text, args);
-		}
-
-		private static double TimeIt(Action action)
-		{
-			var timer = Stopwatch.StartNew();
-			action();
-			timer.Stop();
-			return timer.ElapsedMilliseconds;
 		}
 	}
 }
