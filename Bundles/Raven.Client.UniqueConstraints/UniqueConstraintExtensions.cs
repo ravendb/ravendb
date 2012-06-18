@@ -21,8 +21,8 @@
 			var body = (MemberExpression)keySelector.Body;
 			var propertyName = body.Member.Name;
 
-			var constraintDoc = session.Include("Id").Load<ConstraintDocument>("UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" +
-				Uri.EscapeDataString(value));
+			string uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + Uri.EscapeDataString(value.ToString());
+			var constraintDoc = session.Include("Id").Load<ConstraintDocument>(uniqueId);
 			if (constraintDoc == null)
 				return default(T);
 
