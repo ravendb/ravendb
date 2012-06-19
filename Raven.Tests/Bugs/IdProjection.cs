@@ -6,7 +6,7 @@ namespace Raven.Tests.Bugs
 {
 	public class IdProjection : RavenTest
 	{
-		private const string SpecialId = "BlogPost/This-Is-A-Special-Text ThatContainASpace AndA'Char";
+		private const string SpecialId = "BlogPost/CaseSensitive";
 		private readonly IDocumentStore store;
 
 		public IdProjection()
@@ -37,7 +37,6 @@ namespace Raven.Tests.Bugs
 					.ToArray();
 
 				Assert.Equal(SpecialId, posts.First().Id);
-				
 			}
 		}
 
