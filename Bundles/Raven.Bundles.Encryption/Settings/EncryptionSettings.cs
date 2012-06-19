@@ -9,13 +9,15 @@ using System.Threading.Tasks;
 
 namespace Raven.Bundles.Encryption.Settings
 {
-	[Serializable]
-	internal class EncryptionSettings : ISerializable
+	internal class EncryptionSettings
 	{
 		private byte[] encryptionKey;
 		private Type algorithmType;
 		private Func<SymmetricAlgorithm> algorithmGenerator;
 		private readonly bool encryptIndexes;
+
+		public bool CurrentlySettingKeyVerificationDocument;
+		public readonly Codec Codec;
 
 		public EncryptionSettings()
 			: this(GenerateRandomEncryptionKey())
@@ -36,6 +38,8 @@ namespace Raven.Bundles.Encryption.Settings
 		{
 			this.EncryptionKey = encryptionKey;
 			this.encryptIndexes = encryptIndexes;
+
+			this.Codec = new Codec(this);
 
 			typeof(EncryptionSettings)
 				.GetMethod("SetSymmetricAlgorithmType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
@@ -94,16 +98,6 @@ namespace Raven.Bundles.Encryption.Settings
 			byte[] result = new byte[length];
 			RNGCryptoServiceProvider.Create().GetBytes(result);
 			return result;
-		}
-
-		protected EncryptionSettings(SerializationInfo info, StreamingContext context)
-			: this((byte[])info.GetValue("encryptionKey", typeof(byte[])),
-				(Type)info.GetValue("algorithmType", typeof(Type))) { }
-
-		void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
-		{
-			info.AddValue("encryptionKey", encryptionKey);
-			info.AddValue("algorithmType", algorithmType);
 		}
 	}
 }

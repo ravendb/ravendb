@@ -6,11 +6,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
+using Raven.Bundles.Encryption.Settings;
 
 namespace Raven.Bundles.Encryption.Streams
 {
 	internal class BlockReaderWriter : IDisposable
 	{
+		private readonly EncryptionSettings settings;
+
 		private readonly Stream stream;
 		private readonly string key;
 		private readonly object locker = new object();
@@ -19,8 +22,11 @@ namespace Raven.Bundles.Encryption.Streams
 		private readonly EncryptedFile.Header header;
 		private EncryptedFile.Footer footer;
 
-		public BlockReaderWriter(string key, Stream stream, int defaultBlockSize)
+		public BlockReaderWriter(EncryptionSettings encryptionSettings, string key, Stream stream, int defaultBlockSize)
 		{
+			if (encryptionSettings == null)
+				throw new ArgumentNullException("encryptionSettings");
+
 			if (key == null)
 				throw new ArgumentNullException("key");
 
@@ -34,6 +40,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 			isReadonly = !stream.CanWrite;
 
+			this.settings = encryptionSettings;
 			this.key = key;
 			this.stream = stream;
 
@@ -73,7 +80,7 @@ namespace Raven.Bundles.Encryption.Streams
 				{
 					// Write header
 
-					var sizeTest = Codec.EncodeBlock("Dummy key", new byte[defaultBlockSize]);
+					var sizeTest = settings.Codec.EncodeBlock("Dummy key", new byte[defaultBlockSize]);
 
 					var header = new EncryptedFile.Header
 					{
@@ -156,7 +163,7 @@ namespace Raven.Bundles.Encryption.Streams
 				var iv = stream.ReadEntireBlock(header.IVSize);
 				var encrypted = stream.ReadEntireBlock(header.EncryptedBlockSize);
 
-				var decrypted = Codec.DecodeBlock(key, new Codec.EncodedBlock(iv, encrypted));
+				var decrypted = settings.Codec.DecodeBlock(key, new Codec.EncodedBlock(iv, encrypted));
 
 				Debug.Assert(decrypted.Length == header.DecryptedBlockSize);
 
@@ -195,7 +202,7 @@ namespace Raven.Bundles.Encryption.Streams
 				}
 
 				stream.Position = position;
-				var encrypted = Codec.EncodeBlock(key, block.Data);
+				var encrypted = settings.Codec.EncodeBlock(key, block.Data);
 
 				Debug.Assert(encrypted.Data.Length == header.EncryptedBlockSize);
 

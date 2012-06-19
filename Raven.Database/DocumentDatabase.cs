@@ -78,6 +78,9 @@ namespace Raven.Database
 		[ImportMany]
 		public OrderedPartCollection<AbstractIndexCodec> IndexCodecs { get; set; }
 
+		[ImportMany]
+		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
+
 		private List<IDisposable> toDispose = new List<IDisposable>();
 
 		/// <summary>
@@ -162,7 +165,7 @@ namespace Raven.Database
 			TransactionalStorage.Batch(actions => currentEtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
 
 			// Index codecs must be initialized before we try to read an index
-			InitializeIndexCodecs();
+			InitializeCodecs();
 
 			IndexDefinitionStorage = new IndexDefinitionStorage(
 				configuration,
@@ -195,9 +198,13 @@ namespace Raven.Database
 			Dispose();
 		}
 
-		private void InitializeIndexCodecs()
+		private void InitializeCodecs()
 		{
 			IndexCodecs
+				.Init(disableAllTriggers)
+				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
+			DocumentCodecs
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 		}

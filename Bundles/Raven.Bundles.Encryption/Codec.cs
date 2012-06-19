@@ -13,30 +13,31 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Encryption
 {
-	internal static class Codec
+	internal class Codec
 	{
-		private static readonly ThreadLocal<SHA1> LocalSHA1 = new ThreadLocal<SHA1>(() => SHA1.Create());
 		private static readonly ThreadLocal<RNGCryptoServiceProvider> LocalRNG = new ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
-		private static Tuple<byte[], byte[]> encryptionStartingKeyAndIV = null;
-		private static int? encryptionKeySize = null;
-		private static int? encryptionIVSize = null;
 
-		public static EncryptionSettings EncryptionSettings
+		public readonly EncryptionSettings EncryptionSettings;
+		private Tuple<byte[], byte[]> encryptionStartingKeyAndIV = null;
+		private int? encryptionKeySize = null;
+		private int? encryptionIVSize = null;
+		
+		public Codec(EncryptionSettings settings)
 		{
-			get { return EncryptionSettingsManager.EncryptionSettings; }
+			this.EncryptionSettings = settings;
 		}
 
-		public static Stream Encode(string key, Stream dataStream)
+		public Stream Encode(string key, Stream dataStream)
 		{
 			return new CryptoStream(dataStream, GetCryptoProvider(null).CreateEncryptor(), CryptoStreamMode.Write).WriteSalt(key);
 		}
 
-		public static Stream Decode(string key, Stream dataStream)
+		public Stream Decode(string key, Stream dataStream)
 		{
 			return new CryptoStream(dataStream, GetCryptoProvider(null).CreateDecryptor(), CryptoStreamMode.Read).ReadSalt(key);
 		}
 
-		public static EncodedBlock EncodeBlock(string key, byte[] data)
+		public EncodedBlock EncodeBlock(string key, byte[] data)
 		{
 			byte[] iv;
 			var transform = GetCryptoProviderWithRandomIV(out iv).CreateEncryptor();
@@ -44,14 +45,14 @@ namespace Raven.Bundles.Encryption
 			return new EncodedBlock(iv, transform.TransformEntireBlock(data));
 		}
 
-		public static byte[] DecodeBlock(string key, EncodedBlock block)
+		public byte[] DecodeBlock(string key, EncodedBlock block)
 		{
 			var transform = GetCryptoProvider(block.IV).CreateDecryptor();
 
 			return transform.TransformEntireBlock(block.Data);
 		}
 
-		private static int GetIVLength()
+		private int GetIVLength()
 		{
 			if (encryptionIVSize == null)
 			{
@@ -62,20 +63,20 @@ namespace Raven.Bundles.Encryption
 			return encryptionIVSize.Value;
 		}
 
-		private static SymmetricAlgorithm GetCryptoProvider(byte[] iv)
+		private SymmetricAlgorithm GetCryptoProvider(byte[] iv)
 		{
 			var result = EncryptionSettings.GenerateAlgorithm();
 			encryptionStartingKeyAndIV = encryptionStartingKeyAndIV ?? GetStartingKeyAndIVForEncryption(result);
 
 			if (iv != null && iv.Length != encryptionIVSize)
-				throw new ArgumentException("GetCryptoProvider: IV has wrong length. Given length: " + iv.Length + ", expectd length: " + encryptionIVSize);
+				throw new ArgumentException("GetCryptoProvider: IV has wrong length. Given length: " + iv.Length + ", expected length: " + encryptionIVSize);
 
 			result.Key = encryptionStartingKeyAndIV.Item1;
 			result.IV = iv ?? encryptionStartingKeyAndIV.Item2;
 			return result;
 		}
 
-		private static SymmetricAlgorithm GetCryptoProviderWithRandomIV(out byte[] iv)
+		private SymmetricAlgorithm GetCryptoProviderWithRandomIV(out byte[] iv)
 		{
 			iv = new byte[GetIVLength()];
 			LocalRNG.Value.GetBytes(iv);
@@ -83,7 +84,7 @@ namespace Raven.Bundles.Encryption
 			return GetCryptoProvider(iv);
 		}
 
-		private static Tuple<byte[], byte[]> GetStartingKeyAndIVForEncryption(SymmetricAlgorithm algorithm)
+		private Tuple<byte[], byte[]> GetStartingKeyAndIVForEncryption(SymmetricAlgorithm algorithm)
 		{
 			int bits;
 			if (algorithm.ValidKeySize(Constants.DefaultKeySizeToUseInActualEncryptionInBits))
@@ -100,17 +101,32 @@ namespace Raven.Bundles.Encryption
 
 		private static byte[] GetSaltFromEncryptionKey(byte[] key)
 		{
-			return LocalSHA1.Value.ComputeHash(key);
+			return SHA1.Create().ComputeHash(key);
 		}
 
-		private static Stream WriteSalt(this Stream stream, string key)
+		public struct EncodedBlock
+		{
+			public EncodedBlock(byte[] iv, byte[] data)
+			{
+				this.IV = iv;
+				this.Data = data;
+			}
+
+			public readonly byte[] IV;
+			public readonly byte[] Data;
+		}
+	}
+
+	internal static class CodecSaltExtensions
+	{
+		public static Stream WriteSalt(this Stream stream, string key)
 		{
 			byte[] keyBytes = Encoding.UTF8.GetBytes(key);
 			stream.Write(keyBytes, 0, keyBytes.Length);
 			return stream;
 		}
 
-		private static Stream ReadSalt(this Stream stream, string key)
+		public static Stream ReadSalt(this Stream stream, string key)
 		{
 			try
 			{
@@ -128,18 +144,6 @@ namespace Raven.Bundles.Encryption
 			{
 				throw new IOException("Encrypted stream is not correctly salted with the document key.", ex);
 			}
-		}
-
-		public struct EncodedBlock
-		{
-			public EncodedBlock(byte[] iv, byte[] data)
-			{
-				this.IV = iv;
-				this.Data = data;
-			}
-
-			public readonly byte[] IV;
-			public readonly byte[] Data;
 		}
 	}
 }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Bundles.Encryption.Settings;
 
 namespace Raven.Bundles.Encryption.Streams
 {
@@ -28,7 +29,6 @@ namespace Raven.Bundles.Encryption.Streams
 	/// </summary>
 	internal class SeekableCryptoStream : Stream
 	{
-		private const int DefaultBlockSize = 1024;
 		private int CurrentBlockSize = 1024;
 
 		private readonly BlockReaderWriter underlyingStream;
@@ -39,7 +39,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 		private readonly bool isReadonly;
 
-		public SeekableCryptoStream(string key, Stream stream)
+		public SeekableCryptoStream(EncryptionSettings encryptionSettings, string key, Stream stream)
 		{
 			if (!stream.CanRead)
 				throw new ArgumentException("The Underlying stream for a SeekableCryptoStream must always be either read-only or read-write. Write only streams are not supported.");
@@ -48,7 +48,7 @@ namespace Raven.Bundles.Encryption.Streams
 
 			isReadonly = !stream.CanWrite;
 
-			this.underlyingStream = new BlockReaderWriter(key, stream, DefaultBlockSize);
+			this.underlyingStream = new BlockReaderWriter(encryptionSettings, key, stream, CurrentBlockSize);
 		}
 
 		public override bool CanRead
@@ -239,7 +239,8 @@ namespace Raven.Bundles.Encryption.Streams
 
 		public override long Length
 		{
-			get { 
+			get
+			{
 				var result = underlyingStream.Footer.TotalLength;
 
 				// Even if we haven't flushed a block to the BlockReaderWriter, we need to count its size as written.

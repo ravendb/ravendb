@@ -16,29 +16,31 @@ namespace Raven.Bundles.Encryption.Plugin
 {
 	public class IndexEncryption : AbstractIndexCodec
 	{
+		EncryptionSettings settings;
+
 		public override void Initialize(DocumentDatabase database)
 		{
-			EncryptionSettingsManager.Initialize(database);
+			settings = EncryptionSettingsManager.GetEncryptionSettingsForDatabase(database);
 		}
 
 		public override Stream Encode(string key, Stream dataStream)
 		{
 			// Can't simply use Codec.Encode(key, dataStream) because the resulting stream needs to be seekable
 
-			if (!Codec.EncryptionSettings.EncryptIndexes)
+			if (!settings.EncryptIndexes)
 				return dataStream;
 
-			return new SeekableCryptoStream(key, dataStream);
+			return new SeekableCryptoStream(settings, key, dataStream);
 		}
 
 		public override Stream Decode(string key, Stream dataStream)
 		{
 			// Can't simply use Codec.Decode(key, dataStream) because the resulting stream needs to be seekable
 
-			if (!Codec.EncryptionSettings.EncryptIndexes)
+			if (!settings.EncryptIndexes)
 				return dataStream;
 
-			return new SeekableCryptoStream(key, dataStream);
+			return new SeekableCryptoStream(settings, key, dataStream);
 		}
 	}
 }

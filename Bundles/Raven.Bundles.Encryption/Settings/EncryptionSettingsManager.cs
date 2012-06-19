@@ -13,23 +13,22 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Encryption.Settings
 {
-	public static class EncryptionSettingsManager
+	internal static class EncryptionSettingsManager
 	{
-		internal static EncryptionSettings EncryptionSettings { get; private set; }
-		internal static bool CurrentlySettingKeyVerificationDocument { get; private set; }
-
-		public static void Initialize(DocumentDatabase database)
+		public static EncryptionSettings GetEncryptionSettingsForDatabase(DocumentDatabase database)
 		{
-			if (EncryptionSettings != null)
-				return;
+			var result = (EncryptionSettings)database.ExternalState.GetOrAdd("EncryptionSettings", _ =>
+			{
+				var type = GetTypeFromName(database.Configuration.Settings[Constants.AlgorithmTypeSetting]);
+				var key = GetKeyFromBase64(database.Configuration.Settings[Constants.EncryptionKeySetting]);
+				var encryptIndexes = GetEncryptIndexesFromString(database.Configuration.Settings[Constants.EncryptIndexes], true);
 
-			var type = GetTypeFromName(database.Configuration.Settings[Constants.AlgorithmTypeSetting]);
-			var key = GetKeyFromBase64(database.Configuration.Settings[Constants.EncryptionKeySetting]);
-			var encryptIndexes = GetEncryptIndexesFromString(database.Configuration.Settings[Constants.EncryptIndexes], true);
+				return new EncryptionSettings(key, type, encryptIndexes);
+			});
 
-			EncryptionSettings = new EncryptionSettings(key, type, encryptIndexes);
+			VerifyEncryptionKey(database, result);
 
-			VerifyEncryptionKey(database);
+			return result;
 		}
 
 		/// <summary>
@@ -85,7 +84,7 @@ namespace Raven.Bundles.Encryption.Settings
 		/// <summary>
 		/// Uses an encrypted document to verify that the encryption key is correct and decodes it to the right value.
 		/// </summary>
-		private static void VerifyEncryptionKey(DocumentDatabase database)
+		private static void VerifyEncryptionKey(DocumentDatabase database, EncryptionSettings settings)
 		{
 			JsonDocument doc;
 			try
@@ -110,7 +109,7 @@ namespace Raven.Bundles.Encryption.Settings
 				if (EncryptedDocumentsExist(database))
 					throw new InvalidOperationException("The database already has existing documents, you cannot start using encryption now.");
 
-				using (CurrentlySettingKeyVerificationDocumentScope())
+				using (CurrentlySettingKeyVerificationDocumentScope(settings))
 					database.Put(Constants.InDatabaseKeyVerificationDocumentName, null, Constants.InDatabaseKeyVerificationDocumentContents, new RavenJObject(), null);
 			}
 		}
@@ -156,10 +155,10 @@ namespace Raven.Bundles.Encryption.Settings
 			}
 		}
 
-		private static IDisposable CurrentlySettingKeyVerificationDocumentScope()
+		private static IDisposable CurrentlySettingKeyVerificationDocumentScope(EncryptionSettings settings)
 		{
-			CurrentlySettingKeyVerificationDocument = true;
-			return new DisposableAction(() => CurrentlySettingKeyVerificationDocument = false);
+			settings.CurrentlySettingKeyVerificationDocument = true;
+			return new DisposableAction(() => settings.CurrentlySettingKeyVerificationDocument = false);
 		}
 	}
 }

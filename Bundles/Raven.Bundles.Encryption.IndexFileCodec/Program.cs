@@ -69,14 +69,12 @@ If decryption fails, a message will be written to standard error.
 
 		static void Encrypt(byte[] password, string file, Stream input, Stream output)
 		{
-			EncryptionSettingsManager.EncryptionSettings = new EncryptionSettings(password);
-			input.CopyTo(new SeekableCryptoStream(file, output));
+			input.CopyTo(new SeekableCryptoStream(new EncryptionSettings(password), file, output));
 		}
 
 		static void Decrypt(byte[] password, string file, Stream input, Stream output)
 		{
-			EncryptionSettingsManager.EncryptionSettings = new EncryptionSettings(password);
-			new SeekableCryptoStream(file, input).CopyTo(output);
+			new SeekableCryptoStream(new EncryptionSettings(password), file, input).CopyTo(output);
 		}
 	}
 }
