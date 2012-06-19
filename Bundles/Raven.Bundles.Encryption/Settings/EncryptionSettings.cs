@@ -7,14 +7,15 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Bundles.Encryption
+namespace Raven.Bundles.Encryption.Settings
 {
 	[Serializable]
-	public class EncryptionSettings : ISerializable
+	internal class EncryptionSettings : ISerializable
 	{
 		private byte[] encryptionKey;
 		private Type algorithmType;
 		private Func<SymmetricAlgorithm> algorithmGenerator;
+		private readonly bool encryptIndexes;
 
 		public EncryptionSettings()
 			: this(GenerateRandomEncryptionKey())
@@ -27,8 +28,14 @@ namespace Raven.Bundles.Encryption
 		}
 
 		public EncryptionSettings(byte[] encryptionKey, Type symmetricAlgorithmType)
+			: this(encryptionKey, symmetricAlgorithmType, true)
+		{
+		}
+
+		public EncryptionSettings(byte[] encryptionKey, Type symmetricAlgorithmType, bool encryptIndexes)
 		{
 			this.EncryptionKey = encryptionKey;
+			this.encryptIndexes = encryptIndexes;
 
 			typeof(EncryptionSettings)
 				.GetMethod("SetSymmetricAlgorithmType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
@@ -38,13 +45,14 @@ namespace Raven.Bundles.Encryption
 
 		public static bool DontEncrypt(string key)
 		{
-			return key.StartsWith(Constants.DontEncryptDocumentsStartingWith, StringComparison.InvariantCultureIgnoreCase);
+			return key.StartsWith(Constants.DontEncryptDocumentsStartingWith, StringComparison.InvariantCultureIgnoreCase)
+				&& key != Constants.InDatabaseKeyVerificationDocumentName;
 		}
 
 		public byte[] EncryptionKey
 		{
 			get { return encryptionKey; }
-			set
+			private set
 			{
 				if (value == null)
 					throw new ArgumentNullException("EncryptionKey");
@@ -69,6 +77,11 @@ namespace Raven.Bundles.Encryption
 		public Func<SymmetricAlgorithm> GenerateAlgorithm
 		{
 			get { return algorithmGenerator; }
+		}
+
+		public bool EncryptIndexes
+		{
+			get { return encryptIndexes; }
 		}
 
 		public static byte[] GenerateRandomEncryptionKey()

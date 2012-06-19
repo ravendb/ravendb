@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs.Queries
 				using (var session = store.OpenSession())
 				{
 					var str = session.Query<WithInteger>()
-						.Where(x => x.Sequence > 150 && x.Sequence < 300)
+						.Where(x => x.Sequence < 300 && x.Sequence > 150 )
 						.ToString();
 					
 					Assert.Equal("Sequence_Range:{0x00000096 TO 0x0000012C}", str);

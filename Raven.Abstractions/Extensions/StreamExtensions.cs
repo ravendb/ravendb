@@ -60,5 +60,30 @@ namespace Raven.Abstractions.Extensions
 			Buffer.BlockCopy(buffer, 0, result, resultOffset, currentOffset);
 			return result;
 		}
+
+		/// <summary>
+		/// Allocates a byte array and reads an entire block from the stream
+		/// </summary>
+		public static byte[] ReadEntireBlock(this Stream stream, int count)
+		{
+			byte[] buffer = new byte[count];
+			stream.ReadEntireBlock(buffer, 0, count);
+			return buffer;
+		}
+
+		/// <summary>
+		/// Reads an entire block from the stream
+		/// </summary>
+		public static void ReadEntireBlock(this Stream stream, byte[] buffer, int start, int count)
+		{
+			int totalRead = 0;
+			while (totalRead < count)
+			{
+				int read = stream.Read(buffer, start + totalRead, count - totalRead);
+				if (read == 0)
+					throw new EndOfStreamException();
+				totalRead += read;
+			}
+		}
 	}
 }

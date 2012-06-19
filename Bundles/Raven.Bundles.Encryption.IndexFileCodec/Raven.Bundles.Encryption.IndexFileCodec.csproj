@@ -4,15 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{38811282-5124-4AD2-B45A-FA6041980EE6}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{1BB3D982-9675-400D-A247-547C071FBE35}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Raven.Bundles.Encryption</RootNamespace>
-    <AssemblyName>Raven.Bundles.Encryption</AssemblyName>
+    <RootNamespace>Raven.Bundles.Encryption.IndexFileCodec</RootNamespace>
+    <AssemblyName>Raven.Bundles.Encryption.IndexFileCodec</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,6 +23,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -39,34 +41,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
-      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
-      <Name>Raven.Abstractions</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Raven.Database\Raven.Database.csproj">
-      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
-      <Name>Raven.Database</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Constants.cs" />
-    <Compile Include="Codec.cs" />
-    <Compile Include="CryptoTransformExtensions.cs" />
-    <Compile Include="Plugin\EncryptionSettingsPutTrigger.cs" />
-    <Compile Include="Streams\BlockReaderWriter.cs" />
-    <Compile Include="Streams\EncryptedFile.cs" />
-    <Compile Include="Streams\SeekableCryptoStream.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Streams\StructConverter.cs" />
-    <Compile Include="Plugin\IndexEncryption.cs" />
-    <Compile Include="Plugin\EncryptionSettingsDeleteTrigger.cs" />
-    <Compile Include="Plugin\DocumentEncryption.cs" />
-    <Compile Include="Settings\EncryptionSettings.cs" />
-    <Compile Include="Settings\EncryptionSettingsManager.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Bundles.Encryption\Raven.Bundles.Encryption.csproj">
+      <Project>{38811282-5124-4ad2-b45a-fa6041980ee6}</Project>
+      <Name>Raven.Bundles.Encryption</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

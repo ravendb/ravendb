@@ -12,21 +12,15 @@ namespace Raven.Tests.Util
 		{
 			var sitePhysicalDirectory = physicalPath;
 
-			foreach (var process in Process.GetProcessesByName("iisexpress.exd"))
+			foreach (var process in Process.GetProcessesByName("iisexpress"))
 			{
 				process.Kill();
 			}
 
-			if (File.Exists(@"c:\program files (x86)\IIS Express\IISExpress.exe"))
-			{
-				StartProcess(@"c:\program files (x86)\IIS Express\IISExpress.exe",
-				             @"/systray:false /port:" + port + @" /path:" + sitePhysicalDirectory);
-			}
-			else
-			{
-				StartProcess(@"c:\program files\IIS Express\IISExpress.exe",
-							 @"/systray:false /port:" + port + @" /path:" + sitePhysicalDirectory);
-			}
+			var processFileName = File.Exists(@"c:\program files (x86)\IIS Express\IISExpress.exe")
+				? @"c:\program files (x86)\IIS Express\IISExpress.exe"
+				: @"c:\program files\IIS Express\IISExpress.exe";
+			StartProcess(processFileName, @"/systray:false /trace:error /port:" + port + @" /path:" + sitePhysicalDirectory);
 
 			var match = WaitForConsoleOutputMatching(@"Successfully registered URL ""([^""]*)""");
 

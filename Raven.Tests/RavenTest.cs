@@ -49,22 +49,33 @@ namespace Raven.Tests
 											}
 									};
 
-			ModifyStore(documentStore);
-			ModifyConfiguration(documentStore.Configuration);
+			try
+			{
+				ModifyStore(documentStore);
+				ModifyConfiguration(documentStore.Configuration);
 
 			if (documentStore.Configuration.RunInMemory == false && deleteExisting)
-				IOExtensions.DeleteDirectory(path);
-			documentStore.Initialize();
+					IOExtensions.DeleteDirectory(path);
+				documentStore.Initialize();
 
-			CreateDefaultIndexes(documentStore);
 
-			if (allocatedMemory != null && inMemory)
-			{
-				var transactionalStorage = ((TransactionalStorage)documentStore.DocumentDatabase.TransactionalStorage);
-				transactionalStorage.EnsureCapacity(allocatedMemory.Value);
+				CreateDefaultIndexes(documentStore);
+
+				if (allocatedMemory != null && inMemory)
+				{
+					var transactionalStorage = ((TransactionalStorage)documentStore.DocumentDatabase.TransactionalStorage);
+					transactionalStorage.EnsureCapacity(allocatedMemory.Value);
+				}
+
+				return documentStore;
 			}
-
-			return documentStore;
+			catch
+			{
+				// We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
+				if (documentStore != null)
+					documentStore.Dispose();
+				throw;
+			}
 		}
 
 		protected virtual void CreateDefaultIndexes(IDocumentStore documentStore)
@@ -219,11 +230,29 @@ namespace Raven.Tests
 
 		protected void ClearDatabaseDirectory()
 		{
-			IOExtensions.DeleteDirectory(DbName);
-			IOExtensions.DeleteDirectory(DbDirectory);
+			bool isRetry = false;
 
-			// Delete tenants created using the EnsureDatabaseExists method.
-			IOExtensions.DeleteDirectory("Tenants");
+			while (true)
+			{
+				try
+				{
+					IOExtensions.DeleteDirectory(DbName);
+					IOExtensions.DeleteDirectory(DbDirectory);
+
+					// Delete tenants created using the EnsureDatabaseExists method.
+					IOExtensions.DeleteDirectory("Tenants");
+					break;
+				}
+				catch (IOException)
+				{
+					if (isRetry)
+						throw;
+
+					GC.Collect();
+					GC.WaitForPendingFinalizers();
+					isRetry = true;
+				}
+			}
 		}
 
 		public double Timer(Action action)
