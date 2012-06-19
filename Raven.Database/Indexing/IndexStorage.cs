@@ -28,6 +28,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Database.Queries;
 using Raven.Database.Storage;
 using Directory = System.IO.Directory;
 using System.ComponentModel.Composition;
@@ -112,6 +113,32 @@ namespace Raven.Database.Indexing
 				{
 					var luceneDirectory = OpenOrCreateLuceneDirectory(indexDefinition, createIfMissing: resetTried);
 					indexImplementation = CreateIndexImplementation(indexName, indexDefinition, luceneDirectory);
+					var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
+					if (Directory.Exists(suggestionsForIndex))
+					{
+						foreach (var directory in Directory.GetDirectories(suggestionsForIndex))
+						{
+							IndexSearcher searcher;
+							using(indexImplementation.GetSearcher(out searcher))
+							{
+								var key = Path.GetFileName(directory);
+								var decodedKey = MonoHttpUtility.UrlDecode(key);
+								var lastIndexOfDash = decodedKey.LastIndexOf('-');
+								var accuracy = float.Parse(decodedKey.Substring(lastIndexOfDash+1));
+								var lastIndexOfDistance = decodedKey.LastIndexOf('-', lastIndexOfDash - 1);
+								StringDistanceTypes distanceType;
+								Enum.TryParse(decodedKey.Substring(lastIndexOfDistance+1, lastIndexOfDash - lastIndexOfDistance-1),
+								                             true, out distanceType);
+								var field = decodedKey.Substring(0, lastIndexOfDistance );
+								var extension = new SuggestionQueryIndexExtension(
+									Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.GetIndexReader(),
+									SuggestionQueryRunner.GetStringDistance(distanceType),
+									field,
+									accuracy);
+								indexImplementation.SetExtension(key, extension);
+							}
+						}
+					}
 					break;
 				}
 				catch (Exception e)

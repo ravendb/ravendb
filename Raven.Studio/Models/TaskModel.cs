@@ -11,7 +11,7 @@ namespace Raven.Studio.Models
 		Ended
 	}
 
-	public abstract class TaskModel : ViewModel
+	public abstract class TaskModel : Model
 	{
 		public TaskModel()
 		{

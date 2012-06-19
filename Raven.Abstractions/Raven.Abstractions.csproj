@@ -167,6 +167,12 @@
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\JsonConverterCollection.cs">
       <Link>Imports\Newtonsoft.Json\JsonConverterCollection.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\JsonDictionaryAttribute.cs">
+      <Link>Imports\Newtonsoft.Json\JsonDictionaryAttribute.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\JsonException.cs">
+      <Link>Imports\Newtonsoft.Json\JsonException.cs</Link>
+    </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\JsonIgnoreAttribute.cs">
       <Link>Imports\Newtonsoft.Json\JsonIgnoreAttribute.cs</Link>
     </Compile>
@@ -373,6 +379,9 @@
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\JsonArrayContract.cs">
       <Link>Imports\Newtonsoft.Json\Serialization\JsonArrayContract.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\JsonContainerContract.cs">
+      <Link>Imports\Newtonsoft.Json\Serialization\JsonContainerContract.cs</Link>
     </Compile>
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\JsonContract.cs">
       <Link>Imports\Newtonsoft.Json\Serialization\JsonContract.cs</Link>
@@ -611,7 +620,16 @@
     <Compile Include="Json\Utilities\MiscellaneousUtils.cs" />
     <Compile Include="Json\Utilities\StringUtils.cs" />
     <Compile Include="Json\Utilities\Tuple.cs" />
+    <Compile Include="Linq\DynamicList.cs" />
     <Compile Include="Linq\DynamicNullObject.cs" />
+    <Compile Include="Logging\ILog.cs" />
+    <Compile Include="Logging\ILogExtensions.cs" />
+    <Compile Include="Logging\ILogProvider.cs" />
+    <Compile Include="Logging\LoggerExecutionWrapper.cs" />
+    <Compile Include="Logging\LogLevel.cs" />
+    <Compile Include="Logging\LogProvider.cs" />
+    <Compile Include="Logging\LogProviders\Log4NetLogProvider.cs" />
+    <Compile Include="Logging\LogProviders\NLogLogProvider.cs" />
     <Compile Include="MEF\IPartMetadata.cs" />
     <Compile Include="MEF\OrderedPartCollection.cs" />
     <Compile Include="Json\JsonDateTimeOffsetConverter.cs" />
@@ -637,6 +655,10 @@
     <Compile Include="Indexing\SortOptions.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
+    <Compile Include="Smuggler\ISmugglerApi.cs" />
+    <Compile Include="Smuggler\SmugglerAction.cs" />
+    <Compile Include="Smuggler\SmugglerApiBase.cs" />
+    <Compile Include="Smuggler\SmugglerOptions.cs" />
     <Compile Include="SystemTime.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -1,0 +1,831 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
+
+    <Style x:Key="Style_DataGrid_Default" TargetType="sdk:DataGrid">
+        <Setter Property="RowBackground" Value="#FFF8F8F8" />
+        <Setter Property="AlternatingRowBackground" Value="#00FFFFFF" />
+        <Setter Property="Background" Value="#FCFDFDFD" />
+        <Setter Property="HeadersVisibility" Value="Column" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="SelectionMode" Value="Extended" />
+        <Setter Property="CanUserReorderColumns" Value="True" />
+        <Setter Property="CanUserResizeColumns" Value="True" />
+        <Setter Property="CanUserSortColumns" Value="True" />
+        <Setter Property="AutoGenerateColumns" Value="True" />
+        <Setter Property="RowDetailsVisibilityMode" Value="VisibleWhenSelected" />
+        <Setter Property="BorderBrush" Value="#FFEAE7E4"/>
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
+        <Setter Property="DragIndicatorStyle">
+            <Setter.Value>
+                <!-- TODO: Change the TargetType to Control when the fix Jolt bugs 18719 is verified -->
+                <Style TargetType="ContentControl">
+                    <Setter Property="Foreground" Value="#7FFFFFFF" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <!-- TODO: Change the TargetType to Control when the fix Jolt bugs 18719 is verified -->
+                            <ControlTemplate TargetType="ContentControl">
+                                <Grid>
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="SortStates">
+                                            <VisualState x:Name="Unsorted" />
+                                            <VisualState x:Name="SortAscending">
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetName="SortIcon" Storyboard.TargetProperty="Opacity" Duration="0" To="1.0"/>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="SortDescending">
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetName="SortIcon" Storyboard.TargetProperty="Opacity" Duration="0" To="1.0"/>
+                                                    <DoubleAnimation Storyboard.TargetName="SortIcon" Storyboard.TargetProperty="(RenderTransform).ScaleY" Duration="0" To="-.9"/>
+                                                </Storyboard>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+
+                                    <Rectangle x:Name="BackgroundRectangle" Stretch="Fill" Fill="#66808080" Grid.ColumnSpan="2" />
+
+                                    <Rectangle x:Name="BackgroundGradient" Stretch="Fill" Grid.ColumnSpan="2" Opacity="0" >
+                                        <Rectangle.Fill>
+                                            <LinearGradientBrush StartPoint=".7,0" EndPoint=".7,1">
+                                                <GradientStop Color="#FFFFFFFF" Offset="0.015" />
+                                                <GradientStop Color="#F9FFFFFF" Offset="0.375" />
+                                                <GradientStop Color="#E5FFFFFF" Offset="0.6" />
+                                                <GradientStop Color="#C6FFFFFF" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Rectangle.Fill>
+                                    </Rectangle>
+
+                                    <Grid HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Margin="{TemplateBinding Padding}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition/>
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <ContentPresenter Content="{TemplateBinding Content}"/>
+
+                                        <Path Grid.Column="1" Name="SortIcon" Fill="#7FFFFFFF" RenderTransformOrigin=".5,.5" HorizontalAlignment="Left" VerticalAlignment="Center" Opacity="0" Stretch="Uniform" Width="8" Margin="4,0,0,0" Data="F1 M -5.215,6.099L 5.215,6.099L 0,0L -5.215,6.099 Z ">
+                                            <Path.RenderTransform>
+                                                <ScaleTransform ScaleX=".9" ScaleY=".9" />
+                                            </Path.RenderTransform>
+                                        </Path>
+                                    </Grid>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="DropLocationIndicatorStyle">
+            <Setter.Value>
+                <Style TargetType="ContentControl">
+                    <Setter Property="Background" Value="#FF3F4346"/>
+                    <Setter Property="Width" Value="2"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ContentControl">
+                                <Rectangle Fill="{TemplateBinding Background}" Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="GridLinesVisibility" Value="None" />
+        <Setter Property="HorizontalGridLinesBrush" Value="#FFEAE7E4" />
+        <Setter Property="IsTabStop" Value="True" />
+        <Setter Property="VerticalGridLinesBrush" Value="#FFEAE7E4" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sdk:DataGrid">
+                    <Grid>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="DisabledVisualElement" Storyboard.TargetProperty="Opacity" Duration="0" To="1"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}">
+                            <Grid Name="Root" Background="{TemplateBinding Background}">
+                                <Grid.Resources>
+                                    <!--Start: TopLeftHeaderTemplate-->
+                                    <ControlTemplate x:Key="TopLeftHeaderTemplate" TargetType="sdk:DataGridColumnHeader">
+                                        <Grid Name="Root">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition/>
+                                                <RowDefinition/>
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Border BorderThickness="0,0,1,0" BorderBrush="#FFEAE7E4" Grid.RowSpan="2">
+                                                <Rectangle Stretch="Fill" StrokeThickness="1">
+                                                    <Rectangle.Fill>
+                                                        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                                            <GradientStop Color="#C5F7F7F7" Offset="0.049"/>
+                                                            <GradientStop Color="#C1E8E8E8" Offset="0.74"/>
+                                                        </LinearGradientBrush>
+                                                    </Rectangle.Fill>
+                                                </Rectangle>
+                                            </Border>
+                                            <Rectangle VerticalAlignment="Bottom" Width="Auto" StrokeThickness="1" Height="1" Fill="#FFDBDCDC" Grid.RowSpan="2"/>
+                                        </Grid>
+                                    </ControlTemplate>
+                                    <!--End: TopLeftHeaderTemplate-->
+
+                                    <!--Start: TopRightHeaderTemplate-->
+                                    <ControlTemplate x:Key="TopRightHeaderTemplate" TargetType="sdk:DataGridColumnHeader">
+                                        <Grid Name="RootElement">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition/>
+                                                <RowDefinition/>
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Border BorderThickness="1,0,0,0" BorderBrush="#FFEAE7E4" Grid.RowSpan="2">
+                                                <Rectangle Stretch="Fill">
+                                                    <Rectangle.Fill>
+                                                        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                                            <GradientStop Color="#C5F7F7F7" Offset="0.049"/>
+                                                            <GradientStop Color="#C1E8E8E8" Offset="0.74"/>
+                                                        </LinearGradientBrush>
+                                                    </Rectangle.Fill>
+                                                </Rectangle>
+                                            </Border>
+                                        </Grid>
+                                    </ControlTemplate>
+                                    <!--End: TopRightHeaderTemplate-->
+                                </Grid.Resources>
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition/>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <sdk:DataGridColumnHeader Name="TopLeftCornerHeader" Template="{StaticResource TopLeftHeaderTemplate}" Width="22" />
+                                <sdk:DataGridColumnHeadersPresenter Name="ColumnHeadersPresenter" Grid.Column="1"/>
+                                <sdk:DataGridColumnHeader Name="TopRightCornerHeader" Grid.Column="2" Template="{StaticResource TopRightHeaderTemplate}" />
+                                <Rectangle Name="ColumnHeadersAndRowsSeparator" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Width="Auto" StrokeThickness="1" Height="1" Fill="#FFC9CACA"/>
+
+                                <sdk:DataGridRowsPresenter Name="RowsPresenter" Grid.ColumnSpan="2" Grid.Row="1" />
+                                <Rectangle Name="BottomRightCorner" Fill="#FFE9EEF4" Grid.Column="2" Grid.Row="2" />
+                                <Rectangle Name="BottomLeftCorner" Fill="#FFE9EEF4" Grid.Row="2" Grid.ColumnSpan="2" />
+                                <ScrollBar Name="VerticalScrollbar" Orientation="Vertical" Grid.Column="2" Grid.Row="1" Width="18" Margin="0,-1,-1,-1"/>
+
+                                <Grid Grid.Column="1" Grid.Row="2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                    <Rectangle Name="FrozenColumnScrollBarSpacer" />
+                                    <ScrollBar Name="HorizontalScrollbar" Grid.Column="1" Orientation="Horizontal" Height="18" Margin="-1,0,-1,-1"/>
+                                </Grid>
+
+                            </Grid>
+                        </Border>
+                        <Border x:Name="DisabledVisualElement" IsHitTestVisible="False" Height="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Width="Auto" CornerRadius="2" Background="#8CFFFFFF" Opacity="0"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="sdk:DataGrid" BasedOn="{StaticResource Style_DataGrid_Default}"/>
+    
+    <Style TargetType="sdk:DataGridRow">
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sdk:DataGridRow">
+                    <sdk:DataGridFrozenGrid Name="Root">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="NormalAlternatingRow">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BackgroundRectangle" Storyboard.TargetProperty="Opacity" Duration="0" To="0"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BackgroundRectangle" Storyboard.TargetProperty="Opacity" Duration="0" To=".3"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="NormalSelected">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BackgroundRectangle" Storyboard.TargetProperty="Opacity" Duration="0" To="1"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="MouseOverSelected">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BackgroundRectangle" Storyboard.TargetProperty="Opacity" Duration="0" To="0.9"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="UnfocusedSelected">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BackgroundRectangle" Storyboard.TargetProperty="Opacity" Duration="0" To="1"/>
+                                        <ColorAnimation Duration="0" Storyboard.TargetName="BackgroundRectangle" Storyboard.TargetProperty="(Fill).Color" To="#FFE1E7EC"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="UnfocusedEditing"/>
+                                <VisualState x:Name="NormalEditing"/>
+                                <VisualState x:Name="MouseOverUnfocusedEditing"/>
+                                <VisualState x:Name="MouseOverEditing"/>
+                                <VisualState x:Name="MouseOverUnfocusedSelected"/>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ValidationStates">
+                                <VisualState x:Name="Valid"/>
+                                <VisualState x:Name="Invalid">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Duration="0" Storyboard.TargetName="BackgroundRectangle" Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="Collapsed"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <DoubleAnimation Storyboard.TargetName="InvalidVisualElement" Storyboard.TargetProperty="Opacity" Duration="0" To="1"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid.Resources>
+                            <Storyboard x:Key="DetailsVisibleTransition">
+                                <DoubleAnimation Storyboard.TargetName="DetailsPresenter" Storyboard.TargetProperty="ContentHeight" Duration="00:00:0.1" />
+                            </Storyboard>
+                        </Grid.Resources>
+
+                        <Rectangle x:Name="BackgroundRectangle" Grid.RowSpan="2" Grid.ColumnSpan="2" Opacity="0" Fill="#FFC4C4C4"/>
+                        <Rectangle x:Name="InvalidVisualElement" Grid.RowSpan="2" Grid.ColumnSpan="2" Opacity="0" Fill="#FFF7D8DB"/>
+
+                        <sdk:DataGridRowHeader Grid.RowSpan="3" Name="RowHeader" sdk:DataGridFrozenGrid.IsFrozen="True" />
+                        <sdk:DataGridCellsPresenter Grid.Column="1" Name="CellsPresenter" sdk:DataGridFrozenGrid.IsFrozen="True" />
+                        <sdk:DataGridDetailsPresenter Grid.Row="1" Grid.Column="1" Name="DetailsPresenter" />
+                        <Rectangle Grid.Row="2" Grid.Column="1" Name="BottomGridLine" HorizontalAlignment="Stretch" Height="1" />
+                    </sdk:DataGridFrozenGrid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="sdk:DataGridRowHeader">
+        <Setter Property="Background" Value="#99E9EEF4" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="SeparatorBrush" Value="#FFFFFFFF" />
+        <Setter Property="SeparatorVisibility" Value="Collapsed"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sdk:DataGridRowHeader">
+                    <Grid Name="Root">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BackgroundRectangle" Storyboard.TargetProperty="(Fill).Color" Duration="0" To="#99D5EAF1"/>
+                                        <DoubleAnimation Storyboard.TargetName="CurrentRowGlyph" Storyboard.TargetProperty="Opacity" Duration="0" To="0"/>
+                                        <DoubleAnimation Storyboard.TargetName="EditingRowGlyph" Storyboard.TargetProperty="Opacity" Duration="0" To="0"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="MouseOverCurrentRowSelected">
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BackgroundRectangle" Storyboard.TargetProperty="(Fill).Color" Duration="0" To="#FFD5EAF1"/>
+                                        <DoubleAnimation Storyboard.TargetName="CurrentRowGlyph" Storyboard.TargetProperty="Opacity" Duration="0" To="1"/>
+                                        <DoubleAnimation Storyboard.TargetName="EditingRowGlyph" Storyboard.TargetProperty="Opacity" Duration="0" To="0"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="NormalCurrentRow">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="CurrentRowGlyph" Storyboard.TargetProperty="Opacity" Duration="0" To="1"/>
+                                        <DoubleAnimation Storyboard.TargetName="EditingRowGlyph" Storyboard.TargetProperty="Opacity" Duration="0" To="0"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="NormalSelected">
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BackgroundRectangle" Storyboard.TargetProperty="(Fill).Color" Duration="0" To="#FFD5EAF1"/>
+                                        <DoubleAnimation Storyboard.TargetName="CurrentRowGlyph" Storyboard.TargetProperty="Opacity" Duration="0" To="0"/>
+                                        <DoubleAnimation Storyboard.TargetName="EditingRowGlyph" Storyboard.TargetProperty="Opacity" Duration="0" To="0"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="NormalEditingRow">
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BackgroundRectangle" Storyboard.TargetProperty="(Fill).Color" Duration="0" To="#FFD5EAF1"/>
+                                        <DoubleAnimation Storyboard.TargetName="CurrentRowGlyph" Storyboard.TargetProperty="Opacity" Duration="0" To="1"/>
+                                        <DoubleAnimation Storyboard.TargetName="EditingRowGlyph" Storyboard.TargetProperty="Opacity" Duration="0" To="0"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ValidationStates">
+                                <VisualState x:Name="RowValid"/>
+                                <VisualState x:Name="RowInvalid">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BackgroundRectangle" Storyboard.TargetProperty="Opacity" Duration="0" To="0"/>
+                                        <DoubleAnimation Storyboard.TargetName="RowInvalidVisualElement" Storyboard.TargetProperty="Opacity" Duration="0" To="1"/>
+                                        <ColorAnimation Storyboard.TargetName="CurrentRowGlyph" Storyboard.TargetProperty="(Fill).(GradientStops)[0].Color" Duration="0" To="#FFDC000C"/>
+                                        <ColorAnimation Storyboard.TargetName="CurrentRowGlyph" Storyboard.TargetProperty="(Fill).(GradientStops)[1].Color" Duration="0" To="#FFDC000C"/>
+                                        <ColorAnimation Storyboard.TargetName="CurrentRowGlyph" Storyboard.TargetProperty="(Fill).(GradientStops)[2].Color" Duration="0" To="#FFDC000C"/>
+                                        <ColorAnimation Storyboard.TargetName="EditingRowGlyph" Storyboard.TargetProperty="(Fill).(GradientStops)[0].Color" Duration="0" To="#FFDC000C"/>
+                                        <ColorAnimation Storyboard.TargetName="EditingRowGlyph" Storyboard.TargetProperty="(Fill).(GradientStops)[1].Color" Duration="0" To="#FFDC000C"/>
+                                        <ColorAnimation Storyboard.TargetName="EditingRowGlyph" Storyboard.TargetProperty="(Fill).(GradientStops)[2].Color" Duration="0" To="#FFDC000C"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border BorderBrush="#FFFFFFFF" BorderThickness="1,0,1,0" Grid.RowSpan="3" Grid.ColumnSpan="2">
+                            <Grid Background="{TemplateBinding Background}">
+                                <Rectangle x:Name="RowInvalidVisualElement" Stretch="Fill" Grid.RowSpan="3" Grid.ColumnSpan="2" Fill="#FFF7D8DB" Opacity="0" />
+                                <Rectangle x:Name="BackgroundRectangle" Stretch="Fill" Grid.RowSpan="3" Grid.ColumnSpan="2" Fill="Transparent" />
+                            </Grid>
+                        </Border>
+                        <Rectangle Name="HorizontalSeparator" Grid.ColumnSpan="2" Grid.Row="2" Height="1" Margin="1,0,1,0" HorizontalAlignment="Stretch" Fill="{TemplateBinding SeparatorBrush}" Visibility="{TemplateBinding SeparatorVisibility}" />
+
+                        <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center" HorizontalAlignment="Center" Grid.Column="1" Grid.RowSpan="2" />
+
+                        <Path Name="CurrentRowGlyph" VerticalAlignment="Center" HorizontalAlignment="Center" Width="6" Height="10"  Margin="8,0,8,0" Grid.RowSpan="2" Stretch="Fill" Opacity="0" Data="F1 M 511.047,352.682L 511.047,342.252L 517.145,347.467L 511.047,352.682 Z ">
+                            <Path.Fill>
+                                <LinearGradientBrush StartPoint="0,-.15" EndPoint="0,1.75">
+                                    <GradientStop Color="#FF84E3FF" Offset="0"/>
+                                    <GradientStop Color="#FF6ABFD8" Offset="0.5"/>
+                                    <GradientStop Color="#FF5297AB" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Path.Fill>
+                        </Path>
+
+                        <Path Name="EditingRowGlyph" VerticalAlignment="Center" HorizontalAlignment="Center" Width="6" Height="10"  Margin="8,0,8,0" Grid.RowSpan="2" Stretch="Fill" Opacity="0" Data="F1 M 511.047,352.682L 511.047,342.252L 517.145,347.467L 511.047,352.682 Z ">
+                            <Path.Fill>
+                                <LinearGradientBrush StartPoint="0,-.15" EndPoint="0,1.75">
+                                    <GradientStop Color="#FF84E3FF" Offset="0"/>
+                                    <GradientStop Color="#FF6ABFD8" Offset="0.5"/>
+                                    <GradientStop Color="#FF5297AB" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Path.Fill>
+                        </Path>
+
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="sdk:DataGridRowGroupHeader">
+        <Setter Property="Cursor" Value="Arrow" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Background" Value="#FFE4E8EA" />
+        <Setter Property="Height" Value="20"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sdk:DataGridRowGroupHeader">
+                    <sdk:DataGridFrozenGrid Name="Root" Background="{TemplateBinding Background}">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CurrentStates">
+                                <VisualState x:Name="Regular"/>
+                                <VisualState x:Name="Current">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="FocusVisual" Storyboard.TargetProperty="Opacity" To="1" Duration="0" />
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <sdk:DataGridFrozenGrid.Resources>
+                            <ControlTemplate x:Key="ToggleButtonTemplate" TargetType="ToggleButton">
+                                <Grid Background="Transparent">
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="CommonStates">
+                                            <VisualState x:Name="Normal"/>
+                                            <VisualState x:Name="MouseOver">
+                                                <Storyboard>
+                                                    <ColorAnimation Storyboard.TargetName="CollapsedArrow" Storyboard.TargetProperty="(Stroke).Color" Duration="0" To="#FF6DBDD1"/>
+                                                    <ColorAnimation Storyboard.TargetName="ExpandedArrow" Storyboard.TargetProperty="(Fill).Color" Duration="0" To="#FF6DBDD1"/>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Pressed">
+                                                <Storyboard>
+                                                    <ColorAnimation Storyboard.TargetName="CollapsedArrow" Storyboard.TargetProperty="(Stroke).Color" Duration="0" To="#FF6DBDD1"/>
+                                                    <ColorAnimation Storyboard.TargetName="ExpandedArrow" Storyboard.TargetProperty="(Fill).Color" Duration="0" To="#FF6DBDD1"/>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Disabled">
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0" Storyboard.TargetName="CollapsedArrow" Storyboard.TargetProperty="Opacity" To=".5"/>
+                                                    <DoubleAnimation Duration="0" Storyboard.TargetName="ExpandedArrow" Storyboard.TargetProperty="Opacity" To=".5"/>
+                                                </Storyboard>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                        <VisualStateGroup x:Name="CheckStates">
+                                            <VisualState x:Name="Checked" />
+                                            <VisualState x:Name="Unchecked">
+                                                <Storyboard>
+                                                    <ObjectAnimationUsingKeyFrames Duration="0" Storyboard.TargetName="CollapsedArrow" Storyboard.TargetProperty="Visibility">
+                                                        <DiscreteObjectKeyFrame KeyTime="0" Value="Visible"/>
+                                                    </ObjectAnimationUsingKeyFrames>
+                                                    <ObjectAnimationUsingKeyFrames Duration="0" Storyboard.TargetName="ExpandedArrow" Storyboard.TargetProperty="Visibility">
+                                                        <DiscreteObjectKeyFrame KeyTime="0" Value="Collapsed"/>
+                                                    </ObjectAnimationUsingKeyFrames>
+                                                </Storyboard>
+                                            </VisualState>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+
+                                    <Path Stretch="Uniform" Data="F1 M 0,0 L 0,1 L .6,.5 L 0,0 Z" Width="5" HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="CollapsedArrow" Visibility="Collapsed" Stroke="#FF414345"/>
+                                    <Path Stretch="Uniform" Data="F1 M 0,1 L 1,1 L 1,0 L 0,1 Z" Width="6" HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="ExpandedArrow" Fill="#FF414345"/>
+                                </Grid>
+                            </ControlTemplate>
+                        </sdk:DataGridFrozenGrid.Resources>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Rectangle Grid.Column="1" Grid.ColumnSpan="5" Fill="#FFFFFFFF" Height="1"/>
+                        <Rectangle Grid.Column="1" Grid.Row="1" Name="IndentSpacer" />
+                        <ToggleButton Grid.Column="2" Grid.Row="1" Name="ExpanderButton" Height="15" Width="15" IsTabStop="False" Template="{StaticResource ToggleButtonTemplate}" Margin="2,0,0,0"/>
+
+                        <StackPanel Grid.Column="3" Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,1,0,1">
+                            <TextBlock x:Name="PropertyNameElement" Margin="4,0,0,0" Visibility="{TemplateBinding PropertyNameVisibility}"/>
+                            <TextBlock Margin="4,0,0,0" Text="{Binding Name}" />
+                            <TextBlock x:Name="ItemCountElement" Margin="4,0,0,0" Visibility="{TemplateBinding ItemCountVisibility}"/>
+                        </StackPanel>
+
+                        <Rectangle Grid.Column="1" Grid.ColumnSpan="5" Fill="#FFD3D3D3" Height="1" Grid.Row="2"/>
+                        <Rectangle Name="FocusVisual" Grid.Column="1" Grid.ColumnSpan="4" Grid.RowSpan="3" Stroke="#FF6DBDD1" StrokeThickness="1" HorizontalAlignment="Stretch" 
+							   VerticalAlignment="Stretch" IsHitTestVisible="false" Opacity="0" />
+                        <sdk:DataGridRowHeader Name="RowHeader" Grid.RowSpan="3" sdk:DataGridFrozenGrid.IsFrozen="True"/>
+
+                    </sdk:DataGridFrozenGrid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_DataGridColumnHeader_Default" TargetType="sdk:DataGridColumnHeader">
+        <Setter Property="Foreground" Value="#FFA2183E" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="SeparatorBrush" Value="#FFEAE7E4" />
+        <Setter Property="Padding" Value="4" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sdk:DataGridColumnHeader">
+                    <Grid Name="Root">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <ColorAnimation Duration="0" Storyboard.TargetName="BackgroundGradient" Storyboard.TargetProperty="(Fill).(GradientStops)[0].Color" To="#C1E8E8E8"/>
+                                        <ColorAnimation Duration="0" Storyboard.TargetName="BackgroundGradient" Storyboard.TargetProperty="(Fill).(GradientStops)[1].Color" To="#C5F7F7F7"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <ColorAnimation Duration="0" Storyboard.TargetName="BackgroundGradient" Storyboard.TargetProperty="(Fill).(GradientStops)[0].Color" To="#C5D3D3D3"/>
+                                        <ColorAnimation Duration="0" Storyboard.TargetName="BackgroundGradient" Storyboard.TargetProperty="(Fill).(GradientStops)[1].Color" To="#C6FFFFFF"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="SortStates">
+                                <VisualState x:Name="Unsorted" />
+                                <VisualState x:Name="SortAscending">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="SortIcon" Storyboard.TargetProperty="Opacity" Duration="0" To="1.0"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="SortDescending">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="SortIcon" Storyboard.TargetProperty="Opacity" Duration="0" To="1.0"/>
+                                        <DoubleAnimation Storyboard.TargetName="SortIcon" Storyboard.TargetProperty="(RenderTransform).ScaleY" Duration="0" To="-.9"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition/>
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Rectangle x:Name="BackgroundGradient" Stretch="Fill" Grid.ColumnSpan="2" >
+                            <Rectangle.Fill>
+                                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                    <GradientStop Color="#C5F7F7F7" Offset="0.049"/>
+                                    <GradientStop Color="#C1E8E8E8" Offset="0.74"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+
+                        <Grid HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Margin="{TemplateBinding Padding}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition/>
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ContentPresenter Content="{TemplateBinding Content}"/>
+
+                            <Path Grid.Column="1" Name="SortIcon" Fill="#FF444444" RenderTransformOrigin=".5,.5" HorizontalAlignment="Left" VerticalAlignment="Center" Opacity="0" Stretch="Uniform" Width="8" Margin="4,0,0,0" Data="F1 M -5.215,6.099L 5.215,6.099L 0,0L -5.215,6.099 Z ">
+                                <Path.RenderTransform>
+                                    <ScaleTransform ScaleX=".9" ScaleY=".9" />
+                                </Path.RenderTransform>
+                            </Path>
+                        </Grid>
+
+                        <Rectangle Name="VerticalSeparator" Grid.Column="1" Width="1" VerticalAlignment="Stretch" Fill="{TemplateBinding SeparatorBrush}" Visibility="{TemplateBinding SeparatorVisibility}" />
+
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="sdk:DataGridColumnHeader" BasedOn="{StaticResource Style_DataGridColumnHeader_Default}"/>
+    
+    <Style TargetType="sdk:DataGridCell">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sdk:DataGridCell">
+                    <Grid x:Name="Root" Background="{TemplateBinding Background}">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CurrentStates">
+                                <VisualState x:Name="Regular" />
+                                <VisualState x:Name="Current">
+                                    <Storyboard>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="ValidationStates">
+                                <VisualState x:Name="Valid"/>
+                                <VisualState x:Name="Invalid">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="InvalidVisualElement" Storyboard.TargetProperty="Opacity" Duration="0" To="1"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="SelectionStates">
+                                <VisualState x:Name="Unselected"/>
+                                <VisualState x:Name="Selected"/>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <ContentPresenter
+							Content="{TemplateBinding Content}"
+							ContentTemplate="{TemplateBinding ContentTemplate}"
+							HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+							VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+							Margin="{TemplateBinding Padding}" />
+
+                        <Rectangle x:Name="InvalidVisualElement" IsHitTestVisible="False" StrokeThickness="1" Stroke="#FFDC000C" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Opacity="0"/>
+
+                        <Rectangle x:Name="RightGridLine" Grid.Column="1" VerticalAlignment="Stretch" Width="1" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+
+    <!-- Chromeless DataGrid styles -->
+    <Style x:Key="Style_DataGrid_NoChrome_NoHeader" TargetType="sdk:DataGrid">
+        <Setter Property="RowBackground" Value="Transparent" />
+        <Setter Property="AlternatingRowBackground" Value="Transparent" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="HeadersVisibility" Value="Column" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="SelectionMode" Value="Extended" />
+        <Setter Property="CanUserReorderColumns" Value="False" />
+        <Setter Property="CanUserResizeColumns" Value="True" />
+        <Setter Property="CanUserSortColumns" Value="False" />
+        <Setter Property="AutoGenerateColumns" Value="False" />
+        <Setter Property="RowDetailsVisibilityMode" Value="VisibleWhenSelected" />
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="GridLinesVisibility" Value="None" />
+        <Setter Property="HorizontalGridLinesBrush" Value="#FFC9CACA" />
+        <Setter Property="IsTabStop" Value="True" />
+        <Setter Property="VerticalGridLinesBrush" Value="#FFC9CACA" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="sdk:DataGrid">
+                    <Grid>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="DisabledVisualElement" Storyboard.TargetProperty="Opacity" Duration="0" To="1"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}" CornerRadius="2">
+                            <Grid Name="Root" Background="{TemplateBinding Background}">
+                                <Grid.Resources>
+                                    <Style TargetType="sdk:DataGridRow">
+                                        <Setter Property="IsTabStop" Value="False" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="sdk:DataGridRow">
+                                                    <sdk:DataGridFrozenGrid Name="Root">
+                                                        <VisualStateManager.VisualStateGroups>
+                                                            <VisualStateGroup x:Name="CommonStates">
+                                                                <VisualState x:Name="Normal"/>
+                                                                <VisualState x:Name="NormalAlternatingRow">
+                                                                </VisualState>
+                                                                <VisualState x:Name="MouseOver">
+                                                                </VisualState>
+                                                                <VisualState x:Name="NormalSelected">
+                                                                </VisualState>
+                                                                <VisualState x:Name="MouseOverSelected">
+                                                                </VisualState>
+                                                                <VisualState x:Name="UnfocusedSelected">
+                                                                </VisualState>
+                                                            </VisualStateGroup>
+                                                            <VisualStateGroup x:Name="ValidationStates">
+                                                                <VisualState x:Name="Valid"/>
+                                                                <VisualState x:Name="Invalid">
+                                                                </VisualState>
+                                                            </VisualStateGroup>
+                                                        </VisualStateManager.VisualStateGroups>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.Resources>
+                                                            <Style TargetType="sdk:DataGridCell">
+                                                                <Setter Property="Background" Value="Transparent" />
+                                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                                                                <Setter Property="IsTabStop" Value="False" />
+                                                                <Setter Property="Template">
+                                                                    <Setter.Value>
+                                                                        <ControlTemplate TargetType="sdk:DataGridCell">
+                                                                            <Grid Name="Root" Background="{TemplateBinding Background}">
+                                                                                <VisualStateManager.VisualStateGroups>
+                                                                                    <VisualStateGroup x:Name="CurrentStates">
+                                                                                        <VisualState x:Name="Regular" />
+                                                                                        <VisualState x:Name="Current">
+                                                                                        </VisualState>
+                                                                                    </VisualStateGroup>
+                                                                                    <VisualStateGroup x:Name="ValidationStates">
+                                                                                        <VisualState x:Name="Valid"/>
+                                                                                        <VisualState x:Name="Invalid">
+                                                                                        </VisualState>
+                                                                                    </VisualStateGroup>
+                                                                                </VisualStateManager.VisualStateGroups>
+
+                                                                                <Grid.ColumnDefinitions>
+                                                                                    <ColumnDefinition />
+                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                </Grid.ColumnDefinitions>
+
+                                                                                <ContentPresenter
+																					Content="{TemplateBinding Content}"
+																					ContentTemplate="{TemplateBinding ContentTemplate}"
+																					HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+																					VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+																					Margin="{TemplateBinding Padding}" />
+
+                                                                            </Grid>
+                                                                        </ControlTemplate>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </Style>
+                                                        </Grid.Resources>
+                                                        <sdk:DataGridCellsPresenter Grid.Column="1" Name="CellsPresenter" sdk:DataGridFrozenGrid.IsFrozen="True"  />
+                                                    </sdk:DataGridFrozenGrid>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+
+                                    <Style TargetType="sdk:DataGridRowGroupHeader">
+                                        <Setter Property="Cursor" Value="Arrow" />
+                                        <Setter Property="IsTabStop" Value="False" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="Height" Value="20"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="sdk:DataGridRowGroupHeader">
+                                                    <sdk:DataGridFrozenGrid Name="Root" Background="{TemplateBinding Background}">
+                                                        <VisualStateManager.VisualStateGroups>
+                                                            <VisualStateGroup x:Name="CurrentStates">
+                                                                <VisualState x:Name="Regular"/>
+                                                                <VisualState x:Name="Current">
+                                                                </VisualState>
+                                                            </VisualStateGroup>
+                                                        </VisualStateManager.VisualStateGroups>
+                                                        <sdk:DataGridFrozenGrid.Resources>
+                                                        </sdk:DataGridFrozenGrid.Resources>
+
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+
+                                                        <TextBlock Margin="4,0,0,0" Text="{Binding Name}" FontWeight="Bold"/>
+
+
+                                                    </sdk:DataGridFrozenGrid>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Grid.Resources>
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition/>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+
+                                <sdk:DataGridRowsPresenter Name="RowsPresenter" Grid.ColumnSpan="2" Grid.Row="1" />
+                                <ScrollBar Name="VerticalScrollbar" Orientation="Vertical" Grid.Column="2" Grid.Row="1" Width="18" Margin="0,-1,-1,-1"/>
+
+                                <Grid Grid.Column="1" Grid.Row="2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                    <Rectangle Name="FrozenColumnScrollBarSpacer" />
+                                    <ScrollBar Name="HorizontalScrollbar" Grid.Column="1" Orientation="Horizontal" Height="18" Margin="-1,0,-1,-1"/>
+                                </Grid>
+
+                            </Grid>
+                        </Border>
+                        <Border x:Name="DisabledVisualElement" IsHitTestVisible="False" Height="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Width="Auto" CornerRadius="2" Background="#8CFFFFFF" Opacity="0"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_DataGrid_NoHeader" TargetType="sdk:DataGrid" BasedOn="{StaticResource Style_DataGrid_Default}">
+        <Setter Property="HeadersVisibility" Value="None"/>
+        <Setter Property="GridLinesVisibility" Value="None"/>
+        <Setter Property="IsReadOnly" Value="True"/>
+    </Style>
+</ResourceDictionary>

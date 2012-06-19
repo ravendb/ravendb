@@ -52,16 +52,16 @@ namespace Raven.Tests.Storage
 
 			db.Put("ayende", null, new RavenJObject(), new RavenJObject(), null);
 
-			for (int i = 0; i < 50; i++)
+			bool indexed = false;
+			for (int i = 0; i < 500; i++)
 			{
-				bool indexed = false;
 				db.TransactionalStorage.Batch(accessor => indexed = (accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
 				if (indexed == false)
 					break;
 				Thread.Sleep(50);
 			}
 
-			db.TransactionalStorage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("Raven/DocumentsByEntityName", null, null)));
+			Assert.False(indexed);
 		}
 	}
 }

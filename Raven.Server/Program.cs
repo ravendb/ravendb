@@ -17,6 +17,7 @@ using NDesk.Options;
 using NLog.Config;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -434,7 +435,7 @@ Enjoy...
 			else
 			{
 				ManagedInstallerClass.InstallHelper(new[] { Assembly.GetExecutingAssembly().Location });
-				SetRecoveryOptions("RavenDB");
+				SetRecoveryOptions(ProjectInstaller.SERVICE_NAME);
 				var startController = new ServiceController(ProjectInstaller.SERVICE_NAME);
 				startController.Start();
 			}

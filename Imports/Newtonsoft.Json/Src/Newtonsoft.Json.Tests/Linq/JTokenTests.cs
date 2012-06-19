@@ -26,7 +26,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Raven.Imports.Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Converters;
 #if !NETFX_CORE
 using NUnit.Framework;
 #else
@@ -34,15 +34,15 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TestFixture = Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute;
 using Test = Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute;
 #endif
-using Raven.Imports.Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using System.IO;
 #if NET20
-using Raven.Imports.Newtonsoft.Json.Utilities.LinqBridge;
+using Newtonsoft.Json.Utilities.LinqBridge;
 #else
 using System.Linq;
 #endif
 
-namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
+namespace Newtonsoft.Json.Tests.Linq
 {
   [TestFixture]
   public class JTokenTests : TestFixtureBase
@@ -556,7 +556,7 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
     [Test]
     public void AddPropertyToArray()
     {
-      ExceptionAssert.Throws<ArgumentException>("Can not add Raven.Imports.Newtonsoft.Json.Linq.JProperty to Raven.Imports.Newtonsoft.Json.Linq.JArray.",
+      ExceptionAssert.Throws<ArgumentException>("Can not add Newtonsoft.Json.Linq.JProperty to Newtonsoft.Json.Linq.JArray.",
       () =>
       {
         JArray a = new JArray();
@@ -565,15 +565,15 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
     }
 
     [Test]
-    [ExpectedException(typeof(ArgumentException)
-#if !NETFX_CORE
-      , ExpectedMessage = "Can not add Raven.Imports.Newtonsoft.Json.Linq.JValue to Raven.Imports.Newtonsoft.Json.Linq.JObject."
-#endif
-      )]
     public void AddValueToObject()
     {
-      JObject o = new JObject();
-      o.Add(5);
+      ExceptionAssert.Throws<ArgumentException>(
+        "Can not add Newtonsoft.Json.Linq.JValue to Newtonsoft.Json.Linq.JObject.",
+        () =>
+        {
+          JObject o = new JObject();
+          o.Add(5);
+        });
     }
 
     [Test]
@@ -770,7 +770,7 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Linq
     [Test]
     public void ParseAdditionalContent()
     {
-      ExceptionAssert.Throws<JsonReaderException>("Additional text encountered after finished reading JSON content: ,. Line 5, position 2.",
+      ExceptionAssert.Throws<JsonReaderException>("Additional text encountered after finished reading JSON content: ,. Path '', line 5, position 2.",
         () =>
         {
           string json = @"[

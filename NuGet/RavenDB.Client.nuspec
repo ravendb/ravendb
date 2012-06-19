@@ -12,9 +12,6 @@
 		<projectUrl>http://www.ravendb.net/</projectUrl>
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
 		<tags>nosql ravendb raven document database client</tags>
-		<dependencies>
-			<dependency id="NLog" version="[2.0.0.2000]" />
-		</dependencies>
 		<frameworkAssemblies>
 			<frameworkAssembly assemblyName="System.ComponentModel.Composition" targetFramework="net40" />
 		</frameworkAssemblies>

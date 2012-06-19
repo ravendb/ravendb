@@ -76,7 +76,7 @@ namespace Raven.Tests.Bugs.MapRedue
 				using (var session = store.OpenSession())
 				{
 					var results = session.Query<CategoriesWithChildrenCount.ReduceResult, CategoriesWithChildrenCount>()
-						.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.ToList();
 
 					WaitForUserToContinueTheTest(store);

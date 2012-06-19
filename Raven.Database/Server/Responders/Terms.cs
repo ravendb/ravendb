@@ -40,7 +40,7 @@ namespace Raven.Database.Server.Responders
 			                                                         context.Request.QueryString["fromValue"],
 			                                                         context.GetPageSize(Database.Configuration.MaxPageSize)
 				);
-			context.Response.AddHeader("ETag", Database.GetIndexEtag(index, null).ToString());
+			context.WriteETag(Database.GetIndexEtag(index, null));
 			context.WriteJson(executeGetTermsQuery);
 		}
 	}

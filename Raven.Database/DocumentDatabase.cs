@@ -118,7 +118,6 @@ namespace Raven.Database
 			AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
 			AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
 
-			ExternalState = new ConcurrentDictionary<string, object>();
 			Name = configuration.DatabaseName;
 			if(configuration.CustomTaskScheduler != null)
 			{
@@ -295,6 +294,9 @@ namespace Raven.Database
 
 				TransactionalStorage.Batch(actions =>
 				{
+					result.LastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
+					result.LastAttachmentEtag = actions.Staleness.GetMostRecentAttachmentEtag();
+
 					result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
 					result.CountOfDocuments = actions.Documents.GetDocumentsCount();
 					result.StaleIndexes = IndexStorage.Indexes
@@ -305,8 +307,6 @@ namespace Raven.Database
 			}
 		}
 		
-		public ConcurrentDictionary<string, object> ExternalState { get; set; }
-
 		public InMemoryRavenConfiguration Configuration
 		{
 			get;
@@ -376,11 +376,17 @@ namespace Raven.Database
 					disposable.Dispose();
 			});
 
+			if (TransactionalStorage != null)
 			exceptionAggregator.Execute(TransactionalStorage.Dispose);
+			if (IndexStorage != null)
 			exceptionAggregator.Execute(IndexStorage.Dispose);
 
+			if (Configuration != null)
 			exceptionAggregator.Execute(Configuration.Dispose);
+
 			exceptionAggregator.Execute(disableAllTriggers.Dispose);
+
+			if (workContext != null)
 			exceptionAggregator.Execute(workContext.Dispose);
 
 
@@ -465,14 +471,16 @@ namespace Raven.Database
 
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			key = key != null ? key.Trim() : null;
-			if (string.IsNullOrEmpty(key))
+			if (string.IsNullOrWhiteSpace(key))
 			{
 				// we no longer sort by the key, so it doesn't matter
 				// that the key is no longer sequential
 				key = Guid.NewGuid().ToString();
 			}
-
+			else
+			{
+				key = key.Trim();
+			}
 			RemoveReservedProperties(document);
 			RemoveReservedProperties(metadata);
 			Guid newEtag = Guid.Empty;
@@ -578,21 +586,27 @@ namespace Raven.Database
 
 		public bool Delete(string key, Guid? etag, TransactionInformation transactionInformation)
 		{
+			RavenJObject metadata;
+			return Delete(key, etag, transactionInformation, out metadata);
+		}
+
+		public bool Delete(string key, Guid? etag, TransactionInformation transactionInformation, out RavenJObject metadata)
+		{
 			if (key == null) throw new ArgumentNullException("key");
 			key = key.Trim();
 			
 			var deleted = false;
 			log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
+			RavenJObject metadataVar = null;
 			TransactionalStorage.Batch(actions =>
 			{
 				if (transactionInformation == null)
 				{
-					AssertDeleteOperationNotVetoed(key, transactionInformation);
+					AssertDeleteOperationNotVetoed(key, null);
 
-					DeleteTriggers.Apply(trigger => trigger.OnDelete(key, transactionInformation));
+					DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
 
-					RavenJObject metadata;
-					if (actions.Documents.DeleteDocument(key, etag, out metadata))
+					if (actions.Documents.DeleteDocument(key, etag, out metadataVar))
 					{
 						deleted = true;
 						foreach (var indexName in IndexDefinitionStorage.IndexNames)
@@ -601,7 +615,7 @@ namespace Raven.Database
 							if(abstractViewGenerator == null)
 								continue;
 
-							var token = metadata.Value<string>(Constants.RavenEntityName);
+							var token = metadataVar.Value<string>(Constants.RavenEntityName);
 
 							if (token != null && // the document has a entity name
 								abstractViewGenerator.ForEntityNames.Count > 0) // the index operations on specific entities
@@ -629,6 +643,7 @@ namespace Raven.Database
 			TransactionalStorage
 				.ExecuteImmediatelyOrRegisterForSyncronization(() => DeleteTriggers.Apply(trigger => trigger.AfterCommit(key)));
 
+			metadata = metadataVar;
 			return deleted;
 		}
 
@@ -775,7 +790,7 @@ namespace Raven.Database
 			return findIndexCreationOptions;
 		}
 
-		public QueryResult Query(string index, IndexQuery query)
+		public QueryResultWithIncludes Query(string index, IndexQuery query)
 		{
 			index = IndexDefinitionStorage.FixupIndexName(index);
 			var list = new List<RavenJObject>();
@@ -783,6 +798,7 @@ namespace Raven.Database
 			Tuple<DateTime, Guid> indexTimestamp = Tuple.Create(DateTime.MinValue, Guid.Empty);
 			Guid resultEtag = Guid.Empty;
 			var nonAuthoritativeInformation = false;
+			var idsToLoad = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 			TransactionalStorage.Batch(
 				actions =>
 				{
@@ -800,7 +816,7 @@ namespace Raven.Database
 					{
 						throw new IndexDisabledException(indexFailureInformation);
 					}
-					var docRetriever = new DocumentRetriever(actions, ReadTriggers);
+					var docRetriever = new DocumentRetriever(actions, ReadTriggers, idsToLoad);
 					var indexDefinition = GetIndexDefinition(index);
 					var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
 														  viewGenerator.ReduceDefinition == null
@@ -846,9 +862,8 @@ namespace Raven.Database
 					{
 						throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
 					}
-
 				});
-			return new QueryResult
+			return new QueryResultWithIncludes
 			{
 				IndexName = index,
 				Results = list,
@@ -858,7 +873,8 @@ namespace Raven.Database
 				TotalResults = query.TotalSize.Value,
 				IndexTimestamp = indexTimestamp.Item1,
 				IndexEtag = indexTimestamp.Item2,
-				ResultEtag = resultEtag
+				ResultEtag = resultEtag,
+				IdsToInclude = idsToLoad
 			};
 		}
 

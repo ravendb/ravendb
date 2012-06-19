@@ -1,4 +1,6 @@
-﻿namespace Rhino.Licensing
+﻿using System;
+
+namespace Rhino.Licensing
 {
 	/// <summary>
 	/// Validates content of a license file
@@ -16,13 +18,15 @@
 			License = license;
 		}
 
+		public StringLicenseValidator(string publicKey, string license, string licenseServerUrl, Guid clientId)
+			: base(publicKey, licenseServerUrl, clientId)
+		{
+			License = license;
+		}
+
 		/// <summary>
 		/// License content
 		/// </summary>
-		protected override string License
-		{
-			get;
-			set;
-		}
+		protected override string License { get; set; }
 	}
 }

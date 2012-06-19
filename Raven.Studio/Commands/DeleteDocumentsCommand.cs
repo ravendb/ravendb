@@ -14,24 +14,21 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
-	public class DeleteDocumentsCommand : ListBoxCommand<ViewableDocument>
+	public class DeleteDocumentsCommand : VirtualItemSelectionCommand<ViewableDocument>
 	{
-		public override bool CanExecute(object parameter)
-		{
-			if (base.CanExecute(parameter))
-			{
-				var documentsIds = SelectedItems.FirstOrDefault();
+	    public DeleteDocumentsCommand(ItemSelection<VirtualItem<ViewableDocument>> itemSelection) : base(itemSelection)
+	    {
+	    }
 
-				if (documentsIds != null && documentsIds.Id != null)
-					return true;
-			}
+        protected override bool CanExecuteOverride(IList<ViewableDocument> items)
+        {
+            var document = items.FirstOrDefault();
+            return document != null && document.Id != null;
+        }
 
-			return false;
-		}
-
-		public override void Execute(object parameter)
-		{
-			var documentsIds = SelectedItems
+        protected override void ExecuteOverride(IList<ViewableDocument> realizedItems)
+        {
+            var documentsIds = realizedItems
 				.Select(x => x.Id)
 				.ToList();
 
@@ -40,7 +37,6 @@ namespace Raven.Studio.Commands
 			                                            	: string.Format("Are you sure that you want to delete this document? ({0})", documentsIds.First()))
 				.ContinueWhenTrueInTheUIThread(() =>
 				                               	{
-				                               		((DocumentsModel)Context).IsLoadingDocuments = true;
 													ApplicationModel.Current.AddNotification(new Notification("Deleting documents..."));
 				                               	})
 				.ContinueWhenTrue(() => DeleteDocuments(documentsIds));
@@ -64,8 +60,8 @@ namespace Raven.Studio.Commands
 								: string.Format("Document {0} was deleted", documentIds.First());
 			ApplicationModel.Current.AddNotification(new Notification(notification));
 
-			View.UpdateAllFromServer();
-			((DocumentsModel)Context).ForceTimerTicked();
+            ClearSelection();
+			PageView.UpdateAllFromServer();
 		}
 	}
 }

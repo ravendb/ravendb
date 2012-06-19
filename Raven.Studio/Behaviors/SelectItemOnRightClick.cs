@@ -6,11 +6,12 @@
 using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interactivity;
 using System.Windows.Media;
 
 namespace Raven.Studio.Behaviors
 {
-	public class SelectItemOnRightClick : StudioBehavior<ListBox>
+	public class SelectItemOnRightClick : Behavior<ListBox>
 	{
 		protected override void OnAttached()
 		{
@@ -21,6 +22,7 @@ namespace Raven.Studio.Behaviors
 		protected override void OnDetaching()
 		{
 			base.OnDetaching();
+
 			AssociatedObject.MouseRightButtonDown -= AssociatedObjectOnMouseRightButtonDown;
 		}
 

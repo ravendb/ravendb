@@ -9,7 +9,7 @@
     <BitmapImage x:Key="Image_Document_Tiny" UriSource="document.png"/>
     <BitmapImage x:Key="Image_Add_Tiny" UriSource="add.png"/>
     <BitmapImage x:Key="Image_AddDocument_Tiny" UriSource="document-new.png"/>
-    <BitmapImage x:Key="Image_Remove_Tiny" UriSource="Remove.png"/>
+    <BitmapImage x:Key="Image_Remove_Tiny" UriSource="RemoveGray.png"/>
     <BitmapImage x:Key="Image_Save_Small" UriSource="Save.png"/>
     <BitmapImage x:Key="Image_Search_Small" UriSource="Search.png" />
     <BitmapImage x:Key="Image_Undo_Small" UriSource="Undo.png"/>
@@ -31,5 +31,8 @@
     <BitmapImage x:Key="Image_AddIndex_Tiny" UriSource="document_prepare.png"/>
     <BitmapImage x:Key="Image_ExecuteQuery_Small" UriSource="ExecuteQuery.png"/>
     <BitmapImage x:Key="Image_ChangeView_Tiny" UriSource="ChangeView.png"/>
+    <BitmapImage x:Key="Image_Up_Tiny" UriSource="Up.png"/>
+    <BitmapImage x:Key="Image_Down_Tiny" UriSource="Down.png"/>
+    <BitmapImage x:Key="Image_GoToDocument_Tiny" UriSource="Shortcut.png"/>
     
 </ResourceDictionary>

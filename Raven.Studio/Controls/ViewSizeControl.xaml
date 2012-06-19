@@ -3,8 +3,10 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-			 xmlns:b="clr-namespace:Boogaart.Silverlight.Behaviors"
-			 mc:Ignorable="d"
+			 xmlns:b="clr-namespace:Boogaart.Silverlight.Behaviors" xmlns:Controls="clr-namespace:System.Windows.Controls"
+             xmlns:Studio="clr-namespace:Raven.Studio"
+             xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+             xmlns:Controls1="clr-namespace:Raven.Studio.Controls" mc:Ignorable="d"
 			 d:DesignHeight="300"
 			 d:DesignWidth="400">
 
@@ -33,14 +35,8 @@
 			</ToggleButton.Content>
 		</ToggleButton>
 		<Popup IsOpen="{Binding ElementName=ToggleButton, Path=IsChecked, Mode=TwoWay}"
-			   b:Popup.PlacementTarget="{Binding ElementName=ToggleButton}"
-			   b:Popup.StaysOpen="False">
-			<b:Popup.PreferredOrientations>
-				<b:PopupOrientationCollection>
-					<b:PopupOrientation Placement="Bottom"
-										HorizontalAlignment="Center" />
-				</b:PopupOrientationCollection>
-			</b:Popup.PreferredOrientations>
+			   HorizontalOffset="-103"
+               b:Popup.StaysOpen="False">
 			<Border Background="#EFEFEF"
 					BorderThickness="1"
 					BorderBrush="Gray"
@@ -48,18 +44,18 @@
 				<Border.Effect>
 					<DropShadowEffect Opacity="0.4" />
 				</Border.Effect>
-				<Grid Height="150">
+				<Grid Height="150" Margin="4">
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="Auto" />
 						<ColumnDefinition Width="Auto" />
 					</Grid.ColumnDefinitions>
 
 					<Slider Orientation="Vertical"
-							Minimum="66"
-							Maximum="700"
+							Minimum="0"
+							Maximum="100"
 							Value="{Binding ViewSize, Mode=TwoWay}"
 							Grid.Column="0"
-							Margin="4" />
+							Margin="4,6,4,5" />
 
 					<Rectangle Width="1"
 							   Fill="#DFDFDF"
@@ -70,16 +66,55 @@
 							   Grid.Column="1"
 							   HorizontalAlignment="Left" />
 
-					<TextBlock Text="Compact"
-							   HorizontalAlignment="Left"
+                    <Button Content="Details"
 							   VerticalAlignment="Bottom"
-							   Margin="5,0,5,3"
-							   Grid.Column="1" />
-					<TextBlock Text="Expanded"
-							   HorizontalAlignment="Left"
+                            HorizontalContentAlignment="Left"
+							   Margin="5,0,5,0"
+							   Grid.Column="1" 
+                               Style="{StaticResource Style_Button_MouseOverChrome}"
+                               Command="{Binding Path=SetViewSize}"
+                               CommandParameter="Details"/>
+                    
+                    <Controls:Separator HorizontalAlignment="Stretch"
+							   VerticalAlignment="Bottom"
+							   Margin="5,0,5,23"
+							   Grid.Column="1"/>
+
+                    <Button Content="Small Card"
+							   VerticalAlignment="Bottom"
+                            HorizontalContentAlignment="Left"
+							   Margin="5,0,5,26"
+							   Grid.Column="1"
+                               Style="{StaticResource Style_Button_MouseOverChrome}"
+                               Command="{Binding Path=SetViewSize}"
+                               CommandParameter="SmallCard"/>
+
+                    <Button Content="Medium Card"
+							   VerticalAlignment="Bottom"
+                            HorizontalContentAlignment="Left"
+							   Margin="5,3,5,57"
+							   Grid.Column="1"
+                               Style="{StaticResource Style_Button_MouseOverChrome}"
+                               Command="{Binding Path=SetViewSize}"
+                               CommandParameter="MediumCard"/>
+
+                    <Button Content="Large Card"
 							   VerticalAlignment="Top"
-							   Margin="5,3,5,0"
-							   Grid.Column="1" />
+                            HorizontalContentAlignment="Left"
+							   Margin="5,33,5,0"
+							   Grid.Column="1"
+                               Style="{StaticResource Style_Button_MouseOverChrome}"
+                               Command="{Binding Path=SetViewSize}"
+                               CommandParameter="LargeCard"/>
+                    
+                    <Button Content="Extra Large Card"
+							   VerticalAlignment="Top"
+                            HorizontalContentAlignment="Left"
+							   Margin="5,0,0,0"
+							   Grid.Column="1"
+                               Style="{StaticResource Style_Button_MouseOverChrome}"
+                               Command="{Binding Path=SetViewSize}"
+                               CommandParameter="ExtraLargeCard"/>
 				</Grid>
 
 			</Border>

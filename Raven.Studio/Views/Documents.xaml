@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Documents"
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Documents"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
@@ -18,4 +18,4 @@
 		<Documents:DocumentsView DataContext="{Binding Path=Documents.Value}"
 								 Margin="{StaticResource Margin_ContentPage}" />
 	</Grid>
-</Infrastructure:View>
+</Infrastructure:PageView>

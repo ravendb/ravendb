@@ -40,7 +40,7 @@ namespace Raven.Studio.Commands
 				.EnsureSilverlightStartUpAsync()
 				.Catch();
 
-			var updateAllFromServer = View.UpdateAllFromServer();
+			var updateAllFromServer = PageView.UpdateAllFromServer();
 			refreshStaticModels
 				.Except(updateAllFromServer.Select(x=>x.GetType()))
 				.Select(model => (Model) Activator.CreateInstance(model))

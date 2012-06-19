@@ -85,6 +85,9 @@
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
     </Reference>
+    <Reference Include="Spatial4n.Core">
+      <HintPath>..\SharedLibs\Spatial4n.Core.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.configuration" />
@@ -117,6 +120,7 @@
     <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Config\MemoryStatistics.cs" />
     <Compile Include="Extensions\DateTimeExtensions.cs" />
+    <Compile Include="Data\QueryResultWithIncludes.cs" />
     <Compile Include="Impl\Clustering\ClusterInspecter.cs" />
     <Compile Include="Impl\Clustering\ClusterResourceState.cs" />
     <Compile Include="Impl\Clustering\ErrorCodes.cs" />
@@ -139,11 +143,17 @@
     <Compile Include="Indexing\Sorting\RandomFieldComparatorSource.cs" />
     <Compile Include="Indexing\Sorting\RandomFieldComparator.cs" />
     <Compile Include="Indexing\Sorting\RandomSortField.cs" />
+    <Compile Include="Indexing\Sorting\SpatialDistanceSortField.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Linq\Ast\TransformDynamicLambdaExpressions.cs" />
+    <Compile Include="Linq\RecursiveFunction.cs" />
     <Compile Include="Plugins\Builtins\InvalidDocumentNames.cs" />
     <Compile Include="Plugins\Builtins\Tenants\ModifiedTenantDatabase.cs" />
     <Compile Include="Plugins\Builtins\Tenants\TenantDatabaseModified.cs" />
     <Compile Include="Plugins\AbstractIndexCodec.cs" />
+    <Compile Include="Plugins\Catalogs\BundlesFilteredCatalog.cs" />
+    <Compile Include="Plugins\Catalogs\FilteredCatalog.cs" />
     <Compile Include="Rhino.Licensing\AbstractLicenseValidator.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryClient.cs" />
     <Compile Include="Rhino.Licensing\Discovery\DiscoveryHost.cs" />
@@ -187,6 +197,7 @@
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
     <Compile Include="Server\Responders\AdminRunIdleOperations.cs" />
+    <Compile Include="Server\Responders\AdminStats.cs" />
     <Compile Include="Server\Responders\DatabaseSize.cs" />
     <Compile Include="Server\Responders\Favicon.cs" />
     <Compile Include="Server\Responders\Licensing.cs" />
@@ -465,6 +476,7 @@
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Server\Responders\TransactionStatus.cs" />
+    <Compile Include="Smuggler\DataDumper.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\GetMappedResultsParams.cs" />
     <Compile Include="Storage\IAttachmentsStorageActions.cs" />

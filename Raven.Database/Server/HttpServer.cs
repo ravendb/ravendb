@@ -8,13 +8,18 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition;
+using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
+using Raven.Database.Plugins;
+using Raven.Database.Plugins.Catalogs;
+using Raven.Database.Server.Responders;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
@@ -26,7 +31,6 @@ using Raven.Database.Config;
 using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
-using Raven.Database.Plugins.Builtins;
 using Raven.Database.Plugins.Builtins.Tenants;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
@@ -37,6 +41,7 @@ namespace Raven.Database.Server
 {
 	public class HttpServer : IDisposable
 	{
+		private readonly DateTime startUpTime = DateTime.UtcNow;
 		private const int MaxConcurrentRequests = 192;
 		public DocumentDatabase DefaultResourceStore { get; private set; }
 		public InMemoryRavenConfiguration DefaultConfiguration { get; private set; }
@@ -142,10 +147,37 @@ namespace Raven.Database.Server
 			if (@event.Database != DefaultResourceStore)
 				return; // we ignore anything that isn't from the root db
 
-			CleanupDatabase(@event.Name);
+			CleanupDatabase(@event.Name, skipIfActive: false);
 		}
 
-		
+		public object Statistics
+		{
+			get
+			{
+				return new
+				{
+					TotalNumberOfRequests = NumberOfRequests,
+					Uptime = DateTime.UtcNow - startUpTime,
+					LoadedDatabases =
+						from documentDatabase in ResourcesStoresCache
+								.Concat(new[] {new KeyValuePair<string, DocumentDatabase>("Default", DefaultResourceStore),})
+						let totalSizeOnDisk = documentDatabase.Value.GetTotalSizeOnDisk()
+						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Key)
+						select new
+						{
+							Name = documentDatabase.Key,
+							LastActivity =  new[]
+							{
+								lastUsed, 
+								documentDatabase.Value.WorkContext.LastWorkTime,
+							}.Max(),
+							Size = totalSizeOnDisk,
+							HumaneSize = DatabaseSize.Humane(totalSizeOnDisk),
+							documentDatabase.Value.Statistics.CountOfDocuments,
+						}
+				};
+			}
+		}
 
 		public void Dispose()
 		{
@@ -228,12 +260,12 @@ namespace Raven.Database.Server
 			{
 				// intentionally inside the loop, so we get better concurrency overall
 				// since shutting down a database can take a while
-				CleanupDatabase(db);
+				CleanupDatabase(db, skipIfActive: true);
 
 			}
 		}
 
-		protected void CleanupDatabase(string db)
+		protected void CleanupDatabase(string db, bool skipIfActive)
 		{
 			lock (ResourcesStoresCache)
 			{
@@ -244,7 +276,7 @@ namespace Raven.Database.Server
 					databaseLastRecentlyUsed.TryRemove(db, out time);
 					return;
 				}
-				if ((SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
+				if (skipIfActive && (SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 1)
 				{
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
@@ -545,7 +577,10 @@ namespace Raven.Database.Server
 					var requestResponder = requestResponderLazy.Value;
 					if (requestResponder.WillRespond(ctx))
 					{
+						var sp = Stopwatch.StartNew();
 						requestResponder.Respond(ctx);
+						sp.Stop();
+						ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,# ms",CultureInfo.InvariantCulture));
 						return requestResponder.IsUserInterfaceRequest;
 					}
 				}
@@ -614,6 +649,7 @@ namespace Raven.Database.Server
 				currentTenantId.Value = Constants.DefaultDatabase;
 				currentDatabase.Value = DefaultResourceStore;
 				currentConfiguration.Value = DefaultConfiguration;
+				databaseLastRecentlyUsed.AddOrUpdate("Default", SystemTime.Now, (s, time) => SystemTime.Now);
 			}
 			else
 			{
@@ -725,6 +761,11 @@ namespace Raven.Database.Server
 			var acceptEncoding = ctx.Request.Headers["Accept-Encoding"];
 
 			if (string.IsNullOrEmpty(acceptEncoding))
+				return;
+
+			// The Studio xap is already a compressed file, it's a waste of time to try to compress it further.
+			var requestUrl = ctx.GetRequestUrl();
+			if (String.Equals(requestUrl, "/silverlight/Raven.Studio.xap", StringComparison.InvariantCultureIgnoreCase))
 				return;
 
 			// gzip must be first, because chrome has an issue accepting deflate data

@@ -1,19 +1,46 @@
 ﻿using System.Windows;
+using System.Windows.Input;
+using System.Windows.Interactivity;
 using Microsoft.Expression.Interactivity.Input;
 
 namespace Raven.Studio.Behaviors
 {
-	public class StudioKeyTrigger : KeyTrigger 
-	{
-		protected override void OnAttached()
-		{
-			base.OnAttached();
+    /// <summary>
+    /// The built in KeyTrigger is broken: it doesn't work for ChildWindows, and it 
+    /// doesn't detach itself when the element gets unloaded. Which is why we've got our own.
+    /// </summary>
+    public class StudioKeyTrigger : EventTriggerBase<FrameworkElement>
+    {
+        public static readonly DependencyProperty KeyProperty =
+            DependencyProperty.Register("Key", typeof(Key), typeof(StudioKeyTrigger), new PropertyMetadata(default(Key)));
 
-			var element = AssociatedObject as FrameworkElement;
-			if (element == null)
-				return;
+        public static readonly DependencyProperty ModifiersProperty =
+            DependencyProperty.Register("Modifiers", typeof(ModifierKeys), typeof(StudioKeyTrigger), new PropertyMetadata(default(ModifierKeys)));
 
-			element.Unloaded += (sender, args) => Detach();
-		}
-	}
+        public ModifierKeys Modifiers
+        {
+            get { return (ModifierKeys)GetValue(ModifiersProperty); }
+            set { SetValue(ModifiersProperty, value); }
+        }
+
+        public Key Key
+        {
+            get { return (Key)GetValue(KeyProperty); }
+            set { SetValue(KeyProperty, value); }
+        }
+
+        protected override string GetEventName()
+        {
+            return "KeyDown";
+        }
+
+        protected override void OnEvent(System.EventArgs eventArgs)
+        {
+            var keyEventArgs = eventArgs as KeyEventArgs;
+            if (keyEventArgs.Key == Key && Keyboard.Modifiers == Modifiers)
+            {
+                InvokeActions(null);
+            }
+        }
+    }
 }

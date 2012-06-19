@@ -6,7 +6,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class IndexesModel : ViewModel
+	public class IndexesModel : PageViewModel
 	{
 		public static BindableCollection<IndexListItem> GroupedIndexes { get; private set; }
 

@@ -11,27 +11,29 @@ using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Xml;
 using Raven.Abstractions.Indexing;
 using Raven.Bundles.Expiration;
 using Raven.Bundles.IndexReplication;
 using Raven.Bundles.IndexReplication.Data;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Server;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Raven.Bundles.Tests.IndexReplication
 {
-	public class ReplicateToSql : IDisposable
+	public class CanReplicateToSql : IDisposable
 	{
-		private readonly DocumentStore documentStore;
+		private readonly IDocumentStore documentStore;
 		private readonly string path;
 		private readonly RavenDbServer ravenDbServer;
 
-		public ConnectionStringSettings ConnectionString { get; set; }
+		private ConnectionStringSettings ConnectionString
+		{
+			get { return FactIfSqlServerIsAvailable.ConnectionStringSettings; }
+		}
 
-		public ReplicateToSql()
+		public CanReplicateToSql()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
@@ -51,11 +53,7 @@ namespace Raven.Bundles.Tests.IndexReplication
 						},
 				});
 			ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
-			documentStore = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			};
-			documentStore.Initialize();
+			documentStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize();
 
 			documentStore.DatabaseCommands.PutIndex(
 				"Questions/Votes",
@@ -121,7 +119,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 		}
 
 		[FactIfSqlServerIsAvailable]
-		public void Can_replicate_to_sql()
+		public void WhenInserted()
 		{
 			CreateRdbmsSchema();
 
@@ -190,7 +188,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 		}
 
 		[FactIfSqlServerIsAvailable]
-		public void Can_replicate_to_sql_when_document_is_updated()
+		public void WhenUpdated()
 		{
 			CreateRdbmsSchema();
 			
@@ -286,7 +284,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 			}
 		}
 
-		public class QuestionSummary
+		private class QuestionSummary
 		{
 			public string Id { get; set; }
 			public string Title { get; set; }
@@ -294,7 +292,7 @@ CREATE TABLE [dbo].[QuestionSummaries]
 			public int DownVotes { get; set; }
 		}
 
-		public class Question
+		private class Question
 		{
 			public string Id { get; set; }
 			public string Title { get; set; }
@@ -302,101 +300,10 @@ CREATE TABLE [dbo].[QuestionSummaries]
 			public Vote[] Votes { get; set; }
 		}
 
-		public class Vote
+		private class Vote
 		{
 			public bool Up { get; set; }
 			public string Comment { get; set; }
-		}
-
-	}
-
-	[CLSCompliant(false)]
-	public class FactIfSqlServerIsAvailable : FactAttribute
-	{
-
-		ConnectionStringSettings connectionStringSettings;
-		public FactIfSqlServerIsAvailable()
-		{
-			var connectionStringName = GetAppropriateConnectionStringNameInternal();
-			if(connectionStringName == null)
-			{
-				base.Skip = "Could not find a connection string with a valid database to connect to, skipping the test";
-				return;
-			}
-			connectionStringSettings = ConfigurationManager.ConnectionStrings[connectionStringName];
-		}
-
-		protected override System.Collections.Generic.IEnumerable<Xunit.Sdk.ITestCommand> EnumerateTestCommands(Xunit.Sdk.IMethodInfo method)
-		{
-			return base.EnumerateTestCommands(method).Select(enumerateTestCommand => new ActionTestCommandWrapper(enumerateTestCommand, o =>
-			{
-				((ReplicateToSql)o).ConnectionString=connectionStringSettings;
-			}));
-		}
-
-		public class ActionTestCommandWrapper : ITestCommand
-		{
-			private readonly ITestCommand inner;
-			private readonly Action<object> action;
-
-			public ActionTestCommandWrapper(ITestCommand inner, Action<object> action)
-			{
-				this.inner = inner;
-				this.action = action;
-			}
-
-			public MethodResult Execute(object testClass)
-			{
-				action(testClass);
-				return inner.Execute(testClass);
-			}
-
-			public XmlNode ToStartXml()
-			{
-				return inner.ToStartXml();
-			}
-
-			public string DisplayName
-			{
-				get { return inner.DisplayName; }
-			}
-
-			public bool ShouldCreateInstance
-			{
-				get { return inner.ShouldCreateInstance; }
-			}
-
-			public int Timeout
-			{
-				get { return inner.Timeout; }
-			}
-		}
-
-		private static string GetAppropriateConnectionStringNameInternal()
-		{
-			foreach (ConnectionStringSettings connectionString in new[]
-			{
-				ConfigurationManager.ConnectionStrings["SqlExpress"],
-				ConfigurationManager.ConnectionStrings["LocalHost"],
-			})
-			{
-				var providerFactory = DbProviderFactories.GetFactory(connectionString.ProviderName);
-				try
-				{
-					using (var connection = providerFactory.CreateConnection())
-					{
-						connection.ConnectionString = connectionString.ConnectionString;
-						connection.Open();
-					}
-					return connectionString.Name;
-				}
-				// ReSharper disable EmptyGeneralCatchClause
-				catch
-				// ReSharper restore EmptyGeneralCatchClause
-				{
-				}
-			}
-			return null;
 		}
 	}
 }

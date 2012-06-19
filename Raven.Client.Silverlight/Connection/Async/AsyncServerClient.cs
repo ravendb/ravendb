@@ -185,7 +185,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 							NonAuthoritativeInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
 							Key = docKey,
 							LastModified = DateTime.ParseExact(request.ResponseHeaders[Constants.LastModified].First(), "r", CultureInfo.InvariantCulture).ToLocalTime(),
-							Etag = new Guid(request.ResponseHeaders["ETag"].First()),
+							Etag = request.GetEtagHeader(),
 							Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 						};
 					}
@@ -223,7 +223,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 											", conflict must be resolved before the document will be accessible")
 				{
 					ConflictedVersionIds = conflictIds,
-					Etag = new Guid(httpWebResponse.Headers["ETag"])
+					Etag = httpWebResponse.GetEtagHeader()
 				};
 			}
 			return false;
@@ -498,7 +498,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, path.NoCache(), "GET", credentials, convention);
 
 				return request.ReadResponseJsonAsync()
-					.ContinueWith(task => AttemptToProcessResponse(() => SerializationHelper.ToQueryResult((RavenJObject)task.Result, request.ResponseHeaders["ETag"].First())));
+					.ContinueWith(task => AttemptToProcessResponse(() => SerializationHelper.ToQueryResult((RavenJObject)task.Result, request.GetEtagHeader())));
 			});
 		}
 
@@ -905,11 +905,11 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <summary>
 		/// Gets the list of databases from the server asynchronously
 		/// </summary>
-		public Task<string[]> GetDatabaseNamesAsync(int pageSize)
+		public Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0)
 		{
 			return ExecuteWithReplication("GET", url =>
 			{
-				return url.Databases(pageSize)
+				return url.Databases(pageSize, start)
 					.NoCache()
 					.ToJsonRequest(this, credentials, convention)
 					.ReadResponseJsonAsync()
@@ -979,7 +979,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 							return new Attachment
 									{
 										Data = () => new MemoryStream(buffer),
-										Etag = new Guid(request.ResponseHeaders["ETag"].First()),
+										Etag = request.GetEtagHeader(),
 										Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
 									};
 						}

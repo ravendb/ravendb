@@ -4,8 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
+using System.Web;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
+using Raven.Database.Extensions;
 using SpellChecker.Net.Search.Spell;
 
 namespace Raven.Database.Queries
@@ -31,7 +34,7 @@ namespace Raven.Database.Queries
 			suggestionQuery.MaxSuggestions = Math.Min(suggestionQuery.MaxSuggestions,
 													  _database.Configuration.MaxPageSize);
 
-			var indexExtensionKey = suggestionQuery.Field + "/" + suggestionQuery.Distance + "/" + suggestionQuery.Accuracy;
+			var indexExtensionKey = MonoHttpUtility.UrlEncode(suggestionQuery.Field + "-" + suggestionQuery.Distance + "-" + suggestionQuery.Accuracy);
 
 			var indexExtension = _database.IndexStorage.GetIndexExtension(indexName, indexExtensionKey) as SuggestionQueryIndexExtension;
 
@@ -44,8 +47,13 @@ namespace Raven.Database.Queries
 			{
 				var indexReader = currentSearcher.GetIndexReader();
 
-				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(GetStringDistance(suggestionQuery), suggestionQuery.Field, suggestionQuery.Accuracy);
-				suggestionQueryIndexExtension.Init(indexReader);
+				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
+					Path.Combine(_database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
+					indexReader,
+					GetStringDistance(suggestionQuery.Distance), 
+					suggestionQuery.Field, 
+					suggestionQuery.Accuracy);
+				suggestionQueryIndexExtension.Init(indexReader); // TODO: This is completely innefficient, need to use distance matching on terms instead of re-indexing using grams
 
 				_database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
 
@@ -53,9 +61,10 @@ namespace Raven.Database.Queries
 			}
 		}
 
-		private static StringDistance GetStringDistance(SuggestionQuery query)
+		[CLSCompliant(false)]
+		public static StringDistance GetStringDistance(StringDistanceTypes distanceAlg)
 		{
-			switch (query.Distance)
+			switch (distanceAlg)
 			{
 				case StringDistanceTypes.NGram:
 					return new NGramDistance();

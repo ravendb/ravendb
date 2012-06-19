@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Features.Stats.StatisticsView"
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Features.Stats.StatisticsView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
@@ -15,7 +15,9 @@
 
 		<Border 
 			Grid.Row="0"
-			Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0">
+			Background="{StaticResource Brush_HeaderBackground}" CornerRadius="4,4,0,0"
+            BorderBrush="{StaticResource Brush_HeaderBorder}"
+            BorderThickness="1">
 			<toolkit:DockPanel Margin="4" LastChildFill="False">
 				<StackPanel Orientation="Horizontal">
 					<HyperlinkButton Content="Summary"
@@ -124,4 +126,4 @@
 			</Grid>
 		</ScrollViewer>
 	</Grid>
-</Infrastructure:View>
+</Infrastructure:PageView>

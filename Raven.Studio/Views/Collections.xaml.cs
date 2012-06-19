@@ -2,7 +2,7 @@
 
 namespace Raven.Studio.Views
 {
-	public partial class Collections : View
+	public partial class Collections : PageView
 	{
 		public Collections()
 		{

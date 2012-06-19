@@ -29,7 +29,7 @@ namespace Raven.Database.Queries
 			temporaryIndexes = new ConcurrentDictionary<string, TemporaryIndexInfo>();
 		}
 
-		public QueryResult ExecuteDynamicQuery(string entityName, IndexQuery query)
+		public QueryResultWithIncludes ExecuteDynamicQuery(string entityName, IndexQuery query)
 		{
 			// Create the map
 			var map = DynamicQueryMapping.Create(documentDatabase, query, entityName);
@@ -42,7 +42,10 @@ namespace Raven.Database.Queries
 												   (current, mapItem) => current.Replace(mapItem.QueryFrom, mapItem.To));
 
 			UpdateFieldNamesForSortedFields(query, map);
-			UpdateFieldsInArray(map, query.FieldsToFetch);
+
+			// We explicitly do NOT want to update the field names of FieldsToFetch - that reads directly from the document
+			//UpdateFieldsInArray(map, query.FieldsToFetch);
+			
 			UpdateFieldsInArray(map, query.GroupBy);
 
 			return ExecuteActualQuery(query, map, touchTemporaryIndexResult, realQuery);
@@ -71,10 +74,10 @@ namespace Raven.Database.Queries
 			}
 		}
 
-		private QueryResult ExecuteActualQuery(IndexQuery query, DynamicQueryMapping map, Tuple<string, bool> touchTemporaryIndexResult, string realQuery)
+		private QueryResultWithIncludes ExecuteActualQuery(IndexQuery query, DynamicQueryMapping map, Tuple<string, bool> touchTemporaryIndexResult, string realQuery)
 		{
 			// Perform the query until we have some results at least
-			QueryResult result;
+			QueryResultWithIncludes result;
 			var sp = Stopwatch.StartNew();
 			while (true)
 			{
@@ -89,11 +92,12 @@ namespace Raven.Database.Queries
 													GroupBy = query.GroupBy,
 													AggregationOperation = query.AggregationOperation,
 													SortedFields = query.SortedFields,
+													DefaultField = query.DefaultField
 												});
 
 				if (!touchTemporaryIndexResult.Item2 ||
 					!result.IsStale ||
-					result.Results.Count >= query.PageSize ||
+					(result.Results.Count >= query.PageSize && query.PageSize > 0) ||
 					sp.Elapsed.TotalSeconds > 15)
 				{
 					return result;

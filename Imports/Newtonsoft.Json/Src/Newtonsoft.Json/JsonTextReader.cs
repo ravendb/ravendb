@@ -55,7 +55,6 @@ namespace Raven.Imports.Newtonsoft.Json
     private const char UnicodeReplacementChar = '\uFFFD';
 
     private readonly TextReader _reader;
-
     private char[] _chars;
     private int _charsUsed;
     private int _charPos;
@@ -76,7 +75,6 @@ namespace Raven.Imports.Newtonsoft.Json
 
       _reader = reader;
       _lineNumber = 1;
-
       _chars = new char[4097];
     }
 
@@ -324,6 +322,7 @@ namespace Raven.Imports.Newtonsoft.Json
       int attemptCharReadCount = _chars.Length - _charsUsed - 1;
 
       int charsRead = _reader.Read(_chars, _charsUsed, attemptCharReadCount);
+
       _charsUsed += charsRead;
 
       if (charsRead == 0)
@@ -501,7 +500,7 @@ namespace Raven.Imports.Newtonsoft.Json
               }
               else
               {
-                throw CreateReaderException(this, "Additional text encountered after finished reading JSON content: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]));
+                throw JsonReaderException.Create(this, "Additional text encountered after finished reading JSON content: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]));
               }
             }
             return false;
@@ -510,7 +509,7 @@ namespace Raven.Imports.Newtonsoft.Json
           case State.Error:
             break;
           default:
-            throw CreateReaderException(this, "Unexpected state: {0}.".FormatWith(CultureInfo.InvariantCulture, CurrentState));
+            throw JsonReaderException.Create(this, "Unexpected state: {0}.".FormatWith(CultureInfo.InvariantCulture, CurrentState));
         }
       }
     }
@@ -534,7 +533,7 @@ namespace Raven.Imports.Newtonsoft.Json
               if (ReadData(true) == 0)
               {
                 _charPos = charPos;
-                throw CreateReaderException(this, "Unterminated string. Expected delimiter: {0}.".FormatWith(CultureInfo.InvariantCulture, quote));
+                throw JsonReaderException.Create(this, "Unterminated string. Expected delimiter: {0}.".FormatWith(CultureInfo.InvariantCulture, quote));
               }
             }
             break;
@@ -543,7 +542,7 @@ namespace Raven.Imports.Newtonsoft.Json
             if (!EnsureChars(0, true))
             {
               _charPos = charPos;
-              throw CreateReaderException(this, "Unterminated string. Expected delimiter: {0}.".FormatWith(CultureInfo.InvariantCulture, quote));
+              throw JsonReaderException.Create(this, "Unterminated string. Expected delimiter: {0}.".FormatWith(CultureInfo.InvariantCulture, quote));
             }
 
             // start of escape sequence
@@ -648,7 +647,7 @@ namespace Raven.Imports.Newtonsoft.Json
               default:
                 charPos++;
                 _charPos = charPos;
-                throw CreateReaderException(this, "Bad JSON escape sequence: {0}.".FormatWith(CultureInfo.InvariantCulture, @"\" + currentChar));
+                throw JsonReaderException.Create(this, "Bad JSON escape sequence: {0}.".FormatWith(CultureInfo.InvariantCulture, @"\" + currentChar));
             }
 
             if (buffer == null)
@@ -721,7 +720,7 @@ namespace Raven.Imports.Newtonsoft.Json
       }
       else
       {
-        throw CreateReaderException(this, "Unexpected end while parsing unicode character.");
+        throw JsonReaderException.Create(this, "Unexpected end while parsing unicode character.");
       }
       return writeChar;
     }
@@ -848,7 +847,7 @@ namespace Raven.Imports.Newtonsoft.Json
             }
             else
             {
-              throw CreateReaderException(this, "After parsing a value an unexpected character was encountered: {0}.".FormatWith(CultureInfo.InvariantCulture, currentChar));
+              throw JsonReaderException.Create(this, "After parsing a value an unexpected character was encountered: {0}.".FormatWith(CultureInfo.InvariantCulture, currentChar));
             }
             break;
         }
@@ -927,7 +926,7 @@ namespace Raven.Imports.Newtonsoft.Json
       }
       else
       {
-        throw CreateReaderException(this, "Invalid property identifier character: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]));
+        throw JsonReaderException.Create(this, "Invalid property identifier character: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]));
       }
 
       string propertyName = _stringReference.ToString();
@@ -935,7 +934,7 @@ namespace Raven.Imports.Newtonsoft.Json
       EatWhitespace(false);
 
       if (_chars[_charPos] != ':')
-        throw CreateReaderException(this, "Invalid character after parsing property name. Expected ':' but got: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]));
+        throw JsonReaderException.Create(this, "Invalid character after parsing property name. Expected ':' but got: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]));
 
       _charPos++;
 
@@ -964,7 +963,7 @@ namespace Raven.Imports.Newtonsoft.Json
             if (_charsUsed == _charPos)
             {
               if (ReadData(true) == 0)
-                throw CreateReaderException(this, "Unexpected end while parsing unquoted property name.");
+                throw JsonReaderException.Create(this, "Unexpected end while parsing unquoted property name.");
 
               break;
             }
@@ -985,7 +984,7 @@ namespace Raven.Imports.Newtonsoft.Json
               return;
             }
 
-            throw CreateReaderException(this, "Invalid JavaScript property identifier character: {0}.".FormatWith(CultureInfo.InvariantCulture, currentChar));
+            throw JsonReaderException.Create(this, "Invalid JavaScript property identifier character: {0}.".FormatWith(CultureInfo.InvariantCulture, currentChar));
         }
       }
     }
@@ -1029,11 +1028,11 @@ namespace Raven.Imports.Newtonsoft.Json
               else if (next == 'e')
                 ParseConstructor();
               else
-                throw CreateReaderException(this, "Unexpected character encountered while parsing value: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]));
+                throw JsonReaderException.Create(this, "Unexpected character encountered while parsing value: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]));
             }
             else
             {
-              throw CreateReaderException(this, "Unexpected end.");
+              throw JsonReaderException.Create(this, "Unexpected end.");
             }
             return true;
           case 'N':
@@ -1100,7 +1099,7 @@ namespace Raven.Imports.Newtonsoft.Json
             }
             else
             {
-              throw CreateReaderException(this, "Unexpected character encountered while parsing value: {0}.".FormatWith(CultureInfo.InvariantCulture, currentChar));
+              throw JsonReaderException.Create(this, "Unexpected character encountered while parsing value: {0}.".FormatWith(CultureInfo.InvariantCulture, currentChar));
             }
         }
       }
@@ -1183,7 +1182,7 @@ namespace Raven.Imports.Newtonsoft.Json
             if (_charsUsed == _charPos)
             {
               if (ReadData(true) == 0)
-                throw CreateReaderException(this, "Unexpected end while parsing constructor.");
+                throw JsonReaderException.Create(this, "Unexpected end while parsing constructor.");
             }
             else
             {
@@ -1221,7 +1220,7 @@ namespace Raven.Imports.Newtonsoft.Json
           }
           else
           {
-            throw CreateReaderException(this, "Unexpected character while parsing constructor: {0}.".FormatWith(CultureInfo.InvariantCulture, currentChar));
+            throw JsonReaderException.Create(this, "Unexpected character while parsing constructor: {0}.".FormatWith(CultureInfo.InvariantCulture, currentChar));
           }
         }
 
@@ -1231,7 +1230,7 @@ namespace Raven.Imports.Newtonsoft.Json
         EatWhitespace(false);
 
         if (_chars[_charPos] != '(')
-          throw CreateReaderException(this, "Unexpected character while parsing constructor: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]));
+          throw JsonReaderException.Create(this, "Unexpected character while parsing constructor: {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]));
 
         _charPos++;
 
@@ -1350,7 +1349,7 @@ namespace Raven.Imports.Newtonsoft.Json
             }
             catch (OverflowException ex)
             {
-              throw CreateReaderException((JsonReader)this, "JSON integer {0} is too large or small for an Int64.".FormatWith(CultureInfo.InvariantCulture, number), ex);
+              throw JsonReaderException.Create((JsonReader)this, "JSON integer {0} is too large or small for an Int64.".FormatWith(CultureInfo.InvariantCulture, number), ex);
             }
 
             numberType = JsonToken.Integer;
@@ -1369,7 +1368,7 @@ namespace Raven.Imports.Newtonsoft.Json
       _charPos++;
 
       if (!EnsureChars(1, false) || _chars[_charPos] != '*')
-        throw CreateReaderException(this, "Error parsing comment. Expected: *, got {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]));
+        throw JsonReaderException.Create(this, "Error parsing comment. Expected: *, got {0}.".FormatWith(CultureInfo.InvariantCulture, _chars[_charPos]));
       else
         _charPos++;
 
@@ -1385,7 +1384,7 @@ namespace Raven.Imports.Newtonsoft.Json
             if (_charsUsed == _charPos)
             {
               if (ReadData(true) == 0)
-                throw CreateReaderException(this, "Unexpected end while parsing comment.");
+                throw JsonReaderException.Create(this, "Unexpected end while parsing comment.");
             }
             else
             {
@@ -1498,7 +1497,7 @@ namespace Raven.Imports.Newtonsoft.Json
       }
       else
       {
-        throw CreateReaderException(this, "Error parsing boolean value.");
+        throw JsonReaderException.Create(this, "Error parsing boolean value.");
       }
     }
 
@@ -1510,7 +1509,7 @@ namespace Raven.Imports.Newtonsoft.Json
       }
       else
       {
-        throw CreateReaderException(this, "Error parsing null value.");
+        throw JsonReaderException.Create(this, "Error parsing null value.");
       }
     }
 
@@ -1522,7 +1521,7 @@ namespace Raven.Imports.Newtonsoft.Json
       }
       else
       {
-        throw CreateReaderException(this, "Error parsing undefined value.");
+        throw JsonReaderException.Create(this, "Error parsing undefined value.");
       }
     }
 
@@ -1534,7 +1533,7 @@ namespace Raven.Imports.Newtonsoft.Json
       }
       else
       {
-        throw CreateReaderException(this, "Error parsing boolean value.");
+        throw JsonReaderException.Create(this, "Error parsing boolean value.");
       }
     }
 
@@ -1546,7 +1545,7 @@ namespace Raven.Imports.Newtonsoft.Json
       }
       else
       {
-        throw CreateReaderException(this, "Error parsing negative infinity value.");
+        throw JsonReaderException.Create(this, "Error parsing negative infinity value.");
       }
     }
 
@@ -1558,7 +1557,7 @@ namespace Raven.Imports.Newtonsoft.Json
       }
       else
       {
-        throw CreateReaderException(this, "Error parsing positive infinity value.");
+        throw JsonReaderException.Create(this, "Error parsing positive infinity value.");
       }
     }
 
@@ -1570,7 +1569,7 @@ namespace Raven.Imports.Newtonsoft.Json
       }
       else
       {
-        throw CreateReaderException(this, "Error parsing NaN value.");
+        throw JsonReaderException.Create(this, "Error parsing NaN value.");
       }
     }
 

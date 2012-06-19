@@ -81,6 +81,7 @@
       <HintPath>..\SharedLibs\Silverlight\Expression\SL5\Microsoft.Expression.Interactions.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
+    <Reference Include="System.ComponentModel.DataAnnotations, Version=5.0.5.0, Culture=neutral, PublicKeyToken=ddd0da4d3e678217, processorArchitecture=MSIL" />
     <Reference Include="System.Reactive, Version=1.0.10621.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Rx-Main.1.0.11226\lib\SL4\System.Reactive.dll</HintPath>
     </Reference>
@@ -138,16 +139,63 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Behaviors\BindColumnsToColumnSetBehavior.cs" />
+    <Compile Include="Behaviors\BindColumnVisibility.cs" />
+    <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
+    <Compile Include="Behaviors\BindSuggestionsProvider.cs" />
+    <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
+    <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
+    <Compile Include="Behaviors\FadeTrimming.cs" />
+    <Compile Include="Behaviors\FocusElementAction.cs" />
+    <Compile Include="Behaviors\IAutoCompleteSuggestionProvider.cs" />
+    <Compile Include="Behaviors\OpenDropDownAction.cs" />
+    <Compile Include="Behaviors\SelectAllAction.cs" />
+    <Compile Include="Behaviors\SelectRowOnRightClickBehavior.cs" />
+    <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\CopyDocumentsToClipboardCommand.cs" />
     <Compile Include="Commands\ResetIndexCommand.cs" />
+    <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
+    <Compile Include="Controls\DataFetchErrorNotifier.xaml.cs">
+      <DependentUpon>DataFetchErrorNotifier.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\GoToDocumentControl.xaml.cs">
+      <DependentUpon>GoToDocumentControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
+    <Compile Include="Controls\VirtualizingWrapPanel.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
+    <Compile Include="Extensions\DoubleExtensions.cs" />
+    <Compile Include="Extensions\IObservableExtensions.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
+    <Compile Include="Features\Documents\AllDocumentsNavigator.cs" />
+    <Compile Include="Features\Documents\CollectionDocumentsCollectionSource.cs" />
+    <Compile Include="Features\Documents\ColumnDefinition.cs" />
+    <Compile Include="Features\Documents\ColumnEditorViewModel.cs" />
+    <Compile Include="Features\Documents\ColumnModel.cs" />
+    <Compile Include="Features\Documents\ColumnsEditorDialog.xaml.cs">
+      <DependentUpon>ColumnsEditorDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\ColumnsEditorDialogViewModel.cs" />
+    <Compile Include="Features\Documents\ColumnSet.cs" />
+    <Compile Include="Features\Documents\ColumnsModel.cs" />
+    <Compile Include="Features\Documents\ColumnSuggester.cs" />
+    <Compile Include="Features\Documents\DocumentNavigationStrategy.cs" />
+    <Compile Include="Features\Documents\DocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
+    <Compile Include="Features\Documents\DocumentsView.xaml.cs">
+      <DependentUpon>DocumentsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Documents\EditVirtualDocumentCommand.cs" />
+    <Compile Include="Features\Documents\IndexDocumentsNavigator.cs" />
+    <Compile Include="Features\Documents\PriorityColumn.cs" />
+    <Compile Include="Features\Documents\SingleDocumentNavigator.cs" />
+    <Compile Include="Features\Query\IndexQueryHelpers.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
+    <Compile Include="Features\Query\QueryDocumentsCollectionSource.cs" />
     <Compile Include="Features\Query\QueryIndexAutoComplete.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
     <Compile Include="Features\Tasks\TaskView.xaml.cs">
@@ -156,23 +204,65 @@
     <Compile Include="Features\Terms\TermsView.xaml.cs">
       <DependentUpon>TermsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Impl\SplitButton\GlobalSuppressions.cs" />
+    <Compile Include="Impl\SplitButton\MenuButton.cs" />
+    <Compile Include="Impl\SplitButton\SplitButton.cs" />
+    <Compile Include="Impl\WatermarkedTextBox\VisualStateHelper.cs" />
+    <Compile Include="Impl\WatermarkedTextBox\WatermarkedTextBox.cs" />
+    <Compile Include="Infrastructure\ArrayContainer.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
+    <Compile Include="Infrastructure\Converters\NegatingBoolConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringValueToObjectConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringValueConversion.cs" />
+    <Compile Include="Infrastructure\Converters\StringValueConversionCollection.cs" />
     <Compile Include="Infrastructure\Converters\TaskStatusConverter.cs" />
     <Compile Include="Infrastructure\Converters\RedIfError.cs" />
     <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
+    <Compile Include="Infrastructure\Converters\TrimmedStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
+    <Compile Include="Infrastructure\FlexibleTemplateItemsControl.cs" />
+    <Compile Include="Infrastructure\ProvideVisibleItemRangeFromDataGridBehavior.cs" />
+    <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
+    <Compile Include="Infrastructure\DeferredActionInvoker.cs" />
+    <Compile Include="Infrastructure\DialogView.cs" />
+    <Compile Include="Infrastructure\DialogViewModel.cs" />
+    <Compile Include="Infrastructure\FrameworkElementExtensions.cs" />
+    <Compile Include="Infrastructure\IEnquireAboutItemVisibility.cs" />
+    <Compile Include="Infrastructure\INotifyOnDataFetchErrors.cs" />
+    <Compile Include="Infrastructure\ItemSelection.cs" />
+    <Compile Include="Infrastructure\ItemSelection`1.cs" />
+    <Compile Include="Infrastructure\IVirtualCollectionSource.cs" />
+    <Compile Include="Infrastructure\MarkupExtensions\StaticExtension.cs" />
+    <Compile Include="Infrastructure\MostRecentUsedList.cs" />
+    <Compile Include="Infrastructure\RecyclingContentLoader.cs" />
+    <Compile Include="Infrastructure\SparseList.cs" />
+    <Compile Include="Infrastructure\Validation.cs" />
+    <Compile Include="Infrastructure\Validators\DataGridLengthAttribute.cs" />
+    <Compile Include="Infrastructure\View.cs" />
+    <Compile Include="Infrastructure\ViewModel.cs" />
+    <Compile Include="Infrastructure\VirtualCollection.cs" />
+    <Compile Include="Infrastructure\VirtualCollectionSource.cs" />
+    <Compile Include="Infrastructure\VirtualItem.cs" />
+    <Compile Include="Infrastructure\ProvideVisibleItemRangeFromItemsControlBehavior.cs" />
     <Compile Include="Infrastructure\WeakEventListener.cs" />
     <Compile Include="Infrastructure\WeakEventSourceBase.cs" />
     <Compile Include="Infrastructure\WeakReference.cs" />
+    <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
+    <Compile Include="Models\ApplicationState.cs" />
     <Compile Include="Models\DocumentSize.cs" />
+    <Compile Include="Models\DocumentViewStateStore.cs" />
+    <Compile Include="Models\GoToDocumentModel.cs" />
     <Compile Include="Models\IHasPageTitle.cs" />
+    <Compile Include="Models\DocumentsModel.cs" />
+    <Compile Include="Models\PerDatabaseState.cs" />
+    <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
     <Compile Include="Views\Terms.xaml.cs">
       <DependentUpon>Terms.xaml</DependentUpon>
     </Compile>
     <EmbeddedResource Include="Assets\EmbeddedData\MvcMusicStore_Dump.json" />
     <Compile Include="Behaviors\SelectItemOnRightClick.cs" />
-    <Compile Include="Behaviors\ShowItemsBasedOnControlDimensions.cs" />
     <Compile Include="Behaviors\UpdateTextBindingOnPropertyChanged.cs" />
     <Compile Include="Behaviors\DoubleClickBehavior.cs" />
     <Compile Include="Behaviors\GoToStateAction.cs" />
@@ -236,9 +326,6 @@
     </Compile>
     <Compile Include="Commands\DeleteDocumentCommand.cs" />
     <Compile Include="Commands\NavigateToCommand.cs" />
-    <Compile Include="Features\Documents\DocumentsView.xaml.cs">
-      <DependentUpon>DocumentsView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Features\Util\MessageBoxWindow.xaml.cs">
       <DependentUpon>MessageBoxWindow.xaml</DependentUpon>
     </Compile>
@@ -298,10 +385,9 @@
     <Compile Include="Infrastructure\RxExtensions.cs" />
     <Compile Include="Infrastructure\UrlParser.cs" />
     <Compile Include="Infrastructure\UrlUtil.cs" />
-    <Compile Include="Infrastructure\ViewModel.cs" />
+    <Compile Include="Infrastructure\PageViewModel.cs" />
     <Compile Include="Models\AllDocumentsModel.cs" />
     <Compile Include="Models\DatabasesListModel.cs" />
-    <Compile Include="Models\DocumentsModel.cs" />
     <Compile Include="Models\HomeModel.cs" />
     <Compile Include="Models\IndexDefinitionModel.cs" />
     <Compile Include="Infrastructure\ContextMenu\ContextMenu.cs" />
@@ -355,7 +441,7 @@
     <Compile Include="Infrastructure\Observable.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Infrastructure\View.cs">
+    <Compile Include="Infrastructure\PageView.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Models\ApplicationModel.cs" />
@@ -413,7 +499,47 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="Assets\ComboBoxStyles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\DataGridStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Assets\SplitButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\TextBoxStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Assets\TreeViewStyles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\WatermarkedTextBox.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\DataFetchErrorNotifier.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\GoToDocumentControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\Taggers.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\ColumnsEditorDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Documents\DocumentsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -424,6 +550,10 @@
     <Page Include="Features\Terms\TermsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Impl\SplitButton\Themes\generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Terms.xaml">
       <SubType>Designer</SubType>
@@ -557,10 +687,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Features\Documents\DocumentsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Features\Input\ConfirmWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -618,6 +744,9 @@
     <EmbeddedResource Include="Settings.dat" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Assets\Images\RemoveGray.png" />
+    <Content Include="Impl\SplitButton\Credits.txt" />
+    <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
     <Resource Include="Assets\Images\RavenDBLogo.png" />
     <Resource Include="Assets\Images\FooterTexture.png" />
@@ -649,6 +778,8 @@
     <Resource Include="Assets\Images\ExecuteQuery.png" />
     <Resource Include="Assets\Images\ChangeView.png" />
     <Resource Include="Assets\Images\Search.png" />
+    <Resource Include="Assets\Images\Up.png" />
+    <Resource Include="Assets\Images\Down.png" />
     <Content Include="Impl\PopupPlacement\Credit.txt" />
   </ItemGroup>
   <ItemGroup>

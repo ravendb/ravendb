@@ -69,12 +69,9 @@
     <Compile Include="Responders\DocumentReplicationResponder.cs" />
     <Compile Include="Tasks\ReplicationTask.cs" />
     <Compile Include="Data\SourceReplicationInformation.cs" />
-    <Compile Include="Triggers\ReplicationHiLo.cs" />
+    <Compile Include="Impl\ReplicationHiLo.cs" />
     <Compile Include="Triggers\VirtualAttachmentDeleteTrigger.cs" />
     <Compile Include="Triggers\VirtualDeleteTrigger.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">

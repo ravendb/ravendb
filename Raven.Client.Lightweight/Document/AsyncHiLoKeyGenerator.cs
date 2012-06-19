@@ -53,7 +53,7 @@ namespace Raven.Client.Document
 		///</summary>
 		public Task<long> NextIdAsync()
 		{
-			var myRange = range; // thread safe copy
+			var myRange = Range; // thread safe copy
 			long incrementedCurrent = Interlocked.Increment(ref myRange.Current);
 			if (incrementedCurrent <= myRange.Max)
 			{
@@ -64,7 +64,7 @@ namespace Raven.Client.Document
 			try
 			{
 				generatorLock.Enter(ref lockTaken);
-				if (range != myRange)
+				if (Range != myRange)
 				{
 					// Lock was contended, and the max has already been changed. Just get a new id as usual.
 					generatorLock.Exit();
@@ -76,7 +76,7 @@ namespace Raven.Client.Document
 					{
 						try
 						{
-							range = task.Result;
+							Range = task.Result;
 						}
 						finally
 						{
@@ -96,16 +96,16 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private Task<Range> GetNextRangeAsync()
+		private Task<RangeValue> GetNextRangeAsync()
 		{
 			IncreaseCapacityIfRequired();
 
 			return GetNextMaxAsyncInner();
 		}
 
-		private Task<Range> GetNextMaxAsyncInner()
+		private Task<RangeValue> GetNextMaxAsyncInner()
 		{
-			var minNextMax = range.Max;
+			var minNextMax = Range.Max;
 			return GetDocumentAsync()
 				.ContinueWith(task =>
 				{
@@ -159,7 +159,7 @@ namespace Raven.Client.Document
 							document.DataAsJson["Max"] = max;
 						}
 
-						return PutDocumentAsync(document).WithResult(new Range(min, max));
+						return PutDocumentAsync(document).WithResult(new RangeValue(min, max));
 					}
 					catch (ConcurrencyException)
 					{

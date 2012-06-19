@@ -75,9 +75,6 @@ namespace Raven.Tests.ManagedStorage
 			}
 		}
 
-
-		
-
 		[Fact]
 		public void CanAddAndReadFileAfterReopen()
 		{

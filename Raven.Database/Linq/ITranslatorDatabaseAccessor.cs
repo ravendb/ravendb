@@ -17,5 +17,10 @@ namespace Raven.Database.Linq
 		/// Returns the document matching this id, if exists, or null if it doesn't
 		/// </summary>
 		dynamic Load(object maybeId);
+
+		/// <summary>
+		/// Returns null object
+		/// </summary>
+		dynamic Include(object maybeId);
 	}
 }

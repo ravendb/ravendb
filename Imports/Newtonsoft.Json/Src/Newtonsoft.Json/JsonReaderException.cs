@@ -24,7 +24,9 @@
 #endregion
 
 using System;
+using System.Globalization;
 using System.Runtime.Serialization;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
@@ -34,14 +36,13 @@ namespace Raven.Imports.Newtonsoft.Json
 #if !(SILVERLIGHT || WINDOWS_PHONE || NETFX_CORE || PORTABLE)
   [Serializable]
 #endif
-  public class JsonReaderException : Exception
+  public class JsonReaderException : JsonException
   {
     /// <summary>
     /// Gets the line number indicating where the error occurred.
     /// </summary>
     /// <value>The line number indicating where the error occurred.</value>
     public int LineNumber { get; private set; }
-
 
     /// <summary>
     /// Gets the line position indicating where the error occurred.
@@ -103,6 +104,36 @@ namespace Raven.Imports.Newtonsoft.Json
       Path = path;
       LineNumber = lineNumber;
       LinePosition = linePosition;
+    }
+
+    internal static JsonReaderException Create(JsonReader reader, string message)
+    {
+      return Create(reader, message, null);
+    }
+
+    internal static JsonReaderException Create(JsonReader reader, string message, Exception ex)
+    {
+      return Create(reader as IJsonLineInfo, reader.Path, message, ex);
+    }
+
+    internal static JsonReaderException Create(IJsonLineInfo lineInfo, string path, string message, Exception ex)
+    {
+      message = FormatExceptionMessage(lineInfo, path, message);
+
+      int lineNumber;
+      int linePosition;
+      if (lineInfo != null && lineInfo.HasLineInfo())
+      {
+        lineNumber = lineInfo.LineNumber;
+        linePosition = lineInfo.LinePosition;
+      }
+      else
+      {
+        lineNumber = 0;
+        linePosition = 0;
+      }
+
+      return new JsonReaderException(message, ex, path, lineNumber, linePosition);
     }
   }
 }

@@ -3,10 +3,11 @@ using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 using System.Windows.Controls;
 using Raven.Studio.Infrastructure;
+using System.Linq;
 
 namespace Raven.Studio.Models
 {
-	public class TermsModel : ViewModel
+	public class TermsModel : PageViewModel
 	{
 
 		public TermsModel()
@@ -54,7 +55,7 @@ namespace Raven.Studio.Models
 						IndexDefinitionModel.HandleIndexNotFound(IndexName);
 						return;
 					}
-					fields.Match(definition.Fields);
+					fields.Match(definition.Fields.OrderBy(f => f).ToList());
 
 					foreach (var field in fields)
 					{

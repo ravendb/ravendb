@@ -358,6 +358,10 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       contract.MemberSerialization = JsonTypeReflector.GetObjectMemberSerialization(contract.NonNullableUnderlyingType, ignoreSerializableAttribute);
       contract.Properties.AddRange(CreateProperties(contract.NonNullableUnderlyingType, contract.MemberSerialization));
 
+      JsonObjectAttribute attribute = JsonTypeReflector.GetJsonObjectAttribute(contract.NonNullableUnderlyingType);
+      if (attribute != null)
+        contract.ItemRequired = attribute._itemRequired;
+
       // check if a JsonConstructorAttribute has been defined and use that
       if (contract.NonNullableUnderlyingType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Any(c => c.IsDefined(typeof(JsonConstructorAttribute), true)))
       {
@@ -385,7 +389,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       IList<ConstructorInfo> markedConstructors = objectType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(c => c.IsDefined(typeof(JsonConstructorAttribute), true)).ToList();
 
       if (markedConstructors.Count > 1)
-        throw new Exception("Multiple constructors with the JsonConstructorAttribute.");
+        throw new JsonException("Multiple constructors with the JsonConstructorAttribute.");
       else if (markedConstructors.Count == 1)
         return markedConstructors[0];
 
@@ -457,7 +461,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         property.Converter = property.Converter ?? matchingMemberProperty.Converter;
         property.MemberConverter = property.MemberConverter ?? matchingMemberProperty.MemberConverter;
         property.DefaultValue = property.DefaultValue ?? matchingMemberProperty.DefaultValue;
-        property.Required = (property.Required != Required.Default) ? property.Required : matchingMemberProperty.Required;
+        property._required = property._required ?? matchingMemberProperty._required;
         property.IsReference = property.IsReference ?? matchingMemberProperty.IsReference;
         property.NullValueHandling = property.NullValueHandling ?? matchingMemberProperty.NullValueHandling;
         property.DefaultValueHandling = property.DefaultValueHandling ?? matchingMemberProperty.DefaultValueHandling;
@@ -732,6 +736,9 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       if (JsonTypeReflector.GetJsonArrayAttribute(t) != null)
         return CreateArrayContract(objectType);
 
+      if (JsonTypeReflector.GetJsonDictionaryAttribute(t) != null)
+        return CreateDictionaryContract(objectType);
+
       if (t == typeof(JToken) || t.IsSubclassOf(typeof(JToken)))
         return CreateLinqContract(objectType);
 
@@ -792,26 +799,26 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         return false;
 
       if (currentCallback != null)
-        throw new Exception("Invalid attribute. Both '{0}' and '{1}' in type '{2}' have '{3}'.".FormatWith(CultureInfo.InvariantCulture, method, currentCallback, GetClrTypeFullName(method.DeclaringType), attributeType));
+        throw new JsonException("Invalid attribute. Both '{0}' and '{1}' in type '{2}' have '{3}'.".FormatWith(CultureInfo.InvariantCulture, method, currentCallback, GetClrTypeFullName(method.DeclaringType), attributeType));
 
       if (prevAttributeType != null)
-        throw new Exception("Invalid Callback. Method '{3}' in type '{2}' has both '{0}' and '{1}'.".FormatWith(CultureInfo.InvariantCulture, prevAttributeType, attributeType, GetClrTypeFullName(method.DeclaringType), method));
+        throw new JsonException("Invalid Callback. Method '{3}' in type '{2}' has both '{0}' and '{1}'.".FormatWith(CultureInfo.InvariantCulture, prevAttributeType, attributeType, GetClrTypeFullName(method.DeclaringType), method));
 
       if (method.IsVirtual)
-        throw new Exception("Virtual Method '{0}' of type '{1}' cannot be marked with '{2}' attribute.".FormatWith(CultureInfo.InvariantCulture, method, GetClrTypeFullName(method.DeclaringType), attributeType));
+        throw new JsonException("Virtual Method '{0}' of type '{1}' cannot be marked with '{2}' attribute.".FormatWith(CultureInfo.InvariantCulture, method, GetClrTypeFullName(method.DeclaringType), attributeType));
 
       if (method.ReturnType != typeof(void))
-        throw new Exception("Serialization Callback '{1}' in type '{0}' must return void.".FormatWith(CultureInfo.InvariantCulture, GetClrTypeFullName(method.DeclaringType), method));
+        throw new JsonException("Serialization Callback '{1}' in type '{0}' must return void.".FormatWith(CultureInfo.InvariantCulture, GetClrTypeFullName(method.DeclaringType), method));
 
       if (attributeType == typeof(OnErrorAttribute))
       {
         if (parameters == null || parameters.Length != 2 || parameters[0].ParameterType != typeof(StreamingContext) || parameters[1].ParameterType != typeof(ErrorContext))
-          throw new Exception("Serialization Error Callback '{1}' in type '{0}' must have two parameters of type '{2}' and '{3}'.".FormatWith(CultureInfo.InvariantCulture, GetClrTypeFullName(method.DeclaringType), method, typeof(StreamingContext), typeof(ErrorContext)));
+          throw new JsonException("Serialization Error Callback '{1}' in type '{0}' must have two parameters of type '{2}' and '{3}'.".FormatWith(CultureInfo.InvariantCulture, GetClrTypeFullName(method.DeclaringType), method, typeof(StreamingContext), typeof(ErrorContext)));
       }
       else
       {
         if (parameters == null || parameters.Length != 1 || parameters[0].ParameterType != typeof(StreamingContext))
-          throw new Exception("Serialization Callback '{1}' in type '{0}' must have a single parameter of type '{2}'.".FormatWith(CultureInfo.InvariantCulture, GetClrTypeFullName(method.DeclaringType), method, typeof(StreamingContext)));
+          throw new JsonException("Serialization Callback '{1}' in type '{0}' must have a single parameter of type '{2}'.".FormatWith(CultureInfo.InvariantCulture, GetClrTypeFullName(method.DeclaringType), method, typeof(StreamingContext)));
       }
 
       prevAttributeType = attributeType;
@@ -863,7 +870,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       // warning - this method use to cause errors with Intellitrace. Retest in VS Ultimate after changes
       IValueProvider valueProvider;
 
-#if !(SILVERLIGHT || PORTABLE)
+#if !(SILVERLIGHT || PORTABLE || NETFX_CORE)
       if (DynamicCodeGeneration)
         valueProvider = new DynamicValueProvider(member);
       else
@@ -939,24 +946,24 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       property.PropertyName = ResolvePropertyName(mappedName);
       property.UnderlyingName = name;
 
+      bool hasMemberAttribute = false;
       if (propertyAttribute != null)
       {
-        property.Required = propertyAttribute.Required;
+        property._required = propertyAttribute._required;
         property.Order = propertyAttribute._order;
+        hasMemberAttribute = true;
       }
 #if !PocketPC && !NET20
       else if (dataMemberAttribute != null)
       {
-        property.Required = (dataMemberAttribute.IsRequired) ? Required.AllowNull : Required.Default;
+        property._required = (dataMemberAttribute.IsRequired) ? Required.AllowNull : Required.Default;
         property.Order = (dataMemberAttribute.Order != -1) ? (int?) dataMemberAttribute.Order : null;
+        hasMemberAttribute = true;
       }
 #endif
-      else
-      {
-        property.Required = Required.Default;
-      }
 
-      bool hasJsonIgnoreAttribute = JsonTypeReflector.GetAttribute<JsonIgnoreAttribute>(attributeProvider) != null
+      bool hasJsonIgnoreAttribute =
+        JsonTypeReflector.GetAttribute<JsonIgnoreAttribute>(attributeProvider) != null
 #if !(SILVERLIGHT || NETFX_CORE || PORTABLE)
         || JsonTypeReflector.GetAttribute<NonSerializedAttribute>(attributeProvider) != null
 #endif
@@ -964,19 +971,19 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 
       if (memberSerialization != MemberSerialization.OptIn)
       {
-        // ignored if it has JsonIgnore or NonSerialized attributes
-        property.Ignored = hasJsonIgnoreAttribute;
+       bool hasIgnoreDataMemberAttribute = false;
+        
+#if !(NET20 || NET35)
+        hasIgnoreDataMemberAttribute = (JsonTypeReflector.GetAttribute<IgnoreDataMemberAttribute>(attributeProvider) != null);
+#endif
+
+        // ignored if it has JsonIgnore or NonSerialized or IgnoreDataMember attributes
+        property.Ignored = (hasJsonIgnoreAttribute || hasIgnoreDataMemberAttribute);
       }
       else
       {
         // ignored if it has JsonIgnore/NonSerialized or does not have DataMember or JsonProperty attributes
-        property.Ignored =
-          hasJsonIgnoreAttribute
-          || (propertyAttribute == null
-#if !PocketPC && !NET20
-              && dataMemberAttribute == null
-#endif
-             );
+        property.Ignored = (hasJsonIgnoreAttribute || !hasMemberAttribute);
       }
 
       // resolve converter for property
@@ -993,6 +1000,14 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       property.ObjectCreationHandling = (propertyAttribute != null) ? propertyAttribute._objectCreationHandling : null;
       property.TypeNameHandling = (propertyAttribute != null) ? propertyAttribute._typeNameHandling : null;
       property.IsReference = (propertyAttribute != null) ? propertyAttribute._isReference : null;
+
+      property.ItemIsReference = (propertyAttribute != null) ? propertyAttribute._itemIsReference : null;
+      property.ItemConverter =
+        (propertyAttribute != null && propertyAttribute.ItemConverterType != null)
+          ? JsonConverterAttribute.CreateJsonConverterInstance(propertyAttribute.ItemConverterType)
+          : null;
+      property.ItemReferenceLoopHandling = (propertyAttribute != null) ? propertyAttribute._itemReferenceLoopHandling : null;
+      property.ItemTypeNameHandling = (propertyAttribute != null) ? propertyAttribute._itemTypeNameHandling : null;
 
       allowNonPublicAccess = false;
       if ((DefaultMembersSearchFlags & BindingFlags.NonPublic) == BindingFlags.NonPublic)
@@ -1051,6 +1066,18 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     protected internal virtual string ResolvePropertyName(string propertyName)
     {
       return propertyName;
+    }
+
+    /// <summary>
+    /// Gets the resolved name of the property.
+    /// </summary>
+    /// <param name="propertyName">Name of the property.</param>
+    /// <returns>Name of the property.</returns>
+    public string GetResolvedPropertyName(string propertyName)
+    {
+      // this is a new method rather than changing the visibility of ResolvePropertyName to avoid
+      // a breaking change for anyone who has overidden the method
+      return ResolvePropertyName(propertyName);
     }
   }
 }

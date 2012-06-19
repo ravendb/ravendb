@@ -44,8 +44,9 @@ namespace Raven.Tests.Bugs
 						.ToList();
 
 					Assert.Equal("Grandchild", categoryHeaderWithParentses[0].Name);
-					Assert.Equal("Child", categoryHeaderWithParentses[0].Parents[0].Name);
-					Assert.Equal("Root", categoryHeaderWithParentses[0].Parents[1].Name);
+					Assert.Equal("Grandchild", categoryHeaderWithParentses[0].Parents[0].Name);
+					Assert.Equal("Child", categoryHeaderWithParentses[0].Parents[1].Name);
+					Assert.Equal("Root", categoryHeaderWithParentses[0].Parents[2].Name);
 				}
 			}
 		}
@@ -57,18 +58,18 @@ namespace Raven.Tests.Bugs
 				Map = categories => from category in categories
 				                    select new {category.Id, category.Name, category.ParentId};
 				TransformResults = (database, categories) =>
-				                   from category in categories
+								   from category in categories
 								   let parentCategories = Recurse(category, c => database.Load<Category>(c.ParentId))
-				                   select new
-				                   {
-				                   	category.Id,
-				                   	category.Name,
-				                   	Parents =
-				                   	(
-				                   		from parent in parentCategories
-				                   		select new {parent.Id, parent.Name}
-				                   	)
-				                   };
+								   select new
+								   {
+									   category.Id,
+									   category.Name,
+									   Parents =
+									   (
+										   from parent in parentCategories
+										   select new { parent.Id, parent.Name }
+									   )
+								   };
 			}
 		}
 

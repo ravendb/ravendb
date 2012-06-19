@@ -28,7 +28,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			ResourceStore.ExternalState.GetOrAddAtomically("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
+			ResourceStore.ExtensionsState.GetOrAddAtomically("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
 			{
 				foreach (var silverlightRequestedAware in SilverlightRequestedAware)
 				{

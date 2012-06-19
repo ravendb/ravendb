@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Name="this"
+﻿<Infrastructure:PageView x:Name="this"
 					 x:Class="Raven.Studio.Features.Query.QueryView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -9,21 +9,31 @@
 					 xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
 					 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
 					 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
-					 xmlns:Controls="clr-namespace:System.Windows.Controls">
+					 xmlns:Controls="clr-namespace:System.Windows.Controls"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:Models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d"
+                         d:DataContext="{d:DesignInstance Models:QueryModel}">
 
-	<toolkit:DockPanel Margin="{StaticResource Margin_ContentPage}">
+	<Grid Margin="{StaticResource Margin_ContentPage}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 		<Border Background="{StaticResource Brush_HeaderBackground}"
-				MinHeight="40"
+                BorderBrush="{StaticResource Brush_HeaderBorder}"
 				Margin="0,0,0,0"
 				CornerRadius="4,4,0,0"
-				toolkit:DockPanel.Dock="Top">
-			<toolkit:DockPanel Margin="4"
-							   LastChildFill="False">
+                BorderThickness="1,1,1,0"
+                MinHeight="30"
+				Grid.Row="0">
+			<toolkit:DockPanel LastChildFill="False">
 				<StackPanel Orientation="Horizontal">
 					<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
 						   Stretch="None"
 						   VerticalAlignment="Center"
-						   Margin="2" />
+						   Margin="4,0" />
 					<HyperlinkButton Content="Indexes"
 									 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
 									 Command="{StaticResource NavigateToCommand}"
@@ -46,7 +56,8 @@
 
 					<StackPanel Orientation="Horizontal"
 								Visibility="{Binding IsDynamicQuery, Converter={StaticResource BooleanToOppositeVisibility}}">
-						<HyperlinkButton Content="{Binding IndexName}"
+                        <HyperlinkButton Content="{Binding IndexName, Converter={StaticResource TrimmedString}, ConverterParameter=50}"
+                                         ToolTipService.ToolTip="{Binding IndexName}"
 										 Style="{StaticResource Style_Link_Breadcrumb_Initial}"
 										 Command="{StaticResource NavigateToCommand}"
 										 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
@@ -60,57 +71,55 @@
 							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
 							   VerticalAlignment="Center" />
 				</StackPanel>
+			</toolkit:DockPanel>
+		</Border>
+        
+        <Border Background="{StaticResource Brush_ToolbarBackground}"
+                Grid.Row="1">
+            <StackPanel Orientation="Horizontal"
+						Margin="0,4"
+						VerticalAlignment="Center">
 
-				<StackPanel Orientation="Horizontal"
-							toolkit:DockPanel.Dock="Right"
-							VerticalAlignment="Center">
-
-					<Button x:Name="AddSortBy"
+                <Button Command="{Binding Execute}"
+							Style="{StaticResource Style_Button_MouseOverChrome}"
+							ToolTipService.ToolTip="Show the Results of the Query (Ctrl+Enter)">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="{StaticResource Image_ExecuteQuery_Small}"
+									   Width="16"
+									   Height="16" />
+                            <TextBlock Text="Execute" />
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+                
+                <Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+                
+                <Button x:Name="AddSortBy"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							ToolTipService.ToolTip="Add sort by option for this query"
 							VerticalAlignment="Center"
-							HorizontalAlignment="Left"
 							Margin="0,0,6,0"
 							Command="{Binding AddSortBy}"
 							Visibility="{Binding Path=SortByOptions.Count, Converter={StaticResource HiddenWhenEmpty}}"
 							VerticalContentAlignment="Center">
-						<Button.Content>
-							<StackPanel Orientation="Horizontal"
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal"
 										VerticalAlignment="Center">
-								<Image Source="{StaticResource Image_Add_Tiny}"
+                            <Image Source="{StaticResource Image_Add_Tiny}"
 									   Stretch="None"
 									   VerticalAlignment="Center" />
-								<TextBlock Text="Add Sort By"
+                            <TextBlock Text="Add Sort By"
 										   VerticalAlignment="Center"
 										   Margin="2,0,0,0" />
-							</StackPanel>
-						</Button.Content>
-					</Button>
-
-					<Controls:Separator Style="{StaticResource Style_Separator_HeaderLink}"
-										VerticalAlignment="Center"
-										Height="20"
-										Margin="2,0,6,0" />
-
-					<Button Grid.Column="1"
-							Command="{Binding Execute}"
-							HorizontalAlignment="Right"
-							Style="{StaticResource Style_Button_MouseOverChrome}"
-							ToolTipService.ToolTip="Show the Results of the Query">
-						<Button.Content>
-							<StackPanel Orientation="Horizontal">
-								<Image Source="{StaticResource Image_ExecuteQuery_Small}"
-									   Width="16"
-									   Height="16" />
-								<TextBlock Text="Execute" />
-							</StackPanel>
-						</Button.Content>
-					</Button>
-				</StackPanel>
-			</toolkit:DockPanel>
-		</Border>
-
-		<Grid>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+                
+            </StackPanel>
+        </Border>
+        
+		<Grid Grid.Row="2">
 			<Grid.RowDefinitions>
 				<RowDefinition Height="*"
 							   MinHeight="100" />
@@ -126,9 +135,6 @@
 					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
-				<Border Background="{StaticResource Brush_SubtleBackground2}"
-						Grid.Row="0"
-						Grid.RowSpan="2" />
 				<TextBlock Text="Query"
 						   Margin="0,5,5,0"
 						   Style="{StaticResource Style_TextBlock_PagePartHeader}"
@@ -146,9 +152,6 @@
 					</i:Interaction.Triggers>
 				</Editors:QueryEditor>
 
-				<Border Background="{StaticResource Brush_SubtleBackground2}"
-						Grid.Row="2"
-						Grid.RowSpan="1" />
 				<Grid Grid.Row="2">
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="*" />
@@ -189,9 +192,6 @@
 
 				</Grid>
 
-				<Border Background="{StaticResource Brush_SubtleBackground2}"
-						Grid.Row="3"
-						Grid.RowSpan="1" />
 				<StackPanel Visibility="{Binding Path=SortBy.Count, Converter={StaticResource HiddenWhenEmpty}}"
 							Grid.Row="3"
 							Margin="0,5">
@@ -233,71 +233,107 @@
 							  Background="Transparent"
 							  HorizontalAlignment="Stretch" />
 
-			<Border Background="{StaticResource Brush_SubtleBackground2}"
-					Grid.Row="2"
-					Grid.RowSpan="1" />
 			<Grid Grid.Row="2">
 				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
 					<RowDefinition Height="*" />
+					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
-				<StackPanel>
-					<TextBlock Text="Error"
+				<Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+					<TextBlock Grid.Row="0"
+                               Text="Error"
 							   Style="{StaticResource Style_TextBlock_PagePartHeader}"
 							   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
-					<TextBlock Text="{Binding Error}"
+                    <TextBlock Grid.Row="1"
+                               Text="{Binding Error}"
 							   Visibility="{Binding Error, Converter={StaticResource HiddenWhenNull}}" />
 
-					<StackPanel DataContext="{Binding Path=DocumentsResult.Value}"
-								Visibility="{Binding Path=., Converter={StaticResource HiddenWhenNull}}">
+					<Grid Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-						<Documents:DocumentsView Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}" />
-						<TextBlock Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
-								   Text="There are no results for this query." />
-					</StackPanel>
+                        <Documents:DocumentsView DataContext="{Binding DocumentsResult}" Grid.RowSpan="2"/>
 
-					<toolkit:BusyIndicator IsBusy="{Binding DocumentsResult.Value.IsLoadingDocuments, Mode=TwoWay}"
-										   BusyContent="Querying..." />
-					<ItemsControl ItemsSource="{Binding Suggestions}">
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<StackPanel Orientation="Horizontal">
-									<TextBlock Text="Did you mean " />
-									<HyperlinkButton Content="{Binding SuggestedTerm}"
+                        <TextBlock Visibility="{Binding Path=DocumentsResult.Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
+								   Text="There are no results for this query." VerticalAlignment="Top" HorizontalAlignment="Center"
+                                   Margin="0,80,0,0"
+                                   Grid.RowSpan="2"/>
+
+                        <ItemsControl 
+                            Grid.RowSpan="2"
+                            VerticalAlignment="Top" HorizontalAlignment="Center"
+                            Margin="0,120,0,0"
+                            ItemsSource="{Binding Suggestions}"
+                            Visibility="{Binding Path=DocumentsResult.Documents.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Did you mean " />
+                                        <HyperlinkButton Content="{Binding SuggestedTerm}"
 													 FontStyle="Italic"
 													 Command="{Binding Path=DataContext.RepairTermInQuery, ElementName=this}"
 													 CommandParameter="{Binding}" />
-									<TextBlock Text=" for the field " />
-									<TextBlock Text="{Binding Field}"
+                                        <TextBlock Text=" for the field " />
+                                        <TextBlock Text="{Binding Field}"
 											   FontStyle="Italic" />
-									<TextBlock Text=" ?" />
-								</StackPanel>
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
-				</StackPanel>
+                                        <TextBlock Text=" ?" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </Grid>
 
-				<StackPanel Grid.Row="1"
-							VerticalAlignment="Bottom"
-							Orientation="Horizontal">
+                <Border Grid.Row="1"
+							    VerticalAlignment="Bottom"
+                        Background="{StaticResource Brush_HeaderBackground}"
+                        BorderBrush="{StaticResource Brush_HeaderBorder}"
+                        BorderThickness="1"
+                        CornerRadius="2"
+                        Margin="0,5,0,0">
 
-					<TextBlock Text="Total results: " />
-					<TextBlock Text="{Binding Results.TotalResults, StringFormat='#,#'}" />
-					<TextBlock Text="        Status: " />
-					<TextBlock Text="{Binding Results.IsStale, Converter={StaticResource BooleanToStaleStatConverter},StringFormat='\{0\}'}" />
-					<TextBlock Text="        Last update of document: " />
-					<TextBlock Text="{Binding Results.IndexTimestamp, Converter={StaticResource TimeToLongAgoConverter}}"
-							   ToolTipService.ToolTip="{Binding Results.IndexTimestamp,Converter={StaticResource UtcToLocalConverter}, StringFormat='Last document change was at {0}'}" />
-					<TextBlock Text="        Duration (query+network+parsing): " />
-					<TextBlock Text="{Binding QueryTime.TotalMilliseconds, StringFormat='\{0:#,#\} ms'}" />
-					<TextBlock Text="        Index: " />
-					<TextBlock Text="{Binding Results.IndexName}" />
-					<TextBlock Text="        Etag: " />
-					<TextBlock Text="{Binding Results.IndexEtag}" />
-				</StackPanel>
-			</Grid>
+                        <toolkit:WrapPanel Margin="3">
+                            <toolkit:WrapPanel.Resources>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Margin" Value="0,2,25,2"/>
+                                </Style>
+                            </toolkit:WrapPanel.Resources>
+                            <TextBlock>
+					    <Run Text="Total results: " />
+					    <Run Text="{Binding Results.TotalResults, StringFormat='#,#'}" />
+                                </TextBlock>
+                            <TextBlock>
+					    <Run Text="Status: " />
+					    <Run Text="{Binding Results.IsStale, Converter={StaticResource BooleanToStaleStatConverter},StringFormat='\{0\}'}" />
+                                 </TextBlock>
+                            <TextBlock ToolTipService.ToolTip="{Binding Results.IndexTimestamp,Converter={StaticResource UtcToLocalConverter}, StringFormat='Last document change was at {0}'}" >
+					    <Run Text="Last update of document: " />
+					    <Run Text="{Binding Results.IndexTimestamp, Converter={StaticResource TimeToLongAgoConverter}}"/>
+                                </TextBlock>
+                            <TextBlock>
+					    <Run Text="Duration (query+network+parsing): " />
+					    <Run Text="{Binding QueryTime.TotalMilliseconds, StringFormat='\{0:#,#\} ms'}" />
+                                </TextBlock>
+                            <TextBlock>
+					    <Run Text="Index: " />
+					    <Run Text="{Binding Results.IndexName}" />
+                                </TextBlock>
+                            <TextBlock>
+					    <Run Text="Etag: " />
+					    <Run Text="{Binding Results.IndexEtag}" />
+                                </TextBlock>
+                        </toolkit:WrapPanel>
+                </Border>
+            </Grid>
 		</Grid>
-	</toolkit:DockPanel>
-</Infrastructure:View>
+	</Grid>
+</Infrastructure:PageView>

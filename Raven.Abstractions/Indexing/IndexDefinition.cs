@@ -71,7 +71,7 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// Returns a boolean value indicating whether this IndexDefinition is of a temporary index
 		/// </summary>
-		public bool IsTemp { get { return string.IsNullOrEmpty(Name) ? false : Name.StartsWith("Temp"); } }
+		public bool IsTemp { get { return !string.IsNullOrEmpty(Name) && Name.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase); } }
 
 		/// <summary>
 		/// Gets or sets the stores options

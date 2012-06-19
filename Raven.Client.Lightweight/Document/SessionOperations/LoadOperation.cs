@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Net;
-using NLog;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Data;
 
 namespace Raven.Client.Document.SessionOperations
 {
 	public class LoadOperation
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogProvider.GetCurrentClassLogger();
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		private readonly Func<IDisposable> disableAllCaching;
 		private readonly string id;
@@ -27,7 +26,7 @@ namespace Raven.Client.Document.SessionOperations
 
 		public void LogOperation()
 		{
-			log.Debug("Loading document [{0}] from {1}", id, sessionOperations.StoreIdentifier);
+			log.DebugFormat("Loading document [{0}] from {1}", id, sessionOperations.StoreIdentifier);
 		}
 
 		public IDisposable EnterLoadContext()

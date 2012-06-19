@@ -33,11 +33,14 @@ namespace Raven.Database.Impl
 		private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly IStorageActionsAccessor actions;
 		private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
+		private readonly HashSet<string> itemsToInclude;
 
-		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers)
+		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
+			HashSet<string> itemsToInclude = null)
 		{
 			this.actions = actions;
 			this.triggers = triggers;
+			this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
 		}
 
 		public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
@@ -109,12 +112,22 @@ namespace Raven.Database.Impl
 							return null;
 					}
 				}
+
+				// We have to load the document if user explicitly asked for the id, since 
+				// we normalize the casing for the document id on the index, and we need to return
+				// the id to the user with the same casing they gave us.
+				var fetchingId = fieldsToFetch.Any(fieldToFetch => fieldToFetch == Constants.DocumentIdFieldName);
 				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null).ToArray();
-				if (fieldsToFetchFromDocument.Length > 0)
+				if (fieldsToFetchFromDocument.Length > 0 || fetchingId)
 				{
 					var doc = GetDocumentWithCaching(queryResult.Key);
 					if (doc != null)
 					{
+						if(fetchingId) 
+						{
+							queryResult.Projection[Constants.DocumentIdFieldName] = doc.Key;
+						}
+
 						var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
 						foreach (var property in result)
 						{
@@ -203,6 +216,39 @@ namespace Raven.Database.Impl
 			}
 
 			return document;
+		}
+
+		public dynamic Include(object maybeId)
+		{
+			if (maybeId == null || maybeId is DynamicNullObject)
+				return new DynamicNullObject();
+			var id = maybeId as string;
+			if (id != null)
+				return Include(id);
+			var jId = maybeId as RavenJValue;
+			if (jId != null)
+				return Include(jId.Value.ToString());
+
+			foreach (var itemId in (IEnumerable)maybeId)
+			{
+				Include(itemId);
+			}
+			return new DynamicNullObject();
+
+		}
+		public dynamic Include(string id)
+		{
+			itemsToInclude.Add(id);
+			return new DynamicNullObject();
+		}
+		
+		public dynamic Include(IEnumerable<string> ids)
+		{
+			foreach (var id in ids)
+			{
+				itemsToInclude.Add(id);
+			}
+			return new DynamicNullObject();
 		}
 
 		public dynamic Load(string id)

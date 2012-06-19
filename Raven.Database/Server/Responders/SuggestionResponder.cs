@@ -66,7 +66,7 @@ namespace Raven.Database.Server.Responders
 							};
 
 			var suggestionQueryResult = Database.ExecuteSuggestionQuery(index, query);
-			context.Response.AddHeader("ETag", Database.GetIndexEtag(index, null).ToString());
+			context.WriteETag(Database.GetIndexEtag(index, null));
 			context.WriteJson(suggestionQueryResult);
 		}
 	}

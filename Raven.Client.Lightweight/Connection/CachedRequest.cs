@@ -6,7 +6,7 @@ namespace Raven.Client.Connection
 {
 	internal class CachedRequest
 	{
-		public RavenJToken Data;
+		public RavenJToken Data { get; set; }
 		public DateTimeOffset Time;
 		public NameValueCollection Headers;
 	}

@@ -28,7 +28,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			ResourceStore.ExternalState.GetOrAddAtomically("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
+			ResourceStore.ExtensionsState.GetOrAddAtomically("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
 			{
 				var skipCreatingStudioIndexes = ResourceStore.Configuration.Settings["Raven/SkipCreatingStudioIndexes"];
 				if (string.IsNullOrEmpty(skipCreatingStudioIndexes) == false && 

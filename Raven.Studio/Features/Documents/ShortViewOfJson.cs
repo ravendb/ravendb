@@ -14,82 +14,153 @@ namespace Raven.Studio.Features.Documents
 {
 	public static class ShortViewOfJson
 	{
-		private static void WriteJsonObject(RavenJObject ravenJObject, StringWriter sw, int margin, int indent = 0)
+		private static void WriteJsonObject(RavenJObject ravenJObject, CountingWriter sw, int width, int numberOfLines)
 		{
-			sw.WriteLine('{');
-			indent += 1;
+			sw.WriteLine("{");
+			sw.PushIndent();
+
 			foreach (var item in ravenJObject)
 			{
-				Indent(sw, indent);
+                if (sw.LinesWritten > numberOfLines)
+                {
+                    break;
+                }
 				sw.Write(item.Key);
 				sw.Write(": ");
-				WriteValue(item.Value, sw, margin, indent);
-				sw.WriteLine();
+                WriteValue(item.Value, sw, width, numberOfLines);
+				sw.WriteLine("");
 			}
-			indent -= 1;
-			Indent(sw, indent);
-			sw.Write('}');
+
+			sw.PopIndent();
+			sw.Write("}");
 		}
 
-		private static void WriteValue(RavenJToken token, StringWriter sw, int margin, int indent)
+        private static void WriteValue(RavenJToken token, CountingWriter sw, int width, int numberOfLines)
 		{
 			switch (token.Type)
 			{
 				case JTokenType.Array:
-					WriteJsonArray((RavenJArray)token, sw, margin, indent);
+                    WriteJsonArray((RavenJArray)token, sw, width, numberOfLines);
 					break;
 				case JTokenType.Object:
-					WriteJsonObject((RavenJObject)token, sw, margin, indent);
+                    WriteJsonObject((RavenJObject)token, sw, width, numberOfLines);
 					break;
 				case JTokenType.Null:
 					sw.Write("null");
 					break;
 				case JTokenType.String:
-					sw.Write('"');
+					sw.Write("\"");
 					sw.Write(token.ToString()
 								.NormalizeWhitespace()
-								.ShortViewOfString(margin - 2)
+                                .TrimmedViewOfString(width - sw.CharactersOnCurrentLine -1)
 						);
-					sw.Write('"');
+                    sw.Write("\"");
 					break;
 				default:
-					sw.Write(token.ToString().ShortViewOfString(margin));
+                    sw.Write(token.ToString().TrimmedViewOfString(width - sw.CharactersOnCurrentLine - 1));
 					break;
 			}
 		}
 
-		private static void WriteJsonArray(RavenJArray array, StringWriter sw, int margin, int indent = 0)
+        private static void WriteJsonArray(RavenJArray array, CountingWriter sw, int width, int numberOfLines)
 		{
-			sw.WriteLine('[');
-			indent += 1;
+			sw.WriteLine("[");
+			sw.PushIndent();
+
 			var isFirstItem = true;
 			foreach (var token in array.Values())
 			{
+                if (sw.LinesWritten >= numberOfLines)
+                {
+                    break;
+                }
+
 				if (isFirstItem)
 					isFirstItem = false;
 				else
-					sw.WriteLine(',');
-				Indent(sw, indent);
-				WriteValue(token, sw, margin, indent);
+					sw.WriteLine(",");
+                WriteValue(token, sw, width, numberOfLines);
 			}
-			sw.WriteLine();
-			indent -= 1;
-			Indent(sw, indent);
-			sw.Write(']');
+			sw.WriteLine("");
+			sw.PopIndent();
+			sw.Write("]");
 		}
 
-		private static void Indent(StringWriter sw, int indent)
-		{
-			if (indent > 0)
-				sw.Write(new string(' ', indent * 2));
-		}
+	    public static string GetContentTrimmedToDimensions(RavenJObject dataAsJson, int widthInCharacters, int heightInLines)
+	    {
+	        var sw = new CountingWriter(2);
 
-		public static string GetContentDataWithMargin(RavenJObject dataAsJson, int margin)
-		{
-			margin = Math.Max(4, margin);
-			var sw = new StringWriter();
-			WriteJsonObject(dataAsJson, sw, margin);
-			return sw.ToString();
-		}
+            WriteJsonObject(dataAsJson, sw, widthInCharacters, heightInLines);
+
+	        return sw.ToString();
+	    }
+
+        private class CountingWriter
+        {
+            private readonly int indentSize;
+            private int linesWritten;
+            private int charctersOnCurrentLine;
+            private StringWriter sw;
+            private int indent;
+            private bool needsIndent;
+
+            public CountingWriter(int indentSize)
+            {
+                this.indentSize = indentSize;
+                sw = new StringWriter();
+            }
+
+            public int LinesWritten
+            {
+                get { return linesWritten; }
+            }
+
+            public int CharactersOnCurrentLine
+            {
+                get { return charctersOnCurrentLine; }
+            }
+
+            public void Write(string value)
+            {
+                WriteIndentIfNeeded();
+
+                charctersOnCurrentLine += value.Length;
+                sw.Write(value);
+            }
+
+            private void WriteIndentIfNeeded()
+            {
+                if (needsIndent)
+                {
+                    sw.Write(new string(' ', indentSize * indent));
+                    needsIndent = false;
+                }
+            }
+
+            public void WriteLine(string value)
+            {
+                WriteIndentIfNeeded();
+
+                sw.WriteLine(value);
+                linesWritten++;
+                charctersOnCurrentLine = 0;
+                needsIndent = true;
+            }
+
+            public void PushIndent()
+            {
+                indent++;
+            }
+
+            public void PopIndent()
+            {
+                indent = Math.Max(indent-1,0);
+            }
+
+            public override string ToString()
+            {
+                return sw.ToString();
+            }
+        }
 	}
 }

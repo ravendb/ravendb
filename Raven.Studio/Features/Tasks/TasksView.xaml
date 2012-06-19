@@ -21,6 +21,8 @@
 
 		<toolkit:DockPanel>
 			<Border Background="{StaticResource Brush_HeaderBackground}"
+                    BorderBrush="{StaticResource Brush_HeaderBorder}"
+                    BorderThickness="1"
 					CornerRadius="4,4,0,0"
 					toolkit:DockPanel.Dock="Top">
 				<toolkit:DockPanel Margin="4"

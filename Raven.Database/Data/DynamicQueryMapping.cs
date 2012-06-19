@@ -224,7 +224,7 @@ namespace Raven.Database.Data
 
 		public static DynamicQueryMapping Create(DocumentDatabase database, IndexQuery query, string entityName)
 		{
-			var fields = SimpleQueryParser.GetFieldsForDynamicQuery(query.Query);
+			var fields = SimpleQueryParser.GetFieldsForDynamicQuery(query);
 
 			if(query.SortedFields != null)
 			{

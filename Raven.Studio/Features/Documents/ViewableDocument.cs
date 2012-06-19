@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reactive.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
 using Raven.Imports.Newtonsoft.Json;
@@ -11,6 +12,7 @@ using Raven.Studio.Framework;
 using Raven.Studio.Infrastructure;
 using System.Linq;
 using Raven.Studio.Models;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -21,13 +23,14 @@ namespace Raven.Studio.Features.Documents
 		public bool IsProjection { get; set; }
 	}
 
-	public class ViewableDocument : NotifyPropertyChangedBase, IDisposable
+	public class ViewableDocument : ViewModel
 	{
+	    private const double CharacterWidth = 7;
+	    private const double LineHeight = 5;
 		private readonly JsonDocument inner;
 		private string id;
 		private string clrType;
 		private string collectionType;
-		private IDisposable disposable;
 
 		public ViewableDocument(JsonDocument inner)
 		{
@@ -39,13 +42,6 @@ namespace Raven.Studio.Features.Documents
 				LastModified = LastModified.ToLocalTime();
 			ClrType = inner.Metadata.IfPresent<string>(Constants.RavenClrType);
 			CollectionType = DetermineCollectionType(inner.Metadata);
-
-			disposable = Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentSize.Current.SizeChanged += e, e => DocumentSize.Current.SizeChanged -= e)
-				.Throttle(TimeSpan.FromSeconds(0.5))
-				.Subscribe(_ => CalculateData());
-
-			CalculateData();
-			ToolTipText = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, 10);
 		}
 
 		Brush fill;
@@ -62,35 +58,37 @@ namespace Raven.Studio.Features.Documents
 		private string toolTipText;
 		public string ToolTipText
 		{
-			get { return toolTipText; }
-			set
+            get { return toolTipText ?? (toolTipText = ShortViewOfJson.GetContentTrimmedToDimensions(inner.DataAsJson, 60, 70)); }
+		}
+
+		private string trimmedDocumentView;
+		public string TrimmedDocumentView
+		{
+			get
 			{
-				toolTipText = value;
-				OnPropertyChanged(() => ToolTipText);
+                if (trimmedDocumentViewNeedsRecalculation)
+                {
+                    trimmedDocumentViewNeedsRecalculation = false;
+                    ProduceTrimmedDocumentView();
+                }
+			    return trimmedDocumentView;
+			}
+			private set
+			{
+				trimmedDocumentView = value;
+				OnPropertyChanged(() => TrimmedDocumentView);
 			}
 		}
 
-		private string data;
-		public string Data
-		{
-			get { return data; }
-			set
-			{
-				data = value;
-				OnPropertyChanged(() => Data);
-			}
-		}
+	    private void ProduceTrimmedDocumentView()
+	    {
+	        var widthInCharacters = (int)(DocumentSize.Current.Width/CharacterWidth);
+	        var heightInLines = (int)(DocumentSize.Current.Height/LineHeight);
 
-		private void CalculateData()
-		{
-			string d = null;
-			if (DocumentSize.Current.Height >= DocumentSize.ExpandedMinimumHeight)
-			{
-				var margin = Math.Sqrt(DocumentSize.Current.Width) - 4;
-				d = ShortViewOfJson.GetContentDataWithMargin(inner.DataAsJson, (int)margin);
-			}
-			Execute.OnTheUI(() => Data = d);
-		}
+	        Task.Factory.StartNew(
+	            () => ShortViewOfJson.GetContentTrimmedToDimensions(inner.DataAsJson, widthInCharacters, heightInLines))
+	            .ContinueOnSuccessInTheUIThread(v => TrimmedDocumentView = v);
+	    }
 
 		public string DisplayId
 		{
@@ -190,7 +188,9 @@ namespace Raven.Studio.Features.Documents
 		}
 
 		private DateTime lastModified;
-		public DateTime LastModified
+	    private bool trimmedDocumentViewNeedsRecalculation;
+
+	    public DateTime LastModified
 		{
 			get { return lastModified; }
 			set { lastModified = value; OnPropertyChanged(() => LastModified); }
@@ -202,7 +202,7 @@ namespace Raven.Studio.Features.Documents
 			set { id = value; OnPropertyChanged(() => Id); }
 		}
 
-		public JsonDocument InnerDocument
+		public JsonDocument Document
 		{
 			get { return inner; }
 		}
@@ -212,12 +212,6 @@ namespace Raven.Studio.Features.Documents
 		public override string ToString()
 		{
 			return inner.DataAsJson.ToString();
-		}
-
-		public void Dispose()
-		{
-			if (disposable != null)
-				disposable.Dispose();
 		}
 
 		public static string DetermineCollectionType(RavenJObject metadata)
@@ -233,5 +227,22 @@ namespace Raven.Studio.Features.Documents
 			var entity = metadata.IfPresent<string>(Constants.RavenEntityName);
 			return entity ?? "Doc";
 		}
+
+        protected override void OnViewLoaded()
+        {
+            Observable.FromEventPattern<EventHandler, EventArgs>(e => DocumentSize.Current.SizeChanged += e, e => DocumentSize.Current.SizeChanged -= e)
+                .Throttle(TimeSpan.FromSeconds(0.5))
+                .TakeUntil(Unloaded)
+                .ObserveOnDispatcher()
+                .Subscribe(_ => InvalidateData());
+
+            InvalidateData();
+        }
+
+	    private void InvalidateData()
+	    {
+	        trimmedDocumentViewNeedsRecalculation  = true;
+            OnPropertyChanged(() => TrimmedDocumentView);
+	    }
 	}
 }

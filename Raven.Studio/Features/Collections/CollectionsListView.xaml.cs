@@ -4,7 +4,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Collections
 {
-	public partial class CollectionsListView : View
+	public partial class CollectionsListView : PageView
 	{
 		public CollectionsListView()
 		{

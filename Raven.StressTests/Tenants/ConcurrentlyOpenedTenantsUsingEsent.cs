@@ -23,13 +23,13 @@ namespace Raven.StressTests.Tenants
 		[Fact]
 		public void CanConcurrentlyPutDocsToDifferentTenants()
 		{
-			const int count = 1000;
+			const int count = 100;
 			using (GetNewServer())
 			using (var documentStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				for (int i = 1; i <= count; i++)
 				{
-					var tenantName = "Tenant " + i;
+					var tenantName = "Tenant-" + i;
 					documentStore.DatabaseCommands.EnsureDatabaseExists(tenantName);
 				}
 
@@ -37,7 +37,7 @@ namespace Raven.StressTests.Tenants
 				{
 					for (int i = 1; i <= count; i++)
 					{
-						var tenantName = "Tenant " + i;
+						var tenantName = "Tenant-" + i;
 						var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
 						databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject());
 					}

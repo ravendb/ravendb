@@ -79,7 +79,7 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
-			context.Response.AddHeader("ETag", computedEtag.ToString());
+			context.WriteETag(computedEtag);
 			context.WriteJson(result);
 		}
 	}

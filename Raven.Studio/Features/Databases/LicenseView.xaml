@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Features.Databases.LicenseView"
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Features.Databases.LicenseView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure">
@@ -11,4 +11,4 @@
 						 Command="{StaticResource ShowLicensingStatusCommand}"
 						 CommandParameter="{Binding}" />
 	</StackPanel>
-</Infrastructure:View>
+</Infrastructure:PageView>

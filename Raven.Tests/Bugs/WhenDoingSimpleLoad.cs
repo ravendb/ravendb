@@ -13,10 +13,14 @@ namespace Raven.Tests.Bugs
 		public void WillMakeJustOneRequest()
 		{
 			using (var server = GetNewServer())
-			using (var documentStore = new DocumentStore {Url = "http://localhost:8079", Conventions =
-			                                                                                	{
-																									FailoverBehavior = FailoverBehavior.FailImmediately,
-			                                                                                	}}.Initialize())
+			using (var documentStore = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+				Conventions =
+				{
+					FailoverBehavior = FailoverBehavior.FailImmediately,
+				}
+			}.Initialize())
 			{
 				using (var session = documentStore.OpenSession())
 				{

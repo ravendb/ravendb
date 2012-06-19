@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+extern alias database;
 using System.Threading;
 using Raven.Bundles.Tests.Versioning;
 using Raven.Client;
@@ -26,7 +27,7 @@ namespace Raven.Bundles.Tests.Replication
 				session.SaveChanges();
 			}
 
-			Company company = WaitForDocument<Company>(store2, "companies/1");
+			var company = WaitForDocument<Company>(store2, "companies/1");
 			Assert.Equal("Hibernating Rhinos", company.Name);
 		}
 

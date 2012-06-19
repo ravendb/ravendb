@@ -7,7 +7,7 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Databases
 {
-	public partial class LicenseView : View
+	public partial class LicenseView : PageView
 	{
 		public LicenseView()
 		{

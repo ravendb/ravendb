@@ -29,7 +29,7 @@ namespace Raven.Studio.Features.Tasks
 			if (Status == null || Status.IsRunning == false)
 				return null;
 			TaskStatus = TaskStatus.Started;
-			return DatabaseCommands.GetAsync(BackupStatus.RavenBackupStatusDocumentKey)
+			return ApplicationModel.DatabaseCommands.GetAsync(BackupStatus.RavenBackupStatusDocumentKey)
 				.ContinueOnSuccessInTheUIThread(item =>
 				{
 					var documentConvention = ApplicationModel.Current.Server.Value.Conventions;

@@ -10,7 +10,7 @@
              xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
              xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
              xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-             mc:Ignorable="d"
+             xmlns:Controls="clr-namespace:System.Windows.Controls" mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Models:IndexDefinitionModel, IsDesignTimeCreatable=False}">
     <UserControl.Resources>
         <DataTemplate x:Key="IndexFieldTemplate">
@@ -20,6 +20,11 @@
                     Margin="10"
                     VerticalAlignment="Center"
                     HorizontalAlignment="Center">
+                <Border.Resources>
+                    <Style TargetType="ComboBox" BasedOn="{StaticResource Style_ComboBox_DefaultStyle}">
+                        <Setter Property="MinHeight" Value="26"/>
+                    </Style>
+                </Border.Resources>
                 <Grid Margin="4,4,4,4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -30,9 +35,9 @@
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="4" />
+                        <RowDefinition Height="6" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="4" />
+                        <RowDefinition Height="6" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
@@ -68,7 +73,7 @@
                               SelectedItem="{Binding Storage, Converter={StaticResource enumeratedValue}, Mode=TwoWay}"
                               Grid.Row="2"
                               Grid.Column="1"
-                              MinWidth="80"
+                              MinWidth="90"
                               VerticalAlignment="Center" />
 
                     <TextBlock Text="Indexing"
@@ -104,129 +109,55 @@
                 </Grid>
             </Border>
         </DataTemplate>
-        <Style TargetType="TextBox">
+        <Style TargetType="TextBox" BasedOn="{StaticResource Style_TextBox_Default}">
             <Setter Property="Background"
                     Value="{StaticResource Brush_TextBox_Background}" />
         </Style>
-        <Style TargetType="Editors:LinqEditor">
+        <Style TargetType="Editors:LinqEditor" BasedOn="{StaticResource Style_SyntaxEditor_Default}">
             <Setter Property="MinHeight"
                     Value="100" />
         </Style>
     </UserControl.Resources>
-    <toolkit:DockPanel Margin="{StaticResource Margin_ContentPage}">
-        <Border Background="{StaticResource Brush_HeaderBackground}"
-                CornerRadius="4,4,0,0"
-                toolkit:DockPanel.Dock="Top">
-            <toolkit:DockPanel Margin="4"
-                               LastChildFill="False">
-
-                <i:Interaction.Triggers>
-                    <Behaviors:StudioKeyTrigger Key="N"
+    <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}" Margin="{StaticResource Margin_ContentPage}">
+        <i:Interaction.Triggers>
+            <Behaviors:StudioKeyTrigger Key="N"
                                                 Modifiers="Control">
-                        <i:InvokeCommandAction Command="{StaticResource NavigateToCommand}"
+                <i:InvokeCommandAction Command="{StaticResource NavigateToCommand}"
                                                CommandParameter="/indexes/new?mode=new" />
-                    </Behaviors:StudioKeyTrigger>
+            </Behaviors:StudioKeyTrigger>
 
-                    <Behaviors:StudioKeyTrigger Key="S"
+            <Behaviors:StudioKeyTrigger Key="S"
                                                 Modifiers="Control">
-                        <i:InvokeCommandAction Command="{Binding SaveIndex}" />
-                    </Behaviors:StudioKeyTrigger>
-                </i:Interaction.Triggers>
+                <i:InvokeCommandAction Command="{Binding SaveIndex}" />
+            </Behaviors:StudioKeyTrigger>
+        </i:Interaction.Triggers>
 
-                <StackPanel Orientation="Horizontal">
-                    <Image Source="{StaticResource Image_DocumentIndex_Tiny}"
+        <toolkit:HeaderedContentControl.Header>
+            <StackPanel Orientation="Horizontal">
+                <Image Source="{StaticResource Image_DocumentIndex_Tiny}"
                            Stretch="None"
                            VerticalAlignment="Center"
-                           Margin="0,0,4,0" />
-                    <HyperlinkButton Content="Indexes"
+                           Margin="4,0,4,0" />
+                <HyperlinkButton Content="Indexes"
                                      Style="{StaticResource Style_Link_Breadcrumb_Initial}"
                                      Command="{StaticResource NavigateToCommand}"
                                      CommandParameter="/Indexes" />
-                    <TextBlock Text=">"
+                <TextBlock Text=">"
                                VerticalAlignment="Center"
                                Margin="4,0" />
-                    <TextBlock Text="{Binding Header}"
+                <TextBlock Text="{Binding Header}"
                                Style="{StaticResource Style_TextBlock_Breadcrumb}"
                                VerticalAlignment="Center" />
-                </StackPanel>
-                <StackPanel toolkit:DockPanel.Dock="Right"
-                            HorizontalAlignment="Left">
-                    <StackPanel Orientation="Horizontal"
-                                toolkit:DockPanel.Dock="Right"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Right">
-
-                        <Button x:Name="Terms"
-                                Style="{StaticResource Style_Button_MouseOverChrome}"
-                                Command="{StaticResource NavigateToCommand}"
-                                CommandParameter="{Binding Name, StringFormat=/terms/\{0\}}"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Left"
-                                Margin="0">
-                            <Button.Content>
-                                <StackPanel Orientation="Horizontal"
-                                            VerticalAlignment="Center">
-                                    <Image Source="{StaticResource Image_ChangeView_Tiny}"
-                                           Stretch="None"
-                                           VerticalAlignment="Center" />
-                                    <TextBlock Text="Terms"
-                                               VerticalAlignment="Center"
-                                               Margin="2,0,0,0" />
-                                </StackPanel>
-                            </Button.Content>
-                        </Button>
-                        
-                        <Button x:Name="MappedResults"
-                                Style="{StaticResource Style_Button_MouseOverChrome}"
-                                Command="{StaticResource NavigateToExternalUrlCommand}"
-                                CommandParameter="{Binding Name, StringFormat='/indexes/{0}?debug=map'}"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Left"
-                                Margin="0">
-                            <Button.Content>
-                                <StackPanel Orientation="Horizontal"
-                                            VerticalAlignment="Center">
-                                    <Image Source="{StaticResource Image_ChangeView_Tiny}"
-                                           Stretch="None"
-                                           VerticalAlignment="Center" />
-                                    <TextBlock Text="Mapped Results"
-                                               VerticalAlignment="Center"
-                                               Margin="2,0,0,0" />
-                                </StackPanel>
-                            </Button.Content>
-                        </Button>
-
-                        <Button x:Name="Query"
-                                Style="{StaticResource Style_Button_MouseOverChrome}"
-                                HorizontalAlignment="Left"
-                                Margin="4 0 0 0"
-                                ToolTipService.ToolTip="Query this index"
-                                Command="{StaticResource NavigateToCommand}"
-                                CommandParameter="{Binding Name, StringFormat='/query/\{0\}'}">
-                            <Image Source="{StaticResource Image_Query_Small}"
-                                   Stretch="None" />
-                        </Button>
-
-                        <Button x:Name="Delete"
-                                Style="{StaticResource Style_Button_MouseOverChrome}"
-                                HorizontalAlignment="Left"
-                                Margin="4 0 0 0"
-                                ToolTipService.ToolTip="Delete this index"
-                                Command="{Binding DeleteIndex}">
-                            <Image Source="{StaticResource Image_Delete_Small}"
-                                   Stretch="None" />
-                        </Button>
-
-                        <Button x:Name="Reset"
-                                Style="{StaticResource Style_Button_MouseOverChrome}"
-                                HorizontalAlignment="Left"
-                                Margin="4 0 0 0"
-                                ToolTipService.ToolTip="Undo all changes"
-                                Command="{Binding ResetIndex}">
-                            <Image Source="{StaticResource Image_Undo_Small}"
-                                   Stretch="None" />
-                        </Button>
-
+            </StackPanel>
+        </toolkit:HeaderedContentControl.Header>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+              <RowDefinition Height="*"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Border Background="{StaticResource Brush_ToolbarBackground}">
+                    <StackPanel  VerticalAlignment="Center" Orientation="Horizontal" Margin="0,5">
                         <Button x:Name="Save"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 HorizontalAlignment="Left"
@@ -236,14 +167,10 @@
                             <Image Source="{StaticResource Image_Save_Small}"
                                    Stretch="None" />
                         </Button>
-                    </StackPanel>
 
-                    <StackPanel Orientation="Horizontal"
-                                toolkit:DockPanel.Dock="Right"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Right">
-                        
-                        <Button x:Name="AddMap"
+                    <Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+
+                    <Button x:Name="AddMap"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 ToolTipService.ToolTip="Add map to the index"
                                 VerticalAlignment="Center"
@@ -322,88 +249,136 @@
                                 </StackPanel>
                             </Button.Content>
                         </Button>
-                    </StackPanel>
+
+                    <Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+                        
+                    <Button x:Name="Terms"
+                                Style="{StaticResource Style_Button_MouseOverChrome}"
+                                Command="{StaticResource NavigateToCommand}"
+                                CommandParameter="{Binding Name, StringFormat=/terms/\{0\}}"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Left"
+                                Margin="0">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                <Image Source="{StaticResource Image_ChangeView_Tiny}"
+                                           Stretch="None"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="Terms"
+                                               VerticalAlignment="Center"
+                                               Margin="2,0,0,0" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+
+                    <Button x:Name="Query"
+                                Style="{StaticResource Style_Button_MouseOverChrome}"
+                                HorizontalAlignment="Left"
+                                Margin="4 0 0 0"
+                                ToolTipService.ToolTip="Query this index"
+                                Command="{StaticResource NavigateToCommand}"
+                                CommandParameter="{Binding Name, StringFormat='/query/\{0\}'}">
+                        <Image Source="{StaticResource Image_Query_Small}"
+                                   Stretch="None" />
+                    </Button>
+
+                    <Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
+                        
+                    <Button x:Name="Reset"
+                                Style="{StaticResource Style_Button_MouseOverChrome}"
+                                HorizontalAlignment="Left"
+                                Margin="4 0 0 0"
+                                ToolTipService.ToolTip="Undo all changes"
+                                Command="{Binding ResetIndex}">
+                        <Image Source="{StaticResource Image_Undo_Small}"
+                                   Stretch="None" />
+                    </Button>
+
+                    <Button x:Name="Delete"
+                                Style="{StaticResource Style_Button_MouseOverChrome}"
+                                HorizontalAlignment="Left"
+                                Margin="4 0 0 0"
+                                ToolTipService.ToolTip="Delete this index"
+                                Command="{Binding DeleteIndex}">
+                        <Image Source="{StaticResource Image_Delete_Small}"
+                                   Stretch="None" />
+                    </Button>
                 </StackPanel>
-            </toolkit:DockPanel>
-        </Border>
-        <ScrollViewer BorderThickness="0"
+            </Border>
+            <ScrollViewer 
+                Grid.Row="1"
+                BorderThickness="0"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
-                      Padding="0">
+                      Padding="5,5,0,0">
 
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="80" />
-                    <ColumnDefinition />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="80" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                <Border Background="{StaticResource Brush_SubtleBackground2}"
-                        Grid.ColumnSpan="2"
-                        Grid.RowSpan="2" />
-
-                <TextBlock Text="Name"
+                    <TextBlock Text="Name"
                            Margin="5,10"
-                           VerticalAlignment="Top"
+                           VerticalAlignment="Center"
                            Style="{StaticResource Style_TextBlock_PagePartHeader}" />
-                <TextBox Grid.Column="1"
+                    <TextBox Grid.Column="1"
                          Text="{Binding Name, Mode=TwoWay}"
                          Margin="0,10,24,10"
                          VerticalAlignment="Center" />
 
-                <StackPanel Grid.Row="1"
+                    <StackPanel Grid.Row="1"
                             Grid.Column="1"
                             Orientation="Horizontal">
 
-                </StackPanel>
-                <Border Background="{StaticResource Brush_SubtleBackground2}"
-                        Grid.Row="2"
-                        Grid.ColumnSpan="2" />
+                    </StackPanel>
 
-                <TextBlock Text="Maps"
+                    <TextBlock Text="Maps"
                            Grid.Row="2"
                            Margin="5,10,5,0"
                            Style="{StaticResource Style_TextBlock_PagePartHeader}"
                            VerticalAlignment="Top" />
-                <ItemsControl ItemsSource="{Binding Maps}"
+                    <ItemsControl ItemsSource="{Binding Maps}"
                               Grid.Row="2"
                               Grid.Column="1"
                               Margin="0,10">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"
                                                    MinHeight="100" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="24" />
-                                </Grid.ColumnDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="24" />
+                                    </Grid.ColumnDefinitions>
 
-                                <Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}" />
+                                    <Editors:LinqEditor Text="{Binding Text, Mode=TwoWay}" />
 
-                                <sdk:GridSplitter Grid.Row="1"
+                                    <sdk:GridSplitter Grid.Row="1"
                                                   Grid.ColumnSpan="2"
                                                   Background="Transparent"
                                                   HorizontalAlignment="Stretch" />
 
-                                <Button Grid.Column="1"
+                                    <Button Grid.Column="1"
                                         Style="{StaticResource Style_Button_MouseOverChrome}"
                                         Padding="4"
                                         Margin="2,0"
@@ -414,37 +389,33 @@
                                         VerticalAlignment="Top"
                                         Command="{Binding DataContext.RemoveMap, ElementName=this}"
                                         CommandParameter="{Binding}">
-                                    <Button.Content>
-                                        <Image Source="{StaticResource Image_Remove_Tiny}"
+                                        <Button.Content>
+                                            <Image Source="{StaticResource Image_Remove_Tiny}"
                                                Width="12"
                                                Height="12" />
-                                    </Button.Content>
-                                </Button>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <Border Background="{StaticResource Brush_SubtleBackground2}"
-                        Grid.Row="3"
-                        Grid.ColumnSpan="2"
-                        Grid.RowSpan="2" />
+                                        </Button.Content>
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
-                <TextBlock Text="Reduce"
+                    <TextBlock Text="Reduce"
                            Visibility="{Binding ShowReduce, Converter={StaticResource BooleanToVisibility}}"
                            Grid.Row="3"
                            Margin="5,10,5,0"
                            Style="{StaticResource Style_TextBlock_PagePartHeader}"
                            VerticalAlignment="Top" />
-                <Grid Grid.Row="3"
+                    <Grid Grid.Row="3"
                       Grid.Column="1"
                       Visibility="{Binding ShowReduce, Converter={StaticResource BooleanToVisibility}}"
                       Margin="0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}" />
-                    <Button Grid.Column="1"
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Editors:LinqEditor Text="{Binding Reduce, Mode=TwoWay}" />
+                        <Button Grid.Column="1"
                             Style="{StaticResource Style_Button_MouseOverChrome}"
                             Padding="4"
                             Margin="2,0"
@@ -454,40 +425,36 @@
                             VerticalAlignment="Top"
                             Command="{Binding RemoveReduce}"
                             CommandParameter="{Binding}">
-                        <Button.Content>
-                            <Image Source="{StaticResource Image_Remove_Tiny}"
+                            <Button.Content>
+                                <Image Source="{StaticResource Image_Remove_Tiny}"
                                    Width="12"
                                    Height="12" />
-                        </Button.Content>
-                    </Button>
-                </Grid>
+                            </Button.Content>
+                        </Button>
+                    </Grid>
 
-                <sdk:GridSplitter Grid.Row="4"
+                    <sdk:GridSplitter Grid.Row="4"
                                   Grid.Column="1"
                                   Visibility="{Binding ShowReduce, Converter={StaticResource BooleanToVisibility}}"
                                   Background="Transparent"
                                   HorizontalAlignment="Stretch" />
-                <Border Background="{StaticResource Brush_SubtleBackground2}"
-                        Grid.Row="5"
-                        Grid.ColumnSpan="2"
-                        Grid.RowSpan="2" />
-
-                <TextBlock Text="Transform"
+                    
+                    <TextBlock Text="Transform"
                            Visibility="{Binding ShowTransformResults, Converter={StaticResource BooleanToVisibility}}"
                            Grid.Row="5"
                            Margin="5,10,5,0"
                            Style="{StaticResource Style_TextBlock_PagePartHeader}"
                            VerticalAlignment="Top" />
-                <Grid Grid.Row="5"
+                    <Grid Grid.Row="5"
                       Grid.Column="1"
                       Visibility="{Binding ShowTransformResults, Converter={StaticResource BooleanToVisibility}}"
                       Margin="0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Editors:LinqEditor Text="{Binding TransformResults, Mode=TwoWay}" />
-                    <Button Grid.Column="1"
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Editors:LinqEditor Text="{Binding TransformResults, Mode=TwoWay}" />
+                        <Button Grid.Column="1"
                             Style="{StaticResource Style_Button_MouseOverChrome}"
                             Padding="4"
                             Margin="2,0"
@@ -497,50 +464,55 @@
                             VerticalAlignment="Top"
                             Command="{Binding RemoveTransformResults}"
                             CommandParameter="{Binding}">
-                        <Button.Content>
-                            <Image Source="{StaticResource Image_Remove_Tiny}"
+                            <Button.Content>
+                                <Image Source="{StaticResource Image_Remove_Tiny}"
                                    Width="12"
                                    Height="12" />
-                        </Button.Content>
-                    </Button>
-                </Grid>
+                            </Button.Content>
+                        </Button>
+                    </Grid>
 
-                <sdk:GridSplitter Grid.Row="6"
+                    <sdk:GridSplitter Grid.Row="6"
                                   Grid.Column="1"
                                   Visibility="{Binding ShowTransformResults, Converter={StaticResource BooleanToVisibility}}"
                                   Background="Transparent"
                                   HorizontalAlignment="Stretch" />
-                <Border Background="{StaticResource Brush_SubtleBackground2}"
-                        Grid.Row="7"
-                        Grid.ColumnSpan="2" />
 
-                <TextBlock Text="Fields"
+                    <TextBlock Text="Fields"
                            Visibility="{Binding Fields.Count, Converter={StaticResource HiddenWhenEmpty}}"
                            Grid.Row="7"
                            Margin="5,10,5,0"
                            Style="{StaticResource Style_TextBlock_PagePartHeader}"
                            VerticalAlignment="Top" />
-                <ItemsControl ItemsSource="{Binding Fields}"
+                    <ItemsControl ItemsSource="{Binding Fields}"
                               Visibility="{Binding Fields.Count, Converter={StaticResource HiddenWhenEmpty}}"
                               Style="{StaticResource Style_ItemsControl_IndexFields}"
                               Grid.Row="7"
                               Grid.Column="1"
                               Margin="0,10,24,10"
                               ItemTemplate="{StaticResource IndexFieldTemplate}">
-                </ItemsControl>
-
-                <Grid Grid.Row="10"
-                      Grid.Column="2">
-                    <StackPanel>
-                        <HyperlinkButton Content="{Binding ErrorsCount, StringFormat=\{0\} errors}"
-                                         Visibility="{Binding ErrorsCount, Converter={StaticResource HiddenWhenEmpty}}"
-                                         Command="{StaticResource NavigateToCommand}"
-                                         CommandParameter="{Binding Name, StringFormat=/indexes-errors/\{0\}}" />
-                    </StackPanel>
+                    </ItemsControl>
 
                 </Grid>
+            </ScrollViewer>
 
+            <Grid Grid.Row="2">
+                <Border Visibility="{Binding ErrorsCount, Converter={StaticResource HiddenWhenEmpty}}">
+                    <Border.Background>
+                        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                            <GradientStop Color="#D67171"/>
+                            <GradientStop Color="#C25858" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <StackPanel Margin="5">
+                        <HyperlinkButton Content="{Binding ErrorsCount, StringFormat='\{0\} errors encountered when processing index'}"
+                                         
+                                             Command="{StaticResource NavigateToCommand}"
+                                             CommandParameter="{Binding Name, StringFormat=/indexes-errors/\{0\}}" 
+                                         Foreground="White" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
             </Grid>
-        </ScrollViewer>
-    </toolkit:DockPanel>
+        </Grid>
+    </toolkit:HeaderedContentControl>
 </UserControl>

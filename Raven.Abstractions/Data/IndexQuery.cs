@@ -96,6 +96,11 @@ namespace Raven.Abstractions.Data
 		public Guid? CutoffEtag { get; set; }
 
 		/// <summary>
+		/// The default field to use when querying directly on the Lucene query
+		/// </summary>
+		public string DefaultField { get; set; }
+
+		/// <summary>
 		/// If set to true, RavenDB won't execute the transform results function
 		/// returning just the raw results instead
 		/// </summary>
@@ -130,6 +135,13 @@ namespace Raven.Abstractions.Data
 			return path.ToString();
 		}
 
+        public string GetQueryString()
+        {
+            var sb = new StringBuilder();
+            AppendQueryString(sb);
+            return sb.ToString();
+        }
+
 		public void AppendQueryString(StringBuilder path)
 		{
 			path
@@ -144,6 +156,11 @@ namespace Raven.Abstractions.Data
 			SortedFields.ApplyIfNotNull(
 				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
 
+			if(string.IsNullOrEmpty(DefaultField) == false)
+			{
+				path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
+			}
+			
 			if (Cutoff != null)
 			{
 				var cutOffAsString =

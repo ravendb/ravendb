@@ -1,9 +1,11 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Views.Collections"
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Views.Collections"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Collections="clr-namespace:Raven.Studio.Features.Collections"
-					 Infrastructure:ModelAttacher.AttachObservableModel="CollectionsModel">
+                         xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk"
+                         Infrastructure:ModelAttacher.AttachObservableModel="CollectionsModel"
+                         NavigationCacheMode="Enabled">
 
 	<Grid DataContext="{Binding Value}">
 		<Grid.RowDefinitions>
@@ -15,4 +17,4 @@
 		<Collections:CollectionView Margin="{StaticResource Margin_ContentPage}" 
 								 	Grid.Row="1" />
 	</Grid>
-</Infrastructure:View>
+</Infrastructure:PageView>

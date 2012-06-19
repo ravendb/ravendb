@@ -8,7 +8,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public class StatisticsModel : ViewModel
+	public class StatisticsModel : PageViewModel
 	{
 		public StatisticsModel()
 		{

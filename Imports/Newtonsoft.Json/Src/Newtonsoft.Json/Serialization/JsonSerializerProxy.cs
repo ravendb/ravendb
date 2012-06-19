@@ -144,6 +144,12 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       set { _serializer.DateTimeZoneHandling = value; }
     }
 
+    public override DateParseHandling DateParseHandling
+    {
+      get { return _serializer.DateParseHandling; }
+      set { _serializer.DateParseHandling = value; }
+    }
+
     public override CultureInfo Culture
     {
       get { return _serializer.Culture; }
@@ -154,6 +160,12 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     {
       get { return _serializer.MaxDepth; }
       set { _serializer.MaxDepth = value; }
+    }
+
+    public override bool CheckAdditionalContent
+    {
+      get { return _serializer.CheckAdditionalContent; }
+      set { _serializer.CheckAdditionalContent = value; }
     }
 
     internal JsonSerializerInternalBase GetInternalSerializer()
@@ -183,7 +195,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     internal override object DeserializeInternal(JsonReader reader, Type objectType)
     {
       if (_serializerReader != null)
-        return _serializerReader.Deserialize(reader, objectType);
+        return _serializerReader.Deserialize(reader, objectType, false);
       else
         return _serializer.Deserialize(reader, objectType);
     }

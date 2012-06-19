@@ -51,6 +51,22 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
     }
 
     [Test]
+    public void PopulateArray()
+    {
+      IList<Person> people = new List<Person>
+        {
+          new Person { Name = "Initial" }
+        };
+
+      JsonConvert.PopulateObject(@"[{""Name"":""James""}, null]", people);
+
+      Assert.AreEqual(3, people.Count);
+      Assert.AreEqual("Initial", people[0].Name);
+      Assert.AreEqual("James", people[1].Name);
+      Assert.AreEqual(null, people[2]);
+    }
+
+    [Test]
     public void PopulateStore()
     {
       Store s = new Store();
@@ -140,7 +156,7 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
     [Test]
     public void PopulateWithBadJson()
     {
-      ExceptionAssert.Throws<JsonSerializationException>("Unexpected initial token 'Integer' when populating object. Expected JSON object or array. Line 1, position 1.",
+      ExceptionAssert.Throws<JsonSerializationException>("Unexpected initial token 'Integer' when populating object. Expected JSON object or array. Path '', line 1, position 1.",
         () =>
         {
           JsonConvert.PopulateObject("1", new Person());

@@ -231,7 +231,7 @@ namespace Raven.Client.Embedded
 		/// Get tenant database names (Server/Client mode only)
 		/// </summary>
 		/// <returns></returns>
-		public string[] GetDatabaseNames(int pageSize)
+		public string[] GetDatabaseNames(int pageSize, int start = 0)
 		{
 			throw new InvalidOperationException("Embedded mode does not support multi-tenancy");
 		}
@@ -347,19 +347,21 @@ namespace Raven.Client.Embedded
 						.Where(x => x["@metadata"] != null)
 						.Select(x => x["@metadata"].Value<string>("@id"))
 						.Where(x => x != null)
-					);
+					); 
 
 			if (includes != null)
 			{
-				var includeCmd = new AddIncludesCommand(database, TransactionInformation,
-														(etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
+			var includeCmd = new AddIncludesCommand(database, TransactionInformation,
+			                                        (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
 
-				foreach (var result in queryResult.Results)
-				{
-					includeCmd.Execute(result);
-				}
+			foreach (var result in queryResult.Results)
+			{
+				includeCmd.Execute(result);
+			}
 
-				EnsureLocalDate(queryResult.Includes);
+			includeCmd.AlsoInclude(queryResult.IdsToInclude);
+
+			EnsureLocalDate(queryResult.Includes);
 			}
 
 			return queryResult;
@@ -412,11 +414,11 @@ namespace Raven.Client.Embedded
 			
 			if (includes != null)
 			{
-				var includeCmd = new AddIncludesCommand(database, TransactionInformation, (etag, doc) => multiLoadResult.Includes.Add(doc), includes, new HashSet<string>(ids));
-				foreach (var jsonDocument in multiLoadResult.Results)
-				{
-					includeCmd.Execute(jsonDocument);
-				}
+			var includeCmd = new AddIncludesCommand(database, TransactionInformation, (etag, doc) => multiLoadResult.Includes.Add(doc), includes, new HashSet<string>(ids));
+			foreach (var jsonDocument in multiLoadResult.Results)
+			{
+				includeCmd.Execute(jsonDocument);
+			}
 			}
 
 			return multiLoadResult;
@@ -675,7 +677,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <returns>
-		/// The document metadata for the specifed document, or null if the document does not exist
+		/// The document metadata for the specified document, or null if the document does not exist
 		/// </returns>
 		public JsonDocumentMetadata Head(string key)
 		{
@@ -685,7 +687,7 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
-		/// Perform a single POST requst containing multiple nested GET requests
+		/// Perform a single POST request containing multiple nested GET requests
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{

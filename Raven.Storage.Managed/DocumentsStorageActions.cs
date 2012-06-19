@@ -187,7 +187,8 @@ namespace Raven.Storage.Managed
 			if (documentCodecs.Count() > 0)
 			{
 				var metadataCopy = (RavenJObject)metadata.Metadata.CloneToken() ;
-				using (docDataStream = documentCodecs.Aggregate(docDataStream, (dataStream, codec) => codec.Value.Decode(metadata.Key, metadataCopy, dataStream)))
+				using (docDataStream = documentCodecs
+					.ReverseAggregate(docDataStream, (dataStream, codec) => codec.Decode(metadata.Key, metadataCopy, dataStream)))
 					result = docDataStream.ToJObject();
 			}
 			else
@@ -227,7 +228,8 @@ namespace Raven.Storage.Managed
 
 			metadata.WriteTo(ms);
 
-			using (var stream = documentCodecs.Aggregate<Lazy<AbstractDocumentCodec>, Stream>(ms, (dataStream, codec) => codec.Value.Encode(key, data, metadata, dataStream)))
+			using (var stream = documentCodecs.Aggregate<Lazy<AbstractDocumentCodec>, Stream>(ms,
+				(dataStream, codec) => codec.Value.Encode(key, data, metadata, dataStream)))
 			{
 				data.WriteTo(stream);
 				stream.Flush();
@@ -295,6 +297,13 @@ namespace Raven.Storage.Managed
 				}
 				return existingEtag;
 			}
+			
+			if (etag != null && etag != Guid.Empty) // expected something to be there.
+				throw new ConcurrencyException("PUT attempted on document '" + key +
+				                               "' using a non current etag (document deleted)")
+				{
+					ExpectedETag = etag.Value
+				};
 
 			readResult = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
 			StorageHelper.AssertNotModifiedByAnotherTransaction(storage, transactionStorageActions, key, readResult, transactionInformation);

@@ -12,6 +12,7 @@ using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Storage;
@@ -137,7 +138,7 @@ namespace Raven.Storage.Esent.StorageActions
 			using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
 			{
 				var size = stream.Length;
-				using(var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+				using(var aggregate = documentCodecs.ReverseAggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 				{
 					var data = aggregate.ToJObject();
 					cacher.SetCachedDocument(key, etag, data, metadata, (int) size);
@@ -165,7 +166,7 @@ namespace Raven.Storage.Esent.StorageActions
 			using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
 				var size = stream.Length;
-				using (var columnStream = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
+				using (var columnStream = documentCodecs.ReverseAggregate(stream, (dataStream, codec) => codec.Decode(key, metadata, dataStream)))
 				{
 					var data = columnStream.ToJObject();
 
@@ -206,7 +207,7 @@ namespace Raven.Storage.Esent.StorageActions
 			using (
 				Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
 			{
-				using (var aggregate = documentCodecs.Aggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+				using (var aggregate = documentCodecs.ReverseAggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 					dataAsJson = aggregate.ToJObject();
 			}
 
@@ -285,6 +286,12 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 			else
 			{
+				if (etag != null && etag != Guid.Empty) // expected something to be there.
+					throw new ConcurrencyException("PUT attempted on document '" + key +
+					                               "' using a non current etag (document deleted)")
+					{
+						ExpectedETag = etag.Value
+					};
 				EnsureDocumentIsNotCreatedInAnotherTransaction(key, Guid.NewGuid());
 				if (Api.TryMoveFirst(session, Details))
 					Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["document_count"], 1);

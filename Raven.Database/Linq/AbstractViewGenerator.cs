@@ -10,6 +10,7 @@ using System.ComponentModel.Composition;
 using System.Text;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Lucene.Net.Documents;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Indexing;
@@ -37,6 +38,8 @@ namespace Raven.Database.Linq
 
 		private static readonly Regex selectManyOrFrom = new Regex(@"( (?<!^)\s from \s ) | ( \.SelectMany\( )", 
 			RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+
+		public string SourceCode { get; set; }
 
 		public int CountOfSelectMany
 		{
@@ -114,28 +117,7 @@ namespace Raven.Database.Linq
 				}
 			}
 		}
-
-		protected IEnumerable<dynamic> Recurse(object item, Func<dynamic ,dynamic> func)
-		{
-			if (item == null)
-				return Enumerable.Empty<dynamic>();
-
-			var resultsOrdered = new List<dynamic>();
-
-			var results = new HashSet<object>();
-			item = func(item);
-			while (item != null)
-			{
-				if (results.Add(item) == false)
-					break;
-
-				resultsOrdered.Add(item);
-				item = func(item);
-			}
-
-			return new DynamicList(resultsOrdered.ToArray());
-		}
-
+		
 		public void AddQueryParameterForMap(string field)
 		{
 			mapFields.Add(field);
@@ -153,6 +135,7 @@ namespace Raven.Database.Linq
 
 		public virtual bool ContainsFieldOnMap(string field)
 		{
+			if (field.EndsWith("_Range")) field = field.Substring(0, field.Length - 6);
 			if (ReduceDefinition == null)
 				return fields.Contains(field);
 			return mapFields.Contains(field);
@@ -172,6 +155,11 @@ namespace Raven.Database.Linq
 		protected void AddMapDefinition(IndexingFunc mapDef)
 		{
 			MapDefinitions.Add(mapDef);
+		}
+		
+		protected IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)
+		{
+			return new RecursiveFunction(item, func).Execute();
 		}
 	}
 }

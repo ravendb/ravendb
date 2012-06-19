@@ -1,20 +1,22 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Views.Home"
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Views.Home"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Documents="clr-namespace:Raven.Studio.Features.Documents"
 					 Title="Home"
 					 Style="{StaticResource PageStyle}"
+                        NavigationCacheMode="Enabled"
 					 Infrastructure:ModelAttacher.AttachObservableModel="HomeModel">
 
 	<Grid DataContext="{Binding Value}">
 		<Grid.RowDefinitions>
-			<RowDefinition Height="250" />
+			<RowDefinition Height="1*" />
 			<RowDefinition Height="8" />
 			<RowDefinition Height="Auto" />
+            <RowDefinition Height="1*" />
 		</Grid.RowDefinitions>
 		
-		<Documents:DocumentsView DataContext="{Binding Path=RecentDocuments.Value}"
+		<Documents:DocumentsView DataContext="{Binding Path=RecentDocuments}"
 								 Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}"
 								 Margin="{StaticResource Margin_ContentPage}" />
 		
@@ -42,4 +44,4 @@
 			</StackPanel>
 		</StackPanel>
 	</Grid>
-</Infrastructure:View>
+</Infrastructure:PageView>

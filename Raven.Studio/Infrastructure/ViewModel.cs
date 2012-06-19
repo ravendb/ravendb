@@ -1,52 +1,60 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Raven.Client.Connection.Async;
+﻿using System;
+using System.Net;
+using System.Reactive;
+using System.Reactive.Subjects;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Ink;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
-	public abstract class ViewModel : Model
-	{
-		public List<string> ModelUrlIgnoreList { get; private set; }
-		public string ModelUrl { get; set; }
-		public bool IsLoaded { get; private set; }
+    public class ViewModel : Model
+    {
+        private Subject<Unit> unloadedSubject;
 
-		public ViewModel()
-		{
-			ModelUrlIgnoreList = new List<string>();
-		}
+        public void NotifyViewLoaded()
+        {
+            IsLoaded = true;
+            OnViewLoaded();
+        }
 
-		public void LoadModel(string state)
-		{
-			IsLoaded = true;
-			if (string.IsNullOrWhiteSpace(state) == false &&
-				state.StartsWith(ModelUrl, StringComparison.InvariantCultureIgnoreCase) &&
-				ModelUrlIgnoreList.Any(state.StartsWith) == false)
-			{
-				LoadModelParameters(state.Substring(ModelUrl.Length));
-				ForceTimerTicked();
-			}
-		}
+        public void NotifyViewUnloaded()
+        {
+            if (unloadedSubject != null)
+            {
+                unloadedSubject.OnNext(Unit.Default);
+            }
 
-		public virtual void LoadModelParameters(string parameters) { }
+            OnViewUnloaded();
 
-		public override Task TimerTickedAsync()
-		{
-			return IsLoaded ? LoadedTimerTickedAsync() : null;
-		}
+            IsLoaded = false;
+        }
 
-		protected virtual Task LoadedTimerTickedAsync()
-		{
-			return null;
-		}
+        protected virtual void OnViewUnloaded()
+        {
+            
+        }
 
-		public Observable<DatabaseModel> Database {get { return ApplicationModel.Database; }}
+        protected virtual void OnViewLoaded()
+        {
+            
+        }
 
-		public IAsyncDatabaseCommands DatabaseCommands
-		{
-			get { return Database.Value.AsyncDatabaseCommands; }
-		}
-	}
+        protected IObservable<Unit> Unloaded
+        {
+            get { return unloadedSubject ?? (unloadedSubject = new Subject<Unit>()); }
+        }
+
+        protected bool IsLoaded { get; private set; }
+        protected PerDatabaseState PerDatabaseState
+        {
+            get { return ApplicationModel.Current.State.Databases[ApplicationModel.Database.Value]; }
+        }
+    }
 }

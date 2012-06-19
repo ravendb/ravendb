@@ -43,6 +43,8 @@ namespace Rhino.Licensing
 		{
 			get
 			{
+				if (string.IsNullOrEmpty(licensePath))
+					return null;
 				return inMemoryLicense ?? File.ReadAllText(licensePath);
 			}
 			set
@@ -78,6 +80,7 @@ namespace Rhino.Licensing
 		/// </summary>
 		public override void RemoveExistingLicense()
 		{
+			base.RemoveExistingLicense();
 			File.Delete(licensePath);
 		}
 	}

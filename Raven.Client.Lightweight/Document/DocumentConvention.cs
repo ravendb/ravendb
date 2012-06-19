@@ -80,6 +80,7 @@ namespace Raven.Client.Document
 			};
 			MaxNumberOfRequestsPerSession = 30;
 			ApplyReduceFunction = DefaultApplyReduceFunction;
+			ReplicationInformerFactory = url=> new ReplicationInformer(this);
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
 		}
@@ -488,6 +489,14 @@ namespace Raven.Client.Document
 		/// over the merged results
 		/// </summary>
 		public ApplyReduceFunctionFunc ApplyReduceFunction { get; set; }
+
+
+		/// <summary>
+		/// This is called to provide replication behavior for the client. You can customize 
+		/// this to inject your own replication / failover logic.
+		/// </summary>
+		public Func<string, ReplicationInformer> ReplicationInformerFactory { get; set; }
+
 
 		public FailoverBehavior FailoverBehaviorWithoutFlags
 		{

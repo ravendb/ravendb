@@ -64,6 +64,7 @@ namespace Raven.Imports.Newtonsoft.Json
     private CultureInfo _culture;
     private int? _maxDepth;
     private bool _maxDepthSet;
+    private bool? _checkAdditionalContent;
 
     /// <summary>
     /// Occurs when the <see cref="JsonSerializer"/> errors during serialization and deserialization.
@@ -348,6 +349,24 @@ namespace Raven.Imports.Newtonsoft.Json
         _maxDepthSet = true;
       }
     }
+
+    /// <summary>
+    /// Gets a value indicating whether there will be a check for additional JSON content after deserializing an object.
+    /// </summary>
+    /// <value>
+    /// 	<c>true</c> if there will be a check for additional JSON content after deserializing an object; otherwise, <c>false</c>.
+    /// </value>
+    public virtual bool CheckAdditionalContent
+    {
+      get { return _checkAdditionalContent ?? JsonSerializerSettings.DefaultCheckAdditionalContent; }
+      set { _checkAdditionalContent = value; }
+    }
+
+    internal bool IsCheckAdditionalContentSet()
+    {
+      return (_checkAdditionalContent != null);
+    }
+
     #endregion
 
     /// <summary>
@@ -392,6 +411,7 @@ namespace Raven.Imports.Newtonsoft.Json
         jsonSerializer.DefaultValueHandling = settings.DefaultValueHandling;
         jsonSerializer.ConstructorHandling = settings.ConstructorHandling;
         jsonSerializer.Context = settings.Context;
+        jsonSerializer._checkAdditionalContent = settings._checkAdditionalContent;
 
         // reader/writer specific
         // unset values won't override reader/writer set values
@@ -523,7 +543,7 @@ namespace Raven.Imports.Newtonsoft.Json
       }
 
       JsonSerializerInternalReader serializerReader = new JsonSerializerInternalReader(this);
-      object value = serializerReader.Deserialize(reader, objectType);
+      object value = serializerReader.Deserialize(reader, objectType, CheckAdditionalContent);
 
       // reset reader back to previous options
       if (previousCulture != null)

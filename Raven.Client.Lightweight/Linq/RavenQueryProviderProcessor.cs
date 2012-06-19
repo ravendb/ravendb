@@ -14,6 +14,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Linq
@@ -392,6 +393,27 @@ namespace Raven.Client.Linq
 				AssertNoComputation(memberExpression);
 
 				path = memberExpression.ToString();
+#if !NET35
+				var props = memberExpression.Member.GetCustomAttributes(false)
+					.Where(x => x.GetType().Name == "JsonPropertyAttribute")
+					.ToArray();
+				if (props.Length != 0)
+				{
+					string propertyName = ((dynamic) props[0]).PropertyName;
+					if (string.IsNullOrEmpty(propertyName) == false)
+					{
+						path = path.Substring(0, path.Length - memberExpression.Member.Name.Length) +
+						       propertyName;
+					}
+				}
+#else
+				var props = memberExpression.Member.GetCustomAttributes(typeof(JsonPropertyAttribute), false);
+				if (props.Length != 0)
+				{
+					path = path.Substring(0, path.Length - memberExpression.Member.Name.Length) +
+					       ((JsonPropertyAttribute) props[0]).PropertyName;
+				}
+#endif
 				isNestedPath = memberExpression.Expression is MemberExpression;
 				memberType = memberExpression.Member.GetMemberType();
 			}
@@ -442,7 +464,7 @@ namespace Raven.Client.Linq
 		{
 			var unaryExpression = expression as UnaryExpression;
 			if (unaryExpression != null)
-				expression = unaryExpression.Operand;
+				return GetMemberExpression(unaryExpression.Operand);
 
 			var lambdaExpression = expression as LambdaExpression;
 			if (lambdaExpression != null)
@@ -527,7 +549,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
 			{
-				VisitLessThanOrEqual(Expression.LessThanOrEqual(expression.Right, expression.Left));
+				VisitLessThan(Expression.LessThan(expression.Right, expression.Left));
 				return;
 			}
 			var memberInfo = GetMember(expression.Left);
@@ -542,7 +564,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
 			{
-				VisitLessThan(Expression.LessThan(expression.Right, expression.Left));
+				VisitLessThanOrEqual(Expression.LessThanOrEqual(expression.Right, expression.Left));
 				return;
 			}
 
@@ -558,7 +580,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
 			{
-				VisitGreaterThanOrEqual(Expression.GreaterThanOrEqual(expression.Right, expression.Left));
+				VisitGreaterThan(Expression.GreaterThan(expression.Right, expression.Left));
 				return;
 			}
 			var memberInfo = GetMember(expression.Left);
@@ -573,7 +595,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 		{
 			if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
 			{
-				VisitGreaterThan(Expression.GreaterThan(expression.Right, expression.Left));
+				VisitGreaterThanOrEqual(Expression.GreaterThanOrEqual(expression.Right, expression.Left));
 				return;
 			}
 			var memberInfo = GetMember(expression.Left);
@@ -892,6 +914,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						VisitCount();
 						break;
 					}
+				case "LongCount":
+					{
+						VisitExpression(expression.Arguments[0]);
+						if (expression.Arguments.Count == 2)
+						{
+							VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+						}
+
+						VisitLongCount();
+						break;
+					}
 				case "Distinct":
 					luceneQuery.GroupBy(AggregationOperation.Distinct);
 					VisitExpression(expression.Arguments[0]);
@@ -1007,6 +1040,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			if (identityProperty != null && identityProperty.Name == docField)
 			{
 				FieldsToFetch.Add(Constants.DocumentIdFieldName);
+				if (identityProperty.Name != renamedField)
+				{
+					docField = Constants.DocumentIdFieldName;
+				}
 			}
 			else
 			{
@@ -1014,6 +1051,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}
 			if(docField != renamedField)
 			{
+				if(identityProperty == null)
+				{
+					var idPropName = luceneQuery.DocumentConvention.FindIdentityPropertyNameFromEntityName(luceneQuery.DocumentConvention.GetTypeTagName(typeof (T)));
+					if(docField == idPropName)
+					{
+						FieldsToRename[Constants.DocumentIdFieldName] = renamedField;
+					}
+				}
 				FieldsToRename[docField] = renamedField;
 			}
 		}
@@ -1044,8 +1089,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitCount()
 		{
-			luceneQuery.Take(1);
+			luceneQuery.Take(0);
 			queryType = SpecialQueryType.Count;
+		}
+
+		private void VisitLongCount()
+		{
+			luceneQuery.Take(0);
+			queryType = SpecialQueryType.LongCount;
 		}
 
 		private void VisitSingle()
@@ -1334,8 +1385,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 						var queryResultAsync = finalQuery.QueryResult;
 						return queryResultAsync.TotalResults;
 					}
+				case SpecialQueryType.LongCount:
+					{
+						var queryResultAsync = finalQuery.QueryResult;
+						return (long)queryResultAsync.TotalResults;
+					}
 #else
 				case SpecialQueryType.Count:
+					{
+						throw new NotImplementedException("not done yet");
+					}
+				case SpecialQueryType.LongCount:
 					{
 						throw new NotImplementedException("not done yet");
 					}
@@ -1371,6 +1431,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			/// </summary>
 			Count,
 			/// <summary>
+			/// Get count of items for the query as an Int64
+			/// </summary>
+			LongCount,
+			/// <summary>
 			/// Get only the first item
 			/// </summary>
 			First,
@@ -1385,7 +1449,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			/// <summary>
 			/// Get only the first item (or throw if there are more than one) or null if empty
 			/// </summary>
-			SingleOrDefault
+			SingleOrDefault,
 		}
 
 		#endregion

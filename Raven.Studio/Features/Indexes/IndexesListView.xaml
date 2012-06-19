@@ -119,7 +119,7 @@
 		<toolkit:HeaderedContentControl.Header>
 			<toolkit:DockPanel LastChildFill="False">
 				<StackPanel Orientation="Horizontal"
-							toolkit:DockPanel.Dock="Left">
+							toolkit:DockPanel.Dock="Top">
 					<Image Source="{StaticResource Image_DocumentIndex_Tiny}"
 						   Stretch="None"
 						   VerticalAlignment="Center"
@@ -129,43 +129,45 @@
 							   VerticalAlignment="Center"
 							   Margin="6" />
 				</StackPanel>
-				<StackPanel Orientation="Horizontal"
-							toolkit:DockPanel.Dock="Right"
-							VerticalAlignment="Center"
-							Margin="0,0,4,0">
-					<HyperlinkButton Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="/indexes/new?mode=new"
-									 Style="{StaticResource Style_Button_MouseOverChrome}"
-									 VerticalAlignment="Center">
-						<HyperlinkButton.Content>
-							<StackPanel Orientation="Horizontal">
-								<Image Source="{StaticResource Image_AddDatabase_Tiny}"
-									   Stretch="None"
-									   VerticalAlignment="Center"
-									   Margin="4,0,4,0" />
-								<TextBlock Text="Create an Index"
-										   VerticalAlignment="Center" />
-							</StackPanel>
-						</HyperlinkButton.Content>
-					</HyperlinkButton>
+                <Border toolkit:DockPanel.Dock="Top" Background="{StaticResource Brush_ToolbarBackground}">
+				    <StackPanel Orientation="Horizontal"
+							    VerticalAlignment="Center"
+							    Margin="0,4,4,4">
+					    <HyperlinkButton Command="{StaticResource NavigateToCommand}"
+									     CommandParameter="/indexes/new?mode=new"
+									     Style="{StaticResource Style_Button_MouseOverChrome}"
+									     VerticalAlignment="Center"
+                                         ToolTipService.ToolTip="Create a new index (Ctrl+N)">
+						    <HyperlinkButton.Content>
+							    <StackPanel Orientation="Horizontal">
+								    <Image Source="{StaticResource Image_AddDatabase_Tiny}"
+									       Stretch="None"
+									       VerticalAlignment="Center"
+									       Margin="4,0,4,0" />
+								    <TextBlock Text="New Index"
+										       VerticalAlignment="Center" />
+							    </StackPanel>
+						    </HyperlinkButton.Content>
+					    </HyperlinkButton>
 
-					<HyperlinkButton Command="{StaticResource NavigateToCommand}"
-									 CommandParameter="/query?mode=dynamic"
-									 Style="{StaticResource Style_Button_MouseOverChrome}"
-									 VerticalAlignment="Center">
-						<HyperlinkButton.Content>
-							<StackPanel Orientation="Horizontal">
-								<Image Source="{StaticResource Image_Query_Small}"
-									   Stretch="None"
-									   VerticalAlignment="Center"
-									   Margin="4,0,4,0" />
-								<TextBlock Text="Dynamic Query"
-										   VerticalAlignment="Center" />
-							</StackPanel>
-						</HyperlinkButton.Content>
-					</HyperlinkButton>
-				</StackPanel>
-			</toolkit:DockPanel>
+					    <HyperlinkButton Command="{StaticResource NavigateToCommand}"
+									     CommandParameter="/query?mode=dynamic"
+									     Style="{StaticResource Style_Button_MouseOverChrome}"
+									     VerticalAlignment="Center">
+						    <HyperlinkButton.Content>
+							    <StackPanel Orientation="Horizontal">
+								    <Image Source="{StaticResource Image_Query_Small}"
+									       Stretch="None"
+									       VerticalAlignment="Center"
+									       Margin="4,0,4,0" />
+								    <TextBlock Text="Dynamic Query"
+										       VerticalAlignment="Center" />
+							    </StackPanel>
+						    </HyperlinkButton.Content>
+					    </HyperlinkButton>
+				    </StackPanel>
+                </Border>
+            </toolkit:DockPanel>
 		</toolkit:HeaderedContentControl.Header>
 
 		<Controls1:ListBoxMenu x:Name="IndexesList" 

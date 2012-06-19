@@ -26,6 +26,7 @@
 												 ValueWhenNonEmpty="*" />
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
 	<Converters:CollectionCountToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedWhenNonEmpty"/>
-
+    <Converters:NegatingBoolConverter x:Key="NegatingBool"/>
+    <Converters:TrimmedStringConverter x:Key="TrimmedString"/>
 	<Models:DocumentSize x:Key="DocumentSize" />
 </ResourceDictionary>

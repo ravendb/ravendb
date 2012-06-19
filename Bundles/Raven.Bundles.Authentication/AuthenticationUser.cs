@@ -12,6 +12,8 @@ namespace Raven.Bundles.Authentication
 		public bool Admin { get; set; }
 		public string[] AllowedDatabases { get; set; }
 
+		public UserDatabaseAccess[] Databases { get; set; }
+
 		protected string HashedPassword { get; private set; }
 
 		private Guid passwordSalt;
@@ -48,5 +50,6 @@ namespace Raven.Bundles.Authentication
 		{
 			return HashedPassword == GetHashedPassword(maybePwd);
 		}
+
 	}
 }

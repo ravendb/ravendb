@@ -12,7 +12,7 @@ using Raven.Studio.Messages;
 
 namespace Raven.Studio.Models
 {
-	public class IndexDefinitionModel : ViewModel, IHasPageTitle
+	public class IndexDefinitionModel : PageViewModel, IHasPageTitle
 	{
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
@@ -53,7 +53,7 @@ namespace Raven.Studio.Models
 			var urlParser = new UrlParser(parameters);
 			if (urlParser.GetQueryParam("mode") == "new")
 			{
-				Header = "Create an Index";
+				Header = "New Index";
 				return;
 			}
 
@@ -61,7 +61,7 @@ namespace Raven.Studio.Models
 			if (string.IsNullOrWhiteSpace(name))
 				HandleIndexNotFound(null);
 
-			Header = "Edit Index: " + name;
+			Header = name;
 			DatabaseCommands.GetIndexAsync(name)
 				.ContinueOnSuccessInTheUIThread(index1 =>
 				                   {

@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Features.Stats.DatabaseStatisticsView"
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Features.Stats.DatabaseStatisticsView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
@@ -38,4 +38,4 @@
 		</StackPanel>
 
 	</StackPanel>
-</Infrastructure:View>
+</Infrastructure:PageView>

@@ -64,6 +64,8 @@ namespace Raven.Client.Document
 
 		protected Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResultsFunc;
 
+		protected string defaultField;
+
 		private int currentClauseDepth;
 
 		private KeyValuePair<string, string> lastEquality;
@@ -201,7 +203,7 @@ namespace Raven.Client.Document
 		}
 
 		protected Action<QueryResult> afterQueryExecutedCallback;
-		private Guid? cutoffEtag;
+		protected Guid? cutoffEtag;
 
 		private TimeSpan DefaultTimeout
 		{
@@ -340,6 +342,11 @@ namespace Raven.Client.Document
 		{
 			WaitForNonStaleResults();
 			return this;
+		}
+
+		public void UsingDefaultField(string field)
+		{
+			defaultField = field;
 		}
 
 		/// <summary>
@@ -1458,6 +1465,7 @@ If you really want to do in memory filtering on the data returned from the query
 					Latitude = lat,
 					Longitude = lng,
 					Radius = radius,
+					DefaultField = defaultField
 				};
 			}
 
@@ -1471,7 +1479,8 @@ If you really want to do in memory filtering on the data returned from the query
 				Cutoff = cutoff,
 				CutoffEtag = cutoffEtag,
 				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-				FieldsToFetch = projectionFields
+				FieldsToFetch = projectionFields,
+				DefaultField = defaultField
 			};
 		}
 

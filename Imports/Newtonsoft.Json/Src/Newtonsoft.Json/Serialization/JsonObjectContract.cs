@@ -31,13 +31,21 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
   /// <summary>
   /// Contract details for a <see cref="Type"/> used by the <see cref="JsonSerializer"/>.
   /// </summary>
-  public class JsonObjectContract : JsonContract
+  public class JsonObjectContract : JsonContainerContract
   {
     /// <summary>
     /// Gets or sets the object member serialization.
     /// </summary>
     /// <value>The member object serialization.</value>
     public MemberSerialization MemberSerialization { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value that indicates whether the object's properties are required.
+    /// </summary>
+    /// <value>
+    /// 	A value indicating whether the object's properties are required.
+    /// </value>
+    public Required? ItemRequired { get; set; }
 
     /// <summary>
     /// Gets the object's properties.
@@ -63,6 +71,36 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     /// </summary>
     /// <value>The parametrized constructor.</value>
     public ConstructorInfo ParametrizedConstructor { get; set; }
+
+    private bool? _hasRequiredOrDefaultValueProperties;
+    internal bool HasRequiredOrDefaultValueProperties
+    {
+      get
+      {
+        if (_hasRequiredOrDefaultValueProperties == null)
+        {
+          _hasRequiredOrDefaultValueProperties = false;
+
+          if (ItemRequired.GetValueOrDefault(Required.Default) != Required.Default)
+          {
+            _hasRequiredOrDefaultValueProperties = true;
+          }
+          else
+          {
+            foreach (JsonProperty property in Properties)
+            {
+              if (property.Required != Required.Default || ((property.DefaultValueHandling & DefaultValueHandling.Populate) == DefaultValueHandling.Populate) && property.Writable)
+              {
+                _hasRequiredOrDefaultValueProperties = true;
+                break;
+              }
+            }
+          }
+        }
+
+        return _hasRequiredOrDefaultValueProperties.Value;
+      }
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonObjectContract"/> class.

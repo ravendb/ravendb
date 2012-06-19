@@ -165,8 +165,16 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
     {
       List<string> errors = new List<string>();
 
-      List<DateTime> c = JsonConvert.DeserializeObject<List<DateTime>>(
-        @"[
+      JsonSerializer serializer = JsonSerializer.Create(new JsonSerializerSettings
+      {
+        Error = delegate(object sender, ErrorEventArgs args)
+        {
+          errors.Add(args.ErrorContext.Path + " - " + args.ErrorContext.Member + " - " + args.ErrorContext.Error.Message);
+          args.ErrorContext.Handled = true;
+        },
+        Converters = { new IsoDateTimeConverter() }
+      });
+      var c = serializer.Deserialize<List<DateTime>>(new JsonTextReader(new StringReader(@"[
         ""2009-09-09T00:00:00Z"",
         ""I am not a date and will error!"",
         [
@@ -175,16 +183,8 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
         ""1977-02-20T00:00:00Z"",
         null,
         ""2000-12-01T00:00:00Z""
-      ]",
-        new JsonSerializerSettings
-          {
-            Error = delegate(object sender, ErrorEventArgs args)
-              {
-                errors.Add(args.ErrorContext.Path + " - " + args.ErrorContext.Member + " - " + args.ErrorContext.Error.Message);
-                args.ErrorContext.Handled = true;
-              },
-            Converters = {new IsoDateTimeConverter()}
-          });
+      ]")));
+
 
       // 2009-09-09T00:00:00Z
       // 1977-02-20T00:00:00Z
@@ -205,8 +205,8 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
 #else
       Assert.AreEqual("[1] - 1 - The string was not recognized as a valid DateTime. There is a unknown word starting at index 0.", errors[0]);
 #endif
-      Assert.AreEqual("[2] - 2 - Unexpected token parsing date. Expected String, got StartArray.", errors[1]);
-      Assert.AreEqual("[4] - 4 - Cannot convert null value to System.DateTime.", errors[2]);
+      Assert.AreEqual("[2] - 2 - Unexpected token parsing date. Expected String, got StartArray. Path '[2]', line 4, position 10.", errors[1]);
+      Assert.AreEqual("[4] - 4 - Cannot convert null value to System.DateTime. Path '[4]', line 8, position 13.", errors[2]);
     }
 
     [Test]
@@ -294,10 +294,10 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
         e = ex;
       }
 
-      Assert.AreEqual(@"Could not convert string to DateTime: kjhkjhkjhkjh. Line 1, position 16.", e.Message);
+      Assert.AreEqual(@"Could not convert string to DateTime: kjhkjhkjhkjh. Path '[0][0]', line 1, position 16.", e.Message);
 
       Assert.AreEqual(1, errors.Count);
-      Assert.AreEqual(@"[0][0] - 0 - Could not convert string to DateTime: kjhkjhkjhkjh. Line 1, position 16.", errors[0]);
+      Assert.AreEqual(@"[0][0] - 0 - Could not convert string to DateTime: kjhkjhkjhkjh. Path '[0][0]', line 1, position 16.", errors[0]);
     }
 
     [Test]
@@ -314,8 +314,8 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
       serializer.Deserialize(new JsonTextReader(new StringReader(json)), typeof (MyTypeWithRequiredMembers));
       
       Assert.AreEqual(2, errors.Count);
-      Assert.AreEqual(" - Required1 - Required property 'Required1' not found in JSON. Line 1, position 2.", errors[0]);
-      Assert.AreEqual(" - Required2 - Required property 'Required2' not found in JSON. Line 1, position 2.", errors[1]);
+      Assert.AreEqual(" - Required1 - Required property 'Required1' not found in JSON. Path '', line 1, position 2.", errors[0]);
+      Assert.AreEqual(" - Required2 - Required property 'Required2' not found in JSON. Path '', line 1, position 2.", errors[1]);
     }
 
     [Test]
@@ -335,8 +335,8 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
       serializer.Deserialize(new JsonTextReader(new StringReader(json)), typeof(int[]));
 
       Assert.AreEqual(2, errors.Count);
-      Assert.AreEqual("[0] - 0 - Could not convert string to integer: a. Line 1, position 4.", errors[0]);
-      Assert.AreEqual("[1] - 1 - Could not convert string to integer: b. Line 1, position 8.", errors[1]);
+      Assert.AreEqual("[0] - 0 - Could not convert string to integer: a. Path '[0]', line 1, position 4.", errors[0]);
+      Assert.AreEqual("[1] - 1 - Could not convert string to integer: b. Path '[1]', line 1, position 8.", errors[1]);
     }
 
     [Test]
@@ -361,6 +361,133 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.Serialization
     {
       public Nest A { get; set; }
     }
+
+    [Test]
+    public void InfiniteErrorHandlingLoopFromInputError()
+    {
+      IList<string> errors = new List<string>();
+
+      JsonSerializer serializer = new JsonSerializer();
+      serializer.Error += (sender, e) =>
+        {
+          errors.Add(e.ErrorContext.Error.Message);
+          e.ErrorContext.Handled = true;
+        };
+
+      ErrorPerson[] result = serializer.Deserialize<ErrorPerson[]>(new JsonTextReader(new ThrowingReader()));
+
+      Assert.IsNull(result);
+      Assert.AreEqual(3, errors.Count);
+      Assert.AreEqual("too far", errors[0]);
+      Assert.AreEqual("too far", errors[1]);
+      Assert.AreEqual("Infinite loop detected from error handling. Path '[1023]', line 1, position 65536.", errors[2]);
+    }
+
+    [Test]
+    public void InfiniteLoopArrayHandling()
+    {
+      IList<string> errors = new List<string>();
+
+      object o = JsonConvert.DeserializeObject(
+        "[0,x]",
+        typeof (int[]),
+        new JsonSerializerSettings
+          {
+            Error = (sender, arg) =>
+              {
+                errors.Add(arg.ErrorContext.Error.Message);
+                arg.ErrorContext.Handled = true;
+              }
+          });
+
+      Assert.IsNull(o);
+      
+      Assert.AreEqual(3, errors.Count);
+      Assert.AreEqual("Unexpected character encountered while parsing value: x. Path '[0]', line 1, position 3.", errors[0]);
+      Assert.AreEqual("Unexpected character encountered while parsing value: x. Path '[0]', line 1, position 3.", errors[1]);
+      Assert.AreEqual("Infinite loop detected from error handling. Path '[0]', line 1, position 3.", errors[2]);
+    }
+
+    [Test]
+    public void InfiniteLoopArrayHandlingInObject()
+    {
+      IList<string> errors = new List<string>();
+
+      Dictionary<string, int[]> o = JsonConvert.DeserializeObject<Dictionary<string, int[]>>(
+        "{'badarray':[0,x,2],'goodarray':[0,1,2]}",
+        new JsonSerializerSettings
+        {
+          Error = (sender, arg) =>
+          {
+            errors.Add(arg.ErrorContext.Error.Message);
+            arg.ErrorContext.Handled = true;
+          }
+        });
+
+      Assert.IsNull(o);
+
+      Assert.AreEqual(4, errors.Count);
+      Assert.AreEqual("Unexpected character encountered while parsing value: x. Path 'badarray[0]', line 1, position 15.", errors[0]);
+      Assert.AreEqual("Unexpected character encountered while parsing value: x. Path 'badarray[0]', line 1, position 15.", errors[1]);
+      Assert.AreEqual("Infinite loop detected from error handling. Path 'badarray[0]', line 1, position 15.", errors[2]);
+      Assert.AreEqual("Unexpected character encountered while parsing value: x. Path 'badarray[0]', line 1, position 15.", errors[3]);
+    }
+
+    public class ThrowingReader : TextReader
+    {
+      int _position = 0;
+      static string element = "{\"FirstName\":\"Din\",\"LastName\":\"Rav\",\"Item\":{\"ItemName\":\"temp\"}}";
+      bool _firstRead = true;
+      bool _readComma = false;
+
+      public ThrowingReader()
+      {
+      }
+
+      public override int Read(char[] buffer, int index, int count)
+      {
+        char[] temp = new char[buffer.Length];
+        int charsRead = 0;
+        if (_firstRead)
+        {
+          charsRead = new StringReader("[").Read(temp, index, count);
+          _firstRead = false;
+        }
+        else
+        {
+          if (_readComma)
+          {
+            charsRead = new StringReader(",").Read(temp, index, count);
+            _readComma = false;
+          }
+          else
+          {
+            charsRead = new StringReader(element).Read(temp, index, count);
+            _readComma = true;
+          }
+        }
+
+        _position += charsRead;
+        if (_position > 65536)
+        {
+          throw new Exception("too far");
+        }
+        Array.Copy(temp, index, buffer, index, charsRead);
+        return charsRead;
+      }
+    }
+  }
+
+  public class ErrorPerson
+  {
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public ErrorItem Item { get; set; }
+  }
+
+  public class ErrorItem
+  {
+    public string ItemName { get; set; }
   }
 
   [JsonObject]

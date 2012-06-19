@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Indexing
 {
@@ -17,12 +18,12 @@ namespace Raven.Database.Indexing
 		static readonly Regex dateQuery = new Regex(@"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}", RegexOptions.Compiled);
 		static readonly Regex dynamicQueryTerms = new Regex(@"[-+]?([^\{\}\[\]\(\)\s]*?[^\\\s])\:", RegexOptions.Compiled);
 
-		public static HashSet<string> GetFields(string query)
+		public static HashSet<string> GetFields(IndexQuery query)
 		{
 			return GetFieldsInternal(query, queryTerms);
 		}
 
-		public static HashSet<Tuple<string,string>> GetFieldsForDynamicQuery(string query)
+		public static HashSet<Tuple<string,string>> GetFieldsForDynamicQuery(IndexQuery query)
 		{
 			var results = new HashSet<Tuple<string,string>>();
 			foreach (var result in GetFieldsInternal(query, dynamicQueryTerms))
@@ -31,15 +32,20 @@ namespace Raven.Database.Indexing
 					continue;
 				results.Add(Tuple.Create(TranslateField(result), result));
 			}
+			
 			return results;
 		}
-		private static HashSet<string> GetFieldsInternal(string query, Regex queryTerms)
+		private static HashSet<string> GetFieldsInternal(IndexQuery query, Regex queryTerms)
 		{
 			var fields = new HashSet<string>();
-			if(query == null)
+			if (string.IsNullOrEmpty(query.DefaultField) == false)
+			{
+				fields.Add(query.DefaultField);
+			}
+			if(query.Query == null)
 				return fields;
-			var dates = dateQuery.Matches(query); // we need to exclude dates from this check
-			var queryTermMatches = queryTerms.Matches(query);
+			var dates = dateQuery.Matches(query.Query); // we need to exclude dates from this check
+			var queryTermMatches = queryTerms.Matches(query.Query);
 			for (int x = 0; x < queryTermMatches.Count; x++)
 			{
 				Match match = queryTermMatches[x];
@@ -58,7 +64,7 @@ namespace Raven.Database.Indexing
 				}
 
 				if (isDate == false)
-					fields.Add(field);
+				fields.Add(field);
 			}
 			return fields;
 		}

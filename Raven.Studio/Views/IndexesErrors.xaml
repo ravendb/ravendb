@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Views.IndexesErrors"
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Views.IndexesErrors"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -6,9 +6,10 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:Indexes="clr-namespace:Raven.Studio.Features.Indexes"
 					 mc:Ignorable="d"
-					 Infrastructure:ModelAttacher.AttachObservableModel="IndexesErrorsModel">
+					 Infrastructure:ModelAttacher.AttachObservableModel="IndexesErrorsModel"
+                         Title="Index Errors">
 
 	<Grid DataContext="{Binding Value}">
 		<Indexes:IndexesErrorsView />
 	</Grid>
-</Infrastructure:View>
+</Infrastructure:PageView>

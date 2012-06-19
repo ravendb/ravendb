@@ -37,7 +37,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
   /// <summary>
   /// Contract details for a <see cref="Type"/> used by the <see cref="JsonSerializer"/>.
   /// </summary>
-  public class JsonDictionaryContract : JsonContract
+  public class JsonDictionaryContract : JsonContainerContract
   {
     /// <summary>
     /// Gets or sets the property name resolver.
@@ -56,8 +56,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     /// <value>The <see cref="Type"/> of the dictionary values.</value>
     public Type DictionaryValueType { get; private set; }
 
-    internal JsonContract DictionaryKeyContract { get; set; }
-    internal JsonContract DictionaryValueContract { get; set; }
+    internal JsonContract KeyContract { get; set; }
 
     private readonly bool _isDictionaryValueTypeNullableType;
     private readonly Type _genericCollectionDefinitionType;

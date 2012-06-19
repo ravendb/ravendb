@@ -40,7 +40,7 @@ namespace Raven.StressTests.Races
 		[Fact]
 		public void CanMergeResultFromAllPostsShards()
 		{
-			Run<CanQueryOnlyPosts>(x => x.CanMergeResultFromAllPostsShards(), 100);
+			Run<CanQueryOnlyPosts>(x => x.CanMergeResultFromAllPostsShards(), 10);
 		}
 		
 		[Fact]

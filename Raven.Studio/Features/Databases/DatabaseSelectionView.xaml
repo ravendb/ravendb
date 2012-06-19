@@ -1,4 +1,4 @@
-﻿<Infrastructure:View x:Class="Raven.Studio.Features.Databases.DatabaseSelectionView"
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Features.Databases.DatabaseSelectionView"
 					 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 					 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
@@ -25,4 +25,4 @@
 					  VerticalAlignment="Center" />
 		</StackPanel>
 	</ContentControl>
-</Infrastructure:View>
+</Infrastructure:PageView>

@@ -46,6 +46,11 @@ namespace Raven.Json.Linq
 				var curObject = writingStack.Pop();
 				foreach (var current in curReader)
 				{
+					if (current.Value == null)
+					{
+						curObject.AddForCloning(current.Key, null); // we call this explicitly to support null entries in JArray
+						continue;
+					}
 					if (current.Value is RavenJValue)
 					{
 						curObject.AddForCloning(current.Key, current.Value.CloneToken());
@@ -262,6 +267,11 @@ namespace Raven.Json.Linq
 			{
 				var curOtherReader = otherStack.Pop();
 				var curThisReader = thisStack.Pop();
+
+				if(curOtherReader == null && curThisReader == null)
+					continue; // shouldn't happen, but we got an error report from a user about this
+				if (curOtherReader == null || curThisReader == null)
+					return false;
 
 				if (curThisReader.Type == curOtherReader.Type)
 				{

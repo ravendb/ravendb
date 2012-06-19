@@ -50,70 +50,6 @@ namespace Raven.Imports.Newtonsoft.Json.Tests
   [TestFixture]
   public class JsonConvertTest : TestFixtureBase
   {
-#if Entities
-    [Test]
-    public void EntitiesTest()
-    {
-      Purchase purchase = new Purchase() { Id = 1 };
-      purchase.PurchaseLine.Add(new PurchaseLine() { Id = 1, Purchase = purchase });
-      purchase.PurchaseLine.Add(new PurchaseLine() { Id = 2, Purchase = purchase });
-
-      StringWriter sw = new StringWriter();
-      JsonSerializer serializer = new JsonSerializer();
-      serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-
-      using (JsonWriter jw = new JsonTextWriter(sw))
-      {
-        jw.Formatting = Formatting.Indented;
-
-        serializer.Serialize(jw, purchase);
-      }
-
-      string json = sw.ToString();
-
-      Assert.AreEqual(@"{
-  ""Id"": 1,
-  ""PurchaseLine"": [
-    {
-      ""Id"": 1,
-      ""PurchaseReference"": {
-        ""EntityKey"": null,
-        ""RelationshipName"": ""EntityDataModel.PurchasePurchaseLine"",
-        ""SourceRoleName"": ""PurchaseLine"",
-        ""TargetRoleName"": ""Purchase"",
-        ""RelationshipSet"": null,
-        ""IsLoaded"": false
-      },
-      ""EntityState"": 1,
-      ""EntityKey"": null
-    },
-    {
-      ""Id"": 2,
-      ""PurchaseReference"": {
-        ""EntityKey"": null,
-        ""RelationshipName"": ""EntityDataModel.PurchasePurchaseLine"",
-        ""SourceRoleName"": ""PurchaseLine"",
-        ""TargetRoleName"": ""Purchase"",
-        ""RelationshipSet"": null,
-        ""IsLoaded"": false
-      },
-      ""EntityState"": 1,
-      ""EntityKey"": null
-    }
-  ],
-  ""EntityState"": 1,
-  ""EntityKey"": null
-}", json);
-
-      Purchase newPurchase = JsonConvert.DeserializeObject<Purchase>(json);
-      Assert.AreEqual(1, newPurchase.Id);
-
-      Assert.AreEqual(2, newPurchase.PurchaseLine.Count);
-      Assert.AreEqual(1, newPurchase.PurchaseLine.ElementAt(0).Id);
-      Assert.AreEqual(2, newPurchase.PurchaseLine.ElementAt(1).Id);
-    }
-#endif
-
     [Test]
     public void DeserializeObject_EmptyString()
     {
@@ -126,6 +62,27 @@ namespace Raven.Imports.Newtonsoft.Json.Tests
     {
       object result = JsonConvert.DeserializeObject("1");
       Assert.AreEqual(1L, result);
+    }
+
+    [Test]
+    public void DeserializeObject_Integer_EmptyString()
+    {
+      int? value = JsonConvert.DeserializeObject<int?>("");
+      Assert.IsNull(value);
+    }
+
+    [Test]
+    public void DeserializeObject_Decimal_EmptyString()
+    {
+      decimal? value = JsonConvert.DeserializeObject<decimal?>("");
+      Assert.IsNull(value);
+    }
+
+    [Test]
+    public void DeserializeObject_DateTime_EmptyString()
+    {
+      DateTime? value = JsonConvert.DeserializeObject<DateTime?>("");
+      Assert.IsNull(value);
     }
 
     [Test]
@@ -303,7 +260,7 @@ now brown cow?", '"', true);
     [Test]
     public void TestInvalidStrings()
     {
-      ExceptionAssert.Throws<JsonReaderException>("Additional text encountered after finished reading JSON content: t. Line 1, position 19.",
+      ExceptionAssert.Throws<JsonReaderException>("Additional text encountered after finished reading JSON content: t. Path '', line 1, position 19.",
       () =>
       {
         string orig = @"this is a string ""that has quotes"" ";
@@ -763,6 +720,34 @@ now brown cow?", '"', true);
         });
 
       Assert.AreEqual(@"""2000-01-01T01:01:01Z""", json);
+    }
+
+    //[Test]
+    public void StackOverflowTest()
+    {
+      StringBuilder sb = new StringBuilder();
+
+      int depth = 900;
+      for (int i = 0; i < depth; i++)
+      {
+        sb.Append("{'A':");
+      }
+
+      // invalid json
+      sb.Append("{***}");
+      for (int i = 0; i < depth; i++)
+      {
+        sb.Append("}");
+      }
+
+      string json = sb.ToString();
+      JsonSerializer serializer = new JsonSerializer() { };
+      serializer.Deserialize<Nest>(new JsonTextReader(new StringReader(json)));
+    }
+
+    public class Nest
+    {
+      public Nest A { get; set; }
     }
   }
 }
