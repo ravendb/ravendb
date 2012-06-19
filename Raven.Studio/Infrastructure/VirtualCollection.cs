@@ -499,11 +499,11 @@ namespace Raven.Studio.Infrastructure
             }
             else if (delta < 0)
             {
-                for (int i = delta; i < 0; i++)
+                for (int i = 1; i <= Math.Abs(delta); i++)
                 {
                     OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove,
-                                                                             _virtualItems[originalItemCount + i],
-                                                                             originalItemCount + i));
+                                                                             _virtualItems[originalItemCount - i],
+                                                                             originalItemCount - i));
                 }
             }
         }

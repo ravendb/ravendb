@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Documents
 {
@@ -11,6 +12,8 @@ namespace Raven.Studio.Features.Documents
     {
         public DocumentsCollectionSource()
         {
+            ApplicationModel.Database.ObservePropertyChanged()
+                .SubscribeWeakly(this, (source, args) => source.Refresh(RefreshMode.ClearStaleData));
         }
 
         protected override Task<int> GetCount()

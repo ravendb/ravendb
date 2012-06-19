@@ -56,6 +56,7 @@ namespace Raven.Studio.Behaviors
         private bool internalColumnUpdate;
         private Dictionary<ColumnDefinition, double> columnWidths;
         private ColumnsModel cachedColumnsModel;
+        private bool _isResetPending;
 
         public ColumnsModel Columns
         {
@@ -72,7 +73,7 @@ namespace Raven.Studio.Behaviors
 
             
 
-            ResetColumns();
+            ScheduleColumnReset();
         }
 
         private DataGridColumnHeadersPresenter GetColumnHeadersPresenter()
@@ -131,7 +132,7 @@ namespace Raven.Studio.Behaviors
 
             isLoaded = true;
             StartObservingColumnsModel(Columns);
-            ResetColumns();
+            ScheduleColumnReset();
         }
 
         private void StartObservingColumnsModel(ColumnsModel columnsModel)
@@ -166,25 +167,7 @@ namespace Raven.Studio.Behaviors
                 return;
             }
 
-            if (e.Action == NotifyCollectionChangedAction.Add)
-            {
-                AddColumn(e.NewItems[0] as ColumnDefinition);
-            }
-            else if (e.Action == NotifyCollectionChangedAction.Remove)
-            {
-                RemoveColumn(e.OldItems[0] as ColumnDefinition);
-            }
-            else if (e.Action == NotifyCollectionChangedAction.Replace)
-            {
-                var index = GetIndexOfAssociatedColumn(e.OldItems[0] as ColumnDefinition);
-                RemoveColumn(e.OldItems[0] as ColumnDefinition);
-                AddColumn(e.NewItems[0] as ColumnDefinition, index);
-            }
-            else if (e.Action == NotifyCollectionChangedAction.Reset)
-            {
-                ResetColumns();
-            }
-            
+            ScheduleColumnReset();
         }
 
         private int GetIndexOfAssociatedColumn(ColumnDefinition columnModel)
@@ -193,11 +176,22 @@ namespace Raven.Studio.Behaviors
             return column == null ? -1 : AssociatedObject.Columns.IndexOf(column);
         }
 
-        private void ResetColumns()
+        private void ScheduleColumnReset()
+        {
+            if (!_isResetPending)
+            {
+                _isResetPending = true;
+                Dispatcher.BeginInvoke(DoReset);
+            }
+        }
+
+        private void DoReset()
         {
             ClearBoundColumns();
             AddColumns();
-            Dispatcher.BeginInvoke(CacheColumnWidths);
+            CacheColumnWidths();
+
+            _isResetPending = false; 
         }
 
         private void CacheColumnWidths()
@@ -368,7 +362,7 @@ namespace Raven.Studio.Behaviors
                 if (e.NewValue != null)
                 {
                     behavior.StartObservingColumnsModel(e.NewValue as ColumnsModel);
-                    behavior.ResetColumns();
+                    behavior.ScheduleColumnReset();
                 }
             }
         }
