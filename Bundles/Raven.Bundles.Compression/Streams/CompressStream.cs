@@ -21,7 +21,7 @@ namespace Raven.Bundles.Compression.Streams
 				var magic = BitConverter.GetBytes(DocumentCompression.CompressFileMagic);
 				underlyingStream.Write(magic, 0, magic.Length);
 
-				this.deflateStream = new DeflateStream(underlyingStream, CompressionLevel.Optimal, leaveOpen: false);
+				this.deflateStream = new DeflateStream(underlyingStream, CompressionMode.Compress, leaveOpen: false);
 			}
 			catch
 			{

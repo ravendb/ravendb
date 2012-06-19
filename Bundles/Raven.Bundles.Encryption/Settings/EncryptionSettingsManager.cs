@@ -15,9 +15,11 @@ namespace Raven.Bundles.Encryption.Settings
 {
 	internal static class EncryptionSettingsManager
 	{
+		private static readonly object EncryptionSettingsKeyInExtensionsState = new object();
+
 		public static EncryptionSettings GetEncryptionSettingsForDatabase(DocumentDatabase database)
 		{
-			var result = (EncryptionSettings)database.ExternalState.GetOrAdd("EncryptionSettings", _ =>
+			var result = (EncryptionSettings)database.ExtensionsState.GetOrAdd(EncryptionSettingsKeyInExtensionsState, _ =>
 			{
 				var type = GetTypeFromName(database.Configuration.Settings[Constants.AlgorithmTypeSetting]);
 				var key = GetKeyFromBase64(database.Configuration.Settings[Constants.EncryptionKeySetting]);
