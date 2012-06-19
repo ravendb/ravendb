@@ -8,7 +8,7 @@ properties {
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
-	$configuration = "Debug"
+	$global:configuration = "Debug"
 	
 	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Spatial4n.Core.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???",
@@ -68,7 +68,7 @@ properties {
 }
 include .\psake_ext.ps1
 
-task default -depends OpenSource,Release
+task default -depends Stable,Release
 
 task Verify40 {
 	if( (ls "$env:windir\Microsoft.NET\Framework\v4.0*") -eq $null ) {
@@ -130,8 +130,8 @@ task Compile -depends Init {
 	
 	try { 
 		ExecuteTask("BeforeCompile")
-		Write-Host "Compiling with '$configuration' configuration"
-		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$configuration }
+		Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
+		exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:OutDir="$buildartifacts_dir\" /p:Configuration=$global:configuration }
 	} catch {
 		Throw
 	} finally { 
@@ -180,17 +180,17 @@ task TestSilverlight -depends Compile, CopyServer {
 	}
 }
 
-task ReleaseNoTests -depends OpenSource,DoRelease {
+task ReleaseNoTests -depends Stable,DoRelease {
 
 }
 
 task Unstable {
-	$configuration = "Release"
+	$global:configuration = "Release"
 	$global:uploadCategory = "RavenDB-Unstable"
 }
 
-task OpenSource {
-	$configuration = "Release"
+task Stable {
+	$global:configuration = "Release"
 	$global:uploadCategory = "RavenDB"
 }
 
@@ -396,7 +396,7 @@ task Upload -depends DoRelease {
 	}
 }	
 
-task UploadOpenSource -depends OpenSource, DoRelease, Upload	
+task UploadStable -depends Stable, DoRelease, Upload	
 
 task UploadUnstable -depends Unstable, DoRelease, Upload
 
