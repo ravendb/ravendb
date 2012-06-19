@@ -32,7 +32,7 @@ namespace Raven.Studio.Features.Logs
 
 		protected override Task LoadedTimerTickedAsync()
 		{
-			if (IsLogsEnabled == false)
+			if (IsLogsEnabled == false || Database.Value == null)
 				return null;
 
 			return DatabaseCommands.GetLogsAsync(showErrorsOnly)

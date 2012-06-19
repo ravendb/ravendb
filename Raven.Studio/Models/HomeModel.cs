@@ -12,6 +12,7 @@ using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Models
 {
@@ -70,19 +71,28 @@ namespace Raven.Studio.Models
 
 		public ICommand CreateSampleData
 		{
-			get { return new CreateSampleDataCommand(this, DatabaseCommands); }
+			get { return new CreateSampleDataCommand(this, Database); }
 		}
 
 		public class CreateSampleDataCommand : Command
 		{
 			private readonly HomeModel model;
-			private readonly IAsyncDatabaseCommands databaseCommands;
+            private readonly Observable<DatabaseModel> database;
 
-			public CreateSampleDataCommand(HomeModel model, IAsyncDatabaseCommands databaseCommands)
+			public CreateSampleDataCommand(HomeModel model, Observable<DatabaseModel> database)
 			{
 				this.model = model;
-				this.databaseCommands = databaseCommands;
+                this.database = database;
+
+			    database.ObservePropertyChanged()
+			        .SubscribeWeakly(this, (target, e) => RaiseCanExecuteChanged());
 			}
+
+            public override bool CanExecute(object parameter)
+            {
+                return database.Value != null
+                       && database.Value.Statistics.Value.CountOfDocuments > 0;
+            }
 
 			public override void Execute(object parameter)
 			{
@@ -93,6 +103,8 @@ namespace Raven.Studio.Models
 
 			private IEnumerable<Task> CreateSampleData()
 			{
+			    var commands = database.Value.AsyncDatabaseCommands;
+
 				// this code assumes a small enough dataset, and doesn't do any sort
 				// of paging or batching whatsoever.
 
@@ -107,14 +119,14 @@ namespace Raven.Studio.Models
 					{
 						var indexName = index.Value<string>("name");
 						var ravenJObject = index.Value<RavenJObject>("definition");
-						var putDoc = databaseCommands
+                        var putDoc = commands
 							.PutIndexAsync(indexName,
 										   ravenJObject.JsonDeserialization<IndexDefinition>(),
 										   true);
 						yield return putDoc;
 					}
 
-					var batch = databaseCommands.BatchAsync(
+                    var batch = commands.BatchAsync(
 						musicStoreData.Value<RavenJArray>("Docs").OfType<RavenJObject>().Select(
 							doc =>
 							{
