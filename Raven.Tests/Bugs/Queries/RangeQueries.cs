@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Xunit;
@@ -19,8 +20,24 @@ namespace Raven.Tests.Bugs.Queries
 					var str = session.Query<WithInteger>()
 						.Where(x => x.Sequence > 150 && x.Sequence < 300)
 						.ToString();
-
+					
 					Assert.Equal("Sequence_Range:{0x00000096 TO 0x0000012C}", str);
+				}
+			}
+		}
+
+		[Fact]
+		public void LinqTranslateCorrectlyEquals()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					var str = session.Query<WithInteger>()
+						.Where(x => x.Sequence >= 150 && x.Sequence <= 300)
+						.ToString();
+
+					Assert.Equal("Sequence_Range:[0x00000096 TO 0x0000012C]", str);
 				}
 			}
 		}
