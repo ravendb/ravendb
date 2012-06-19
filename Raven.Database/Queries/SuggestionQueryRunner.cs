@@ -61,6 +61,7 @@ namespace Raven.Database.Queries
 			}
 		}
 
+		[CLSCompliant(false)]
 		public static StringDistance GetStringDistance(StringDistanceTypes distanceAlg)
 		{
 			switch (distanceAlg)
