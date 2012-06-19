@@ -27,7 +27,11 @@
 										Modifiers="Control">
 				<i:InvokeCommandAction Command="{StaticResource NavigateToDocumentByIdCommand}"/>
 			</Behaviors:StudioKeyTrigger>
-		</i:Interaction.Triggers>
+            <Behaviors:StudioKeyTrigger Key="Q"
+										Modifiers="Control">
+                <i:InvokeCommandAction Command="{StaticResource NavigateToCommandSameWindow}" CommandParameter="/query?mode=dynamic"/>
+            </Behaviors:StudioKeyTrigger>
+        </i:Interaction.Triggers>
 
 		<Grid x:Name="HeaderGrid"
 			  Grid.Row="0"
@@ -183,6 +187,12 @@
                                 <Image Source="{StaticResource Image_AddIndex_Tiny}"/>
                             </Controls:MenuItem.Icon>
                       </Controls:MenuItem>
+                        <Controls:Separator/>
+                        <Controls:MenuItem Header="New Dynamic Query" Command="{StaticResource NavigateToCommand}" CommandParameter="/query?mode=dynamic">
+                            <Controls:MenuItem.Icon>
+                                <Image Source="{StaticResource Image_Query_Small}"/>
+                            </Controls:MenuItem.Icon>
+                        </Controls:MenuItem>
                     </Delay:SplitButton.ButtonMenuItemsSource>
                     <StackPanel Orientation="Horizontal" Background="Transparent" ToolTipService.ToolTip="Create a New Document">
                         <Image Source="{StaticResource Image_Add_Tiny}" Width="14" Height="14"

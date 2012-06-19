@@ -23,6 +23,11 @@
             <DoubleAnimation Storyboard.TargetName="QueryErrorPanel" Storyboard.TargetProperty="Height" To="0" Duration="0:0:0.1"/>
         </Storyboard>
     </Infrastructure:PageView.Resources>
+    <i:Interaction.Triggers>
+        <i:EventTrigger EventName="Loaded">
+            <Behaviors:FocusElementAction TargetName="QueryEditor"/>
+        </i:EventTrigger>
+    </i:Interaction.Triggers>
         <Grid Margin="{StaticResource Margin_ContentPage}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
