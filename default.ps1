@@ -8,7 +8,7 @@ properties {
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
-	$global:configuration = "Debug"
+	$global:configuration = "Release"
 	
 	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
 				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Spatial4n.Core.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???",

@@ -10,10 +10,10 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class RavenDbAnyOfPropertyCollection : LocalClientTest, IDisposable
+	public class RavenDbAnyOfPropertyCollection : LocalClientTest
 	{
-		readonly IDocumentStore store;
-		DateTime now = new DateTime(2010, 10, 31);
+		private readonly IDocumentStore store;
+		private readonly DateTime now = new DateTime(2010, 10, 31);
 
 		public RavenDbAnyOfPropertyCollection()
 		{
@@ -38,6 +38,12 @@ namespace Raven.Tests.Bugs
 				});
 				session.SaveChanges();
 			}
+		}
+
+		public override void Dispose()
+		{
+			if (store != null) store.Dispose();
+			base.Dispose();
 		}
 
 		[Fact]
@@ -82,11 +88,5 @@ namespace Raven.Tests.Bugs
 				Assert.Equal(1, array.Count());
 			}
 		}
-		public override void Dispose()
-		{
-			if (store != null) store.Dispose();
-			base.Dispose();
-		}
-
 	}
 }

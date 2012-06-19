@@ -205,6 +205,7 @@
     <Compile Include="Bugs\OptimizedSimpleQueries.cs" />
     <Compile Include="Bugs\Orders.cs" />
     <Compile Include="Bugs\PoisonIndexes\PoisonIndex.cs" />
+    <Compile Include="Bugs\IdProjection.cs" />
     <Compile Include="Bugs\Queries\Boolean.cs" />
     <Compile Include="Bugs\Queries\CanIncludeValueType.cs" />
     <Compile Include="Bugs\Queries\QueryProvider.cs" />
@@ -569,6 +570,7 @@
     <Compile Include="MailingList\Bruno.cs" />
     <Compile Include="MailingList\BrunoLopes.cs" />
     <Compile Include="MailingList\ChrisH.cs" />
+    <Compile Include="MailingList\DynamicFieldSorting.cs" />
     <Compile Include="MailingList\Lars.cs" />
     <Compile Include="MailingList\Daniel.cs" />
     <Compile Include="MailingList\DynamicFieldSorting.cs" />
