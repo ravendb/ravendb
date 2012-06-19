@@ -21,11 +21,16 @@ namespace Raven.Bundles.Encryption.Streams
 				throw new ArgumentException("To convert a byte array to a " + typeof(T).FullName + ", the array must be of length " + size, "bytes");
 
 			IntPtr ptr = Marshal.AllocHGlobal(size);
-
-			Marshal.Copy(bytes, 0, ptr, size);
-
-			T data = (T)Marshal.PtrToStructure(ptr, typeof(T));
-			Marshal.FreeHGlobal(ptr);
+			T data;
+			try
+			{
+				Marshal.Copy(bytes, 0, ptr, size);
+				data = (T)Marshal.PtrToStructure(ptr, typeof(T));
+			}
+			finally
+			{
+				Marshal.FreeHGlobal(ptr);
+			}
 
 			return data;
 
@@ -37,10 +42,15 @@ namespace Raven.Bundles.Encryption.Streams
 			byte[] arr = new byte[size];
 
 			IntPtr ptr = Marshal.AllocHGlobal(size);
-			Marshal.StructureToPtr(data, ptr, true);
-			Marshal.Copy(ptr, arr, 0, size);
-			Marshal.FreeHGlobal(ptr);
-
+			try
+			{
+				Marshal.StructureToPtr(data, ptr, true);
+				Marshal.Copy(ptr, arr, 0, size);
+			}
+			finally
+			{
+				Marshal.FreeHGlobal(ptr);
+			}
 			return arr;
 		}
 	}
