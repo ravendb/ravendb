@@ -16,7 +16,7 @@ namespace Raven.Tests.MailingList
 			using (var store = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
 			{
 				new Matches_PlayerStats().Execute(store);
-                store.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
+				store.Conventions.DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites;
 				using (var session = store.OpenSession())
 				{
 					session.Store(Create4x4Match());
@@ -33,15 +33,18 @@ namespace Raven.Tests.MailingList
 		public static Match4x4 Create4x4Match()
 		{
 			var series = new List<Serie4x4>
-            {
-                new Serie4x4 { Games = new List<Game4x4>
-                {
-                    new Game4x4 { Player = "Tomas Gustavsson", Pins = 160, Score = 0},
-                    new Game4x4 { Player = "Markus Norbeck", Pins = 154, Score = 0},
-                    new Game4x4 { Player = "Lars Norbeck", Pins = 169, Score = 1},
-                    new Game4x4 { Player = "Matz Classon", Pins = 140, Score = 0},
-                }},
-            };
+			{
+				new Serie4x4
+				{
+					Games = new List<Game4x4>
+					{
+						new Game4x4 {Player = "Tomas Gustavsson", Pins = 160, Score = 0},
+						new Game4x4 {Player = "Markus Norbeck", Pins = 154, Score = 0},
+						new Game4x4 {Player = "Lars Norbeck", Pins = 169, Score = 1},
+						new Game4x4 {Player = "Matz Classon", Pins = 140, Score = 0},
+					}
+				},
+			};
 
 			var match = new Match4x4
 			{
@@ -49,10 +52,10 @@ namespace Raven.Tests.MailingList
 				Date = new DateTime(2012, 01, 28),
 				Teams =
 					new List<Team4x4>
-                                        {
-                                            new Team4x4{Name = "Fredrikshof C", Score = 6, Series = series},
-                                            new Team4x4{Name="Librex", Score = 14}
-                                        }
+					{
+						new Team4x4 {Name = "Fredrikshof C", Score = 6, Series = series},
+						new Team4x4 {Name = "Librex", Score = 14}
+					}
 			};
 			return match;
 		}

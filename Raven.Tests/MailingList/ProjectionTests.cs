@@ -34,12 +34,12 @@ namespace Raven.Tests.MailingList
 		private void Setup()
 		{
 			var list = new List<Foo>()
-                           {
-                               new Foo {Data = 1},
-                               new Foo {Data = 2},
-                               new Foo {Data = 3},
-                               new Foo {Data = 4},
-                           };
+			{
+				new Foo {Data = 1},
+				new Foo {Data = 2},
+				new Foo {Data = 3},
+				new Foo {Data = 4},
+			};
 
 			list.ForEach(foo => Session.Store(foo));
 			Session.SaveChanges();
@@ -53,7 +53,7 @@ namespace Raven.Tests.MailingList
 
 		//This works as expected
 		[Fact]
-		public void _0_ActuallyGetData()
+		public void ActuallyGetData()
 		{
 			var foos =
 				Session
@@ -71,7 +71,7 @@ namespace Raven.Tests.MailingList
 
 		//This works as expected
 		[Fact]
-		public void _1_ShouldBeAbleToProjectIdOntoAnotherFieldCalledId()
+		public void ShouldBeAbleToProjectIdOntoAnotherFieldCalledId()
 		{
 			var foos =
 				Session
@@ -89,7 +89,7 @@ namespace Raven.Tests.MailingList
 
 		//Fails
 		[Fact]
-		public void _2_ShouldBeAbleToProjectIdOntoAnotherName()
+		public void ShouldBeAbleToProjectIdOntoAnotherName()
 		{
 			var foos =
 				Session
@@ -107,7 +107,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void _3_ShouldBeAbleToProjectIdOntoAnotherName_AndAnotherFieldNamedIdShouldNotBeAffected()
+		public void ShouldBeAbleToProjectIdOntoAnotherName_AndAnotherFieldNamedIdShouldNotBeAffected()
 		{
 			var foos =
 				Session.Query<Foo>()
