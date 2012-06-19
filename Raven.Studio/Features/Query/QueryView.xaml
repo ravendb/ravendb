@@ -153,10 +153,10 @@
 									 Text="{Binding Path=Query.Value, Mode=TwoWay}"
 									 CompletionProvider="{Binding Path=QueryIndexAutoComplete.CompletionProvider}">
 					<i:Interaction.Triggers>
-						<ei:KeyTrigger Key="Enter"
+						<Behaviors:StudioKeyTrigger Key="Enter"
 									   Modifiers="Control">
 							<i:InvokeCommandAction Command="{Binding Execute}" />
-						</ei:KeyTrigger>
+                        </Behaviors:StudioKeyTrigger>
 					</i:Interaction.Triggers>
 				</Editors:QueryEditor>
 
