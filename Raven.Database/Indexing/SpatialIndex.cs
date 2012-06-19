@@ -21,8 +21,8 @@ namespace Raven.Database.Indexing
 {
 	public static class SpatialIndex
 	{
-		internal static readonly SpatialContext RavenSpatialContext = new SpatialContext(DistanceUnits.MILES);
-		private static readonly SpatialStrategy<SimpleSpatialFieldInfo> strategy;
+		internal static readonly SpatialContext Context = new SpatialContext(DistanceUnits.MILES);
+		internal static readonly SpatialStrategy<SimpleSpatialFieldInfo> Strategy;
 		private static readonly SimpleSpatialFieldInfo fieldInfo;
 		private static readonly int maxLength;
 
@@ -30,14 +30,14 @@ namespace Raven.Database.Indexing
 		{
 			maxLength = GeohashPrefixTree.GetMaxLevelsPossible();
 			fieldInfo = new SimpleSpatialFieldInfo(Constants.SpatialFieldName);
-			strategy = new RecursivePrefixTreeStrategy(new GeohashPrefixTree(RavenSpatialContext, maxLength));
+			Strategy = new RecursivePrefixTreeStrategy(new GeohashPrefixTree(Context, maxLength));
 		}
 
 		public static IEnumerable<Fieldable> Generate(double? lat, double? lng)
 		{
-			Shape shape = RavenSpatialContext.MakePoint(lng ?? 0, lat ?? 0);
-			return strategy.CreateFields(fieldInfo, shape, true, false).Where(f => f != null)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, RavenSpatialContext.ToString(shape), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS), });
+			Shape shape = Context.MakePoint(lng ?? 0, lat ?? 0);
+			return Strategy.CreateFields(fieldInfo, shape, true, false).Where(f => f != null)
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, Context.ToString(shape), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS), });
 		}
 
 		/// <summary>
@@ -49,7 +49,7 @@ namespace Raven.Database.Indexing
 		/// <returns></returns>
 		public static Query MakeQuery(double lat, double lng, double radius)
 		{
-			return strategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, RavenSpatialContext.MakeCircle(lng, lat, radius)), fieldInfo);
+			return Strategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, Context.MakeCircle(lng, lat, radius)), fieldInfo);
 		}
 
 		public static Filter MakeFilter(IndexQuery indexQuery)
@@ -57,15 +57,15 @@ namespace Raven.Database.Indexing
 			var spatialQry = indexQuery as SpatialIndexQuery;
 			if (spatialQry == null) return null;
 
-			var args = new SpatialArgs(SpatialOperation.IsWithin, RavenSpatialContext.MakeCircle(spatialQry.Longitude, spatialQry.Latitude, spatialQry.Radius));
-			return strategy.MakeFilter(args, fieldInfo);
+			var args = new SpatialArgs(SpatialOperation.IsWithin, Context.MakeCircle(spatialQry.Longitude, spatialQry.Latitude, spatialQry.Radius));
+			return Strategy.MakeFilter(args, fieldInfo);
 		}
 
 		public static double GetDistance(double fromLat, double fromLng, double toLat, double toLng)
 		{
-			var ptFrom = RavenSpatialContext.MakePoint(fromLng, fromLat);
-			var ptTo = RavenSpatialContext.MakePoint(toLng, toLat);
-			return RavenSpatialContext.GetDistCalc().Distance(ptFrom, ptTo);
+			var ptFrom = Context.MakePoint(fromLng, fromLat);
+			var ptTo = Context.MakePoint(toLng, toLat);
+			return Context.GetDistCalc().Distance(ptFrom, ptTo);
 		}
 	}
 }
