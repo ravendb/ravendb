@@ -9,6 +9,7 @@ using System.Reactive.Disposables;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using VirtualCollection.VirtualCollection;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -21,6 +22,7 @@ namespace Raven.Studio.Infrastructure
     public class VirtualCollection<T> : IList<VirtualItem<T>>, IList, ICollectionView, INotifyPropertyChanged, IEnquireAboutItemVisibility where T : class
     {
         const int IndividualItemNotificationLimit = 100;
+        private const int MaxConcurrentPageRequests = 4;
 
         public event NotifyCollectionChangedEventHandler CollectionChanged;
 
@@ -39,18 +41,22 @@ namespace Raven.Studio.Infrastructure
         private readonly HashSet<int> _fetchedPages = new HashSet<int>();
         private readonly HashSet<int> _requestedPages = new HashSet<int>();
 
-        private readonly MostRecentUsedList<int> _mostRecentlyRequestedPages; 
+        private readonly MostRecentUsedList<int> _mostRecentlyRequestedPages;
         private int _itemCount;
         private readonly TaskScheduler _synchronizationContextScheduler;
         private bool _isRefreshDeferred;
         private int _currentItem;
 
+        private int _inProcessPageRequests;
+        private Stack<PageRequest> _pendingPageRequests = new Stack<PageRequest>();
+
         private readonly SortDescriptionCollection _sortDescriptions = new SortDescriptionCollection();
 
-        public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize, int cachedPages) : this(source, pageSize, cachedPages, EqualityComparer<T>.Default)
+        public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize, int cachedPages)
+            : this(source, pageSize, cachedPages, EqualityComparer<T>.Default)
         {
-            
-        } 
+
+        }
 
         public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize, int cachedPages, IEqualityComparer<T> equalityComparer)
         {
@@ -265,21 +271,57 @@ namespace Raven.Studio.Infrastructure
 
             _requestedPages.Add(page);
 
-            var stateWhenRequestInitiated = _state;
+            ScheduleRequest(page);
+        }
 
-            _source.GetPageAsync(page*_pageSize, _pageSize, _sortDescriptions).ContinueWith(
-                t =>
+        private void ScheduleRequest(int page)
+        {
+            _pendingPageRequests.Push(new PageRequest(page, _state));
+
+            ProcessPageRequests();
+        }
+
+        private void ProcessPageRequests()
+        {
+            while (_inProcessPageRequests < MaxConcurrentPageRequests && _pendingPageRequests.Count > 0)
+            {
+                var request = _pendingPageRequests.Pop();
+
+                // if we encounter a requested posted for an early collection state,
+                // we can ignore it, and all that came before it
+                if (_state != request.StateWhenRequested)
+                {
+                    _pendingPageRequests.Clear();
+                    break;
+                }
+
+                // check that the page is still requested (the user might have scrolled, causing the 
+                // page to be ejected from the cache
+                if (!_requestedPages.Contains(request.Page))
+                {
+                    break;
+                }
+
+                _inProcessPageRequests++;
+
+                _source.GetPageAsync(request.Page * _pageSize, _pageSize, _sortDescriptions).ContinueWith(
+                    t =>
                     {
                         if (!t.IsFaulted)
                         {
-                            UpdatePage(page, t.Result, stateWhenRequestInitiated);
+                            UpdatePage(request.Page, t.Result, request.StateWhenRequested);
                         }
                         else
                         {
-                            InvalidatePage(page, stateWhenRequestInitiated);
+                            InvalidatePage(request.Page, request.StateWhenRequested);
                         }
+
+                        // fire off any further requests
+                        _inProcessPageRequests--;
+                        ProcessPageRequests();
                     },
-                _synchronizationContextScheduler);
+                    _synchronizationContextScheduler);
+            }
         }
 
         private void InvalidatePage(int page, uint stateWhenRequestInitiated)
@@ -321,7 +363,7 @@ namespace Raven.Studio.Infrastructure
                 return;
             }
 
-            bool stillRelevant = _requestedPages.Remove(page); 
+            bool stillRelevant = _requestedPages.Remove(page);
             if (!stillRelevant)
             {
                 return;
@@ -368,8 +410,8 @@ namespace Raven.Studio.Infrastructure
 
             if (queryItemVisibilityArgs.FirstVisibleIndex.HasValue)
             {
-                var firstVisiblePage = queryItemVisibilityArgs.FirstVisibleIndex.Value/_pageSize;
-                var lastVisiblePage = queryItemVisibilityArgs.LastVisibleIndex.Value/_pageSize;
+                var firstVisiblePage = queryItemVisibilityArgs.FirstVisibleIndex.Value / _pageSize;
+                var lastVisiblePage = queryItemVisibilityArgs.LastVisibleIndex.Value / _pageSize;
 
                 int numberOfVisiblePages = lastVisiblePage - firstVisiblePage + 1;
                 EnsurePageCacheSize(numberOfVisiblePages);
@@ -503,7 +545,7 @@ namespace Raven.Studio.Infrastructure
         {
             _isRefreshDeferred = true;
 
-            return Disposable.Create(() => { _isRefreshDeferred = false; Refresh(); });
+            return new Disposer(() => { _isRefreshDeferred = false; Refresh(); });
         }
 
         public bool MoveCurrentToFirst()
@@ -678,6 +720,18 @@ namespace Raven.Studio.Infrastructure
         public void RemoveAt(int index)
         {
             throw new NotImplementedException();
+        }
+
+        private struct PageRequest
+        {
+            public readonly int Page;
+            public readonly uint StateWhenRequested;
+
+            public PageRequest(int page, uint state)
+            {
+                Page = page;
+                StateWhenRequested = state;
+            }
         }
     }
 }
