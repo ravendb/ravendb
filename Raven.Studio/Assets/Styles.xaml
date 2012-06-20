@@ -1193,10 +1193,12 @@
 
 	<Style x:Name="Collections_FluidList" BasedOn="{StaticResource Style_ListBox_Fluid}"
 		   TargetType="ListBox">
+        <Setter Property="MinHeight" Value="100"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
 		<Setter Property="MaxHeight"
 				Value="400" />
 		<Setter Property="Background"
-				Value="Transparent" />
+				Value="#B5FFFFFF" />
 	</Style>
 
 	<Style x:Name="Databases_FluidList" BasedOn="{StaticResource Style_ListBox_Fluid}"
