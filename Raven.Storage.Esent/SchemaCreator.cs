@@ -353,6 +353,7 @@ namespace Raven.Storage.Esent
 				index.cbKeyMost = SystemParameters.KeyMost;
 				index.pidxUnicode = new JET_UNICODEINDEX
 				{
+					lcid = 1033,
 					dwMapFlags = LCMAP_SORTKEY | NORM_IGNORECASE | NORM_IGNOREKANATYPE | NORM_IGNOREWIDTH
 				};
 				try
