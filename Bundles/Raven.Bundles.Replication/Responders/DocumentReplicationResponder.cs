@@ -124,6 +124,7 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 
+			metadata[ReplicationConstants.RavenReplicationConflictDocument] = true;
 			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata);
 			metadata.Add(ReplicationConstants.RavenReplicationConflict, RavenJToken.FromObject(true));
 			actions.Documents.AddDocument(newDocumentConflictId, null, document, metadata);

@@ -59,9 +59,11 @@
     <Compile Include="Plugins\AbstractDocumentReplicationConflictResolver.cs" />
     <Compile Include="Responders\AttachmentReplicationResponder.cs" />
     <Compile Include="Triggers\AttachmentAncestryPutTrigger.cs" />
+    <Compile Include="Triggers\PreventConflictDocumentsPutTrigger.cs" />
     <Compile Include="Triggers\HideVirtuallyDeletedAttachmentsReadTrigger.cs" />
     <Compile Include="Triggers\HideVirtuallyDeletedDocumentsReadTrigger.cs" />
     <Compile Include="Triggers\AncestryPutTrigger.cs" />
+    <Compile Include="Triggers\PreventIndexingConflictDocumentsReadTrigger.cs" />
     <Compile Include="Triggers\RemoveConflictOnAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\RemoveConflictOnPutTrigger.cs" />
     <Compile Include="ReplicationConstants.cs" />
