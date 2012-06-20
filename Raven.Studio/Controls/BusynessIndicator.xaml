@@ -1,0 +1,60 @@
+﻿<UserControl x:Class="Raven.Studio.Controls.BusynessIndicator"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:Controls="clr-namespace:Raven.Studio.Controls"
+     mc:Ignorable="d"
+    d:DesignHeight="300" d:DesignWidth="400"
+    FontSize="12">
+
+    <Grid x:Name="LayoutRoot" DataContext="{Binding RelativeSource={RelativeSource AncestorType=Controls:BusynessIndicator}}">
+    	<VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="BusyStates">
+                <VisualState x:Name="Busy">
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="Glint"
+                                                   Storyboard.TargetProperty="(Shape.Fill).(LinearGradientBrush.Transform).(TransformGroup.Children)[0].X"
+                                                   Duration="00:00:.15" From="0" To="20" RepeatBehavior="Forever"/>
+                        <DoubleAnimation Storyboard.TargetName="Glint"
+                                                   Storyboard.TargetProperty="Opacity"
+                                                   Duration="00:00:.15" To="0.7" 
+                                                   BeginTime="0:0:0.5"/>
+                    </Storyboard>
+                </VisualState>
+                <VisualState x:Name="Idle">
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="Glint"
+                                                   Storyboard.TargetProperty="Opacity"
+                                                   Duration="00:00:.15" To="0" />
+                    </Storyboard>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+        <Border x:Name="Container"  Height="3" VerticalAlignment="Top" >
+            <Grid>
+                <Grid Visibility="Visible">
+                    <Border Background="#E4E2E3" 
+                               Opacity="1" 
+                               RenderTransformOrigin="0.5,0.5"
+                               CornerRadius="0,0,2,2"/>
+                    <Rectangle x:Name="Glint" RadiusX="0" RadiusY="0" StrokeThickness="1" Margin="0" Opacity="0" >
+                        <Rectangle.Fill>
+                            <LinearGradientBrush SpreadMethod="Repeat" MappingMode="Absolute" EndPoint="0,1" StartPoint="20,1">
+                                <LinearGradientBrush.Transform >
+                                    <TransformGroup>
+                                        <TranslateTransform X="0" />
+                                        <SkewTransform AngleX="-30" />
+                                    </TransformGroup>
+                                </LinearGradientBrush.Transform>
+                                <GradientStop Color="#78AB2148" Offset="0"/>
+                                <GradientStop Color="#AB2148" Offset=".25"/>
+                                <GradientStop Color="#78AB2148" Offset="0.85"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

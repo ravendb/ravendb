@@ -6,11 +6,14 @@ using System.Windows;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Extensions;
 using System.Threading.Tasks;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
 	public static class InvocationExtensions
 	{
+        
+
 		public static Task ContinueOnSuccess<T>(this Task<T> parent, Action<T> action)
 		{
 			return parent.ContinueWith(task => action(task.Result));
@@ -48,6 +51,16 @@ namespace Raven.Studio.Infrastructure
 				return TaskEx.Run(action);
 			}).Unwrap();
 		}
+
+        public static Task ContinueOnUIThread(this Task parent, Action<Task> action)
+        {
+            return parent.ContinueWith(action, Schedulers.UIScheduler);
+        }
+
+        public static Task ContinueOnUIThread<T>(this Task<T> parent, Action<Task<T>> action)
+        {
+            return parent.ContinueWith(action, Schedulers.UIScheduler);
+        }
 
 		public static Task ContinueOnSuccessInTheUIThread(this Task parent, Action action)
 		{
@@ -94,7 +107,7 @@ namespace Raven.Studio.Infrastructure
 					return task;
 
 				var ex = task.Exception.ExtractSingleInnerException();
-				Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
+                Execute.OnTheUI(() => ApplicationModel.Current.AddErrorNotification(ex, null, stackTrace))
 					.ContinueWith(_ => action(task.Exception));
 				return task;
 			}).Unwrap();
@@ -114,7 +127,7 @@ namespace Raven.Studio.Infrastructure
 			        return;
 
 			    var ex = task.Exception.ExtractSingleInnerException();
-			    Execute.OnTheUI(() => ErrorPresenter.Show(ex, stackTrace))
+			    Execute.OnTheUI(() => ApplicationModel.Current.AddErrorNotification(ex, null, stackTrace))
 			        .ContinueWith(_ => action(task.Exception));
 			});
 

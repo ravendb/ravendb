@@ -102,14 +102,14 @@
                 </ei:DataTrigger>
                 <ei:DataTrigger Binding="{Binding Level}"
 											Value="Warning">
-                    <ei:ChangePropertyAction PropertyName="Source" TargetName="Image"
+                    <ei:ChangePropertyAction PropertyName="Source" TargetObject="{Binding ElementName=Image}"
 														 Value="{StaticResource Image_Warning_Tiny}" />
-                    <ei:ChangePropertyAction PropertyName="Background" TargetName="border"
+                    <ei:ChangePropertyAction PropertyName="Background" TargetObject="{Binding ElementName=border}"
 														 Value="{StaticResource InformationBackground}" /> 
-                    <ei:ChangePropertyAction PropertyName="Foreground" TargetName="TextBlock"
+                    <ei:ChangePropertyAction PropertyName="Foreground" TargetObject="{Binding ElementName=TextBlock}"
 														 Value="Black" />
-                    <ei:ChangePropertyAction PropertyName="Stroke" TargetName="Ellipse"
-														 Value="#FF581129" />
+                    <ei:ChangePropertyAction PropertyName="Stroke" TargetObject="{Binding ElementName=Ellipse}"
+														 Value="#8085C0" />
                 </ei:DataTrigger>
             </i:Interaction.Triggers>
             <Border.CacheMode>
@@ -129,8 +129,8 @@
 				<Grid Margin="5,0,0,0">
 					<Ellipse x:Name="Ellipse"
                              Fill="White"
-							 Width="24"
-							 Height="24"
+							 Width="26"
+							 Height="26"
 							 Stroke="#FF581129"
 							 HorizontalAlignment="Center"
 							 VerticalAlignment="Center" />

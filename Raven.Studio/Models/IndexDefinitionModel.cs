@@ -63,15 +63,15 @@ namespace Raven.Studio.Models
 
 			Header = name;
 			DatabaseCommands.GetIndexAsync(name)
-				.ContinueOnSuccessInTheUIThread(index1 =>
+				.ContinueOnUIThread(task =>
 				                   {
-				                   	if (index1 == null)
+                                       if (task.IsFaulted || task.Result == null)
 				                   	{
 										HandleIndexNotFound(name);
 				                   		return;
 				                   	}
 									originalIndex = JsonConvert.SerializeObject(index);
-									UpdateFromIndex(index1);
+									    UpdateFromIndex(task.Result);
 				                   }).Catch();
 		}
 
@@ -383,11 +383,22 @@ namespace Raven.Studio.Models
 			{
 				DatabaseCommands
 					.DeleteIndexAsync(index.Name)
-					.ContinueOnSuccessInTheUIThread(() =>
+			        .ContinueOnUIThread(t =>
 					                                	{
+			                                    if (t.IsFaulted)
+			                                    {
 					                                		ApplicationModel.Current.AddNotification(
-					                                			new Notification("index " + index.Name + " successfully deleted"));
+			                                            new Notification("index " + index.Name +
+			                                                             " could not be deleted", NotificationLevel.Error,
+			                                                             t.Exception));
+			                                    }
+			                                    else
+			                                    {
+			                                        ApplicationModel.Current.AddNotification(
+			                                            new Notification("index " + index.Name +
+			                                                             " successfully deleted"));
 					                                		UrlUtil.Navigate("/indexes");
+			                                    }
 					                                	});
 			}
 		}

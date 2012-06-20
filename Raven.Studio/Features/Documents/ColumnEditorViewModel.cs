@@ -19,32 +19,44 @@ using Validation = Raven.Studio.Infrastructure.Validation;
 
 namespace Raven.Studio.Features.Documents
 {
-    public class ColumnEditorViewModel : ViewModel, IEditableObject, INotifyDataErrorInfo
+    public class ColumnEditorViewModel : ViewModel, IEditableObject, INotifyDataErrorInfo, IValidationSuppressible
     {
         private IList<ValidationResult> validationResults = new List<ValidationResult>();
         public event EventHandler<EventArgs> ChangesCommitted;
 
         private ColumnDefinition column;
-        private string header;
-        private string binding;
-        private string defaultWidth;
+        private string header = string.Empty;
+        private string binding = string.Empty;
+        private string defaultWidth = string.Empty;
 
         public string Header
         {
             get { return this.header; }
             set
             {
+                if (header == value)
+                {
+                    return;
+                }
+
                 this.header = value;
                 OnPropertyChanged(() => Header);
                 OnPropertyChanged(() => IsNewRow);
+                Revalidate();
             }
         }
 
+        [RequiredString()]
         public string Binding
         {
             get { return this.binding; }
             set
             {
+                if (binding == value)
+                {
+                    return;
+                }
+
                 this.binding = value;
                 if (string.IsNullOrEmpty(Header))
                 {
@@ -52,6 +64,7 @@ namespace Raven.Studio.Features.Documents
                 }
                 OnPropertyChanged(() => Binding);
                 OnPropertyChanged(() => IsNewRow);
+                Revalidate();
             }
         }
 
@@ -77,6 +90,10 @@ namespace Raven.Studio.Features.Documents
             get { return this.defaultWidth; }
             set
             {
+                if (defaultWidth == value)
+                {
+                    return;
+                }
                 this.defaultWidth = value;
                 OnPropertyChanged(() => DefaultWidth);
                 Revalidate();
@@ -141,6 +158,7 @@ namespace Raven.Studio.Features.Documents
 
         public void EndEdit()
         {
+            Revalidate();
             OnChangesCommitted(EventArgs.Empty);
         }
 
@@ -181,6 +199,11 @@ namespace Raven.Studio.Features.Documents
         {
             EventHandler<EventArgs> handler = ChangesCommitted;
             if (handler != null) handler(this, e);
+        }
+
+        public bool SuppressValidation
+        {
+            get { return IsNewRow; }
         }
     }
 }

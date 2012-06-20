@@ -32,6 +32,10 @@ namespace Raven.Studio.Models
         private DocumentNavigator navigator;
         private ICommand navigateNext;
         private ICommand navigatePrevious;
+        private string urlForFirst;
+        private string urlForPrevious;
+        private string urlForNext;
+        private string urlForLast;
 
 		public EditableDocumentModel()
 		{
@@ -45,7 +49,10 @@ namespace Raven.Studio.Models
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
             InitialiseDocument();
 
-            ParentPathSegments = new ObservableCollection<PathSegment>();
+            ParentPathSegments = new ObservableCollection<PathSegment>()
+                                     {
+                                         new PathSegment() { Name="Documents", Url = "/documents"}
+                                     };
 
             currentDatabase = Database.Value.Name;
         }
@@ -75,7 +82,7 @@ namespace Raven.Studio.Models
             get
             {
                 return navigateNext ??
-                       (navigateNext = new ActionCommand(() => UrlUtil.Navigate(Navigator.GetUrlForNext())));
+                       (navigateNext = new ActionCommand(() => HandleNavigation(urlForNext)));
             }
         }
 
@@ -84,7 +91,33 @@ namespace Raven.Studio.Models
             get
             {
                 return navigatePrevious ??
-                       (navigatePrevious = new ActionCommand(() => UrlUtil.Navigate(Navigator.GetUrlForPrevious())));
+                       (navigatePrevious = new ActionCommand(() => HandleNavigation(urlForPrevious)));
+            }
+		}
+
+        public ICommand NavigateToFirst
+        {
+            get
+            {
+                return navigateFirst ??
+                       (navigateFirst = new ActionCommand(() => HandleNavigation(urlForFirst)));
+            }
+        }
+
+        public ICommand NavigateToLast
+        {
+            get
+            {
+                return navigateLast ??
+                       (navigateLast = new ActionCommand(() => HandleNavigation(urlForLast)));
+            }
+        }
+
+        private void HandleNavigation(string url)
+        {
+            if (!string.IsNullOrEmpty(url))
+            {
+                UrlUtil.Navigate(url);
             }
 		}
 
@@ -128,13 +161,18 @@ namespace Raven.Studio.Models
                             SetCurrentDocumentKey(result.Document.Key);
                         }
 
+                        urlForFirst = result.UrlForFirst;
+                        urlForPrevious = result.UrlForPrevious;
+                        urlForLast = result.UrlForLast;
+                        urlForNext = result.UrlForNext;
+
                         isLoaded = true;
                         document.Value = result.Document;
                         CurrentIndex = (int) result.Index;
                         TotalItems = (int) result.TotalDocuments;
 
                         ParentPathSegments.Clear();
-                        ParentPathSegments.AddRange(Navigator.GetParentPath());
+                        ParentPathSegments.AddRange(result.ParentPath);
                     })
                 .Catch();
         }
@@ -184,12 +222,12 @@ namespace Raven.Studio.Models
 
         public bool HasPrevious
 		{
-            get { return CurrentIndex > 0; }
+            get { return !string.IsNullOrEmpty(urlForPrevious); }
 		}
 
         public bool HasNext
 		{
-            get { return CurrentIndex < TotalItems - 1; }
+            get { return !string.IsNullOrEmpty(urlForNext); }
 			}
 
         public bool CanNavigate
@@ -458,7 +496,7 @@ namespace Raven.Studio.Models
                     }
                     else
                     {
-                        UrlUtil.Navigate(Navigator.GetParentPath().Last().Url);
+                        UrlUtil.Navigate(ParentPathSegments.Last().Url);
                     }
                 })
                 .Catch();
@@ -532,6 +570,8 @@ namespace Raven.Studio.Models
 		}
 
         private ICommand deleteCommand;
+        private ICommand navigateFirst;
+        private ICommand navigateLast;
 		public ICommand Delete
 		{
             get { return deleteCommand ?? (deleteCommand = new ActionCommand(HandleDeleteDocument)); }
@@ -651,7 +691,7 @@ namespace Raven.Studio.Models
 				}
 				catch (Exception ex)
 				{
-					ErrorPresenter.Show(ex, null, "Could not parse JSON");
+                    ApplicationModel.Current.AddErrorNotification(ex, "Could not parse JSON");
 					return;
 				}
 
