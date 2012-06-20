@@ -121,15 +121,23 @@ namespace Raven.Database.Data
 			{
 				foreach (var item in GroupByItems)
 				{
-					index.Stores[item.To] = FieldStorage.Yes;
+					index.Stores[ToFieldName(item.To)] = FieldStorage.Yes;
 				}
 			}
 
 			foreach (var descriptor in SortDescriptors)
 			{
-				index.SortOptions[descriptor.Field] =  descriptor.FieldType;
+				index.SortOptions[ToFieldName(descriptor.Field)] = descriptor.FieldType;
 			}
 			return index;
+		}
+
+		private string ToFieldName(string field)
+		{
+			var item = Items.FirstOrDefault(x => x.From == field);
+			if (item == null)
+				return field;
+			return item.To;
 		}
 
 		private string AggregationReducePart()
