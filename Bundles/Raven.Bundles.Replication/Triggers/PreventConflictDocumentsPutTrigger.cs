@@ -28,11 +28,10 @@ namespace Raven.Bundles.Replication.Triggers
 			{
 				documentByKey = accessor.Documents.DocumentByKey(key, transactionInformation);		
 			});
-			if (document == null)
+			if (documentByKey == null)
 				return VetoResult.Allowed;
 			if (documentByKey.Metadata.ContainsKey(ReplicationConstants.RavenReplicationConflictDocument))
-				return
-					VetoResult.Deny("Conflict documents (with " + ReplicationConstants.RavenReplicationConflictDocument +
+				return VetoResult.Deny("Conflict documents (with " + ReplicationConstants.RavenReplicationConflictDocument +
 					                ") are read only and can only be modified by RavenDB when you resolve the conflict");
 			return VetoResult.Allowed;
 		}
