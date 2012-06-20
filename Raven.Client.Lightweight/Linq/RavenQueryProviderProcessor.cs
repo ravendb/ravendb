@@ -174,6 +174,10 @@ namespace Raven.Client.Linq
 
 		private void VisitAndAlso(BinaryExpression andAlso)
 		{
+			if (TryHandleBetween(andAlso))
+				return;
+
+
 			if (subClauseDepth > 0) luceneQuery.OpenSubclause();
 			subClauseDepth++;
 
@@ -183,6 +187,64 @@ namespace Raven.Client.Linq
 
 			subClauseDepth--;
 			if (subClauseDepth > 0) luceneQuery.CloseSubclause();
+		}
+
+		private bool TryHandleBetween(BinaryExpression andAlso)
+		{
+			// x.Foo > 100 && x.Foo < 200
+			// x.Foo < 200 && x.Foo > 100 
+			// 100 < x.Foo && 200 > x.Foo
+			// 200 > x.Foo && 100 < x.Foo 
+
+			var isPossibleBetween =
+				(andAlso.Left.NodeType == ExpressionType.GreaterThan && andAlso.Right.NodeType == ExpressionType.LessThan) ||
+				(andAlso.Left.NodeType == ExpressionType.GreaterThanOrEqual && andAlso.Right.NodeType == ExpressionType.LessThanOrEqual) ||
+				(andAlso.Left.NodeType == ExpressionType.LessThan && andAlso.Right.NodeType == ExpressionType.GreaterThan) ||
+				(andAlso.Left.NodeType == ExpressionType.LessThanOrEqual && andAlso.Right.NodeType == ExpressionType.GreaterThan);
+
+			if (isPossibleBetween == false)
+				return false;
+
+			var leftMember = GetMemberForBetween((BinaryExpression) andAlso.Left);
+			var rightMember = GetMemberForBetween((BinaryExpression)andAlso.Right);
+
+			if (leftMember == null || rightMember == null)
+				return false;
+
+			// both must be on the same property
+			if (leftMember.Item1.Path != rightMember.Item1.Path)
+				return false;
+
+			var min = (andAlso.Left.NodeType == ExpressionType.LessThan ||
+			           andAlso.Left.NodeType == ExpressionType.LessThanOrEqual)
+			          	? rightMember.Item2
+			          	: leftMember.Item2;
+			var max = (andAlso.Left.NodeType == ExpressionType.LessThan ||
+					   andAlso.Left.NodeType == ExpressionType.LessThanOrEqual)
+						? leftMember.Item2
+						: rightMember.Item2;
+
+			if (andAlso.Left.NodeType == ExpressionType.GreaterThanOrEqual || andAlso.Left.NodeType == ExpressionType.LessThanOrEqual)
+				luceneQuery.WhereBetweenOrEqual(leftMember.Item1.Path, min, max);
+			else
+				luceneQuery.WhereBetween(leftMember.Item1.Path, min, max);
+
+			return true;
+		}
+
+		private Tuple<ExpressionInfo, object> GetMemberForBetween(BinaryExpression binaryExpression)
+		{
+			if (IsMemberAccessForQuerySource(binaryExpression.Left))
+			{
+				var expressionInfo = GetMember(binaryExpression.Left);
+				return Tuple.Create(expressionInfo, GetValueFromExpression(binaryExpression.Right, expressionInfo.Type));
+			}
+			if (IsMemberAccessForQuerySource(binaryExpression.Right))
+			{
+				var expressionInfo = GetMember(binaryExpression.Right);
+				return Tuple.Create(expressionInfo, GetValueFromExpression(binaryExpression.Left, expressionInfo.Type));
+			}
+			return null;
 		}
 
 		private void VisitOrElse(BinaryExpression orElse)
