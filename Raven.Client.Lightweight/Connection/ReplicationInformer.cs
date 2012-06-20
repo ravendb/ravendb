@@ -727,7 +727,34 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 				e = aggregateException.ExtractSingleInnerException();
 			}
 #endif
+			var webException = (e as WebException) ?? (e.InnerException as WebException);
+			if(webException != null)
+			{
+				switch (webException.Status)
+				{
+					case WebExceptionStatus.NameResolutionFailure:
+					case WebExceptionStatus.ConnectFailure:
+					case WebExceptionStatus.ReceiveFailure:
+					case WebExceptionStatus.SendFailure:
+					case WebExceptionStatus.PipelineFailure:
+					case WebExceptionStatus.ConnectionClosed:
+					case WebExceptionStatus.Timeout:
+						return true;
+				}
 
+				var httpWebResponse = webException.Response as HttpWebResponse;
+				if(httpWebResponse != null)
+				{
+					switch (httpWebResponse.StatusCode)
+					{
+						case HttpStatusCode.RequestTimeout:
+						case HttpStatusCode.BadGateway:
+						case HttpStatusCode.ServiceUnavailable:
+						case HttpStatusCode.GatewayTimeout:
+							return true;
+					}
+				}
+			}
 			return e.InnerException is SocketException ||
 				e.InnerException is IOException;
 		}
