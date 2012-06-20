@@ -16,6 +16,11 @@ namespace Raven.Studio
 			InitializeComponent();
 		}
 
+	    public void Refresh()
+	    {
+	       ContentFrame.Refresh();
+	    }
+
 		// After the Frame navigates, ensure the HyperlinkButton representing the current page is selected
 		private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
 		{

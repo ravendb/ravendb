@@ -177,18 +177,18 @@
                                    Margin="12,6,4,6" Foreground="#FF666666" Padding="4,5" 
                                    VerticalAlignment="Center">
                     <Delay:SplitButton.ButtonMenuItemsSource>
-                        <Controls:MenuItem Header="New Document" Command="{StaticResource NavigateToCommand}" CommandParameter="/edit?mode=new">
+                        <Controls:MenuItem Header="New Document" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/edit?mode=new">
                           <Controls:MenuItem.Icon>
                                 <Image Source="{StaticResource Image_AddDocument_Tiny}"/>
                           </Controls:MenuItem.Icon>
                         </Controls:MenuItem>
-                      <Controls:MenuItem Header="New Index" Command="{StaticResource NavigateToCommand}" CommandParameter="/indexes/new?mode=new">
+                      <Controls:MenuItem Header="New Index" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/indexes/new?mode=new">
                             <Controls:MenuItem.Icon>
                                 <Image Source="{StaticResource Image_AddIndex_Tiny}"/>
                             </Controls:MenuItem.Icon>
                       </Controls:MenuItem>
                         <Controls:Separator/>
-                        <Controls:MenuItem Header="New Dynamic Query" Command="{StaticResource NavigateToCommand}" CommandParameter="/query?mode=dynamic">
+                        <Controls:MenuItem Header="New Dynamic Query" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/query?mode=dynamic">
                             <Controls:MenuItem.Icon>
                                 <Image Source="{StaticResource Image_Query_Small}"/>
                             </Controls:MenuItem.Icon>
