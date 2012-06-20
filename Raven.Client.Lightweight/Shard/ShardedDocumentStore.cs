@@ -265,14 +265,14 @@ namespace Raven.Client.Shard
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
 					var generator = new ShardedHiloKeyGenerator(this, 32);
-					Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
+					Conventions.DocumentKeyGenerator = (commands, entity) => generator.GenerateDocumentKey(commands, Conventions, entity);
 				}
 
 				if (Conventions.AsyncDocumentKeyGenerator == null)
 				{
 #if !SILVERLIGHT
 					var generator = new AsyncShardedHiloKeyGenerator(this, 32);
-					Conventions.AsyncDocumentKeyGenerator = entity => generator.GenerateDocumentKeyAsync(Conventions, entity);
+					Conventions.AsyncDocumentKeyGenerator = (commands, entity) => generator.GenerateDocumentKeyAsync(commands, Conventions, entity);
 #else
 					Conventions.AsyncDocumentKeyGenerator = entity =>
 					{

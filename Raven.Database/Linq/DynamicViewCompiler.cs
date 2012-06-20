@@ -314,7 +314,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 			        string.Format(
 			            @"The result type is not consistent across map and reduce:
 Common fields: {0}
-Map	only fields   : {1}
+Map only fields   : {1}
 Reduce only fields: {2}
 ",
 			            string.Join(", ", mapFields.Intersect(reduceFields).OrderBy(x => x)),

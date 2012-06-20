@@ -66,8 +66,7 @@ namespace Raven.Tests.Bugs
 							   }
 			}.ToIndexDefinition(new DocumentConvention());
 			var expectedMapTranslation =
-				@"docs.Pages
-	.SelectMany(p => p.CoAuthors.DefaultIfEmpty(), (p, coAuthor) => new {Id = p.Id, CoAuthorUserID = coAuthor != null ? coAuthor.UserId : -1})";
+				"docs.Pages\r\n\t.SelectMany(p => p.CoAuthors.DefaultIfEmpty(), (p, coAuthor) => new {Id = p.Id, CoAuthorUserID = coAuthor != null ? coAuthor.UserId : -1})";
 			Assert.Equal(expectedMapTranslation, indexDefinition.Map);
 		}
 

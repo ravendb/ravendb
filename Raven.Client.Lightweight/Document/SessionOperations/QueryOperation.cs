@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using NLog;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Logging;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 
@@ -14,7 +14,7 @@ namespace Raven.Client.Document.SessionOperations
 {
 	public class QueryOperation
 	{
-		private static readonly Logger log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogProvider.GetCurrentClassLogger();
 		private readonly InMemoryDocumentSessionOperations sessionOperations;
 		private readonly string indexName;
 		private readonly IndexQuery indexQuery;
@@ -75,7 +75,7 @@ namespace Raven.Client.Document.SessionOperations
 
 		public void LogQuery()
 		{
-			log.Debug("Executing query '{0}' on index '{1}' in '{2}'",
+			log.DebugFormat("Executing query '{0}' on index '{1}' in '{2}'",
 										  indexQuery.Query, indexName, sessionOperations.StoreIdentifier);
 		}
 
@@ -253,7 +253,7 @@ namespace Raven.Client.Document.SessionOperations
 						string.Format("Waited for {0:#,#;;0}ms for the query to return authoritative result.",
 									  sp.ElapsedMilliseconds));
 				}
-				log.Debug(
+				log.DebugFormat(
 						"Non authoritative query results on authoritative query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
 						indexQuery.Query,
 						indexName,
@@ -270,7 +270,7 @@ namespace Raven.Client.Document.SessionOperations
 						string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.",
 									  sp.ElapsedMilliseconds));
 				}
-				log.Debug(
+				log.DebugFormat(
 						"Stale query results on non stale query '{0}' on index '{1}' in '{2}', query will be retried, index etag is: {3}",
 						indexQuery.Query,
 						indexName,
@@ -280,7 +280,7 @@ namespace Raven.Client.Document.SessionOperations
 			}
 			currentQueryResults = result;
 			currentQueryResults.EnsureSnapshot();
-			log.Debug("Query returned {0}/{1} {2}results", result.Results.Count,
+			log.DebugFormat("Query returned {0}/{1} {2}results", result.Results.Count,
 											  result.TotalResults, result.IsStale ? "stale " : "");
 			return true;
 		}

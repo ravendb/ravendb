@@ -119,7 +119,7 @@ namespace Raven.Studio.Models
             {
                 UrlUtil.Navigate(url);
             }
-        }
+		}
 
         public override void LoadModelParameters(string parameters)
         {
@@ -226,9 +226,9 @@ namespace Raven.Studio.Models
 		}
 
         public bool HasNext
-        {
+		{
             get { return !string.IsNullOrEmpty(urlForNext); }
-        }
+			}
 
         public bool CanNavigate
 		{
@@ -572,7 +572,7 @@ namespace Raven.Studio.Models
         private ICommand deleteCommand;
         private ICommand navigateFirst;
         private ICommand navigateLast;
-        public ICommand Delete
+		public ICommand Delete
 		{
             get { return deleteCommand ?? (deleteCommand = new ActionCommand(HandleDeleteDocument)); }
 		}

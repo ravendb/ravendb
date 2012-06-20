@@ -11,6 +11,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -65,6 +66,20 @@ namespace Raven.Client.Shard
 				return document;
 
 			throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
+		}
+
+		protected override string GenerateKey(object entity)
+		{
+			var shardId = shardStrategy.ShardResolutionStrategy.MetadataShardIdFor(entity);
+			IDatabaseCommands value;
+			if (shardDbCommands.TryGetValue(shardId, out value) == false)
+				throw new InvalidOperationException("Could not find shard: " + shardId);
+			return Conventions.GenerateDocumentKey(value, entity);
+		}
+
+		protected override Task<string> GenerateKeyAsync(object entity)
+		{
+			throw new NotSupportedException("Cannot generate key asyncronously using syncronous session");
 		}
 
 		#region Properties to access different interfacess

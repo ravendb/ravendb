@@ -51,7 +51,7 @@ Additional fields	: Title", exception.Message);
 				Assert.Equal(
 					@"The result type is not consistent across map and reduce:
 Common fields: Title
-Map	only fields   : 
+Map only fields   : 
 Reduce only fields: Count
 ",
 					exception.Message);

@@ -12,26 +12,26 @@
 		  Title="Tasks"
 		  DataContext="{Binding Path=Server.Value.SelectedDatabase.Value}">
 
-    <Grid Margin="{StaticResource Margin_ContentPage}">
-        <Grid.RowDefinitions>
+	<Grid Margin="{StaticResource Margin_ContentPage}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+			<RowDefinition Height="*" />
 
-        </Grid.RowDefinitions>
+		</Grid.RowDefinitions>
 
 
-        <Border Background="{StaticResource Brush_HeaderBackground}"
+			<Border Background="{StaticResource Brush_HeaderBackground}"
                     BorderBrush="{StaticResource Brush_HeaderBorder}"
                     BorderThickness="1,1,1,0"
 					CornerRadius="4,4,0,0"
 					toolkit:DockPanel.Dock="Top"></Border>
-        <StackPanel Orientation="Horizontal">
+					<StackPanel Orientation="Horizontal">
             <Image Style="{StaticResource Style_Image_PageHeader}"
                                Source="{StaticResource Image_Tasks_Small}"/>
-            <TextBlock Text="Tasks"
+						<TextBlock Text="Tasks"
 								   Style="{StaticResource Style_Text_Header}" />
-        </StackPanel>
+					</StackPanel>
 
         <Border Background="{StaticResource Brush_ToolbarBackground}"
                     BorderBrush="{StaticResource Brush_HeaderBorder}"
@@ -44,13 +44,13 @@
 							 SelectedItem="{Binding Path=SelectedTask.Value, Mode=TwoWay}"
 							 Style="{StaticResource Style_ListBox_HeaderOptions}"
 							 Padding="0">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock Text="{Binding Name}" />
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+						<ListBox.ItemTemplate>
+							<DataTemplate>
+								<TextBlock Text="{Binding Name}" />
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+					</ListBox>
 
         <Tasks:TaskView  Grid.Row="2"/>
-    </Grid>
+	</Grid>
 </sdk:Page>

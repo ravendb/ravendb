@@ -28,7 +28,7 @@
             <Behaviors:FocusElementAction TargetName="QueryEditor"/>
         </i:EventTrigger>
     </i:Interaction.Triggers>
-        <Grid Margin="{StaticResource Margin_ContentPage}">
+	<Grid Margin="{StaticResource Margin_ContentPage}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -43,7 +43,7 @@
             <toolkit:DockPanel LastChildFill="False" Grid.Row="0">
 				<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
                 <Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
-                <HyperlinkButton Content="Indexes"
+					<HyperlinkButton Content="Indexes"
 									 Style="{StaticResource Style_Link_Breadcrumb_Header}"
 									 Command="{StaticResource NavigateToCommand}"
 									 CommandParameter="/Indexes"

@@ -79,11 +79,11 @@ namespace Raven.Studio.Models
 				.ContinueOnUIThread(task =>
 				                   {
                                        if (task.IsFaulted || task.Result == null)
-                                       {
+				                   	{
 										HandleIndexNotFound(name);
 				                   		return;
-				                   	    }
-									    originalIndex = JsonConvert.SerializeObject(index);
+				                   	}
+									originalIndex = JsonConvert.SerializeObject(index);
 									    UpdateFromIndex(task.Result);
 				                   }).Catch();
 		}
@@ -407,13 +407,13 @@ namespace Raven.Studio.Models
 
 			private void DeleteIndex()
 			{
-			    DatabaseCommands
-			        .DeleteIndexAsync(index.Name)
+				DatabaseCommands
+					.DeleteIndexAsync(index.Name)
 			        .ContinueOnUIThread(t =>
-			                                {
+					                                	{
 			                                    if (t.IsFaulted)
 			                                    {
-			                                        ApplicationModel.Current.AddNotification(
+					                                		ApplicationModel.Current.AddNotification(
 			                                            new Notification("index " + index.Name +
 			                                                             " could not be deleted", NotificationLevel.Error,
 			                                                             t.Exception));
@@ -423,9 +423,9 @@ namespace Raven.Studio.Models
 			                                        ApplicationModel.Current.AddNotification(
 			                                            new Notification("index " + index.Name +
 			                                                             " successfully deleted"));
-			                                        UrlUtil.Navigate("/indexes");
+					                                		UrlUtil.Navigate("/indexes");
 			                                    }
-			                                });
+					                                	});
 			}
 		}
 

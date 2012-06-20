@@ -135,6 +135,7 @@ namespace Raven.Database.Linq
 
 		public virtual bool ContainsFieldOnMap(string field)
 		{
+			if (field.EndsWith("_Range")) field = field.Substring(0, field.Length - 6);
 			if (ReduceDefinition == null)
 				return fields.Contains(field);
 			return mapFields.Contains(field);

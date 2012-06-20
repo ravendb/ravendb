@@ -72,10 +72,12 @@ namespace Raven.Tests.Bugs
 			{
 				store.Conventions.DisableProfiling = false; 
 				store.Initialize();
-				// make the replication check here
+				
+				// make hilo & replication checks here
 				using (var session = store.OpenSession())
 				{
-					session.Load<User>("users/1");
+					session.Store(new User());
+					session.SaveChanges();
 				}
 
 				Guid id;
@@ -89,6 +91,7 @@ namespace Raven.Tests.Bugs
 
 				var profilingInformation = store.GetProfilingInformationFor(id);
 
+				
 				Assert.Equal(1, profilingInformation.Requests.Count);
 			}
 		}

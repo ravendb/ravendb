@@ -6,19 +6,15 @@
 #if !NET35
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Net;
 using System.Threading.Tasks;
-using NLog;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
-using Raven.Client.Listeners;
 using Raven.Client.Util;
 
 namespace Raven.Client.Document.Async
@@ -341,9 +337,19 @@ namespace Raven.Client.Document.Async
 			return AsyncLuceneQuery<T>(indexName);
 		}
 
+		protected override string GenerateKey(object entity)
+		{
+			throw new NotSupportedException("Async session cannot generate keys syncronously");
+		}
+
 		protected override void RememberEntityForDocumentKeyGeneration(object entity)
 		{
 			asyncDocumentKeyGeneration.Add(entity);
+		}
+
+		protected override Task<string> GenerateKeyAsync(object entity)
+		{
+			return Conventions.AsyncDocumentKeyGenerator(AsyncDatabaseCommands, entity);
 		}
 	}
 }
