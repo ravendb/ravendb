@@ -20,6 +20,7 @@
 		<ResourceDictionary Source="DataGridStyles.xaml" />
 		<ResourceDictionary Source="TreeViewStyles.xaml" />
 		<ResourceDictionary Source="SplitButton.xaml" />
+		<ResourceDictionary Source="SplitButtonPopup.xaml" />
 		<ResourceDictionary Source="WatermarkedTextBox.xaml" />
 		<ResourceDictionary Source="ComboBoxStyles.xaml" />
 	</ResourceDictionary.MergedDictionaries>

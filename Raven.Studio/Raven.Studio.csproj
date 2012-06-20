@@ -210,6 +210,7 @@
     <Compile Include="Features\Util\ErrorListWindow.xaml.cs">
       <DependentUpon>ErrorListWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Impl\SplitButton\SplitButtonPopup.cs" />
     <Compile Include="Impl\SplitButton\GlobalSuppressions.cs" />
     <Compile Include="Impl\SplitButton\MenuButton.cs" />
     <Compile Include="Impl\SplitButton\SplitButton.cs" />
@@ -516,6 +517,10 @@
     <Page Include="Assets\ComboBoxStyles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\SplitButtonPopup.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Assets\DataGridStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
