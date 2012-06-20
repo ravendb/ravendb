@@ -15,6 +15,7 @@ using System.Threading;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 #if !NET35
+using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.Batches;
 #endif
@@ -389,6 +390,19 @@ namespace Raven.Client.Document
 				throw new InvalidOperationException("Document '" + documentKey + "' no longer exists and was probably deleted");
 			return jsonDocument;
 		}
+
+		protected override string GenerateKey(object entity)
+		{
+			return Conventions.DocumentKeyGenerator(DatabaseCommands, entity);
+		}
+
+#if !NET35
+		protected override Task<string> GenerateKeyAsync(object entity)
+		{
+			return Conventions.AsyncDocumentKeyGenerator(AsyncDatabaseCommands, entity);
+		}
+#endif
+
 
 		/// <summary>
 		/// Begin a load while including the specified path

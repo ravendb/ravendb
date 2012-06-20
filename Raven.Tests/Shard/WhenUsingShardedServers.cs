@@ -74,7 +74,7 @@ namespace Raven.Tests.Shard
 
 				foreach (var shard in shards)
 				{
-					shard.Value.Conventions.DocumentKeyGenerator = c => ((Company)c).Name;
+					shard.Value.Conventions.DocumentKeyGenerator = (cmds, c) => ((Company)c).Name;
 				}
 
 				using (var session = documentStore.OpenSession())

@@ -50,8 +50,8 @@ namespace Raven.Tests.Document
 		{
 			using (var store = NewDocumentStore())
 			{
-				var mk = new MultiTypeHiLoKeyGenerator(store.DatabaseCommands, 5);
-				store.Conventions.DocumentKeyGenerator = o => mk.GenerateDocumentKey(store.Conventions, o);
+				var mk = new MultiTypeHiLoKeyGenerator(5);
+				store.Conventions.DocumentKeyGenerator = (cmd, o) => mk.GenerateDocumentKey(cmd, store.Conventions, o);
 
 				
 				using (var session = store.OpenSession())
@@ -65,8 +65,8 @@ namespace Raven.Tests.Document
 					Assert.Equal("contacts/1", contact.Id);
 				}
 
-				mk = new MultiTypeHiLoKeyGenerator(store.DatabaseCommands, 5);
-				store.Conventions.DocumentKeyGenerator = o => mk.GenerateDocumentKey(store.Conventions, o);
+				mk = new MultiTypeHiLoKeyGenerator(5);
+				store.Conventions.DocumentKeyGenerator = (cmd, o) => mk.GenerateDocumentKey(cmd, store.Conventions, o);
 
 				using (var session = store.OpenSession())
 				{
@@ -86,11 +86,11 @@ namespace Raven.Tests.Document
 		{
 			using (var store = NewDocumentStore())
 			{
-				var mk = new MultiTypeHiLoKeyGenerator(store.DatabaseCommands, 5);
+				var mk = new MultiTypeHiLoKeyGenerator(5);
 				for (int i = 0; i < 15; i++)
 				{
 					Assert.Equal("companies/"+(i+1),
-						mk.GenerateDocumentKey(store.Conventions, new Company()));
+						mk.GenerateDocumentKey(store.DatabaseCommands, store.Conventions, new Company()));
 				}
 			}
 		}
@@ -117,7 +117,7 @@ namespace Raven.Tests.Document
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.Conventions.DocumentKeyGenerator = fun=> null;
+				store.Conventions.DocumentKeyGenerator = (c, f)=> null;
 
 				using (var session = store.OpenSession())
 				{
@@ -134,7 +134,7 @@ namespace Raven.Tests.Document
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.Conventions.DocumentKeyGenerator = fun => null;
+				store.Conventions.DocumentKeyGenerator = (c,f) => null;
 
 				using (var session = store.OpenSession())
 				{

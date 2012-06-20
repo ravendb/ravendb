@@ -306,11 +306,24 @@ namespace Raven.Client.Shard
 				}).Unwrap();
 		}
 
-		
+
+		protected override string GenerateKey(object entity)
+		{
+			throw new NotSupportedException("Cannot generated key syncronously in an async session");
+		}
 
 		protected override void RememberEntityForDocumentKeyGeneration(object entity)
 		{
 			asyncDocumentKeyGeneration.Add(entity);
+		}
+
+		protected override Task<string> GenerateKeyAsync(object entity)
+		{
+			var shardId = shardStrategy.ShardResolutionStrategy.MetadataShardIdFor(entity);
+			IAsyncDatabaseCommands value;
+			if(shardDbCommands.TryGetValue(shardId, out value) == false)
+				throw new InvalidOperationException("Could not find shard: " + shardId);
+			return Conventions.GenerateDocumentKeyAsync(value, entity);
 		}
 	}
 }
