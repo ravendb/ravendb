@@ -53,7 +53,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Selects the <seealso cref="TProjection"/> fields directly from the index
+		/// Selects the projection fields directly from the index
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		public IDocumentQuery<TProjection> SelectFields<TProjection>()

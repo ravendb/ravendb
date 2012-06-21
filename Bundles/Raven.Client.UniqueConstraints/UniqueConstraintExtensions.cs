@@ -21,7 +21,7 @@
 			var body = (MemberExpression)keySelector.Body;
 			var propertyName = body.Member.Name;
 
-			string uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + Uri.EscapeDataString(value.ToString());
+			string uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + Uri.EscapeDataString((value ?? "[[NULL_VALUE]]").ToString());
 			var constraintDoc = session.Include("Id").Load<ConstraintDocument>(uniqueId);
 			if (constraintDoc == null)
 				return default(T);
@@ -49,8 +49,9 @@
 
 				foreach (var property in properties)
 				{
-					var propertyValue = property.GetValue(entity, null).ToString();
-					constraintsIds.Add("UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() + "/" + Uri.EscapeDataString(propertyValue));
+					var propertyValue = property.GetValue(entity, null);
+					constraintsIds.Add("UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() + "/" + 
+						Uri.EscapeDataString((propertyValue ?? "[[NULL_VALUE]]").ToString()));
 				}
 
 				ConstraintDocument[] constraintDocs = session.Include("Id").Load<ConstraintDocument>(constraintsIds.ToArray());

@@ -594,7 +594,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Selects all the <seealso cref="TProjection"/> fields directly from the index
+		/// Selects all the projection fields directly from the index
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		public virtual IAsyncDocumentQuery<TProjection> SelectFields<TProjection>()

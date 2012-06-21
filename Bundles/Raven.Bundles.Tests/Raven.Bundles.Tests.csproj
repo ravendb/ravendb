@@ -50,6 +50,9 @@
     <Reference Include="xunit">
       <HintPath>..\..\Packages\xunit.1.9.0.1566\lib\xunit.dll</HintPath>
     </Reference>
+    <Reference Include="xunit.extensions">
+      <HintPath>..\..\packages\xunit.extensions.1.9.0.1566\lib\xunit.extensions.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\CommonAssemblyInfo.cs">
@@ -112,6 +115,7 @@
     <Compile Include="Replication\WritesDuringFailover.cs" />
     <Compile Include="Replication\WritesDuringFailover2.cs" />
     <Compile Include="TestUtil.cs" />
+    <Compile Include="UniqueConstraints\Bugs\JimBolla.cs" />
     <Compile Include="UniqueConstraints\Bugs\Lars.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy2.cs" />

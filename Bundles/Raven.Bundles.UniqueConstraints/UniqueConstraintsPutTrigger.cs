@@ -31,7 +31,7 @@ namespace Raven.Bundles.UniqueConstraints
 			{
 				var propName = ((RavenJValue)property).Value.ToString();
 				string documentName = "UniqueConstraints/" + entityName + propName + "/" +
-									  Uri.EscapeDataString(document.Value<string>(propName));
+									  Uri.EscapeDataString(document.Value<string>(propName) ?? "[[NULL_VALUE]]");
 				Database.Put(
 					documentName,
 					null,
@@ -67,7 +67,7 @@ namespace Raven.Bundles.UniqueConstraints
 			{
 				var propName = ((RavenJValue)property).Value.ToString();
 				var checkKey = "UniqueConstraints/" + entityName + propName + "/" +
-							   Uri.EscapeDataString(document.Value<string>(propName));
+							   Uri.EscapeDataString(document.Value<string>(propName) ?? "[[NULL_VALUE]]");
 				var checkDoc = Database.Get(checkKey, transactionInformation);
 				if (checkDoc == null) 
 					continue;
@@ -120,7 +120,7 @@ namespace Raven.Bundles.UniqueConstraints
 				if (!oldJson.Value<string>(propName).Equals(document.Value<string>(propName)))
 				{
 					Database.Delete(
-						"UniqueConstraints/" + entityName + propName + "/" + Uri.EscapeDataString(oldJson.Value<string>(propName)),
+						"UniqueConstraints/" + entityName + propName + "/" + Uri.EscapeDataString(oldJson.Value<string>(propName) ?? "[[NULL_VALUE]]"),
 						null, transactionInformation);
 				}
 			}
