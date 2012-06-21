@@ -732,13 +732,15 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			{
 				switch (webException.Status)
 				{
+#if !NET35 && !SILVERLIGHT
 					case WebExceptionStatus.NameResolutionFailure:
-					case WebExceptionStatus.ConnectFailure:
 					case WebExceptionStatus.ReceiveFailure:
-					case WebExceptionStatus.SendFailure:
 					case WebExceptionStatus.PipelineFailure:
 					case WebExceptionStatus.ConnectionClosed:
 					case WebExceptionStatus.Timeout:
+#endif		
+					case WebExceptionStatus.ConnectFailure:
+					case WebExceptionStatus.SendFailure:
 						return true;
 				}
 
