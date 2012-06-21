@@ -23,15 +23,18 @@ namespace Raven.Bundles.UniqueConstraints
 
 			var properties = metadata.Value<RavenJArray>(Constants.EnsureUniqueConstraints);
 
-			if (properties == null || properties.Count() <= 0) 
+			if (properties == null || properties.Length <= 0) 
 				return;
 
 			var constraintMetaObject = new RavenJObject { { Constants.IsConstraintDocument, true } };
 			foreach (var property in properties)
 			{
 				var propName = ((RavenJValue)property).Value.ToString();
+				var uniqueValue = document.Value<string>(propName);
+				if(uniqueValue == null)
+					continue;
 				string documentName = "UniqueConstraints/" + entityName + propName + "/" +
-									  Uri.EscapeDataString(document.Value<string>(propName) ?? "[[NULL_VALUE]]");
+									  Uri.EscapeDataString(uniqueValue);
 				Database.Put(
 					documentName,
 					null,
@@ -66,8 +69,11 @@ namespace Raven.Bundles.UniqueConstraints
 			foreach (var property in properties)
 			{
 				var propName = ((RavenJValue)property).Value.ToString();
+				var uniqueValue = document.Value<string>(propName);
+				if(uniqueValue == null)
+					continue;
 				var checkKey = "UniqueConstraints/" + entityName + propName + "/" +
-							   Uri.EscapeDataString(document.Value<string>(propName) ?? "[[NULL_VALUE]]");
+				               Uri.EscapeDataString(uniqueValue);
 				var checkDoc = Database.Get(checkKey, transactionInformation);
 				if (checkDoc == null) 
 					continue;
@@ -117,10 +123,13 @@ namespace Raven.Bundles.UniqueConstraints
 				var propName = ((RavenJValue)property).Value.ToString();
 
 				// Handle Updates in the Constraint
-				if (!oldJson.Value<string>(propName).Equals(document.Value<string>(propName)))
+				var uniqueValue = oldJson.Value<string>(propName);
+				if(uniqueValue == null)
+					continue;
+				if (!uniqueValue.Equals(document.Value<string>(propName)))
 				{
 					Database.Delete(
-						"UniqueConstraints/" + entityName + propName + "/" + Uri.EscapeDataString(oldJson.Value<string>(propName) ?? "[[NULL_VALUE]]"),
+						"UniqueConstraints/" + entityName + propName + "/" + Uri.EscapeDataString(uniqueValue),
 						null, transactionInformation);
 				}
 			}
