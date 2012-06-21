@@ -12,6 +12,7 @@ namespace Raven.Bundles.Replication
 		public const string RavenReplicationHistory = "Raven-Replication-History";
 		public const string RavenReplicationVersionHiLo = "Raven/Replication/VersionHilo";
 		public const string RavenReplicationConflict = "Raven-Replication-Conflict";
+		public const string RavenReplicationConflictDocument = "Raven-Replication-Conflict-Document";
 		public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
 		public const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 		public const string RavenReplicationDestinationsBasePath = "Raven/Replication/Destinations/";

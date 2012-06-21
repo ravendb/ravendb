@@ -56,7 +56,7 @@ namespace Raven.Studio.Features.Query
 
 	    private void ClearRecentQuery()
 		{
-			model.Error = null;
+			model.ClearQueryError();
 			model.Suggestions.Clear();
 		}
 

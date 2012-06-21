@@ -27,6 +27,10 @@
 										Modifiers="Control">
 				<i:InvokeCommandAction Command="{StaticResource NavigateToDocumentByIdCommand}"/>
 			</Behaviors:StudioKeyTrigger>
+            <Behaviors:StudioKeyTrigger Key="Q"
+										Modifiers="Control">
+                <i:InvokeCommandAction Command="{StaticResource NavigateToCommandSameWindow}" CommandParameter="/query?mode=dynamic"/>
+            </Behaviors:StudioKeyTrigger>
 		</i:Interaction.Triggers>
 
 		<Grid x:Name="HeaderGrid"
@@ -80,10 +84,11 @@
 				  x:Name="Logo">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="34" />
 					<ColumnDefinition Width="Auto" />
 				</Grid.ColumnDefinitions>
 
-				<HyperlinkButton Grid.Column="1"
+				<HyperlinkButton Grid.Column="2"
 								 HorizontalAlignment="Left"
 								 Margin="0,5,5,1"
 								 Command="{StaticResource NavigateToExternalUrlCommand}"
@@ -94,6 +99,17 @@
 						   Height="25" />
 				</HyperlinkButton>
 
+                <Button Grid.Column="1"
+                        Command="{StaticResource ShowErrorListWindowCommand}"
+                        Style="{StaticResource Style_Button_MouseOverChrome}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        ToolTipService.ToolTip="Show recent errors"
+                        Visibility="{Binding ErrorCount, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}">
+                    <Image Source="{StaticResource Image_Error_Small}"
+                           Stretch="Fill" Width="24" Height="24"/>
+                </Button>
+                
 				<Databases:DatabaseSelectionView VerticalAlignment="Center"
 												 HorizontalAlignment="Right" />
 			</Grid>
@@ -163,21 +179,25 @@
                     <Delay:SplitButton.ButtonMenuItemsSource>
                         <Controls:MenuItem Header="New Document" Command="{StaticResource NavigateToCommand}" CommandParameter="/edit?mode=new">
                           <Controls:MenuItem.Icon>
-                                <Image Source="{StaticResource Image_Document_Tiny}"/>
+                                <Image Source="{StaticResource Image_AddDocument_Tiny}"/>
                           </Controls:MenuItem.Icon>
                         </Controls:MenuItem>
                       <Controls:MenuItem Header="New Index" Command="{StaticResource NavigateToCommand}" CommandParameter="/indexes/new?mode=new">
                             <Controls:MenuItem.Icon>
-                                <Image Source="{StaticResource Image_DocumentIndex_Tiny}"/>
+                                <Image Source="{StaticResource Image_AddIndex_Tiny}"/>
                             </Controls:MenuItem.Icon>
                       </Controls:MenuItem>
+                        <Controls:Separator/>
+                        <Controls:MenuItem Header="New Dynamic Query" Command="{StaticResource NavigateToCommand}" CommandParameter="/query?mode=dynamic">
+                            <Controls:MenuItem.Icon>
+                                <Image Source="{StaticResource Image_Query_Small}"/>
+                            </Controls:MenuItem.Icon>
+                        </Controls:MenuItem>
                     </Delay:SplitButton.ButtonMenuItemsSource>
                     <StackPanel Orientation="Horizontal" Background="Transparent" ToolTipService.ToolTip="Create a New Document">
-                        <Path Data="M0,4.5 L9,4.5 M4.5,0 L4.5,9" StrokeThickness="3" Stroke="#B8214A"
-										   Stretch="Fill"
+                        <Image Source="{StaticResource Image_Add_Tiny}" Width="14" Height="14"
 										   VerticalAlignment="Center"
-										   Margin="0,0,4,0"
-                                           Width="14" Height="14" />
+								Margin="0,0,4,0"/>
                         <TextBlock Text="New" VerticalAlignment="Center" />
                     </StackPanel>
                 </Delay:SplitButton>

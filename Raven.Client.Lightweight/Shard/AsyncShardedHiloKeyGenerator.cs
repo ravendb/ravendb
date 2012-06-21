@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 
 namespace Raven.Client.Shard
@@ -24,7 +25,7 @@ namespace Raven.Client.Shard
 			this.capacity = capacity;
 		}
 
-		public Task<string> GenerateDocumentKeyAsync(DocumentConvention conventions, object entity)
+		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions, object entity)
 		{
 			var shardId = shardedDocumentStore.ShardStrategy.ShardResolutionStrategy.MetadataShardIdFor(entity);
 			if (shardId == null)
@@ -33,13 +34,13 @@ namespace Raven.Client.Shard
 
 			AsyncMultiTypeHiLoKeyGenerator value;
 			if (generatorsByShard.TryGetValue(shardId, out value))
-				return value.GenerateDocumentKeyAsync(conventions, entity);
+				return value.GenerateDocumentKeyAsync(databaseCommands, conventions, entity);
 
 			lock (this)
 			{
 				if (generatorsByShard.TryGetValue(shardId, out value) == false)
 				{
-					value = new AsyncMultiTypeHiLoKeyGenerator(shardedDocumentStore.AsyncDatabaseCommandsFor(shardId), capacity);
+					value = new AsyncMultiTypeHiLoKeyGenerator(capacity);
 					generatorsByShard = new Dictionary<string, AsyncMultiTypeHiLoKeyGenerator>(generatorsByShard)
 					                    	{
 					                    		{shardId, value}
@@ -47,7 +48,7 @@ namespace Raven.Client.Shard
 				}
 			}
 
-			return value.GenerateDocumentKeyAsync(conventions, entity);
+			return value.GenerateDocumentKeyAsync(databaseCommands, conventions, entity);
 		}
 	}
 }

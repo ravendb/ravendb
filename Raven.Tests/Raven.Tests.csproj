@@ -566,10 +566,12 @@
     <Compile Include="Linq\LongCount.cs" />
     <Compile Include="MailingList\AccesscControlHeaders.cs" />
     <Compile Include="MailingList\Ben.cs" />
+    <Compile Include="MailingList\Brett.cs" />
     <Compile Include="MailingList\BrianVallelunga.cs" />
     <Compile Include="MailingList\Bruno.cs" />
     <Compile Include="MailingList\BrunoLopes.cs" />
     <Compile Include="MailingList\ChrisH.cs" />
+    <Compile Include="MailingList\HiloWithMultiTenancy.cs" />
     <Compile Include="MailingList\Lars.cs" />
     <Compile Include="MailingList\Daniel.cs" />
     <Compile Include="MailingList\DynamicFieldSorting.cs" />
@@ -639,6 +641,7 @@
     <Compile Include="MailingList\RecreatingIndexes.cs" />
     <Compile Include="MailingList\RobinM\AttachmentsStatic.cs" />
     <Compile Include="MailingList\RyanD.cs" />
+    <Compile Include="MailingList\Samina2.cs" />
     <Compile Include="MailingList\Scott.cs" />
     <Compile Include="MailingList\SearchByMapReduceExample.cs" />
     <Compile Include="MailingList\SpecialChars.cs" />
@@ -648,6 +651,7 @@
     <Compile Include="MailingList\StartsWith.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
     <Compile Include="MailingList\Stockholm.cs" />
+    <Compile Include="MailingList\Tony.cs" />
     <Compile Include="MailingList\What.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />

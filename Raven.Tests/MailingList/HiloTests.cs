@@ -34,9 +34,9 @@ namespace Raven.Tests.MailingList
 					},
 					new RavenJObject());
 
-				var hiLoKeyGenerator = new HiLoKeyGenerator(store.DatabaseCommands, "Users", 32);
+				var hiLoKeyGenerator = new HiLoKeyGenerator("Users", 32);
 
-				var generateDocumentKey = hiLoKeyGenerator.GenerateDocumentKey(new DocumentConvention(), new User());
+				var generateDocumentKey = hiLoKeyGenerator.GenerateDocumentKey(store.DatabaseCommands, new DocumentConvention(), new User());
 				Assert.Equal("Users/2,33", generateDocumentKey);
 			}
 		}
@@ -53,9 +53,9 @@ namespace Raven.Tests.MailingList
 					},
 					new RavenJObject());
 
-				var hiLoKeyGenerator = new HiLoKeyGenerator(store.DatabaseCommands, "Users", 32);
+				var hiLoKeyGenerator = new HiLoKeyGenerator("Users", 32);
 
-				var ids = new HashSet<long> { hiLoKeyGenerator.NextId() };
+				var ids = new HashSet<long> { hiLoKeyGenerator.NextId(store.DatabaseCommands) };
 
 				store.DatabaseCommands.Put(
 					"Raven/Hilo/Users", null,
@@ -68,7 +68,7 @@ namespace Raven.Tests.MailingList
 
 				for (int i = 0; i < 128; i++)
 				{
-					Assert.True(ids.Add(hiLoKeyGenerator.NextId()), "Failed at " + i);
+					Assert.True(ids.Add(hiLoKeyGenerator.NextId(store.DatabaseCommands)), "Failed at " + i);
 				}
 
 				var list = ids.GroupBy(x => x).Select(g => new
@@ -134,8 +134,8 @@ namespace Raven.Tests.MailingList
 							});
 				});
 
-				var hiLoKeyGenerator = new HiLoKeyGenerator(store.DatabaseCommands, "Users", 32);
-				var nextId = hiLoKeyGenerator.NextId();
+				var hiLoKeyGenerator = new HiLoKeyGenerator("Users", 32);
+				var nextId = hiLoKeyGenerator.NextId(store.DatabaseCommands);
 				Assert.Equal(65, nextId);
 			}
 		}

@@ -10,6 +10,7 @@ using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Extensions;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Studio.Models
 {
@@ -228,6 +229,10 @@ namespace Raven.Studio.Models
 		                           QueryTime = e.EventArgs.QueryTime;
 		                           Results = e.EventArgs.Statistics;
 		                       });
+		    Observable.FromEventPattern<QueryErrorEventArgs>(h => CollectionSource.QueryError += h,
+		                                                     h => CollectionSource.QueryError -= h)
+		        .ObserveOnDispatcher()
+		        .Subscribe(e => HandleQueryError(e.EventArgs.Exception));
 
 		    DocumentsResult = new DocumentsModel(CollectionSource)
 		                          {
@@ -237,6 +242,8 @@ namespace Raven.Studio.Models
 		                          };
 
             Query = new Observable<string>();
+            QueryErrorMessage = new Observable<string>();
+            IsErrorVisible = new Observable<bool>();
 
 			SortBy = new BindableCollection<StringRef>(x => x.Value);
 		    SortBy.CollectionChanged += HandleSortByChanged;
@@ -245,6 +252,23 @@ namespace Raven.Studio.Models
 			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
 			DynamicSelectedOption = DynamicOptions[0];
 		}
+
+	    private void HandleQueryError(Exception exception)
+	    {
+	        if (exception is AggregateException)
+	        {
+	            exception = ((AggregateException) exception).ExtractSingleInnerException();
+	        }
+
+	        QueryErrorMessage.Value = exception.Message;
+	        IsErrorVisible.Value = true;
+	    }
+
+	    public void ClearQueryError()
+	    {
+	        QueryErrorMessage.Value = string.Empty;
+	        IsErrorVisible.Value = false;
+	    }
 
 	    private void HandleSortByChanged(object sender, NotifyCollectionChangedEventArgs e)
 	    {
@@ -276,20 +300,20 @@ namespace Raven.Studio.Models
 			IndexName = urlParser.Path.Trim('/');
 
 			DatabaseCommands.GetIndexAsync(IndexName)
-				.ContinueOnSuccessInTheUIThread(definition =>
+				.ContinueOnUIThread(task =>
 				{
-					if (definition == null)
+					if (task.IsFaulted || task.Result  == null)
 					{
 						IndexDefinitionModel.HandleIndexNotFound(IndexName);
 						return;
 					}
-					var fields = definition.Fields;
+                    var fields = task.Result.Fields;
 					QueryIndexAutoComplete = new QueryIndexAutoComplete(IndexName, Query, fields);
 					
 					const string spatialindexGenerate = "SpatialIndex.Generate";
 					IsSpatialQuerySupported =
-						definition.Maps.Any(x => x.Contains(spatialindexGenerate)) ||
-						(definition.Reduce != null && definition.Reduce.Contains(spatialindexGenerate));
+                        task.Result.Maps.Any(x => x.Contains(spatialindexGenerate)) ||
+                        (task.Result.Reduce != null && task.Result.Reduce.Contains(spatialindexGenerate));
 
 					SetSortByOptions(fields);
 					Execute.Execute(string.Empty);
@@ -313,7 +337,9 @@ namespace Raven.Studio.Models
 
 		public ICommand Execute { get { return executeQuery ?? (executeQuery = new ExecuteQueryCommand(this)); } }
 
-		public Observable<string> Query { get; set; }
+        public Observable<string> QueryErrorMessage { get; private set; }
+        public Observable<bool> IsErrorVisible { get; private set; } 
+		public Observable<string> Query { get; private set; }
 
 		private TimeSpan queryTime;
 		public TimeSpan QueryTime
@@ -336,12 +362,6 @@ namespace Raven.Studio.Models
 			}
 		}
 
-
-	    public string Error
-		{
-			get { return error; }
-			set { error = value; OnPropertyChanged(() => Error); }
-		}
 
 		public DocumentsModel DocumentsResult { get; private set; }
 

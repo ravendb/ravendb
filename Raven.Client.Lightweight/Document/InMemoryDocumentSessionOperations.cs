@@ -594,7 +594,7 @@ more responsive application.
 			{
 				if (TryGetIdFromDynamic(entity, out id) == false)
 				{
-					id = Conventions.DocumentKeyGenerator(entity);
+					id = GenerateKey(entity);
 					if (id != null)
 					{
 						// Store it back into the Id field so the client has access to to it                    
@@ -610,6 +610,8 @@ more responsive application.
 			return id;
 		}
 
+		protected abstract string GenerateKey(object entity);
+
 		protected virtual void RememberEntityForDocumentKeyGeneration(object entity)
 		{
 			throw new NotImplementedException("You cannot set GenerateDocumentKeysOnStore to false without implementing RememberEntityForDocumentKeyGeneration");
@@ -623,7 +625,7 @@ more responsive application.
 				string id;
 				if (TryGetIdFromDynamic(entity, out id) == false)
 				{
-					return Conventions.AsyncDocumentKeyGenerator(entity)
+					return GenerateKeyAsync(entity)
 						.ContinueWith(task =>
 						{
 							if (task.Result != null)
@@ -643,6 +645,8 @@ more responsive application.
 					return task.Result;
 				});
 		}
+
+		protected abstract Task<string> GenerateKeyAsync(object entity);
 #endif
 
 		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
@@ -681,7 +685,7 @@ more responsive application.
 			if (id == null)
 			{
 				// Generate the key up front
-				id = Conventions.GenerateDocumentKey(entity);
+				id = GenerateKey(entity);
 
 			}
 
@@ -699,7 +703,7 @@ more responsive application.
 			Task<string> generator =
 				id != null
 				? CompletedTask.With(id)
-				: Conventions.GenerateDocumentKeyAsync(entity);
+				: GenerateKeyAsync(entity);
 
 			return generator.ContinueWith(task =>
 			{

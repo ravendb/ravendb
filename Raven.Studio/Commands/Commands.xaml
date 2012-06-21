@@ -6,6 +6,7 @@
 	<Commands:CopyToClipboardCommand x:Name="CopyToClipboardCommand" />
 	<Commands:DeleteAllDocumentsOfCollectionCommand	x:Name="DeleteAllDocumentsOfCollectionCommand" />
 	<Commands:NavigateToCommand x:Name="NavigateToCommand" />
+	<Commands:NavigateToCommand x:Name="NavigateToCommandSameWindow" EnsureSameWindow="True" />
 	<Documents:EditNeighbouringDocumentCommand x:Name="EditNeighbouringDocumentCommand" />
 	<Commands:ChangeDatabaseCommand x:Name="ChangeDatabaseCommand" />
 	<Commands:NavigateToExternalUrlCommand x:Name="NavigateToExternalUrlCommand" />
@@ -15,4 +16,5 @@
 	<Commands:DeleteIndexCommand x:Name="DeleteIndexCommand" />
 	<Commands:PromoteToAutoIndexCommand x:Name="PromoteToAutoIndexCommand" />
 	<Commands:ResetIndexCommand x:Name="ResetIndexCommand" />
+	<Commands:ShowErrorListWindowCommand x:Name="ShowErrorListWindowCommand" />
 </ResourceDictionary>

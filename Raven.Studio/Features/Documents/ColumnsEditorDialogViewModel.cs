@@ -205,7 +205,7 @@ namespace Raven.Studio.Features.Documents
 
         private void HandleDeleteSelectedColumn()
         {
-            if (SelectedColumn == null)
+            if (SelectedColumn == null || SelectedColumn.IsNewRow) 
             {
                 return;
             }

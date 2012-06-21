@@ -91,7 +91,7 @@ namespace Raven.Studio.Infrastructure
 
 		private void EnsureDatabaseParameterIncluded()
 		{
-			if (GetQueryParam("database") != null)
+			if (GetQueryParam("database") != null || ApplicationModel.Database.Value == null)
 				return;
 
 			SetQueryParam("database", ApplicationModel.Database.Value.Name);

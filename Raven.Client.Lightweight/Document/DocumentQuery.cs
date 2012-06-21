@@ -52,6 +52,14 @@ namespace Raven.Client.Document
 			
 		}
 
+		/// <summary>
+		/// Selects the projection fields directly from the index
+		/// </summary>
+		/// <typeparam name="TProjection">The type of the projection.</typeparam>
+		public IDocumentQuery<TProjection> SelectFields<TProjection>()
+		{
+			return SelectFields<TProjection>(typeof (TProjection).GetProperties().Select(x => x.Name).ToArray());
+		}
 
 		/// <summary>
 		/// Selects the specified fields directly from the index

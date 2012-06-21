@@ -146,7 +146,7 @@ namespace Raven.Studio.Models
 
         private void UpdateColumnSet()
         {
-            if (!IsLoaded)
+            if (!IsLoaded || ApplicationModel.Database.Value == null)
             {
                 return;
             }
@@ -238,6 +238,11 @@ namespace Raven.Studio.Models
 
         private void BeginLoadPriorityProperties()
         {
+            if (ApplicationModel.Database.Value == null)
+            {
+                return;
+            }
+
             ApplicationModel.Database.Value
                 .AsyncDatabaseCommands
                 .GetAsync(PriorityColumnsDocumentName)

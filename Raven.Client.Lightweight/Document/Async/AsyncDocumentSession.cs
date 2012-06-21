@@ -337,9 +337,19 @@ namespace Raven.Client.Document.Async
 			return AsyncLuceneQuery<T>(indexName);
 		}
 
+		protected override string GenerateKey(object entity)
+		{
+			throw new NotSupportedException("Async session cannot generate keys syncronously");
+		}
+
 		protected override void RememberEntityForDocumentKeyGeneration(object entity)
 		{
 			asyncDocumentKeyGeneration.Add(entity);
+		}
+
+		protected override Task<string> GenerateKeyAsync(object entity)
+		{
+			return Conventions.AsyncDocumentKeyGenerator(AsyncDatabaseCommands, entity);
 		}
 	}
 }

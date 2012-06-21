@@ -7,7 +7,10 @@ namespace Raven.Studio.Behaviors
     {
         protected override void Invoke(object parameter)
         {
-            Target.Focus();
+            if (Target != null)
+            {
+                AssociatedObject.Dispatcher.BeginInvoke(() => Target.Focus());
+            }
         }
     }
 }

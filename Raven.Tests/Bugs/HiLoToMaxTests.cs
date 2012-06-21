@@ -12,10 +12,10 @@ namespace Raven.Tests.Bugs
 		{
 			using(var store = NewDocumentStore())
 			{
-				var generator = new HiLoKeyGenerator(store.DatabaseCommands, "users", 3);
+				var generator = new HiLoKeyGenerator("users", 3);
 				for (long i = 0; i < 50; i++)
 				{
-					Assert.Equal(i+1, generator.NextId());
+					Assert.Equal(i + 1, generator.NextId(store.DatabaseCommands));
 				}
 			}
 		}
@@ -25,13 +25,13 @@ namespace Raven.Tests.Bugs
 		{
 			using (var store = NewDocumentStore())
 			{
-				var generator1 = new HiLoKeyGenerator(store.DatabaseCommands, "users", 3);
-				var generator2 = new HiLoKeyGenerator(store.DatabaseCommands, "users", 3);
+				var generator1 = new HiLoKeyGenerator("users", 3);
+				var generator2 = new HiLoKeyGenerator("users", 3);
 				var dic = new Dictionary<long, int>();
 				for (long i = 0; i < 50; i++)
 				{
-					dic.Add(generator1.NextId(), 1);
-					dic.Add(generator2.NextId(), 1);
+					dic.Add(generator1.NextId(store.DatabaseCommands), 1);
+					dic.Add(generator2.NextId(store.DatabaseCommands), 1);
 				}
 			}
 		}
@@ -46,10 +46,10 @@ namespace Raven.Tests.Bugs
 					RavenJObject.FromObject(new{ ServerHi = 2}), 
 					new RavenJObject());
 
-				var generator = new HiLoKeyGenerator(store.DatabaseCommands, "users", 1024);
+				var generator = new HiLoKeyGenerator("users", 1024);
 				for (long i = 0; i < 50; i++)
 				{
-					Assert.Equal((i + 1)+1024, generator.NextId());
+					Assert.Equal((i + 1) + 1024, generator.NextId(store.DatabaseCommands));
 				}
 			}
 		}

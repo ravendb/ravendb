@@ -50,16 +50,20 @@
 	</UserControl.Resources>
 
 	<Grid DataContext="{Binding Value}" Margin="{StaticResource Margin_ContentPage}">
-		<toolkit:HeaderedContentControl Visibility="{Binding Path=TempIndexes.Count, Converter={StaticResource HiddenWhenEmpty}}"
-										Style="{StaticResource Style_HeaderedContentControl}" Margin="0,0,0,15">
+		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}" Margin="0,0,0,15">
 			<toolkit:HeaderedContentControl.Header>
-				<toolkit:DockPanel Margin="4"  LastChildFill="False">
-					<StackPanel Orientation="Horizontal" toolkit:DockPanel.Dock="Left" VerticalAlignment="Center" >
-						<Image Source="{StaticResource Image_Database_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+				<Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+					<StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Center" >
+                        <Image Source="{StaticResource Image_Database_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="6"/>
 						<TextBlock Text="Databases"
-							   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center"/>
+							   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6"/>
 					</StackPanel>
-					<StackPanel Orientation="Horizontal" toolkit:DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <Border Background="{StaticResource Brush_ToolbarBackground}" Grid.Row="1">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,4,4,4">
 						<HyperlinkButton Command="{StaticResource CreateDatabaseCommand}" 
 										 CommandParameter="{Binding}"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
@@ -71,7 +75,8 @@
 								</StackPanel></HyperlinkButton.Content>
 						</HyperlinkButton>
 					</StackPanel>
-				</toolkit:DockPanel>
+                    </Border>
+                </Grid>
 			</toolkit:HeaderedContentControl.Header>
 			<ListBox Style="{StaticResource Databases_FluidList}"
 					 ItemsSource="{Binding Databases}"

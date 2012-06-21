@@ -20,15 +20,25 @@ namespace Raven.Studio.Commands
 
 		private void DeleteIndex(string indexName)
 		{
-			DatabaseCommands
-				.DeleteIndexAsync(indexName)
-				.ContinueOnSuccessInTheUIThread(() =>
-				{
-					ApplicationModel.Current.AddNotification(new Notification("Index " + indexName + " successfully deleted"));
-					UrlUtil.Navigate("/indexes");
-					IndexesModel.GroupedIndexes.Remove(SelectedItems.First());
-				})
-				.Catch();
+		    DatabaseCommands
+		        .DeleteIndexAsync(indexName)
+		        .ContinueOnUIThread(t =>
+		                                {
+		                                    if (t.IsFaulted)
+		                                    {
+		                                        ApplicationModel.Current.AddNotification(
+		                                            new Notification("index " + indexName +
+		                                                             " could not be deleted", NotificationLevel.Error,
+		                                                             t.Exception));
+		                                    }
+		                                    else
+		                                    {
+		                                        ApplicationModel.Current.AddNotification(
+		                                            new Notification("Index " + indexName + " successfully deleted"));
+		                                        UrlUtil.Navigate("/indexes");
+		                                        IndexesModel.GroupedIndexes.Remove(SelectedItems.First());
+		                                    }
+		                                });
 		}
 	}
 }

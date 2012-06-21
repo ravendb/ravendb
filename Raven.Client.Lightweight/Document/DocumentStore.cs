@@ -361,31 +361,22 @@ namespace Raven.Client.Document
 
 				InitializeSecurity();
 
+#if !SILVERLIGHT
 				if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
 				{
-#if !SILVERLIGHT
-					var generator = new MultiTypeHiLoKeyGenerator(databaseCommandsGenerator(), 32);
-					Conventions.DocumentKeyGenerator = entity => generator.GenerateDocumentKey(Conventions, entity);
-#else
-
-					Conventions.DocumentKeyGenerator = entity =>
-					{
-						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
-						if (typeTagName == null)
-							return Guid.NewGuid().ToString();
-						return typeTagName + "/" + Guid.NewGuid();
-					};
-#endif
+					var generator = new MultiTypeHiLoKeyGenerator(32);
+					Conventions.DocumentKeyGenerator = (databaseCommands, entity) => generator.GenerateDocumentKey(databaseCommands, Conventions, entity);
 				}
+#endif
 
 #if !NET35 
 				if (Conventions.AsyncDocumentKeyGenerator == null && asyncDatabaseCommandsGenerator != null)
 				{
 #if !SILVERLIGHT
-					var generator = new AsyncMultiTypeHiLoKeyGenerator(asyncDatabaseCommandsGenerator(), 32);
-					Conventions.AsyncDocumentKeyGenerator = entity => generator.GenerateDocumentKeyAsync(Conventions, entity);
+					var generator = new AsyncMultiTypeHiLoKeyGenerator(32);
+					Conventions.AsyncDocumentKeyGenerator = (commands, entity) => generator.GenerateDocumentKeyAsync(commands, Conventions, entity);
 #else
-					Conventions.AsyncDocumentKeyGenerator = entity =>
+					Conventions.AsyncDocumentKeyGenerator = (commands, entity) =>
 					{
 						var typeTagName = Conventions.GetTypeTagName(entity.GetType());
 						if (typeTagName == null)

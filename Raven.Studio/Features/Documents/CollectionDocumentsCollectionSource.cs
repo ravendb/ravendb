@@ -46,7 +46,7 @@ namespace Raven.Studio.Features.Documents
                               TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        public override Task<IList<ViewableDocument>> GetPageAsync(int start, int pageSize, IList<SortDescription> sortDescriptions)
+        protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)
         {
             return GetQueryResults(start, pageSize)
                 .ContinueWith(task =>
@@ -78,7 +78,8 @@ namespace Raven.Studio.Features.Documents
             return ApplicationModel.DatabaseCommands
                 .QueryAsync("Raven/DocumentsByEntityName",
                             new IndexQuery {Start = start, PageSize = pageSize, Query = "Tag:" + collectionName},
-                            new string[] {});
+                            new string[] {})
+                .Catch();
         }
     }
 }

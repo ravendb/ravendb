@@ -13,34 +13,19 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class MultiTypeHiLoKeyGenerator
 	{
-		private readonly IDatabaseCommands databaseCommands;
-		private readonly IDocumentStore documentStore;
 		private readonly int capacity;
 		private readonly object generatorLock = new object();
 		private IDictionary<string, HiLoKeyGenerator> keyGeneratorsByTag = new Dictionary<string, HiLoKeyGenerator>();
 
-		private IDatabaseCommands DatabaseCommands
-		{
-			get { return databaseCommands ?? documentStore.DatabaseCommands; }
-		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="MultiTypeHiLoKeyGenerator"/> class.
 		/// </summary>
-		public MultiTypeHiLoKeyGenerator(IDatabaseCommands databaseCommands, int capacity)
+		public MultiTypeHiLoKeyGenerator(int capacity)
 		{
-			this.databaseCommands = databaseCommands;
 			this.capacity = capacity;
 		}
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="MultiTypeHiLoKeyGenerator"/> class.
-		/// </summary>
-		public MultiTypeHiLoKeyGenerator(IDocumentStore documentStore, int capacity)
-		{
-			this.documentStore = documentStore;
-			this.capacity = capacity;
-		}
 
 
 		/// <summary>
@@ -49,7 +34,7 @@ namespace Raven.Client.Document
 		/// <param name="conventions">The conventions.</param>
 		/// <param name="entity">The entity.</param>
 		/// <returns></returns>
-		public string GenerateDocumentKey(DocumentConvention conventions, object entity)
+		public string GenerateDocumentKey(IDatabaseCommands databaseCommands, DocumentConvention conventions, object entity)
 		{
 		    var typeTagName = conventions.GetTypeTagName(entity.GetType());
 			if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
@@ -57,14 +42,14 @@ namespace Raven.Client.Document
 			var tag = conventions.TransformTypeTagNameToDocumentKeyPrefix(typeTagName);
 			HiLoKeyGenerator value;
 			if (keyGeneratorsByTag.TryGetValue(tag, out value))
-				return value.GenerateDocumentKey(conventions, entity);
+				return value.GenerateDocumentKey(databaseCommands, conventions, entity);
 
 			lock(generatorLock)
 			{
 				if (keyGeneratorsByTag.TryGetValue(tag, out value))
-					return value.GenerateDocumentKey(conventions, entity);
+					return value.GenerateDocumentKey(databaseCommands, conventions, entity);
 
-				value = new HiLoKeyGenerator(DatabaseCommands, tag, capacity);
+				value = new HiLoKeyGenerator(tag, capacity);
 				// doing it this way for thread safety
 				keyGeneratorsByTag = new Dictionary<string, HiLoKeyGenerator>(keyGeneratorsByTag)
 				{
@@ -72,7 +57,7 @@ namespace Raven.Client.Document
 				};
 			}
 
-			return value.GenerateDocumentKey(conventions, entity);
+			return value.GenerateDocumentKey(databaseCommands, conventions, entity);
 		}
 	}
 }

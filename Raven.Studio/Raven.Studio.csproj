@@ -122,6 +122,7 @@
     <Reference Include="System.Windows.Controls.Toolkit, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\System.Windows.Controls.Toolkit.dll</HintPath>
     </Reference>
+    <Reference Include="System.Windows.Data, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Interactivity">
       <HintPath>..\SharedLibs\Silverlight\System.Windows.Interactivity.dll</HintPath>
     </Reference>
@@ -144,6 +145,7 @@
     <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
     <Compile Include="Behaviors\BindSuggestionsProvider.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
+    <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
     <Compile Include="Behaviors\FocusElementAction.cs" />
@@ -157,9 +159,10 @@
     <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Commands\CopyDocumentsToClipboardCommand.cs" />
     <Compile Include="Commands\ResetIndexCommand.cs" />
+    <Compile Include="Commands\ShowErrorListWindowCommand.cs" />
     <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
-    <Compile Include="Controls\DataFetchErrorNotifier.xaml.cs">
-      <DependentUpon>DataFetchErrorNotifier.xaml</DependentUpon>
+    <Compile Include="Controls\BusynessIndicator.xaml.cs">
+      <DependentUpon>BusynessIndicator.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\GoToDocumentControl.xaml.cs">
       <DependentUpon>GoToDocumentControl.xaml</DependentUpon>
@@ -204,6 +207,9 @@
     <Compile Include="Features\Terms\TermsView.xaml.cs">
       <DependentUpon>TermsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\Util\ErrorListWindow.xaml.cs">
+      <DependentUpon>ErrorListWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Impl\SplitButton\GlobalSuppressions.cs" />
     <Compile Include="Impl\SplitButton\MenuButton.cs" />
     <Compile Include="Impl\SplitButton\SplitButton.cs" />
@@ -221,7 +227,10 @@
     <Compile Include="Infrastructure\Converters\TimeToLongAgoConverter.cs" />
     <Compile Include="Infrastructure\Converters\TrimmedStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
+    <Compile Include="Infrastructure\Disposer.cs" />
     <Compile Include="Infrastructure\FlexibleTemplateItemsControl.cs" />
+    <Compile Include="Infrastructure\INotifyBusyness.cs" />
+    <Compile Include="Infrastructure\ItemsRealizedEventArgs.cs" />
     <Compile Include="Infrastructure\ProvideVisibleItemRangeFromDataGridBehavior.cs" />
     <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
     <Compile Include="Infrastructure\DeferredActionInvoker.cs" />
@@ -236,9 +245,13 @@
     <Compile Include="Infrastructure\MarkupExtensions\StaticExtension.cs" />
     <Compile Include="Infrastructure\MostRecentUsedList.cs" />
     <Compile Include="Infrastructure\RecyclingContentLoader.cs" />
+    <Compile Include="Infrastructure\RefreshMode.cs" />
+    <Compile Include="Infrastructure\Schedulers.cs" />
     <Compile Include="Infrastructure\SparseList.cs" />
     <Compile Include="Infrastructure\Validation.cs" />
     <Compile Include="Infrastructure\Validators\DataGridLengthAttribute.cs" />
+    <Compile Include="Infrastructure\Validators\IValidationSuppressible.cs" />
+    <Compile Include="Infrastructure\Validators\RequiredStringAttribute.cs" />
     <Compile Include="Infrastructure\View.cs" />
     <Compile Include="Infrastructure\ViewModel.cs" />
     <Compile Include="Infrastructure\VirtualCollection.cs" />
@@ -252,6 +265,7 @@
     <Compile Include="Models\ApplicationState.cs" />
     <Compile Include="Models\DocumentSize.cs" />
     <Compile Include="Models\DocumentViewStateStore.cs" />
+    <Compile Include="Models\StudioErrorListModel.cs" />
     <Compile Include="Models\GoToDocumentModel.cs" />
     <Compile Include="Models\IHasPageTitle.cs" />
     <Compile Include="Models\DocumentsModel.cs" />
@@ -523,7 +537,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Controls\DataFetchErrorNotifier.xaml">
+    <Page Include="Controls\BusynessIndicator.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -548,6 +562,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Terms\TermsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Util\ErrorListWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -744,42 +762,52 @@
     <EmbeddedResource Include="Settings.dat" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Assets\Images\RemoveGray.png" />
+    <Resource Include="Assets\Images\add_tiny.png" />
+    <Resource Include="Assets\Images\database_add_tiny.png" />
+    <Resource Include="Assets\Images\database_tiny.png" />
+    <Resource Include="Assets\Images\debug_tiny.png" />
+    <Resource Include="Assets\Images\document_add_tiny.png" />
+    <Resource Include="Assets\Images\document_tiny.png" />
+    <Resource Include="Assets\Images\edit_tiny.png" />
+    <Resource Include="Assets\Images\error_tiny.png" />
+    <Resource Include="Assets\Images\execute_query_tiny.png" />
+    <Resource Include="Assets\Images\index_add_tiny.png" />
+    <Resource Include="Assets\Images\index_query_tiny.png" />
+    <Resource Include="Assets\Images\index_small.png" />
+    <Resource Include="Assets\Images\index_tiny.png" />
+    <Resource Include="Assets\Images\info_tiny.png" />
+    <Resource Include="Assets\Images\navigateto_tiny.png" />
+    <Resource Include="Assets\Images\next_tiny.png" />
+    <Resource Include="Assets\Images\previous_tiny.png" />
+    <Resource Include="Assets\Images\reformatjson_tiny.png" />
+    <Resource Include="Assets\Images\refresh_tiny.png" />
+    <Resource Include="Assets\Images\remove_tiny.png" />
+    <Resource Include="Assets\Images\save_tiny.png" />
+    <Resource Include="Assets\Images\search_tiny.png" />
+    <Resource Include="Assets\Images\undo_tiny.png" />
+    <Resource Include="Assets\Images\warning_tiny.png" />
+    <Resource Include="Assets\Images\down_tiny.png" />
+    <Resource Include="Assets\Images\up_tiny.png" />
+    <Resource Include="Assets\Images\edit_columns_tiny.png" />
+    <Resource Include="Assets\Images\copy_to_clipboard_tiny.png" />
+    <Resource Include="Assets\Images\changeview_tiny.png" />
+    <Resource Include="Assets\Images\document_small.png" />
+    <Resource Include="Assets\Images\logs_small.png" />
+    <Resource Include="Assets\Images\tasks_small.png" />
+    <Resource Include="Assets\Images\error_medium.png" />
+    <Resource Include="Assets\Images\error_small.png" />
+    <Resource Include="Assets\Images\navigate_first_tiny.png" />
+    <Resource Include="Assets\Images\navigate_last_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
     <Resource Include="Assets\Images\RavenDBLogo.png" />
     <Resource Include="Assets\Images\FooterTexture.png" />
     <Resource Include="Assets\Images\BackgroundTextureBottom.png" />
-    <Resource Include="Assets\Images\document-index-icon.png" />
     <None Include="Assets\Images\ImageCredits.txt" />
     <Resource Include="Assets\Images\Save.png" />
-    <Resource Include="Assets\Images\Undo.png" />
-    <Resource Include="Assets\Images\add.png" />
-    <Resource Include="Assets\Images\Remove.png" />
-    <Resource Include="Assets\Images\Query.png" />
-    <Resource Include="Assets\Images\Edit.png" />
-    <Resource Include="Assets\Images\HtmlBalanceBracesHS.png" />
-    <Resource Include="Assets\Images\DeleteHS.png" />
     <Resource Include="Assets\Images\RefreshSmall.png" />
-    <Resource Include="Assets\Images\Shortcut.png" />
-    <Resource Include="Assets\Images\Debug.png" />
-    <Resource Include="Assets\Images\Info.png" />
-    <Resource Include="Assets\Images\Warning.png" />
-    <Resource Include="Assets\Images\Document.png" />
-    <Resource Include="Assets\Images\document_page_next.png" />
-    <Resource Include="Assets\Images\document_page_previous.png" />
-    <Resource Include="Assets\Images\database.png" />
     <Resource Include="Assets\Images\database_add.png" />
-    <Resource Include="Assets\Images\document_prepare.png" />
-    <Resource Include="Assets\Images\Error.png" />
-    <Resource Include="Assets\Images\document-new.png" />
-    <Resource Include="Assets\Images\edit_pencil_write_icon.png" />
-    <Resource Include="Assets\Images\ExecuteQuery.png" />
-    <Resource Include="Assets\Images\ChangeView.png" />
-    <Resource Include="Assets\Images\Search.png" />
-    <Resource Include="Assets\Images\Up.png" />
-    <Resource Include="Assets\Images\Down.png" />
     <Content Include="Impl\PopupPlacement\Credit.txt" />
   </ItemGroup>
   <ItemGroup>

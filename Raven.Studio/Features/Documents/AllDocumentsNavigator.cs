@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using Raven.Abstractions.Data;
+using Raven.Studio.Framework;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -44,24 +45,47 @@ namespace Raven.Studio.Features.Documents
             {
                 return DatabaseCommands.GetDocumentsAsync(itemIndex, 1)
                     .ContinueWith(t =>
-                                  new DocumentAndNavigationInfo
                                       {
-                                          TotalDocuments = GetTotalDocuments(),
-                                          Index = itemIndex,
-                                          Document = t.Result.Length > 0 ? t.Result[0] : null
+                                          var totalDocuments = GetTotalDocuments();
+                                          return new DocumentAndNavigationInfo
+                                              {
+                                                  TotalDocuments = totalDocuments,
+                                                  Index = itemIndex,
+                                                  Document = t.Result.Length > 0 ? t.Result[0] : null,
+                                                  ParentPath = GetParentPath(t.Result[0]),
+                                                  UrlForFirst = GetUrlForIndex(0),
+                                                  UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
+                                                  UrlForNext =
+                                                      itemIndex < totalDocuments - 1
+                                                          ? GetUrlForIndex(itemIndex + 1)
+                                                          : null,
+                                                  UrlForLast = GetUrlForIndex(totalDocuments - 1),
+                                              };
                                       }
                     );
             }
             else
             {
-                return DatabaseCommands.GetAsync(id).ContinueWith(t =>
-                                  new DocumentAndNavigationInfo
-                                  {
-                                      TotalDocuments = GetTotalDocuments(),
-                                      Index = itemIndex,
-                                      Document = t.Result
-                                  }
-                    ); ;
+                return DatabaseCommands.GetAsync(id).ContinueWith
+                    (t =>
+                         {
+                             var totalDocuments = GetTotalDocuments();
+                             return new DocumentAndNavigationInfo
+                                        {
+                                            TotalDocuments = GetTotalDocuments(),
+                                            Index = itemIndex,
+                                            Document = t.Result,
+                                            ParentPath = GetParentPath(t.Result),
+                                            UrlForFirst = GetUrlForIndex(0),
+                                            UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
+                                            UrlForNext =
+                                                itemIndex < totalDocuments - 1
+                                                    ? GetUrlForIndex(itemIndex + 1)
+                                                    : null,
+                                            UrlForLast = GetUrlForIndex(totalDocuments - 1),
+                                        };
+                         }
+                    );
             }
         }
 
@@ -89,15 +113,31 @@ namespace Raven.Studio.Features.Documents
             return GetUrlForIndex(itemIndex);
         }
 
-        public override IList<PathSegment> GetParentPath()
+        protected IList<PathSegment> GetParentPath(JsonDocument result)
         {
+            if (result == null)
+            {
+                return null;
+            }
+            var entityType = result.Metadata.IfPresent<string>(Constants.RavenEntityName);
+
+            if (entityType != null)
+            {
+                return new[]
+                           {
+                               new PathSegment() {Name = "Documents", Url = "/documents"},
+                               new PathSegment()
+                                   {Name = entityType, Url = "/collections?name=" + entityType}
+                           };
+            }
+
             return new[]
                        {
                            new PathSegment() { Name = "Documents", Url = "/documents"}
                        };
         }
 
-        private string GetUrlForIndex(int index)
+        private string GetUrlForIndex(long index)
         {
             var builder = GetBaseUrl();
 

@@ -67,7 +67,12 @@ namespace Raven.Studio.Features.Documents
                                      {
                                          Document = t.Result.Results.Count > 0 ? t.Result.Results[0].ToJsonDocument() : null,
                                          TotalDocuments = t.Result.TotalResults,
-                                         Index = itemIndex
+                                         Index = itemIndex,
+                                         ParentPath = GetParentPath(),
+                                         UrlForFirst = GetUrlForIndex(0),
+                                         UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
+                                         UrlForNext = itemIndex < t.Result.TotalResults - 1 ? GetUrlForIndex(itemIndex + 1) : null,
+                                         UrlForLast = GetUrlForIndex(t.Result.TotalResults - 1),
                                      });
             }
             else
@@ -82,6 +87,11 @@ namespace Raven.Studio.Features.Documents
                                           Document = getDocumentTask.Result,
                                           Index = itemIndex,
                                           TotalDocuments = getStatisticsTask.Result.TotalResults,
+                                          ParentPath = GetParentPath(),
+                                          UrlForFirst = GetUrlForIndex(0),
+                                          UrlForPrevious = itemIndex > 0 ? GetUrlForIndex(itemIndex - 1) : null,
+                                          UrlForNext = itemIndex < getStatisticsTask.Result.TotalResults - 1 ? GetUrlForIndex(itemIndex + 1) : null,
+                                          UrlForLast = GetUrlForIndex(getStatisticsTask.Result.TotalResults - 1),
                                       }
                     );
             }
@@ -130,7 +140,7 @@ namespace Raven.Studio.Features.Documents
             return GetUrlForIndex(itemIndex);
         }
 
-        public override IList<PathSegment> GetParentPath()
+        protected IList<PathSegment> GetParentPath()
         {
             if (indexName == "Raven/DocumentsByEntityName")
             {
