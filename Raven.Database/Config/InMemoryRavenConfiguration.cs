@@ -628,7 +628,7 @@ namespace Raven.Database.Config
 					var patterns = Settings["Raven/BundlesSearchPattern"] ?? "*.dll";
 					foreach (var pattern in patterns.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
 					{
-						Catalog.Catalogs.Add(new DirectoryCatalog(pluginsDirectory, pattern));
+						Catalog.Catalogs.Add(new BuiltinFilteringCatalog(new DirectoryCatalog(pluginsDirectory, pattern)));
 					}
 				}
 			}

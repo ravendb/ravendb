@@ -624,6 +624,7 @@
     <Compile Include="MailingList\Maverix2.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
     <Compile Include="MailingList\Nick.cs" />
+    <Compile Include="MailingList\NoBuiltinDuplicates.cs" />
     <Compile Include="MailingList\NonHttpBackupRestore.cs" />
     <Compile Include="MailingList\NSB.cs" />
     <Compile Include="MailingList\NullableBoolQuery.cs" />
