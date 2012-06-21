@@ -655,6 +655,7 @@
     <Compile Include="MailingList\StatsTest.cs" />
     <Compile Include="MailingList\Stockholm.cs" />
     <Compile Include="MailingList\Tony.cs" />
+    <Compile Include="MailingList\Troy.cs" />
     <Compile Include="MailingList\What.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />
