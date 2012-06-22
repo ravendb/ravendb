@@ -56,6 +56,7 @@ namespace Raven.Studio.Features.JsonEditor
 
         private IParserErrorResult DontReportBeforeClosingBrace(IParserState state)
         {
+            // Commas are not necessary before the closing brace, so ignore it
             if (state.TokenReader.LookAheadToken.Id == JsonTokenId.CloseCurlyBrace)
             {
                 return ParserErrorResults.Ignore;
@@ -68,6 +69,7 @@ namespace Raven.Studio.Features.JsonEditor
 
         private IParserErrorResult AdvanceToStringOrClosingBrace(IParserState state)
         {
+            // advance either to the start of the next key/value pair, or to the closing brace
             state.TokenReader.AdvanceTo(JsonTokenId.StringStartDelimiter, JsonTokenId.CloseCurlyBrace);
             return ParserErrorResults.Continue;
         }
