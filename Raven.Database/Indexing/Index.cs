@@ -171,10 +171,15 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		public static RavenJObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
+		public static RavenJObject CreateDocumentFromFields(Document document, FieldsToFetch fieldsToFetch)
 		{
 			var documentFromFields = new RavenJObject();
-			var q = fieldsToFetch
+			IEnumerable<string> fields = fieldsToFetch.Fields;
+
+			if (fieldsToFetch.FetchAllStoredFields)
+				fields = fields.Concat(document.GetFields().Cast<Fieldable>().Select(x => x.Name()));
+
+			var q = fields
 				.SelectMany(name => document.GetFields(name) ?? new Field[0])
 				.Where(x => x != null)
 				.Where(
@@ -346,8 +351,6 @@ namespace Raven.Database.Indexing
 			foreach (var analyzer in indexDefinition.Analyzers)
 			{
 				Analyzer analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(analyzer.Key, analyzer.Value);
-				if (analyzerInstance == null)
-					continue;
 				toDispose.Add(analyzerInstance.Close);
 
 				if (forQuerying)
@@ -359,32 +362,7 @@ namespace Raven.Database.Indexing
 
 				perFieldAnalyzerWrapper.AddAnalyzer(analyzer.Key, analyzerInstance);
 			}
-			StandardAnalyzer standardAnalyzer = null;
-			KeywordAnalyzer keywordAnalyzer = null;
-			foreach (var fieldIndexing in indexDefinition.Indexes)
-			{
-				switch (fieldIndexing.Value)
-				{
-					case FieldIndexing.NotAnalyzed:
-						if (keywordAnalyzer == null)
-						{
-							keywordAnalyzer = new KeywordAnalyzer();
-							toDispose.Add(keywordAnalyzer.Close);
-						}
-						perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, keywordAnalyzer);
-						break;
-					case FieldIndexing.Analyzed:
-						if (indexDefinition.Analyzers.ContainsKey(fieldIndexing.Key))
-							continue;
-						if (standardAnalyzer == null)
-						{
-							standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
-							toDispose.Add(standardAnalyzer.Close);
-						}
-						perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, standardAnalyzer);
-						break;
-				}
-			}
+			
 			return perFieldAnalyzerWrapper;
 		}
 
