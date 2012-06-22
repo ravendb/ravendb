@@ -85,14 +85,14 @@ namespace Raven.Studio.Features.JsonEditor {
         public const Int32 StringEndDelimiter = 14;
         
         /// <summary>
-        /// Gets the <c>PrimaryStringLineTerminator</c> token ID.
+        /// Gets the <c>EscapedCharacter</c> token ID.
         /// </summary>
-        public const Int32 PrimaryStringLineTerminator = 15;
+        public const Int32 EscapedCharacter = 15;
         
         /// <summary>
-        /// Gets the <c>StringEscapedDelimiter</c> token ID.
+        /// Gets the <c>EscapedUnicode</c> token ID.
         /// </summary>
-        public const Int32 StringEscapedDelimiter = 16;
+        public const Int32 EscapedUnicode = 16;
         
         /// <summary>
         /// Gets the <c>StringText</c> token ID.

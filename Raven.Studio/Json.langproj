@@ -50,8 +50,15 @@ Actipro Syntax Language Project (.langproj)
 						</Scope.EndPatternGroup>
 					</Scope>
 				</State.Scopes>
-				<RegexPatternGroup TokenKey="PrimaryStringLineTerminator" Pattern="\n" />
-				<ExplicitPatternGroup TokenKey="StringEscapedDelimiter" Pattern="\&quot;" />
+				<ExplicitPatternGroup TokenKey="EscapedQuote" Pattern="\&quot;" />
+				<ExplicitPatternGroup TokenKey="EscapedReverseSolidus" Pattern="\\" />
+				<ExplicitPatternGroup TokenKey="EscapedSolidus" Pattern="\/" />
+				<ExplicitPatternGroup TokenKey="EscapedBackspace" Pattern="\b" />
+				<ExplicitPatternGroup TokenKey="EscapedFormFeed" Pattern="\f" />
+				<ExplicitPatternGroup TokenKey="EscapedNewLine" Pattern="\n" />
+				<ExplicitPatternGroup TokenKey="EscapedCarriageReturn" Pattern="\r" />
+				<ExplicitPatternGroup TokenKey="EscapedTab" Pattern="\t" />
+				<RegexPatternGroup TokenKey="EscapedUnicode" Pattern="\\u[0-9a-fA-F]{4}" />
 				<RegexPatternGroup TokenKey="StringText" Pattern="[^\&quot;\\\n]+" />
 			</State>
 		</DynamicLexer>

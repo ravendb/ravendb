@@ -32,7 +32,8 @@ namespace Raven.Studio.Features.JsonEditor
             var @startString = new Terminal(JsonTokenId.StringStartDelimiter, "StartQuote") {ErrorAlias = "'\"'"};
             var @endString = new Terminal(JsonTokenId.StringEndDelimiter, "EndQuote") {ErrorAlias = "'\"'"};
             var @stringCharacters = new Terminal(JsonTokenId.StringText, "Characters");
-            var @escapedQuote = new Terminal(JsonTokenId.StringEscapedDelimiter, "'\\\"'");
+            var @escapedCharacter = new Terminal(JsonTokenId.EscapedCharacter, "Escape sequence ('\\\"', '\\\\', '\\b', '\\f', '\\n', '\\r', '\\t'");
+            var @escapedUnicode = new Terminal(JsonTokenId.EscapedUnicode, "Escaped Unicode character (e.g. \\u12ab)");
             
             var jsonObject = new NonTerminal("Object");
             var propertyValue = new NonTerminal("PropertyValue");
@@ -46,7 +47,7 @@ namespace Raven.Studio.Features.JsonEditor
             value.Production = stringValue | @number | jsonObject | array | @true | @false | @null;
             array.Production = @openSquare + (value + (comma + value).ZeroOrMore()).Optional() + @closeSquare;
 
-            stringValue.Production = @startString + (@stringCharacters | @escapedQuote).ZeroOrMore() + @endString;
+            stringValue.Production = @startString + (@stringCharacters | @escapedCharacter | @escapedUnicode).ZeroOrMore() + @endString;
 
             this.Root = jsonObject;
         }

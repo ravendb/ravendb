@@ -100,17 +100,17 @@ namespace Raven.Studio.Features.JsonEditor {
             lexicalPatternGroup.TokenId = JsonTokenId.StringEndDelimiter;
             lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\""));
             lexicalScope.EndLexicalPatternGroup = lexicalPatternGroup;
-            lexicalPatternGroup = new DynamicLexicalPatternGroup(DynamicLexicalPatternType.Regex, "PrimaryStringLineTerminator", null);
-            lexicalPatternGroup.TokenId = JsonTokenId.PrimaryStringLineTerminator;
-            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\n"));
+            lexicalPatternGroup = new DynamicLexicalPatternGroup(DynamicLexicalPatternType.Regex, "EscapedCharacter", null);
+            lexicalPatternGroup.TokenId = JsonTokenId.EscapedCharacter;
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\\\[\\\"\\\\/bfnrt]"));
             lexicalState.LexicalPatternGroups.Add(lexicalPatternGroup);
-            lexicalPatternGroup = new DynamicLexicalPatternGroup(DynamicLexicalPatternType.Explicit, "StringEscapedDelimiter", null);
-            lexicalPatternGroup.TokenId = JsonTokenId.StringEscapedDelimiter;
-            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\\""));
+            lexicalPatternGroup = new DynamicLexicalPatternGroup(DynamicLexicalPatternType.Regex, "EscapedUnicode", null);
+            lexicalPatternGroup.TokenId = JsonTokenId.EscapedUnicode;
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\\\u[0-9a-fA-F]{4}"));
             lexicalState.LexicalPatternGroups.Add(lexicalPatternGroup);
             lexicalPatternGroup = new DynamicLexicalPatternGroup(DynamicLexicalPatternType.Regex, "StringText", null);
             lexicalPatternGroup.TokenId = JsonTokenId.StringText;
-            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[^\\\"\\\\\\n]+"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[^\\\"\\\\]+"));
             lexicalState.LexicalPatternGroups.Add(lexicalPatternGroup);
         }
     }
