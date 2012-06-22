@@ -654,7 +654,7 @@
 		</Setter>
 	</Style>
 
-    <Style x:Key="Style_Button_Default" TargetType="Button">
+    <Style x:Key="Style_Button_Default" TargetType="ButtonBase">
         <Setter Property="Background" Value="#FF1F3B53"/>
         <Setter Property="Foreground" Value="#FF000000"/>
         <Setter Property="Padding" Value="5"/>
@@ -663,7 +663,7 @@
       <Setter Property="MinHeight" Value="30"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="Button">
+                <ControlTemplate TargetType="ButtonBase">
                     <Grid>
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
@@ -3471,6 +3471,76 @@
                         </Grid>
                         <Border x:Name="DisabledVisualElement" IsHitTestVisible="false" Background="#A5FFFFFF" Opacity="0"/>
                         <Border x:Name="FocusVisualElement" IsHitTestVisible="false" BorderBrush="#00FFFFFF" BorderThickness="1" Visibility="Collapsed"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Style_ToggleButton_ErrorExpander" TargetType="ToggleButton">
+        <Setter Property="Background" Value="{StaticResource Brush_ErrorBackground}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush_ErrorBackground}"/>
+      <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Grid>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="MouseOver">
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="CheckStates">
+                                <VisualState x:Name="Checked">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ExpandGlyph" Storyboard.TargetProperty="(ContentPresenter.RenderTransform).(RotateTransform.Angle)" To="180" Duration="0:0:0.1"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Unchecked">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="ExpandGlyph" Storyboard.TargetProperty="(ContentPresenter.RenderTransform).(RotateTransform.Angle)" To="0" Duration="0:0:0.1"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="FocusStates">
+                                <VisualState x:Name="Focused">
+                                    <Storyboard>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Unfocused" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border x:Name="Background" CornerRadius="2,2,0,0" Background="{TemplateBinding Background}" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Path x:Name="ExpandGlyph" toolkit:DockPanel.Dock="Right" VerticalAlignment="Center" Margin="6,0" RenderTransformOrigin="0.5,0.5"
+                Data="{StaticResource Drawing_ExpandArrow}" StrokeEndLineCap="Round" 
+                                  Grid.Column="0"
+                StrokeStartLineCap="Round" StrokeLineJoin="Round" StrokeThickness="2" Stroke="White" Height="10">
+                                <Path.RenderTransform>
+                                    <RotateTransform Angle="0"/>
+                                </Path.RenderTransform>
+                            </Path>
+
+                            <ContentPresenter
+                            Grid.Column="1"
+                              x:Name="contentPresenter"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              Margin="{TemplateBinding Padding}"/>
+                        </Grid>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>

@@ -2,11 +2,17 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using ActiproSoftware.Text;
+using ActiproSoftware.Text.Implementation;
+using ActiproSoftware.Text.Parsing;
+using ActiproSoftware.Text.Parsing.LLParser;
 using Microsoft.Expression.Interactivity.Core;
+using Raven.Abstractions.Logging;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -14,16 +20,17 @@ using Raven.Json.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Input;
+using Raven.Studio.Features.JsonEditor;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Raven.Abstractions.Extensions;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Models
 {
     public class EditableDocumentModel : PageViewModel
 	{
 		private readonly Observable<JsonDocument> document;
-		private string jsonData;
 		private bool isLoaded;
         private int currentIndex;
         private int totalItems;
@@ -36,13 +43,31 @@ namespace Raven.Studio.Models
         private string urlForPrevious;
         private string urlForNext;
         private string urlForLast;
+        private IEditorDocument jsonDataDocument;
+        private IEditorDocument metaDataDocument;
+        private ICommand deleteCommand;
+        private ICommand navigateFirst;
+        private ICommand navigateLast;
+        private string documentSize;
+        private static JsonSyntaxLanguageExtended JsonLanguage;
+        private bool isShowingErrors;
+
+        static EditableDocumentModel()
+        {
+            JsonLanguage = new JsonSyntaxLanguageExtended();
+        }
 
 		public EditableDocumentModel()
 		{
 			ModelUrl = "/edit";
 
+            jsonDataDocument = new EditorDocument() { Language = JsonLanguage };
+            metaDataDocument = new EditorDocument() { Language = JsonLanguage };
+
 			References = new ObservableCollection<LinkModel>();
 			Related = new BindableCollection<LinkModel>(model => model.Title);
+            DocumentErrors = new ObservableCollection<DocumentError>();
+
 			SearchEnabled = false;
 
 			document = new Observable<JsonDocument>();
@@ -55,6 +80,43 @@ namespace Raven.Studio.Models
                                      };
 
             currentDatabase = Database.Value.Name;
+
+
+
+		    jsonDataDocument.ObserveTextChanged()
+		        .Merge(metaDataDocument.ObserveTextChanged())
+		        .Throttle(TimeSpan.FromSeconds(1))
+		        .ObserveOnDispatcher()
+		        .Subscribe(_ => HandleDocumentChanged());
+		}
+
+        private void HandleDocumentChanged()
+        {
+            UpdateErrors();
+            UpdateDocumentSize();
+            UpdateReferences();
+        }
+
+        private void UpdateErrors()
+        {
+            DocumentErrors.Clear();
+
+            AddErrors(JsonDataDocument, "Data");
+            AddErrors(MetaDataDocument, "Metadata");
+        }
+
+        private void AddErrors(IEditorDocument document, string view)
+        {
+            var parseData = document.ParseData as ILLParseData;
+            if (parseData == null)
+            {
+                return;
+            }
+
+            foreach (var parseError in parseData.Errors)
+            {
+                DocumentErrors.Add(new DocumentError() {Section = view, ParseError = parseError});
+            }
         }
 
         private void InitialiseDocument()
@@ -235,8 +297,19 @@ namespace Raven.Studio.Models
             get { return Navigator != null && (HasNext || HasPrevious); }
 		}
 
-        public ObservableCollection<PathSegment> ParentPathSegments { get; private set; } 
+        public bool IsShowingErrors
+        {
+            get { return isShowingErrors; }
+            set
+            {
+                isShowingErrors = value;
+                OnPropertyChanged(() => IsShowingErrors);
+            }
+        }
 
+        public ObservableCollection<PathSegment> ParentPathSegments { get; private set; }
+        public ObservableCollection<DocumentError> DocumentErrors { get; private set; }
+ 
 		public void SetCurrentDocumentKey(string docId)
 		{
             if (docId != null)
@@ -261,9 +334,10 @@ namespace Raven.Studio.Models
 		{
 			var newdoc = document.Value;
             RemoveNonDisplayedMetadata(newdoc.Metadata);
-			JsonMetadata = newdoc.Metadata.ToString(Formatting.Indented);
 			UpdateMetadata(newdoc.Metadata);
-			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
+
+            JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
+
 			UpdateRelated();
 			OnEverythingChanged();
 		}
@@ -326,23 +400,6 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public string Collection
-		{
-            get { return metadata.FirstOrDefault(x => x.Key == "Raven-Entity-Name").Value; }
-		}
-
-		private string jsonMetadata;
-		public string JsonMetadata
-		{
-			get { return jsonMetadata; }
-			set
-			{
-				jsonMetadata = value;
-				OnPropertyChanged(() => JsonMetadata);
-				OnPropertyChanged(() => DocumentSize);
-			}
-		}
-
 		private DocumentMode mode = DocumentMode.NotInitializedYet;
 		public DocumentMode Mode
 		{
@@ -355,40 +412,59 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public string JsonData
+        public IEditorDocument JsonDataDocument
+        {
+            get { return jsonDataDocument; }
+        }
+
+        public IEditorDocument MetaDataDocument
+        {
+            get { return metaDataDocument; }
+        }
+
+        protected string JsonData
+        {
+            get { return JsonDataDocument.CurrentSnapshot.Text; }
+            set { JsonDataDocument.SetText(value); }
+        }
+
+        protected string JsonMetadata
+        {
+            get { return MetaDataDocument.CurrentSnapshot.Text; }
+            set { MetaDataDocument.SetText(value); }
+        }
+
+        public string DocumentSize
 		{
-			get { return jsonData; }
-			set
-			{
-				jsonData = value;
-				UpdateReferences();
-				OnPropertyChanged(() => JsonData);
-				OnPropertyChanged(() => DocumentSize);
-			}
+			get { return documentSize; }
+            private set
+            {
+                documentSize = value;
+                OnPropertyChanged(() => DocumentSize);
+            }
 		}
 
-		public string DocumentSize
-		{
-			get
-			{
-				double byteCount = Encoding.UTF8.GetByteCount(JsonData) + Encoding.UTF8.GetByteCount(JsonMetadata);
-				string sizeTerm = "Bytes";
-				if (byteCount >= 1024 * 1024)
-				{
-					sizeTerm = "MBytes";
-					byteCount = byteCount / (1024 * 1024);
-				}
-				else if (byteCount >= 1024)
-				{
-					sizeTerm = "KBytes";
-                    byteCount = byteCount/1024;
+        private void UpdateDocumentSize()
+        {
+            double byteCount = Encoding.UTF8.GetByteCount(JsonDataDocument.CurrentSnapshot.Text) 
+                + Encoding.UTF8.GetByteCount(MetaDataDocument.CurrentSnapshot.Text);
 
-				}
-				return string.Format("Content-Length: {0:#,#.##;;0} {1}", byteCount, sizeTerm);
-			}
-		}
+            string sizeTerm = "Bytes";
+            if (byteCount >= 1024*1024)
+            {
+                sizeTerm = "MBytes";
+                byteCount = byteCount/(1024*1024);
+            }
+            else if (byteCount >= 1024)
+            {
+                sizeTerm = "KBytes";
+                byteCount = byteCount/1024;
+            }
 
-		private bool notifiedOnDelete;
+            DocumentSize = string.Format("Content-Length: {0:#,#.##;;0} {1}", byteCount, sizeTerm);
+        }
+
+        private bool notifiedOnDelete;
 		private bool notifiedOnChange;
 
 		protected override Task LoadedTimerTickedAsync()
@@ -424,7 +500,7 @@ namespace Raven.Studio.Models
 		{
 			if (Seperator != null)
 			{
-				var referencesIds = Regex.Matches(jsonData, @"""(\w+" + Seperator + @"\w+)");
+				var referencesIds = Regex.Matches(JsonData, @"""(\w+" + Seperator + @"\w+)");
 				References.Clear();
 				foreach (var source in referencesIds.Cast<Match>().Select(x => x.Groups[1].Value).Distinct())
 				{
@@ -564,15 +640,22 @@ namespace Raven.Studio.Models
 			}
 		}
 
+        private bool IsDocumentValid()
+        {
+            return !EditorDocumentHasErrors(JsonDataDocument) && !EditorDocumentHasErrors(MetaDataDocument);
+        }
+
+        private bool EditorDocumentHasErrors(IEditorDocument editorDocument)
+        {
+            var parseData = editorDocument.ParseData as ILLParseData;
+            return parseData != null && parseData.Errors.Any();
+        }
 		public ICommand Save
 		{
 			get { return new SaveDocumentCommand(this); }
 		}
 
-        private ICommand deleteCommand;
-        private ICommand navigateFirst;
-        private ICommand navigateLast;
-		public ICommand Delete
+        public ICommand Delete
 		{
             get { return deleteCommand ?? (deleteCommand = new ActionCommand(HandleDeleteDocument)); }
 		}
@@ -656,6 +739,11 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
+                if (!parentModel.IsDocumentValid())
+                {
+                    this.parentModel.IsShowingErrors = true;
+                }
+
 				if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
 				{
 					AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
@@ -714,7 +802,9 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		private class PrettifyDocumentCommand : Command
+
+
+        private class PrettifyDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel editableDocumentModel;
 
@@ -749,4 +839,11 @@ namespace Raven.Studio.Models
 		Projection,
 		New,
 	}
+
+    public class DocumentError
+    {
+        public string Section { get; set; }
+
+        public IParseError ParseError { get; set; }
+    }
 }

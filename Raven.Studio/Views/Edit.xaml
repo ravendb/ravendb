@@ -16,7 +16,7 @@
                          xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
                          mc:Ignorable="d"
-					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel"
+					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel" 
                          Title="Edit Document">
     <Infrastructure:PageView.Resources>
         <Storyboard x:Key="ShowSearch">
@@ -31,10 +31,17 @@
                 <DiscreteObjectKeyFrame KeyTime="0:0:0.1" Value="{z:Static Member=Visibility.Collapsed}"/>
             </ObjectAnimationUsingKeyFrames>
         </Storyboard>
+        <Storyboard x:Key="ShowErrorsPanel">
+            <DoubleAnimation Storyboard.TargetName="ErrorArea" Storyboard.TargetProperty="Height" To="200" Duration="0:0:0.1"/>
+        </Storyboard>
+        <Storyboard x:Key="HideErrorsPanel">
+            <DoubleAnimation Storyboard.TargetName="ErrorArea" Storyboard.TargetProperty="Height" To="24" Duration="0:0:0.1"/>
+        </Storyboard>
     </Infrastructure:PageView.Resources>
-        <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}"
-                                   Margin="{StaticResource Margin_ContentPage}"
-		  DataContext="{Binding Value}" d:DataContext="{d:DesignInstance Models:EditableDocumentModel}">
+    <toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}"
+                                   Margin="{StaticResource Margin_ContentPage}" 
+                                    DataContext="{Binding Value}"
+                                    d:DataContext="{d:DesignInstance Models:EditableDocumentModel}">
         <i:Interaction.Triggers>
             <Behaviors:StudioKeyTrigger Key="S" Modifiers="Control">
                 <i:InvokeCommandAction Command="{Binding Save}" />
@@ -302,6 +309,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 
                 <Controls1:WatermarkedTextBox Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -313,13 +321,82 @@
 							Margin="5,8,10,10"
 							x:Name="TabControl">
                     <sdk:TabItem Header="Data">
-                        <Editors:JsonEditor Text="{Binding JsonData, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        <Editors:JsonEditor BoundDocument="{Binding JsonDataDocument}"
 										x:Name="EditorCtrl" />
                     </sdk:TabItem>
                     <sdk:TabItem Header="Metadata">
-                        <Editors:JsonEditor Text="{Binding JsonMetadata, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <Editors:JsonEditor BoundDocument="{Binding MetaDataDocument}" />
                     </sdk:TabItem>
                 </sdk:TabControl>
+
+                <Border x:Name="ErrorArea" Height="24" Grid.Row="2" Margin="5,0,10,10">
+                    <i:Interaction.Triggers>
+                        <ei:DataTrigger Binding="{Binding IsShowingErrors}" Value="True" Comparison="Equal">
+                            <ei:ControlStoryboardAction ControlStoryboardOption="Play" Storyboard="{StaticResource ShowErrorsPanel}"/>
+                        </ei:DataTrigger>
+                        <ei:DataTrigger Binding="{Binding IsShowingErrors}" Value="False" Comparison="Equal">
+                            <ei:ControlStoryboardAction ControlStoryboardOption="Play" Storyboard="{StaticResource HideErrorsPanel}"/>
+                        </ei:DataTrigger>
+                    </i:Interaction.Triggers>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <ToggleButton IsChecked="{Binding IsShowingErrors, Mode=TwoWay}" HorizontalAlignment="Left"
+                                      Style="{StaticResource Style_ToggleButton_ErrorExpander}"
+                                      MinWidth="80"
+                                      HorizontalContentAlignment="Left">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding DocumentErrors.Count, StringFormat='{}{0} Errors'}"/>
+                            </StackPanel>
+                        </ToggleButton>
+                        <sdk:DataGrid ItemsSource="{Binding DocumentErrors}" AutoGenerateColumns="False"
+                                      Grid.Row="1"
+                                      BorderBrush="{StaticResource Brush_ErrorBackground}">
+                            <sdk:DataGrid.Columns>
+                                <sdk:DataGridTemplateColumn>
+                                    <sdk:DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Image Source="{StaticResource Image_Error_Tiny}" Stretch="None" Margin="2" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </sdk:DataGridTemplateColumn.CellTemplate>
+                                </sdk:DataGridTemplateColumn>
+                                <sdk:DataGridTemplateColumn Header="Section">
+                                    <sdk:DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Section}" Margin="2" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </sdk:DataGridTemplateColumn.CellTemplate>
+                                </sdk:DataGridTemplateColumn>
+                                <sdk:DataGridTemplateColumn Header="Description" Width="*">
+                                    <sdk:DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="Models:DocumentError">
+                                            <TextBlock Text="{Binding ParseError.Description}" Behaviors:FadeTrimming.IsEnabled="True" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed="True"
+                                                       VerticalAlignment="Center" Margin="2"/>
+                                        </DataTemplate>
+                                    </sdk:DataGridTemplateColumn.CellTemplate>
+                                </sdk:DataGridTemplateColumn>
+                                <sdk:DataGridTemplateColumn Header="Line">
+                                    <sdk:DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="Models:DocumentError">
+                                            <TextBlock Text="{Binding ParseError.PositionRange.StartPosition.DisplayLine}"
+                                                       VerticalAlignment="Center" Margin="2"/>
+                                        </DataTemplate>
+                                    </sdk:DataGridTemplateColumn.CellTemplate>
+                                </sdk:DataGridTemplateColumn>
+                                <sdk:DataGridTemplateColumn Header="Column">
+                                    <sdk:DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="Models:DocumentError">
+                                            <TextBlock Text="{Binding ParseError.PositionRange.StartPosition.DisplayCharacter}"
+                                                       VerticalAlignment="Center" Margin="2"/>
+                                        </DataTemplate>
+                                    </sdk:DataGridTemplateColumn.CellTemplate>
+                                </sdk:DataGridTemplateColumn>
+                            </sdk:DataGrid.Columns>
+                        </sdk:DataGrid>
+                    </Grid>
+                </Border>
             </Grid>
 
             <ScrollViewer Grid.Column="1"

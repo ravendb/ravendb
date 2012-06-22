@@ -63,8 +63,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL" />
+    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Shared.Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="ActiproSoftware.Text.LLParser.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
@@ -72,6 +76,7 @@
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.LLParser.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight5">
@@ -178,6 +183,7 @@
     <Compile Include="Extensions\IObservableExtensions.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
+    <Compile Include="Extensions\SyntaxEditorExtensions.cs" />
     <Compile Include="Features\Documents\AllDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\CollectionDocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\ColumnDefinition.cs" />
@@ -557,6 +563,10 @@
     <Page Include="Assets\TreeViewStyles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\Vectors.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Assets\WatermarkedTextBox.xaml">
       <Generator>MSBuild:Compile</Generator>

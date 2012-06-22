@@ -9,6 +9,7 @@
 				<ResourceDictionary Source="Assets/Brushes.xaml" />
 				<ResourceDictionary Source="Assets/Styles.xaml" />
 				<ResourceDictionary Source="Assets/Types.xaml" />
+				<ResourceDictionary Source="Assets/Vectors.xaml" />
 				<ResourceDictionary Source="Commands/Commands.xaml" />
 				<ResourceDictionary Source="Infrastructure/ContextMenu/ContextMenu.xaml" />
 				<ResourceDictionary Source="Controls/Taggers.xaml" />
