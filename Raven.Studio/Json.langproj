@@ -1,0 +1,73 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+Actipro Syntax Language Project (.langproj)
+  For use with Actipro SyntaxEditor and related products.
+  http://www.actiprosoftware.com
+
+-->
+<LanguageProject LanguageKey="Json" LanguageDescription="Json" OutputLanguageDefinition="False" OutputLanguageKey="CSharp" OutputNamespaceName="Raven.Studio.Features.JsonEditor" OutputPath="C:\Projects\HibernatingRhinos\RavenDb\Raven.Studio\Features\JsonEditor" xmlns="http://schemas.actiprosoftware.com/langproj/1.0">
+	<!-- Classification types -->
+	<LanguageProject.ClassificationTypes>
+		<ClassificationType Key="Delimiter" />
+		<ClassificationType Key="Keyword" DefaultStyle="#FF0000FF" />
+		<ClassificationType Key="Number" />
+		<ClassificationType Key="Operator" />
+		<ClassificationType Key="String" DefaultStyle="#FF800000" />
+	</LanguageProject.ClassificationTypes>
+	<!-- Lexer -->
+	<LanguageProject.Lexer>
+		<DynamicLexer>
+			<!-- Default state -->
+			<State Key="Default">
+				<State.ChildStates>
+					<StateRef Key="PrimaryString" />
+				</State.ChildStates>
+				<RegexPatternGroup TokenKey="Whitespace" Pattern="{LineTerminatorWhitespace}+" />
+				<ExplicitPatternGroup TokenKey="Comma" ClassificationTypeKey="Delimiter" Pattern="," />
+				<ExplicitPatternGroup TokenKey="Colon" ClassificationTypeKey="Delimiter" Pattern=":" />
+				<ExplicitPatternGroup TokenKey="OpenCurlyBrace" ClassificationTypeKey="Delimiter" Pattern="{" />
+				<ExplicitPatternGroup TokenKey="CloseCurlyBrace" ClassificationTypeKey="Delimiter" Pattern="}" />
+				<ExplicitPatternGroup TokenKey="OpenSquareBrace" ClassificationTypeKey="Delimiter" Pattern="[" />
+				<ExplicitPatternGroup TokenKey="CloseSquareBrace" ClassificationTypeKey="Delimiter" Pattern="]" />
+				<ExplicitPatternGroup TokenKey="True" ClassificationTypeKey="Keyword" Pattern="true" CaseSensitivity="AutoCorrect" />
+				<ExplicitPatternGroup TokenKey="False" ClassificationTypeKey="Keyword" Pattern="false" CaseSensitivity="AutoCorrect" />
+				<ExplicitPatternGroup TokenKey="Null" ClassificationTypeKey="Keyword" Pattern="null" CaseSensitivity="AutoCorrect" />
+				<RegexPatternGroup TokenKey="Number" ClassificationTypeKey="Number" LookAheadPattern="{NonWord}|\z">
+					<RegexPattern Value="{Digit}* \. {Digit}+ ([Ee] [\+\-]? {Digit}+)?" />
+					<RegexPattern Value="{Digit}+ [Ee] [\+\-]? {Digit}+" />
+				</RegexPatternGroup>
+			</State>
+			<!-- PrimaryString state -->
+			<State Key="PrimaryString" Description="Primary string" DefaultTokenKey="PrimaryStringText" DefaultClassificationTypeKey="String">
+				<State.Scopes>
+					<Scope>
+						<Scope.StartPatternGroup>
+							<ExplicitPatternGroup TokenKey="StringStartDelimiter" Pattern="&quot;" />
+						</Scope.StartPatternGroup>
+						<Scope.EndPatternGroup>
+							<ExplicitPatternGroup TokenKey="StringEndDelimiter" Pattern="&quot;" />
+						</Scope.EndPatternGroup>
+					</Scope>
+				</State.Scopes>
+				<RegexPatternGroup TokenKey="PrimaryStringLineTerminator" Pattern="\n" />
+				<ExplicitPatternGroup TokenKey="StringEscapedDelimiter" Pattern="\&quot;" />
+				<RegexPatternGroup TokenKey="StringText" Pattern="[^\&quot;\\\n]+" />
+			</State>
+		</DynamicLexer>
+	</LanguageProject.Lexer>
+	<!-- LL Parser -->
+	<LanguageProject.LLParser>
+		<LLParser DebuggerAssemblyPath="C:\Projects\HibernatingRhinos\RavenJsonParserTest\JsonDebuggerTest\JsonDebuggerTest\bin\Debug\JsonDebuggerTest.dll" DebuggerParserTypeName="Raven.Studio.Features.JsonEditor.JsonParser" />
+	</LanguageProject.LLParser>
+	<!-- Example text -->
+	<LanguageProject.ExampleText><![CDATA[{
+  "Property": "StringValue",
+  "Another Property": [],
+  "Third Property": [
+  	{ "Nested" : 0 },
+	{ "2nd Nested" : true
+  ],
+  "Fourth" : false
+}]]></LanguageProject.ExampleText>
+</LanguageProject>

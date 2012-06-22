@@ -67,6 +67,10 @@
     <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
     </Reference>
+    <Reference Include="ActiproSoftware.Text.LLParser.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.LLParser.Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
@@ -196,6 +200,22 @@
     <Compile Include="Features\Documents\IndexDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\PriorityColumn.cs" />
     <Compile Include="Features\Documents\SingleDocumentNavigator.cs" />
+    <Compile Include="Features\JsonEditor\Array.g.cs" />
+    <Compile Include="Features\JsonEditor\IJsonClassificationTypeProvider.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonAstNodeId.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonClassificationTypeProvider.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonExampleTextProvider.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonGrammar.cs" />
+    <Compile Include="Features\JsonEditor\JsonLexer.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonLexicalStateId.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonOutliningSource.cs" />
+    <Compile Include="Features\JsonEditor\JsonParser.cs" />
+    <Compile Include="Features\JsonEditor\JsonSyntaxLanguage.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonSyntaxLanguageExtended.cs" />
+    <Compile Include="Features\JsonEditor\JsonTokenId.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonTokenReader.cs" />
+    <Compile Include="Features\JsonEditor\JsonTokenTagger.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonTokenTaggerProvider.g.cs" />
     <Compile Include="Features\Query\IndexQueryHelpers.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Query\QueryDocumentsCollectionSource.cs" />
