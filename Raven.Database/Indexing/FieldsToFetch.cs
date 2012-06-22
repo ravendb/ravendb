@@ -6,7 +6,7 @@ using Raven.Database.Impl;
 
 namespace Raven.Database.Indexing
 {
-	public class FieldsToFetch : IEnumerable<string>
+	public class FieldsToFetch
 	{
 		private readonly string additionalField;
 		private readonly HashSet<string> fieldsToFetch;
@@ -61,10 +61,6 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return GetEnumerator();
-		}
 
 		public FieldsToFetch CloneWith(string[] newFieldsToFetch)
 		{

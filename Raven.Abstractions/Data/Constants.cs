@@ -21,6 +21,7 @@ namespace Raven.Abstractions.Data
 		public const string RavenClrType = "Raven-Clr-Type";
 		public const string RavenEntityName = "Raven-Entity-Name";
 		public const string RavenReadOnly = "Raven-Read-Only";
+		public const string AllFields = "__all_fields";
 		// This is used to indicate that a document exists in an uncommitted transaction
 		public const string RavenDocumentDoesNotExists = "Raven-Document-Does-Not-Exists";
 		public const string Metadata = "@metadata";

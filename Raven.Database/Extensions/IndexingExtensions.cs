@@ -45,10 +45,16 @@ namespace Raven.Database.Extensions
 			FieldIndexing value;
 			if (self.Indexes.TryGetValue(name, out value) == false)
 			{
-				string ignored;
-				if (self.Analyzers.TryGetValue(name, out ignored))
-					return Field.Index.ANALYZED;// if there is a custom analyzer, the value should be analyzed
-				return defaultIndex;
+				if(self.Indexes.TryGetValue(Constants.AllFields, out value) == false)
+				{
+					string ignored;
+					if (self.Analyzers.TryGetValue(name, out ignored) ||
+						self.Analyzers.TryGetValue(Constants.AllFields, out ignored))
+					{
+						return Field.Index.ANALYZED; // if there is a custom analyzer, the value should be analyzed
+					}
+					return defaultIndex;
+				}
 			}
 			switch (value)
 			{
@@ -71,7 +77,11 @@ namespace Raven.Database.Extensions
 				return defaultStorage;
 			FieldStorage value;
 			if (self.Stores.TryGetValue(name, out value) == false)
-				return defaultStorage;
+			{
+				// do we have a overriding default?
+				if (self.Stores.TryGetValue(Constants.AllFields, out value) == false)
+					return defaultStorage;
+			}
 			switch (value)
 			{
 				case FieldStorage.Yes:
@@ -119,7 +129,10 @@ namespace Raven.Database.Extensions
 		{
 			SortOptions value;
 			if (self.SortOptions.TryGetValue(name, out value))
-				return value;
+			{
+				if (self.SortOptions.TryGetValue(Constants.AllFields, out value) == false)
+					return value;
+			}
 			
 			if (name.EndsWith("_Range"))
 			{

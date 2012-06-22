@@ -335,6 +335,13 @@ namespace Raven.Database.Indexing
 		public PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose, bool forQuerying = false)
 		{
 			toDispose.Add(defaultAnalyzer.Close);
+
+			string value;
+			if(indexDefinition.Analyzers.TryGetValue(Constants.AllFields, out value))
+			{
+				defaultAnalyzer = IndexingExtensions.CreateAnalyzerInstance(Constants.AllFields, value);
+				toDispose.Add(defaultAnalyzer.Close);
+			}
 			var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(defaultAnalyzer);
 			foreach (var analyzer in indexDefinition.Analyzers)
 			{
