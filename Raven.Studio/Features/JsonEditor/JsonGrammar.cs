@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Net;
-
+using ActiproSoftware.Text.Parsing.LLParser;
 using ActiproSoftware.Text.Parsing.LLParser.Implementation;
 
 namespace Raven.Studio.Features.JsonEditor
@@ -23,7 +23,7 @@ namespace Raven.Studio.Features.JsonEditor
             var @comma = new Terminal(JsonTokenId.Comma, "Comma") {ErrorAlias = "','"};
             var @colon = new Terminal(JsonTokenId.Colon, "Colon") {ErrorAlias = "':'"};
 
-            var @number = new Terminal(JsonTokenId.Number, "Integer");
+            var @number = new Terminal(JsonTokenId.Number, "Number");
 
             var @true = new Terminal(JsonTokenId.True, "True") {ErrorAlias = "true"};
             var @false = new Terminal(JsonTokenId.False, "False") {ErrorAlias = "false"};
@@ -37,19 +37,39 @@ namespace Raven.Studio.Features.JsonEditor
             
             var jsonObject = new NonTerminal("Object");
             var propertyValue = new NonTerminal("PropertyValue");
-            var value = new NonTerminal("Value");
+            var propertyValueList = new NonTerminal("PropertyValueList");
+            var value = new NonTerminal("Value") { ErrorAlias = "Value"};
             var array = new NonTerminal("Array");
             var stringValue = new NonTerminal("String");
 
-            jsonObject.Production = @openCurly + (propertyValue + (comma + propertyValue).ZeroOrMore()).Optional() + @closeCurly;
-            propertyValue.Production = stringValue + colon + value;
+            jsonObject.Production = @openCurly + propertyValueList.OnError(AdvanceToStringOrClosingBrace).ZeroOrMore() + @closeCurly.OnErrorContinue();
+            propertyValueList.Production = propertyValue + @comma.OnError(DontReportBeforeClosingBrace);
+            propertyValue.Production = stringValue + @colon + value;
 
             value.Production = stringValue | @number | jsonObject | array | @true | @false | @null;
-            array.Production = @openSquare + (value + (comma + value).ZeroOrMore()).Optional() + @closeSquare;
+            array.Production = @openSquare + (value + (@comma + value).ZeroOrMore()).Optional() + @closeSquare.OnErrorContinue();
 
-            stringValue.Production = @startString + (@stringCharacters | @escapedCharacter | @escapedUnicode).ZeroOrMore() + @endString;
+            stringValue.Production = @startString + (@stringCharacters | @escapedCharacter | @escapedUnicode).ZeroOrMore() + @endString.OnErrorContinue();
 
             this.Root = jsonObject;
+        }
+
+        private IParserErrorResult DontReportBeforeClosingBrace(IParserState state)
+        {
+            if (state.TokenReader.LookAheadToken.Id == JsonTokenId.CloseCurlyBrace)
+            {
+                return ParserErrorResults.Ignore;
+            }
+            else
+            {
+                return ParserErrorResults.Continue;
+            }
+        }
+
+        private IParserErrorResult AdvanceToStringOrClosingBrace(IParserState state)
+        {
+            state.TokenReader.AdvanceTo(JsonTokenId.StringStartDelimiter, JsonTokenId.CloseCurlyBrace);
+            return ParserErrorResults.Continue;
         }
     }
 }

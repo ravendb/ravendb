@@ -81,8 +81,9 @@ namespace Raven.Studio.Features.JsonEditor {
             lexicalPatternGroup = new DynamicLexicalPatternGroup(DynamicLexicalPatternType.Regex, "Number", classificationTypeProvider.Number);
             lexicalPatternGroup.TokenId = JsonTokenId.Number;
             lexicalPatternGroup.LookAheadPattern = "{NonWord}|\\z";
-            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("{Digit}* \\. {Digit}+ ([Ee] [\\+\\-]? {Digit}+)?"));
-            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("{Digit}+ [Ee] [\\+\\-]? {Digit}+"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[+\\-]?{Digit}* \\. {Digit}+ ([Ee] [\\+\\-]? {Digit}+)?"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[+\\-]?{Digit}+ [Ee] [\\+\\-]? {Digit}+"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[+\\-]?{Digit}+"));
             lexicalState.LexicalPatternGroups.Add(lexicalPatternGroup);
 
             // Initialize the PrimaryString lexical state
