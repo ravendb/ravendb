@@ -54,6 +54,7 @@ namespace Raven.Client.Document
 				new Int32Converter(),
 				new Int64Converter(),
 			};
+			MaxFailoverCheckPeriod = TimeSpan.FromMinutes(5);
 			DisableProfiling = true;
 			EnlistInDistributedTransactions = true;
 			UseParallelMultiGet = true;
@@ -504,6 +505,13 @@ namespace Raven.Client.Document
 		{
 			get { return FailoverBehavior & (~FailoverBehavior.ReadFromAllServers); }
 		}
+
+		/// <summary>
+		/// The maximum amount of time that we will wait before checking
+		/// that a failed node is still up or not.
+		/// Default: 5 minutes
+		/// </summary>
+		public TimeSpan MaxFailoverCheckPeriod { get; set; }
 	}
 
 

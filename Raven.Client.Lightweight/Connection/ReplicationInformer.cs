@@ -79,9 +79,9 @@ namespace Raven.Client.Connection
 		}
 
 #if !NET35 && !SILVERLIGHT
-		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, IntHolder>();
+		private readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter> failureCounts = new System.Collections.Concurrent.ConcurrentDictionary<string, FailureCounter>();
 #else
-		private readonly Dictionary<string, IntHolder> failureCounts = new Dictionary<string, IntHolder>();
+		private readonly Dictionary<string, FailureCounter> failureCounts = new Dictionary<string, FailureCounter>();
 #endif
 
 #if !NET35
@@ -180,9 +180,15 @@ namespace Raven.Client.Connection
 		}
 #endif
 
-		private class IntHolder
+		private class FailureCounter
 		{
 			public int Value;
+			public DateTime LastCheck;
+
+			public FailureCounter()
+			{
+				LastCheck = DateTime.UtcNow;
+			}
 		}
 
 
@@ -202,19 +208,25 @@ namespace Raven.Client.Connection
 			if (primary == false)
 				AssertValidOperation(method);
 
-			IntHolder value = GetHolder(operationUrl);
-			if (value.Value > 1000)
+			var failureCounter = GetHolder(operationUrl);
+			if (failureCounter.Value == 0)
+				return true;
+
+			var floor = Math.Floor(Math.Log10(failureCounter.Value) + 1);
+			var repeats = Math.Pow(10, floor);
+
+			if (failureCounter.Value % repeats == 0)
 			{
-				return currentRequest % 1000 == 0;
+				failureCounter.LastCheck = SystemTime.UtcNow;
+				return true;
 			}
-			if (value.Value > 100)
+
+			if ((SystemTime.UtcNow - failureCounter.LastCheck) > conventions.MaxFailoverCheckPeriod)
 			{
-				return currentRequest % 100 == 0;
+				failureCounter.LastCheck = SystemTime.UtcNow;
+				return true;
 			}
-			if (value.Value > 10)
-			{
-				return currentRequest % 10 == 0;
-			}
+
 			return true;
 		}
 
@@ -240,21 +252,21 @@ namespace Raven.Client.Connection
 												conventions.FailoverBehavior);
 		}
 
-		private IntHolder GetHolder(string operationUrl)
+		private FailureCounter GetHolder(string operationUrl)
 		{
 #if !NET35 && !SILVERLIGHT
-			return failureCounts.GetOrAdd(operationUrl, new IntHolder());
+			return failureCounts.GetOrAdd(operationUrl, new FailureCounter());
 #else
 			// need to compensate for 3.5 not having concnurrent dic.
 
-			IntHolder value;
+			FailureCounter value;
 			if (failureCounts.TryGetValue(operationUrl, out value) == false)
 			{
 				lock (replicationLock)
 				{
 					if (failureCounts.TryGetValue(operationUrl, out value) == false)
 					{
-						failureCounts[operationUrl] = value = new IntHolder();
+						failureCounts[operationUrl] = value = new FailureCounter();
 					}
 				}
 			}
@@ -269,7 +281,7 @@ namespace Raven.Client.Connection
 		/// <param name="operationUrl">The operation URL.</param>
 		public bool IsFirstFailure(string operationUrl)
 		{
-			IntHolder value = GetHolder(operationUrl);
+			FailureCounter value = GetHolder(operationUrl);
 			return value.Value == 0;
 		}
 
@@ -279,7 +291,7 @@ namespace Raven.Client.Connection
 		/// <param name="operationUrl">The operation URL.</param>
 		public void IncrementFailureCount(string operationUrl)
 		{
-			IntHolder value = GetHolder(operationUrl);
+			FailureCounter value = GetHolder(operationUrl);
 			var current = Interlocked.Increment(ref value.Value);
 			if (current == 1)// first failure
 			{
@@ -306,7 +318,7 @@ namespace Raven.Client.Connection
 				if (getTask.Status == TaskStatus.RanToCompletion)
 				{
 					document = getTask.Result;
-					failureCounts[commands.Url] = new IntHolder(); // we just hit the master, so we can reset its failure count
+					failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
 				else
 				{
@@ -331,10 +343,10 @@ namespace Raven.Client.Connection
 					.ToList();
 				foreach (var replicationDestination in replicationDestinations)
 				{
-					IntHolder value;
+					FailureCounter value;
 					if (failureCounts.TryGetValue(replicationDestination, out value))
 						continue;
-					failureCounts[replicationDestination] = new IntHolder();
+					failureCounts[replicationDestination] = new FailureCounter();
 				}
 
 				lastReplicationUpdate = SystemTime.UtcNow;
@@ -349,7 +361,7 @@ namespace Raven.Client.Connection
 			try
 			{
 				document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
-				failureCounts[commands.Url] = new IntHolder(); // we just hit the master, so we can reset its failure count
+				failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 			}
 			catch (Exception e)
 			{
@@ -380,10 +392,10 @@ namespace Raven.Client.Connection
 				.ToList();
 			foreach (var replicationDestination in replicationDestinations)
 			{
-				IntHolder value;
+				FailureCounter value;
 				if (failureCounts.TryGetValue(replicationDestination, out value))
 					continue;
-				failureCounts[replicationDestination] = new IntHolder();
+				failureCounts[replicationDestination] = new FailureCounter();
 			}
 		}
 
@@ -460,8 +472,9 @@ namespace Raven.Client.Connection
 		/// <param name="operationUrl">The operation URL.</param>
 		public void ResetFailureCount(string operationUrl)
 		{
-			IntHolder value = GetHolder(operationUrl);
+			var value = GetHolder(operationUrl);
 			var oldVal = Interlocked.Exchange(ref value.Value, 0);
+			value.LastCheck = DateTime.UtcNow;
 			if (oldVal != 0)
 			{
 				FailoverStatusChanged(this,

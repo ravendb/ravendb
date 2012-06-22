@@ -452,6 +452,15 @@ namespace Raven.Client.Linq
 			{
 				var memberExpression = GetMemberExpression(expression);
 
+				// we truncate the nullable .Value because in json all values are nullable
+				if (memberExpression.Member.Name == "Value" &&
+					Nullable.GetUnderlyingType(memberExpression.Expression.Type) != null)
+				{
+					GetPath(memberExpression.Expression, out path, out memberType, out isNestedPath);
+					return;
+				}
+
+
 				AssertNoComputation(memberExpression);
 
 				path = memberExpression.ToString();
