@@ -130,14 +130,18 @@ namespace Raven.Database.Extensions
 			SortOptions value;
 			if (self.SortOptions.TryGetValue(name, out value))
 			{
-				if (self.SortOptions.TryGetValue(Constants.AllFields, out value) == false)
-					return value;
+				return value;
 			}
-			
+			if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
+				return value;
+
 			if (name.EndsWith("_Range"))
 			{
 				string nameWithoutRange = name.Substring(0, name.Length - "_Range".Length);
 				if (self.SortOptions.TryGetValue(nameWithoutRange, out value))
+					return value;
+
+				if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
 					return value;
 			}
 			if (CurrentOperationContext.Headers.Value == null)

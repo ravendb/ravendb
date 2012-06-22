@@ -362,7 +362,32 @@ namespace Raven.Database.Indexing
 
 				perFieldAnalyzerWrapper.AddAnalyzer(analyzer.Key, analyzerInstance);
 			}
-			
+			StandardAnalyzer standardAnalyzer = null;
+			KeywordAnalyzer keywordAnalyzer = null;
+			foreach (var fieldIndexing in indexDefinition.Indexes)
+			{
+				switch (fieldIndexing.Value)
+				{
+					case FieldIndexing.NotAnalyzed:
+						if (keywordAnalyzer == null)
+						{
+							keywordAnalyzer = new KeywordAnalyzer();
+							toDispose.Add(keywordAnalyzer.Close);
+						}
+						perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, keywordAnalyzer);
+						break;
+					case FieldIndexing.Analyzed:
+						if (indexDefinition.Analyzers.ContainsKey(fieldIndexing.Key))
+							continue;
+						if (standardAnalyzer == null)
+						{
+							standardAnalyzer = new StandardAnalyzer(Version.LUCENE_29);
+							toDispose.Add(standardAnalyzer.Close);
+						}
+						perFieldAnalyzerWrapper.AddAnalyzer(fieldIndexing.Key, standardAnalyzer);
+						break;
+				}
+			}
 			return perFieldAnalyzerWrapper;
 		}
 

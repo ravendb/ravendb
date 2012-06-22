@@ -21,7 +21,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void QueryProductWithPhraseOrOtherTermsByDepartmentAndSwitchTermOrder()
 		{
-			using(var store = CreateStore())
+			using (var store = CreateStore())
 			using (var session = store.OpenSession())
 			{
 
@@ -84,7 +84,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void QueryProductWithPhraseOrOtherTermsByDepartmentSeemsToBeAndSearch()
 		{
-			using(var store = CreateStore())
+			using (var store = CreateStore())
 			using (var session = store.OpenSession())
 			{
 
@@ -190,58 +190,58 @@ namespace Raven.Tests.MailingList
 		private static List<Product> CreateProducts()
 		{
 			var products = new List<Product>
-        {
-          new Product
-            {
-              Id = Guid.NewGuid(),
-              Name = "Blu-Ray Player",
-              Description = "Latest and greated 3D Blu-Ray Player",
-              Created = DateTimeOffset.Now,
-              Department = "Electronics",
-              Category = "Blu-Ray",
-              Attributes = new List<string> {"Single Disc", "Black", "3D"}
-            },
-          new Product
-            {
-              Id = Guid.NewGuid(),
-              Name = "Stair Fence",
-              Description = "Protect your young ones from falling down the stairs.",
-              Created = DateTimeOffset.Now,
-              Department = "Safety",
-              Category = "Children",
-              Attributes = new List<string> {"Wood Color", "Top of Stairs", "Removable"}
-            },
-          new Product
-            {
-              Id = Guid.NewGuid(),
-              Name = "Gigabit Network Switch",
-              Description = "Portable 12 Port GB Network Switch.",
-              Created = DateTimeOffset.Now,
-              Department = "Electronics",
-              Category = "Networking",
-              Attributes = new List<string> {"12 Port", "Vertical or Horizontal mount"}
-            },
-          new Product
-            {
-              Id = Guid.NewGuid(),
-              Name = "Cisco 64 Port Switch Commercial Grade",
-              Description = "Commercial 64 Port GB Network Switch.",
-              Created = DateTimeOffset.Now,
-              Department = "Electronics",
-              Category = "Networking",
-              Attributes = new List<string> {"64 Port", "Rack Mount"}
-            },
-          new Product
-            {
-              Id = Guid.NewGuid(),
-              Name = "Beolit 12 Airplay",
-              Description = "The best portable wireless sounds featuring Apple's Airplay.",
-              Created = DateTimeOffset.Now,
-              Department = "Electronics",
-              Category = "B&O Play",
-              Attributes = new List<string> {"Airplay", "USB", "Sweet Sound"}
-            }
-        };
+			{
+				new Product
+				{
+					Id = Guid.NewGuid(),
+					Name = "Blu-Ray Player",
+					Description = "Latest and greated 3D Blu-Ray Player",
+					Created = DateTimeOffset.Now,
+					Department = "Electronics",
+					Category = "Blu-Ray",
+					Attributes = new List<string> {"Single Disc", "Black", "3D"}
+				},
+				new Product
+				{
+					Id = Guid.NewGuid(),
+					Name = "Stair Fence",
+					Description = "Protect your young ones from falling down the stairs.",
+					Created = DateTimeOffset.Now,
+					Department = "Safety",
+					Category = "Children",
+					Attributes = new List<string> {"Wood Color", "Top of Stairs", "Removable"}
+				},
+				new Product
+				{
+					Id = Guid.NewGuid(),
+					Name = "Gigabit Network Switch",
+					Description = "Portable 12 Port GB Network Switch.",
+					Created = DateTimeOffset.Now,
+					Department = "Electronics",
+					Category = "Networking",
+					Attributes = new List<string> {"12 Port", "Vertical or Horizontal mount"}
+				},
+				new Product
+				{
+					Id = Guid.NewGuid(),
+					Name = "Cisco 64 Port Switch Commercial Grade",
+					Description = "Commercial 64 Port GB Network Switch.",
+					Created = DateTimeOffset.Now,
+					Department = "Electronics",
+					Category = "Networking",
+					Attributes = new List<string> {"64 Port", "Rack Mount"}
+				},
+				new Product
+				{
+					Id = Guid.NewGuid(),
+					Name = "Beolit 12 Airplay",
+					Description = "The best portable wireless sounds featuring Apple's Airplay.",
+					Created = DateTimeOffset.Now,
+					Department = "Electronics",
+					Category = "B&O Play",
+					Attributes = new List<string> {"Airplay", "USB", "Sweet Sound"}
+				}
+			};
 
 			return products;
 		}
@@ -261,21 +261,21 @@ namespace Raven.Tests.MailingList
 			public Product_Search()
 			{
 				Map = products =>
-				  from product in products
-				  select new
-				  {
-					  Query = new object[]
-					    {
-						    product.Name,
-                product.Category,
-                product.Description,
-                product.Attributes
-              },
-					  product.Name,
-					  product.Category,
-					  product.Created,
-					  product.Department
-				  };
+				      from product in products
+				      select new
+				      {
+				      	Query = new object[]
+				      	{
+				      		product.Name,
+				      		product.Category,
+				      		product.Description,
+				      		product.Attributes
+				      	},
+				      	product.Name,
+				      	product.Category,
+				      	product.Created,
+				      	product.Department
+				      };
 
 				Index(x => x.Query, FieldIndexing.Analyzed);
 				Index(x => x.Created, FieldIndexing.NotAnalyzed);
@@ -284,6 +284,6 @@ namespace Raven.Tests.MailingList
 				Index(x => x.Department, FieldIndexing.NotAnalyzed);
 
 			}
-		} 
+		}
 	}
 }

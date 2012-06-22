@@ -389,6 +389,7 @@ namespace Raven.Tests.Bugs
 						.OrderBy(x => x.Name)
 						.Search(x => x.Name, "Photo")
 						.ToList();
+					WaitForUserToContinueTheTest(store);
 					Assert.NotEmpty(images);
 				}
 			}
