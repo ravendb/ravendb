@@ -133,10 +133,16 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		protected override void InitializeInternal()
 		{
+			if (string.IsNullOrEmpty(Url) == false && string.IsNullOrEmpty(DataDirectory) == false)
+				throw new InvalidOperationException("You cannot specify both Url and DataDirectory at the same time. Url implies running in client/server mode against the remote server. DataDirectory implies running in embedded mode. Those two options are incompatible");
+
+			if (string.IsNullOrEmpty(DataDirectory) == false && string.IsNullOrEmpty(DefaultDatabase) == false)
+				throw new InvalidOperationException("You cannot specify DefaultDatabase value when the DataDirectory has been set, running in Embedded mode, the Default Database is not a valid option.");
+
 			if (configuration != null && Url == null)
 			{
 				configuration.PostInit();
-				if(configuration.RunInMemory || configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
+				if (configuration.RunInMemory || configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
 				{
 					ResourceManagerId = Guid.NewGuid(); // avoid conflicts
 				}
@@ -163,12 +169,12 @@ namespace Raven.Client.Embedded
 		{
 			if (RunInMemory)
 				return;
-			if(string.IsNullOrEmpty(DataDirectory))  // if we don't have a data dir...
+			if (string.IsNullOrEmpty(DataDirectory))  // if we don't have a data dir...
 				base.AssertValidConfiguration();	 // we need to check the configuration for url
 
 		}
 
-	
+
 		/// <summary>
 		/// Expose the internal http server, if used
 		/// </summary>
