@@ -1,4 +1,6 @@
-﻿namespace Raven.Bundles.UniqueConstraints
+﻿using System;
+
+namespace Raven.Bundles.UniqueConstraints
 {
 	using System.Linq;
 	using System.Text;
@@ -6,6 +8,7 @@
 	using Abstractions.Data;
 	using Database.Plugins;
 	using Json.Linq;
+	using Raven.Database.Extensions;
 
 	public class UniqueConstraintsPutTrigger : AbstractPutTrigger
 	{
@@ -20,15 +23,20 @@
 
 			var properties = metadata.Value<RavenJArray>(Constants.EnsureUniqueConstraints);
 
-			if (properties == null || properties.Count() <= 0) 
+			if (properties == null || properties.Length <= 0) 
 				return;
 
 			var constraintMetaObject = new RavenJObject { { Constants.IsConstraintDocument, true } };
 			foreach (var property in properties)
 			{
 				var propName = ((RavenJValue)property).Value.ToString();
+				var uniqueValue = document.Value<string>(propName);
+				if(uniqueValue == null)
+					continue;
+				string documentName = "UniqueConstraints/" + entityName + propName + "/" +
+									  Uri.EscapeDataString(uniqueValue);
 				Database.Put(
-					"UniqueConstraints/" + entityName + propName + "/" + document.Value<string>(propName),
+					documentName,
 					null,
 					RavenJObject.FromObject(new { RelatedId = key }),
 					constraintMetaObject,
@@ -61,7 +69,11 @@
 			foreach (var property in properties)
 			{
 				var propName = ((RavenJValue)property).Value.ToString();
-				var checkKey = "UniqueConstraints/" + entityName + propName + "/" + document.Value<string>(propName);
+				var uniqueValue = document.Value<string>(propName);
+				if(uniqueValue == null)
+					continue;
+				var checkKey = "UniqueConstraints/" + entityName + propName + "/" +
+				               Uri.EscapeDataString(uniqueValue);
 				var checkDoc = Database.Get(checkKey, transactionInformation);
 				if (checkDoc == null) 
 					continue;
@@ -111,9 +123,14 @@
 				var propName = ((RavenJValue)property).Value.ToString();
 
 				// Handle Updates in the Constraint
-				if (!oldJson.Value<string>(propName).Equals(document.Value<string>(propName)))
+				var uniqueValue = oldJson.Value<string>(propName);
+				if(uniqueValue == null)
+					continue;
+				if (!uniqueValue.Equals(document.Value<string>(propName)))
 				{
-					Database.Delete("UniqueConstraints/" + entityName + propName + "/" + oldJson.Value<string>(propName), null, transactionInformation);
+					Database.Delete(
+						"UniqueConstraints/" + entityName + propName + "/" + Uri.EscapeDataString(uniqueValue),
+						null, transactionInformation);
 				}
 			}
 		}

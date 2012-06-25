@@ -12,6 +12,7 @@ using System.Runtime.Serialization.Formatters;
 using System.Text;
 #if !NET35
 using System.Threading.Tasks;
+using Raven.Client.Connection.Async;
 #endif
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -53,6 +54,7 @@ namespace Raven.Client.Document
 				new Int32Converter(),
 				new Int64Converter(),
 			};
+			MaxFailoverCheckPeriod = TimeSpan.FromMinutes(5);
 			DisableProfiling = true;
 			EnlistInDistributedTransactions = true;
 			UseParallelMultiGet = true;
@@ -243,20 +245,21 @@ namespace Raven.Client.Document
 			return FindTypeTagName(type) ?? DefaultTypeTagName(type);
 		}
 
+#if !SILVERLIGHT
 		/// <summary>
 		/// Generates the document key.
 		/// </summary>
 		/// <param name="entity">The entity.</param>
 		/// <returns></returns>
-		public string GenerateDocumentKey(object entity)
+		public string GenerateDocumentKey(IDatabaseCommands databaseCommands,object entity)
 		{
-			return DocumentKeyGenerator(entity);
+			return DocumentKeyGenerator(databaseCommands,entity);
 		}
-
+#endif
 #if !NET35
-		public Task<string> GenerateDocumentKeyAsync(object entity)
+		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands,object entity)
 		{
-			return AsyncDocumentKeyGenerator(entity);
+			return AsyncDocumentKeyGenerator(databaseCommands,entity);
 		}
 #endif
 
@@ -359,19 +362,19 @@ namespace Raven.Client.Document
 		/// Get or sets the function to get the identity property name from the entity name
 		/// </summary>
 		public Func<string, string> FindIdentityPropertyNameFromEntityName { get; set; }
-
+#if !SILVERLIGHT
 		/// <summary>
 		/// Gets or sets the document key generator.
 		/// </summary>
 		/// <value>The document key generator.</value>
-		public Func<object, string> DocumentKeyGenerator { get; set; }
-
+		public Func<IDatabaseCommands,object, string> DocumentKeyGenerator { get; set; }
+#endif
 #if !NET35
 		/// <summary>
 		/// Gets or sets the document key generator.
 		/// </summary>
 		/// <value>The document key generator.</value>
-		public Func<object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
+		public Func<IAsyncDatabaseCommands,object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
 #endif
 
 		/// <summary>
@@ -502,6 +505,13 @@ namespace Raven.Client.Document
 		{
 			get { return FailoverBehavior & (~FailoverBehavior.ReadFromAllServers); }
 		}
+
+		/// <summary>
+		/// The maximum amount of time that we will wait before checking
+		/// that a failed node is still up or not.
+		/// Default: 5 minutes
+		/// </summary>
+		public TimeSpan MaxFailoverCheckPeriod { get; set; }
 	}
 
 

@@ -6,18 +6,22 @@ using Raven.Database.Impl;
 
 namespace Raven.Database.Indexing
 {
-	public class FieldsToFetch : IEnumerable<string>
+	public class FieldsToFetch
 	{
 		private readonly string additionalField;
 		private readonly HashSet<string> fieldsToFetch;
 		private readonly AggregationOperation aggregationOperation;
 		private HashSet<string > ensuredFieldNames;
+		public bool FetchAllStoredFields { get; set; }
 
 		public FieldsToFetch(string[] fieldsToFetch, AggregationOperation aggregationOperation, string additionalField)
 		{
 			this.additionalField = additionalField;
 			if (fieldsToFetch != null)
+			{
 				this.fieldsToFetch = new HashSet<string>(fieldsToFetch);
+				FetchAllStoredFields = this.fieldsToFetch.Remove(Constants.AllFields);
+			}
 			this.aggregationOperation = aggregationOperation.RemoveOptionals();
 
 			if (this.aggregationOperation != AggregationOperation.None)
@@ -36,18 +40,24 @@ namespace Raven.Database.Indexing
 
 		public bool IsProjection { get; private set; }
 
-		public IEnumerator<string> GetEnumerator()
-		{
-			HashSet<string> fieldsWeMustReturn = ensuredFieldNames == null ? new HashSet<string>() : new HashSet<string>(ensuredFieldNames);
-			foreach (var fieldToReturn in GetFieldsToReturn())
-			{
-				fieldsWeMustReturn.Remove(fieldToReturn);
-				yield return fieldToReturn;
-			}
 
-			foreach (var field in fieldsWeMustReturn)
+		public IEnumerable<string> Fields
+		{
+			get
 			{
-				yield return field;
+				HashSet<string> fieldsWeMustReturn = ensuredFieldNames == null
+				                                     	? new HashSet<string>()
+				                                     	: new HashSet<string>(ensuredFieldNames);
+				foreach (var fieldToReturn in GetFieldsToReturn())
+				{
+					fieldsWeMustReturn.Remove(fieldToReturn);
+					yield return fieldToReturn;
+				}
+
+				foreach (var field in fieldsWeMustReturn)
+				{
+					yield return field;
+				}
 			}
 		}
 
@@ -61,10 +71,6 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return GetEnumerator();
-		}
 
 		public FieldsToFetch CloneWith(string[] newFieldsToFetch)
 		{

@@ -77,90 +77,104 @@ namespace Raven.Database.Linq
 
 		public static VariableDeclaration GetVariableDeclarationForLinqQuery(string query, bool requiresSelectNewAnonymousType)
 		{
-			var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + query));
+			try
+			{
+				var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + query));
 
-			var block = parser.ParseBlock();
+				var block = parser.ParseBlock();
 
-			if (block.Children.Count != 1)
-				throw new InvalidOperationException("Could not understand query: \r\n" + parser.Errors.ErrorOutput);
+				if (block.Children.Count != 1)
+					throw new InvalidOperationException("Could not understand query: \r\n" + parser.Errors.ErrorOutput);
 
-			var declaration = block.Children[0] as LocalVariableDeclaration;
-			if (declaration == null)
-				throw new InvalidOperationException("Only local variable declaration are allowed");
+				var declaration = block.Children[0] as LocalVariableDeclaration;
+				if (declaration == null)
+					throw new InvalidOperationException("Only local variable declaration are allowed");
 
-			if (declaration.Variables.Count != 1)
-				throw new InvalidOperationException("Only one variable declaration is allowed");
+				if (declaration.Variables.Count != 1)
+					throw new InvalidOperationException("Only one variable declaration is allowed");
 
-			var variable = declaration.Variables[0];
+				var variable = declaration.Variables[0];
 
-			if (variable.Initializer == null)
-				throw new InvalidOperationException("Variable declaration must have an initializer");
+				if (variable.Initializer == null)
+					throw new InvalidOperationException("Variable declaration must have an initializer");
 
-			var queryExpression = (variable.Initializer as QueryExpression);
-			if (queryExpression == null)
-				throw new InvalidOperationException("Variable initializer must be a query expression");
+				var queryExpression = (variable.Initializer as QueryExpression);
+				if (queryExpression == null)
+					throw new InvalidOperationException("Variable initializer must be a query expression");
 
-			var selectClause = queryExpression.SelectOrGroupClause as QueryExpressionSelectClause;
-			if (selectClause == null)
-				throw new InvalidOperationException("Variable initializer must be a select query expression");
+				var selectClause = queryExpression.SelectOrGroupClause as QueryExpressionSelectClause;
+				if (selectClause == null)
+					throw new InvalidOperationException("Variable initializer must be a select query expression");
 
-			var createExpression = selectClause.Projection as ObjectCreateExpression;
-			if ((createExpression == null || createExpression.IsAnonymousType == false) && requiresSelectNewAnonymousType)
-				throw new InvalidOperationException(
-					"Variable initializer must be a select query expression returning an anonymous object");
+				var createExpression = selectClause.Projection as ObjectCreateExpression;
+				if ((createExpression == null || createExpression.IsAnonymousType == false) && requiresSelectNewAnonymousType)
+					throw new InvalidOperationException(
+						"Variable initializer must be a select query expression returning an anonymous object");
 
-			variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
-			variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
-			variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
-			return variable;
+				variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
+				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
+				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
+				return variable;
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException("Could not understand query: " + Environment.NewLine + query, e);
+			}
 		}
 
 		public static VariableDeclaration GetVariableDeclarationForLinqMethods(string query, bool requiresSelectNewAnonymousType)
 		{
-			var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + query));
+			try
+			{
+				var parser = ParserFactory.CreateParser(SupportedLanguage.CSharp, new StringReader("var q = " + query));
 
-			var block = parser.ParseBlock();
+				var block = parser.ParseBlock();
 
-			if (block.Children.Count != 1)
-				throw new InvalidOperationException("Could not understand query: \r\n" + parser.Errors.ErrorOutput);
+				if (block.Children.Count != 1)
+					throw new InvalidOperationException("Could not understand query: \r\n" + parser.Errors.ErrorOutput);
 
-			var declaration = block.Children[0] as LocalVariableDeclaration;
-			if (declaration == null)
-				throw new InvalidOperationException("Only local variable declaration are allowed");
+				var declaration = block.Children[0] as LocalVariableDeclaration;
+				if (declaration == null)
+					throw new InvalidOperationException("Only local variable declaration are allowed");
 
-			if (declaration.Variables.Count != 1)
-				throw new InvalidOperationException("Only one variable declaration is allowed");
+				if (declaration.Variables.Count != 1)
+					throw new InvalidOperationException("Only one variable declaration is allowed");
 
-			var variable = declaration.Variables[0];
+				var variable = declaration.Variables[0];
 
-			if (variable.Initializer as InvocationExpression == null)
-				throw new InvalidOperationException("Variable declaration must have an initializer which is a method invocation expression");
+				if (variable.Initializer as InvocationExpression == null)
+					throw new InvalidOperationException("Variable declaration must have an initializer which is a method invocation expression");
 
-			var targetObject = ((InvocationExpression)variable.Initializer).TargetObject as MemberReferenceExpression;
-			if (targetObject == null)
-				throw new InvalidOperationException("Variable initializer must be invoked on a method reference expression");
+				var targetObject = ((InvocationExpression)variable.Initializer).TargetObject as MemberReferenceExpression;
+				if (targetObject == null)
+					throw new InvalidOperationException("Variable initializer must be invoked on a method reference expression");
 
-			if (targetObject.MemberName != "Select" && targetObject.MemberName != "SelectMany")
-				throw new InvalidOperationException("Variable initializer must end with a select call");
+				if (targetObject.MemberName != "Select" && targetObject.MemberName != "SelectMany")
+					throw new InvalidOperationException("Variable initializer must end with a select call");
 
-			var lambdaExpression = AsLambdaExpression(((InvocationExpression)variable.Initializer).Arguments.Last());
-			if (lambdaExpression == null)
-				throw new InvalidOperationException("Variable initializer select must have a lambda expression");
+				var lambdaExpression = AsLambdaExpression(((InvocationExpression)variable.Initializer).Arguments.Last());
+				if (lambdaExpression == null)
+					throw new InvalidOperationException("Variable initializer select must have a lambda expression");
 
-			variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
-			variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
-			variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
+				variable.AcceptVisitor(new TransformNullCoalasingOperatorTransformer(), null);
+				variable.AcceptVisitor(new DynamicExtensionMethodsTranslator(), null);
+				variable.AcceptVisitor(new TransformDynamicLambdaExpressions(), null);
 
-			var expressionBody = GetAnonymousCreateExpression(lambdaExpression.ExpressionBody);
+				var expressionBody = GetAnonymousCreateExpression(lambdaExpression.ExpressionBody);
 
-			var objectCreateExpression = expressionBody as ObjectCreateExpression;
-			if (objectCreateExpression == null && requiresSelectNewAnonymousType)
-				throw new InvalidOperationException("Variable initializer select must have a lambda expression with an object create expression");
+				var objectCreateExpression = expressionBody as ObjectCreateExpression;
+				if (objectCreateExpression == null && requiresSelectNewAnonymousType)
+					throw new InvalidOperationException("Variable initializer select must have a lambda expression with an object create expression");
 
-			if (objectCreateExpression != null && objectCreateExpression.IsAnonymousType == false && objectCreateExpression.CreateType.Type.Contains("Anonymous") == false && requiresSelectNewAnonymousType)
-				throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anonymous type but returning " + objectCreateExpression.CreateType.Type);
+				if (objectCreateExpression != null && objectCreateExpression.IsAnonymousType == false && objectCreateExpression.CreateType.Type.Contains("Anonymous") == false && requiresSelectNewAnonymousType)
+					throw new InvalidOperationException("Variable initializer select must have a lambda expression creating an anonymous type but returning " + objectCreateExpression.CreateType.Type);
 
-			return variable;
+				return variable;
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException("Could not understand query: " + Environment.NewLine + query, e);
+			}
 		}
 
 		public static Expression GetAnonymousCreateExpression(Expression expression)

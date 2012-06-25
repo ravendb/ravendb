@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using Raven.Abstractions.Data;
+using Raven.Studio.Framework;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Documents
@@ -40,6 +41,7 @@ namespace Raven.Studio.Features.Documents
                                                                            Document = t.Result,
                                                                            TotalDocuments = 1,
                                                                            Index = 0,
+                                                                           ParentPath = GetParentPath(t.Result),
                                                                        });
         }
 
@@ -48,8 +50,24 @@ namespace Raven.Studio.Features.Documents
             return base.GetUrlForCurrentIndex();
         }
 
-        public override IList<PathSegment> GetParentPath()
+        protected IList<PathSegment> GetParentPath(JsonDocument result)
         {
+            if (result == null)
+            {
+                return null;
+            }
+            var entityType = result.Metadata.IfPresent<string>(Constants.RavenEntityName);
+
+            if (entityType != null)
+            {
+                return new[]
+                           {
+                               new PathSegment() {Name = "Documents", Url = "/documents"},
+                               new PathSegment()
+                                   {Name = entityType, Url = "/collections?name=" + entityType}
+                           };
+            }
+
             return new[]
                        {
                            new PathSegment() { Name = "Documents", Url = "/documents"}

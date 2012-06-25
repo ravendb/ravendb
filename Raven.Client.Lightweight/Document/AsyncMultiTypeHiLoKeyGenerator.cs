@@ -17,20 +17,14 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class AsyncMultiTypeHiLoKeyGenerator
 	{
-		private readonly IAsyncDatabaseCommands databaseCommands;
 		private readonly IDocumentStore documentStore;
 		private readonly int capacity;
 		private readonly object generatorLock = new object();
 		private readonly ConcurrentDictionary<string, AsyncHiLoKeyGenerator> keyGeneratorsByTag = new ConcurrentDictionary<string, AsyncHiLoKeyGenerator>();
 
-		private IAsyncDatabaseCommands DatabaseCommands
-		{
-			get { return databaseCommands ?? documentStore.AsyncDatabaseCommands; }
-		}
 
-		public AsyncMultiTypeHiLoKeyGenerator(IAsyncDatabaseCommands databaseCommands, int capacity)
+		public AsyncMultiTypeHiLoKeyGenerator(int capacity)
 		{
-			this.databaseCommands = databaseCommands;
 			this.capacity = capacity;
 		}
 
@@ -40,7 +34,7 @@ namespace Raven.Client.Document
 			this.capacity = capacity;
 		}
 		
-		public Task<string> GenerateDocumentKeyAsync(DocumentConvention conventions, object entity)
+		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention conventions, object entity)
 		{
 		    var typeTagName = conventions.GetTypeTagName(entity.GetType());
 			if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
@@ -48,18 +42,18 @@ namespace Raven.Client.Document
 			var tag = conventions.TransformTypeTagNameToDocumentKeyPrefix(typeTagName);
 			AsyncHiLoKeyGenerator value;
 			if (keyGeneratorsByTag.TryGetValue(tag, out value))
-				return value.GenerateDocumentKeyAsync(conventions, entity);
+				return value.GenerateDocumentKeyAsync(databaseCommands, conventions, entity);
 
 			lock(generatorLock)
 			{
 				if (keyGeneratorsByTag.TryGetValue(tag, out value))
-					return value.GenerateDocumentKeyAsync(conventions, entity);
+					return value.GenerateDocumentKeyAsync(databaseCommands, conventions, entity);
 
-				value = new AsyncHiLoKeyGenerator(DatabaseCommands, tag, capacity);
+				value = new AsyncHiLoKeyGenerator(tag, capacity);
 				keyGeneratorsByTag.TryAdd(tag, value);
 			}
 
-			return value.GenerateDocumentKeyAsync(conventions, entity);
+			return value.GenerateDocumentKeyAsync(databaseCommands, conventions, entity);
 		}
 	}
 }

@@ -25,8 +25,8 @@ namespace Raven.Tests.Bugs
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				var gen = new HiLoKeyGenerator(store.DatabaseCommands, "When_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
-				Test(gen.NextId, ThreadCount, GeneratedIdCount);
+				var gen = new HiLoKeyGenerator("When_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
+				Test(() => gen.NextId(store.DatabaseCommands), ThreadCount, GeneratedIdCount);
 			}
 		}
 
@@ -39,8 +39,8 @@ namespace Raven.Tests.Bugs
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				var gen = new AsyncHiLoKeyGenerator(store.AsyncDatabaseCommands, "When_async_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
-				Test(() => gen.NextIdAsync().Result, ThreadCount, GeneratedIdCount);
+				var gen = new AsyncHiLoKeyGenerator("When_async_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
+				Test(() => gen.NextIdAsync(store.AsyncDatabaseCommands).Result, ThreadCount, GeneratedIdCount);
 			}
 		}
 
@@ -53,8 +53,8 @@ namespace Raven.Tests.Bugs
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				var gen = new HiLoKeyGenerator(store.DatabaseCommands, "When_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
-				Test(gen.NextId, 1, GeneratedIdCount);
+				var gen = new HiLoKeyGenerator("When_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
+				Test(() => gen.NextId(store.DatabaseCommands), 1, GeneratedIdCount);
 			}
 		}
 
@@ -67,8 +67,8 @@ namespace Raven.Tests.Bugs
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				var gen = new AsyncHiLoKeyGenerator(store.AsyncDatabaseCommands, "When_async_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
-				Test(() => gen.NextIdAsync().Result, 1, GeneratedIdCount);
+				var gen = new AsyncHiLoKeyGenerator("When_async_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
+				Test(() => gen.NextIdAsync(store.AsyncDatabaseCommands).Result, 1, GeneratedIdCount);
 			}
 		}
 

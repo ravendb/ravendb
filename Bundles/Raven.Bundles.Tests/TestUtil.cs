@@ -7,14 +7,14 @@ using Raven.Client;
 
 namespace Raven.Bundles.Tests
 {
-    public class TestUtil
-    {
-        public static void WaitForIndexing(IDocumentStore store)
-        {
-            while (store.DatabaseCommands.GetStatistics().StaleIndexes.Length > 0)
-            {
-                Thread.Sleep(100);
-            }
-        }
-    }
+	public class TestUtil
+	{
+		public static void WaitForIndexing(IDocumentStore store)
+		{
+			while (store.DatabaseCommands.GetStatistics().StaleIndexes.Length > 0)
+			{
+				Thread.Sleep(100);
+			}
+		}
+	}
 }

@@ -17,11 +17,13 @@
 
 		public static T LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, object value)
 		{
+			if (value == null) throw new ArgumentNullException("value", "The unique value cannot be null");
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
 			var body = (MemberExpression)keySelector.Body;
 			var propertyName = body.Member.Name;
 
-			var constraintDoc = session.Include("Id").Load<ConstraintDocument>("UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + value);
+			string uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + Uri.EscapeDataString(value.ToString());
+			var constraintDoc = session.Include("Id").Load<ConstraintDocument>(uniqueId);
 			if (constraintDoc == null)
 				return default(T);
 
@@ -48,8 +50,11 @@
 
 				foreach (var property in properties)
 				{
-					var propertyValue = property.GetValue(entity, null).ToString();
-					constraintsIds.Add("UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() + "/" + propertyValue);
+					var propertyValue = property.GetValue(entity, null);
+					if(propertyValue == null)
+						continue;
+					constraintsIds.Add("UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() + "/" + 
+						Uri.EscapeDataString(propertyValue.ToString()));
 				}
 
 				ConstraintDocument[] constraintDocs = session.Include("Id").Load<ConstraintDocument>(constraintsIds.ToArray());

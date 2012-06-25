@@ -1286,14 +1286,12 @@ namespace Raven.Client.Indexes
 					case "OrderBy":
 					case "OrderByDescending":
 					case "DefaultIfEmpty":
-					case "Count":
 					case "First":
 					case "FirstOrDefault":
 					case "Single":
 					case "SingleOrDefault":
 					case "Last":
 					case "LastOrDefault":
-					case "Sum":
 					case "Reverse":
 						return true;
 				}

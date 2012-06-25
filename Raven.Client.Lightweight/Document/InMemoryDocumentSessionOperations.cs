@@ -18,6 +18,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Linq;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
@@ -33,6 +34,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Document
 {
+
 	/// <summary>
 	/// Abstract implementation for in memory session operations
 	/// </summary>
@@ -45,7 +47,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Guid Id { get; private set; }
 
-		protected static readonly NLog.Logger log = NLog.LogManager.GetCurrentClassLogger();
+		protected static readonly ILog log = LogProvider.GetCurrentClassLogger();
 
 		/// <summary>
 		/// The entities waiting to be deleted
@@ -592,7 +594,7 @@ more responsive application.
 			{
 				if (TryGetIdFromDynamic(entity, out id) == false)
 				{
-					id = Conventions.DocumentKeyGenerator(entity);
+					id = GenerateKey(entity);
 					if (id != null)
 					{
 						// Store it back into the Id field so the client has access to to it                    
@@ -608,6 +610,8 @@ more responsive application.
 			return id;
 		}
 
+		protected abstract string GenerateKey(object entity);
+
 		protected virtual void RememberEntityForDocumentKeyGeneration(object entity)
 		{
 			throw new NotImplementedException("You cannot set GenerateDocumentKeysOnStore to false without implementing RememberEntityForDocumentKeyGeneration");
@@ -621,7 +625,7 @@ more responsive application.
 				string id;
 				if (TryGetIdFromDynamic(entity, out id) == false)
 				{
-					return Conventions.AsyncDocumentKeyGenerator(entity)
+					return GenerateKeyAsync(entity)
 						.ContinueWith(task =>
 						{
 							if (task.Result != null)
@@ -641,6 +645,8 @@ more responsive application.
 					return task.Result;
 				});
 		}
+
+		protected abstract Task<string> GenerateKeyAsync(object entity);
 #endif
 
 		protected virtual void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
@@ -679,7 +685,7 @@ more responsive application.
 			if (id == null)
 			{
 				// Generate the key up front
-				id = Conventions.GenerateDocumentKey(entity);
+				id = GenerateKey(entity);
 
 			}
 
@@ -697,7 +703,7 @@ more responsive application.
 			Task<string> generator =
 				id != null
 				? CompletedTask.With(id)
-				: Conventions.GenerateDocumentKeyAsync(entity);
+				: GenerateKeyAsync(entity);
 
 			return generator.ContinueWith(task =>
 			{

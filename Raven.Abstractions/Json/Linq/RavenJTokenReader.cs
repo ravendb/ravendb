@@ -422,7 +422,7 @@ namespace Raven.Json.Linq
 			}
 		}
 
-		private new JsonReaderException CreateReaderException(JsonReader reader, string message)
+		private static JsonReaderException CreateReaderException(JsonReader reader, string message)
 		{
 			return new JsonReaderException(message);
 		}

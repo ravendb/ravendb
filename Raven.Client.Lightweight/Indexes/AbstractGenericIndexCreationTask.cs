@@ -133,6 +133,11 @@ namespace Raven.Client.Indexes
 			Stores.Add(field, storage);
 		}
 
+		protected void StoreAllFields(FieldStorage storage)
+		{
+			StoresStrings.Add(Constants.AllFields, storage);
+		}
+
 		/// <summary>
 		/// Register a field to be stored
 		/// </summary>

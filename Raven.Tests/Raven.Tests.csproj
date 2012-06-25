@@ -71,6 +71,9 @@
     <Reference Include="ICSharpCode.NRefactory">
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>
+    <Reference Include="log4net">
+      <HintPath>..\packages\log4net.2.0.0\lib\net40-full\log4net.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net, Version=2.9.1.2, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
@@ -120,6 +123,12 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Abstractions\Logging\LoggerExecutionWrapperTests.cs" />
+    <Compile Include="Abstractions\Logging\LogProviders\Log4NetLogProviderLoggingDisabledTests.cs" />
+    <Compile Include="Abstractions\Logging\LogProviders\Log4NetLogProviderLoggingEnabledTests.cs" />
+    <Compile Include="Abstractions\Logging\LogProviders\NLogLogProviderLoggingDisabedTests.cs" />
+    <Compile Include="Abstractions\Logging\LogProviders\NLogLogProviderLoggingEnabledTests.cs" />
+    <Compile Include="Abstractions\Logging\LogProviderTests.cs" />
     <Compile Include="Bugs\Account.cs" />
     <Compile Include="Bugs\AccurateCount.cs" />
     <Compile Include="Bugs\AdHocProjections.cs" />
@@ -520,6 +529,7 @@
     <Compile Include="Document\TotalCountServerTest.cs" />
     <Compile Include="Document\WhenUsingMultipleUnshardedServers.cs" />
     <Compile Include="Document\ZoneCountResult.cs" />
+    <Compile Include="Faceted\FacetAdvancedAPI.cs" />
     <Compile Include="IISExpressTestClient.cs" />
     <Compile Include="Bugs\IndexDefinitions.cs" />
     <Compile Include="Indexes\AnalyzerResolution.cs" />
@@ -554,13 +564,18 @@
     <Compile Include="Issues\RavenDB_301.cs" />
     <Compile Include="Issues\RavenDB_302.cs" />
     <Compile Include="Issues\Ravendb_334.cs" />
+    <Compile Include="Issues\RavenDB_367.cs" />
     <Compile Include="Linq\LongCount.cs" />
     <Compile Include="MailingList\AccesscControlHeaders.cs" />
+    <Compile Include="MailingList\Arun.cs" />
     <Compile Include="MailingList\Ben.cs" />
+    <Compile Include="MailingList\Brett.cs" />
     <Compile Include="MailingList\BrianVallelunga.cs" />
     <Compile Include="MailingList\Bruno.cs" />
     <Compile Include="MailingList\BrunoLopes.cs" />
     <Compile Include="MailingList\ChrisH.cs" />
+    <Compile Include="MailingList\HiloWithMultiTenancy.cs" />
+    <Compile Include="MailingList\Lars.cs" />
     <Compile Include="MailingList\Daniel.cs" />
     <Compile Include="MailingList\DynamicFieldSorting.cs" />
     <Compile Include="MailingList\HierarchyTests.cs" />
@@ -605,14 +620,17 @@
     <Compile Include="MailingList\Joel.cs" />
     <Compile Include="MailingList\Johnson.cs" />
     <Compile Include="MailingList\Jorre.cs" />
+    <Compile Include="MailingList\LinusK.cs" />
     <Compile Include="MailingList\Mark2.cs" />
     <Compile Include="MailingList\MattJohnson.cs" />
     <Compile Include="MailingList\Maverix.cs" />
     <Compile Include="MailingList\Maverix2.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
     <Compile Include="MailingList\Nick.cs" />
+    <Compile Include="MailingList\NoBuiltinDuplicates.cs" />
     <Compile Include="MailingList\NonHttpBackupRestore.cs" />
     <Compile Include="MailingList\NSB.cs" />
+    <Compile Include="MailingList\NullableBoolQuery.cs" />
     <Compile Include="MailingList\OrderByValueTypeCast.cs" />
     <Compile Include="MailingList\Oregon.cs" />
     <Compile Include="MailingList\Phil.cs" />
@@ -625,9 +643,11 @@
     <Compile Include="MailingList\QueryNotAnyTest.cs" />
     <Compile Include="MailingList\RavenAsyncTest.cs" />
     <Compile Include="MailingList\RavenDB252.cs" />
+    <Compile Include="MailingList\RavenProjectionGuid.cs" />
     <Compile Include="MailingList\RecreatingIndexes.cs" />
     <Compile Include="MailingList\RobinM\AttachmentsStatic.cs" />
     <Compile Include="MailingList\RyanD.cs" />
+    <Compile Include="MailingList\Samina2.cs" />
     <Compile Include="MailingList\Scott.cs" />
     <Compile Include="MailingList\SearchByMapReduceExample.cs" />
     <Compile Include="MailingList\SpecialChars.cs" />
@@ -637,6 +657,8 @@
     <Compile Include="MailingList\StartsWith.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
     <Compile Include="MailingList\Stockholm.cs" />
+    <Compile Include="MailingList\Tony.cs" />
+    <Compile Include="MailingList\Troy.cs" />
     <Compile Include="MailingList\What.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />

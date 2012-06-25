@@ -184,7 +184,7 @@ namespace Raven.Tests.Bugs
 			{
 				FindTypeTagName = t => t.GetType() == typeof(TestClass) ? "testclass" : null,
 				MaxNumberOfRequestsPerSession = 3000,
-				DocumentKeyGenerator = doc =>
+				DocumentKeyGenerator = (cmd, doc) =>
 				{
 					if (doc is TestClass)
 						return ((TestClass)doc).Id;

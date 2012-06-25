@@ -3,6 +3,8 @@
 	using Abstractions.Data;
 	using Database.Plugins;
 	using Json.Linq;
+	using Raven.Database.Extensions;
+	using System;
 
 	public class UniqueConstraintsDeleteTrigger : AbstractDeleteTrigger
 	{
@@ -27,7 +29,11 @@
 
 			foreach (var property in uniqueConstraits)
 			{
-				var checkKey = "UniqueConstraints/" + entityName  + property + "/" + doc.DataAsJson.Value<string>(property.Value<string>());
+				var value = property.Value<string>();
+				if(value == null)
+					continue;
+				var checkKey = "UniqueConstraints/" + entityName + property + "/" +
+							   Uri.EscapeDataString(doc.DataAsJson.Value<string>(value));
 
 				Database.Delete(checkKey, null, transactionInformation);
 			}

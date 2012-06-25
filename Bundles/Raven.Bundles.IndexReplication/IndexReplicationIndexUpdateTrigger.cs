@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Lucene.Net.Documents;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.IndexReplication.Data;
 using Raven.Database.Json;
@@ -108,7 +109,7 @@ namespace Raven.Bundles.IndexReplication
 						if (numericfield != null)
 							field = numericfield;
 
-						if (field == null)
+						if (field == null || field.StringValue() == Constants.NullValue)
 							parameter.Value = DBNull.Value;
 						else if (field is NumericField)
 						{

@@ -25,16 +25,14 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class AsyncHiLoKeyGenerator : HiLoKeyGeneratorBase
 	{
-		private readonly IAsyncDatabaseCommands databaseCommands;
 		private SpinLock generatorLock = new SpinLock(enableThreadOwnerTracking: false); // Using a spin lock rather than Monitor.Enter, because it's not reentrant
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
 		/// </summary>
-		public AsyncHiLoKeyGenerator(IAsyncDatabaseCommands databaseCommands, string tag, long capacity)
+		public AsyncHiLoKeyGenerator(string tag, long capacity)
 			: base(tag, capacity)
 		{
-			this.databaseCommands = databaseCommands;
 		}
 
 		/// <summary>
@@ -43,15 +41,15 @@ namespace Raven.Client.Document
 		/// <param name="convention">The convention.</param>
 		/// <param name="entity">The entity.</param>
 		/// <returns></returns>
-		public Task<string> GenerateDocumentKeyAsync(DocumentConvention convention, object entity)
+		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention convention, object entity)
 		{
-			return NextIdAsync().ContinueWith(task => GetDocumentKeyFromId(convention, task.Result));
+			return NextIdAsync(databaseCommands).ContinueWith(task => GetDocumentKeyFromId(convention, task.Result));
 		}
 
 		///<summary>
 		/// Create the next id (numeric)
 		///</summary>
-		public Task<long> NextIdAsync()
+		public Task<long> NextIdAsync(IAsyncDatabaseCommands databaseCommands)
 		{
 			var myRange = Range; // thread safe copy
 			long incrementedCurrent = Interlocked.Increment(ref myRange.Current);
@@ -68,10 +66,10 @@ namespace Raven.Client.Document
 				{
 					// Lock was contended, and the max has already been changed. Just get a new id as usual.
 					generatorLock.Exit();
-					return NextIdAsync();
+					return NextIdAsync(databaseCommands);
 				}
 				// Get a new max, and use the current value.
-				return GetNextRangeAsync()
+				return GetNextRangeAsync(databaseCommands)
 					.ContinueWith(task =>
 					{
 						try
@@ -83,7 +81,7 @@ namespace Raven.Client.Document
 							generatorLock.Exit();
 						}
 
-						return NextIdAsync();
+						return NextIdAsync(databaseCommands);
 					}).Unwrap();
 			}
 			catch
@@ -96,17 +94,17 @@ namespace Raven.Client.Document
 			}
 		}
 
-		private Task<RangeValue> GetNextRangeAsync()
+		private Task<RangeValue> GetNextRangeAsync(IAsyncDatabaseCommands databaseCommands)
 		{
 			IncreaseCapacityIfRequired();
 
-			return GetNextMaxAsyncInner();
+			return GetNextMaxAsyncInner(databaseCommands);
 		}
 
-		private Task<RangeValue> GetNextMaxAsyncInner()
+		private Task<RangeValue> GetNextMaxAsyncInner(IAsyncDatabaseCommands databaseCommands)
 		{
 			var minNextMax = Range.Max;
-			return GetDocumentAsync()
+			return GetDocumentAsync(databaseCommands)
 				.ContinueWith(task =>
 				{
 					try
@@ -125,7 +123,7 @@ namespace Raven.Client.Document
 								.AggregateAsync(Enumerable.Max);
 
 							return highestMax
-								.ContinueWith(t => PutDocumentAsync(new JsonDocument
+								.ContinueWith(t => PutDocumentAsync(databaseCommands, new JsonDocument
 								{
 									Etag = e.Etag,
 									Metadata = new RavenJObject(),
@@ -133,7 +131,7 @@ namespace Raven.Client.Document
 									Key = HiLoDocumentKey
 								}))
 								.Unwrap()
-								.ContinueWithTask(GetNextRangeAsync);
+								.ContinueWithTask(() => GetNextRangeAsync(databaseCommands));
 						}
 
 						long min, max;
@@ -159,23 +157,23 @@ namespace Raven.Client.Document
 							document.DataAsJson["Max"] = max;
 						}
 
-						return PutDocumentAsync(document).WithResult(new RangeValue(min, max));
+						return PutDocumentAsync(databaseCommands, document).WithResult(new RangeValue(min, max));
 					}
 					catch (ConcurrencyException)
 					{
-						return GetNextMaxAsyncInner();
+						return GetNextMaxAsyncInner(databaseCommands);
 					}
 				}).Unwrap();
 		}
 
-		private Task PutDocumentAsync(JsonDocument document)
+		private Task PutDocumentAsync(IAsyncDatabaseCommands databaseCommands, JsonDocument document)
 		{
 			return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag,
 								 document.DataAsJson,
 								 document.Metadata);
 		}
 
-		private Task<JsonDocument> GetDocumentAsync()
+		private Task<JsonDocument> GetDocumentAsync(IAsyncDatabaseCommands databaseCommands)
 		{
 			return databaseCommands.GetAsync(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0])
 				.ContinueWith(task =>

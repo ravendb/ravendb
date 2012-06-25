@@ -148,4 +148,9 @@
 		<GradientStop Color="#FEFAFAFA"/>
 		<GradientStop Color="#FFF1F1F1" Offset="1"/>
 	</LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush_ErrorBackground" EndPoint="0.5,1" StartPoint="0.5,0">
+        <GradientStop Color="#D67171"/>
+        <GradientStop Color="#C25858" Offset="1"/>
+    </LinearGradientBrush>
 </ResourceDictionary>

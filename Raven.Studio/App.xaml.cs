@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO.IsolatedStorage;
+using System.Threading.Tasks;
 using System.Windows;
 using Raven.Studio.Controls.Editors;
 using Raven.Studio.Infrastructure;
@@ -21,6 +22,8 @@ namespace Raven.Studio
 	    private void Application_Startup(object sender, StartupEventArgs e)
 		{
 			SettingsRegister.Register();
+
+	        Schedulers.UIScheduler = TaskScheduler.FromCurrentSynchronizationContext();
 
 			var rootVisual = new MainPage();
 			ApplicationModel.Current.Setup(rootVisual);
@@ -46,7 +49,7 @@ namespace Raven.Studio
 			if (System.Diagnostics.Debugger.IsAttached) return;
 			
 			e.Handled = true;
-			ErrorPresenter.Show(e.ExceptionObject);
+			ApplicationModel.Current.AddErrorNotification(e.ExceptionObject, "An unhandled exception occurred: " + e.ExceptionObject.Message);
 		}
 	}
 }

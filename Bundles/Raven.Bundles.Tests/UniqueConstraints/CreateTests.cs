@@ -60,7 +60,7 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 
 			using (var session = DocumentStore.OpenSession())
 			{
-				var constraintDocument = session.Load<dynamic>("UniqueConstraints/Users/Email/foo@bar.com");
+				var constraintDocument = session.Load<dynamic>("UniqueConstraints/Users/Email/" + Uri.EscapeDataString("foo@bar.com"));
 
 				Assert.NotNull(constraintDocument);
 				Assert.Equal(constraintDocument.RelatedId, user.Id);

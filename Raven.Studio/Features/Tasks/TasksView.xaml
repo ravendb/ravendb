@@ -15,26 +15,31 @@
 	<Grid Margin="{StaticResource Margin_ContentPage}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 
 		</Grid.RowDefinitions>
 
-		<toolkit:DockPanel>
+
 			<Border Background="{StaticResource Brush_HeaderBackground}"
                     BorderBrush="{StaticResource Brush_HeaderBorder}"
-                    BorderThickness="1"
+                    BorderThickness="1,1,1,0"
 					CornerRadius="4,4,0,0"
-					toolkit:DockPanel.Dock="Top">
-				<toolkit:DockPanel Margin="4"
-								   LastChildFill="False">
+					toolkit:DockPanel.Dock="Top"></Border>
 					<StackPanel Orientation="Horizontal">
+            <Image Style="{StaticResource Style_Image_PageHeader}"
+                               Source="{StaticResource Image_Tasks_Small}"/>
 						<TextBlock Text="Tasks"
-								   Style="{StaticResource Style_TextBlock_Breadcrumb}"
-								   VerticalAlignment="Center" />
+								   Style="{StaticResource Style_Text_Header}" />
 					</StackPanel>
 
-					<ListBox toolkit:DockPanel.Dock="Left"
-							 Margin="10,0,0,0"
+        <Border Background="{StaticResource Brush_ToolbarBackground}"
+                    BorderBrush="{StaticResource Brush_HeaderBorder}"
+                    BorderThickness="1,0,1,1"
+					CornerRadius="0"
+					Grid.Row="1"/>
+        <ListBox Grid.Row="1"
+							 Margin="5"
 							 ItemsSource="{Binding Tasks}"
 							 SelectedItem="{Binding Path=SelectedTask.Value, Mode=TwoWay}"
 							 Style="{StaticResource Style_ListBox_HeaderOptions}"
@@ -45,9 +50,7 @@
 							</DataTemplate>
 						</ListBox.ItemTemplate>
 					</ListBox>
-				</toolkit:DockPanel>
-			</Border>
-		</toolkit:DockPanel>
-		<Tasks:TaskView  Grid.Row="1"/>
+
+        <Tasks:TaskView  Grid.Row="2"/>
 	</Grid>
 </sdk:Page>
