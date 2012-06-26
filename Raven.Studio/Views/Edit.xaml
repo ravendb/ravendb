@@ -308,6 +308,7 @@
 
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
@@ -317,19 +318,20 @@
 					 Grid.Row="0"
 					 Margin="5,10,10,0" />
 
-                <sdk:TabControl Grid.Row="1"
-							Margin="5,8,10,10"
-							x:Name="TabControl">
-                    <sdk:TabItem Header="Data">
-                        <Editors:JsonEditor BoundDocument="{Binding JsonDataDocument}"
-										x:Name="EditorCtrl" />
-                    </sdk:TabItem>
-                    <sdk:TabItem Header="Metadata">
-                        <Editors:JsonEditor BoundDocument="{Binding MetaDataDocument}" />
-                    </sdk:TabItem>
-                </sdk:TabControl>
+                <ListBox Grid.Row="1" ItemsSource="{Binding DocumentSections}" SelectedItem="{Binding CurrentSection, Mode=TwoWay}"
+                         Style="{StaticResource Style_ListBox_TabStrip}"
+                         Margin="5,10,10,0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="Models:DocumentSection">
+                            <TextBlock Text="{Binding Name}"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
 
-                <Border x:Name="ErrorArea" Height="24" Grid.Row="2" Margin="5,0,10,10">
+                <Editors:JsonEditor Grid.Row="2" BoundDocument="{Binding CurrentSection.Document}"
+										x:Name="EditorCtrl" Margin="5,0,10,10" />
+
+                <Border x:Name="ErrorArea" Height="24" Grid.Row="3" Margin="5,0,10,10">
                     <i:Interaction.Triggers>
                         <ei:DataTrigger Binding="{Binding IsShowingErrors}" Value="True" Comparison="Equal">
                             <ei:ControlStoryboardAction ControlStoryboardOption="Play" Storyboard="{StaticResource ShowErrorsPanel}"/>
@@ -353,19 +355,27 @@
                         </ToggleButton>
                         <sdk:DataGrid ItemsSource="{Binding DocumentErrors}" AutoGenerateColumns="False"
                                       Grid.Row="1"
-                                      BorderBrush="{StaticResource Brush_ErrorBackground}">
+                                      BorderBrush="{StaticResource Brush_ErrorBackground}"
+                                      x:Name="ErrorsGrid">
+                            <i:Interaction.Triggers>
+                                <Behaviors:DataGridRowDoubleClickTrigger>
+                                    <Behaviors:FocusElementAction TargetObject="{Binding ElementName=EditorCtrl}"/>
+                                    <ei:ChangePropertyAction TargetObject="{Binding}" PropertyName="CurrentSection" Value="{Binding Path=SelectedItem.Section, ElementName=ErrorsGrid}"/>
+                                    <Behaviors:HighlightSyntaxErrorAction TargetObject="{Binding ElementName=EditorCtrl}" ParseError="{Binding Path=SelectedItem.ParseError, ElementName=ErrorsGrid}"/>
+                                </Behaviors:DataGridRowDoubleClickTrigger>
+                            </i:Interaction.Triggers>
                             <sdk:DataGrid.Columns>
                                 <sdk:DataGridTemplateColumn>
                                     <sdk:DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Image Source="{StaticResource Image_Error_Tiny}" Stretch="None" Margin="2" VerticalAlignment="Center"/>
+                                            <Image Source="{StaticResource Image_Error_Tiny}" Stretch="Fill" Width="12" Height="12" Margin="2" VerticalAlignment="Center"/>
                                         </DataTemplate>
                                     </sdk:DataGridTemplateColumn.CellTemplate>
                                 </sdk:DataGridTemplateColumn>
                                 <sdk:DataGridTemplateColumn Header="Section">
                                     <sdk:DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding Section}" Margin="2" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Section.Name}" Margin="2" VerticalAlignment="Center"/>
                                         </DataTemplate>
                                     </sdk:DataGridTemplateColumn.CellTemplate>
                                 </sdk:DataGridTemplateColumn>

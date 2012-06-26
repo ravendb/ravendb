@@ -43,8 +43,8 @@ namespace Raven.Studio.Models
         private string urlForPrevious;
         private string urlForNext;
         private string urlForLast;
-        private IEditorDocument jsonDataDocument;
-        private IEditorDocument metaDataDocument;
+        private DocumentSection dataSection;
+        private DocumentSection metaDataSection;
         private ICommand deleteCommand;
         private ICommand navigateFirst;
         private ICommand navigateLast;
@@ -61,8 +61,10 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/edit";
 
-            jsonDataDocument = new EditorDocument() { Language = JsonLanguage };
-            metaDataDocument = new EditorDocument() { Language = JsonLanguage };
+		    dataSection = new DocumentSection() {Name = "Data", Document = new EditorDocument() {Language = JsonLanguage}};
+            metaDataSection = new DocumentSection() { Name="Metadata", Document = new EditorDocument() { Language = JsonLanguage }};
+            DocumentSections = new List<DocumentSection>() { dataSection, metaDataSection};
+		    CurrentSection = dataSection;
 
 			References = new ObservableCollection<LinkModel>();
 			Related = new BindableCollection<LinkModel>(model => model.Title);
@@ -83,8 +85,8 @@ namespace Raven.Studio.Models
 
 
 
-		    jsonDataDocument.ObserveTextChanged()
-		        .Merge(metaDataDocument.ObserveTextChanged())
+		    dataSection.Document.ObserveTextChanged()
+                .Merge(metaDataSection.Document.ObserveTextChanged())
 		        .Throttle(TimeSpan.FromSeconds(1))
 		        .ObserveOnDispatcher()
 		        .Subscribe(_ => HandleDocumentChanged());
@@ -101,13 +103,13 @@ namespace Raven.Studio.Models
         {
             DocumentErrors.Clear();
 
-            AddErrors(JsonDataDocument, "Data");
-            AddErrors(MetaDataDocument, "Metadata");
+            AddErrors(dataSection);
+            AddErrors(metaDataSection);
         }
 
-        private void AddErrors(IEditorDocument document, string view)
+        private void AddErrors(DocumentSection section)
         {
-            var parseData = document.ParseData as ILLParseData;
+            var parseData = section.Document.ParseData as ILLParseData;
             if (parseData == null)
             {
                 return;
@@ -115,7 +117,7 @@ namespace Raven.Studio.Models
 
             foreach (var parseError in parseData.Errors)
             {
-                DocumentErrors.Add(new DocumentError() {Section = view, ParseError = parseError});
+                DocumentErrors.Add(new DocumentError() {Section = section, ParseError = parseError});
             }
         }
 
@@ -309,8 +311,22 @@ namespace Raven.Studio.Models
 
         public ObservableCollection<PathSegment> ParentPathSegments { get; private set; }
         public ObservableCollection<DocumentError> DocumentErrors { get; private set; }
- 
-		public void SetCurrentDocumentKey(string docId)
+
+        public IList<DocumentSection> DocumentSections { get; private set; }
+
+        private DocumentSection currentSection;
+
+        public DocumentSection CurrentSection
+        {
+            get { return currentSection; }
+            set
+            {
+                currentSection = value;
+                OnPropertyChanged(() => CurrentSection);
+            }
+        }
+
+        public void SetCurrentDocumentKey(string docId)
 		{
             if (docId != null)
             {
@@ -414,12 +430,12 @@ namespace Raven.Studio.Models
 
         public IEditorDocument JsonDataDocument
         {
-            get { return jsonDataDocument; }
+            get { return dataSection.Document; }
         }
 
         public IEditorDocument MetaDataDocument
         {
-            get { return metaDataDocument; }
+            get { return metaDataSection.Document; }
         }
 
         protected string JsonData
@@ -840,9 +856,16 @@ namespace Raven.Studio.Models
 		New,
 	}
 
+    public class DocumentSection
+    {
+        public string Name { get; set; }
+
+        public IEditorDocument Document { get; set; }
+    }
+
     public class DocumentError
     {
-        public string Section { get; set; }
+        public DocumentSection Section { get; set; }
 
         public IParseError ParseError { get; set; }
     }

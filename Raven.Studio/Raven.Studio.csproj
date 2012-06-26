@@ -154,10 +154,12 @@
     <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
     <Compile Include="Behaviors\BindSuggestionsProvider.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
+    <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
     <Compile Include="Behaviors\FocusElementAction.cs" />
+    <Compile Include="Behaviors\HighlightSyntaxErrorAction.cs" />
     <Compile Include="Behaviors\IAutoCompleteSuggestionProvider.cs" />
     <Compile Include="Behaviors\OpenDropDownAction.cs" />
     <Compile Include="Behaviors\SelectAllAction.cs" />
