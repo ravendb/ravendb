@@ -563,8 +563,10 @@
     <Compile Include="Issues\RavenDB_301.cs" />
     <Compile Include="Issues\RavenDB_302.cs" />
     <Compile Include="Issues\Ravendb_334.cs" />
+    <Compile Include="Issues\RavenDB_367.cs" />
     <Compile Include="Linq\LongCount.cs" />
     <Compile Include="MailingList\AccesscControlHeaders.cs" />
+    <Compile Include="MailingList\Arun.cs" />
     <Compile Include="MailingList\Ben.cs" />
     <Compile Include="MailingList\Brett.cs" />
     <Compile Include="MailingList\BrianVallelunga.cs" />
@@ -655,6 +657,7 @@
     <Compile Include="MailingList\StatsTest.cs" />
     <Compile Include="MailingList\Stockholm.cs" />
     <Compile Include="MailingList\Tony.cs" />
+    <Compile Include="MailingList\Troy.cs" />
     <Compile Include="MailingList\What.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />

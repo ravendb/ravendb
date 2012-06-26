@@ -97,9 +97,13 @@ namespace Raven.Database.Impl
 				if (indexDefinition.IsMapReduce == false)
 				{
 					bool hasStoredFields = false;
-					foreach (var fieldToFetch in fieldsToFetch)
+					FieldStorage value;
+					if(indexDefinition.Stores.TryGetValue(Constants.AllFields, out value))
 					{
-						FieldStorage value;
+						hasStoredFields = value != FieldStorage.No;
+					}
+					foreach (var fieldToFetch in fieldsToFetch.Fields)
+					{
 						if (indexDefinition.Stores.TryGetValue(fieldToFetch, out value) == false &&
 							value != FieldStorage.No)
 							continue;
@@ -116,8 +120,10 @@ namespace Raven.Database.Impl
 				// We have to load the document if user explicitly asked for the id, since 
 				// we normalize the casing for the document id on the index, and we need to return
 				// the id to the user with the same casing they gave us.
-				var fetchingId = fieldsToFetch.Any(fieldToFetch => fieldToFetch == Constants.DocumentIdFieldName);
-				var fieldsToFetchFromDocument = fieldsToFetch.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null).ToArray();
+				var fetchingId = fieldsToFetch.Fields.Any(fieldToFetch => fieldToFetch == Constants.DocumentIdFieldName);
+				var fieldsToFetchFromDocument = fieldsToFetch.Fields
+					.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null)
+					.ToArray();
 				if (fieldsToFetchFromDocument.Length > 0 || fetchingId)
 				{
 					var doc = GetDocumentWithCaching(queryResult.Key);

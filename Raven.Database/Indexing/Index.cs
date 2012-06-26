@@ -171,10 +171,15 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		public static RavenJObject CreateDocumentFromFields(Document document, IEnumerable<string> fieldsToFetch)
+		public static RavenJObject CreateDocumentFromFields(Document document, FieldsToFetch fieldsToFetch)
 		{
 			var documentFromFields = new RavenJObject();
-			var q = fieldsToFetch
+			IEnumerable<string> fields = fieldsToFetch.Fields;
+
+			if (fieldsToFetch.FetchAllStoredFields)
+				fields = fields.Concat(document.GetFields().Cast<Fieldable>().Select(x => x.Name()));
+
+			var q = fields
 				.SelectMany(name => document.GetFields(name) ?? new Field[0])
 				.Where(x => x != null)
 				.Where(
@@ -335,12 +340,17 @@ namespace Raven.Database.Indexing
 		public PerFieldAnalyzerWrapper CreateAnalyzer(Analyzer defaultAnalyzer, ICollection<Action> toDispose, bool forQuerying = false)
 		{
 			toDispose.Add(defaultAnalyzer.Close);
+
+			string value;
+			if(indexDefinition.Analyzers.TryGetValue(Constants.AllFields, out value))
+			{
+				defaultAnalyzer = IndexingExtensions.CreateAnalyzerInstance(Constants.AllFields, value);
+				toDispose.Add(defaultAnalyzer.Close);
+			}
 			var perFieldAnalyzerWrapper = new PerFieldAnalyzerWrapper(defaultAnalyzer);
 			foreach (var analyzer in indexDefinition.Analyzers)
 			{
 				Analyzer analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(analyzer.Key, analyzer.Value);
-				if (analyzerInstance == null)
-					continue;
 				toDispose.Add(analyzerInstance.Close);
 
 				if (forQuerying)

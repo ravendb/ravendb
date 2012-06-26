@@ -29,8 +29,11 @@
 
 			foreach (var property in uniqueConstraits)
 			{
+				var value = property.Value<string>();
+				if(value == null)
+					continue;
 				var checkKey = "UniqueConstraints/" + entityName + property + "/" +
-							   Uri.EscapeDataString(doc.DataAsJson.Value<string>(property.Value<string>() ?? "[[NULL_VALUE]]"));
+							   Uri.EscapeDataString(doc.DataAsJson.Value<string>(value));
 
 				Database.Delete(checkKey, null, transactionInformation);
 			}
