@@ -128,7 +128,36 @@
             Provides the base requirements for a breakpoint within an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebugger" />.
             </summary></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IBreakpoint.Symbol"><summary>
             Gets the <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol" /> at which to break.
-            </summary><value>The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol" /> at which to break.</value></member><member name="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableAstNode"><summary>
+            </summary><value>The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol" /> at which to break.</value></member><member name="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState"><summary>
+            Provides the base requirements for an object that contains information about the current <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebugger" /> state.
+            </summary></member><member name="M:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.AddBreakpoint(ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol)"><summary>
+            Adds an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IBreakpoint" /> for an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol" />.
+            </summary><param name="symbol">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol" /> for which a breakpoint should be created.</param></member><member name="M:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.RemoveBreakpoint(ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol)"><summary>
+            Removes an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IBreakpoint" /> for an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol" />.
+            </summary><param name="symbol">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol" /> for which a breakpoint should be removed.</param></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.Breakpoints"><summary>
+            Gets the collection of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IBreakpoint" /> objects.
+            </summary><value>The collection of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IBreakpoint" /> objects.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.Ebnf"><summary>
+            Gets the textual EBNF representation of the grammar.
+            </summary><value>The textual EBNF representation of the grammar.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.IsBreakForCanMatch"><summary>
+            Gets whether the current pause is related to a can-match check for an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.EbnfTerm" />.
+            </summary><value><c>true</c> if the current pause is related to a can-match check; otherwise, <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.Matches"><summary>
+            Gets the list of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableAstNodeMatch" /> objects that indicate the labeled AST node matches for the current scope.
+            </summary><value>The list of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableAstNodeMatch" /> objects that indicate the labeled AST node matches for the current scope.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.NonTerminals"><summary>
+            Gets the read-only list of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableNonTerminal" /> objects defined in the grammar.
+            </summary><value>The read-only list of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableNonTerminal" /> objects defined in the grammar.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.NonTerminalStack"><summary>
+            Gets the stack of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableNonTerminal" /> objects into which the parser has entered.
+            </summary><value>The stack of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableNonTerminal" /> objects into which the parser has entered.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.ParseErrors"><summary>
+            Gets the collection of <see cref="T:ActiproSoftware.Text.Parsing.IParseError" /> objects that will be returned in the <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> parsing result.
+            </summary><value>The collection of <see cref="T:ActiproSoftware.Text.Parsing.IParseError" /> objects that will be returned in the <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> parsing result.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.RootNode"><summary>
+            Gets the root <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableAstNode" /> that has been constructed.
+            </summary><value>The root <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableAstNode" /> that has been constructed.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.Terminals"><summary>
+            Gets the read-only list of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableTerminal" /> objects defined in the grammar.
+            </summary><value>The read-only list of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableTerminal" /> objects defined in the grammar.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.TermStack"><summary>
+            Gets the stack of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableEbnfTerm" /> objects into which the parser has entered.
+            </summary><value>The stack of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableEbnfTerm" /> objects into which the parser has entered.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.TokenReader"><summary>
+            Gets the <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used to read tokens during the parsing operation.
+            </summary><value>The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used to read tokens during the parsing operation.</value></member><member name="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableAstNode"><summary>
             Provides the base requirements for a debuggable <see cref="T:ActiproSoftware.Text.Parsing.IAstNode" />.
             </summary></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableAstNode.EndOffset"><summary>
             Gets the end offset of this AST node, if known.
@@ -212,36 +241,7 @@
             Occurs when the <see cref="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebugger.Mode" /> property changes.
             </summary><eventdata>
             The event handler receives an argument of type <c>EventArgs</c> containing data related to this event.
-            </eventdata></member><member name="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState"><summary>
-            Provides the base requirements for an object that contains information about the current <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebugger" /> state.
-            </summary></member><member name="M:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.AddBreakpoint(ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol)"><summary>
-            Adds an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IBreakpoint" /> for an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol" />.
-            </summary><param name="symbol">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol" /> for which a breakpoint should be created.</param></member><member name="M:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.RemoveBreakpoint(ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol)"><summary>
-            Removes an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IBreakpoint" /> for an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol" />.
-            </summary><param name="symbol">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableSymbol" /> for which a breakpoint should be removed.</param></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.Breakpoints"><summary>
-            Gets the collection of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IBreakpoint" /> objects.
-            </summary><value>The collection of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IBreakpoint" /> objects.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.Ebnf"><summary>
-            Gets the textual EBNF representation of the grammar.
-            </summary><value>The textual EBNF representation of the grammar.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.IsBreakForCanMatch"><summary>
-            Gets whether the current pause is related to a can-match check for an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.EbnfTerm" />.
-            </summary><value><c>true</c> if the current pause is related to a can-match check; otherwise, <c>false</c>.
-            </value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.Matches"><summary>
-            Gets the list of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableAstNodeMatch" /> objects that indicate the labeled AST node matches for the current scope.
-            </summary><value>The list of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableAstNodeMatch" /> objects that indicate the labeled AST node matches for the current scope.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.NonTerminals"><summary>
-            Gets the read-only list of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableNonTerminal" /> objects defined in the grammar.
-            </summary><value>The read-only list of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableNonTerminal" /> objects defined in the grammar.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.NonTerminalStack"><summary>
-            Gets the stack of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableNonTerminal" /> objects into which the parser has entered.
-            </summary><value>The stack of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableNonTerminal" /> objects into which the parser has entered.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.ParseErrors"><summary>
-            Gets the collection of <see cref="T:ActiproSoftware.Text.Parsing.IParseError" /> objects that will be returned in the <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> parsing result.
-            </summary><value>The collection of <see cref="T:ActiproSoftware.Text.Parsing.IParseError" /> objects that will be returned in the <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> parsing result.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.RootNode"><summary>
-            Gets the root <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableAstNode" /> that has been constructed.
-            </summary><value>The root <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableAstNode" /> that has been constructed.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.Terminals"><summary>
-            Gets the read-only list of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableTerminal" /> objects defined in the grammar.
-            </summary><value>The read-only list of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableTerminal" /> objects defined in the grammar.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.TermStack"><summary>
-            Gets the stack of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableEbnfTerm" /> objects into which the parser has entered.
-            </summary><value>The stack of <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggableEbnfTerm" /> objects into which the parser has entered.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Debugging.IDebuggerState.TokenReader"><summary>
-            Gets the <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used to read tokens during the parsing operation.
-            </summary><value>The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used to read tokens during the parsing operation.</value></member><member name="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.Implementation.InfiniteLifetimeObjectBase"><summary>
+            </eventdata></member><member name="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.Implementation.InfiniteLifetimeObjectBase"><summary>
             Provides the abstract base class for an object that can be proxied across an <c>AppDomain</c> and always remains active.
             </summary></member><member name="T:ActiproSoftware.Text.Parsing.LLParser.Debugging.Implementation.Debugger"><summary>
             Represents a <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> debugger that can control parser execution and obtain detailed information about parser state.
@@ -322,6 +322,9 @@
             </remarks></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.ITokenReader.IsAtEnd"><summary>
             Gets whether the current <see cref="T:ActiproSoftware.Text.Lexing.IToken" /> is at the end of the text buffer.
             </summary><value><c>true</c> if the current <see cref="T:ActiproSoftware.Text.Lexing.IToken" /> is at the end of the text buffer; otherwise, <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.ITokenReader.IsParserInErrorState"><summary>
+            Gets or sets whether the parser is currently recovering from an error state.
+            </summary><value><c>true</c> if the parser is currently recovering from an error state; otherwise, <c>false</c>.
             </value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.ITokenReader.LookAheadToken"><summary>
             Returns the <see cref="T:ActiproSoftware.Text.Lexing.IToken" /> that is immediately after the current token.
             </summary><value>The <see cref="T:ActiproSoftware.Text.Lexing.IToken" /> that is immediately after the current token.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.ITokenReader.Offset"><summary>
@@ -683,6 +686,9 @@
             </summary><param name="reader">The <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> to use for consuming text.</param></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Implementation.TokenReaderBase.IsAtEnd"><summary>
             Gets whether the current <see cref="T:ActiproSoftware.Text.Lexing.IToken" /> is at the end of the text buffer.
             </summary><value><c>true</c> if the current <see cref="T:ActiproSoftware.Text.Lexing.IToken" /> is at the end of the text buffer; otherwise, <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Implementation.TokenReaderBase.IsParserInErrorState"><summary>
+            Gets or sets whether the parser is currently recovering from an error state.
+            </summary><value><c>true</c> if the parser is currently recovering from an error state; otherwise, <c>false</c>.
             </value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Implementation.TokenReaderBase.LookAheadToken"><summary>
             Returns the <see cref="T:ActiproSoftware.Text.Lexing.IToken" /> that is immediately after the current token.
             </summary><value>The <see cref="T:ActiproSoftware.Text.Lexing.IToken" /> that is immediately after the current token.</value></member><member name="P:ActiproSoftware.Text.Parsing.LLParser.Implementation.TokenReaderBase.Offset"><summary>

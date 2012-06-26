@@ -295,25 +295,7 @@
             Creates <c>C#</c> language <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> objects for a <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />.
             </summary></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpContextFactory.CreateContext(ActiproSoftware.Text.TextSnapshotOffset,ActiproSoftware.Text.Languages.DotNet.DotNetContextKind)"><summary>
             Creates an <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> for the specified <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />.
-            </summary><param name="snapshotOffset">The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> for which to create a context.</param><param name="kind">A <see cref="T:ActiproSoftware.Text.Languages.DotNet.DotNetContextKind" /> indicating the kind of context.</param><returns>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> that was created.</returns></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase"><summary>
-            Provides the abstract base class of a .NET language parser.
-            </summary></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
-            Creates an <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> for the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
-            </summary><param name="request">The <see cref="T:ActiproSoftware.Text.Parsing.IParseRequest" /> that contains data about the requested parsing operation.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><returns>The <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> that was created.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
-            Initializes a new instance of the <c>DotNetParserBase</c> class.
-            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser"><summary>
-            Represents a parser for the <c>C#</c> language.
-            </summary></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.CreateTokenReader(ActiproSoftware.Text.ITextBufferReader)"><summary>
-            Creates an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.
-            </summary><param name="reader">The <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> that provides access to the text buffer.</param><returns>An <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.</returns></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.InitializeParseData(ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
-            Initializes a <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> using the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
-            </summary><param name="parseData">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> to initialize.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><remarks>
-            This method is called by default from the <see cref="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)" /> method.
-            </remarks></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.#ctor"><summary>
-            Initializes a new instance of the <c>CSharpParser</c> class.
-            </summary></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
-            Initializes a new instance of the <c>CSharpParser</c> class.
-            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpExampleTextProvider"><summary>
+            </summary><param name="snapshotOffset">The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> for which to create a context.</param><param name="kind">A <see cref="T:ActiproSoftware.Text.Languages.DotNet.DotNetContextKind" /> indicating the kind of context.</param><returns>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> that was created.</returns></member><member name="T:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpExampleTextProvider"><summary>
             Represents a example text provider for the <c>C#</c> language.
             </summary><remarks>
             This type was generated by the Actipro Language Designer tool v10.2.530.0 (http://www.actiprosoftware.com).
@@ -375,7 +357,27 @@
             Gets the <c>DocumentationComment</c> lexical state ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpLexicalStateId.PreprocessorDirective"><summary>
             Gets the <c>PreprocessorDirective</c> lexical state ID.
-            </summary></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Reflection.IAssembly"><summary>
+            </summary></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase"><summary>
+            Provides the abstract base class of a .NET language parser.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
+            Creates an <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> for the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
+            </summary><param name="request">The <see cref="T:ActiproSoftware.Text.Parsing.IParseRequest" /> that contains data about the requested parsing operation.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><returns>The <see cref="T:ActiproSoftware.Text.Parsing.IParseData" /> that was created.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
+            Initializes a new instance of the <c>DotNetParserBase</c> class.
+            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser"><summary>
+            Represents a parser for the <c>C#</c> language.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.CreateTokenReader(ActiproSoftware.Text.ITextBufferReader)"><summary>
+            Creates an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.
+            </summary><param name="reader">The <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> that provides access to the text buffer.</param><returns>An <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.</returns></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.InitializeParseData(ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
+            Initializes a <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> using the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
+            </summary><param name="parseData">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> to initialize.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><remarks>
+            This method is called by default from the <see cref="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)" /> method.
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.ParseExpression(System.String)"><summary>
+            Parses the specified expression text.
+            </summary><param name="text">The expression text to parse.</param><returns>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetParseData" /> that contains the parse results.</returns></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.#ctor"><summary>
+            Initializes a new instance of the <c>CSharpParser</c> class.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.CSharp.Implementation.CSharpParser.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
+            Initializes a new instance of the <c>CSharpParser</c> class.
+            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.DotNet.Reflection.IAssembly"><summary>
             Provides the base requirements of an assembly.
             </summary></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Reflection.IAssembly.GetAssemblyName"><summary>
             Returns an <see cref="T:ActiproSoftware.Text.Languages.DotNet.Reflection.IAssemblyName" /> that contains assembly name information.
@@ -3375,7 +3377,9 @@
             Gets the <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> for which this context was created.
             </summary><value>The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> for which this context was created.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.IDotNetContext.TargetExpression"><summary>
             Gets the target AST <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Expression" /> for the context, if known.
-            </summary><value>The target AST <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Expression" /> for the context, if known.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.IDotNetParseData"><summary>
+            </summary><value>The target AST <see cref="T:ActiproSoftware.Text.Languages.DotNet.Ast.Implementation.Expression" /> for the context, if known.</value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.IDotNetContext.TargetSnapshotOffset"><summary>
+            Gets the <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />, if known, against which to use as context for the resolver.
+            </summary><value>The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />, if known, against which to use as context for the resolver.</value></member><member name="T:ActiproSoftware.Text.Languages.DotNet.IDotNetParseData"><summary>
             Provides the base requirements of an object that stores the results of a .NET language parsing operation.
             </summary><seealso cref="T:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParseData" /></member><member name="P:ActiproSoftware.Text.Languages.DotNet.IDotNetParseData.PreprocessorDirectives"><summary>
             Gets the collection of preprocessor directives.
@@ -3616,6 +3620,9 @@
             </value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Reflection.ITypeMemberDefinition.IsHidden"><summary>
             Gets whether the current member is decorated such that it should never be visible within an editor.
             </summary><value><c>true</c> if the current member is decorated such that it should never be visible within an editor; otherwise, <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Reflection.ITypeMemberDefinition.IsImplicitDefaultConstructor"><summary>
+            Gets whether the current member is an implicit default constructor.
+            </summary><value><c>true</c> if the current member is an implicit default constructor; otherwise, <c>false</c>.
             </value></member><member name="P:ActiproSoftware.Text.Languages.DotNet.Reflection.ITypeMemberDefinition.IsLiteral"><summary>
             Gets whether the current member's value is written at compile time and cannot be changed.
             </summary><value><c>true</c> if the current member's value is written at compile time and cannot be changed; otherwise, <c>false</c>.
@@ -3858,10 +3865,7 @@
             Represents a qualified name.
             </summary></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Reflection.Implementation.QualifiedName.Clone"><summary>
             Returns a deep clone of the object.
-            </summary><returns>The object that was created.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Reflection.Implementation.QualifiedName.Construct(ActiproSoftware.Text.Languages.DotNet.Reflection.IQualifiedName,System.Collections.Generic.IDictionary{System.String,ActiproSoftware.Text.Languages.DotNet.Reflection.IQualifiedName},System.Boolean)"><summary>
-            Returns whether the qualified name can be constructed using the specified type parameter mappings dictionary.
-            </summary><param name="qualifiedName">The <see cref="T:ActiproSoftware.Text.Languages.DotNet.Reflection.IQualifiedName" /> to examine.</param><param name="mappings">The dictionary of type parameter names to type argument qualified names.</param><param name="isCaseSensitive">Whether the construction is occuring in a case-sensitive language.</param><returns><c>true</c> if the qualified name can be constructed using the specified type parameter mappings dictionary; otherwise, <c>false</c>.
-            </returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Reflection.Implementation.QualifiedName.Equals(System.Object)"><summary>
+            </summary><returns>The object that was created.</returns></member><member name="M:ActiproSoftware.Text.Languages.DotNet.Reflection.Implementation.QualifiedName.Equals(System.Object)"><summary>
             Determines whether the specified <c>Object</c> is equal to the current <c>Object</c>. 
             </summary><param name="obj">The <c>Object</c> to compare to the current <c>Object</c>.</param><returns><c>true</c> if the specified <c>Object</c> is equal to the current <c>Object</c>; 
             otherwise, <c>false</c>. 
@@ -4126,19 +4130,7 @@
             Creates <c>Visual Basic</c> language <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> objects for a <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />.
             </summary></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBContextFactory.CreateContext(ActiproSoftware.Text.TextSnapshotOffset,ActiproSoftware.Text.Languages.DotNet.DotNetContextKind)"><summary>
             Creates an <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> for the specified <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" />.
-            </summary><param name="snapshotOffset">The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> for which to create a context.</param><param name="kind">A <see cref="T:ActiproSoftware.Text.Languages.DotNet.DotNetContextKind" /> indicating the kind of context.</param><returns>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> that was created.</returns></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBParser"><summary>
-            Represents a parser for the <c>Visual Basic</c> language.
-            </summary></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.CreateTokenReader(ActiproSoftware.Text.ITextBufferReader)"><summary>
-            Creates an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.
-            </summary><param name="reader">The <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> that provides access to the text buffer.</param><returns>An <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.</returns></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.InitializeParseData(ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
-            Initializes a <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> using the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
-            </summary><param name="parseData">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> to initialize.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><remarks>
-            This method is called by default from the <see cref="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)" /> method.
-            </remarks></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.#ctor"><summary>
-            Initializes a new instance of the <c>VBParser</c> class.
-            </summary></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
-            Initializes a new instance of the <c>VBParser</c> class.
-            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBExampleTextProvider"><summary>
+            </summary><param name="snapshotOffset">The <see cref="T:ActiproSoftware.Text.TextSnapshotOffset" /> for which to create a context.</param><param name="kind">A <see cref="T:ActiproSoftware.Text.Languages.DotNet.DotNetContextKind" /> indicating the kind of context.</param><returns>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetContext" /> that was created.</returns></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBExampleTextProvider"><summary>
             Represents a example text provider for the <c>VB</c> language.
             </summary><remarks>
             This type was generated by the Actipro Language Designer tool v10.2.530.0 (http://www.actiprosoftware.com).
@@ -4198,7 +4190,21 @@
             Gets the <c>DocumentationComment</c> lexical state ID.
             </summary></member><member name="F:ActiproSoftware.Text.Languages.VB.Implementation.VBLexicalStateId.PreprocessorDirective"><summary>
             Gets the <c>PreprocessorDirective</c> lexical state ID.
-            </summary></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBProjectAssembly"><summary>
+            </summary></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBParser"><summary>
+            Represents a parser for the <c>Visual Basic</c> language.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.CreateTokenReader(ActiproSoftware.Text.ITextBufferReader)"><summary>
+            Creates an <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.
+            </summary><param name="reader">The <see cref="T:ActiproSoftware.Text.ITextBufferReader" /> that provides access to the text buffer.</param><returns>An <see cref="T:ActiproSoftware.Text.Parsing.LLParser.ITokenReader" /> that is used by the parser to read through tokens.</returns></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.InitializeParseData(ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData,ActiproSoftware.Text.Parsing.LLParser.IParserState)"><summary>
+            Initializes a <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> using the specified <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" />.
+            </summary><param name="parseData">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.LLParseData" /> to initialize.</param><param name="state">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.IParserState" /> to examine.</param><remarks>
+            This method is called by default from the <see cref="M:ActiproSoftware.Text.Languages.DotNet.Implementation.DotNetParserBase.CreateParseData(ActiproSoftware.Text.Parsing.IParseRequest,ActiproSoftware.Text.Parsing.LLParser.IParserState)" /> method.
+            </remarks></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.ParseExpression(System.String)"><summary>
+            Parses the specified expression text.
+            </summary><param name="text">The expression text to parse.</param><returns>The <see cref="T:ActiproSoftware.Text.Languages.DotNet.IDotNetParseData" /> that contains the parse results.</returns></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.#ctor"><summary>
+            Initializes a new instance of the <c>VBParser</c> class.
+            </summary></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBParser.#ctor(ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar)"><summary>
+            Initializes a new instance of the <c>VBParser</c> class.
+            </summary><param name="grammar">The <see cref="T:ActiproSoftware.Text.Parsing.LLParser.Implementation.Grammar" /> instance to use.</param></member><member name="T:ActiproSoftware.Text.Languages.VB.Implementation.VBProjectAssembly"><summary>
             Represents a <c>Visual Basic</c> project (source code-based) assembly.
             </summary></member><member name="M:ActiproSoftware.Text.Languages.VB.Implementation.VBProjectAssembly.#ctor(System.String)"><summary>
             Initializes a new instance of the <c>VBProjectAssembly</c> class.
