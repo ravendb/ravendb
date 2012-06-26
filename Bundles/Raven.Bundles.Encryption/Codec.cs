@@ -21,7 +21,7 @@ namespace Raven.Bundles.Encryption
 		private Tuple<byte[], byte[]> encryptionStartingKeyAndIV = null;
 		private int? encryptionKeySize = null;
 		private int? encryptionIVSize = null;
-		
+
 		public Codec(EncryptionSettings settings)
 		{
 			this.EncryptionSettings = settings;
@@ -29,12 +29,74 @@ namespace Raven.Bundles.Encryption
 
 		public Stream Encode(string key, Stream dataStream)
 		{
-			return new CryptoStream(dataStream, GetCryptoProvider(null).CreateEncryptor(), CryptoStreamMode.Write).WriteSalt(key);
+			SymmetricAlgorithm provider = null;
+			ICryptoTransform encryptor = null;
+			Stream stream = null;
+			try
+			{
+				provider = GetCryptoProvider(null);
+				encryptor = provider.CreateEncryptor();
+				stream = new CryptoStream(dataStream, encryptor, CryptoStreamMode.Write);
+				return stream.WriteSalt(key).DisposeTogetherWith(provider, encryptor);
+			}
+			catch
+			{
+				try
+				{
+					if (provider != null)
+						provider.Dispose();
+				}
+				catch { }
+				try
+				{
+					if (encryptor != null)
+						encryptor.Dispose();
+				}
+				catch { }
+				try
+				{
+					if (stream != null)
+						stream.Dispose();
+				}
+				catch { }
+				throw;
+			}
 		}
 
 		public Stream Decode(string key, Stream dataStream)
 		{
-			return new CryptoStream(dataStream, GetCryptoProvider(null).CreateDecryptor(), CryptoStreamMode.Read).ReadSalt(key);
+			SymmetricAlgorithm provider = null;
+			ICryptoTransform decryptor = null;
+			Stream stream = null;
+			try
+			{
+				provider = GetCryptoProvider(null);
+				decryptor = provider.CreateDecryptor();
+				stream = new CryptoStream(dataStream, decryptor, CryptoStreamMode.Write);
+				return stream.ReadSalt(key).DisposeTogetherWith(provider, decryptor);
+			}
+			catch
+			{
+				try
+				{
+					if (provider != null)
+						provider.Dispose();
+				}
+				catch { }
+				try
+				{
+					if (decryptor != null)
+						decryptor.Dispose();
+				}
+				catch { }
+				try
+				{
+					if (stream != null)
+						stream.Dispose();
+				}
+				catch { }
+				throw;
+			}
 		}
 
 		public EncodedBlock EncodeBlock(string key, byte[] data)
