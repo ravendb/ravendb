@@ -29,9 +29,9 @@ namespace Raven.Bundles.Encryption.Streams
 	/// </summary>
 	internal class SeekableCryptoStream : Stream
 	{
-		private int CurrentBlockSize = 1024;
 
 		private readonly BlockReaderWriter underlyingStream;
+		private readonly int currentBlockSize;
 		private readonly object locker = new object();
 		private EncryptedFile.Block currentReadingBlock;
 		private EncryptedFile.Block currentWritingBlock;
@@ -48,7 +48,8 @@ namespace Raven.Bundles.Encryption.Streams
 
 			isReadonly = !stream.CanWrite;
 
-			this.underlyingStream = new BlockReaderWriter(encryptionSettings, key, stream, CurrentBlockSize);
+			this.underlyingStream = new BlockReaderWriter(encryptionSettings, key, stream, Constants.DefaultIndexFileBlockSize);
+			this.currentBlockSize = underlyingStream.Header.DecryptedBlockSize;
 		}
 
 		public override bool CanRead
@@ -94,7 +95,7 @@ namespace Raven.Bundles.Encryption.Streams
 					currentReadingBlock = underlyingStream.ReadBlock(startingBlock);
 				}
 
-				int blockRead = (int)Math.Min(currentReadingBlock.TotalStreamLength - Position, CurrentBlockSize - bufferOffset);
+				int blockRead = (int)Math.Min(currentReadingBlock.TotalStreamLength - Position, currentBlockSize - bufferOffset);
 				int actualRead = Math.Min(count, blockRead);
 				Array.Copy(currentReadingBlock.Data, blockOffset, buffer, bufferOffset, actualRead);
 				// We use the fact that a stream doesn't have to read all data in one go to avoid a loop here.
@@ -133,7 +134,7 @@ namespace Raven.Bundles.Encryption.Streams
 				{
 					WriteAnyUnwrittenData();
 
-					if (blockOffset != 0 || count < CurrentBlockSize)
+					if (blockOffset != 0 || count < currentBlockSize)
 					{
 						// Read the existing block from the underlying stream, as we're only changing part of it
 						currentWritingBlock = underlyingStream.ReadBlock(startingBlock);
@@ -144,7 +145,7 @@ namespace Raven.Bundles.Encryption.Streams
 						currentWritingBlock = new EncryptedFile.Block
 						{
 							BlockNumber = startingBlock,
-							Data = new byte[CurrentBlockSize],
+							Data = new byte[currentBlockSize],
 							TotalStreamLength = underlyingStream.Footer.TotalLength
 						};
 					}
@@ -158,7 +159,7 @@ namespace Raven.Bundles.Encryption.Streams
 				}
 				else
 				{
-					var countInCurrentBlock = CurrentBlockSize - bufferOffset;
+					var countInCurrentBlock = currentBlockSize - bufferOffset;
 					Array.Copy(buffer, bufferOffset, currentWritingBlock.Data, blockOffset, countInCurrentBlock);
 					Position += countInCurrentBlock;
 

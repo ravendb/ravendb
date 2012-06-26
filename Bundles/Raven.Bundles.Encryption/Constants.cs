@@ -26,6 +26,8 @@ namespace Raven.Bundles.Encryption
 		public const int DefaultKeySizeToUseInActualEncryptionInBits = 128;
 		public const int Rfc2898Iterations = 1000;
 
+		public const int DefaultIndexFileBlockSize = 12 * 1024;
+
 		public static readonly Type DefaultCryptoServiceProvider = typeof(AesManaged);
 
 	}
