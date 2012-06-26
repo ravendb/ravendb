@@ -19,6 +19,28 @@
 					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel" 
                          Title="Edit Document">
     <Infrastructure:PageView.Resources>
+        <LinearGradientBrush x:Key="ErrorAreaBorderBrush" EndPoint="0.5,1" StartPoint="0.5,0">
+            <GradientStop Color="#D6D6D6"/>
+            <GradientStop Color="#C2C2C2" Offset="1"/>
+        </LinearGradientBrush>
+        <Storyboard x:Key="HighlightErrorArea">
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.Foreground).(SolidColorBrush.Color)" To="White" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ErrorsGrid" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[0].Color" To="#D67171" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ErrorsGrid" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[1].Color" To="#C25858" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[0].Color" To="#D67171" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[1].Color" To="#C25858" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.Background).(LinearGradientBrush.GradientStops)[0].Color" To="#D67171" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.Background).(LinearGradientBrush.GradientStops)[1].Color" To="#C25858" Duration="0:0:0.1"/>
+        </Storyboard>
+        <Storyboard x:Key="UnhighlightErrorArea">
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.Foreground).(SolidColorBrush.Color)" To="Black" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ErrorsGrid" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[0].Color" To="#D6D6D6" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ErrorsGrid" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[1].Color" To="#C2C2C2" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[0].Color" To="#D6D6D6" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[1].Color" To="#C2C2C2" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.Background).(LinearGradientBrush.GradientStops)[0].Color" To="#D6D6D6" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.Background).(LinearGradientBrush.GradientStops)[1].Color" To="#C2C2C2" Duration="0:0:0.1"/>
+        </Storyboard>
         <Storyboard x:Key="ShowSearch">
             <DoubleAnimation Storyboard.TargetName="SearchBorder" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.1"/>
             <ObjectAnimationUsingKeyFrames Storyboard.TargetName="SearchBorder" Storyboard.TargetProperty="Visibility">
@@ -333,6 +355,12 @@
 
                 <Border x:Name="ErrorArea" Height="24" Grid.Row="3" Margin="5,0,10,10">
                     <i:Interaction.Triggers>
+                        <ei:DataTrigger Binding="{Binding DocumentErrors.Count}" Value="0" Comparison="GreaterThan">
+                            <ei:ControlStoryboardAction ControlStoryboardOption="Play" Storyboard="{StaticResource HighlightErrorArea}"/>
+                        </ei:DataTrigger>
+                        <ei:DataTrigger Binding="{Binding DocumentErrors.Count}" Value="0" Comparison="Equal">
+                            <ei:ControlStoryboardAction ControlStoryboardOption="Play" Storyboard="{StaticResource UnhighlightErrorArea}"/>
+                        </ei:DataTrigger>
                         <ei:DataTrigger Binding="{Binding IsShowingErrors}" Value="True" Comparison="Equal">
                             <ei:ControlStoryboardAction ControlStoryboardOption="Play" Storyboard="{StaticResource ShowErrorsPanel}"/>
                         </ei:DataTrigger>
@@ -345,17 +373,22 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <ToggleButton IsChecked="{Binding IsShowingErrors, Mode=TwoWay}" HorizontalAlignment="Left"
+                        <ToggleButton 
+                                    x:Name="ShowErrorsButton"
+                                      IsChecked="{Binding IsShowingErrors, Mode=TwoWay}" HorizontalAlignment="Left"
                                       Style="{StaticResource Style_ToggleButton_ErrorExpander}"
                                       MinWidth="80"
-                                      HorizontalContentAlignment="Left">
+                                      HorizontalContentAlignment="Left"
+                                      Foreground="Black"
+                                      Background="{StaticResource ErrorAreaBorderBrush}"
+                                      BorderBrush="{StaticResource ErrorAreaBorderBrush}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding DocumentErrors.Count, StringFormat='{}{0} Errors'}"/>
                             </StackPanel>
                         </ToggleButton>
                         <sdk:DataGrid ItemsSource="{Binding DocumentErrors}" AutoGenerateColumns="False"
                                       Grid.Row="1"
-                                      BorderBrush="{StaticResource Brush_ErrorBackground}"
+                                      BorderBrush="{StaticResource ErrorAreaBorderBrush}"
                                       x:Name="ErrorsGrid">
                             <i:Interaction.Triggers>
                                 <Behaviors:DataGridRowDoubleClickTrigger>
