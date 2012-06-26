@@ -312,7 +312,16 @@ namespace Raven.Client.Document
 			WaitForNonStaleResults(waitTimeout);
 			return this;
 		}
-		
+
+		/// <summary>
+		/// When using spatial queries, instruct the query to sort by the distance from the origin point
+		/// </summary>
+		IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance()
+		{
+			OrderBy(Constants.DistanceFieldName);
+			return this;
+		}
+
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>

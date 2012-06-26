@@ -100,6 +100,10 @@ namespace Raven.Client
 		/// <param name="longitude">The longitude.</param>
 		IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude);
 
+		/// <summary>
+		/// When using spatial queries, instruct the query to sort by the distance from the origin point
+		/// </summary>
+		IDocumentQueryCustomization SortByDistance();
 
 		/// <summary>
 		/// Order the search results randomly
