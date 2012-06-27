@@ -91,11 +91,21 @@ namespace Raven.Studio.Features.Documents
 
         private static long GetTotalDocuments()
         {
-            return ApplicationModel.Database.Value == null
-                       ? 0
-                       : ApplicationModel.Database.Value.Statistics == null
-                             ? 0
-                             : ApplicationModel.Database.Value.Statistics.Value.CountOfDocuments;
+            // since we're working on a background thread, we have to be prepare for observable to change underneath us.
+            var databaseModel = ApplicationModel.Database.Value;
+            if (databaseModel == null)
+            {
+                return 0;
+            }
+
+
+            var databaseStatistics = databaseModel.Statistics.Value;
+            if (databaseStatistics == null)
+            {
+                return 0;
+            }
+
+            return databaseStatistics.CountOfDocuments;
         }
 
         public override string GetUrlForNext()
