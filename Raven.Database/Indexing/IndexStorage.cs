@@ -193,6 +193,8 @@ namespace Raven.Database.Indexing
 
 						CheckIndexAndRecover(directory, indexDirectory);
 						IndexWriter.Unlock(directory);
+						// for some reason, just calling ulock doesn't remove this file
+						directory.DeleteFile("write.lock");
 					}
 				}
 			}
