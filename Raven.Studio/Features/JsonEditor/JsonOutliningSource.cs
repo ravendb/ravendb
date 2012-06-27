@@ -78,10 +78,7 @@ namespace Raven.Studio.Features.JsonEditor
 
             if (startPosition.Line != endPosition.Line)
             {
-                // node.EndOffset points to the character after the } or ]
-                // Since we want to show the final } or ] when the region is collapsed
-                // we end the region at the character before it
-                AddNode(new TextRange(node.StartOffset.Value + 1, node.EndOffset.Value - 2),
+                AddNode(new TextRange(node.StartOffset.Value + 1, node.EndOffset.Value - 1),
                         outliningNodeDefinition);
             }
 

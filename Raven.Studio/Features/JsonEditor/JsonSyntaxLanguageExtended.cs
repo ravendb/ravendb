@@ -27,6 +27,8 @@ namespace Raven.Studio.Features.JsonEditor
 
             this.RegisterParser(new JsonParser());
 
+            RegisterService<ITextFormatter>(new JsonTextFormatter());
+
             // Register a tagger provider on the language as a service that can create CustomTag objects
             this.RegisterService(new TextViewTaggerProvider<WordHighlightTagger>(typeof(WordHighlightTagger)));
 

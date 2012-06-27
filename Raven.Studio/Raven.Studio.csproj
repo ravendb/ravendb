@@ -224,6 +224,7 @@
     <Compile Include="Features\JsonEditor\JsonStringNode.g.cs" />
     <Compile Include="Features\JsonEditor\JsonSyntaxLanguage.g.cs" />
     <Compile Include="Features\JsonEditor\JsonSyntaxLanguageExtended.cs" />
+    <Compile Include="Features\JsonEditor\JsonTextFormatter.cs" />
     <Compile Include="Features\JsonEditor\JsonTokenId.g.cs" />
     <Compile Include="Features\JsonEditor\JsonTokenReader.cs" />
     <Compile Include="Features\JsonEditor\JsonTokenTagger.g.cs" />

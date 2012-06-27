@@ -61,8 +61,8 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/edit";
 
-		    dataSection = new DocumentSection() {Name = "Data", Document = new EditorDocument() {Language = JsonLanguage}};
-            metaDataSection = new DocumentSection() { Name="Metadata", Document = new EditorDocument() { Language = JsonLanguage }};
+		    dataSection = new DocumentSection() {Name = "Data", Document = new EditorDocument() {Language = JsonLanguage, TabSize = 2}};
+            metaDataSection = new DocumentSection() { Name = "Metadata", Document = new EditorDocument() { Language = JsonLanguage, TabSize = 2 } };
             DocumentSections = new List<DocumentSection>() { dataSection, metaDataSection};
 		    CurrentSection = dataSection;
 
@@ -859,19 +859,12 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				RavenJObject metadata;
-				try
-				{
-					metadata = RavenJObject.Parse(editableDocumentModel.JsonMetadata);
-					editableDocumentModel.JsonData = RavenJObject.Parse(editableDocumentModel.JsonData).ToString(Formatting.Indented);
-					editableDocumentModel.JsonMetadata = metadata.ToString(Formatting.Indented);
-				}
-				catch (JsonReaderException ex)
-				{
-					ErrorPresenter.Show(ex.Message);
-					return;
-				}
-				editableDocumentModel.UpdateMetadata(metadata);
+			    var document = editableDocumentModel.CurrentSection.Document;
+			    var formatter = document.Language.GetService<ITextFormatter>();
+                if (formatter != null)
+                {
+                    formatter.Format(document.CurrentSnapshot.SnapshotRange);
+                }
 			}
 		}
 	}
