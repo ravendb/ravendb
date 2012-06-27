@@ -9,6 +9,7 @@ using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Database.Extensions;
 
 namespace Raven.Client.Embedded
 {
@@ -70,8 +71,27 @@ namespace Raven.Client.Embedded
 		/// <value>The data directory.</value>
 		public string DataDirectory
 		{
-			get { return Configuration.DataDirectory; }
+			get
+			{
+				return Configuration.DataDirectory;
+			}
 			set { Configuration.DataDirectory = value; }
+		}
+
+		/// <summary>
+		/// Gets or sets the URL.
+		/// </summary>
+		public override string Url
+		{
+			get
+			{
+				return base.Url;
+			}
+			set
+			{
+				DataDirectory = null;
+				base.Url = value;
+			}
 		}
 
 		///<summary>

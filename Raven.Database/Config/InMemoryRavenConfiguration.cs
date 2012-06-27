@@ -554,7 +554,7 @@ namespace Raven.Database.Config
 		public string DataDirectory
 		{
 			get { return dataDirectory; }
-			set { dataDirectory = value.ToFullPath(); }
+			set { dataDirectory = value == null ? null : value.ToFullPath(); }
 		}
 
 		/// <summary>
