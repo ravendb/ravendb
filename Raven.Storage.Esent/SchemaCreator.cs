@@ -348,12 +348,9 @@ namespace Raven.Storage.Esent
 		{
 			foreach (var index in indexes)
 			{
-				index.cbKey = index.szKey.Length;
-				index.ulDensity = 90;
-				index.cbKeyMost = SystemParameters.KeyMost;
 				try
 				{
-					Api.JetCreateIndex2(session, tableid, new[] { index }, 1);
+					Api.JetCreateIndex(session, tableid, index.szIndexName, index.grbit, index.szKey, index.szKey.Length, 90);
 				}
 				catch (Exception e)
 				{
