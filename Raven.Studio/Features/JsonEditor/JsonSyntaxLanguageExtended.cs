@@ -12,6 +12,7 @@ using ActiproSoftware.Text.Tagging;
 using ActiproSoftware.Text.Tagging.Implementation;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining.Implementation;
 using Raven.Studio.Controls;
 using ActiproSoftware.Text;
@@ -22,7 +23,7 @@ namespace Raven.Studio.Features.JsonEditor
     {
         public JsonSyntaxLanguageExtended() : base()
         { 
-            this.RegisterOutliner(new TokenOutliner<JsonOutliningSource>());
+            this.RegisterService<IOutliner>(new JsonOutliner());
 
             this.RegisterParser(new JsonParser());
 

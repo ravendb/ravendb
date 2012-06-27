@@ -15,28 +15,28 @@ namespace Raven.Studio.Features.JsonEditor {
     public partial class JsonAstNodeId : AstNodeIdProviderBase {
         
         /// <summary>
-        /// Gets the <c>Array</c> AST node ID.
+        /// Gets the <c>JsonArrayNode</c> AST node ID.
         /// </summary>
-        [DescriptionAttribute("Array")]
-        public const Int32 Array = 1;
+        [DescriptionAttribute("Json array")]
+        public const Int32 JsonArrayNode = 1;
         
         /// <summary>
-        /// Gets the <c>Object</c> AST node ID.
+        /// Gets the <c>JsonObjectNode</c> AST node ID.
         /// </summary>
-        [DescriptionAttribute("Object")]
-        public const Int32 Object = 2;
+        [DescriptionAttribute("Json object")]
+        public const Int32 JsonObjectNode = 2;
         
         /// <summary>
-        /// Gets the <c>StringValue</c> AST node ID.
+        /// Gets the <c>JsonPropertyValuePairNode</c> AST node ID.
         /// </summary>
-        [DescriptionAttribute("String")]
-        public const Int32 StringValue = 3;
+        [DescriptionAttribute("Json property value pair")]
+        public const Int32 JsonPropertyValuePairNode = 3;
         
         /// <summary>
-        /// Gets the <c>Value</c> AST node ID.
+        /// Gets the <c>JsonStringNode</c> AST node ID.
         /// </summary>
-        [DescriptionAttribute("Value")]
-        public const Int32 Value = 4;
+        [DescriptionAttribute("Json string")]
+        public const Int32 JsonStringNode = 4;
         
         /// <summary>
         /// Gets the minimum AST node ID returned by this provider.

@@ -81,9 +81,9 @@ namespace Raven.Studio.Features.JsonEditor {
             lexicalPatternGroup = new DynamicLexicalPatternGroup(DynamicLexicalPatternType.Regex, "Number", classificationTypeProvider.Number);
             lexicalPatternGroup.TokenId = JsonTokenId.Number;
             lexicalPatternGroup.LookAheadPattern = "{NonWord}|\\z";
-            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[+\\-]?{Digit}* \\. {Digit}+ ([Ee] [\\+\\-]? {Digit}+)?"));
-            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[+\\-]?{Digit}+ [Ee] [\\+\\-]? {Digit}+"));
-            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[+\\-]?{Digit}+"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[\\+\\-]?{Digit}* \\. {Digit}+ ([Ee] [\\+\\-]? {Digit}+)?"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[\\+\\-]?{Digit}+ [Ee] [\\+\\-]? {Digit}+"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[\\+\\-]?{Digit}+"));
             lexicalState.LexicalPatternGroups.Add(lexicalPatternGroup);
 
             // Initialize the PrimaryString lexical state
@@ -101,9 +101,16 @@ namespace Raven.Studio.Features.JsonEditor {
             lexicalPatternGroup.TokenId = JsonTokenId.StringEndDelimiter;
             lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\""));
             lexicalScope.EndLexicalPatternGroup = lexicalPatternGroup;
-            lexicalPatternGroup = new DynamicLexicalPatternGroup(DynamicLexicalPatternType.Regex, "EscapedCharacter", null);
+            lexicalPatternGroup = new DynamicLexicalPatternGroup(DynamicLexicalPatternType.Explicit, "EscapedCharacter", null);
             lexicalPatternGroup.TokenId = JsonTokenId.EscapedCharacter;
-            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\\\[\\\"\\\\/bfnrt]"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\\""));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\\\"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\/"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\b"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\f"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\n"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\r"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("\\t"));
             lexicalState.LexicalPatternGroups.Add(lexicalPatternGroup);
             lexicalPatternGroup = new DynamicLexicalPatternGroup(DynamicLexicalPatternType.Regex, "EscapedUnicode", null);
             lexicalPatternGroup.TokenId = JsonTokenId.EscapedUnicode;
@@ -111,7 +118,7 @@ namespace Raven.Studio.Features.JsonEditor {
             lexicalState.LexicalPatternGroups.Add(lexicalPatternGroup);
             lexicalPatternGroup = new DynamicLexicalPatternGroup(DynamicLexicalPatternType.Regex, "StringText", null);
             lexicalPatternGroup.TokenId = JsonTokenId.StringText;
-            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[^\\\"\\\\]+"));
+            lexicalPatternGroup.Patterns.Add(new DynamicLexicalPattern("[^\\\"\\\\\\n]+"));
             lexicalState.LexicalPatternGroups.Add(lexicalPatternGroup);
         }
     }

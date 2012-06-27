@@ -40,16 +40,38 @@ namespace Raven.Studio.Features.JsonEditor
             var propertyValueList = new NonTerminal("PropertyValueList");
             var value = new NonTerminal("Value") { ErrorAlias = "Value"};
             var array = new NonTerminal("Array");
+            
             var stringValue = new NonTerminal("String");
 
-            jsonObject.Production = @openCurly + propertyValueList.OnError(AdvanceToStringOrClosingBrace).ZeroOrMore() + @closeCurly.OnErrorContinue();
-            propertyValueList.Production = propertyValue + @comma.OnError(DontReportBeforeClosingBrace);
-            propertyValue.Production = stringValue + @colon + value;
+            jsonObject.Production = @openCurly +
+                                        propertyValueList.OnError(AdvanceToStringOrClosingBrace).ZeroOrMore().SetLabel("propValues") 
+                                    + @closeCurly.OnErrorContinue()
+                                    > Ast<JsonObjectNode>()
+                                    .AddToCollectionProperty(a => a.PropertyValues, AstChildrenFrom("propValues"));
 
-            value.Production = stringValue | @number | jsonObject | array | @true | @false | @null;
-            array.Production = @openSquare + (value + (@comma + value).ZeroOrMore()).Optional() + @closeSquare.OnErrorContinue();
+            propertyValueList.Production = propertyValue["propValue"] + @comma.OnError(DontReportBeforeClosingBrace) > AstFrom("propValue");
+            propertyValue.Production = stringValue["propName"] + @colon + value["propValue"] > Ast<JsonPropertyValuePairNode>()
+                .SetProperty(a => a.Name, AstFrom("propName"))
+                .SetProperty(a => a.Value, AstFrom("propValue"));
 
-            stringValue.Production = @startString + (@stringCharacters | @escapedCharacter | @escapedUnicode).ZeroOrMore() + @endString.OnErrorContinue();
+            value.Production = stringValue["value"] > AstFrom("value") 
+                | @number["value"] > AstFrom("value") 
+                | jsonObject["value"] > AstFrom("value")
+                | array["value"] > AstFrom("value")
+                | @true["value"] > AstFrom("value")
+                | @false["value"] > AstFrom("value")
+                | @null["value"] > AstFrom("value");
+
+            array.Production = @openSquare +
+                               (value["value1"] +
+                                (@comma + value["value"] > AstFrom("value")).ZeroOrMore().SetLabel("values")).
+                                   Optional() + @closeSquare.OnErrorContinue()
+                               > Ast<JsonArrayNode>()
+                                     .AddToCollectionProperty(a => a.Values, AstFrom("value1"),
+                                                              AstChildrenFrom("values"));
+
+            stringValue.Production = @startString + (@stringCharacters | @escapedCharacter | @escapedUnicode).ZeroOrMore().SetLabel("characters") + @endString.OnErrorContinue()
+                > Ast<JsonStringNode>().SetProperty(a => a.Value, AstChildrenFrom("characters"));
 
             this.Root = jsonObject;
         }

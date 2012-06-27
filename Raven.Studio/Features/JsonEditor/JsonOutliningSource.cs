@@ -9,53 +9,107 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using ActiproSoftware.Text;
+using ActiproSoftware.Text.Parsing;
+using ActiproSoftware.Text.Parsing.LLParser;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining.Implementation;
 
 namespace Raven.Studio.Features.JsonEditor
 {
-    public class JsonOutliningSource : TokenOutliningSourceBase
+    public class JsonOutliningSource : RangeOutliningSourceBase
     {
         private static OutliningNodeDefinition squareBraceDefinition;
         private static OutliningNodeDefinition curlyBraceDefinition;
 
         public JsonOutliningSource(ITextSnapshot snapshot) : base(snapshot)
         {
+            Outline(snapshot);
+        }
+
+        private void Outline(ITextSnapshot snapshot)
+        {
+            var rootNode = GetRootAstNode(snapshot);
+            if (rootNode != null)
+            {
+                ProcessJsonObjectPropertyValues(rootNode,snapshot);
+            }
+        }
+
+        private void ProcessJsonObjectPropertyValues(JsonObjectNode rootNode, ITextSnapshot snapshot)
+        {
+            foreach (var jsonPropertyValuePair in rootNode.PropertyValues)
+            {
+                ProcessValue(snapshot, jsonPropertyValuePair.Value);
+            }
+        }
+
+        private void ProcessValue(ITextSnapshot snapshot, IAstNode valueNode)
+        {
+            if (valueNode is JsonObjectNode)
+            {
+                ProcessJsonObject(snapshot, valueNode as JsonObjectNode);
+            }
+            else if (valueNode is JsonArrayNode)
+            {
+                AddOutliningNode(snapshot, valueNode, squareBraceDefinition);
+
+                foreach (var node in (valueNode as JsonArrayNode).Values)
+                {
+                    ProcessValue(snapshot, node);
+                }
+            }
+        }
+
+        private void ProcessJsonObject(ITextSnapshot snapshot, JsonObjectNode jsonObject)
+        {
+            AddOutliningNode(snapshot, jsonObject, curlyBraceDefinition);
+            ProcessJsonObjectPropertyValues(jsonObject, snapshot);
+        }
+
+        private void AddOutliningNode(ITextSnapshot snapshot, IAstNode node, OutliningNodeDefinition outliningNodeDefinition)
+        {
+            if (!node.StartOffset.HasValue || !node.EndOffset.HasValue)
+            {
+                return;
+            }
+
+            var startPosition = snapshot.OffsetToPosition(node.StartOffset.Value);
+            var endPosition = snapshot.OffsetToPosition(node.EndOffset.Value);
+
+            if (startPosition.Line != endPosition.Line)
+            {
+                // node.EndOffset points to the character after the } or ]
+                // Since we want to show the final } or ] when the region is collapsed
+                // we end the region at the character before it
+                AddNode(new TextRange(node.StartOffset.Value, node.EndOffset.Value - 2),
+                        outliningNodeDefinition);
+            }
+
+        }
+
+        private JsonObjectNode GetRootAstNode(ITextSnapshot snapshot)
+        {
+            var codeDoc = (snapshot.Document as ICodeDocument);
+            if (codeDoc == null)
+            {
+                return null;
+            }
+
+            var parseData = codeDoc.ParseData as ILLParseData;
+            if (parseData == null)
+            {
+                return null;
+            }
+
+            var node = parseData.Ast as JsonObjectNode;
+            return node;
         }
 
         static JsonOutliningSource()
         {
-            squareBraceDefinition = new OutliningNodeDefinition("SquareBrace")
-                                        {
-                                            IsImplementation = true
-                                        };
+            squareBraceDefinition = new OutliningNodeDefinition("SquareBrace");
 
-            curlyBraceDefinition = new OutliningNodeDefinition("CurlyBrace")
-                                       {
-                                           IsImplementation = true
-                                       };
-
-        }
-        protected override ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining.OutliningNodeAction GetNodeActionForToken(ActiproSoftware.Text.Lexing.IToken token, out ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining.IOutliningNodeDefinition definition)
-        {
-            switch (token.Key)
-            {
-                case "OpenCurlyBrace":
-                    definition = curlyBraceDefinition;
-                    return OutliningNodeAction.Start;
-                case "CloseCurlyBrace":
-                    definition = curlyBraceDefinition;
-                    return OutliningNodeAction.End;
-                case "OpenSquareBrace":
-                    definition = squareBraceDefinition;
-                    return OutliningNodeAction.Start;
-                case "CloseSquareBrace":
-                    definition = squareBraceDefinition;
-                    return OutliningNodeAction.End;
-                default:
-                    definition = null;
-                    return OutliningNodeAction.None;
-            }
+            curlyBraceDefinition = new OutliningNodeDefinition("CurlyBrace");
         }
     }
 }

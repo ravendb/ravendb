@@ -34,8 +34,9 @@ Actipro Syntax Language Project (.langproj)
 				<ExplicitPatternGroup TokenKey="False" ClassificationTypeKey="Keyword" Pattern="false" CaseSensitivity="AutoCorrect" />
 				<ExplicitPatternGroup TokenKey="Null" ClassificationTypeKey="Keyword" Pattern="null" CaseSensitivity="AutoCorrect" />
 				<RegexPatternGroup TokenKey="Number" ClassificationTypeKey="Number" LookAheadPattern="{NonWord}|\z">
-					<RegexPattern Value="{Digit}* \. {Digit}+ ([Ee] [\+\-]? {Digit}+)?" />
-					<RegexPattern Value="{Digit}+ [Ee] [\+\-]? {Digit}+" />
+					<RegexPattern Value="[\+\-]?{Digit}* \. {Digit}+ ([Ee] [\+\-]? {Digit}+)?" />
+					<RegexPattern Value="[\+\-]?{Digit}+ [Ee] [\+\-]? {Digit}+" />
+					<RegexPattern Value="[\+\-]?{Digit}+" />
 				</RegexPatternGroup>
 			</State>
 			<!-- PrimaryString state -->
@@ -50,14 +51,11 @@ Actipro Syntax Language Project (.langproj)
 						</Scope.EndPatternGroup>
 					</Scope>
 				</State.Scopes>
-				<ExplicitPatternGroup TokenKey="EscapedQuote" Pattern="\&quot;" />
-				<ExplicitPatternGroup TokenKey="EscapedReverseSolidus" Pattern="\\" />
-				<ExplicitPatternGroup TokenKey="EscapedSolidus" Pattern="\/" />
-				<ExplicitPatternGroup TokenKey="EscapedBackspace" Pattern="\b" />
-				<ExplicitPatternGroup TokenKey="EscapedFormFeed" Pattern="\f" />
-				<ExplicitPatternGroup TokenKey="EscapedNewLine" Pattern="\n" />
-				<ExplicitPatternGroup TokenKey="EscapedCarriageReturn" Pattern="\r" />
-				<ExplicitPatternGroup TokenKey="EscapedTab" Pattern="\t" />
+				<ExplicitPatternGroup TokenKey="EscapedCharacter">
+					<ExplicitPatterns><![CDATA[
+						\" \\ \/ \b \f \n \r \t
+					]]></ExplicitPatterns>
+				</ExplicitPatternGroup>
 				<RegexPatternGroup TokenKey="EscapedUnicode" Pattern="\\u[0-9a-fA-F]{4}" />
 				<RegexPatternGroup TokenKey="StringText" Pattern="[^\&quot;\\\n]+" />
 			</State>
@@ -67,6 +65,30 @@ Actipro Syntax Language Project (.langproj)
 	<LanguageProject.LLParser>
 		<LLParser DebuggerAssemblyPath="C:\Projects\HibernatingRhinos\RavenJsonParserTest\JsonDebuggerTest\JsonDebuggerTest\bin\Debug\JsonDebuggerTest.dll" DebuggerParserTypeName="Raven.Studio.Features.JsonEditor.JsonParser" />
 	</LanguageProject.LLParser>
+	<!-- AST nodes -->
+	<LanguageProject.AstNodes>
+		<AstNode Key="JsonArrayNode" Description="Json array">
+			<AstNode.Properties>
+				<AstNodeProperty Key="Values" PropertyType="AstNodeList" Type="IAstNode" Description="Values" />
+			</AstNode.Properties>
+		</AstNode>
+		<AstNode Key="JsonObjectNode" Description="Json object">
+			<AstNode.Properties>
+				<AstNodeProperty Key="PropertyValues" PropertyType="AstNodeList" Type="JsonPropertyValuePairNode" Description="Property values" />
+			</AstNode.Properties>
+		</AstNode>
+		<AstNode Key="JsonPropertyValuePairNode" Description="Json property value pair">
+			<AstNode.Properties>
+				<AstNodeProperty Key="Name" PropertyType="AstNode" Type="JsonStringNode" Description="Name" />
+				<AstNodeProperty Key="Value" PropertyType="AstNode" Type="IAstNode" Description="Value" />
+			</AstNode.Properties>
+		</AstNode>
+		<AstNode Key="JsonStringNode" Description="Json string">
+			<AstNode.Properties>
+				<AstNodeProperty Key="Value" Type="String" Description="Value" />
+			</AstNode.Properties>
+		</AstNode>
+	</LanguageProject.AstNodes>
 	<!-- Example text -->
 	<LanguageProject.ExampleText><![CDATA[{
   "Property": "StringValue",

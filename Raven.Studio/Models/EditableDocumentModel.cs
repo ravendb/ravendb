@@ -666,6 +666,28 @@ namespace Raven.Studio.Models
             var parseData = editorDocument.ParseData as ILLParseData;
             return parseData != null && parseData.Errors.Any();
         }
+
+        private Task WhenParsingComplete(IEditorDocument document)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+            if ((document.ParseData as ILLParseData).Snapshot == document.CurrentSnapshot)
+            {
+                tcs.SetResult(true);
+            }
+            else
+            {
+                EventHandler<ParseDataPropertyChangedEventArgs> completed = null;
+                completed = (s, e) =>
+                                {
+                                    tcs.SetResult(true);
+                                    document.ParseDataChanged -= completed;
+                                };
+                document.ParseDataChanged += completed;
+            }
+
+            return tcs.Task;
+        }
+
 		public ICommand Save
 		{
 			get { return new SaveDocumentCommand(this); }
@@ -755,22 +777,28 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-                if (!parentModel.IsDocumentValid())
-                {
-                    this.parentModel.IsShowingErrors = true;
-                }
-
-				if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
-				{
-					AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
-						.ContinueWhenTrueInTheUIThread(SaveDocument);
-					return;
-				}
-
-				SaveDocument();
+			    TaskEx.WhenAll(parentModel.DocumentSections.Select(s => parentModel.WhenParsingComplete(s.Document)))
+			        .ContinueOnUIThread(t => ConfirmSave());
 			}
 
-			private void SaveDocument()
+		    private void ConfirmSave()
+		    {
+		        if (!parentModel.IsDocumentValid())
+		        {
+		            this.parentModel.IsShowingErrors = true;
+		        }
+
+		        if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+		        {
+		            AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
+		                .ContinueWhenTrueInTheUIThread(SaveDocument);
+		            return;
+		        }
+
+		        SaveDocument();
+		    }
+
+		    private void SaveDocument()
 			{
 				RavenJObject doc;
 				RavenJObject metadata;
