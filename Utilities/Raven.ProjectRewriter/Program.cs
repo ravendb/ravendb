@@ -14,13 +14,13 @@ namespace Raven.ProjectRewriter
 		static XNamespace xmlns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
 		static void Main(string[] args)
 		{
-			Generate35(@"Raven.Abstractions\Raven.Abstractions.csproj",
-				@"Raven.Abstractions\Raven.Abstractions.g.3.5.csproj",
-				"Raven.Json");
-			Generate35(@"Raven.Client.Lightweight\Raven.Client.Lightweight.csproj",
-				@"Raven.Client.Lightweight\Raven.Client.Lightweight.g.3.5.csproj",
-				"Raven.Json",
-				"Raven.Abstractions");
+			//Generate35(@"Raven.Abstractions\Raven.Abstractions.csproj",
+			//    @"Raven.Abstractions\Raven.Abstractions.g.3.5.csproj",
+			//    "Raven.Json");
+			//Generate35(@"Raven.Client.Lightweight\Raven.Client.Lightweight.csproj",
+			//    @"Raven.Client.Lightweight\Raven.Client.Lightweight.g.3.5.csproj",
+			//    "Raven.Json",
+			//    "Raven.Abstractions");
 
 			GenerateSilverlight4(@"Raven.Client.Silverlight\Raven.Client.Silverlight.csproj",
 				@"Raven.Client.Silverlight\Raven.Client.Silverlight.g.4.csproj");
