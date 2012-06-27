@@ -648,6 +648,7 @@
     <Compile Include="MailingList\RobinM\AttachmentsStatic.cs" />
     <Compile Include="MailingList\RyanD.cs" />
     <Compile Include="MailingList\Samina2.cs" />
+    <Compile Include="MailingList\Samina3.cs" />
     <Compile Include="MailingList\Scott.cs" />
     <Compile Include="MailingList\SearchByMapReduceExample.cs" />
     <Compile Include="MailingList\SpecialChars.cs" />

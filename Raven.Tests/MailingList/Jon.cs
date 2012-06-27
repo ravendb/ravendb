@@ -61,7 +61,8 @@ namespace Raven.Tests.MailingList
 
 				using(var session = store.OpenSession())
 				{
-					var userWithPermissionses = session.Query<UserWithPermissions, PermissionsByUser>().Customize(x => x.WaitForNonStaleResults()).ToList();
+					var userWithPermissionses = session.Query<UserWithPermissions, PermissionsByUser>().Customize(x => 
+						x.WaitForNonStaleResults()).ToList();
 					Assert.NotEmpty(userWithPermissionses);
 				}
 			}
