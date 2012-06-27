@@ -351,11 +351,6 @@ namespace Raven.Storage.Esent
 				index.cbKey = index.szKey.Length;
 				index.ulDensity = 90;
 				index.cbKeyMost = SystemParameters.KeyMost;
-				index.pidxUnicode = new JET_UNICODEINDEX
-				{
-					lcid = 1033,
-					dwMapFlags = LCMAP_SORTKEY | NORM_IGNORECASE | NORM_IGNOREKANATYPE | NORM_IGNOREWIDTH
-				};
 				try
 				{
 					Api.JetCreateIndex2(session, tableid, new[] { index }, 1);
