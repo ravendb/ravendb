@@ -43,7 +43,7 @@ namespace Raven.Studio.Infrastructure
 
         protected virtual void OnViewLoaded()
         {
-            ParserDispatcherManager.EnsureParserDispatcherIsCreated();
+       
         }
 
         protected IObservable<Unit> Unloaded

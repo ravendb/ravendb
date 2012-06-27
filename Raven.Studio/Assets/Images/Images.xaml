@@ -43,5 +43,6 @@
     <BitmapImage x:Key="Image_CopyToClipboard_Tiny" UriSource="copy_to_clipboard_tiny.png"/>
     <BitmapImage x:Key="Image_Logs_Small" UriSource="logs_small.png"/>
     <BitmapImage x:Key="Image_Tasks_Small" UriSource="tasks_small.png"/>
+    <BitmapImage x:Key="Image_ToggleExpansion_Tiny" UriSource="Collapse_tiny.png"/>
     
 </ResourceDictionary>

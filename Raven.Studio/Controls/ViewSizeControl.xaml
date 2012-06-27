@@ -11,7 +11,8 @@
 			 d:DesignWidth="400">
 
 	<Grid x:Name="LayoutRoot">
-        <Delay:SplitButtonPopup x:Name="ToggleButton" ToolTipService.ToolTip="Switch between views"  Command="{Binding ToggleViewSize}" DropDownToolTip="More Options">
+        <Delay:SplitButtonPopup x:Name="ToggleButton" ToolTipService.ToolTip="Switch between views"  Command="{Binding ToggleViewSize}" DropDownToolTip="More Options"
+                                PopupAlignment="Right">
             <Delay:SplitButtonPopup.Content>
 					<Image Source="{StaticResource Image_ChangeView_Tiny}"
 						   Stretch="None"

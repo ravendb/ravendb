@@ -11,6 +11,7 @@ using ActiproSoftware.Text;
 using ActiproSoftware.Text.Implementation;
 using ActiproSoftware.Text.Parsing;
 using ActiproSoftware.Text.Parsing.LLParser;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Logging;
 using Raven.Imports.Newtonsoft.Json;
@@ -54,10 +55,30 @@ namespace Raven.Studio.Models
 
         static EditableDocumentModel()
         {
+            InitialiseOutliningModes();
             JsonLanguage = new JsonSyntaxLanguageExtended();
         }
 
-		public EditableDocumentModel()
+        private static void InitialiseOutliningModes()
+        {
+            OutliningModes = (new List<DocumentOutliningMode>()
+                                  {
+                                      new DocumentOutliningMode("Disabled")
+                                          {Applicator = document => document.OutliningMode = OutliningMode.None},
+                                      new DocumentOutliningMode("Enabled")
+                                          {Applicator = document => document.OutliningMode = OutliningMode.Automatic},
+                                      new DocumentOutliningMode("Auto-Collapse Collections")
+                                          {
+                                              Applicator = document =>
+                                                               {
+                                                                   document.OutliningMode = OutliningMode.Automatic;
+                                                                   document.OutliningManager.ToggleAllOutliningExpansion();
+                                                               }
+                                          },
+                                  }).AsReadOnly();
+        }
+
+        public EditableDocumentModel()
 		{
 			ModelUrl = "/edit";
 
@@ -74,6 +95,7 @@ namespace Raven.Studio.Models
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
+
             InitialiseDocument();
 
             ParentPathSegments = new ObservableCollection<PathSegment>()
@@ -82,8 +104,6 @@ namespace Raven.Studio.Models
                                      };
 
             currentDatabase = Database.Value.Name;
-
-
 
 		    dataSection.Document.ObserveTextChanged()
                 .Merge(metaDataSection.Document.ObserveTextChanged())
@@ -177,6 +197,51 @@ namespace Raven.Studio.Models
             }
         }
 
+        public ICommand ToggleExpansion
+        {
+            get { return toggleExpansion ?? (toggleExpansion = new ActionCommand(HandleToggleExpansion)); }
+        }
+
+        public DocumentOutliningMode SelectedOutliningMode
+        {
+            get { return outliningMode; }
+            set
+            {
+                outliningMode = value;
+                OnPropertyChanged(() => SelectedOutliningMode);
+
+                StoreOutliningMode();
+                ApplyOutliningMode();
+            }
+        }
+
+        private void StoreOutliningMode()
+        {
+            Settings.Instance.DocumentOutliningMode = SelectedOutliningMode.Name;
+        }
+
+        private void ApplyOutliningMode()
+        {
+            if (outliningMode != null)
+            {
+                foreach (var document in DocumentSections.Select(s => s.Document))
+                {
+                    outliningMode.Applicator(document);
+                }
+            }
+        }
+
+        private void HandleToggleExpansion()
+        {
+            if (CurrentSection.Document == null)
+            {
+                return;
+            }
+
+            CurrentSection.Document.OutliningMode = OutliningMode.Automatic;
+            CurrentSection.Document.OutliningManager.ToggleAllOutliningExpansion();
+        }
+
         private void HandleNavigation(string url)
         {
             if (!string.IsNullOrEmpty(url))
@@ -237,6 +302,8 @@ namespace Raven.Studio.Models
 
                         ParentPathSegments.Clear();
                         ParentPathSegments.AddRange(result.ParentPath);
+
+                        ApplyOutliningMode();
                     })
                 .Catch();
         }
@@ -594,6 +661,22 @@ namespace Raven.Studio.Models
                 .Catch();
         }
 
+        protected override void OnViewLoaded()
+        {
+            ParserDispatcherManager.EnsureParserDispatcherIsCreated();
+
+            if (!string.IsNullOrEmpty(Settings.Instance.DocumentOutliningMode))
+            {
+                var mode = OutliningModes.FirstOrDefault(m => m.Name == Settings.Instance.DocumentOutliningMode);
+                if (mode == null)
+                {
+                    mode = OutliningModes.FirstOrDefault(m => m.Name == "Enabled");
+                }
+
+                SelectedOutliningMode = mode;
+            }
+        }
+
 		public string Key
 		{
 			get { return document.Value.Key; }
@@ -639,7 +722,10 @@ namespace Raven.Studio.Models
 		}
 
 		private IDictionary<string, string> metadata;
-        
+        private ICommand toggleExpansion;
+        private DocumentOutliningMode outliningMode;
+        public static IList<DocumentOutliningMode> OutliningModes { get; private set; }
+
 
         public IEnumerable<KeyValuePair<string, string>> Metadata
 		{
@@ -889,5 +975,16 @@ namespace Raven.Studio.Models
         public DocumentSection Section { get; set; }
 
         public IParseError ParseError { get; set; }
+    }
+
+    public class DocumentOutliningMode
+    {
+        public DocumentOutliningMode(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; private set; }
+        public Action<IEditorDocument> Applicator { get; set; }
     }
 }

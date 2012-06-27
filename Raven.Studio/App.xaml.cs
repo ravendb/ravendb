@@ -16,6 +16,7 @@ namespace Raven.Studio
 			this.Startup += this.Application_Startup;
 			this.UnhandledException += this.Application_UnhandledException;
 
+            LoadDefaults();
 			InitializeComponent();
 		}
 
@@ -29,17 +30,16 @@ namespace Raven.Studio
 			ApplicationModel.Current.Setup(rootVisual);
 			this.RootVisual = rootVisual;
 
-		    LoadDefaults();
 		}
 
 	    private void LoadDefaults()
 	    {
-	        DocumentSize.Current.LoadDefaults(IsolatedStorageSettings.ApplicationSettings);
+	        Settings.Instance.LoadSettings(IsolatedStorageSettings.ApplicationSettings);
 	    }
 
 	    private void HandleExit(object sender, EventArgs e)
 	    {
-            DocumentSize.Current.SaveDefaults(IsolatedStorageSettings.ApplicationSettings);
+            Settings.Instance.SaveSettings(IsolatedStorageSettings.ApplicationSettings);
 
             IsolatedStorageSettings.ApplicationSettings.Save();
 	    }

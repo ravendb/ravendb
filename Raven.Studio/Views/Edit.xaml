@@ -15,7 +15,7 @@
                          xmlns:z="clr-namespace:Raven.Studio.Infrastructure.MarkupExtensions"
                          xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
                          xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
-                         mc:Ignorable="d"
+                         xmlns:Delay="clr-namespace:Delay" mc:Ignorable="d"
 					 Infrastructure:ModelAttacher.AttachObservableModel="EditableDocumentModel" 
                          Title="Edit Document">
     <Infrastructure:PageView.Resources>
@@ -181,7 +181,36 @@
 							   Stretch="None" />
                     </Button>
 
-                    <Button Command="{Binding Refresh}"
+                        <Delay:SplitButtonPopup Command="{Binding ToggleExpansion}"
+							Margin="4,0"
+							ToolTipService.ToolTip="Toggle Outlining Expansion"
+                            DropDownToolTip="More Options">
+                            <Image Source="{StaticResource Image_ToggleExpansion_Tiny}"
+							   Stretch="None" />
+                            <Delay:SplitButtonPopup.PopupContent>
+                                <Border Background="#EFEFEF"
+					                BorderThickness="1"
+					                BorderBrush="Gray"
+					                Margin="0,20,0,0">
+                                    <Border.Effect>
+                                        <DropShadowEffect Opacity="0.4" />
+                                    </Border.Effect>
+                                    <StackPanel>
+                                        <TextBlock Text="Outlining Mode" FontWeight="Bold" Margin="5,5"/>
+                                    <ListBox ItemsSource="{Binding OutliningModes}" SelectedItem="{Binding SelectedOutliningMode, Mode=TwoWay}"
+                                             Style="{StaticResource Style_ListBox_RadioButtons}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name}"/>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </StackPanel>
+                                </Border>
+                            </Delay:SplitButtonPopup.PopupContent>
+                        </Delay:SplitButtonPopup>
+
+                        <Button Command="{Binding Refresh}"
 							Style="{StaticResource Style_Button_MouseOverChrome}"
 							Margin="4,0"
 							ToolTipService.ToolTip="Refresh Document (Ctrl-R)">

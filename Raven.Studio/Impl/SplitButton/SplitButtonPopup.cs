@@ -7,8 +7,9 @@ using System;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using Boogaart.Silverlight.Behaviors;
+using Popup = System.Windows.Controls.Primitives.Popup;
 
 namespace Delay
 {
@@ -20,6 +21,15 @@ namespace Delay
     {
         public static readonly DependencyProperty PopupContentProperty =
             DependencyProperty.Register("PopupContent", typeof (object), typeof (SplitButtonPopup), new PropertyMetadata(default(object)));
+
+        public static readonly DependencyProperty PopupAlignmentProperty =
+            DependencyProperty.Register("PopupAlignment", typeof (PopupHorizontalAlignment), typeof (SplitButtonPopup), new PropertyMetadata(PopupHorizontalAlignment.Left));
+
+        public PopupHorizontalAlignment PopupAlignment
+        {
+            get { return (PopupHorizontalAlignment) GetValue(PopupAlignmentProperty); }
+            set { SetValue(PopupAlignmentProperty, value); }
+        }
 
         public object PopupContent
         {
@@ -195,7 +205,10 @@ namespace Delay
         /// </summary>
         private void UpdatePopupOffsets()
         {
-            _popup.HorizontalOffset = -_popup.Child.DesiredSize.Width + ActualWidth;
+            if (PopupAlignment == PopupHorizontalAlignment.Right)
+            {
+                _popup.HorizontalOffset = -_popup.Child.DesiredSize.Width + ActualWidth;
+            }
         }
 
     }

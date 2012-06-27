@@ -282,6 +282,7 @@
     <Compile Include="Infrastructure\RecyclingContentLoader.cs" />
     <Compile Include="Infrastructure\RefreshMode.cs" />
     <Compile Include="Infrastructure\Schedulers.cs" />
+    <Compile Include="Infrastructure\Settings.cs" />
     <Compile Include="Infrastructure\SparseList.cs" />
     <Compile Include="Infrastructure\Validation.cs" />
     <Compile Include="Infrastructure\Validators\DataGridLengthAttribute.cs" />
@@ -841,6 +842,7 @@
     <Resource Include="Assets\Images\error_small.png" />
     <Resource Include="Assets\Images\navigate_first_tiny.png" />
     <Resource Include="Assets\Images\navigate_last_tiny.png" />
+    <Resource Include="Assets\Images\Collapse_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
