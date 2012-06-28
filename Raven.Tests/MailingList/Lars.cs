@@ -49,10 +49,7 @@ namespace Raven.Tests.MailingList
 			{
 				new Index().Execute(s);
 				var indexDefinition = s.DocumentDatabase.IndexDefinitionStorage.GetIndexDefinition("Index");
-				Assert.Equal(@"results
-	.GroupBy(r => 1)
-	.Select(g => new {g = g, items = Enumerable.ToArray(g)})
-	.Select(__h__TransparentIdentifier0 => new {Age = Enumerable.Sum(__h__TransparentIdentifier0.items, x => ((System.Int32)(x.Age)))})", indexDefinition.Reduce);
+				Assert.Equal("results\r\n\t.GroupBy(r => 1)\r\n\t.Select(g => new {g = g, items = Enumerable.ToArray(g)})\r\n\t.Select(__h__TransparentIdentifier0 => new {Age = Enumerable.Sum(__h__TransparentIdentifier0.items, x => ((System.Int32)(x.Age)))})", indexDefinition.Reduce);
 			}
 		}
 	}
