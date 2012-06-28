@@ -574,6 +574,8 @@
     <Compile Include="MailingList\BrunoLopes.cs" />
     <Compile Include="MailingList\ChrisH.cs" />
     <Compile Include="MailingList\HiloWithMultiTenancy.cs" />
+    <Compile Include="MailingList\Jon.cs" />
+    <Compile Include="MailingList\Jonas.cs" />
     <Compile Include="MailingList\Lars.cs" />
     <Compile Include="MailingList\Daniel.cs" />
     <Compile Include="MailingList\DynamicFieldSorting.cs" />
@@ -647,6 +649,7 @@
     <Compile Include="MailingList\RobinM\AttachmentsStatic.cs" />
     <Compile Include="MailingList\RyanD.cs" />
     <Compile Include="MailingList\Samina2.cs" />
+    <Compile Include="MailingList\Samina3.cs" />
     <Compile Include="MailingList\Scott.cs" />
     <Compile Include="MailingList\SearchByMapReduceExample.cs" />
     <Compile Include="MailingList\SpecialChars.cs" />

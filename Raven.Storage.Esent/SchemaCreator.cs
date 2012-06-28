@@ -62,7 +62,7 @@ namespace Raven.Storage.Esent
 				cbMax = 2048,
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnTagged
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 
@@ -92,7 +92,7 @@ namespace Raven.Storage.Esent
 				cbMax = 2048,
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnTagged
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			var defaultValue = BitConverter.GetBytes(0);
@@ -150,7 +150,7 @@ namespace Raven.Storage.Esent
 				cbMax = 2048,
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnTagged
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			var defaultValue = BitConverter.GetBytes(0);
@@ -179,7 +179,7 @@ namespace Raven.Storage.Esent
 				cbMax = 2048,
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnTagged
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			var defaultValue = BitConverter.GetBytes(0);
@@ -267,7 +267,7 @@ namespace Raven.Storage.Esent
 				cbMax = 2048,
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnTagged
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
@@ -348,17 +348,9 @@ namespace Raven.Storage.Esent
 		{
 			foreach (var index in indexes)
 			{
-				index.cbKey = index.szKey.Length;
-				index.ulDensity = 90;
-				index.cbKeyMost = SystemParameters.KeyMost;
-				index.pidxUnicode = new JET_UNICODEINDEX
-				{
-					lcid = 1033,
-					dwMapFlags = LCMAP_SORTKEY | NORM_IGNORECASE | NORM_IGNOREKANATYPE | NORM_IGNOREWIDTH
-				};
 				try
 				{
-					Api.JetCreateIndex2(session, tableid, new[] { index }, 1);
+					Api.JetCreateIndex(session, tableid, index.szIndexName, index.grbit, index.szKey, index.szKey.Length, 90);
 				}
 				catch (Exception e)
 				{
@@ -384,7 +376,7 @@ namespace Raven.Storage.Esent
 				cbMax = 2048,
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnTagged
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
@@ -465,7 +457,7 @@ namespace Raven.Storage.Esent
 				cbMax = 2048,
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnNotNULL
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "document_key", new JET_COLUMNDEF
@@ -473,14 +465,14 @@ namespace Raven.Storage.Esent
 				cbMax = 2048,
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnNotNULL
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "reduce_key", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.None
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "reduce_key_and_view_hashed", new JET_COLUMNDEF
@@ -555,7 +547,7 @@ namespace Raven.Storage.Esent
 			Api.JetAddColumn(session, tableid, "task", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.LongText,
-				grbit = ColumndefGrbit.None
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "supports_merging", new JET_COLUMNDEF
@@ -578,7 +570,7 @@ namespace Raven.Storage.Esent
 				coltyp = JET_coltyp.LongText,
 
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnNotNULL
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "added_at", new JET_COLUMNDEF
@@ -608,6 +600,12 @@ namespace Raven.Storage.Esent
 						  });
 		}
 
+		private static ColumndefGrbit ColumnNotNullIfOnHigherThanWindowsXp()
+		{
+			var isWindowsXP = (Environment.OSVersion.Version.Major == 5) && (Environment.OSVersion.Version.Minor == 1);
+			return isWindowsXP ? ColumndefGrbit.None: ColumndefGrbit.ColumnNotNULL;
+		}
+
 		private void CreateFilesTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
@@ -626,7 +624,7 @@ namespace Raven.Storage.Esent
 				cbMax = 2048,
 				coltyp = JET_coltyp.LongText,
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnTagged
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
@@ -645,7 +643,7 @@ namespace Raven.Storage.Esent
 			Api.JetAddColumn(session, tableid, "metadata", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.LongText,
-				grbit = ColumndefGrbit.ColumnTagged
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			CreateIndexes(tableid,
@@ -688,7 +686,7 @@ namespace Raven.Storage.Esent
 				coltyp = JET_coltyp.LongText,
 
 				cp = JET_CP.Unicode,
-				grbit = ColumndefGrbit.ColumnTagged
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
 			Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF

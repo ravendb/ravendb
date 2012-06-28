@@ -30,11 +30,6 @@ properties {
 			return "$build_dir\$_"
 		}
 		
-	$client_dlls_3_5 = @( (Get-DependencyPackageFiles 'NLog.2' -FrameworkVersion net35), "Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???") |
-		ForEach-Object { 
-			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
-			return "$build_dir\$_"
-		}
 	 
 	$client_dlls = @( (Get-DependencyPackageFiles 'NLog.2'), "Raven.Client.MvcIntegration.???", 
 					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Lightweight.FSharp.???", "Raven.Client.Debug.???") |
@@ -231,7 +226,6 @@ task CreateOutpuDirectories -depends CleanOutputDirectory {
 	New-Item $build_dir\Output\Web\bin -Type directory | Out-Null
 	New-Item $build_dir\Output\EmbeddedClient -Type directory | Out-Null
 	New-Item $build_dir\Output\Client -Type directory | Out-Null
-	New-Item $build_dir\Output\Client-3.5 -Type directory | Out-Null
 	New-Item $build_dir\Output\Silverlight -Type directory | Out-Null
 	New-Item $build_dir\Output\Silverlight-4 -Type directory | Out-Null
 	New-Item $build_dir\Output\Bundles -Type directory | Out-Null
@@ -270,10 +264,6 @@ task CopyBackup {
 
 task CopyClient {
 	$client_dlls | ForEach-Object { Copy-Item "$_" $build_dir\Output\Client }
-}
-
-task CopyClient35 {
-	$client_dlls_3_5 | ForEach-Object { Copy-Item "$_" $build_dir\Output\Client-3.5 }
 }
 
 task CopyWeb {
@@ -334,7 +324,6 @@ task ZipOutput {
 			Samples\*.* `
 			Smuggler\*.* `
 			Backup\*.* `
-			Client-3.5\*.* `
 			Web\*.* `
 			Bundles\*.* `
 			Web\bin\*.* `
@@ -359,7 +348,6 @@ task DoRelease -depends Compile, `
 	CopyClient, `
 	CopySilverlight, `
 	CopySilverlight-4, `
-	CopyClient35, `
 	CopyWeb, `
 	CopyBundles, `
 	CopyServer, `
@@ -408,12 +396,11 @@ task CreateNugetPackageFineGrained {
 	Remove-Item $nuget_dir -Force -Recurse -ErrorAction SilentlyContinue
 	New-Item $nuget_dir -Type directory | Out-Null
 	
-	New-Item $nuget_dir\RavenDB.Client\lib\net35 -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\net40 -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\sl40 -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.Client\lib\sl50 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.nuspec $nuget_dir\RavenDB.Client\RavenDB.Client.nuspec
-	@("Raven.Abstractions-3.5.???", "Raven.Client.Lightweight-3.5.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\net35 }
+	
 	@("Raven.Abstractions.???", "Raven.Client.Lightweight.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\net40 }
 	@("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\sl40 }
 	@("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\sl50	}

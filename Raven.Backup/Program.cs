@@ -57,7 +57,7 @@ namespace Raven.Backup
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine(ex.Message);
+				Console.WriteLine(ex);
 			}
 
 			if (doReadKeyOnExit) Console.ReadKey();

@@ -166,7 +166,7 @@ namespace Raven.Client.Indexes
 			var result = new Dictionary<string, TValue>();
 			foreach (var value in input)
 			{
-				var propertyPath = value.Key.ToPropertyPath("_");
+				var propertyPath = value.Key.ToPropertyPath('_');
 				result[propertyPath] = value.Value;
 			}
 			return result;
