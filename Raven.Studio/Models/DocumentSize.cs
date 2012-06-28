@@ -23,7 +23,10 @@ namespace Raven.Studio.Models
         private double height;
         private double width;
 
-		private readonly static DocumentSize current = new DocumentSize {Height = DefaultDocumentHeight};
+		private readonly static DocumentSize current = new DocumentSize()
+		                                                   {
+		                                                       IndicatorPosition = Settings.Instance.DocumentSize > 0 ? Settings.Instance.DocumentSize : DetailsToCardSwitchover
+		                                                   };
 		public static DocumentSize Current
 		{
 			get { return current; }
@@ -38,7 +41,6 @@ namespace Raven.Studio.Models
 
 	    public DocumentSize()
         {
-            IndicatorPosition = DetailsToCardSwitchover;
         }
 
 	    public double IndicatorPosition
@@ -61,6 +63,8 @@ namespace Raven.Studio.Models
                 {
                     indicatorPosition = DetailsToCardSwitchover;
                 }
+
+                Settings.Instance.DocumentSize = (int)IndicatorPosition;
 
                 UpdateHeightWidthAndDisplayStyle();
                 OnPropertyChanged(() => IndicatorPosition);
@@ -133,18 +137,5 @@ namespace Raven.Studio.Models
 			if (SizeChanged != null)
 				SizeChanged(this, EventArgs.Empty);
 		}
-
-	    public void LoadDefaults(IDictionary<string, object> settingsDictionary)
-	    {
-	        if (settingsDictionary.ContainsKey(IndicatorPostitionSettingsKey))
-	        {
-                IndicatorPosition = Convert.ToInt32(settingsDictionary[IndicatorPostitionSettingsKey]);
-	        }
-	    }
-
-        public void SaveDefaults(IDictionary<string, object> settingsDictionary)
-        {
-            settingsDictionary[IndicatorPostitionSettingsKey] = IndicatorPosition;
-        }
 	}
 }

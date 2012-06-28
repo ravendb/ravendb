@@ -6,9 +6,12 @@
 					 Title="Home"
 					 Style="{StaticResource PageStyle}"
                         NavigationCacheMode="Enabled"
-					 Infrastructure:ModelAttacher.AttachObservableModel="HomeModel">
+					 Infrastructure:ModelAttacher.AttachObservableModel="HomeModel"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:Models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d">
 
-	<Grid DataContext="{Binding Value}">
+	<Grid DataContext="{Binding Value}" d:DataContext="{d:DesignInstance Models:HomeModel}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="1*" />
 			<RowDefinition Height="8" />
@@ -20,16 +23,9 @@
 								 Visibility="{Binding Path=Documents.Count, Converter={StaticResource HiddenWhenEmpty}}"
 								 Margin="{StaticResource Margin_ContentPage}" />
 		
-		<StackPanel Grid.Row="2" HorizontalAlignment="Left">
-			<StackPanel Orientation="Horizontal"
-						Visibility="{Binding IsGeneratingSampleData, Converter={StaticResource BooleanToVisibility}}">
-				<ProgressBar IsIndeterminate="True"
-							 Width="24" />
-				<TextBlock Text="Generating Sample Data"
-						   Margin="4 0 0 0" />
-			</StackPanel>
-
-			<StackPanel Orientation="Horizontal" Visibility="{Binding Path=ShowCreateSampleData.Value, Converter={StaticResource BooleanToVisibility}}">
+		<StackPanel Grid.Row="2" HorizontalAlignment="Center">
+			<StackPanel Orientation="Horizontal" Visibility="{Binding ElementName=CreateSampleData, Path=IsEnabled, Converter={StaticResource BooleanToVisibility}}"
+                        HorizontalAlignment="Center">
 				<TextBlock>
 					<Run Text="There are no documents in this database yet." />
 					<LineBreak />
@@ -42,6 +38,14 @@
 						Command="{Binding CreateSampleData}"
 						Content="Create sample data" />
 			</StackPanel>
-		</StackPanel>
+
+            <StackPanel Orientation="Horizontal"
+						Visibility="{Binding IsGeneratingSampleData, Converter={StaticResource BooleanToVisibility}}">
+                <ProgressBar IsIndeterminate="True"
+							 Width="24" />
+                <TextBlock Text="Generating Sample Data"
+						   Margin="4 0 0 0" />
+            </StackPanel>
+        </StackPanel>
 	</Grid>
 </Infrastructure:PageView>

@@ -1,6 +1,10 @@
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Reactive;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Raven.Imports.Newtonsoft.Json;
@@ -41,11 +45,6 @@ namespace Raven.Studio.Models
 	    public HomeModel()
 		{
 			ModelUrl = "/home";
-
-			ShowCreateSampleData = new Observable<bool>() { Value = RecentDocuments.Documents.Count == 0};
-
-	        RecentDocuments.Documents.PropertyChanged +=
-                delegate { ShowCreateSampleData.Value = RecentDocuments.Documents.Count == 0; };
 		}
 
 		public override void LoadModelParameters(string parameters)
@@ -58,7 +57,10 @@ namespace Raven.Studio.Models
 			return RecentDocuments.TimerTickedAsync();
 		}
 
-		public Observable<bool> ShowCreateSampleData { get; private set; }
+        protected override void OnViewLoaded()
+        {
+
+        }
 
 		private bool isGeneratingSampleData;
 		public bool IsGeneratingSampleData
@@ -78,20 +80,36 @@ namespace Raven.Studio.Models
 		{
 			private readonly HomeModel model;
             private readonly Observable<DatabaseModel> database;
+		    private IObservable<Unit> databaseChanged;
 
-			public CreateSampleDataCommand(HomeModel model, Observable<DatabaseModel> database)
+		    public CreateSampleDataCommand(HomeModel model, Observable<DatabaseModel> database)
 			{
 				this.model = model;
                 this.database = database;
 
-			    database.ObservePropertyChanged()
-			        .SubscribeWeakly(this, (target, e) => RaiseCanExecuteChanged());
+			    databaseChanged = database
+                    .ObservePropertyChanged()
+                    .Select(e => Unit.Default);
+
+			    databaseChanged
+			        .SubscribeWeakly(this, (target, d) => target.HandleDatabaseChanged(target.database.Value));
 			}
+
+            private void HandleDatabaseChanged(DatabaseModel databaseModel)
+            {
+                RaiseCanExecuteChanged();
+
+                databaseModel.Statistics
+                    .ObservePropertyChanged()
+                    .TakeUntil(databaseChanged)
+                    .SubscribeWeakly(this, (target, e) => target.RaiseCanExecuteChanged());
+            }
 
             public override bool CanExecute(object parameter)
             {
                 return database.Value != null
-                       && database.Value.Statistics.Value.CountOfDocuments > 0;
+                    && database.Value.Statistics.Value != null
+                       && database.Value.Statistics.Value.CountOfDocuments == 0;
             }
 
 			public override void Execute(object parameter)
@@ -108,7 +126,6 @@ namespace Raven.Studio.Models
 				// this code assumes a small enough dataset, and doesn't do any sort
 				// of paging or batching whatsoever.
 
-				model.ShowCreateSampleData.Value = false;
 				model.IsGeneratingSampleData = true;
 
 				using (var sampleData = typeof(HomeModel).Assembly.GetManifestResourceStream("Raven.Studio.Assets.EmbeddedData.MvcMusicStore_Dump.json"))

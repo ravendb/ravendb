@@ -5,6 +5,7 @@ namespace Raven.Studio.Commands
 	public class NavigateToCommand : Command
 	{
         public bool EnsureSameWindow { get; set; }
+        public bool ForceRefresh { get; set; }
 		private string href;
 
 		public override bool CanExecute(object parameter)
@@ -15,7 +16,7 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-			UrlUtil.Navigate(href, EnsureSameWindow);
+			UrlUtil.Navigate(href, EnsureSameWindow, ForceRefresh);
 		}
 	}
 }

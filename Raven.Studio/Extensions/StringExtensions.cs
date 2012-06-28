@@ -22,7 +22,7 @@ namespace Raven.Studio.Extensions
 			return str.Substring(0, margin) + replacement + str.Substring(str.Length - margin - 1);
 		}
 
-        public static string TrimmedViewOfString(this string str, int maxWidth, string replacement = " ... ")
+        public static string TrimmedViewOfString(this string str, int maxWidth, string replacement = "...")
         {
             if (str.Length <= maxWidth)
             {
@@ -30,6 +30,11 @@ namespace Raven.Studio.Extensions
             }
 
             var pieceLength = (maxWidth - replacement.Length)/2;
+            if (pieceLength <= 0)
+            {
+                return replacement;
+            }
+
             return str.Substring(0, pieceLength) + replacement + str.Substring(str.Length - pieceLength);
         }
 

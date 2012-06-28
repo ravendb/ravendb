@@ -14,6 +14,7 @@ namespace Raven.Studio.Behaviors
 
         public static readonly DependencyProperty TargetProperty =
             DependencyProperty.Register("Target", typeof(ItemSelection), typeof(BindSelectedItemsBehavior), new PropertyMetadata(default(ItemSelection), HandleItemSelectionChanged));
+        private static WeakEventListener<BindSelectedItemsBehavior, object, DesiredSelectionChangedEventArgs> desiredSelectionChangedEventListener;
 
         public BindSelectedItemsBehavior()
         {
@@ -113,14 +114,23 @@ namespace Raven.Studio.Behaviors
         {
             var behavior = d as BindSelectedItemsBehavior;
 
-            if (e.OldValue != null)
-            {
-                (e.OldValue as ItemSelection).DesiredSelectionChanged -= behavior.HandleDesiredSelectionChanged;
-            }
+           if (desiredSelectionChangedEventListener != null)
+           {
+               desiredSelectionChangedEventListener.Detach();
+           }
 
             if (e.NewValue != null)
             {
-                (e.NewValue as ItemSelection).DesiredSelectionChanged += behavior.HandleDesiredSelectionChanged;
+                var itemSelection = (e.NewValue as ItemSelection);
+
+                desiredSelectionChangedEventListener = new WeakEventListener<BindSelectedItemsBehavior, object, DesiredSelectionChangedEventArgs>(
+                    behavior)
+                                                           {
+                                                               OnDetachAction = (l => itemSelection.DesiredSelectionChanged -= l.OnEvent),
+                                                               OnEventAction = (b, s, eventArgs) => b.HandleDesiredSelectionChanged(s,eventArgs)
+                                                           };
+
+                itemSelection.DesiredSelectionChanged += desiredSelectionChangedEventListener.OnEvent;
             }
         }
 

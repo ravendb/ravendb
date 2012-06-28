@@ -6,12 +6,19 @@
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors">
 
-	<StackPanel Margin="{StaticResource Margin_ContentPage}">
+	<Grid Margin="{StaticResource Margin_ContentPage}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 		<TextBlock Text="Collections"
+                   Grid.Row="0"
 				   Style="{StaticResource Style_Text_Header}" />
 
 		<ListBox x:Name="CollectionsList" 
+                 Grid.Row="1"
 				 Style="{StaticResource Collections_FluidList}"
+                 Background="#4CFFFFFF"
 				 ItemsSource="{Binding Collections}"
                  ItemContainerStyle="{StaticResource Style_ListBoxItem_Collection}"
 				 SelectedItem="{Binding Path=SelectedCollection.Value, Mode=TwoWay}">
@@ -70,5 +77,13 @@
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
 		</ListBox>
-	</StackPanel>
+
+        <TextBlock Grid.Row="1" HorizontalAlignment="Center" TextAlignment="Center" Margin="10" 
+                   Visibility="{Binding Collections.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
+                   LineHeight="20" FontSize="13">
+            <Run Text="No collections defined"/>
+            <LineBreak/>
+            <Run Foreground="Gray" FontStyle="Italic" Text="Add &quot;Raven-Entity-Name&quot;: &quot;[Desired Collection Name]&quot; to a document's metadata to include it in a collection"/>
+        </TextBlock>
+    </Grid>
 </Infrastructure:PageView>

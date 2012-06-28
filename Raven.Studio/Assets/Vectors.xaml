@@ -1,0 +1,8 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:System="clr-namespace:System;assembly=mscorlib">
+
+    <System:String x:Key="Drawing_ExpandArrow">M0,8L3,5L6,8M0,3L3,0L6,3</System:String>
+    <System:String x:Key="Drawing_DropDownArrow">M0,0L8,0L4,4Z</System:String>
+    
+</ResourceDictionary>

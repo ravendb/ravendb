@@ -14,6 +14,7 @@ namespace Raven.Studio.Infrastructure
 		public static List<PageView> CurrentViews { get; set; }
 
 		private static readonly DispatcherTimer dispatcherTimer;
+	    private bool isLoaded;
 
 		static PageView()
 		{
@@ -78,28 +79,12 @@ namespace Raven.Studio.Infrastructure
 			return model;
 		}
 
-
-		// Dependency property that is bound against the DataContext.
-		// When its value (i.e. the control's DataContext) changes,
-		// call DataContextWatcher_Changed.
-		public static DependencyProperty DataContextWatcherProperty = DependencyProperty.Register(
-			"DataContextWatcher",
-			typeof (object),
-			typeof (PageView),
-			new PropertyMetadata(DataContextWatcherChanged));
-
-		private static void DataContextWatcherChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-		{
-			InvokeTimerTicked(e.NewValue);
-		}
-
 		public PageView()
 		{
-			SetBinding(DataContextWatcherProperty, new Binding());
+			Loaded += HandleLoaded;
+		    Unloaded += HandleUnloaded;
 
-			Loaded += (sender, args) => CurrentViews.Add(this);
-
-			Unloaded += (sender, args) => CurrentViews.Remove(this);
+		    DataContextChanged += HandleDataContectChanged;
 		}
 
         protected override void OnNavigatedTo(System.Windows.Navigation.NavigationEventArgs e)
@@ -110,6 +95,44 @@ namespace Raven.Studio.Infrastructure
             {
                 (((DataContext as IObservable).Value) as PageViewModel).LoadModel(UrlUtil.Url);
             }
+        }
+
+        private void HandleDataContectChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (isLoaded)
+            {
+                var oldViewModel = e.OldValue as ViewModel;
+                if (oldViewModel != null)
+                {
+                    oldViewModel.NotifyViewUnloaded();
+                }
+
+                var newViewModel = e.NewValue as ViewModel;
+                if (newViewModel != null)
+                {
+                    newViewModel.NotifyViewLoaded();
+                }
+
+                InvokeTimerTicked(e.NewValue);
+            }
+        }
+
+        private void HandleLoaded(object sender, RoutedEventArgs e)
+        {
+            CurrentViews.Add(this);
+
+            InvokeOnModel(DataContext, m => { if (m is ViewModel) (m as ViewModel).NotifyViewLoaded(); });
+
+            isLoaded = true;
+        }
+
+        private void HandleUnloaded(object sender, RoutedEventArgs e)
+        {
+            CurrentViews.Remove(this);
+
+            InvokeOnModel(DataContext, m => { if (m is ViewModel) (m as ViewModel).NotifyViewUnloaded(); });
+
+            isLoaded = false;
         }
 	}
 }
