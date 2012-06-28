@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using ActiproSoftware.Text;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining;
 
 namespace Raven.Studio.Extensions
 {
@@ -21,5 +22,16 @@ namespace Raven.Studio.Extensions
             return Observable.FromEventPattern<TextSnapshotChangedEventArgs>(h => document.TextChanged += h,
                                                                              h => document.TextChanged -= h);
         } 
+
+        public static void EnsureCollapsed(this IOutliningManager outliningManager)
+        {
+            outliningManager.ToggleAllOutliningExpansion();
+
+            if ((outliningManager.GetOutliningState(outliningManager.Document.CurrentSnapshot.SnapshotRange) & OutliningState.HasExpandedNodeStart) 
+                == OutliningState.HasExpandedNodeStart)
+            {
+                outliningManager.ToggleAllOutliningExpansion();
+            }
+        }
     }
 }

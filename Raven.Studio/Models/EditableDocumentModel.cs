@@ -72,7 +72,7 @@ namespace Raven.Studio.Models
                                               Applicator = document =>
                                                                {
                                                                    document.OutliningMode = OutliningMode.Automatic;
-                                                                   document.OutliningManager.ToggleAllOutliningExpansion();
+                                                                   document.OutliningManager.EnsureCollapsed();
                                                                }
                                           },
                                   }).AsReadOnly();
@@ -303,7 +303,8 @@ namespace Raven.Studio.Models
                         ParentPathSegments.Clear();
                         ParentPathSegments.AddRange(result.ParentPath);
 
-                        ApplyOutliningMode();
+                        WhenParsingComplete(dataSection.Document)
+                            .ContinueOnUIThread(t => ApplyOutliningMode());
                     })
                 .Catch();
         }
