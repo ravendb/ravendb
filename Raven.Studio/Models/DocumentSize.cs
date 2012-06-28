@@ -23,7 +23,10 @@ namespace Raven.Studio.Models
         private double height;
         private double width;
 
-		private readonly static DocumentSize current = new DocumentSize {Height = DefaultDocumentHeight};
+		private readonly static DocumentSize current = new DocumentSize()
+		                                                   {
+		                                                       IndicatorPosition = Settings.Instance.DocumentSize > 0 ? Settings.Instance.DocumentSize : DetailsToCardSwitchover
+		                                                   };
 		public static DocumentSize Current
 		{
 			get { return current; }
@@ -38,7 +41,6 @@ namespace Raven.Studio.Models
 
 	    public DocumentSize()
         {
-            IndicatorPosition = Settings.Instance.DocumentSize > 0 ? Settings.Instance.DocumentSize : DetailsToCardSwitchover;
         }
 
 	    public double IndicatorPosition
