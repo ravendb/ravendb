@@ -500,6 +500,7 @@
     <Compile Include="Bugs\WhenRavenClrTypeNotFound.cs" />
     <Compile Include="Bugs\when_querying_cases_by_name_in_danish.cs" />
     <Compile Include="Bugs\WhereEntityIs.cs" />
+    <Compile Include="Bugs\WhereUsingUnicodeTheTextEnteredShouldNotBeNormalized.cs" />
     <Compile Include="Bugs\WillNotFailSystemIfServerIsNotAvailableOnStartup.cs" />
     <Compile Include="Bugs\WillThrowIfQueryingForUnindexedField.cs" />
     <Compile Include="Bugs\CanStoreAndGetDateTimeOffset.cs" />
