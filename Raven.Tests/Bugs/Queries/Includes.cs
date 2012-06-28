@@ -13,7 +13,6 @@ namespace Raven.Tests.Bugs.Queries
 	public class Includes : RemoteClientTest
 	{
 		[Fact]
-		public void CanGenerateComplexPaths()
 		public void CanIncludeViaNestedPath()
 		{
 			using (GetNewServer())
@@ -49,6 +48,7 @@ namespace Raven.Tests.Bugs.Queries
 		}
 
 		[Fact]
+		public void CanGenerateComplexPaths()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
@@ -106,7 +106,7 @@ namespace Raven.Tests.Bugs.Queries
 					Assert.NotNull(user.EmergencyPerson);
 
 					// Should be loaded from cache
-					var emergencyContact = s.Load<Person>(user.EmergencyPerson.PersonId);
+					var emergencyContact = s.Load<Person>("people/" + user.EmergencyPerson.PersonId);
 					Assert.NotNull(emergencyContact);
 
 					Assert.Equal(1, s.Advanced.NumberOfRequests);
