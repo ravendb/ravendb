@@ -35,7 +35,7 @@ namespace Raven.Database.Indexing
 				query = PreProcessUntokenizedTerms(query, queryParser);
 				query = PreProcessSearchTerms(query);
 				query = PreProcessDateTerms(query, queryParser);
-				queryParser.SetAllowLeadingWildcard(true); // not the recommended approach, should rather use ReverseFilter
+				queryParser.SetAllowLeadingWildcard(true);
 				return queryParser.Parse(query);
 			}
 			catch (ParseException pe)

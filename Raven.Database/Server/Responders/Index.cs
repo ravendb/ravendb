@@ -6,8 +6,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using NLog;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using System.Linq;
@@ -35,7 +38,7 @@ namespace Raven.Database.Server.Responders
 		{
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var index = match.Groups[1].Value;
-
+			
 			switch (context.Request.HttpMethod)
 			{
 				case "HEAD":
@@ -175,6 +178,8 @@ namespace Raven.Database.Server.Responders
 		{
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
 
+			RewriteDateQueriesFromOldClients(context,indexQuery);
+
 			var sp = Stopwatch.StartNew();
 			var result = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase) ? 
 				PerformQueryAgainstDynamicIndex(context, index, indexQuery, out indexEtag) : 
@@ -200,6 +205,33 @@ namespace Raven.Database.Server.Responders
 			}));
 
 			return result;
+		}
+
+		static Regex oldDateTimeFormat = new Regex(@"(\:|\[|TO\s) \s* (\d{17})", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+
+		private void RewriteDateQueriesFromOldClients(IHttpContext context,IndexQuery indexQuery)
+		{
+			var clientVersion = context.Request.Headers["Raven-Client-Version"];
+			if (string.IsNullOrEmpty(clientVersion) == false) // new client
+				return;
+
+			var matches = oldDateTimeFormat.Matches(indexQuery.Query);
+			if (matches.Count == 0)
+				return;
+			var builder = new StringBuilder(indexQuery.Query);
+			for (int i = matches.Count-1; i >= 0; i--) // working in reverse so as to avoid invalidating previous indexes
+			{
+				builder.Remove(matches[i].Groups[2].Index, matches[i].Groups[2].Length);
+				var dateTimeString = matches[i].Groups[2].Value;
+
+				DateTime time;
+				if (DateTime.TryParseExact(dateTimeString, "yyyyMMddHHmmssfff", CultureInfo.InvariantCulture, DateTimeStyles.None, out time) == false)
+					continue;
+
+				var newDateTimeFormat = time.ToString(Default.DateTimeFormatsToWrite);
+				builder.Insert(matches[i].Groups[2].Index, newDateTimeFormat);
+			}
+			indexQuery.Query = builder.ToString();
 		}
 
 		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
