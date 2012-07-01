@@ -80,8 +80,19 @@ namespace Raven.Client.Document
 		{
 			if (transactionInformation.DistributedIdentifier != Guid.Empty)
 				return transactionInformation.DistributedIdentifier;
-			var first = transactionInformation.LocalIdentifier.Split(':').First();
-			return new Guid(first);
+			string[] parts = transactionInformation.LocalIdentifier.Split(':');
+			if(parts.Length != 2)
+				throw new InvalidOperationException("Could not parse TransactionInformation.LocalIdentifier: " + transactionInformation.LocalIdentifier);
+			
+			var localOrDistributedTransactionId = new Guid(parts[0]);
+			var num = BitConverter.GetBytes(int.Parse(parts[1]));
+			byte[] txId = localOrDistributedTransactionId.ToByteArray();
+			for (int i = 0; i < num.Length; i++)
+			{
+				txId[txId.Length - 1 - i] ^= num[i];
+			}
+			var transactionId = new Guid(txId);
+			return transactionId;
 		}
 	}
 }
