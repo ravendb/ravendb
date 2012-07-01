@@ -35,8 +35,6 @@ namespace Raven.Database.Indexing.Sorting
 	{
 		protected readonly double lng, lat;
 
-		private static ConditionalWeakTable<IndexReader, double[]> cache = new ConditionalWeakTable<IndexReader, double[]>();
-
 		public SpatialDistanceFieldComparatorSource(double lat, double lng)
 		{
 			this.lat = lat;
