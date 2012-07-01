@@ -1225,6 +1225,10 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
+			foreach (var getRequest in requests)
+			{
+				getRequest.Headers["Raven-Client-Version"] = HttpJsonRequest.ClientVersion;
+			}
 			return ExecuteWithReplication("GET", // this is a logical GET, physical POST
 										  operationUrl =>
 										  {

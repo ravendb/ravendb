@@ -40,7 +40,7 @@ namespace Raven.Client.Silverlight.Connection
 		internal HttpWebRequest webRequest;
 		private byte[] postedData;
 		private int retries;
-		private static readonly string ClientVersion = new AssemblyName(typeof(HttpJsonRequest).Assembly.FullName).Version.ToString();
+		public static readonly string ClientVersion = new AssemblyName(typeof(HttpJsonRequest).Assembly.FullName).Version.ToString();
 
 		private Task RecreateWebRequest(Action<HttpWebRequest> result)
 		{

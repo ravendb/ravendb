@@ -221,13 +221,13 @@ namespace Raven.Database.Server.Responders
 			var builder = new StringBuilder(indexQuery.Query);
 			for (int i = matches.Count-1; i >= 0; i--) // working in reverse so as to avoid invalidating previous indexes
 			{
-				builder.Remove(matches[i].Groups[2].Index, matches[i].Groups[2].Length);
 				var dateTimeString = matches[i].Groups[2].Value;
 
 				DateTime time;
 				if (DateTime.TryParseExact(dateTimeString, "yyyyMMddHHmmssfff", CultureInfo.InvariantCulture, DateTimeStyles.None, out time) == false)
 					continue;
 
+				builder.Remove(matches[i].Groups[2].Index, matches[i].Groups[2].Length);
 				var newDateTimeFormat = time.ToString(Default.DateTimeFormatsToWrite);
 				builder.Insert(matches[i].Groups[2].Index, newDateTimeFormat);
 			}

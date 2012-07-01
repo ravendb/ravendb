@@ -30,14 +30,14 @@ namespace Raven.Tests.Bugs
 			}.Initialize();
 
 			store.DatabaseCommands.PutIndex("Orders/ByName",
-			                                new IndexDefinition
-			                                {
+											new IndexDefinition
+											{
 												Map = "from doc in docs.Orders select new { doc.Name }"
-			                                });
+											});
 
-			using(var session = store.OpenSession())
+			using (var session = store.OpenSession())
 			{
-				
+
 				for (int i = 0; i < 15; i++)
 				{
 					var customer = new Customer
@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs
 						Email = "ayende@ayende.com",
 						Name = "Oren"
 					};
-					
+
 					session.Store(customer);
 
 					session.Store(new Order
@@ -87,7 +87,7 @@ namespace Raven.Tests.Bugs
 			using (var session = store.OpenSession())
 			{
 				var orders = session.Advanced.LuceneQuery<Order>()
-					.Include(x=>x.Customer.Id)
+					.Include(x => x.Customer.Id)
 					.WaitForNonStaleResults()
 					.WhereEquals("Name", "3")
 					.ToArray();
@@ -203,8 +203,10 @@ namespace Raven.Tests.Bugs
 		}
 
 		[Fact]
-		public void CanIncludeExtensionWithQuery() {
-			using (var session = store.OpenSession()) {
+		public void CanIncludeExtensionWithQuery()
+		{
+			using (var session = store.OpenSession())
+			{
 				var orders = session.Advanced
 					.LuceneQuery<Order>("Orders/ByName")
 					.WaitForNonStaleResults()

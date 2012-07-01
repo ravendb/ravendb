@@ -43,14 +43,20 @@ namespace Raven.Tests.MailingList
 				using (var session = store.OpenSession())
 				{
 					RavenQueryStatistics stat1;
-					var query1 = session.Query<SampleDoc>().Statistics(out stat1).Where(x => x.Number == doc.Number)
+					var q = session.Query<SampleDoc>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Statistics(out stat1)
+						.Where(x => x.Number == doc.Number);
+					var query1 = q
 						.Lazily();
 
-					Assert.Equal(query1.Value.ToList().Count, 1);
+					Assert.Equal(query1.Value.Count(), 1);
 					Assert.Equal(stat1.TotalResults, 1);
 
 					RavenQueryStatistics stat2;
-					var query2 = session.Query<SampleDoc>().Statistics(out stat2).Where(x => x.Number == doc.Number)
+					var query2 = session.Query<SampleDoc>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Statistics(out stat2).Where(x => x.Number == doc.Number)
 						.Select(x => new { x.Name })
 						.Lazily();
 					Assert.Equal(query2.Value.ToList().Count, 1);
