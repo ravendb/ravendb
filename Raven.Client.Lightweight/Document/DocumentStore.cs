@@ -632,6 +632,7 @@ namespace Raven.Client.Document
 
 		private IAsyncDocumentSession OpenAsyncSessionInternal(IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
+			AssertInitialized();
 			EnsureNotClosed();
 
 			var sessionId = Guid.NewGuid();

@@ -12,7 +12,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NuGet", "NuGet", "{081F76C1
 		NuGet\RavenDB.Bundles.MoreLikeThis.nuspec = NuGet\RavenDB.Bundles.MoreLikeThis.nuspec
 		NuGet\RavenDB.Bundles.nuspec = NuGet\RavenDB.Bundles.nuspec
 		NuGet\RavenDB.Bundles.Quotas.nuspec = NuGet\RavenDB.Bundles.Quotas.nuspec
-		NuGet\RavenDB.Bundles.Replication.nuspec = NuGet\RavenDB.Bundles.Replication.nuspec
 		NuGet\RavenDB.Bundles.UniqueConstraints.nuspec = NuGet\RavenDB.Bundles.UniqueConstraints.nuspec
 		NuGet\RavenDB.Bundles.Versioning.nuspec = NuGet\RavenDB.Bundles.Versioning.nuspec
 		NuGet\RavenDB.Client.Debug.nuspec = NuGet\RavenDB.Client.Debug.nuspec

@@ -393,13 +393,13 @@ namespace Raven.Client.Document
 
 		protected override string GenerateKey(object entity)
 		{
-			return Conventions.DocumentKeyGenerator(DatabaseCommands, entity);
+			return Conventions.GenerateDocumentKey(DatabaseCommands, entity);
 		}
 
 #if !NET35
 		protected override Task<string> GenerateKeyAsync(object entity)
 		{
-			return Conventions.AsyncDocumentKeyGenerator(AsyncDatabaseCommands, entity);
+			return Conventions.GenerateDocumentKeyAsync(AsyncDatabaseCommands, entity);
 		}
 #endif
 
