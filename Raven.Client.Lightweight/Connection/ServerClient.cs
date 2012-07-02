@@ -431,12 +431,13 @@ namespace Raven.Client.Connection
 						throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
 					};
 				}
+
 				return new Attachment
 				{
 					Data = data,
 					Size = len,
 					Etag = webRequest.GetEtagHeader(),
-					Metadata = webRequest.ResponseHeaders.FilterHeaders()
+					Metadata = webRequest.ResponseHeaders.FilterHeadersAttachment()
 				};
 			}
 			catch (WebException e)

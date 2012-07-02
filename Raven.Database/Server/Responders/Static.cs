@@ -70,7 +70,7 @@ namespace Raven.Database.Server.Responders
 					break;
 				case "PUT":
 					var newEtag = Database.PutStatic(filename, context.GetEtag(), context.Request.InputStream,
-					                                 context.Request.Headers.FilterHeaders());
+					                                 context.Request.Headers.FilterHeadersAttachment());
 
 					context.WriteETag(newEtag);
 					context.SetStatusToCreated("/static/" + filename);

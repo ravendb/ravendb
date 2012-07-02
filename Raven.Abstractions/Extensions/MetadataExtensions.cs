@@ -130,6 +130,14 @@ namespace Raven.Abstractions.Extensions
 		}
 
 #if SILVERLIGHT
+		public static RavenJObject FilterHeadersAttachment(this IDictionary<string, IList<string>> self)
+		{
+			var filterHeaders = self.FilterHeaders();
+			if (self.ContainsKey("Content-Type") != null)
+				filterHeaders["Content-Type"] = self["Content-Type"];
+			return filterHeaders;
+		}
+
 		/// <summary>
 		/// Filters the headers from unwanted headers
 		/// </summary>
@@ -155,11 +163,18 @@ namespace Raven.Abstractions.Extensions
 			return metadata;
 		}
 #else
+		public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
+		{
+			var filterHeaders = self.FilterHeaders();
+			if (self["Content-Type"] != null)
+				filterHeaders["Content-Type"] = self["Content-Type"];
+			return filterHeaders;
+		}
+
 		/// <summary>
 		/// Filters the headers from unwanted headers
 		/// </summary>
 		/// <param name="self">The self.</param>
-		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
 		public static RavenJObject FilterHeaders(this NameValueCollection self)
 		{
