@@ -134,7 +134,7 @@ namespace Raven.Abstractions.Extensions
 		{
 			var filterHeaders = self.FilterHeaders();
 			if (self.ContainsKey("Content-Type") != null)
-				filterHeaders["Content-Type"] = self["Content-Type"];
+				filterHeaders["Content-Type"] = self["Content-Type"].FirstOrDefault();
 			return filterHeaders;
 		}
 
