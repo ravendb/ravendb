@@ -43,8 +43,8 @@ namespace Raven.Database.Server
 	{
 		private readonly DateTime startUpTime = DateTime.UtcNow;
 		private const int MaxConcurrentRequests = 192;
-		public DocumentDatabase DefaultResourceStore { get; private set; }
-		public InMemoryRavenConfiguration DefaultConfiguration { get; private set; }
+		public DocumentDatabase SystemDatabase { get; private set; }
+		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
 		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { }; 
@@ -75,7 +75,7 @@ namespace Raven.Database.Server
 		{
 			get
 			{
-				return DefaultConfiguration;
+				return SystemConfiguration;
 			}
 		}
 
@@ -108,8 +108,8 @@ namespace Raven.Database.Server
 		{
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
-			DefaultResourceStore = resourceStore;
-			DefaultConfiguration = configuration;
+			SystemDatabase = resourceStore;
+			SystemConfiguration = configuration;
 
 			int val;
 			if (int.TryParse(configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
@@ -144,7 +144,7 @@ namespace Raven.Database.Server
 
 		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
 		{
-			if (@event.Database != DefaultResourceStore)
+			if (@event.Database != SystemDatabase)
 				return; // we ignore anything that isn't from the root db
 
 			CleanupDatabase(@event.Name, skipIfActive: false);
@@ -160,7 +160,7 @@ namespace Raven.Database.Server
 					Uptime = DateTime.UtcNow - startUpTime,
 					LoadedDatabases =
 						from documentDatabase in ResourcesStoresCache
-								.Concat(new[] {new KeyValuePair<string, DocumentDatabase>("Default", DefaultResourceStore),})
+								.Concat(new[] {new KeyValuePair<string, DocumentDatabase>("System", SystemDatabase),})
 						let totalSizeOnDisk = documentDatabase.Value.GetTotalSizeOnDisk()
 						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Key)
 						select new
@@ -226,14 +226,14 @@ namespace Raven.Database.Server
 		public void StartListening()
 		{
 			listener = new HttpListener();
-			string virtualDirectory = DefaultConfiguration.VirtualDirectory;
+			string virtualDirectory = SystemConfiguration.VirtualDirectory;
 			if (virtualDirectory.EndsWith("/") == false)
 				virtualDirectory = virtualDirectory + "/";
-			listener.Prefixes.Add("http://" + (DefaultConfiguration.HostName ?? "+") + ":" + DefaultConfiguration.Port + virtualDirectory);
+			listener.Prefixes.Add("http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory);
 
 			foreach (var configureHttpListener in ConfigureHttpListeners)
 			{
-				configureHttpListener.Value.Configure(listener, DefaultConfiguration);
+				configureHttpListener.Value.Configure(listener, SystemConfiguration);
 			}
 
 			Init();
@@ -303,7 +303,7 @@ namespace Raven.Database.Server
 			IHttpContext ctx;
 			try
 			{
-				ctx = new HttpListenerContextAdpater(listener.EndGetContext(ar), DefaultConfiguration);
+				ctx = new HttpListenerContextAdpater(listener.EndGetContext(ar), SystemConfiguration);
 				//setup waiting for the next request
 				listener.BeginGetContext(GetContext, null);
 			}
@@ -557,7 +557,7 @@ namespace Raven.Database.Server
 			{
 				OnDispatchingRequest(ctx);
 
-				if (DefaultConfiguration.HttpCompression)
+				if (SystemConfiguration.HttpCompression)
 					AddHttpCompressionIfClientCanAcceptIt(ctx);
 
 				HandleHttpCompressionFromClient(ctx);
@@ -603,8 +603,8 @@ namespace Raven.Database.Server
 				{
 					CurrentOperationContext.Headers.Value = new NameValueCollection();
 					CurrentOperationContext.User.Value = null;
-					currentDatabase.Value = DefaultResourceStore;
-					currentConfiguration.Value = DefaultConfiguration;
+					currentDatabase.Value = SystemDatabase;
+					currentConfiguration.Value = SystemConfiguration;
 				}
 				catch
 				{
@@ -647,9 +647,9 @@ namespace Raven.Database.Server
 			if (match.Success == false)
 			{
 				currentTenantId.Value = Constants.DefaultDatabase;
-				currentDatabase.Value = DefaultResourceStore;
-				currentConfiguration.Value = DefaultConfiguration;
-				databaseLastRecentlyUsed.AddOrUpdate("Default", SystemTime.Now, (s, time) => SystemTime.Now);
+				currentDatabase.Value = SystemDatabase;
+				currentConfiguration.Value = SystemConfiguration;
+				databaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.Now, (s, time) => SystemTime.Now);
 			}
 			else
 			{
@@ -685,8 +685,8 @@ namespace Raven.Database.Server
 
 			JsonDocument jsonDocument;
 
-			using (DefaultResourceStore.DisableAllTriggersForCurrentThread())
-				jsonDocument = DefaultResourceStore.Get("Raven/Databases/" + tenantId, null);
+			using (SystemDatabase.DisableAllTriggersForCurrentThread())
+				jsonDocument = SystemDatabase.Get("Raven/Databases/" + tenantId, null);
 
 			if (jsonDocument == null ||
 				jsonDocument.Metadata == null ||
@@ -700,7 +700,7 @@ namespace Raven.Database.Server
 			{
 				var config = new InMemoryRavenConfiguration
 				{
-					Settings = new NameValueCollection(DefaultConfiguration.Settings),
+					Settings = new NameValueCollection(SystemConfiguration.Settings),
 				};
 
 				SetupTenantDatabaseConfiguration(config);
@@ -718,7 +718,7 @@ namespace Raven.Database.Server
 
 				if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
 				{
-					var baseDataPath = Path.GetDirectoryName(DefaultResourceStore.Configuration.DataDirectory);
+					var baseDataPath = Path.GetDirectoryName(SystemDatabase.Configuration.DataDirectory);
 					if (baseDataPath == null)
 						throw new InvalidOperationException("Could not find root data path");
 					config.Settings["Raven/DataDir"] = Path.Combine(baseDataPath, dataDir.Substring(2));
@@ -728,7 +728,7 @@ namespace Raven.Database.Server
 				config.DatabaseName = tenantId;
 
 				config.Initialize();
-				config.CopyParentSettings(DefaultConfiguration);
+				config.CopyParentSettings(SystemConfiguration);
 				var documentDatabase = new DocumentDatabase(config);
 				documentDatabase.SpinBackgroundWorkers();
 				return documentDatabase;
@@ -739,12 +739,12 @@ namespace Raven.Database.Server
 
 		private void AddAccessControlHeaders(IHttpContext ctx)
 		{
-			if (string.IsNullOrEmpty(DefaultConfiguration.AccessControlAllowOrigin))
+			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlAllowOrigin))
 				return;
-			ctx.Response.AddHeader("Access-Control-Allow-Origin", DefaultConfiguration.AccessControlAllowOrigin);
-			ctx.Response.AddHeader("Access-Control-Max-Age", DefaultConfiguration.AccessControlMaxAge);
-			ctx.Response.AddHeader("Access-Control-Allow-Methods", DefaultConfiguration.AccessControlAllowMethods);
-			if (string.IsNullOrEmpty(DefaultConfiguration.AccessControlRequestHeaders))
+			ctx.Response.AddHeader("Access-Control-Allow-Origin", SystemConfiguration.AccessControlAllowOrigin);
+			ctx.Response.AddHeader("Access-Control-Max-Age", SystemConfiguration.AccessControlMaxAge);
+			ctx.Response.AddHeader("Access-Control-Allow-Methods", SystemConfiguration.AccessControlAllowMethods);
+			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlRequestHeaders))
 			{
 				// allow whatever headers are being requested
 				var hdr = ctx.Request.Headers["Access-Control-Request-Headers"]; // typically: "x-requested-with"
@@ -752,7 +752,7 @@ namespace Raven.Database.Server
 			}
 			else
 			{
-				ctx.Response.AddHeader("Access-Control-Request-Headers", DefaultConfiguration.AccessControlRequestHeaders);
+				ctx.Response.AddHeader("Access-Control-Request-Headers", SystemConfiguration.AccessControlRequestHeaders);
 			}
 		}
 

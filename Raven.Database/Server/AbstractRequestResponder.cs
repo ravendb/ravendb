@@ -33,7 +33,7 @@ namespace Raven.Database.Server
 		public abstract string UrlPattern { get; }
 		public abstract string[] SupportedVerbs { get; }
 
-		public DocumentDatabase DefaultResourceStore { get { return server.DefaultResourceStore; } }
+		public DocumentDatabase DefaultResourceStore { get { return server.SystemDatabase; } }
 		public DocumentDatabase ResourceStore { get { return database(); } }
 		public InMemoryRavenConfiguration Settings { get { return settings(); } }
 		public string TenantId { get { return tenantId(); } }

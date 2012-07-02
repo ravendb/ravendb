@@ -11,7 +11,7 @@ namespace Raven.Studio.Models
 {
 	public class DatabaseModel : Model
 	{
-		public const string DefaultDatabaseName = "Default";
+		public const string SystemDatabaseName = "System";
 
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly string name;
@@ -31,7 +31,7 @@ namespace Raven.Studio.Models
 			SelectedTask = new Observable<TaskModel> {Value = Tasks.FirstOrDefault()};
 			Statistics = new Observable<DatabaseStatistics>();
 
-			asyncDatabaseCommands = name.Equals(DefaultDatabaseName, StringComparison.OrdinalIgnoreCase)
+			asyncDatabaseCommands = name.Equals(SystemDatabaseName, StringComparison.OrdinalIgnoreCase)
 			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
 			                             	: documentStore.AsyncDatabaseCommands.ForDatabase(name);
 		}

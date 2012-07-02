@@ -66,9 +66,9 @@ namespace Raven.Tests.MailingList
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				var throws = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.EnsureDatabaseExists("default"));
+				var throws = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.EnsureDatabaseExists("System"));
 
-				Assert.Contains(@"Cannot create a tenant database with the name 'default', that name is reserved for the actual default database", throws.Message);
+				Assert.Contains(@"Cannot create a tenant database with the name 'System', that name is reserved for the actual system database", throws.Message);
 		
 			}
 		}
