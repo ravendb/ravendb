@@ -925,6 +925,25 @@ namespace Raven.Database
 			return attachment;
 		}
 
+		public IEnumerable<AttachmentInformation> GetStaticsStartingWith(string idPrefix, int start, int pageSize)
+		{
+			if (idPrefix == null) throw new ArgumentNullException("idPrefix");
+			IEnumerable<AttachmentInformation> attachments = null;
+			TransactionalStorage.Batch(actions =>
+			{
+				attachments = actions.Attachments.GetAttachmentsStartingWith(idPrefix, start, pageSize)
+					.Select(information =>
+					{
+						var processAttachmentReadVetoes = ProcessAttachmentReadVetoes(information);
+						ExecuteAttachmentReadTriggers(processAttachmentReadVetoes);
+						return processAttachmentReadVetoes;
+					})
+					.Where(x => x != null)
+					.ToList();
+			});
+			return attachments;
+		}
+
 		private Attachment ProcessAttachmentReadVetoes(string name, Attachment attachment)
 		{
 			if (attachment == null)
@@ -977,6 +996,61 @@ namespace Raven.Database
 			foreach (var attachmentReadTrigger in AttachmentReadTriggers)
 			{
 				attachmentReadTrigger.Value.OnRead(name, attachment);
+			}
+		}
+
+
+		private AttachmentInformation ProcessAttachmentReadVetoes(AttachmentInformation attachment)
+		{
+			if (attachment == null)
+				return null;
+
+			var foundResult = false;
+			foreach (var attachmentReadTriggerLazy in AttachmentReadTriggers)
+			{
+				if (foundResult)
+					break;
+				var attachmentReadTrigger = attachmentReadTriggerLazy.Value;
+				var readVetoResult = attachmentReadTrigger.AllowRead(attachment.Key, null, attachment.Metadata,
+																	 ReadOperation.Load);
+				switch (readVetoResult.Veto)
+				{
+					case ReadVetoResult.ReadAllow.Allow:
+						break;
+					case ReadVetoResult.ReadAllow.Deny:
+						attachment.Size = 0;
+						attachment.Metadata = new RavenJObject
+												{
+													{
+														"Raven-Read-Veto",
+														new RavenJObject
+															{
+																{"Reason", readVetoResult.Reason},
+																{"Trigger", attachmentReadTrigger.ToString()}
+															}
+														}
+												};
+						foundResult = true;
+						break;
+					case ReadVetoResult.ReadAllow.Ignore:
+						attachment = null;
+						foundResult = true;
+						break;
+					default:
+						throw new ArgumentOutOfRangeException(readVetoResult.Veto.ToString());
+				}
+			}
+			return attachment;
+		}
+
+		private void ExecuteAttachmentReadTriggers(AttachmentInformation information)
+		{
+			if (information == null)
+				return;
+
+			foreach (var attachmentReadTrigger in AttachmentReadTriggers)
+			{
+				attachmentReadTrigger.Value.OnRead(information);
 			}
 		}
 
@@ -1078,19 +1152,21 @@ namespace Raven.Database
 			return list;
 		}
 
-		public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag)
+		public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag, string startsWith)
 		{
-			AttachmentInformation[] documents = null;
+			AttachmentInformation[] attachments = null;
 
 			TransactionalStorage.Batch(actions =>
 			{
-				if (etag == null)
-					documents = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
+				if (string.IsNullOrEmpty(startsWith) == false)
+					attachments = actions.Attachments.GetAttachmentsStartingWith(startsWith, start, pageSize).ToArray();
+				else if (etag != null)
+					attachments = actions.Attachments.GetAttachmentsAfter(etag.Value, pageSize).ToArray();
 				else
-					documents = actions.Attachments.GetAttachmentsAfter(etag.Value, pageSize).ToArray();
+					attachments = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
 
 			});
-			return documents;
+			return attachments;
 		}
 
 		public RavenJArray GetIndexNames(int start, int pageSize)

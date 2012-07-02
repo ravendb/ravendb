@@ -107,14 +107,37 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 			while (Api.TryMovePrevious(session, Files))
 			{
-				yield return new AttachmentInformation
-				{
-					Size =  Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]) ?? 0,
-					Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
-					Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
-					Metadata = RavenJObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
-				};
+				yield return ReadCurrentAttachmentInformation();
 			}
+		}
+
+		public IEnumerable<AttachmentInformation> GetAttachmentsStartingWith(string idPrefix, int start, int pageSize)
+		{
+			Api.JetSetCurrentIndex(session, Files, "by_name");
+			Api.MakeKey(session, Files, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			if (Api.TrySeek(session, Files, SeekGrbit.SeekGE) == false)
+				return Enumerable.Empty<AttachmentInformation>();
+
+			var optimizer = new OptimizedIndexReader(Session, Files, pageSize);
+			do
+			{
+				Api.MakeKey(session, Files, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
+				if (Api.TrySetIndexRange(session, Files, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
+					return Enumerable.Empty<AttachmentInformation>();
+
+				while (start > 0)
+				{
+					if (Api.TryMoveNext(session, Files) == false)
+						return Enumerable.Empty<AttachmentInformation>();
+					start--;
+				}
+
+				optimizer.Add();
+
+			} while (Api.TryMoveNext(session, Files) && optimizer.Count < pageSize);
+
+			return optimizer.Select(ReadCurrentAttachmentInformation);
+		
 		}
 
 		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid etag, int take)
@@ -130,13 +153,20 @@ namespace Raven.Storage.Esent.StorageActions
 				optimizer.Add();
 			} while (Api.TryMoveNext(session, Files) && optimizer.Count < take);
 
-			return optimizer.Select(() => new AttachmentInformation
+			return optimizer.Select(ReadCurrentAttachmentInformation);
+		}
+
+		private AttachmentInformation ReadCurrentAttachmentInformation()
+		{
+			return new AttachmentInformation
 			{
 				Size = Api.RetrieveColumnSize(session, Files, tableColumnsCache.FilesColumns["data"]) ?? 0,
 				Etag = Api.RetrieveColumn(session, Files, tableColumnsCache.FilesColumns["etag"]).TransfromToGuidWithProperSorting(),
 				Key = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["name"], Encoding.Unicode),
-				Metadata = RavenJObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode))
-			});
+				Metadata =
+					RavenJObject.Parse(Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"],
+					                                              Encoding.Unicode))
+			};
 		}
 
 		public Attachment GetAttachment(string key)
@@ -151,6 +181,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var metadata = Api.RetrieveColumnAsString(session, Files, tableColumnsCache.FilesColumns["metadata"], Encoding.Unicode);
 			return new Attachment
 			{
+				Key = key,
 				Data = () =>
 				{
 					StorageActionsAccessor storageActionsAccessor = transactionalStorage.GetCurrentBatch();

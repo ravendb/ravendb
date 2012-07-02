@@ -25,7 +25,8 @@ namespace Raven.Database.Server.Responders
 		{
 			var array = Database.GetAttachments(context.GetStart(), 
 			                                   context.GetPageSize(Database.Configuration.MaxPageSize),
-			                                   context.GetEtagFromQueryString());
+			                                   context.GetEtagFromQueryString(),
+											   context.Request.QueryString["startsWith"]);
 			context.WriteJson(array);
 		}
 	}

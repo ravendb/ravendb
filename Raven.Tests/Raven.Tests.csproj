@@ -566,6 +566,7 @@
     <Compile Include="Issues\Ravendb_334.cs" />
     <Compile Include="Issues\RavenDB_367.cs" />
     <Compile Include="Issues\RavenDB_381.cs" />
+    <Compile Include="Issues\RavenDB_384.cs" />
     <Compile Include="Linq\LongCount.cs" />
     <Compile Include="MailingList\AccesscControlHeaders.cs" />
     <Compile Include="MailingList\Arun.cs" />

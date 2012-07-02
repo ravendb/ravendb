@@ -90,6 +90,7 @@ namespace Raven.Storage.Managed
 			var metadata = memoryStream.ToJObject();
 			return new Attachment
 			{
+				Key = key,
 				Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
 				Metadata = metadata,
 				Data = () => memoryStream,
@@ -108,6 +109,22 @@ namespace Raven.Storage.Managed
 					   Metadata = attachment.Metadata,
 					   Size = attachment.Size
 				   };
+		}
+
+		public IEnumerable<AttachmentInformation> GetAttachmentsStartingWith(string idPrefix, int start, int pageSize)
+		{
+			return from key in storage.Attachments["ByKey"].SkipTo(new RavenJObject {{"key", idPrefix}})
+			       	.Skip(start)
+			       	.TakeWhile(x => x.Value<string>("key").StartsWith(idPrefix))
+			       	.Take(pageSize)
+			       let attachment = GetAttachment(key.Value<string>("key"))
+			       select new AttachmentInformation
+			       {
+			       	Key = key.Value<string>("key"),
+			       	Etag = new Guid(key.Value<byte[]>("etag")),
+			       	Metadata = attachment.Metadata,
+			       	Size = attachment.Size
+			       };
 		}
 
 		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid value, int take)

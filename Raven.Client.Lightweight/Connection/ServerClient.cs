@@ -371,6 +371,26 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
+		/// Gets the attachments starting with the specified prefix
+		/// </summary>
+		public IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize)
+		{
+			return ExecuteWithReplication("GET", operationUrl => DirectGetAttachmentHeadersStartingWith("GET", idPrefix, start, pageSize, operationUrl));
+		}
+
+		private IEnumerable<Attachment> DirectGetAttachmentHeadersStartingWith(string method, string idPrefix, int start, int pageSize, string operationUrl)
+		{
+			var webRequest =
+				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+				                                                                         operationUrl + "/static/?startsWith=" +
+				                                                                         idPrefix + "&start=" + start + "&pageSize=" +
+				                                                                         pageSize, method, credentials, convention));
+			var result = webRequest.ReadResponseJson();
+
+			return convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result));
+		}
+
+		/// <summary>
 		/// Gets the attachment by the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>

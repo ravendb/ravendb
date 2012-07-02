@@ -20,6 +20,7 @@ namespace Raven.Storage.Managed.Impl
 
 			Attachments = Add(new Table(x => x.Value<string>("key"), "Attachments")
 			{
+				{"ByKey", x => x.Value<string>("key")},
 				{"ByEtag", x => new ComparableByteArray(x.Value<byte[]>("etag"))},
 			});
 
