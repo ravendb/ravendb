@@ -20,13 +20,6 @@ namespace Raven.Abstractions.Extensions
 	/// </summary>
 	public static class MetadataExtensions
 	{
-		private static readonly HashSet<string> HeadersToIgnoreServerDocument =
-			new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-			{
-				"Content-Type",
-				
-			};
-
 		private static readonly HashSet<string> HeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 		{
 			// Raven internal headers
@@ -53,6 +46,7 @@ namespace Raven.Abstractions.Extensions
 			"Content-Location",
 			"Content-MD5",
 			"Content-Range",
+			"Content-Type",
 			"Expires",
 			// ignoring this header, we handle this internally
 			"Last-Modified",
@@ -115,7 +109,7 @@ namespace Raven.Abstractions.Extensions
 		/// <param name="self">The self.</param>
 		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeaders(this RavenJObject self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this RavenJObject self)
 		{
 			if (self == null)
 				return self;
@@ -128,8 +122,6 @@ namespace Raven.Abstractions.Extensions
 				if(header.Key == Constants.DocumentIdFieldName)
 					continue;
 				if (HeadersToIgnoreClient.Contains(header.Key))
-					continue;
-				if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
 					continue;
 				var headerName = CaptureHeaderName(header.Key);
 				metadata[headerName] = header.Value;
@@ -144,7 +136,7 @@ namespace Raven.Abstractions.Extensions
 		/// <param name="self">The self.</param>
 		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeaders(this IDictionary<string, IList<string>> self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this IDictionary<string, IList<string>> self)
 		  {
 			  var metadata = new RavenJObject();
 			foreach (var header in self)
@@ -152,8 +144,6 @@ namespace Raven.Abstractions.Extensions
 				if (header.Key.StartsWith("Temp"))
 					continue;
 				if (HeadersToIgnoreClient.Contains(header.Key))
-					continue;
-				if(isServerDocument && HeadersToIgnoreServerDocument.Contains(header.Key))
 					continue;
 				var values = header.Value;
 				var headerName = CaptureHeaderName(header.Key);
@@ -171,7 +161,7 @@ namespace Raven.Abstractions.Extensions
 		/// <param name="self">The self.</param>
 		/// <param name="isServerDocument">if set to <c>true</c> [is server document].</param>
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeaders(this NameValueCollection self, bool isServerDocument)
+		public static RavenJObject FilterHeaders(this NameValueCollection self)
 		{
 			var metadata = new RavenJObject(StringComparer.InvariantCultureIgnoreCase);
 			foreach (string header in self)
@@ -181,8 +171,6 @@ namespace Raven.Abstractions.Extensions
 					if(header.StartsWith("Temp"))
 						continue;
 					if (HeadersToIgnoreClient.Contains(header))
-						continue;
-					if (isServerDocument && HeadersToIgnoreServerDocument.Contains(header))
 						continue;
 					var valuesNonDistinct = self.GetValues(header);
 					if(valuesNonDistinct == null)

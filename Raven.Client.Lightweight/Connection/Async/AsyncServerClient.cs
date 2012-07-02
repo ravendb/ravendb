@@ -826,7 +826,7 @@ namespace Raven.Client.Connection.Async
 									Data = () => memoryStream,
 									Size = task.Result.Length,
 									Etag = request.GetEtagHeader(),
-									Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
+									Metadata = request.ResponseHeaders.FilterHeaders()
 								};
 
 							case TaskStatus.Faulted:

@@ -416,7 +416,7 @@ namespace Raven.Client.Connection
 					Data = data,
 					Size = len,
 					Etag = webRequest.GetEtagHeader(),
-					Metadata = webRequest.ResponseHeaders.FilterHeaders(isServerDocument: false)
+					Metadata = webRequest.ResponseHeaders.FilterHeaders()
 				};
 			}
 			catch (WebException e)

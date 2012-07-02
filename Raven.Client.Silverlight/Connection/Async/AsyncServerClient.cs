@@ -186,7 +186,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 							Key = docKey,
 							LastModified = DateTime.ParseExact(request.ResponseHeaders[Constants.LastModified].First(), "r", CultureInfo.InvariantCulture).ToLocalTime(),
 							Etag = request.GetEtagHeader(),
-							Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
+							Metadata = request.ResponseHeaders.FilterHeaders()
 						};
 					}
 					catch (AggregateException e)
@@ -980,7 +980,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 									{
 										Data = () => new MemoryStream(buffer),
 										Etag = request.GetEtagHeader(),
-										Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
+										Metadata = request.ResponseHeaders.FilterHeaders()
 									};
 						}
 						catch (AggregateException e)

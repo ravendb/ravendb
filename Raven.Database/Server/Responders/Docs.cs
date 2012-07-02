@@ -54,7 +54,7 @@ namespace Raven.Database.Server.Responders
 				case "POST":
 					var json = context.ReadJson();
 					var id = Database.Put(null, Guid.NewGuid(), json,
-										  context.Request.Headers.FilterHeaders(isServerDocument: true),
+										  context.Request.Headers.FilterHeaders(),
 										  GetRequestTransaction(context));
 					context.SetStatusToCreated("/docs/" + id);
 					context.WriteJson(id);
