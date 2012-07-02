@@ -115,6 +115,26 @@
     </Compile>
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
+    <Compile Include="Bundles\Replication\Data\DestinationFailureInformation.cs" />
+    <Compile Include="Bundles\Replication\Data\SourceReplicationInformation.cs" />
+    <Compile Include="Bundles\Replication\Impl\ReplicationHiLo.cs" />
+    <Compile Include="Bundles\Replication\Plugins\AbstractAttachmentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\Replication\Plugins\AbstractDocumentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\Replication\ReplicationConstants.cs" />
+    <Compile Include="Bundles\Replication\Responders\AttachmentReplicationResponder.cs" />
+    <Compile Include="Bundles\Replication\Responders\DocumentReplicationResponder.cs" />
+    <Compile Include="Bundles\Replication\Responders\ReplicationLastEtagResponser.cs" />
+    <Compile Include="Bundles\Replication\Tasks\ReplicationTask.cs" />
+    <Compile Include="Bundles\Replication\Triggers\AncestryPutTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\AttachmentAncestryPutTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\HideVirtuallyDeletedAttachmentsReadTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\HideVirtuallyDeletedDocumentsReadTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\PreventConflictDocumentsPutTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\PreventIndexingConflictDocumentsReadTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentPutTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnPutTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\VirtualAttachmentDeleteTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />

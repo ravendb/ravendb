@@ -480,11 +480,7 @@ task CreateNugetPackageFineGrained {
 	New-Item $nuget_dir\RavenDB.Bundles.Quotas\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Quotas.nuspec $nuget_dir\RavenDB.Bundles.Quotas\RavenDB.Bundles.Quotas.nuspec
 	@("Raven.Bundles.Quotas.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Quotas\lib\net40 }
-	
-	New-Item $nuget_dir\RavenDB.Bundles.Replication\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Replication.nuspec $nuget_dir\RavenDB.Bundles.Replication\RavenDB.Bundles.Replication.nuspec
-	@("Raven.Bundles.Replication.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Replication\lib\net40 }
-	
+		
 	New-Item $nuget_dir\RavenDB.Bundles.UniqueConstraints\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.UniqueConstraints.nuspec $nuget_dir\RavenDB.Bundles.UniqueConstraints\RavenDB.Bundles.UniqueConstraints.nuspec
 	@("Raven.Bundles.UniqueConstraints.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.UniqueConstraints\lib\net40 }

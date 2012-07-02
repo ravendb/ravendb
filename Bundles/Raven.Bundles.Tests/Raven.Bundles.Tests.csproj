@@ -188,11 +188,6 @@
       <Project>{EA00C89B-161A-4D62-8A88-9063900F0BC2}</Project>
       <Name>Raven.Bundles.MoreLikeThis</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Bundles.Replication\Raven.Bundles.Replication.csproj">
-      <Project>{2EA316E8-629A-45C2-80B8-48F9CDB5BF57}</Project>
-      <Name>Raven.Bundles.Replication</Name>
-      <Aliases>replication</Aliases>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.UniqueConstraints\Raven.Bundles.UniqueConstraints.csproj">
       <Project>{4C026F8A-FB36-4A30-82E9-324D207F6B48}</Project>
       <Name>Raven.Bundles.UniqueConstraints</Name>
