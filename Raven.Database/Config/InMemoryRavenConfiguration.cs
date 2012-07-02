@@ -207,22 +207,19 @@ namespace Raven.Database.Config
 
 		private void FilterActiveBundles()
 		{
-			var activeBundles = Settings["Raven/ActiveBundles"];
+			var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
 
-			if (activeBundles != null)
-			{
-				var bundles = activeBundles.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-					.Select(x => x.Trim())
-					.ToArray();
-				var catalog =
-					Catalog.Catalogs.Count == 1
-						? Catalog.Catalogs.First()
-						: new AggregateCatalog(Catalog.Catalogs);
+			var bundles = activeBundles.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+				.Select(x => x.Trim())
+				.ToArray();
+			var catalog =
+				Catalog.Catalogs.Count == 1
+					? Catalog.Catalogs.First()
+					: new AggregateCatalog(Catalog.Catalogs);
 
-				Catalog.Catalogs.Clear();
+			Catalog.Catalogs.Clear();
 
-				Catalog.Catalogs.Add(new BundlesFilteredCatalog(catalog, bundles));
-			}
+			Catalog.Catalogs.Add(new BundlesFilteredCatalog(catalog, bundles));
 		}
 
 		public TaskScheduler CustomTaskScheduler { get; set; }
