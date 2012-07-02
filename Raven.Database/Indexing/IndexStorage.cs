@@ -40,6 +40,8 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
+		private const string IndexVersion = "1.2.17";
+
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly string path;
@@ -181,11 +183,14 @@ namespace Raven.Database.Indexing
 					if(createIfMissing == false)
 						throw new InvalidOperationException("Index does not exists: " + indexDirectory);
 
+					WriteIndexVersion(directory);
+
 					//creating index structure if we need to
 					new IndexWriter(directory, dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Close();
 				}
 				else
 				{
+					EnsureIndexVersionMatches(indexName, directory);
 					if (directory.FileExists("write.lock")) // we had an unclean shutdown
 					{
 						if(configuration.ResetIndexOnUncleanShutdown)
@@ -201,6 +206,40 @@ namespace Raven.Database.Indexing
 
 			return directory;
 
+		}
+
+		private static void WriteIndexVersion(Lucene.Net.Store.Directory directory)
+		{
+			var indexOutput = directory.CreateOutput("index.version");
+			try
+			{
+				indexOutput.WriteString(IndexVersion);
+				indexOutput.Flush();
+			}
+			finally
+			{
+				indexOutput.Close();
+			}
+		}
+
+		private static void EnsureIndexVersionMatches(string indexName, Lucene.Net.Store.Directory directory)
+		{
+			if (directory.FileExists("index.version") == false)
+			{
+				throw new InvalidOperationException("Could not find index.version " + indexName + ", resetting index");
+			}
+			var indexInput = directory.OpenInput("index.version");
+			try
+			{
+				var versionFromDisk = indexInput.ReadString();
+				if (versionFromDisk != IndexVersion)
+					throw new InvalidOperationException("Index " + indexName + " is of version " + versionFromDisk +
+					                                    " which is not compatible with " + IndexVersion + ", resetting index");
+			}
+			finally
+			{
+				indexInput.Close();
+			}
 		}
 
 		private static void CheckIndexAndRecover(Lucene.Net.Store.Directory directory, string indexDirectory)
