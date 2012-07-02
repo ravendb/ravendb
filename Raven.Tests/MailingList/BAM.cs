@@ -58,7 +58,7 @@ namespace Raven.Tests.MailingList
 
 
 		[Fact]
-		public void Cannot_create_tenant_named_default()
+		public void Cannot_create_tenant_named_system()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore

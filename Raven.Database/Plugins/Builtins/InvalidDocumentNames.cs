@@ -11,7 +11,7 @@ namespace Raven.Database.Plugins.Builtins
 			if(string.Equals(key, "Raven/Databases/System", StringComparison.InvariantCultureIgnoreCase))
 				return
 					VetoResult.Deny(
-						@"Cannot create a tenant database with the name 'System', that name is reserved for the actual default database");
+						@"Cannot create a tenant database with the name 'System', that name is reserved for the actual system database");
 
 			return VetoResult.Allowed;
 		}
