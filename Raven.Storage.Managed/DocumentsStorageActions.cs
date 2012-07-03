@@ -65,11 +65,22 @@ namespace Raven.Storage.Managed
 				.Take(take);
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take, long? maxSize = null)
 		{
-			return storage.Documents["ByEtag"].SkipAfter(new RavenJObject{{"etag", etag.ToByteArray()}})
+			var docs = storage.Documents["ByEtag"].SkipAfter(new RavenJObject {{"etag", etag.ToByteArray()}})
 				.Select(result => DocumentByKey(result.Value<string>("key"), null))
 				.Take(take);
+			long totalSize = 0;
+			foreach (var doc in docs)
+			{
+				totalSize += doc.SerializedSizeOnDisk;
+				if (maxSize != null && totalSize > maxSize.Value)
+				{
+					yield return doc;
+					yield break;
+				}
+				yield return doc;
+			}
 		}
 
 		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)

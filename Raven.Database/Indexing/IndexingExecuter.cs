@@ -64,7 +64,11 @@ namespace Raven.Database.Indexing
 			{
 				transactionalStorage.Batch(actions =>
 				{
-					jsonDocs = actions.Documents.GetDocumentsAfter(lastIndexedGuidForAllIndexes, autoTuner.NumberOfItemsToIndexInSingleBatch)
+					jsonDocs = actions.Documents
+						.GetDocumentsAfter(
+							lastIndexedGuidForAllIndexes, 
+							autoTuner.NumberOfItemsToIndexInSingleBatch,
+							autoTuner.MaximumMemoryAllowed)
 						.Where(x => x != null)
 						.Select(doc =>
 						{

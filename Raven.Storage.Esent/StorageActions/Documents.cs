@@ -226,19 +226,25 @@ namespace Raven.Storage.Esent.StorageActions
 		}
 
 
-		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take)
+		public IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take, long? maxSize = null)
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MakeKey(session, Documents, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
-				return Enumerable.Empty<JsonDocument>();
+				yield break;
+			long totalSize = 0;
 			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			do
 			{
-				optimizer.Add();
+				var readCurrentDocument = ReadCurrentDocument();
+				totalSize += readCurrentDocument.SerializedSizeOnDisk;
+				if(maxSize != null && totalSize > maxSize.Value)
+				{
+					yield return readCurrentDocument;
+					yield break;
+				}
+				yield return readCurrentDocument;
 			} while (Api.TryMoveNext(session, Documents) && optimizer.Count < take);
-
-			return optimizer.Select(ReadCurrentDocument);
 		}
 
 
