@@ -548,6 +548,7 @@
     <Compile Include="Commands\DeleteCommandData.cs" />
     <Compile Include="Commands\PatchCommandData.cs" />
     <Compile Include="Commands\PutCommandData.cs" />
+    <Compile Include="Connection\WriteCountingStream.cs" />
     <Compile Include="Connection\HttpRavenRequest.cs" />
     <Compile Include="Connection\HttpRavenRequestFactory.cs" />
     <Compile Include="Connection\HttpRequestHelper.cs" />

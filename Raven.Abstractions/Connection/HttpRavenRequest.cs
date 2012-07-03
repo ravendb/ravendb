@@ -25,6 +25,7 @@ namespace Raven.Abstractions.Connection
 		private byte[] postedData;
 		private bool writeBson;
 
+		public long NumberOfBytesWritten { get; private set; }
 
 		public HttpWebRequest WebRequest
 		{
@@ -63,7 +64,8 @@ namespace Raven.Abstractions.Connection
 		{
 			postedStream = streamToWrite;
 			using (var stream = WebRequest.GetRequestStream())
-			using(var commpressedStream = new GZipStream(stream, CompressionMode.Compress))
+			using(var countingStream = new WriteCountingStream(stream, l => NumberOfBytesWritten = l))
+			using(var commpressedStream = new GZipStream(countingStream, CompressionMode.Compress))
 			{
 				streamToWrite.CopyTo(commpressedStream);
 				stream.Flush();
@@ -81,7 +83,8 @@ namespace Raven.Abstractions.Connection
 		{
 			postedData = data;
 			using (var stream = WebRequest.GetRequestStream())
-			using(var cmp = new GZipStream(stream, CompressionMode.Compress))
+			using (var countingStream = new WriteCountingStream(stream, l => NumberOfBytesWritten = l))
+			using (var cmp = new GZipStream(countingStream, CompressionMode.Compress))
 			{
 				cmp.Write(data, 0, data.Length);
 				cmp.Flush();
@@ -99,7 +102,8 @@ namespace Raven.Abstractions.Connection
 		private void WriteToken(WebRequest httpWebRequest)
 		{
 			using (var stream = httpWebRequest.GetRequestStream())
-			using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
+			using (var countingStream = new WriteCountingStream(stream, l => NumberOfBytesWritten = l))
+			using (var commpressedData = new GZipStream(countingStream, CompressionMode.Compress))
 			{
 				if (writeBson)
 				{
