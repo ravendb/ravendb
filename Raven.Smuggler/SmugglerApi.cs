@@ -21,6 +21,9 @@ namespace Raven.Smuggler
 {
 	public class SmugglerApi : SmugglerApiBase
 	{
+		const int retriesCount = 5;
+
+		private int count;
 		protected override RavenJArray GetIndexes(int totalCount)
 		{
 			RavenJArray indexes = null;
@@ -64,10 +67,23 @@ namespace Raven.Smuggler
 
 		protected override RavenJArray GetDocuments(Guid lastEtag)
 		{
-			RavenJArray documents = null;
-			var request = CreateRequest("/docs?pageSize=" + smugglerOptions.BatchSize + "&etag=" + lastEtag);
-			request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
-			return documents;
+			int retries = retriesCount;
+			while (true)
+			{
+				try
+				{
+					RavenJArray documents = null;
+					var request = CreateRequest("/docs?pageSize=" + smugglerOptions.BatchSize + "&etag=" + lastEtag);
+					request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
+					return documents;
+				}
+				catch (Exception e)
+				{
+					if (retries-- == 0)
+						throw;
+					ShowProgress("Error reading from datbase, attempt {0}/{2}, will retry. Error: {1}", retries - retriesCount, e, retriesCount);
+				}
+			}
 		}
 
 		protected override Guid ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag)
@@ -162,13 +178,26 @@ namespace Raven.Smuggler
 								});
 			}
 
-			var request = CreateRequest("/bulk_docs", "POST");
-			request.Write(commands);
-			request.ExecuteRequest();
+			var retries = retriesCount;
+			while(true)
+			{
+				try
+				{
+					var request = CreateRequest("/bulk_docs", "POST");
+					request.Write(commands);
+					request.ExecuteRequest();
+					break;
+				}
+				catch (Exception e)
+				{
+					if (--retries == 0)
+						throw;
+					ShowProgress("Error flushing to datbase, attempt {0}/{2}, will retry. Error: {1}", retries - retriesCount, e, retriesCount);
+				}
+			}
 
-			ShowProgress("Wrote {0} documents in {1}", batch.Count, sw.ElapsedMilliseconds);
+			ShowProgress("{2,5:#,#}: Wrote {0:#,#;;0} documents in {1:#,#;;0} ms", batch.Count, sw.ElapsedMilliseconds, ++count);
 
-			ShowProgress(" in {0:#,#;;0} ms", sw.ElapsedMilliseconds);
 			batch.Clear();
 		}
 

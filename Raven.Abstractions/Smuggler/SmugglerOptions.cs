@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Smuggler
 		{
 			Filters = new Dictionary<string, string>();
 			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments;
-			Timeout = 30*1000; // 30 seconds
+			Timeout = 30 * 1000; // 30 seconds
 			BatchSize = 1024;
 		}
 
