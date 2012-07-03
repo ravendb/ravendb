@@ -70,8 +70,7 @@ namespace Raven.Database.Smuggler
 				};
 			}).ToArray());
 
-			ShowProgress("Wrote {0} documents in {1}", batch.Count, sw.ElapsedMilliseconds);
-			ShowProgress(" in {0:#,#;;0} ms", sw.ElapsedMilliseconds);
+			ShowProgress("Wrote {0:#,#} documents in {1:#,#;;0} ms", batch.Count, sw.ElapsedMilliseconds);
 			batch.Clear();
 		}
 

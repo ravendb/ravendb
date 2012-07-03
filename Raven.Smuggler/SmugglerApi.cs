@@ -23,6 +23,7 @@ namespace Raven.Smuggler
 	{
 		const int retriesCount = 5;
 
+		private int total;
 		private int count;
 		protected override RavenJArray GetIndexes(int totalCount)
 		{
@@ -62,6 +63,12 @@ namespace Raven.Smuggler
 			builder.Append(url);
 			var httpRavenRequest = httpRavenRequestFactory.Create(builder.ToString(), method, ConnectionStringOptions);
 			httpRavenRequest.WebRequest.Timeout = smugglerOptions.Timeout;
+			if(LastRequestErrored)
+			{
+				httpRavenRequest.WebRequest.KeepAlive = false;
+				httpRavenRequest.WebRequest.Timeout *= 2;
+				LastRequestErrored = false;
+			}
 			return httpRavenRequest;
 		}
 
@@ -81,7 +88,8 @@ namespace Raven.Smuggler
 				{
 					if (retries-- == 0)
 						throw;
-					ShowProgress("Error reading from datbase, attempt {0}/{2}, will retry. Error: {1}", retries - retriesCount, e, retriesCount);
+					LastRequestErrored = true;
+					ShowProgress("Error reading from datbase, remaining attempts {0}, will retry. Error: {1}", retries, e, retriesCount);
 				}
 			}
 		}
@@ -179,11 +187,12 @@ namespace Raven.Smuggler
 			}
 
 			var retries = retriesCount;
-			while(true)
+			HttpRavenRequest request = null;
+			while (true)
 			{
 				try
 				{
-					var request = CreateRequest("/bulk_docs", "POST");
+					request = CreateRequest("/bulk_docs", "POST");
 					request.Write(commands);
 					request.ExecuteRequest();
 					break;
@@ -192,14 +201,21 @@ namespace Raven.Smuggler
 				{
 					if (--retries == 0)
 						throw;
-					ShowProgress("Error flushing to datbase, attempt {0}/{2}, will retry. Error: {1}", retries - retriesCount, e, retriesCount);
+					LastRequestErrored = true;
+					ShowProgress("Error flushing to datbase, remaining atempts {0} - time {2:#,#} ms, will retry. Error: {1}", 
+						retriesCount - retries, e, sw.ElapsedMilliseconds);
 				}
 			}
-
-			ShowProgress("{2,5:#,#}: Wrote {0:#,#;;0} documents in {1:#,#;;0} ms", batch.Count, sw.ElapsedMilliseconds, ++count);
+			total += batch.Count;
+			ShowProgress("{2,5:#,#}: Wrote {0:#,#;;0} (total of {3:#,#;;0}) documents [{4:#,#.##;;0} kb compressed to {5:#,###;;0} kb] in {1:#,#;;0} ms", 
+				batch.Count, sw.ElapsedMilliseconds, ++count, total,
+				(double)request.NumberOfBytesWrittenUncompressed / 1024,
+				(double)request.NumberOfBytesWrittenCompressed / 1024);
 
 			batch.Clear();
 		}
+
+		public bool LastRequestErrored { get; set; }
 
 		protected override void EnsureDatabaseExists()
 		{
