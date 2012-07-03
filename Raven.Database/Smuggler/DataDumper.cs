@@ -19,7 +19,7 @@ namespace Raven.Database.Smuggler
 {
 	public class DataDumper : SmugglerApiBase
 	{
-		public DataDumper(DocumentDatabase database)
+		public DataDumper(DocumentDatabase database, SmugglerOptions options) : base(options)
 		{
 			_database = database;
 		}

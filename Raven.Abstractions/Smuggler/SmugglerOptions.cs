@@ -18,6 +18,8 @@ namespace Raven.Abstractions.Smuggler
 		{
 			Filters = new Dictionary<string, string>();
 			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments;
+			Timeout = 30*1000; // 30 seconds
+			BatchSize = 1024;
 		}
 
 		/// <summary>
@@ -33,6 +35,16 @@ namespace Raven.Abstractions.Smuggler
 		/// Usage example: OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments.
 		/// </summary>
 		public ItemType OperateOnTypes { get; set; }
+
+		/// <summary>
+		/// The timeout for requests
+		/// </summary>
+		public int Timeout { get; set; }
+
+		/// <summary>
+		/// The batch size for loading to ravendb
+		/// </summary>
+		public int BatchSize { get; set; }
 
 		public bool MatchFilters(RavenJToken item)
 		{

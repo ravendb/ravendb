@@ -24,7 +24,7 @@ namespace Raven.Smuggler
 		protected override RavenJArray GetIndexes(int totalCount)
 		{
 			RavenJArray indexes = null;
-			var request = CreateRequest("/indexes?pageSize=128&start=" + totalCount);
+			var request = CreateRequest("/indexes?pageSize="+ smugglerOptions.BatchSize + "&start=" + totalCount);
 			request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)));
 			return indexes;
 		}
@@ -39,7 +39,8 @@ namespace Raven.Smuggler
 		public RavenConnectionStringOptions ConnectionStringOptions { get; private set; }
 		private readonly HttpRavenRequestFactory httpRavenRequestFactory = new HttpRavenRequestFactory();
 
-		public SmugglerApi(RavenConnectionStringOptions connectionStringOptions)
+		public SmugglerApi(SmugglerOptions smugglerOptions, RavenConnectionStringOptions connectionStringOptions)
+			:base(smugglerOptions)
 		{
 			ConnectionStringOptions = connectionStringOptions;
 		}
@@ -56,13 +57,15 @@ namespace Raven.Smuggler
 				builder.Append('/');
 			}
 			builder.Append(url);
-			return httpRavenRequestFactory.Create(builder.ToString(), method, ConnectionStringOptions);
+			var httpRavenRequest = httpRavenRequestFactory.Create(builder.ToString(), method, ConnectionStringOptions);
+			httpRavenRequest.WebRequest.Timeout = smugglerOptions.Timeout;
+			return httpRavenRequest;
 		}
 
 		protected override RavenJArray GetDocuments(Guid lastEtag)
 		{
 			RavenJArray documents = null;
-			var request = CreateRequest("/docs?pageSize=128&etag=" + lastEtag);
+			var request = CreateRequest("/docs?pageSize=" + smugglerOptions.BatchSize + "&etag=" + lastEtag);
 			request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
 			return documents;
 		}
@@ -73,7 +76,7 @@ namespace Raven.Smuggler
 			while (true)
 			{
 				RavenJArray attachmentInfo = null;
-				var request = CreateRequest("/static/?pageSize=128&etag=" + lastEtag);
+				var request = CreateRequest("/static/?pageSize=" + smugglerOptions.BatchSize + "&etag=" + lastEtag);
 				request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)));
 
 				if (attachmentInfo.Length == 0)

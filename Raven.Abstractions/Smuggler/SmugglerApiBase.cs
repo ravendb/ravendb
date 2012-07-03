@@ -13,6 +13,7 @@ namespace Raven.Abstractions.Smuggler
 {
 	public abstract class SmugglerApiBase : ISmugglerApi
 	{
+		protected readonly SmugglerOptions smugglerOptions;
 		protected abstract RavenJArray GetIndexes(int totalCount);
 		protected abstract RavenJArray GetDocuments(Guid lastEtag);
 		protected abstract Guid ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag);
@@ -24,6 +25,11 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract void ShowProgress(string format, params object[] args);
 
 		protected bool ensuredDatabaseExists;
+
+		public SmugglerApiBase(SmugglerOptions smugglerOptions)
+		{
+			this.smugglerOptions = smugglerOptions;
+		}
 
 		public void ExportData(SmugglerOptions options, bool incremental = false)
 		{
@@ -262,7 +268,7 @@ namespace Raven.Abstractions.Smuggler
 
 				totalCount += 1;
 				batch.Add(document);
-				if (batch.Count >= 128)
+				if (batch.Count >= smugglerOptions.BatchSize)
 					FlushBatch(batch);
 			}
 			FlushBatch(batch);
