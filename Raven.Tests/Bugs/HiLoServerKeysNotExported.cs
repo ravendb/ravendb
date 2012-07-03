@@ -63,7 +63,7 @@ namespace Raven.Tests.Bugs
 				session.SaveChanges();
 			}
 
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			var smugglerApi = new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
 			smugglerApi.ExportData(new SmugglerOptions { File = DumpFile });
 			Assert.True(File.Exists(DumpFile));
 
@@ -97,7 +97,7 @@ namespace Raven.Tests.Bugs
 				session.SaveChanges();
 			}
 
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			var smugglerApi = new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
 			smugglerApi.ExportData(new SmugglerOptions
 									{
 										File = DumpFile,
@@ -125,7 +125,7 @@ namespace Raven.Tests.Bugs
 		{
 			documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Test", true } });
 
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			var smugglerApi = new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
 			smugglerApi.ExportData(new SmugglerOptions
 									{
 										File = DumpFile,
@@ -151,7 +151,7 @@ namespace Raven.Tests.Bugs
 
 			documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Test", true } });
 
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			var smugglerApi = new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
 			smugglerApi.ExportData(new SmugglerOptions
 			{
 				File = "Incremental",
@@ -190,7 +190,7 @@ namespace Raven.Tests.Bugs
 				Map = "from x in docs select new { x.Name, Count = 1}",
 			});
 
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			var smugglerApi = new SmugglerApi(new SmugglerOptions(),new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
 			smugglerApi.ExportData(new SmugglerOptions
 			{
 				File = "Incremental",
@@ -230,7 +230,7 @@ namespace Raven.Tests.Bugs
 				Map = "from x in docs select new { x.Name, Count = 1}",
 			});
 
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			var smugglerApi = new SmugglerApi(new SmugglerOptions(),new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
 			smugglerApi.ExportData(new SmugglerOptions
 			{
 				File = "Incremental",
@@ -259,7 +259,7 @@ namespace Raven.Tests.Bugs
 		{
 			IOExtensions.DeleteDirectory("Incremental");
 		
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			var smugglerApi = new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
 			for (int i = 0; i < 50; i++)
 			{
 				smugglerApi.ExportData(new SmugglerOptions
@@ -284,7 +284,7 @@ namespace Raven.Tests.Bugs
 				session.SaveChanges();
 			}
 
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = "http://localhost:8079/"});
+			var smugglerApi = new SmugglerApi(new SmugglerOptions(), new  RavenConnectionStringOptions {Url = "http://localhost:8079/"});
 			smugglerApi.ExportData(new SmugglerOptions
 			{
 				File = "Incremental",
@@ -328,7 +328,7 @@ namespace Raven.Tests.Bugs
 				session.SaveChanges();
 			}
 
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
+			var smugglerApi = new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions { Url = "http://localhost:8079/" });
 			smugglerApi.ExportData(new SmugglerOptions
 			{
 				File = "Incremental",
