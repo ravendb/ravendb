@@ -199,15 +199,17 @@ namespace Raven.Smuggler
 				}
 				catch (Exception e)
 				{
-					if (--retries == 0)
+					if (--retries == 0 || request == null)
 						throw;
 					LastRequestErrored = true;
-					ShowProgress("Error flushing to datbase, remaining atempts {0} - time {2:#,#} ms, will retry. Error: {1}", 
-						retriesCount - retries, e, sw.ElapsedMilliseconds);
+					ShowProgress("Error flushing to datbase, remaining atempts {0} - time {2:#,#} ms, will retry [{3:#,#.##;;0} kb compressed to {4:#,#.##;;0} kb]. Error: {1}",
+					             retriesCount - retries, e, sw.ElapsedMilliseconds,
+					             (double) request.NumberOfBytesWrittenUncompressed/1024,
+					             (double) request.NumberOfBytesWrittenCompressed/1024);
 				}
 			}
 			total += batch.Count;
-			ShowProgress("{2,5:#,#}: Wrote {0:#,#;;0} (total of {3:#,#;;0}) documents [{4:#,#.##;;0} kb compressed to {5:#,###;;0} kb] in {1:#,#;;0} ms", 
+			ShowProgress("{2,5:#,#}: Wrote {0:#,#;;0} (total of {3:#,#;;0}) documents [{4:#,#.##;;0} kb compressed to {5:#,#.##;;0} kb] in {1:#,#;;0} ms", 
 				batch.Count, sw.ElapsedMilliseconds, ++count, total,
 				(double)request.NumberOfBytesWrittenUncompressed / 1024,
 				(double)request.NumberOfBytesWrittenCompressed / 1024);
