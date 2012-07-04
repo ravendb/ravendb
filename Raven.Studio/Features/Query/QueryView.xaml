@@ -124,9 +124,16 @@
                     </Button.Content>
                 </Button>
                 
-                <ToggleButton IsChecked="{Binding ShowFields, Mode=TwoWay}" Content="Show fields" 
+                <ToggleButton IsChecked="{Binding ShowFields, Mode=TwoWay}"
                               Style="{StaticResource Style_ToggleButton_MouseOverChrome}"
-                              ToolTipService.ToolTip="Show fields from matching index entries instead of matching documents" />
+                              ToolTipService.ToolTip="Show fields from matching index entries instead of matching documents">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource Image_IndexFields_Tiny}"
+                               Stretch="None" VerticalAlignment="Center"/>
+                        <TextBlock VerticalAlignment="Center"
+										   Margin="2,0,0,0" >Show fields</TextBlock>
+                    </StackPanel>
+                </ToggleButton>
             </StackPanel>
         </Border>
         

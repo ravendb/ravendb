@@ -44,5 +44,6 @@
     <BitmapImage x:Key="Image_Logs_Small" UriSource="logs_small.png"/>
     <BitmapImage x:Key="Image_Tasks_Small" UriSource="tasks_small.png"/>
     <BitmapImage x:Key="Image_ToggleExpansion_Tiny" UriSource="Collapse_tiny.png"/>
+    <BitmapImage x:Key="Image_IndexFields_Tiny" UriSource="index_showfields.png"/>
     
 </ResourceDictionary>
