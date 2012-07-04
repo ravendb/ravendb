@@ -68,7 +68,7 @@ namespace Raven.Database.Indexing
 						.GetDocumentsAfter(
 							lastIndexedGuidForAllIndexes, 
 							autoTuner.NumberOfItemsToIndexInSingleBatch,
-							autoTuner.MaximumMemoryAllowed)
+							autoTuner.MaximumSizeAllowedToFetchFromStorage)
 						.Where(x => x != null)
 						.Select(doc =>
 						{

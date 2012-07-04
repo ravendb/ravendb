@@ -233,7 +233,7 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGT) == false)
 				yield break;
 			long totalSize = 0;
-			var optimizer = new OptimizedIndexReader(Session, Documents, take);
+			int count = 0;
 			do
 			{
 				var readCurrentDocument = ReadCurrentDocument();
@@ -244,7 +244,8 @@ namespace Raven.Storage.Esent.StorageActions
 					yield break;
 				}
 				yield return readCurrentDocument;
-			} while (Api.TryMoveNext(session, Documents) && optimizer.Count < take);
+				count++;
+			} while (Api.TryMoveNext(session, Documents) && count < take);
 		}
 
 
