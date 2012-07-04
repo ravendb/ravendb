@@ -9,7 +9,9 @@
 					 Infrastructure:ModelAttacher.AttachObservableModel="HomeModel"
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-                         xmlns:Models="clr-namespace:Raven.Studio.Models" mc:Ignorable="d">
+                         xmlns:Models="clr-namespace:Raven.Studio.Models"
+                         xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                         mc:Ignorable="d">
 
 	<Grid DataContext="{Binding Value}" d:DataContext="{d:DesignInstance Models:HomeModel}">
 		<Grid.RowDefinitions>
@@ -39,13 +41,12 @@
 						Content="Create sample data" />
 			</StackPanel>
 
-            <StackPanel Orientation="Horizontal"
-						Visibility="{Binding IsGeneratingSampleData, Converter={StaticResource BooleanToVisibility}}">
-                <ProgressBar IsIndeterminate="True"
-							 Width="24" />
-                <TextBlock Text="Generating Sample Data"
-						   Margin="4 0 0 0" />
-            </StackPanel>
+		  <toolkit:DockPanel 
+						Visibility="{Binding IsGeneratingSampleData, Converter={StaticResource BooleanToVisibility}}" Margin="0,10,0,0">
+		    <TextBlock Text="Generating Sample Data :"
+		               toolkit:DockPanel.Dock="Left" />
+                <ProgressBar IsIndeterminate="True" Margin="4 0 0 0" />
+		  </toolkit:DockPanel>
         </StackPanel>
 	</Grid>
 </Infrastructure:PageView>

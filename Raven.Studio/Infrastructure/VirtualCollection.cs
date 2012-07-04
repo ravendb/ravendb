@@ -485,7 +485,7 @@ namespace Raven.Studio.Infrastructure
 
             OnPropertyChanged(new PropertyChangedEventArgs("Count"));
 
-            if (Math.Abs(delta) > IndividualItemNotificationLimit)
+            if (Math.Abs(delta) > IndividualItemNotificationLimit || _itemCount == 0)
             {
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
             }

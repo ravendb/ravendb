@@ -23,6 +23,7 @@
 		<ResourceDictionary Source="SplitButtonPopup.xaml" />
 		<ResourceDictionary Source="WatermarkedTextBox.xaml" />
 		<ResourceDictionary Source="ComboBoxStyles.xaml" />
+		<ResourceDictionary Source="ProgressBarStyles.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style TargetType="ScrollBar">
