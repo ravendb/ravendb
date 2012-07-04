@@ -65,9 +65,9 @@ namespace Raven.Abstractions.Connection
 		{
 			postedStream = streamToWrite;
 			using (var stream = WebRequest.GetRequestStream())
-			using(var countingStream = new WriteCountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
+			using(var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
 			using(var commpressedStream = new GZipStream(countingStream, CompressionMode.Compress))
-			using (var countingStream2 = new WriteCountingStream(commpressedStream, l => NumberOfBytesWrittenUncompressed = l))
+			using (var countingStream2 = new CountingStream(commpressedStream, l => NumberOfBytesWrittenUncompressed = l))
 			{
 				streamToWrite.CopyTo(countingStream2);
 				commpressedStream.Flush();
@@ -85,9 +85,9 @@ namespace Raven.Abstractions.Connection
 		{
 			postedData = data;
 			using (var stream = WebRequest.GetRequestStream())
-			using (var countingStream = new WriteCountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
+			using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
 			using (var cmp = new GZipStream(countingStream, CompressionMode.Compress))
-			using (var countingStream2 = new WriteCountingStream(cmp, l => NumberOfBytesWrittenUncompressed = l))
+			using (var countingStream2 = new CountingStream(cmp, l => NumberOfBytesWrittenUncompressed = l))
 			{
 				countingStream2.Write(data, 0, data.Length);
 				cmp.Flush();
@@ -105,9 +105,9 @@ namespace Raven.Abstractions.Connection
 		private void WriteToken(WebRequest httpWebRequest)
 		{
 			using (var stream = httpWebRequest.GetRequestStream())
-			using (var countingStream = new WriteCountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
+			using (var countingStream = new CountingStream(stream, l => NumberOfBytesWrittenCompressed = l))
 			using (var commpressedData = new GZipStream(countingStream, CompressionMode.Compress))
-			using (var countingStream2 = new WriteCountingStream(commpressedData, l => NumberOfBytesWrittenUncompressed = l))
+			using (var countingStream2 = new CountingStream(commpressedData, l => NumberOfBytesWrittenUncompressed = l))
 			{
 				if (writeBson)
 				{
