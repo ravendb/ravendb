@@ -89,6 +89,8 @@ namespace Raven.Studio.Features.Query
                 q.FieldsToFetch = new[] { Constants.AllFields };
             }
 
+	        q.SkipTransformResults = model.SkipTransformResults;
+
 	        if (model.IsSpatialQuerySupported &&
 	            model.Latitude.HasValue && model.Longitude.HasValue)
 	        {

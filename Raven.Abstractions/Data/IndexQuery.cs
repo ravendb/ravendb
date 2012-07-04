@@ -161,6 +161,11 @@ namespace Raven.Abstractions.Data
 				path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
 			}
 			
+            if (SkipTransformResults)
+            {
+                path.Append("&skipTransformResults=true");
+            }
+
 			if (Cutoff != null)
 			{
 				var cutOffAsString =

@@ -18,7 +18,9 @@ namespace Raven.Studio.Models
 	{
         private string error;
         private ICommand executeQuery;
-
+        private RavenQueryStatistics results;
+        private bool skipTransformResults;
+        private bool hasTransform;
         public QueryDocumentsCollectionSource CollectionSource { get; private set; }
 
 		private QueryIndexAutoComplete queryIndexAutoComplete;
@@ -120,11 +122,29 @@ namespace Raven.Studio.Models
             set
             {
                 showFields = value;
+                if (!SkipTransformResults)
+                {
+                    SkipTransformResults = true;
+                }
+                else
+                {
+                    // no need to do a requery if we've set SkipTransformResults, because that forces one too.
+                    Requery();
+                }
                 OnPropertyChanged(() => ShowFields);
-                Requery();
             }
 	    }
 
+	    public bool SkipTransformResults
+	    {
+	        get { return skipTransformResults; }
+            set
+            {
+                skipTransformResults = value;
+                OnPropertyChanged(() => SkipTransformResults);
+                Requery();
+            }
+	    }
 	    #region Sorting
 
 		public const string SortByDescSuffix = " DESC";
@@ -327,13 +347,24 @@ namespace Raven.Studio.Models
 					IsSpatialQuerySupported =
                         task.Result.Maps.Any(x => x.Contains(spatialindexGenerate)) ||
                         (task.Result.Reduce != null && task.Result.Reduce.Contains(spatialindexGenerate));
+				    HasTransform = !string.IsNullOrEmpty(task.Result.TransformResults);
 
 					SetSortByOptions(fields);
 					Execute.Execute(string.Empty);
 				}).Catch();
 		}
 
-		public void RememberHistory()
+	    public bool HasTransform
+	    {
+            get { return hasTransform; }
+            private set
+            {
+                hasTransform = value;
+                OnPropertyChanged(() => HasTransform);
+            }
+	    }
+
+	    public void RememberHistory()
 		{
 			lastIndex = IndexName;
 			lastQuery = Query.Value;
@@ -364,8 +395,8 @@ namespace Raven.Studio.Models
 				OnPropertyChanged(() => QueryTime);
 			}
 		}
-		private RavenQueryStatistics results;
-		public RavenQueryStatistics Results
+
+	    public RavenQueryStatistics Results
 		{
 			get { return results; }
 			set

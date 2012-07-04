@@ -85,7 +85,7 @@
         <Border Background="{StaticResource Brush_ToolbarBackground}"
                 Grid.Row="1">
             <StackPanel Orientation="Horizontal"
-						Margin="0,4"
+						Margin="0,4,4,4"
 						VerticalAlignment="Center">
 
                 <Button Command="{Binding Execute}"
@@ -126,12 +126,26 @@
                 
                 <ToggleButton IsChecked="{Binding ShowFields, Mode=TwoWay}"
                               Style="{StaticResource Style_ToggleButton_MouseOverChrome}"
-                              ToolTipService.ToolTip="Show fields from matching index entries instead of matching documents">
+                              ToolTipService.ToolTip="Show fields from matching index entries instead of matching documents"
+                              Margin="4,0,0,0">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="{StaticResource Image_IndexFields_Tiny}"
                                Stretch="None" VerticalAlignment="Center"/>
                         <TextBlock VerticalAlignment="Center"
 										   Margin="2,0,0,0" >Show fields</TextBlock>
+                    </StackPanel>
+                </ToggleButton>
+
+                <ToggleButton IsChecked="{Binding SkipTransformResults, Mode=TwoWay}"
+                              Style="{StaticResource Style_ToggleButton_MouseOverChrome}"
+                              ToolTipService.ToolTip="Prevents the Transform Results stage of the index being applied"
+                              Margin="4,0,0,0"
+                              Visibility="{Binding HasTransform, Converter={StaticResource BooleanToVisibility}}">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{StaticResource Image_SkipTransform_Tiny}"
+                               Stretch="None" VerticalAlignment="Center"/>
+                        <TextBlock VerticalAlignment="Center"
+										   Margin="2,0,0,0" >Skip Transform</TextBlock>
                     </StackPanel>
                 </ToggleButton>
             </StackPanel>
