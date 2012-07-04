@@ -669,16 +669,19 @@ namespace Raven.Studio.Models
         {
             ParserDispatcherManager.EnsureParserDispatcherIsCreated();
 
+            DocumentOutliningMode mode = null;
+
             if (!string.IsNullOrEmpty(Settings.Instance.DocumentOutliningMode))
             {
-                var mode = OutliningModes.FirstOrDefault(m => m.Name == Settings.Instance.DocumentOutliningMode);
-                if (mode == null)
-                {
-                    mode = OutliningModes.FirstOrDefault(m => m.Name == "Enabled");
-                }
-
-                SelectedOutliningMode = mode;
+                mode = OutliningModes.FirstOrDefault(m => m.Name == Settings.Instance.DocumentOutliningMode);
             }
+
+            if (mode == null)
+            {
+                mode = OutliningModes.FirstOrDefault(m => m.Name == "Enabled");
+            }
+
+            SelectedOutliningMode = mode;
         }
 
 		public string Key
