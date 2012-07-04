@@ -28,7 +28,7 @@ namespace Raven.Studio.Commands
 				var isLastItem = i == collectionNames.Count - 1;
 				var name = collectionNames[i];
 				DatabaseCommands.DeleteByIndexAsync("Raven/DocumentsByEntityName", new IndexQuery {Query = "Tag:" + name}, allowStale: true)
-					.ContinueOnSuccess(() =>
+					.ContinueOnSuccessInTheUIThread(() =>
 					                   	{
 					                   		if (isLastItem == false) return;
 					                   		var model = (Model) Context;
