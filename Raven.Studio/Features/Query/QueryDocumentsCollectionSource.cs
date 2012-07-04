@@ -54,7 +54,7 @@ namespace Raven.Studio.Features.Query
 
         protected override Task<int> GetCount()
         {
-            return GetQueryResults(0, 1)
+            return GetQueryResults(0, 0)
                 .ContinueWith(t => t.Result.TotalResults,
                               TaskContinuationOptions.ExecuteSynchronously);
         }
