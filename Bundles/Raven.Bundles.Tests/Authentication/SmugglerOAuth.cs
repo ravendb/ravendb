@@ -41,7 +41,7 @@ namespace Raven.Bundles.Tests.Authentication
 		[Fact]
 		public void Export_WithCredentials_WillSuccess()
 		{
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions { Url = store.Url, Credentials = new NetworkCredential("Ayende", "abc") });
+			var smugglerApi = new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions { Url = store.Url, Credentials = new NetworkCredential("Ayende", "abc") });
 
 			smugglerApi.ExportData(new SmugglerOptions { File = File });
 		}
@@ -49,7 +49,7 @@ namespace Raven.Bundles.Tests.Authentication
 		[Fact]
 		public void Export_WithoutCredentials_WillReturnWithStatus401()
 		{
-			var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = store.Url});
+			var smugglerApi = new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions { Url = store.Url });
 
 			var webException = Assert.Throws<WebException>(() => smugglerApi.ExportData(new SmugglerOptions { File = File }));
 			Assert.Equal(WebExceptionStatus.ProtocolError, webException.Status);
