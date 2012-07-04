@@ -52,6 +52,7 @@ namespace Raven.Studio.Models
         private string documentSize;
         private static JsonSyntaxLanguageExtended JsonLanguage;
         private bool isShowingErrors;
+        private bool hasUnsavedChanges;
 
         static EditableDocumentModel()
         {
@@ -107,6 +108,7 @@ namespace Raven.Studio.Models
 
 		    dataSection.Document.ObserveTextChanged()
                 .Merge(metaDataSection.Document.ObserveTextChanged())
+                .Do(_ => HasUnsavedChanges = true)
 		        .Throttle(TimeSpan.FromSeconds(1))
 		        .ObserveOnDispatcher()
 		        .Subscribe(_ => HandleDocumentChanged());
@@ -422,6 +424,7 @@ namespace Raven.Studio.Models
 
             JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
 
+            HasUnsavedChanges = false;
 			UpdateRelated();
 			OnEverythingChanged();
 		}
@@ -775,6 +778,19 @@ namespace Raven.Studio.Models
             return tcs.Task;
         }
 
+        public override bool CanLeavePage()
+        {
+            if (HasUnsavedChanges)
+            {
+                return AskUser.Confirmation("Edit Document",
+                                            "There are unsaved changes to this document. Are you sure you want to continue?");
+            }
+            else
+            {
+                return true;
+            }
+        }
+
 		public ICommand Save
 		{
 			get { return new SaveDocumentCommand(this); }
@@ -810,7 +826,13 @@ namespace Raven.Studio.Models
 			get { return new ChangeFieldValueCommand<EditableDocumentModel>(this, x => x.SearchEnabled = !x.searchEnabled); }
 		}
 
-		private class RefreshDocumentCommand : Command
+        protected bool HasUnsavedChanges
+        {
+            get { return hasUnsavedChanges; }
+            set { hasUnsavedChanges = value; }
+        }
+
+        private class RefreshDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel parent;
 
@@ -826,19 +848,33 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object _)
 			{
-				parent.DatabaseCommands.GetAsync(parent.DocumentKey)
-					.ContinueOnSuccess(doc =>
-										{
-											if (doc == null)
-											{
-												parent.HandleDocumentNotFound();
-												return;
-											}
-
-											parent.document.Value = doc;
-										})
-					.Catch();
+                if (parent.HasUnsavedChanges)
+                {
+                    AskUser.ConfirmationAsync("Edit Document",
+                                              "There are unsaved changes to this document. Are you sure you want to refresh?")
+                        .ContinueWhenTrueInTheUIThread(DoRefresh);
+                }
+                else
+                {
+                    DoRefresh();
+                }
 			}
+
+            private void DoRefresh()
+            {
+                parent.DatabaseCommands.GetAsync(parent.DocumentKey)
+                    .ContinueOnSuccess(doc =>
+                                           {
+                                               if (doc == null)
+                                               {
+                                                   parent.HandleDocumentNotFound();
+                                                   return;
+                                               }
+
+                                               parent.document.Value = doc;
+                                           })
+                    .Catch();
+            }
 		}
 
 		private class SaveDocumentCommand : Command
@@ -924,7 +960,8 @@ namespace Raven.Studio.Models
 					.ContinueOnSuccess(result =>
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
-						parentModel.Etag = result.ETag;
+					    parentModel.HasUnsavedChanges = false;
+                        parentModel.Etag = result.ETag;
 					    parentModel.PutDocumentKeyInUrl(result.Key, dontOpenNewTab:true);
 					    parentModel.SetCurrentDocumentKey(result.Key);
 					})

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace Raven.Studio.Features.Input
 {
@@ -58,5 +59,10 @@ namespace Raven.Studio.Features.Input
 
 			return tcs.Task;
 		}
+
+        public static bool Confirmation(string title, string question)
+        {
+            return MessageBox.Show(question, title, MessageBoxButton.OKCancel) == MessageBoxResult.OK;
+        }
 	}
 }

@@ -7,7 +7,7 @@
 	<Grid Margin="2"
 		  KeyDown="LayoutRoot_OnKeyDown">
 		<Grid.Resources>
-			<Style TargetType="Button">
+            <Style TargetType="Button" BasedOn="{StaticResource Style_Button_Default}">
 				<Setter Property="Width" Value="75" />
 				<Setter Property="Height" Value="23" />
 				<Setter Property="HorizontalAlignment" Value="Left" />

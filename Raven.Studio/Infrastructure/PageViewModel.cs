@@ -48,5 +48,10 @@ namespace Raven.Studio.Infrastructure
 		{
 			get { return Database.Value.AsyncDatabaseCommands; }
 		}
+
+        public virtual bool CanLeavePage()
+        {
+            return true;
+        }
 	}
 }
