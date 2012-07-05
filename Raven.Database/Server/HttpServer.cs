@@ -678,6 +678,15 @@ namespace Raven.Database.Server
 			}
 		}
 
+		public void ForAllDatabases(Action<DocumentDatabase> action)
+		{
+			action(SystemDatabase);
+			foreach (var db in ResourcesStoresCache)
+			{
+				action(db.Value);
+			}
+		}
+
 		protected bool TryGetOrCreateResourceStore(string tenantId, out DocumentDatabase database)
 		{
 			if (ResourcesStoresCache.TryGetValue(tenantId, out database))

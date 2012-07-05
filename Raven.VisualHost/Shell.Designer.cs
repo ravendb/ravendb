@@ -35,13 +35,15 @@
 			this.ignoreHiloToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.setupMasterMasterReplicationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.setupSlaveMasterReplicationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.ravenOverfowToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.setupDatbasesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.stopIndexingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.sToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.StartServers = new System.Windows.Forms.Button();
 			this.groupBox1 = new System.Windows.Forms.GroupBox();
 			this.NumberOfServers = new System.Windows.Forms.NumericUpDown();
 			this.label1 = new System.Windows.Forms.Label();
 			this.ServerTabs = new System.Windows.Forms.TabControl();
-			this.ravenOverfowToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			this.setupDatbasesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.menuStrip1.SuspendLayout();
 			this.groupBox1.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.NumberOfServers)).BeginInit();
@@ -51,7 +53,8 @@
 			// 
 			this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.optionsToolStripMenuItem,
-            this.ravenOverfowToolStripMenuItem});
+            this.ravenOverfowToolStripMenuItem,
+            this.stopIndexingToolStripMenuItem});
 			this.menuStrip1.Location = new System.Drawing.Point(0, 0);
 			this.menuStrip1.Name = "menuStrip1";
 			this.menuStrip1.Size = new System.Drawing.Size(560, 24);
@@ -104,6 +107,36 @@
 			this.setupSlaveMasterReplicationToolStripMenuItem.Size = new System.Drawing.Size(246, 22);
 			this.setupSlaveMasterReplicationToolStripMenuItem.Text = "Setup &Slave/Master Replication";
 			this.setupSlaveMasterReplicationToolStripMenuItem.Click += new System.EventHandler(this.setupSlaveMasterReplicationToolStripMenuItem_Click);
+			// 
+			// ravenOverfowToolStripMenuItem
+			// 
+			this.ravenOverfowToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.setupDatbasesToolStripMenuItem});
+			this.ravenOverfowToolStripMenuItem.Name = "ravenOverfowToolStripMenuItem";
+			this.ravenOverfowToolStripMenuItem.Size = new System.Drawing.Size(99, 20);
+			this.ravenOverfowToolStripMenuItem.Text = "&Raven Overfow";
+			// 
+			// setupDatbasesToolStripMenuItem
+			// 
+			this.setupDatbasesToolStripMenuItem.Name = "setupDatbasesToolStripMenuItem";
+			this.setupDatbasesToolStripMenuItem.Size = new System.Drawing.Size(154, 22);
+			this.setupDatbasesToolStripMenuItem.Text = "&Setup Datbases";
+			this.setupDatbasesToolStripMenuItem.Click += new System.EventHandler(this.setupDatbasesToolStripMenuItem_Click);
+			// 
+			// stopIndexingToolStripMenuItem
+			// 
+			this.stopIndexingToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.sToolStripMenuItem});
+			this.stopIndexingToolStripMenuItem.Name = "stopIndexingToolStripMenuItem";
+			this.stopIndexingToolStripMenuItem.Size = new System.Drawing.Size(64, 20);
+			this.stopIndexingToolStripMenuItem.Text = "&Indexing";
+			// 
+			// sToolStripMenuItem
+			// 
+			this.sToolStripMenuItem.Name = "sToolStripMenuItem";
+			this.sToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+			this.sToolStripMenuItem.Text = "&Stop";
+			this.sToolStripMenuItem.Click += new System.EventHandler(this.sToolStripMenuItem_Click);
 			// 
 			// StartServers
 			// 
@@ -158,21 +191,6 @@
 			this.ServerTabs.Size = new System.Drawing.Size(560, 306);
 			this.ServerTabs.TabIndex = 3;
 			// 
-			// ravenOverfowToolStripMenuItem
-			// 
-			this.ravenOverfowToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.setupDatbasesToolStripMenuItem});
-			this.ravenOverfowToolStripMenuItem.Name = "ravenOverfowToolStripMenuItem";
-			this.ravenOverfowToolStripMenuItem.Size = new System.Drawing.Size(99, 20);
-			this.ravenOverfowToolStripMenuItem.Text = "&Raven Overfow";
-			// 
-			// setupDatbasesToolStripMenuItem
-			// 
-			this.setupDatbasesToolStripMenuItem.Name = "setupDatbasesToolStripMenuItem";
-			this.setupDatbasesToolStripMenuItem.Size = new System.Drawing.Size(154, 22);
-			this.setupDatbasesToolStripMenuItem.Text = "&Setup Datbases";
-			this.setupDatbasesToolStripMenuItem.Click += new System.EventHandler(this.setupDatbasesToolStripMenuItem_Click);
-			// 
 			// Shell
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -209,6 +227,8 @@
 		private System.Windows.Forms.ToolStripSeparator toolStripMenuItem1;
 		private System.Windows.Forms.ToolStripMenuItem ravenOverfowToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem setupDatbasesToolStripMenuItem;
+		private System.Windows.Forms.ToolStripMenuItem stopIndexingToolStripMenuItem;
+		private System.Windows.Forms.ToolStripMenuItem sToolStripMenuItem;
 
 	}
 }

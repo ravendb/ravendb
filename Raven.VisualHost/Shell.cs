@@ -213,5 +213,21 @@ namespace Raven.VisualHost
 				}
 			}
 		}
+
+		private void sToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			var stoppedWorkers = ((ToolStripMenuItem)sender).Checked;
+			foreach (var ravenDbServer in servers)
+			{
+				ravenDbServer.Server.ForAllDatabases(database =>
+				{
+					if (stoppedWorkers)
+						database.SpinBackgroundWorkers();
+					else
+						database.StopBackgroundWorkers();
+				});
+			}
+			((ToolStripMenuItem) sender).Checked = !stoppedWorkers;
+		}
 	}
 }
