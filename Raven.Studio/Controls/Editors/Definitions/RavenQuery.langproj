@@ -22,7 +22,7 @@ Actipro Syntax Language Project (.langproj)
 		<DynamicLexer>
 			<DynamicLexer.Macros>
 				<Macro Key="Date" Pattern="\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}" />
-				<Macro Key="UnquotedValue" Pattern="([^\s\r\n:\[\]\{\}]|(\\:))+" />
+				<Macro Key="UnquotedValue" Pattern="([^\s\r\n:\[\]\{\}\(\)]|(\\:))+" />
 				<Macro Key="Field" Pattern="([^\s\r\n:\\\[\]\{\}]+)\s*:" />
 			</DynamicLexer.Macros>
 			<!-- Default state -->
@@ -36,6 +36,7 @@ Actipro Syntax Language Project (.langproj)
 						AND OR NOT + - && || ^ ~
 					]]></ExplicitPatterns>
 				</ExplicitPatternGroup>
+				<RegexPatternGroup TokenKey="Whitespace" Pattern="{Whitespace}" />
 				<ExplicitPatternGroup TokenKey="Operator" ClassificationTypeKey="Brackets">
 					<ExplicitPatterns><![CDATA[
 						( )
@@ -50,10 +51,10 @@ Actipro Syntax Language Project (.langproj)
 				<State.Scopes>
 					<Scope>
 						<Scope.StartPatternGroup>
-							<ExplicitPatternGroup TokenKey="Quotes" ClassificationTypeKey="Value" Pattern="&quot;" />
+							<ExplicitPatternGroup TokenKey="OpenQuotes" ClassificationTypeKey="Value" Pattern="&quot;" />
 						</Scope.StartPatternGroup>
 						<Scope.EndPatternGroup>
-							<ExplicitPatternGroup TokenKey="Quotes" ClassificationTypeKey="Value" Pattern="&quot;" />
+							<ExplicitPatternGroup TokenKey="CloseQuotes" ClassificationTypeKey="Value" Pattern="&quot;" />
 						</Scope.EndPatternGroup>
 					</Scope>
 				</State.Scopes>
@@ -88,6 +89,7 @@ Actipro Syntax Language Project (.langproj)
 					<StateRef Key="String" />
 				</State.ChildStates>
 				<ExplicitPatternGroup TokenKey="Operator" ClassificationTypeKey="Operator" Pattern="TO" CaseSensitivity="Sensitive" />
+				<RegexPatternGroup TokenKey="Whitespace" Pattern="{Whitespace}" />
 				<RegexPatternGroup TokenKey="Value" ClassificationTypeKey="Value" Pattern="{Date}" />
 				<RegexPatternGroup TokenKey="Field" ClassificationTypeKey="Field" Pattern="{Field}" />
 				<RegexPatternGroup TokenKey="Value" ClassificationTypeKey="Value" Pattern="{UnquotedValue}" CaseSensitivity="Insensitive" />

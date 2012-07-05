@@ -66,8 +66,13 @@ namespace Raven.Studio.Features.Query
 
 		public static Task GetTermsForFieldAsync(string indexName, string field, List<string> terms, string termPrefix = "")
 		{
-			return ApplicationModel.DatabaseCommands.GetTermsAsync(indexName, field, termPrefix, 1024)
-				.ContinueOnSuccess(terms.AddRange);
+		    return ApplicationModel.DatabaseCommands.GetTermsAsync(indexName, field, termPrefix, 1024)
+		        .ContinueOnSuccessInTheUIThread(
+		            results =>
+		                {
+		                    terms.Clear();
+		                    terms.AddRange(results);
+		                });
 		}
 	}
 }
