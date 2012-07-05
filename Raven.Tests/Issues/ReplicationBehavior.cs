@@ -16,7 +16,7 @@ namespace Raven.Tests.Issues
 	public class ReplicationBehavior
 	{
 		[Fact]
- 		public void BackoffStrategy()
+		public void BackoffStrategy()
 		{
 			var replicationInformer = new ReplicationInformer(new DocumentConvention())
 			{
@@ -26,7 +26,7 @@ namespace Raven.Tests.Issues
 					}
 			};
 
-			var urlsTried = new List<Tuple<int,string>>();
+			var urlsTried = new List<Tuple<int, string>>();
 			for (int i = 0; i < 5000; i++)
 			{
 				var req = i + 1;
@@ -39,12 +39,64 @@ namespace Raven.Tests.Issues
 					return 1;
 				});
 			}
-			var expectedUrls = GetExepctedUrl().Take(urlsTried.Count).ToList();
+			var expectedUrls = GetExepctedUrlForFailure().Take(urlsTried.Count).ToList();
 
 			Assert.Equal(expectedUrls, urlsTried);
 		}
 
-		private IEnumerable<Tuple<int,string>> GetExepctedUrl()
+		[Fact]
+		public void ReadStriping()
+		{
+			var replicationInformer = new ReplicationInformer(new DocumentConvention
+			{
+				FailoverBehavior = FailoverBehavior.ReadFromAllServers
+			})
+			{
+				ReplicationDestinations =
+					{
+						"http://localhost:2",
+						"http://localhost:3",
+						"http://localhost:4",
+					}
+			};
+
+			var urlsTried = new List<Tuple<int, string>>();
+			for (int i = 0; i < 10; i++)
+			{
+				var req = i + 1;
+				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", req, req, url =>
+				{
+					urlsTried.Add(Tuple.Create(req, url));
+					return 1;
+				});
+			}
+			var expectedUrls = GetExepctedUrlForReadStriping().Take(urlsTried.Count).ToList();
+
+			Assert.Equal(expectedUrls, urlsTried);
+		}
+
+		private IEnumerable<Tuple<int, string>> GetExepctedUrlForReadStriping()
+		{
+			int reqCount = 0;
+			var urls = new[]
+			{
+				"http://localhost:2",
+				"http://localhost:3",
+				"http://localhost:4",
+
+			};
+			while (true)
+			{
+				reqCount++;
+				var pos = reqCount % (urls.Length + 1);
+				if (pos >= urls.Length)
+					yield return Tuple.Create(reqCount, "http://localhost:1");
+				else
+					yield return Tuple.Create(reqCount, urls[pos]);
+			}
+		}
+
+		private IEnumerable<Tuple<int, string>> GetExepctedUrlForFailure()
 		{
 			int reqCount = 1;
 			var failCount = 0;
@@ -54,10 +106,10 @@ namespace Raven.Tests.Issues
 			failCount++;
 			yield return Tuple.Create(reqCount, "http://localhost:2");
 
-			while(failCount < 10)
+			while (failCount < 10)
 			{
 				reqCount++;
-				if(reqCount % 2 == 0)
+				if (reqCount % 2 == 0)
 				{
 					yield return Tuple.Create(reqCount, "http://localhost:1");
 					failCount++;
