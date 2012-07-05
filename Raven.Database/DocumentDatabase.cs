@@ -97,6 +97,7 @@ namespace Raven.Database
 		/// </summary>
 		public ConcurrentDictionary<object, object> ExtensionsState { get; private set; }
 
+		public TaskScheduler BackgroundTaskScheduler { get { return backgroundTaskScheduler; } }
 
 		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
 		private System.Threading.Tasks.Task indexingBackgroundTask;
@@ -356,17 +357,17 @@ namespace Raven.Database
 			});
 
 			if (TransactionalStorage != null)
-			exceptionAggregator.Execute(TransactionalStorage.Dispose);
+				exceptionAggregator.Execute(TransactionalStorage.Dispose);
 			if (IndexStorage != null)
-			exceptionAggregator.Execute(IndexStorage.Dispose);
+				exceptionAggregator.Execute(IndexStorage.Dispose);
 
 			if (Configuration != null)
-			exceptionAggregator.Execute(Configuration.Dispose);
+				exceptionAggregator.Execute(Configuration.Dispose);
 
 			exceptionAggregator.Execute(disableAllTriggers.Dispose);
 
 			if (workContext != null)
-			exceptionAggregator.Execute(workContext.Dispose);
+				exceptionAggregator.Execute(workContext.Dispose);
 
 
 
