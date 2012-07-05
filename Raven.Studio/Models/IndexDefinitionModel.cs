@@ -193,14 +193,22 @@ namespace Raven.Studio.Models
 			{
 			    if (index.Name != value)
 			    {
+                    MarkAsDirtyIfSignificant(index.Name, value);
 			        index.Name = value;
 			        OnPropertyChanged(() => Name);
-                    MarkAsDirty();
 			    }
 			}
 		}
 
-		//public string MapUrl
+	    private void MarkAsDirtyIfSignificant(string oldValue, string newValue)
+	    {
+	        if (!(string.IsNullOrEmpty(oldValue) && string.IsNullOrEmpty(newValue)))
+	        {
+	            MarkAsDirty();
+	        }
+	    }
+
+	    //public string MapUrl
 		//{
 		//    get{return }
 		//}
@@ -234,8 +242,8 @@ namespace Raven.Studio.Models
 			{
 			    if (index.Reduce != value)
 			    {
+			        MarkAsDirtyIfSignificant(index.Reduce, value);
 			        index.Reduce = value;
-			        MarkAsDirty();
 			        OnPropertyChanged(() => Reduce);
 			    }
 			}
@@ -264,8 +272,8 @@ namespace Raven.Studio.Models
 			{
 			    if (index.TransformResults != value)
 			    {
+			        MarkAsDirtyIfSignificant(index.TransformResults, value);
 			        index.TransformResults = value;
-			        MarkAsDirty();
 			        OnPropertyChanged(() => TransformResults);
 			    }
 			}
