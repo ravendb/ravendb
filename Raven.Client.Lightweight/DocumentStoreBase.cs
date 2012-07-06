@@ -5,9 +5,11 @@ using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Client.Document;
@@ -36,6 +38,13 @@ namespace Raven.Client
 		/// Whatever the instance has been disposed
 		/// </summary>
 		public bool WasDisposed { get; protected set; }
+
+#if !SILVERLIGHT
+		/// <summary>
+		/// Subscribe to change notifications from the server
+		/// </summary>
+		public abstract IObservable<ChangeNotification> Changes(string database = null);
+#endif
 
 		public abstract IDisposable AggressivelyCacheFor(TimeSpan cahceDuration);
 		public abstract IDisposable DisableAggressiveCaching();

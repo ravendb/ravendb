@@ -9,6 +9,7 @@ using System.Collections.Specialized;
 #endif
 using System.Collections.Generic;
 using System.Net;
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
@@ -28,6 +29,12 @@ namespace Raven.Client
 	/// </summary>
 	public interface IDocumentStore : IDisposalNotification
 	{
+#if !SILVERLIGHT
+		/// <summary>
+		/// Subscribe to change notifications from the server
+		/// </summary>
+		IObservable<ChangeNotification> Changes(string database = null);
+#endif
 		/// <summary>
 		/// Setup the context for aggressive caching.
 		/// </summary>

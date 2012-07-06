@@ -16,6 +16,7 @@ namespace Raven.Database.Server
 		
 		private HttpServer httpServer;
 		private string theConnectionId;
+		private DocumentDatabase db;
 
 		public void Send(ChangeNotification notification)
 		{
@@ -24,15 +25,13 @@ namespace Raven.Database.Server
 		public override void Initialize(IDependencyResolver resolver)
 		{
 			httpServer = resolver.Resolve<HttpServer>();
+			db = httpServer.CurrentDatabase;
 			base.Initialize(resolver);
 		}
 
 		protected override System.Threading.Tasks.Task OnConnectedAsync(IRequest request, string connectionId)
 		{
 			this.theConnectionId = connectionId;
-			var db = request.QueryString["database"];
-			if(string.IsNullOrEmpty(db))
-				throw new ArgumentException("The database query string element is mandatory");
 
 			httpServer.RegisterConnection(db, this);
 

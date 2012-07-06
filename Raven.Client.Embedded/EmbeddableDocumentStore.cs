@@ -4,7 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Database;
 using Raven.Database.Config;
@@ -91,6 +94,54 @@ namespace Raven.Client.Embedded
 			{
 				DataDirectory = null;
 				base.Url = value;
+			}
+		}
+
+		/// <summary>
+		/// Subscribe to change notifications from the server
+		/// </summary>
+		public override IObservable<ChangeNotification> Changes(string database = null)
+		{
+			if (string.IsNullOrEmpty(Url) == false)
+				return base.Changes(database);
+
+			return new NotificationObservable(DocumentDatabase);
+		}
+
+		private class NotificationObservable : IObservable<ChangeNotification>, IDisposable
+		{
+			private readonly DocumentDatabase database;
+			private List<IObserver<ChangeNotification>> observers = new List<IObserver<ChangeNotification>>();
+			public NotificationObservable(DocumentDatabase database)
+			{
+				this.database = database;
+				database.Notifications += Notify;
+			}
+
+			private void Notify(object sender, ChangeNotification notification)
+			{
+				foreach (var observer in observers)
+				{
+					observer.OnNext(notification);
+				}
+			}
+
+			public IDisposable Subscribe(IObserver<ChangeNotification> observer)
+			{
+				observers = new List<IObserver<ChangeNotification>>(observers)
+				{
+					observer
+				};
+				return new DisposableAction(() =>
+				{
+					observers = new List<IObserver<ChangeNotification>>(observers.Where(x => x != observer));
+					observer.OnCompleted();
+				});
+			}
+
+			public void Dispose()
+			{
+				database.Notifications -= Notify;
 			}
 		}
 

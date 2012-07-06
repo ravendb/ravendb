@@ -12,6 +12,7 @@ using System.Collections.Specialized;
 #endif
 using System.Linq;
 using System.Net;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 #if !NET35
 using Raven.Client.Connection.Async;
@@ -141,6 +142,38 @@ namespace Raven.Client.Shard
 		}
 
 #endif
+
+		/// <summary>
+		/// Subscribe to change notifications from the server
+		/// </summary>
+		public override IObservable<ChangeNotification> Changes(string database = null)
+		{
+			var observables = ShardStrategy.Shards.Values.Select(x => x.Changes(database)).ToArray();
+			return new ConcatObservable<ChangeNotification>(observables);
+		}
+
+		private class ConcatObservable<T> : IObservable<T>
+		{
+			private readonly IObservable<T>[] inner;
+
+			public ConcatObservable(IObservable<T>[] inner)
+			{
+				this.inner = inner;
+			}
+
+			public IDisposable Subscribe(IObserver<T> observer)
+			{
+				var disposables = inner.Select(x => x.Subscribe(observer)).ToArray();
+				return new DisposableAction(() =>
+				{
+					foreach (var disposable in disposables)
+					{
+						disposable.Dispose();
+					}
+				});
+			}
+		}
+
 
 		/// <summary>
 		/// Setup the context for aggressive caching.

@@ -79,6 +79,7 @@ namespace Raven.Database.Server
 		}
 
 		private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)", RegexOptions.IgnoreCase);
+		private static readonly Regex siganlRQuery = new Regex("^(/databases/([^/]+))?/signalr/", RegexOptions.IgnoreCase);
 
 		private ExternalHttpListenerServer signalrServer;
 		private HttpListener listener;
@@ -161,9 +162,8 @@ namespace Raven.Database.Server
 			}
 		}
 
-		public void RegisterConnection(string name, Notifications notifications)
+		public void RegisterConnection(DocumentDatabase db, Notifications notifications)
 		{
-			var db = GetResourceStore(name);
 			var set = connectionsByDatabase.GetOrAdd(db, _ => new ConcurrentSet<Notifications>());
 			notifications.Disposed += (sender, args) => set.TryRemove(notifications);
 			set.Add(notifications);
@@ -366,7 +366,7 @@ namespace Raven.Database.Server
 			try
 			{
 				Interlocked.Increment(ref physicalRequestsCount);
-				if (ctx.GetRequestUrl().StartsWith("/signalr"))
+				if (siganlRQuery.IsMatch(ctx.GetRequestUrl()))
 					HandleSignalRequest(ctx, httpListenerContext);
 				else
 					HandleActualRequest(ctx);
@@ -379,7 +379,18 @@ namespace Raven.Database.Server
 
 		private void HandleSignalRequest(IHttpContext context,HttpListenerContext listenerContext)
 		{
-			signalrServer.ProcessRequestSafe(listenerContext);
+			SetupRequestToProperDatabase(context);
+			try
+			{
+				if (!SetThreadLocalState(context))
+					return;
+
+				signalrServer.ProcessRequestSafe(listenerContext);
+			}
+			finally
+			{
+				ResetThreadLocalState();
+			}
 		}
 
 		public void HandleActualRequest(IHttpContext ctx)
@@ -594,19 +605,15 @@ namespace Raven.Database.Server
 
 		private bool DispatchRequest(IHttpContext ctx)
 		{
-			SetupRequestToProperDatabase(ctx);
-
-			CurrentOperationContext.Headers.Value = new NameValueCollection(ctx.Request.Headers);
-
-			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
-			CurrentOperationContext.User.Value = null;
-			if (ctx.RequiresAuthentication &&
-				requestAuthorizer.Authorize(ctx) == false)
-				return false;
-
 			Action onResponseEnd = null;
+
+			SetupRequestToProperDatabase(ctx);
 			try
 			{
+
+				if (!SetThreadLocalState(ctx))
+					return false;
+
 				OnDispatchingRequest(ctx);
 
 				if (SystemConfiguration.HttpCompression)
@@ -651,21 +658,37 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
-				try
-				{
-					CurrentOperationContext.Headers.Value = new NameValueCollection();
-					CurrentOperationContext.User.Value = null;
-					currentDatabase.Value = SystemDatabase;
-					currentConfiguration.Value = SystemConfiguration;
-				}
-				catch
-				{
-					// this can happen during system shutdown
-				}
+				ResetThreadLocalState();
 				if (onResponseEnd != null)
 					onResponseEnd();
 			}
 			return false;
+		}
+
+		private bool SetThreadLocalState(IHttpContext ctx)
+		{
+			CurrentOperationContext.Headers.Value = new NameValueCollection(ctx.Request.Headers);
+			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
+			CurrentOperationContext.User.Value = null;
+			if (ctx.RequiresAuthentication &&
+			    requestAuthorizer.Authorize(ctx) == false)
+				return false;
+			return true;
+		}
+
+		private void ResetThreadLocalState()
+		{
+			try
+			{
+				CurrentOperationContext.Headers.Value = new NameValueCollection();
+				CurrentOperationContext.User.Value = null;
+				currentDatabase.Value = SystemDatabase;
+				currentConfiguration.Value = SystemConfiguration;
+			}
+			catch
+			{
+				// this can happen during system shutdown
+			}
 		}
 
 		public Func<IHttpContext, Action> BeforeDispatchingRequest { get; set; }
@@ -689,6 +712,11 @@ namespace Raven.Database.Server
 		protected void OnDispatchingRequest(IHttpContext ctx)
 		{
 			ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
+		}
+
+		public DocumentDatabase CurrentDatabase
+		{
+			get { return currentDatabase.Value ?? SystemDatabase; }
 		}
 
 		private void SetupRequestToProperDatabase(IHttpContext ctx)

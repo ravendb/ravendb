@@ -28,6 +28,8 @@ using Raven.Client.Silverlight.Connection.Async;
 using System.Collections.Generic;
 #else
 using Raven.Client.Listeners;
+using Raven.Imports.SignalR.Client;
+
 #endif
 
 namespace Raven.Client.Document
@@ -601,7 +603,26 @@ namespace Raven.Client.Document
 			return new DisposableAction(() => { });
 #endif
 		}
+#if !SILVERLIGHT
+		/// <summary>
+		/// Subscribe to change notifications from the server
+		/// </summary>
+		public override IObservable<ChangeNotification> Changes(string database = null)
+		{
+			if (string.IsNullOrEmpty(Url))
+				throw new InvalidOperationException("Changes API requires usage of server/client");
 
+			database = database ?? DefaultDatabase;
+
+			var dbUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+			if (string.IsNullOrEmpty(database) == false)
+				dbUrl = dbUrl + "/databases/" + database;
+
+			var connection = new Imports.SignalR.Client.Connection(dbUrl + "/signalr/notifications");
+			connection.Start();
+			return connection.AsObservable<ChangeNotification>();
+		}
+#endif
 		/// <summary>
 		/// Setup the context for aggressive caching.
 		/// </summary>

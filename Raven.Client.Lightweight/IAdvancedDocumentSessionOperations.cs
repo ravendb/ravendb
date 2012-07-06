@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
