@@ -79,7 +79,7 @@ namespace Raven.Database.Server
 		}
 
 		private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)", RegexOptions.IgnoreCase);
-		private static readonly Regex siganlRQuery = new Regex("^(/databases/([^/]+))?/signalr/", RegexOptions.IgnoreCase);
+		public static readonly Regex SiganlRQuery = new Regex("^(/databases/([^/]+))?/signalr/", RegexOptions.IgnoreCase);
 
 		private ExternalHttpListenerServer signalrServer;
 		private HttpListener listener;
@@ -276,14 +276,20 @@ namespace Raven.Database.Server
 
 		private void SetupSignalR(string uri)
 		{
+			var depResolver = CreateDependencyResolver();
+			signalrServer = new ExternalHttpListenerServer(uri, depResolver, listener);
+			signalrServer.MapConnection<NotificationsConnection>("/signalr/notifications");
+		}
+
+		public DefaultDependencyResolver CreateDependencyResolver()
+		{
 			var depResolver = new DefaultDependencyResolver();
 			depResolver.Register(typeof (HttpServer), () => this);
 			var jsonSerializerSettings = new JsonSerializerSettings();
 			jsonSerializerSettings.Converters.AddRange(Default.Converters);
 			var serializer = new JsonNetSerializer(jsonSerializerSettings);
 			depResolver.Register(typeof (IJsonSerializer), () => serializer);
-			signalrServer = new ExternalHttpListenerServer(uri, depResolver, listener);
-			signalrServer.MapConnection<NotificationsConnection>("/signalr/notifications");
+			return depResolver;
 		}
 
 		public void Init()
@@ -366,8 +372,8 @@ namespace Raven.Database.Server
 			try
 			{
 				Interlocked.Increment(ref physicalRequestsCount);
-				if (siganlRQuery.IsMatch(ctx.GetRequestUrl()))
-					HandleSignalRequest(ctx, httpListenerContext);
+				if (SiganlRQuery.IsMatch(ctx.GetRequestUrl()))
+					HandleSignalRequest(ctx, prefix => signalrServer.ProcessRequestSafe(httpListenerContext, prefix));
 				else
 					HandleActualRequest(ctx);
 			}
@@ -377,7 +383,8 @@ namespace Raven.Database.Server
 			}
 		}
 
-		private void HandleSignalRequest(IHttpContext context,HttpListenerContext listenerContext)
+
+		public T HandleSignalRequest<T>(IHttpContext context, Func<string, T> action)
 		{
 			var prefix = SetupRequestToProperDatabase(context);
 			try
@@ -385,10 +392,10 @@ namespace Raven.Database.Server
 				if (!SetThreadLocalState(context))
 				{
 					context.FinalizeResonse();
-					return;
+					return default(T);
 				}
 
-				signalrServer.ProcessRequestSafe(listenerContext, prefix);
+				return action(prefix);
 			}
 			finally
 			{
