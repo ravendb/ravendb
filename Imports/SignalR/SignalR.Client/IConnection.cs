@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-using SignalR.Client.Http;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.SignalR.Client.Http;
 
-namespace SignalR.Client
+namespace Raven.Imports.SignalR.Client
 {
     public interface IConnection
     {

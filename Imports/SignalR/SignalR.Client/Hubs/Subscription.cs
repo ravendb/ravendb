@@ -1,7 +1,7 @@
 ﻿using System;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
-namespace SignalR.Client.Hubs
+namespace Raven.Imports.SignalR.Client.Hubs
 {
     /// <summary>
     /// Represents a subscription to a hub method.

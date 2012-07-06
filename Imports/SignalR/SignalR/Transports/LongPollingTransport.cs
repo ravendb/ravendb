@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using SignalR.Infrastructure;
+using Raven.Imports.SignalR.Infrastructure;
 
-namespace SignalR.Transports
+namespace Raven.Imports.SignalR.Transports
 {
     public class LongPollingTransport : TransportDisconnectBase, ITransport
     {

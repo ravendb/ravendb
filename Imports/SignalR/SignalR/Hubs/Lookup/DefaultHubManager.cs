@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     public class DefaultHubManager : IHubManager
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// Represents a web socket.

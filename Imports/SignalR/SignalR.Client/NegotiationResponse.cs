@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace SignalR.Client
+namespace Raven.Imports.SignalR.Client
 {
     [DebuggerDisplay("{ConnectionId} {Url} -> {ProtocolVersion}")]
     public class NegotiationResponse

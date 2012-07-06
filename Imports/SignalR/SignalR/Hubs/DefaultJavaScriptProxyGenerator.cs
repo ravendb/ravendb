@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using SignalR.Infrastructure;
+using Raven.Imports.SignalR.Infrastructure;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     public class DefaultJavaScriptProxyGenerator : IJavaScriptProxyGenerator
     {

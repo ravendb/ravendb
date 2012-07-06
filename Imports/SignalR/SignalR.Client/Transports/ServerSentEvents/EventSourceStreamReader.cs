@@ -2,9 +2,9 @@
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using SignalR.Client.Infrastructure;
+using Raven.Imports.SignalR.Client.Infrastructure;
 
-namespace SignalR.Client.Transports.ServerSentEvents
+namespace Raven.Imports.SignalR.Client.Transports.ServerSentEvents
 {
     /// <summary>
     /// Event source implementation for .NET. This isn't to the spec but it's enough to support SignalR's

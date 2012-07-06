@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace SignalR.Infrastructure
+namespace Raven.Imports.SignalR.Infrastructure
 {
     /// <summary>
     /// Handles commands from server to server.

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SignalR.Infrastructure
+namespace Raven.Imports.SignalR.Infrastructure
 {
     /// <summary>
     /// Default <see cref="IServerIdManager"/> implementation.

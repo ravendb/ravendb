@@ -5,11 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using SignalR.Client.Http;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.SignalR.Client.Http;
 
-namespace SignalR.Client.Transports
+namespace Raven.Imports.SignalR.Client.Transports
 {
     public abstract class HttpBasedTransport : IClientTransport
     {

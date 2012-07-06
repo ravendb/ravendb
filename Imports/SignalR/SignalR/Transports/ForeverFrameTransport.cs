@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace SignalR.Transports
+namespace Raven.Imports.SignalR.Transports
 {
     public class ForeverFrameTransport : ForeverTransport
     {

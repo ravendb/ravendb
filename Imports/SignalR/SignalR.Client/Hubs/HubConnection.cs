@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using SignalR.Client.Transports;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.SignalR.Client.Transports;
 
-namespace SignalR.Client.Hubs
+namespace Raven.Imports.SignalR.Client.Hubs
 {
     /// <summary>
     /// A <see cref="Connection"/> for interacting with Hubs.

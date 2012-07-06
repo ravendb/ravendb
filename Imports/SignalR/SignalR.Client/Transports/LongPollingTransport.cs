@@ -2,10 +2,10 @@
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using SignalR.Client.Http;
-using SignalR.Client.Infrastructure;
+using Raven.Imports.SignalR.Client.Http;
+using Raven.Imports.SignalR.Client.Infrastructure;
 
-namespace SignalR.Client.Transports
+namespace Raven.Imports.SignalR.Client.Transports
 {
     public class LongPollingTransport : HttpBasedTransport
     {

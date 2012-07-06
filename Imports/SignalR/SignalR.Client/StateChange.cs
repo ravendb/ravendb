@@ -1,4 +1,4 @@
-﻿namespace SignalR.Client
+﻿namespace Raven.Imports.SignalR.Client
 {
     /// <summary>
     /// Represents a change in the connection state.

@@ -1,4 +1,4 @@
-﻿namespace SignalR.Hosting.Common
+﻿namespace Raven.Imports.SignalR.Hosting.Common
 {
     public class Host
     {

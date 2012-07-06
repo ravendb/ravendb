@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     /// <summary>
     /// Provides access to information about a <see cref="IHub"/>.

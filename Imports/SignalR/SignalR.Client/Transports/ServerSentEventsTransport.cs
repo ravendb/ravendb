@@ -2,11 +2,11 @@
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using SignalR.Client.Http;
-using SignalR.Client.Infrastructure;
-using SignalR.Client.Transports.ServerSentEvents;
+using Raven.Imports.SignalR.Client.Http;
+using Raven.Imports.SignalR.Client.Infrastructure;
+using Raven.Imports.SignalR.Client.Transports.ServerSentEvents;
 
-namespace SignalR.Client.Transports
+namespace Raven.Imports.SignalR.Client.Transports
 {
     public class ServerSentEventsTransport : HttpBasedTransport
     {

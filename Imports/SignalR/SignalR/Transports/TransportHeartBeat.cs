@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using SignalR.Infrastructure;
+using Raven.Imports.SignalR.Infrastructure;
 
-namespace SignalR.Transports
+namespace Raven.Imports.SignalR.Transports
 {
     /// <summary>
     /// Default implementation of <see cref="ITransportHeartBeat"/>.

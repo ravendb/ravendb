@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Security.Principal;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// The default connection id generator.

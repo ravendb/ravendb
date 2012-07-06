@@ -1,8 +1,8 @@
 ﻿using System;
-using Newtonsoft.Json.Linq;
-using SignalR.Client.Infrastructure;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.SignalR.Client.Infrastructure;
 
-namespace SignalR.Client.Hubs
+namespace Raven.Imports.SignalR.Client.Hubs
 {
     /// <summary>
     /// <see cref="T:System.IObservable{object[]}"/> implementation of a hub event.

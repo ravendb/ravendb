@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace SignalR.Transports
+namespace Raven.Imports.SignalR.Transports
 {
     /// <summary>
     /// Represents a transport that communicates

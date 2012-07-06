@@ -1,7 +1,7 @@
 ﻿using System.Dynamic;
 using System.Threading.Tasks;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     public class ClientProxy : DynamicObject, IClientProxy
     {

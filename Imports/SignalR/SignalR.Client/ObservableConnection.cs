@@ -1,7 +1,7 @@
 ﻿using System;
-using SignalR.Client.Infrastructure;
+using Raven.Imports.SignalR.Client.Infrastructure;
 
-namespace SignalR.Client
+namespace Raven.Imports.SignalR.Client
 {
     public class ObservableConnection<T> : IObservable<T>
     {

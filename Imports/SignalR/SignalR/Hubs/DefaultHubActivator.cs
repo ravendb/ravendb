@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     public class DefaultHubActivator : IHubActivator
     {

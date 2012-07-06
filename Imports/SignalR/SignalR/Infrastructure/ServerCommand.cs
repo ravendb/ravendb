@@ -1,4 +1,4 @@
-﻿namespace SignalR.Infrastructure
+﻿namespace Raven.Imports.SignalR.Infrastructure
 {
     /// <summary>
     /// A server to server command.

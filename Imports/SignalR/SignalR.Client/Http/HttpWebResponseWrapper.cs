@@ -2,7 +2,7 @@
 using System.IO;
 using System.Net;
 
-namespace SignalR.Client.Http
+namespace Raven.Imports.SignalR.Client.Http
 {
     public class HttpWebResponseWrapper : IResponse
     {

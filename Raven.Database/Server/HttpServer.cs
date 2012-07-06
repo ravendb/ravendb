@@ -19,6 +19,7 @@ using System.Threading;
 using System.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Plugins.Catalogs;
+using Raven.Database.Server.Connections;
 using Raven.Database.Server.Responders;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
@@ -36,6 +37,8 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
+using Raven.Imports.SignalR;
+using Raven.Imports.SignalR.Hosting.Self;
 
 namespace Raven.Database.Server
 {
@@ -57,7 +60,6 @@ namespace Raven.Database.Server
 			new ConcurrentDictionary<string, DocumentDatabase>(StringComparer.InvariantCultureIgnoreCase);
 
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
-
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
 		public int NumberOfRequests
@@ -82,6 +84,7 @@ namespace Raven.Database.Server
 		private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)", RegexOptions.IgnoreCase);
 
 
+		private ExternalHttpListenerServer signalrServer;
 		private HttpListener listener;
 
 		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
@@ -229,7 +232,11 @@ namespace Raven.Database.Server
 			string virtualDirectory = SystemConfiguration.VirtualDirectory;
 			if (virtualDirectory.EndsWith("/") == false)
 				virtualDirectory = virtualDirectory + "/";
-			listener.Prefixes.Add("http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory);
+			var uri = "http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
+			listener.Prefixes.Add(uri);
+
+			signalrServer = new ExternalHttpListenerServer(uri, listener);
+			signalrServer.MapHubs();
 
 			foreach (var configureHttpListener in ConfigureHttpListeners)
 			{
@@ -301,9 +308,11 @@ namespace Raven.Database.Server
 		private void GetContext(IAsyncResult ar)
 		{
 			IHttpContext ctx;
+			HttpListenerContext httpListenerContext;
 			try
 			{
-				ctx = new HttpListenerContextAdpater(listener.EndGetContext(ar), SystemConfiguration);
+				httpListenerContext = listener.EndGetContext(ar);
+				ctx = new HttpListenerContextAdpater(httpListenerContext, SystemConfiguration);
 				//setup waiting for the next request
 				listener.BeginGetContext(GetContext, null);
 			}
@@ -322,12 +331,28 @@ namespace Raven.Database.Server
 			try
 			{
 				Interlocked.Increment(ref physicalRequestsCount);
-				HandleActualRequest(ctx);
+				if (ctx.GetRequestUrl().StartsWith("/signalr"))
+					HandleSingalRequest(httpListenerContext);
+				else
+					HandleActualRequest(ctx);
 			}
 			finally
 			{
 				concurretRequestSemaphore.Release();
 			}
+		}
+
+		private void HandleSingalRequest(HttpListenerContext ctx)
+		{
+			if(t == null)
+			{
+				t = new Timer(state =>
+				{
+					GlobalHost.ConnectionManager.GetHubContext("MyHub").Clients.notify("1");
+				}, null, 1000, 100000);
+			}
+			
+			signalrServer.ProcessRequestSafe(ctx);
 		}
 
 		public void HandleActualRequest(IHttpContext ctx)

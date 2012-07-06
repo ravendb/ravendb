@@ -1,6 +1,6 @@
 ﻿using System.Dynamic;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     public class StatefulSignalProxy : SignalProxy
     {

@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     /// <summary>
     /// A server side proxy for the client side hub.

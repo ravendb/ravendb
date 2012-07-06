@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using SignalR.Hubs;
-using SignalR.Infrastructure;
-using SignalR.Transports;
+using Raven.Imports.SignalR.Hubs;
+using Raven.Imports.SignalR.Infrastructure;
+using Raven.Imports.SignalR.Transports;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     public class DefaultDependencyResolver : IDependencyResolver
     {

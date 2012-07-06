@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace SignalR.Transports
+namespace Raven.Imports.SignalR.Transports
 {
     /// <summary>
     /// Represents a connection that can be tracked by an <see cref="ITransportHeartBeat"/>.

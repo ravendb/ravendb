@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     /// <summary>
     /// The response returned from an incoming hub request.

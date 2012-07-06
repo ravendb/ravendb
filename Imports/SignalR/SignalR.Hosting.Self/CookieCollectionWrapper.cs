@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Net;
+using Raven.Imports.SignalR;
+using Cookie = System.Net.Cookie;
 
-namespace SignalR.Hosting.Self
+namespace Raven.Imports.SignalR.Hosting.Self
 {
     internal class CookieCollectionWrapper : IRequestCookieCollection
     {

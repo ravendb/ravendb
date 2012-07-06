@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using SignalR.Hubs;
+using Raven.Imports.SignalR.Hubs;
 
-namespace SignalR.Hosting.Common.Routing
+namespace Raven.Imports.SignalR.Hosting.Common.Routing
 {
     public class RouteManager
     {

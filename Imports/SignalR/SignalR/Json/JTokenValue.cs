@@ -1,8 +1,8 @@
 ﻿using System;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// An implementation of IJsonValue over JSON.NET

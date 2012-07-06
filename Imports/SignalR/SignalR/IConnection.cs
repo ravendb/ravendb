@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// A communication channel for a <see cref="PersistentConnection"/> and its connections.

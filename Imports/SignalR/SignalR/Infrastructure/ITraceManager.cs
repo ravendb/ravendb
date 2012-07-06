@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace SignalR.Infrastructure
+namespace Raven.Imports.SignalR.Infrastructure
 {
     public interface ITraceManager
     {

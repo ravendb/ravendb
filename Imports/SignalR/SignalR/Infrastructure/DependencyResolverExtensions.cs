@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     public static class DependencyResolverExtensions
     {

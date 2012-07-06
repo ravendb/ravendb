@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 
-namespace SignalR.Infrastructure
+namespace Raven.Imports.SignalR.Infrastructure
 {
     internal class LockedList<T> : List<T>
     {

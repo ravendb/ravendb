@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SignalR.Infrastructure
+namespace Raven.Imports.SignalR.Infrastructure
 {
     /// <summary>
     /// Default <see cref="IServerCommandHandler"/> implementation.

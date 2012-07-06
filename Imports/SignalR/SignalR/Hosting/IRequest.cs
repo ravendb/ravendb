@@ -3,7 +3,7 @@ using System.Collections.Specialized;
 using System.Security.Principal;
 using System.Threading.Tasks;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// Represents a SignalR request

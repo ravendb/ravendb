@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace SignalR.Transports
+namespace Raven.Imports.SignalR.Transports
 {
     /// <summary>
     /// Manages tracking the state of connections.

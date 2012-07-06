@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     internal static class TaskAsyncHelper
     {

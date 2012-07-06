@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     /// <summary>
     /// Handles all communication over the hubs persistent connection.

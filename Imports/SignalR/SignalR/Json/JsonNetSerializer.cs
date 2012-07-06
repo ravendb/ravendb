@@ -1,7 +1,7 @@
 ﻿using System;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// Default <see cref="IJsonSerializer"/> implementation over Json.NET.

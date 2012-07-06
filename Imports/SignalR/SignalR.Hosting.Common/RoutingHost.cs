@@ -1,6 +1,6 @@
-﻿using SignalR.Hosting.Common.Routing;
+﻿using Raven.Imports.SignalR.Hosting.Common.Routing;
 
-namespace SignalR.Hosting.Common
+namespace Raven.Imports.SignalR.Hosting.Common
 {
     public class RoutingHost : Host
     {

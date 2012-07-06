@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace SignalR.Client.Http
+namespace Raven.Imports.SignalR.Client.Http
 {
     /// <summary>
     /// The default <see cref="IHttpClient"/> implementation.

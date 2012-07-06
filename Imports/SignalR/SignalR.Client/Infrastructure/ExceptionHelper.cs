@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 
-namespace SignalR.Client.Infrastructure
+namespace Raven.Imports.SignalR.Client.Infrastructure
 {
     internal static class ExceptionHelper
     {

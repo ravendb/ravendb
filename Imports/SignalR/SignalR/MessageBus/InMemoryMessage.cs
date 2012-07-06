@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     public class InMemoryMessage<T> : Message where T : IComparable<T>
     {

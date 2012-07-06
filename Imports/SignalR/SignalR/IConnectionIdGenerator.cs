@@ -1,6 +1,6 @@
 ﻿using System.Security.Principal;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// Used to generate connection ids.

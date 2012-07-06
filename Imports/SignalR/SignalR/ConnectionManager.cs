@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
-using SignalR.Hubs;
-using SignalR.Infrastructure;
+using Raven.Imports.SignalR.Hubs;
+using Raven.Imports.SignalR.Infrastructure;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// Default <see cref="IConnectionManager"/> implementation.

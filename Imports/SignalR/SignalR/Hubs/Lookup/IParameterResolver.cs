@@ -1,6 +1,6 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Raven.Imports.Newtonsoft.Json.Linq;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     /// <summary>
     /// Describes a parameter resolver for resolving parameter-matching values based on provided information.

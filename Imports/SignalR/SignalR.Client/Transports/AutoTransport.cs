@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Threading.Tasks;
-using SignalR.Client.Http;
+using Raven.Imports.SignalR.Client.Http;
 
-namespace SignalR.Client.Transports
+namespace Raven.Imports.SignalR.Client.Transports
 {
     public class AutoTransport : IClientTransport
     {

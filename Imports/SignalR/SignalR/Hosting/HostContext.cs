@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Principal;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     public class HostContext
     {

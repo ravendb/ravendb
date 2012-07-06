@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 
-namespace SignalR.Transports
+namespace Raven.Imports.SignalR.Transports
 {
     /// <summary>
     /// The default <see cref="ITransportManager"/> implementation.

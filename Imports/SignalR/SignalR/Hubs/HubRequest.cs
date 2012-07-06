@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     public class HubRequest
     {

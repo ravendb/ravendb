@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// Provides access to default host information.

@@ -1,4 +1,4 @@
-﻿namespace SignalR.Transports
+﻿namespace Raven.Imports.SignalR.Transports
 {
     /// <summary>
     /// Manages the transports for connections.

@@ -1,4 +1,4 @@
-﻿namespace SignalR
+﻿namespace Raven.Imports.SignalR
 {
     public enum CommandType
     {

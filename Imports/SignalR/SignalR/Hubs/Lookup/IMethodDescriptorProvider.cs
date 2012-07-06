@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     /// <summary>
     /// Describes a hub method provider that builds a collection of available methods on a given hub.

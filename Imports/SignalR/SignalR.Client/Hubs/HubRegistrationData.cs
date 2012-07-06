@@ -1,4 +1,4 @@
-﻿namespace SignalR.Client.Hubs
+﻿namespace Raven.Imports.SignalR.Client.Hubs
 {
     public class HubRegistrationData
     {

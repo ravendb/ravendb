@@ -1,6 +1,6 @@
 using System.Linq;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     public class DefaultParameterResolver : IParameterResolver
     {

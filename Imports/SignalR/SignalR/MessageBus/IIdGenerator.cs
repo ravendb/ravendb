@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     public interface IIdGenerator<T> where T : IComparable<T>
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace SignalR.Client.Infrastructure
+namespace Raven.Imports.SignalR.Client.Infrastructure
 {
     /// <summary>
     /// Allows for thread safe invocation of a delegate.

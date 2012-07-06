@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace SignalR.Client.Http
+namespace Raven.Imports.SignalR.Client.Http
 {
     public static class IHttpClientExtensions
     {

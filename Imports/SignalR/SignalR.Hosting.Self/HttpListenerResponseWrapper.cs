@@ -2,9 +2,9 @@
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using SignalR.Hosting.Self.Infrastructure;
+using Raven.Imports.SignalR.Hosting.Self.Infrastructure;
 
-namespace SignalR.Hosting.Self
+namespace Raven.Imports.SignalR.Hosting.Self
 {
     public class HttpListenerResponseWrapper : IResponse
     {

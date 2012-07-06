@@ -1,4 +1,4 @@
-﻿namespace SignalR.Client.Transports.ServerSentEvents
+﻿namespace Raven.Imports.SignalR.Client.Transports.ServerSentEvents
 {
     public enum EventType
     {

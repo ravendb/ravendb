@@ -1,6 +1,6 @@
-﻿using SignalR.Hubs;
+﻿using Raven.Imports.SignalR.Hubs;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     public class NullJavaScriptMinifier : IJavaScriptMinifier
     {

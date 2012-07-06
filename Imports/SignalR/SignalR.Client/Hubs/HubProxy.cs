@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Dynamic;
 #endif
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
-namespace SignalR.Client.Hubs
+namespace Raven.Imports.SignalR.Client.Hubs
 {
     public class HubProxy :
 #if !WINDOWS_PHONE && !NET35

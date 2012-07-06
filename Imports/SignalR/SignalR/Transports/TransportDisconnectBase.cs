@@ -4,9 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SignalR.Infrastructure;
+using Raven.Imports.SignalR.Infrastructure;
 
-namespace SignalR.Transports
+namespace Raven.Imports.SignalR.Transports
 {
     public abstract class TransportDisconnectBase : ITrackingConnection
     {

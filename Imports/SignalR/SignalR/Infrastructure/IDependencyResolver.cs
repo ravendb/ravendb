@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     public interface IDependencyResolver
     {

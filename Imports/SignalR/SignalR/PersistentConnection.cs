@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using SignalR.Infrastructure;
-using SignalR.Transports;
+using Raven.Imports.SignalR.Infrastructure;
+using Raven.Imports.SignalR.Transports;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// Represents a connection between client and server.

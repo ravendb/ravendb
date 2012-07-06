@@ -6,12 +6,12 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using SignalR.Client.Http;
-using SignalR.Client.Transports;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.SignalR.Client.Http;
+using Raven.Imports.SignalR.Client.Transports;
 
-namespace SignalR.Client
+namespace Raven.Imports.SignalR.Client
 {
     /// <summary>
     /// Provides client connections for SignalR services.

@@ -4,9 +4,9 @@ using System.IO;
 using System.Net;
 using System.Security.Principal;
 using System.Threading.Tasks;
-using SignalR.Hosting.Common;
+using Raven.Imports.SignalR.Hosting.Common;
 
-namespace SignalR.Hosting.Self
+namespace Raven.Imports.SignalR.Hosting.Self
 {
     public class HttpListenerRequestWrapper : IRequest
     {

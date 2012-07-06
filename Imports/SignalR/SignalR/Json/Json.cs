@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Text;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// Helper class for common JSON operations.

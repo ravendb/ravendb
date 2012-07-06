@@ -1,4 +1,4 @@
-﻿namespace SignalR.Hubs
+﻿namespace Raven.Imports.SignalR.Hubs
 {
     internal class HubContext : IHubContext
     {

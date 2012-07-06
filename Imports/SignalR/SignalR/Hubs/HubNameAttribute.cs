@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
     public sealed class HubNameAttribute : Attribute

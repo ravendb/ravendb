@@ -1,4 +1,4 @@
-﻿namespace SignalR.Infrastructure
+﻿namespace Raven.Imports.SignalR.Infrastructure
 {
     public enum ServerCommandType
     {

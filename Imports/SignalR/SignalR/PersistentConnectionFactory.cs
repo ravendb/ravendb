@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// Responsible for creating <see cref="PersistentConnection"/> instances.

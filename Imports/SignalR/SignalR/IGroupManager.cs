@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// Manages groups for a connection.

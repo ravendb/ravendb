@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using System.Threading;
 
-namespace SignalR.Client.Transports
+namespace Raven.Imports.SignalR.Client.Transports
 {
     public interface IClientTransport
     {

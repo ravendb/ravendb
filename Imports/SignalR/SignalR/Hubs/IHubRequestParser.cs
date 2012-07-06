@@ -1,4 +1,4 @@
-﻿namespace SignalR.Hubs
+﻿namespace Raven.Imports.SignalR.Hubs
 {
     /// <summary>
     /// Handles parsing incoming requests through the <see cref="HubDispatcher"/>.

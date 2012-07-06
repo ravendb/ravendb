@@ -1,7 +1,7 @@
 ﻿using System;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 
-namespace SignalR.Client
+namespace Raven.Imports.SignalR.Client
 {
     public static class ConnectionExtensions
     {

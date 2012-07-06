@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using SignalR.Infrastructure;
+using Raven.Imports.SignalR.Infrastructure;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// The default <see cref="IGroupManager"/> implementation.

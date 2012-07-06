@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace SignalR.Client.Http
+namespace Raven.Imports.SignalR.Client.Http
 {
     /// <summary>
     /// The http request

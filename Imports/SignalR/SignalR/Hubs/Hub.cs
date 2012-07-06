@@ -1,4 +1,4 @@
-﻿namespace SignalR.Hubs
+﻿namespace Raven.Imports.SignalR.Hubs
 {
     /// <summary>
     /// Provides methods that communicate with SignalR connections that connected to a <see cref="Hub"/>.

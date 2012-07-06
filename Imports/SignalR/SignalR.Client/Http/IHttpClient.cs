@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace SignalR.Client.Http
+namespace Raven.Imports.SignalR.Client.Http
 {
     /// <summary>
     /// A client that can make http request.

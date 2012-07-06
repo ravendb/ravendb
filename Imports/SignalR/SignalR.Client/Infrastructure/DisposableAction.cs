@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SignalR.Client.Infrastructure
+namespace Raven.Imports.SignalR.Client.Infrastructure
 {
     internal class DisposableAction : IDisposable
     {

@@ -1,7 +1,7 @@
 ﻿using System;
-using SignalR.Infrastructure;
+using Raven.Imports.SignalR.Infrastructure;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     internal static class HubTypeExtensions
     {

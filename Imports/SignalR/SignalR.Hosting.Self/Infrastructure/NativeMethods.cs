@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace SignalR.Hosting.Self.Infrastructure
+namespace Raven.Imports.SignalR.Hosting.Self.Infrastructure
 {
     internal static class NativeMethods
     {

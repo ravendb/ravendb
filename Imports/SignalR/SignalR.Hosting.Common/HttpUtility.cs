@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Specialized;
-using SignalR.Infrastructure;
+using Raven.Imports.SignalR.Infrastructure;
 
-namespace SignalR.Hosting.Common
+namespace Raven.Imports.SignalR.Hosting.Common
 {
     public static class HttpUtility
     {

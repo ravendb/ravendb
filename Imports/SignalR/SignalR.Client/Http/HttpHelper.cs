@@ -5,10 +5,10 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using SignalR.Client.Infrastructure;
-using SignalR.Infrastructure;
+using Raven.Imports.SignalR.Client.Infrastructure;
+using Raven.Imports.SignalR.Infrastructure;
 
-namespace SignalR.Client.Http
+namespace Raven.Imports.SignalR.Client.Http
 {
     internal static class HttpHelper
     {

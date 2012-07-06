@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using Newtonsoft.Json.Linq;
-using SignalR.Infrastructure;
+using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Imports.SignalR.Infrastructure;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     public class ReflectedMethodDescriptorProvider : IMethodDescriptorProvider
     {

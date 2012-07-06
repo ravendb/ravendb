@@ -1,6 +1,6 @@
 using System;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     /// <summary>
     /// Holds information about a single hub.

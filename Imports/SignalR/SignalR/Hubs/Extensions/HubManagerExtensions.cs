@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Globalization;
 
-namespace SignalR.Hubs
+namespace Raven.Imports.SignalR.Hubs
 {
     public static class HubManagerExtensions
     {

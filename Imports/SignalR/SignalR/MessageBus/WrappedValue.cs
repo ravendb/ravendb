@@ -1,4 +1,4 @@
-﻿namespace SignalR
+﻿namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// All values saved to the messages store are wrapped by this type.

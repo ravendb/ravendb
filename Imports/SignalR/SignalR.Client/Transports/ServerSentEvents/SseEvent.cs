@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SignalR.Client.Transports.ServerSentEvents
+namespace Raven.Imports.SignalR.Client.Transports.ServerSentEvents
 {
     public class SseEvent
     {

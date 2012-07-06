@@ -2,7 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 
-namespace SignalR.Client.Infrastructure
+namespace Raven.Imports.SignalR.Client.Infrastructure
 {
     internal static class StreamExtensions
     {

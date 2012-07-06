@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 
-namespace SignalR.Infrastructure
+namespace Raven.Imports.SignalR.Infrastructure
 {
     // Taken from System.Net.Http.Formatting.Internal.UriQueryUtility.cs (http://aspnetwebstack.codeplex.com/)
 

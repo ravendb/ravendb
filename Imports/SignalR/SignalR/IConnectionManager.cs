@@ -1,6 +1,6 @@
-﻿using SignalR.Hubs;
+﻿using Raven.Imports.SignalR.Hubs;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// Provides access to hubs and persistent connections references.
