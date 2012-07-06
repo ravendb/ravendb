@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="PersistentConnectionFactory.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ChangesConnectionFactory.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -19,12 +19,12 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
 {
-	public class PersistentConnectionFactory
+	public class ChangesConnectionFactory
 	{
 		private readonly DocumentConvention conventions;
 		public event Action<Imports.SignalR.Client.Connection> ConfigureConnection = delegate { };
 
-		public PersistentConnectionFactory(DocumentConvention conventions)
+		public ChangesConnectionFactory(DocumentConvention conventions)
 		{
 			this.conventions = conventions;
 		}

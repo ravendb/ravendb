@@ -740,9 +740,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\HttpExtensions.cs">
       <Link>Connection\HttpExtensions.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\PersistentConnectionFactory.cs">
-      <Link>Imports\Connection\PersistentConnectionFactory.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\ConcurrentBoundedList.cs">
       <Link>Imports\Connection\Profiling\ConcurrentBoundedList.cs</Link>
     </Compile>
