@@ -29,24 +29,12 @@ namespace Raven.Client.Connection
 			this.conventions = conventions;
 		}
 
-		public IObservable<ChangeNotification> Create(string url, ICredentials credentials, IDictionary<string, string> queryString)
+		public TaskObservable<ChangeNotification> Create(string url, ICredentials credentials, IDictionary<string, string> queryString)
 		{
-			var result = new FutureObservable<ChangeNotification>();
 			var changes = EstablishConnection(url, credentials, queryString, 0)
-				.ContinueWith(task =>
-				{
-					if(task.IsFaulted)
-					{
-						result.ForceError(task.Exception);
-						return;
-					}
-					result.Add(task.Result.AsObservable<ChangeNotification>());
-				});
+				.ContinueWith(task => task.Result.AsObservable<ChangeNotification>());
 
-			if (conventions.WaitForConnectionEstablishedInChanges)
-				changes.Wait();
-
-			return result;
+			return new TaskObservable<ChangeNotification>(changes);
 		}
 
 		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)

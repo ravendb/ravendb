@@ -24,8 +24,9 @@ namespace Raven.Tests.Notifications
 			using (var store = NewDocumentStore())
 			{
 				var list = new BlockingCollection<ChangeNotification>();
-				store.Changes()
-					.Subscribe(list.Add);
+				var taskObservable = store.Changes();
+				taskObservable.Task.Wait();
+				taskObservable.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
 				{

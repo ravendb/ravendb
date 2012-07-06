@@ -28,6 +28,8 @@ using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
 using System.Collections.Generic;
+using Raven.Client.Util;
+
 #else
 using Raven.Client.Listeners;
 using Raven.Client.Util;
@@ -364,8 +366,9 @@ namespace Raven.Client.Document
 
 			AssertValidConfiguration();
 
-#if !SILVERLIGHT
 			changesConnectionFactory = new ChangesConnectionFactory(Conventions);
+
+#if !SILVERLIGHT
 			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
 #else
 			jsonRequestFactory = new HttpJsonRequestFactory();
@@ -632,10 +635,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		public override IObservable<ChangeNotification> Changes(
-			string database = null,
-			ChangeTypes changes = ChangeTypes.Common,
-			string idPrefix = null)
+		public override TaskObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null)
 		{
 			AssertInitialized();
 

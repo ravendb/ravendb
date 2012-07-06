@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+#if SILVERLIGHT
+using System.Net.Browser;
+#endif
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Imports.SignalR.Client.Infrastructure;
@@ -43,7 +46,11 @@ namespace Raven.Imports.SignalR.Client.Http
 
         public static Task<HttpWebResponse> GetAsync(string url, Action<HttpWebRequest> requestPreparer)
         {
-            var request = (HttpWebRequest)HttpWebRequest.Create(url);
+#if !SILVERLIGHT
+			var request = (HttpWebRequest)WebRequest.Create(url);
+#else
+			var request = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(url));
+#endif
             if (requestPreparer != null)
             {
                 requestPreparer(request);
@@ -100,8 +107,11 @@ namespace Raven.Imports.SignalR.Client.Http
 
         private static Task<HttpWebResponse> PostInternal(string url, Action<HttpWebRequest> requestPreparer, IDictionary<string, string> postData)
         {
-            var request = (HttpWebRequest)HttpWebRequest.Create(url);
-
+#if !SILVERLIGHT
+			var request = (HttpWebRequest)WebRequest.Create(url);
+#else
+			var request = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(url));
+#endif
             if (requestPreparer != null)
             {
                 requestPreparer(request);

@@ -93,7 +93,6 @@ namespace Raven.Client.Document
 			ReplicationInformerFactory = url=> new ReplicationInformer(this);
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
-			WaitForConnectionEstablishedInChanges = true;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
@@ -555,12 +554,6 @@ namespace Raven.Client.Document
 		/// </summary>
 		public TimeSpan MaxFailoverCheckPeriod { get; set; }
 
-		/// <summary>
-		/// Whatever we wait (sync) until the connection was established when calling
-		/// documentStore.Changes() or return immediately and establish the connection 
-		/// on the background
-		/// </summary>
-		public bool WaitForConnectionEstablishedInChanges { get; set; }
 	}
 
 

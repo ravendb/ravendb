@@ -12,6 +12,7 @@ using System.Collections.Specialized;
 #endif
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 #if !NET35
@@ -147,10 +148,15 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		public override IObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null)
+		public override TaskObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null)
 		{
 			var observables = ShardStrategy.Shards.Values.Select(x => x.Changes(database, changes, idPrefix)).ToArray();
-			return new ConcatObservable<ChangeNotification>(observables);
+			return new TaskObservable<ChangeNotification>(Task.Factory.StartNew(() =>
+			{
+				Task.WaitAll(observables.Select(x => (Task)x.Task).ToArray());
+
+				return (IObservable<ChangeNotification>) new ConcatObservable<ChangeNotification>(observables);
+			}));
 		}
 
 		/// <summary>

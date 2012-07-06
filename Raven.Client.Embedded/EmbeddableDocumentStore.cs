@@ -8,7 +8,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Util;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -100,12 +102,13 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		public override IObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null)
+		public override TaskObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null)
 		{
 			if (string.IsNullOrEmpty(Url) == false)
 				return base.Changes(database, changes, idPrefix);
 
-			return new NotificationObservable(DocumentDatabase, changes, idPrefix);
+			var notificationObservable = new NotificationObservable(DocumentDatabase, changes, idPrefix);
+			return new TaskObservable<ChangeNotification>(new CompletedTask<IObservable<ChangeNotification>>(notificationObservable));
 		}
 
 		private class NotificationObservable : IObservable<ChangeNotification>, IDisposable

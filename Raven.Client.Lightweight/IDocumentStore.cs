@@ -20,6 +20,8 @@ using Raven.Client.Indexes;
 #endif
 #if !NET35
 using Raven.Client.Connection.Async;
+using Raven.Client.Util;
+
 #endif
 
 namespace Raven.Client
@@ -32,10 +34,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		IObservable<ChangeNotification> Changes(
-			string database = null,
-			ChangeTypes changes = ChangeTypes.Common,
-			string idPrefix = null);
+		TaskObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null);
 
 		/// <summary>
 		/// Setup the context for aggressive caching.

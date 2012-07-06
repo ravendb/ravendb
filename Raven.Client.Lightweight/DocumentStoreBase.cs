@@ -18,6 +18,8 @@ using Raven.Client.Silverlight.Connection;
 #endif
 #if !NET35
 using Raven.Client.Connection.Async;
+using Raven.Client.Util;
+
 #endif
 
 namespace Raven.Client
@@ -42,7 +44,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		public abstract IObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null);
+		public abstract TaskObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null);
 
 		public abstract IDisposable AggressivelyCacheFor(TimeSpan cahceDuration);
 		public abstract IDisposable DisableAggressiveCaching();

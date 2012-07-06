@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 
@@ -13,9 +14,9 @@ namespace Raven.Client.Util
 	{
 		private readonly IObservable<T>[] inner;
 
-		public ConcatObservable(IObservable<T>[] inner)
+		public ConcatObservable(IEnumerable<IObservable<T>> inner)
 		{
-			this.inner = inner;
+			this.inner = inner.ToArray();
 		}
 
 		public IDisposable Subscribe(IObserver<T> observer)

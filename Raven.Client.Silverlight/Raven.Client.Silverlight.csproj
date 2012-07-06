@@ -1010,8 +1010,8 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
       <Link>Imports\Util\ConcatObservable.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Util\FutureObservable.cs">
-      <Link>Imports\Util\FutureObservable.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Util\TaskObservable.cs">
+      <Link>Imports\Util\TaskObservable.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Types.cs">
       <Link>Imports\Util\Types.cs</Link>
