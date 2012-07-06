@@ -40,7 +40,7 @@ namespace Raven.Studio.Models
         public Notification SelectedItem
         {
             get { return selectedItem; }
-            private set
+            set
             {
                 selectedItem = value;
                 OnPropertyChanged(() => SelectedItem);
@@ -81,7 +81,11 @@ namespace Raven.Studio.Models
         {
             base.OnViewLoaded();
 
-            SelectedItem = ApplicationModel.Current.Notifications.LastOrDefault(n => n.Level == NotificationLevel.Error);
+            if (SelectedItem == null)
+            {
+                SelectedItem =
+                    ApplicationModel.Current.Notifications.LastOrDefault(n => n.Level == NotificationLevel.Error);
+            }
         }
     }
 }

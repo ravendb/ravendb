@@ -20,7 +20,8 @@ namespace Raven.Studio.Messages
 
 		public DateTime CreatedAt { get; private set; }
 		public string Message { get; private set; }
-		public NotificationLevel Level { get; private set; }
+
+	    public NotificationLevel Level { get; private set; }
 
 	    public string Details
 	    {
