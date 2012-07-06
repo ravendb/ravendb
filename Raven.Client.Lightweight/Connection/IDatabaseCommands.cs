@@ -296,12 +296,27 @@ namespace Raven.Client.Connection
 		void Patch(string key, PatchRequest[] patches);
 
 		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchScript">Javascript code to use to patch the doc</param>
+		void Patch(string key, string patchScript);
+
+		/// <summary>
 		/// Sends a patch request for a specific document
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		void Patch(string key, PatchRequest[] patches, Guid? etag);
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchScript">Javascript code to use to patch the doc</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		void Patch(string key, string patchScript, Guid? etag);
 
 		/// <summary>
 		/// Disable all caching within the given scope

@@ -286,7 +286,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 			return new ConflictException("Conflict detected on " + key +
-			                            ", conflict must be resolved before the document will be accessible")
+										", conflict must be resolved before the document will be accessible")
 			{
 				ConflictedVersionIds = conflictIds,
 				Etag = new Guid(etag)
@@ -1369,6 +1369,16 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		}
 
 		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchScript">Javascript code to use to patch the doc</param>
+		public void Patch(string key, string patchScript)
+		{
+			Patch(key, patchScript, null);
+		}
+
+		/// <summary>
 		/// Sends a patch request for a specific document
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
@@ -1377,14 +1387,25 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		public void Patch(string key, PatchRequest[] patches, Guid? etag)
 		{
 			Batch(new[]
-			      	{
-			      		new PatchCommandData
-			      			{
-			      				Key = key,
-			      				Patches = patches,
-			      				Etag = etag
-			      			}
-			      	});
+					{
+						new PatchCommandData
+							{
+								Key = key,
+								Patches = patches,
+								Etag = etag
+							}
+					});
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchScript">Javascript code to use to patch the doc</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		public void Patch(string key, string patchScript, Guid? etag)
+		{
+			throw new NotImplementedException();
 		}
 
 		/// <summary>
@@ -1394,7 +1415,6 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			return jsonRequestFactory.DisableAllCaching();
 		}
-
 
 
 		#endregion

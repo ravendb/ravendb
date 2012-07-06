@@ -629,6 +629,7 @@
     <Compile Include="MailingList\StartsWith.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
     <Compile Include="MailingList\Stockholm.cs" />
+    <Compile Include="Patching\AdvancedPatching.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />
     <Compile Include="MailingList\WallaceTurner.cs" />

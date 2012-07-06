@@ -33,19 +33,19 @@ this.Comments.Map(function(comment) {
 return (comment == ""one"") ? comment + "" test"" : comment;
 });";
 
-		[Fact]
-		public void CanApplyBasicScriptAsPatch()
-		{
-			var resultJson = new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(sampleScript);
-			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+		//[Fact]
+		//public void CanApplyBasicScriptAsPatch()
+		//{
+		//    var resultJson = new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(sampleScript);
+		//    var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
-			Assert.Equal("Something new", result.Id);
-			Assert.Equal(2, result.Comments.Count);
-			Assert.Equal("one test", result.Comments[0]);
-			Assert.Equal("two", result.Comments[1]);
-			Assert.Equal(12144, result.Value);
-			Assert.Equal("err!!", resultJson["newValue"]);
-		}
+		//    Assert.Equal("Something new", result.Id);
+		//    Assert.Equal(2, result.Comments.Count);
+		//    Assert.Equal("one test", result.Comments[0]);
+		//    Assert.Equal("two", result.Comments[1]);
+		//    Assert.Equal(12144, result.Value);
+		//    Assert.Equal("err!!", resultJson["newValue"]);
+		//}
 
 		//[Fact]
 		//public void CanPerformAdvancedPatching_Remotely()
@@ -149,28 +149,28 @@ return (comment == ""one"") ? comment + "" test"" : comment;
 			store.OpenSession().Advanced.LuceneQuery<object>("TestIndex")
 					.WaitForNonStaleResults().ToList();
 
-			store.DatabaseCommands.UpdateByIndex("TestIndex",
-											new IndexQuery { Query = "Owner:Bob" },
-											sampleScript);
+			//store.DatabaseCommands.UpdateByIndex("TestIndex",
+			//                                new IndexQuery { Query = "Owner:Bob" },
+			//                                sampleScript);
 
 			var item1ResultJson = store.DatabaseCommands.Get(item1.Id).DataAsJson;
-            var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());
+			var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());
 			Console.WriteLine(item1ResultJson);
-            Assert.Equal(2, item1Result.Comments.Count);
-            Assert.Equal("one test", item1Result.Comments[0]);
-            Assert.Equal("two", item1Result.Comments[1]);
-            Assert.Equal(12144, item1Result.Value);
-            Assert.Equal("err!!", item1ResultJson["newValue"]);
+			Assert.Equal(2, item1Result.Comments.Count);
+			Assert.Equal("one test", item1Result.Comments[0]);
+			Assert.Equal("two", item1Result.Comments[1]);
+			Assert.Equal(12144, item1Result.Value);
+			Assert.Equal("err!!", item1ResultJson["newValue"]);
 
 			var item2ResultJson = store.DatabaseCommands.Get(item2.Id).DataAsJson;
 			var item2Result = JsonConvert.DeserializeObject<CustomType>(item2ResultJson.ToString());
 			Console.WriteLine(item2ResultJson);
-            Assert.True(store.DatabaseCommands.Get(item2.Id).Metadata["@id"].ToString().StartsWith("someId"));
-            Assert.Equal(9999, item2Result.Value);
-            Assert.Equal(3, item2Result.Comments.Count);
-            Assert.Equal("one", item2Result.Comments[0]);
-            Assert.Equal("two", item2Result.Comments[1]);
-            Assert.Equal("seven", item2Result.Comments[2]);
+			Assert.True(store.DatabaseCommands.Get(item2.Id).Metadata["@id"].ToString().StartsWith("someId"));
+			Assert.Equal(9999, item2Result.Value);
+			Assert.Equal(3, item2Result.Comments.Count);
+			Assert.Equal("one", item2Result.Comments[0]);
+			Assert.Equal("two", item2Result.Comments[1]);
+			Assert.Equal("seven", item2Result.Comments[2]);
 		}
 
 		class CustomType
