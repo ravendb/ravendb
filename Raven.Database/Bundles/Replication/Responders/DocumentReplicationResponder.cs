@@ -124,6 +124,13 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 
+			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+				Database.RaiseNotifications(new ChangeNotification
+				{
+					Name = id,
+					Type = ChangeTypes.ReplicationConflict
+				}));
+
 			metadata[ReplicationConstants.RavenReplicationConflictDocument] = true;
 			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata);
 			metadata.Add(ReplicationConstants.RavenReplicationConflict, RavenJToken.FromObject(true));

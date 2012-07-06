@@ -22,7 +22,9 @@ namespace Raven.Abstractions.Data
 		Put = 1,
 		Delete = 2,
 		IndexUpdated = 4,
+		ReplicationConflict = 8,
+		AttachmentReplicationConflict = 16,
 
-		All = Put | Delete | IndexUpdated
+		Common = Put | Delete | IndexUpdated
 	}
 }

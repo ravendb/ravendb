@@ -44,7 +44,7 @@ namespace Raven.Client
 		/// Subscribe to change notifications from the server
 		/// </summary>
 		public abstract IObservable<ChangeNotification> Changes(string database = null,
-			ChangeTypes changes = ChangeTypes.All,
+			ChangeTypes changes = ChangeTypes.Common,
 			string idPrefix = null);
 #endif
 

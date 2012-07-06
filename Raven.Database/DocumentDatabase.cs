@@ -399,7 +399,7 @@ namespace Raven.Database
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
-		private void RaiseNotifications(ChangeNotification obj)
+		public void RaiseNotifications(ChangeNotification obj)
 		{
 			Notifications(this, obj);
 		}

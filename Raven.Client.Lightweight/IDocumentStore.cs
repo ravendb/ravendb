@@ -35,7 +35,7 @@ namespace Raven.Client
 		/// </summary>
 		IObservable<ChangeNotification> Changes(
 			string database = null,
-			ChangeTypes changes = ChangeTypes.All,
+			ChangeTypes changes = ChangeTypes.Common,
 			string idPrefix = null);
 #endif
 		/// <summary>

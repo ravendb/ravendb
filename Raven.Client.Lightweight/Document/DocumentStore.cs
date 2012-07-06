@@ -634,7 +634,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public override IObservable<ChangeNotification> Changes(
 			string database = null,
-			ChangeTypes changes = ChangeTypes.All,
+			ChangeTypes changes = ChangeTypes.Common,
 			string idPrefix = null)
 		{
 			if (string.IsNullOrEmpty(Url))

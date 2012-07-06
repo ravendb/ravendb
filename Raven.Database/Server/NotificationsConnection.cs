@@ -47,7 +47,7 @@ namespace Raven.Database.Server
 			var changesAsStr = request.QueryString["changes"];
 
 			if(Enum.TryParse(changesAsStr, out changes) == false)
-				changes = ChangeTypes.All;
+				changes = ChangeTypes.Common;
 
 			idPrefix = request.QueryString["idPrefix"];
 
