@@ -113,7 +113,7 @@ namespace Raven.Imports.SignalR.Client.Transports.ServerSentEvents
 
                 // Keep reading the next set of data
                 Process();
-            });
+            }).Catch();
         }
 
         private void ProcessBuffer(byte[] buffer, int read)
