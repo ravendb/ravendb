@@ -16,7 +16,7 @@ namespace Raven.Imports.SignalR.Client
             return default(T);
         }
 
-#if !WINDOWS_PHONE && !SILVERLIGHT && !NET35
+#if !WINDOWS_PHONE &&  !NET35
         public static IObservable<string> AsObservable(this Connection connection)
         {
             return connection.AsObservable(value => value);

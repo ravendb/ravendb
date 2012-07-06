@@ -68,6 +68,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\System.ComponentModel.Composition.dll</HintPath>
     </Reference>
+    <Reference Include="System.Reactive">
+      <HintPath>..\packages\Rx-Main.1.0.11226\lib\SL4\System.Reactive.dll</HintPath>
+    </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows" />
     <Reference Include="system" />
@@ -569,6 +572,123 @@
     <Compile Include="..\imports\newtonsoft.json\src\newtonsoft.json\WriteState.cs">
       <Link>Imports\Imports\Newtonsoft.Json\WriteState.cs</Link>
     </Compile>
+    <Compile Include="..\Imports\SignalR\SignalR.Client\Connection.cs">
+      <Link>SignalR\Connection.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\SignalR\SignalR.Client\ConnectionExtensions.cs">
+      <Link>SignalR\ConnectionExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\SignalR\SignalR.Client\ConnectionState.cs">
+      <Link>SignalR\ConnectionState.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\http\DefaultHttpClient.cs">
+      <Link>SignalR\Http\DefaultHttpClient.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\http\HttpHelper.cs">
+      <Link>SignalR\Http\HttpHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\http\HttpWebRequestWrapper.cs">
+      <Link>SignalR\Http\HttpWebRequestWrapper.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\http\HttpWebResponseWrapper.cs">
+      <Link>SignalR\Http\HttpWebResponseWrapper.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\http\IHttpClient.cs">
+      <Link>SignalR\Http\IHttpClient.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\http\IHttpClientExtensions.cs">
+      <Link>SignalR\Http\IHttpClientExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\http\IRequest.cs">
+      <Link>SignalR\Http\IRequest.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\http\IResponse.cs">
+      <Link>SignalR\Http\IResponse.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\hubs\HubConnection.cs">
+      <Link>SignalR\Hubs\HubConnection.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\hubs\HubInvocation.cs">
+      <Link>SignalR\Hubs\HubInvocation.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\hubs\HubProxy.cs">
+      <Link>SignalR\Hubs\HubProxy.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\hubs\HubProxyExtensions.cs">
+      <Link>SignalR\Hubs\HubProxyExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\hubs\HubRegistrationData.cs">
+      <Link>SignalR\Hubs\HubRegistrationData.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\hubs\HubResult.cs">
+      <Link>SignalR\Hubs\HubResult.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\hubs\IHubProxy.cs">
+      <Link>SignalR\Hubs\IHubProxy.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\hubs\Subscription.cs">
+      <Link>SignalR\Hubs\Subscription.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\SignalR\SignalR.Client\IConnection.cs">
+      <Link>SignalR\IConnection.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\infrastructure\DisposableAction.cs">
+      <Link>SignalR\Infrastructure\DisposableAction.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\infrastructure\ExceptionHelper.cs">
+      <Link>SignalR\Infrastructure\ExceptionHelper.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\infrastructure\StreamExtensions.cs">
+      <Link>SignalR\Infrastructure\StreamExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\infrastructure\ThreadSafeInvoker.cs">
+      <Link>SignalR\Infrastructure\ThreadSafeInvoker.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\SignalR\SignalR.Client\NegotiationResponse.cs">
+      <Link>SignalR\NegotiationResponse.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\SignalR\SignalR.Client\ObservableConnection.cs">
+      <Link>SignalR\ObservableConnection.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\SignalR\SignalR.Client\StateChange.cs">
+      <Link>SignalR\StateChange.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\transports\AutoTransport.cs">
+      <Link>SignalR\Transports\AutoTransport.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\transports\HttpBasedTransport.cs">
+      <Link>SignalR\Transports\HttpBasedTransport.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\transports\IClientTransport.cs">
+      <Link>SignalR\Transports\IClientTransport.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\transports\LongPollingTransport.cs">
+      <Link>SignalR\Transports\LongPollingTransport.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\transports\ServerSentEventsTransport.cs">
+      <Link>SignalR\Transports\ServerSentEventsTransport.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\transports\serversentevents\ChunkBuffer.cs">
+      <Link>SignalR\Transports\ServerSentEvents\ChunkBuffer.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\transports\serversentevents\EventSourceStreamReader.cs">
+      <Link>SignalR\Transports\ServerSentEvents\EventSourceStreamReader.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\transports\serversentevents\EventType.cs">
+      <Link>SignalR\Transports\ServerSentEvents\EventType.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.client\transports\serversentevents\SseEvent.cs">
+      <Link>SignalR\Transports\ServerSentEvents\SseEvent.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr.hosting.common\infrastructure\UriQueryUtility.cs">
+      <Link>SignalR\Infrastructure\UriQueryUtility.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr\infrastructure\ExceptionsExtensions.cs">
+      <Link>SignalR\Infrastructure\ExceptionsExtensions.cs</Link>
+    </Compile>
+    <Compile Include="..\imports\signalr\signalr\TaskAsyncHelper.cs">
+      <Link>SignalR\Infrastructure\TaskAsyncHelper.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
       <Link>Imports\Connection\WebResponseExtensions.cs</Link>
     </Compile>
@@ -577,6 +697,9 @@
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\BuildNumber.cs">
       <Link>Imports\Data\BuildNumber.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\ChangeNotification.cs">
+      <Link>Imports\Data\ChangeNotification.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\Constants.cs">
       <Link>Imports\Data\Constants.cs</Link>
@@ -731,6 +854,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
       <Link>Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ChangesConnectionFactory.cs">
+      <Link>Imports\Connection\ChangesConnectionFactory.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\CompletedTask.cs">
       <Link>Connection\CompletedTask.cs</Link>
     </Compile>
@@ -881,6 +1007,12 @@
     <Compile Include="..\Raven.Client.Lightweight\Listeners\IDocumentStoreListener.cs">
       <Link>Imports\Listeners\IDocumentStoreListener.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
+      <Link>Imports\Util\ConcatObservable.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\FutureObservable.cs">
+      <Link>Imports\Util\FutureObservable.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Types.cs">
       <Link>Imports\Util\Types.cs</Link>
     </Compile>
@@ -893,6 +1025,7 @@
     <Compile Include="Connection\HttpJsonRequestHelper.cs" />
     <Compile Include="Connection\RavenUrlExtensions.cs" />
     <Compile Include="Data\ServerRequestError.cs" />
+    <Compile Include="MissingFromSilverlight\CD.cs" />
     <Compile Include="MissingFromSilverlight\MD5.cs" />
     <Compile Include="DotNetZip\Adler.cs" />
     <Compile Include="DotNetZip\BlockState.cs" />
@@ -923,6 +1056,8 @@
     <Compile Include="DotNetZip\ZlibException.cs" />
     <Compile Include="DotNetZip\ZlibStream.cs" />
     <Compile Include="DotNetZip\ZlibStreamFlavor.cs" />
+    <Compile Include="MissingFromSilverlight\SpinWait.cs" />
+    <Compile Include="MissingFromSilverlight\SplitOrderedList.cs" />
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />
   </ItemGroup>
   <ItemGroup>

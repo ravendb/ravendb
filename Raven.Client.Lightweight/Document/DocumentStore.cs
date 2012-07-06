@@ -61,7 +61,7 @@ namespace Raven.Client.Document
 #endif
 
 		private HttpJsonRequestFactory jsonRequestFactory;
-#if !SILVERLIGHT
+
 		private ChangesConnectionFactory changesConnectionFactory;
 
 		public ChangesConnectionFactory ChangesConnectionFactory
@@ -72,7 +72,6 @@ namespace Raven.Client.Document
 				return changesConnectionFactory;
 			}
 		}
-#endif
 
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
@@ -446,8 +445,7 @@ namespace Raven.Client.Document
 
 				SetHeader(args.Request.Headers, "Authorization", currentOauthToken);
 			};
-		
-#if !SILVERLIGHT
+
 			changesConnectionFactory.ConfigureConnection += connection =>
 				connection.OnPrepareRequest += request =>
 				{
@@ -456,6 +454,8 @@ namespace Raven.Client.Document
 
 					request.AddHeader("Authorization", currentOauthToken);
 				};
+			
+#if !SILVERLIGHT
 			
 			Conventions.HandleUnauthorizedResponse = (response) =>
 			{
@@ -628,7 +628,7 @@ namespace Raven.Client.Document
 			return new DisposableAction(() => { });
 #endif
 		}
-#if !SILVERLIGHT
+
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
@@ -658,7 +658,7 @@ namespace Raven.Client.Document
 				.Create(dbUrl + "/signalr/notifications", Credentials, nvc);
 			return connection;
 		}
-#endif
+		
 		/// <summary>
 		/// Setup the context for aggressive caching.
 		/// </summary>

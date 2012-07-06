@@ -29,7 +29,6 @@ namespace Raven.Client
 	/// </summary>
 	public interface IDocumentStore : IDisposalNotification
 	{
-#if !SILVERLIGHT
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
@@ -37,7 +36,7 @@ namespace Raven.Client
 			string database = null,
 			ChangeTypes changes = ChangeTypes.Common,
 			string idPrefix = null);
-#endif
+
 		/// <summary>
 		/// Setup the context for aggressive caching.
 		/// </summary>
