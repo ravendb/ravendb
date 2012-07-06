@@ -62,14 +62,14 @@ namespace Raven.Client.Document
 
 		private HttpJsonRequestFactory jsonRequestFactory;
 #if !SILVERLIGHT
-		private PersistentConnectionFactory persistentConnectionFactory;
+		private ChangesConnectionFactory changesConnectionFactory;
 
-		public PersistentConnectionFactory PersistentConnectionFactory
+		public ChangesConnectionFactory ChangesConnectionFactory
 		{
 			get
 			{
 				AssertInitialized();
-				return persistentConnectionFactory;
+				return changesConnectionFactory;
 			}
 		}
 #endif
@@ -366,7 +366,7 @@ namespace Raven.Client.Document
 			AssertValidConfiguration();
 
 #if !SILVERLIGHT
-			persistentConnectionFactory = new PersistentConnectionFactory(Conventions);
+			changesConnectionFactory = new ChangesConnectionFactory(Conventions);
 			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
 #else
 			jsonRequestFactory = new HttpJsonRequestFactory();
@@ -448,7 +448,7 @@ namespace Raven.Client.Document
 			};
 		
 #if !SILVERLIGHT
-			persistentConnectionFactory.ConfigureConnection += connection =>
+			changesConnectionFactory.ConfigureConnection += connection =>
 				connection.OnPrepareRequest += request =>
 				{
 					if (string.IsNullOrEmpty(currentOauthToken))
@@ -637,6 +637,8 @@ namespace Raven.Client.Document
 			ChangeTypes changes = ChangeTypes.Common,
 			string idPrefix = null)
 		{
+			AssertInitialized();
+
 			if (string.IsNullOrEmpty(Url))
 				throw new InvalidOperationException("Changes API requires usage of server/client");
 
@@ -652,7 +654,7 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(idPrefix) == false)
 				nvc["idPrefix"] = idPrefix;
 
-			var connection = persistentConnectionFactory
+			var connection = changesConnectionFactory
 				.Create(dbUrl + "/signalr/notifications", Credentials, nvc);
 			return connection;
 		}
