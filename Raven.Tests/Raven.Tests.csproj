@@ -679,6 +679,7 @@
     <Compile Include="Notifications\Embedded.cs" />
     <Compile Include="Notifications\MultiTenant.cs" />
     <Compile Include="Notifications\Security_Windows.cs" />
+    <Compile Include="Notifications\WithIIS.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />
     <Compile Include="MailingList\WallaceTurner.cs" />

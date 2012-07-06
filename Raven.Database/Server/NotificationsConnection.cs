@@ -31,6 +31,7 @@ namespace Raven.Database.Server
 
 			Connection.Send(theConnectionId, notification);
 		}
+
 		public override void Initialize(IDependencyResolver resolver)
 		{
 			httpServer = resolver.Resolve<HttpServer>();

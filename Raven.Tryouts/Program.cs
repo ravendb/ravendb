@@ -16,14 +16,17 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			var i = DateTime.Now.Ticks%2 == 0 ? "System" : "test";
-			Console.WriteLine(i);
-			var hub = new Connection("http://localhost:8080/signalr/notifications","database=" + i);
-			hub.Start().Wait();
+			using(var store = new DocumentStore
+			{
+				Url = "http://localhost:9001"
+			}.Initialize())
+			{
+				store.Changes().Subscribe(notification => Console.WriteLine(notification.Name));
 
-			hub.AsObservable().Subscribe(Console.WriteLine);
 
-			Console.ReadLine();
+
+				Console.ReadLine();
+			}
 
 		}
 
