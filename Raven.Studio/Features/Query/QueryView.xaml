@@ -174,8 +174,9 @@
 
 				<Editors:QueryEditor x:Name="QueryEditor"
 									 Grid.Row="1"
-									 Text="{Binding Path=Query.Value, Mode=TwoWay}"
-									 CompletionProvider="{Binding Path=QueryIndexAutoComplete.CompletionProvider}">
+                                     IsTextDataBindingEnabled="False"
+                                     BoundDocument="{Binding QueryDocument}"
+                                     >
 					<i:Interaction.Triggers>
 						<Behaviors:StudioKeyTrigger Key="Enter"
 									   Modifiers="Control">

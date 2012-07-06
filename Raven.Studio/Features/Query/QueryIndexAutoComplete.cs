@@ -3,10 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using ActiproSoftware.Text;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
@@ -16,7 +18,7 @@ namespace Raven.Studio.Features.Query
 	public class QueryIndexAutoComplete : NotifyPropertyChangedBase
 	{
 		private readonly string indexName;
-		private readonly Observable<string> query;
+		private readonly IEditorDocument queryDocument;
 		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):",
 		                                                            RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
@@ -41,13 +43,13 @@ namespace Raven.Studio.Features.Query
             
         }
 
-		public QueryIndexAutoComplete(IList<string> fields, string indexName, Observable<string> query)
+		public QueryIndexAutoComplete(IList<string> fields, string indexName, IEditorDocument queryDocument)
 		{
-            if (indexName != null && query != null)
+            if (indexName != null && queryDocument != null)
             {
                 this.indexName = indexName;
-                this.query = query; 
-                this.query.PropertyChanged += GetTermsForUsedFields;
+                this.queryDocument = queryDocument; 
+                this.queryDocument.TextChanged += GetTermsForUsedFields;
                 CompletionProvider = new QueryIntelliPromptProvider(fields, indexName, fieldsTermsDictionary);
             }
             else
@@ -58,9 +60,10 @@ namespace Raven.Studio.Features.Query
 		    this.fields.Match(fields);
 		}
 
-		private void GetTermsForUsedFields(object sender, PropertyChangedEventArgs e)
+		private void GetTermsForUsedFields(object sender, EventArgs e)
 		{
-			var text = ((Observable<string>) sender).Value;
+            //TODO: Update to use token reader to find fields
+			var text = queryDocument.CurrentSnapshot.Text;
 			if (string.IsNullOrEmpty(text))
 				return;
 

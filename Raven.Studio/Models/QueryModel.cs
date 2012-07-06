@@ -4,9 +4,13 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Windows.Input;
+using ActiproSoftware.Text;
+using ActiproSoftware.Text.Implementation;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Abstractions.Data;
 using Raven.Client.Linq;
 using Raven.Studio.Commands;
+using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
@@ -21,16 +25,22 @@ namespace Raven.Studio.Models
         private RavenQueryStatistics results;
         private bool skipTransformResults;
         private bool hasTransform;
+        private TimeSpan queryTime;
+        private bool internalUpdate;
+
+	    private IEditorDocument queryDocument;
+
         public QueryDocumentsCollectionSource CollectionSource { get; private set; }
 
 		private QueryIndexAutoComplete queryIndexAutoComplete;
-		public QueryIndexAutoComplete QueryIndexAutoComplete
+		protected QueryIndexAutoComplete QueryIndexAutoComplete
 		{
-			get { return queryIndexAutoComplete; }
+            get { return queryIndexAutoComplete; }
 			set
 			{
-				queryIndexAutoComplete = value;
-				OnPropertyChanged(() => QueryIndexAutoComplete);
+			    queryIndexAutoComplete = value;
+                queryDocument.Language.UnregisterService<ICompletionProvider>();
+				queryDocument.Language.RegisterService<ICompletionProvider>(value.CompletionProvider);
 			}
 		}
 
@@ -278,6 +288,12 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/query";
 			
+            
+            queryDocument = new EditorDocument()
+                                {
+                                    Language = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("RavenQuery.langdef")
+                                };
+
             CollectionSource = new QueryDocumentsCollectionSource();
 		    Observable.FromEventPattern<QueryStatisticsUpdatedEventArgs>(h => CollectionSource.QueryStatisticsUpdated += h,
 		                                                                 h => CollectionSource.QueryStatisticsUpdated -= h)
@@ -301,7 +317,6 @@ namespace Raven.Studio.Models
                                       DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index, IndexName, CollectionSource.TemplateQuery),
 		                          };
 
-            Query = new Observable<string>();
             QueryErrorMessage = new Observable<string>();
             IsErrorVisible = new Observable<bool>();
 
@@ -369,7 +384,7 @@ namespace Raven.Studio.Models
 						return;
 					}
                     var fields = task.Result.Fields;
-					QueryIndexAutoComplete = new QueryIndexAutoComplete(fields, IndexName, Query);
+					QueryIndexAutoComplete = new QueryIndexAutoComplete(fields, IndexName, QueryDocument);
 					
 					const string spatialindexGenerate = "SpatialIndex.Generate";
 					IsSpatialQuerySupported =
@@ -396,7 +411,7 @@ namespace Raven.Studio.Models
 	    {
 	        var state = PerDatabaseState.QueryState.GetState(IndexName);
 
-	        state.Query = Query.Value;
+	        state.Query = Query;
             state.SortOptions.Clear();
 	        state.SortOptions.AddRange(SortBy.Select(r => r.Value).ToList());
 		}
@@ -407,7 +422,7 @@ namespace Raven.Studio.Models
 
             internalUpdate = true;
 
-            Query.Value = state.Query;
+            Query = state.Query;
             SortBy.Clear();
 
 		    foreach (var sortOption in state.SortOptions)
@@ -425,11 +440,14 @@ namespace Raven.Studio.Models
 		public ICommand Execute { get { return executeQuery ?? (executeQuery = new ExecuteQueryCommand(this)); } }
 
         public Observable<string> QueryErrorMessage { get; private set; }
-        public Observable<bool> IsErrorVisible { get; private set; } 
-		public Observable<string> Query { get; private set; }
+        public Observable<bool> IsErrorVisible { get; private set; }
 
-		private TimeSpan queryTime;
-	    private bool internalUpdate;
+	    public string Query
+	    {
+	        get { return queryDocument.CurrentSnapshot.Text; }
+	        set { queryDocument.SetText(value); }
+	    }
+
 	    public TimeSpan QueryTime
 		{
 			get { return queryTime; }
@@ -450,6 +468,38 @@ namespace Raven.Studio.Models
 			}
 		}
 
+        public IEnumerable<FieldAndTerm> GetCurrentFieldsAndTerms()
+        {
+            var textSnapshotReader = queryDocument.CurrentSnapshot.GetReader(TextPosition.Zero);
+            string currentField = null;
+            while (!textSnapshotReader.IsAtSnapshotEnd)
+            {
+                var token = textSnapshotReader.ReadToken();
+                if (token == null)
+                    break;
+
+                var txt = textSnapshotReader.ReadTextReverse(token.Length);
+                textSnapshotReader.ReadToken();
+
+                if (string.IsNullOrWhiteSpace(txt))
+                    continue;
+
+                string currentVal = null;
+                if (token.Key == "Field")
+                {
+                    currentField = txt.Substring(0, txt.Length - 1);
+                }
+                else
+                {
+                    currentVal = txt;
+                }
+                if (currentField == null || currentVal == null)
+                    continue;
+
+                yield return new FieldAndTerm(currentField, currentVal);
+                currentField = null;
+            }
+        }
 
 		public DocumentsModel DocumentsResult { get; private set; }
 
@@ -477,7 +527,7 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				model.Query.Value = model.Query.Value.Replace(fieldAndTerm.Term, fieldAndTerm.SuggestedTerm);
+				model.Query = model.Query.Replace(fieldAndTerm.Term, fieldAndTerm.SuggestedTerm);
 				model.Requery();
 			}
 		}
@@ -486,5 +536,9 @@ namespace Raven.Studio.Models
 		{
 			get { return "Query Index"; }
 		}
+	    public IEditorDocument QueryDocument
+	    {
+	        get { return queryDocument; }
+	    }
 	}
 }
