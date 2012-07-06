@@ -32,7 +32,9 @@ namespace Raven.Tests.Notifications
 			}.Initialize())
 			{
 				var list = new BlockingCollection<ChangeNotification>();
-				store.Changes()
+				var taskObservable = store.Changes();
+				taskObservable.Task.Wait();
+				taskObservable
 					.Where(x => x.Type == ChangeTypes.Put)
 					.Subscribe(list.Add);
 

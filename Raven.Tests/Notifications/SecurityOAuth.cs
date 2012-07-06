@@ -62,7 +62,9 @@ namespace Raven.Tests.Notifications
 					EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
 					true;
 				var list = new BlockingCollection<ChangeNotification>();
-				store.Changes()
+				var taskObservable = store.Changes();
+				taskObservable.Task.Wait();
+				taskObservable
 					.Where(x => x.Type == ChangeTypes.Put)
 					.Subscribe(list.Add);
 

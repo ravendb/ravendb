@@ -26,7 +26,9 @@ namespace Raven.Tests.Notifications
 			}.Initialize())
 			{
 				var list = new BlockingCollection<ChangeNotification>();
-				store.Changes()
+				var taskObservable = store.Changes();
+				taskObservable.Task.Wait();
+				taskObservable
 					.Where(x => x.Type == ChangeTypes.Put)
 					.Subscribe(list.Add);
 
@@ -56,7 +58,9 @@ namespace Raven.Tests.Notifications
 			{
 				store.DatabaseCommands.EnsureDatabaseExists("test");
 				var list = new BlockingCollection<ChangeNotification>();
-				store.Changes("test")
+				var taskObservable = store.Changes("test");
+				taskObservable.Task.Wait();
+				taskObservable
 					.Where(x => x.Type == ChangeTypes.Put)
 					.Subscribe(list.Add);
 
@@ -87,7 +91,9 @@ namespace Raven.Tests.Notifications
 				store.DatabaseCommands.EnsureDatabaseExists("test");
 				store.DatabaseCommands.EnsureDatabaseExists("another");
 				var list = new BlockingCollection<ChangeNotification>();
-				store.Changes("test")
+				var taskObservable = store.Changes("test");
+				taskObservable.Task.Wait();
+				taskObservable
 					.Where(x => x.Type == ChangeTypes.Put)
 					.Subscribe(list.Add);
 

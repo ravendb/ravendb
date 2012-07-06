@@ -24,7 +24,9 @@ namespace Raven.Tests.Notifications
 			}.Initialize())
 			{
 				var list = new BlockingCollection<ChangeNotification>();
-				store.Changes(changes: ChangeTypes.IndexUpdated)
+				var taskObservable = store.Changes(changes: ChangeTypes.IndexUpdated);
+				taskObservable.Task.Wait();
+				taskObservable
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -51,8 +53,10 @@ namespace Raven.Tests.Notifications
 			}.Initialize())
 			{
 				var list = new BlockingCollection<ChangeNotification>();
-				store.Changes(changes: ChangeTypes.Put, idPrefix:"items")
-					.Subscribe(list.Add);
+				var taskObservable = store.Changes(changes: ChangeTypes.Put, idPrefix: "items");
+				taskObservable.Task.Wait();
+				taskObservable
+				.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
 				{
