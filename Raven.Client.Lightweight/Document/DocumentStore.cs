@@ -59,6 +59,18 @@ namespace Raven.Client.Document
 #endif
 
 		private HttpJsonRequestFactory jsonRequestFactory;
+#if !SILVERLIGHT
+		private PersistentConnectionFactory persistentConnectionFactory;
+
+		public PersistentConnectionFactory PersistentConnectionFactory
+		{
+			get
+			{
+				AssertInitialized();
+				return persistentConnectionFactory;
+			}
+		}
+#endif
 
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
@@ -352,6 +364,7 @@ namespace Raven.Client.Document
 			AssertValidConfiguration();
 
 #if !SILVERLIGHT
+			persistentConnectionFactory = new PersistentConnectionFactory(Conventions);
 			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
 #else
 			jsonRequestFactory = new HttpJsonRequestFactory();
@@ -430,9 +443,18 @@ namespace Raven.Client.Document
 					return;
 
 				SetHeader(args.Request.Headers, "Authorization", currentOauthToken);
-
 			};
+		
 #if !SILVERLIGHT
+			persistentConnectionFactory.ConfigureConnection += connection =>
+				connection.OnPrepareRequest += request =>
+				{
+					if (string.IsNullOrEmpty(currentOauthToken))
+						return;
+
+					request.AddHeader("Authorization", currentOauthToken);
+				};
+			
 			Conventions.HandleUnauthorizedResponse = (response) =>
 			{
 				var oauthSource = response.Headers["OAuth-Source"];
@@ -619,19 +641,9 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(database) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
-			var pushyObservable = new PushyObservable<ChangeNotification>();
-			var connection = new Imports.SignalR.Client.Connection(dbUrl + "/signalr/notifications")
-			{
-				Credentials = Credentials
-			};
-			connection.Start()
-				.ContinueWith(task =>
-				{
-					if(task.IsFaulted)
-						pushyObservable.ForceError(task.Exception);
-				});
-			pushyObservable.Inner = connection.AsObservable<ChangeNotification>();
-			return pushyObservable;
+			var connection = persistentConnectionFactory
+				.Create(dbUrl + "/signalr/notifications", Credentials);
+			return connection;
 		}
 #endif
 		/// <summary>

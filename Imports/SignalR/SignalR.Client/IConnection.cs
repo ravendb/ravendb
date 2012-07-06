@@ -30,5 +30,7 @@ namespace Raven.Imports.SignalR.Client
         void OnError(Exception ex);
         void OnReconnected();
         void PrepareRequest(IRequest request);
+
+    	event Action<IRequest> OnPrepareRequest;
     }
 }

@@ -383,7 +383,10 @@ namespace Raven.Database.Server
 			try
 			{
 				if (!SetThreadLocalState(context))
+				{
+					context.FinalizeResonse();
 					return;
+				}
 
 				signalrServer.ProcessRequestSafe(listenerContext, prefix);
 			}

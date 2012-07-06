@@ -31,5 +31,7 @@ namespace Raven.Imports.SignalR.Client.Http
         /// Aborts the request.
         /// </summary>
         void Abort();
+
+    	void AddHeader(string name, string value);
     }
 }

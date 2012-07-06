@@ -407,9 +407,15 @@ namespace Raven.Imports.SignalR.Client
             {
                 request.CookieContainer = CookieContainer;
             }
+
+        	var onOnPrepareRequest = OnPrepareRequest;
+			if (onOnPrepareRequest != null)
+				onOnPrepareRequest(request);
         }
 
-        private static string CreateUserAgentString(string client)
+    	public event Action<IRequest> OnPrepareRequest;
+
+    	private static string CreateUserAgentString(string client)
         {
             if (_assemblyVersion == null)
             {

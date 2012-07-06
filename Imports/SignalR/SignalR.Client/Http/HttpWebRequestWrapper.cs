@@ -11,6 +11,11 @@ namespace Raven.Imports.SignalR.Client.Http
             _request = request;
         }
 
+		public void AddHeader(string name, string value)
+		{
+			_request.Headers.Add(name, value);
+		}
+
         public string UserAgent
         {
             get
