@@ -16,7 +16,7 @@ namespace Raven.Tests.Notifications
 	public class MultiTenant : RavenTest
 	{
 		[Fact]
-		public void CanGetNotificationsFromTenant()
+		public void CanGetNotificationsFromTenant_DefaultDatabase()
 		{
 			using(GetNewServer())
 			using (var store = new DocumentStore
@@ -43,6 +43,74 @@ namespace Raven.Tests.Notifications
 				Assert.Equal(changeNotification.Type, ChangeType.Put);
 			}
 
+		}
+
+		[Fact]
+		public void CanGetNotificationsFromTenant_ExplicitDatabase()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+			}.Initialize())
+			{
+				store.DatabaseCommands.EnsureDatabaseExists("test");
+				var list = new BlockingCollection<ChangeNotification>();
+				store.Changes("test")
+					.Where(x => x.Type == ChangeType.Put)
+					.Subscribe(list.Add);
+
+				using (var session = store.OpenSession("test"))
+				{
+					session.Store(new ClientServer.Item(), "items/1");
+					session.SaveChanges();
+				}
+
+				ChangeNotification changeNotification;
+				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(15)));
+
+				Assert.Equal("items/1", changeNotification.Name);
+				Assert.Equal(changeNotification.Type, ChangeType.Put);
+			}
+
+		}
+
+		[Fact]
+		public void CanGetNotificationsFromTenant_AndNotFromAnother()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079",
+			}.Initialize())
+			{
+				store.DatabaseCommands.EnsureDatabaseExists("test");
+				store.DatabaseCommands.EnsureDatabaseExists("another");
+				var list = new BlockingCollection<ChangeNotification>();
+				store.Changes("test")
+					.Where(x => x.Type == ChangeType.Put)
+					.Subscribe(list.Add);
+
+				using (var session = store.OpenSession("another"))
+				{
+					session.Store(new ClientServer.Item(), "items/2");
+					session.SaveChanges();
+				}
+
+				using (var session = store.OpenSession("test"))
+				{
+					session.Store(new ClientServer.Item(), "items/1");
+					session.SaveChanges();
+				}
+
+				ChangeNotification changeNotification;
+				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(15)));
+
+				Assert.Equal("items/1", changeNotification.Name);
+				Assert.Equal(changeNotification.Type, ChangeType.Put);
+
+				Assert.False(list.TryTake(out changeNotification, TimeSpan.FromMilliseconds(250)));
+			}
 		}
 	}
 }

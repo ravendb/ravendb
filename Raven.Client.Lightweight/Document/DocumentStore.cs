@@ -620,7 +620,10 @@ namespace Raven.Client.Document
 				dbUrl = dbUrl + "/databases/" + database;
 
 			var pushyObservable = new PushyObservable<ChangeNotification>();
-			var connection = new Imports.SignalR.Client.Connection(dbUrl + "/signalr/notifications");
+			var connection = new Imports.SignalR.Client.Connection(dbUrl + "/signalr/notifications")
+			{
+				Credentials = Credentials
+			};
 			connection.Start()
 				.ContinueWith(task =>
 				{
