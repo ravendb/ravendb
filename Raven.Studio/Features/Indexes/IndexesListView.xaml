@@ -166,12 +166,14 @@
             </toolkit:DockPanel>
 		</toolkit:HeaderedContentControl.Header>
 
-		<Controls1:ListBoxMenu x:Name="IndexesList" 
+		<ListBox x:Name="IndexesList" 
 							   Style="{StaticResource Style_ListBox_Indexes}"
 							   ItemsSource="{Binding GroupedIndexes}"
 							   ItemTemplate="{StaticResource IndexItemTemplate}"
 							   Margin="10,5">
-
+            <i:Interaction.Behaviors>
+                <Behaviors:SelectItemOnRightClick/>
+            </i:Interaction.Behaviors>
 			<Controls:ContextMenuService.ContextMenu>
 				<Controls:ContextMenu x:Name="IndexesContextMenu">
 					<Controls:MenuItem Header="Delete index"
@@ -185,7 +187,7 @@
 									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
 				</Controls:ContextMenu>
 			</Controls:ContextMenuService.ContextMenu>
-		</Controls1:ListBoxMenu>
+		</ListBox>
 	</toolkit:HeaderedContentControl>
 
 </UserControl>
