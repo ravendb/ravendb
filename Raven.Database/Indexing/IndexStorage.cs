@@ -418,6 +418,11 @@ namespace Raven.Database.Indexing
 				return;
 			}
 			value.Remove(keys, context);
+			context.RaiseChangeNotification(new ChangeNotification
+			{
+				Name = index,
+				Type = ChangeTypes.IndexUpdated
+			});
 		}
 
 		public void Index(string index,
@@ -437,6 +442,11 @@ namespace Raven.Database.Indexing
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
 				value.IndexDocuments(viewGenerator, docs, context, actions, minimumTimestamp);
+				context.RaiseChangeNotification(new ChangeNotification
+				{
+					Name = index,
+					Type = ChangeTypes.IndexUpdated
+				});
 			}
 		}
 
@@ -458,6 +468,11 @@ namespace Raven.Database.Indexing
 			using (EnsureInvariantCulture())
 			{
 				mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
+				context.RaiseChangeNotification(new ChangeNotification
+				{
+					Name = index,
+					Type = ChangeTypes.IndexUpdated
+				});
 			}
 		}
 

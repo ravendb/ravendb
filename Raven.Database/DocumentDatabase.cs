@@ -142,7 +142,8 @@ namespace Raven.Database
 			workContext = new WorkContext
 			{
 				IndexUpdateTriggers = IndexUpdateTriggers,
-				ReadTriggers = ReadTriggers
+				ReadTriggers = ReadTriggers,
+				RaiseChangeNotification = RaiseNotifications
 			};
 
 			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);

@@ -11,8 +11,8 @@ namespace Raven.Database.Indexing
 {
 	public class ReducingExecuter : AbstractIndexingExecuter
 	{
-		public ReducingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler, Action<ChangeNotification> notifications)
-			: base(transactionalStorage, context, scheduler, notifications)
+		public ReducingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
+			: base(transactionalStorage, context, scheduler)
 		{
 			autoTuner = new ReduceBatchSizeAutoTuner(context);
 		}
@@ -114,14 +114,6 @@ namespace Raven.Database.Indexing
 		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
 			BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, indexesToWorkOn, (indexToWorkOn, l) => HandleReduceForIndex(indexToWorkOn));
-			foreach (var indexToWorkOn in indexesToWorkOn)
-			{
-				notifications(new ChangeNotification
-				{
-					Name = indexToWorkOn.IndexName,
-					Type = ChangeTypes.IndexUpdated
-				});
-			}
 		}
 
 		protected override bool IsValidIndex(IndexStats indexesStat)

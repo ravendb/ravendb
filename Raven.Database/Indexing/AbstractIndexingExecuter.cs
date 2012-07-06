@@ -15,7 +15,6 @@ namespace Raven.Database.Indexing
 	{
 		protected WorkContext context;
 		protected TaskScheduler scheduler;
-		protected readonly Action<ChangeNotification> notifications;
 		protected static readonly Logger log = LogManager.GetCurrentClassLogger();
 		protected ITransactionalStorage transactionalStorage;
 		protected int workCounter;
@@ -23,12 +22,11 @@ namespace Raven.Database.Indexing
 		protected BaseBatchSizeAutoTuner autoTuner;
 
 		protected AbstractIndexingExecuter(
-			ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler, Action<ChangeNotification> notifications)
+			ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
 		{
 			this.transactionalStorage = transactionalStorage;
 			this.context = context;
 			this.scheduler = scheduler;
-			this.notifications = notifications;
 		}
 
 		public void Execute()
