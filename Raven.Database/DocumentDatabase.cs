@@ -393,10 +393,10 @@ namespace Raven.Database
 		{
 			workContext.StartWork();
 			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-				new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler, RaiseNotifications).Execute,
+				new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler, RaiseNotifications).Execute,
+				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
