@@ -19,8 +19,11 @@ namespace Raven.Studio.Models
         {
             DatabaseName = databaseName;
             DocumentViewState = new DocumentViewStateStore();
+            QueryState = new QueryStateStore();
         }
 
         public DocumentViewStateStore DocumentViewState { get; private set; }
+
+        public QueryStateStore QueryState { get; private set; }
     }
 }

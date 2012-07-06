@@ -16,7 +16,6 @@ namespace Raven.Studio.Models
 {
 	public class QueryModel : PageViewModel, IHasPageTitle
 	{
-        private string error;
         private ICommand executeQuery;
         private RavenQueryStatistics results;
         private bool skipTransformResults;
@@ -110,7 +109,6 @@ namespace Raven.Studio.Models
 				indexName = value;
                 DocumentsResult.Context = "Index/" + indexName;
 				OnPropertyChanged(() => IndexName);
-				RestoreHistory();
 			}
 		}
 
@@ -240,12 +238,10 @@ namespace Raven.Studio.Models
 						IndexName = "dynamic/" + dynamicSelectedOption;
 						break;
 				}
+                RestoreHistory();
 				OnPropertyChanged(() => DynamicSelectedOption);
 			}
 		}
-
-		private static string lastQuery;
-		private static string lastIndex;
 
 		public QueryModel()
 		{
@@ -283,7 +279,6 @@ namespace Raven.Studio.Models
 			SortByOptions = new BindableCollection<string>(x => x);
 			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
-			DynamicSelectedOption = DynamicOptions[0];
 		}
 
 	    private void HandleQueryError(Exception exception)
@@ -310,7 +305,10 @@ namespace Raven.Studio.Models
 	            (e.NewItems[0] as StringRef).PropertyChanged += delegate { Requery(); };
 	        }
 
-            Requery();
+            if (!internalUpdate)
+            {
+                Requery();
+            }
 	    }
 
 	    private void Requery()
@@ -326,7 +324,11 @@ namespace Raven.Studio.Models
 			{
 				IsDynamicQuery = true;
 				DatabaseCommands.GetTermsAsync("Raven/DocumentsByEntityName", "Tag", "", 100)
-					.ContinueOnSuccess(collections => DynamicOptions.Match(new[] { "AllDocs" }.Concat(collections).ToArray()));
+					.ContinueOnSuccessInTheUIThread(collections =>
+					                       {
+					                           DynamicOptions.Match(new[] {"AllDocs"}.Concat(collections).ToArray());
+                                               DynamicSelectedOption = DynamicOptions[0];
+					                       });
 				return;
 			}
 
@@ -350,7 +352,7 @@ namespace Raven.Studio.Models
 				    HasTransform = !string.IsNullOrEmpty(task.Result.TransformResults);
 
 					SetSortByOptions(fields);
-					Execute.Execute(string.Empty);
+                    RestoreHistory();
 				}).Catch();
 		}
 
@@ -365,18 +367,33 @@ namespace Raven.Studio.Models
 	    }
 
 	    public void RememberHistory()
-		{
-			lastIndex = IndexName;
-			lastQuery = Query.Value;
+	    {
+	        var state = PerDatabaseState.QueryState.GetState(IndexName);
+
+	        state.Query = Query.Value;
+            state.SortOptions.Clear();
+	        state.SortOptions.AddRange(SortBy.Select(r => r.Value).ToList());
 		}
 
 		public void RestoreHistory()
 		{
-			if (IndexName == null || lastIndex != IndexName || string.IsNullOrWhiteSpace(lastQuery))
-				return;
+            var state = PerDatabaseState.QueryState.GetState(IndexName);
 
-			Query.Value = lastQuery;
-			Execute.Execute(null);
+            internalUpdate = true;
+
+            Query.Value = state.Query;
+            SortBy.Clear();
+
+		    foreach (var sortOption in state.SortOptions)
+		    {
+		        if (SortByOptions.Contains(sortOption))
+		        {
+		            SortBy.Add(new StringRef() { Value = sortOption});
+		        }
+		    }
+		    internalUpdate = false;
+
+            Requery();
 		}
 
 		public ICommand Execute { get { return executeQuery ?? (executeQuery = new ExecuteQueryCommand(this)); } }
@@ -386,7 +403,8 @@ namespace Raven.Studio.Models
 		public Observable<string> Query { get; private set; }
 
 		private TimeSpan queryTime;
-		public TimeSpan QueryTime
+	    private bool internalUpdate;
+	    public TimeSpan QueryTime
 		{
 			get { return queryTime; }
 			set
