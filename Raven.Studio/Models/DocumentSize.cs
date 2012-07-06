@@ -25,7 +25,7 @@ namespace Raven.Studio.Models
 
 		private readonly static DocumentSize current = new DocumentSize()
 		                                                   {
-		                                                       IndicatorPosition = Settings.Instance.DocumentSize > 0 ? Settings.Instance.DocumentSize : DetailsToCardSwitchover
+		                                                       IndicatorPosition =  Settings.Instance.DocumentSize
 		                                                   };
 		public static DocumentSize Current
 		{
