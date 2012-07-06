@@ -50,10 +50,10 @@ namespace Raven.Imports.SignalR.Hosting.Self
 		/// <summary>
 		/// Process the request
 		/// </summary>
-		public void ProcessRequestSafe(HttpListenerContext context)
+		public Task ProcessRequestSafe(HttpListenerContext context)
 		{
 			// Process the request async
-			ProcessRequestAsync(context).ContinueWith(task =>
+			return ProcessRequestAsync(context).ContinueWith(task =>
 			{
 				if (task.IsFaulted)
 				{

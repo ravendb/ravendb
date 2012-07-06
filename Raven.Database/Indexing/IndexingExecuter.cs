@@ -22,8 +22,8 @@ namespace Raven.Database.Indexing
 {
 	public class IndexingExecuter : AbstractIndexingExecuter
 	{
-		public IndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
-			: base(transactionalStorage, context, scheduler)
+		public IndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler, Action<ChangeNotification> notifications)
+			: base(transactionalStorage, context, scheduler, notifications)
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 		}
@@ -93,6 +93,17 @@ namespace Raven.Database.Indexing
 							actions => IndexDocuments(actions, index.IndexName, docs));
 					
 					});
+
+					var last = jsonDocs.Last();
+					foreach (var indexToWorkOn in indexesToWorkOn)
+					{
+						notifications(new ChangeNotification
+						{
+							Name = indexToWorkOn.IndexName,
+							Type = ChangeType.IndexUpdated,
+							Etag = last.Etag
+						});
+					}
 				}
 			}
 			finally

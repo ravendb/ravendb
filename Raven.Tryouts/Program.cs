@@ -16,8 +16,9 @@ namespace Raven.Tryouts
 	{
 		static void Main()
 		{
-			var hub = new HubConnection("http://ipv4.fiddler:8080/");
-			var x = hub.CreateProxy("MyHub");
+			var i = DateTime.Now.Ticks%2 == 0 ? "System" : "test";
+			Console.WriteLine(i);
+			var hub = new Connection("http://localhost:8080/signalr/notifications","database=" + i);
 			hub.Start().Wait();
 
 			hub.AsObservable().Subscribe(Console.WriteLine);

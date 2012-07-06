@@ -99,6 +99,8 @@ namespace Raven.Database
 
 		public TaskScheduler BackgroundTaskScheduler { get { return backgroundTaskScheduler; } }
 
+		public event EventHandler<ChangeNotification> Notifications = delegate { }; 
+
 		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
 		private System.Threading.Tasks.Task indexingBackgroundTask;
 		private System.Threading.Tasks.Task reducingBackgroundTask;
@@ -390,12 +392,16 @@ namespace Raven.Database
 		{
 			workContext.StartWork();
 			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-				new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
+				new IndexingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler, RaiseNotifications).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
-				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
+				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler, RaiseNotifications).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-			// TODO: Spin another thread for PerformIdleOperations?
+		}
+
+		private void RaiseNotifications(ChangeNotification obj)
+		{
+			Notifications(this, obj);
 		}
 
 		public void RunIdleOperations()
@@ -491,7 +497,16 @@ namespace Raven.Database
 				});
 			}
 			TransactionalStorage
-				.ExecuteImmediatelyOrRegisterForSyncronization(() => PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag)));
+				.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+				{
+					PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
+					Notifications(this, new ChangeNotification
+					{
+						Name = key,
+						Type = ChangeType.Put,
+						Etag = newEtag
+					});
+				});
 
 			log.Debug("Put document {0} with etag {1}", key, newEtag);
 			return new PutResult
@@ -621,7 +636,15 @@ namespace Raven.Database
 				workContext.ShouldNotifyAboutWork(() => "DEL " + key);
 			});
 			TransactionalStorage
-				.ExecuteImmediatelyOrRegisterForSyncronization(() => DeleteTriggers.Apply(trigger => trigger.AfterCommit(key)));
+				.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+				{
+					DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
+					Notifications(this, new ChangeNotification
+					{
+						Name = key,
+						Type = ChangeType.Delete,
+					});
+				});
 
 			metadata = metadataVar;
 			return deleted;

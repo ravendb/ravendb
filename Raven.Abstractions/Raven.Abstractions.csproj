@@ -560,6 +560,7 @@
     <Compile Include="Data\BatchResult.cs" />
     <Compile Include="Data\BoostedValue.cs" />
     <Compile Include="Data\BuildNumber.cs" />
+    <Compile Include="Data\ChangeNotification.cs" />
     <Compile Include="Data\ConnectionStringParser.cs" />
     <Compile Include="Data\Constants.cs" />
     <Compile Include="Data\DatabaseDocument.cs" />

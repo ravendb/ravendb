@@ -8,7 +8,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -17,10 +16,8 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
-using Raven.Database.Plugins;
-using Raven.Database.Plugins.Catalogs;
-using Raven.Database.Server.Connections;
 using Raven.Database.Server.Responders;
+using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
@@ -83,7 +80,6 @@ namespace Raven.Database.Server
 
 		private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)", RegexOptions.IgnoreCase);
 
-
 		private ExternalHttpListenerServer signalrServer;
 		private HttpListener listener;
 
@@ -97,6 +93,9 @@ namespace Raven.Database.Server
 		private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(MaxConcurrentRequests);
 		private Timer databasesCleanupTimer;
 		private int physicalRequestsCount;
+
+		private ConcurrentDictionary<DocumentDatabase, ConcurrentSet<Notifications>> connectionsByDatabase =
+			new ConcurrentDictionary<DocumentDatabase, ConcurrentSet<Notifications>>();
 
 		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
 		private readonly TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
@@ -114,6 +113,7 @@ namespace Raven.Database.Server
 			SystemDatabase = resourceStore;
 			SystemConfiguration = configuration;
 
+			SystemDatabase.Notifications += OnDatabaseNotifications;
 			int val;
 			if (int.TryParse(configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
 				val = 900;
@@ -143,6 +143,30 @@ namespace Raven.Database.Server
 			}
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
+		}
+
+		private void OnDatabaseNotifications(object sender, ChangeNotification changeNotification)
+		{
+			var db = sender as DocumentDatabase;
+			if (db == null)
+				return;
+
+			ConcurrentSet<Notifications> set;
+			if (connectionsByDatabase.TryGetValue(db, out set) == false)
+				return;
+
+			foreach (var notification in set)
+			{
+				notification.Send(changeNotification);
+			}
+		}
+
+		public void RegisterConnection(string name, Notifications notifications)
+		{
+			var db = GetResourceStore(name);
+			var set = connectionsByDatabase.GetOrAdd(db, _ => new ConcurrentSet<Notifications>());
+			notifications.Disposed += (sender, args) => set.TryRemove(notifications);
+			set.Add(notifications);
 		}
 
 		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
@@ -235,8 +259,7 @@ namespace Raven.Database.Server
 			var uri = "http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
 			listener.Prefixes.Add(uri);
 
-			signalrServer = new ExternalHttpListenerServer(uri, listener);
-			signalrServer.MapHubs();
+			SetupSignalR(uri);
 
 			foreach (var configureHttpListener in ConfigureHttpListeners)
 			{
@@ -249,6 +272,18 @@ namespace Raven.Database.Server
 			TenantDatabaseModified.Occured += TenantDatabaseRemoved;
 
 			listener.BeginGetContext(GetContext, null);
+		}
+
+		private void SetupSignalR(string uri)
+		{
+			var depResolver = new DefaultDependencyResolver();
+			depResolver.Register(typeof (HttpServer), () => this);
+			var jsonSerializerSettings = new JsonSerializerSettings();
+			jsonSerializerSettings.Converters.AddRange(Default.Converters);
+			var serializer = new JsonNetSerializer(jsonSerializerSettings);
+			depResolver.Register(typeof (IJsonSerializer), () => serializer);
+			signalrServer = new ExternalHttpListenerServer(uri, depResolver, listener);
+			signalrServer.MapConnection<Notifications>("/signalr/notifications");
 		}
 
 		public void Init()
@@ -332,7 +367,7 @@ namespace Raven.Database.Server
 			{
 				Interlocked.Increment(ref physicalRequestsCount);
 				if (ctx.GetRequestUrl().StartsWith("/signalr"))
-					HandleSingalRequest(httpListenerContext);
+					HandleSignalRequest(ctx, httpListenerContext);
 				else
 					HandleActualRequest(ctx);
 			}
@@ -342,17 +377,9 @@ namespace Raven.Database.Server
 			}
 		}
 
-		private void HandleSingalRequest(HttpListenerContext ctx)
+		private void HandleSignalRequest(IHttpContext context,HttpListenerContext listenerContext)
 		{
-			if(t == null)
-			{
-				t = new Timer(state =>
-				{
-					GlobalHost.ConnectionManager.GetHubContext("MyHub").Clients.notify("1");
-				}, null, 1000, 100000);
-			}
-			
-			signalrServer.ProcessRequestSafe(ctx);
+			signalrServer.ProcessRequestSafe(listenerContext);
 		}
 
 		public void HandleActualRequest(IHttpContext ctx)
@@ -764,6 +791,9 @@ namespace Raven.Database.Server
 				config.Initialize();
 				config.CopyParentSettings(SystemConfiguration);
 				var documentDatabase = new DocumentDatabase(config);
+
+				documentDatabase.Notifications += OnDatabaseNotifications;
+
 				documentDatabase.SpinBackgroundWorkers();
 				return documentDatabase;
 			});
@@ -821,6 +851,18 @@ namespace Raven.Database.Server
 		{
 			Interlocked.Exchange(ref reqNum, 0);
 			Interlocked.Exchange(ref physicalRequestsCount, 0);
+		}
+
+		protected DocumentDatabase GetResourceStore(string name)
+		{
+			if (string.Equals("System", name, StringComparison.InvariantCultureIgnoreCase))
+				return SystemDatabase;
+
+			DocumentDatabase db;
+			if (TryGetOrCreateResourceStore(name, out db))
+				return db;
+			
+			throw new BadRequestException("Could not find a database named: " + name);
 		}
 	}
 }
