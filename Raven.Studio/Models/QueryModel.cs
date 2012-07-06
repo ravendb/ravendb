@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Windows.Input;
+using Raven.Abstractions.Data;
 using Raven.Client.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
@@ -162,7 +163,7 @@ namespace Raven.Studio.Models
 
 		public ICommand AddSortBy
 		{
-			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy.Add(new StringRef { Value = SortByOptions.First() })); }
+			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy.Add(new StringRef { Value = "" })); }
 		}
 
 		public ICommand RemoveSortBy
@@ -238,12 +239,36 @@ namespace Raven.Studio.Models
 						IndexName = "dynamic/" + dynamicSelectedOption;
 						break;
 				}
-                RestoreHistory();
-				OnPropertyChanged(() => DynamicSelectedOption);
+
+                if (dynamicSelectedOption != "AllDocs")
+                {
+                    BeginUpdateFieldsAndSortOptions(dynamicSelectedOption);
+                }
+                else
+                {
+                    RestoreHistory();
+                }
+
+			    OnPropertyChanged(() => DynamicSelectedOption);
 			}
 		}
 
-		public QueryModel()
+	    private void BeginUpdateFieldsAndSortOptions(string collection)
+	    {
+	        DatabaseCommands.QueryAsync("Raven/DocumentsByEntityName",
+	                                    new IndexQuery() {Query = "Tag:" + collection, Start = 0, PageSize = 1}, null)
+	            .ContinueOnSuccessInTheUIThread(result =>
+	                                                {
+                                                        if (result.Results.Count > 0)
+                                                        {
+                                                            var properties = DocumentHelpers.GetPropertiesFromJObjects(result.Results, includeNestedProperties:true, includeMetadata:false, excludeParentPropertyNames:true);
+                                                            SetSortByOptions(properties.ToList());
+                                                            RestoreHistory();
+                                                        }
+	                                                });
+	    }
+
+	    public QueryModel()
 		{
 			ModelUrl = "/query";
 			
@@ -304,11 +329,6 @@ namespace Raven.Studio.Models
 	        {
 	            (e.NewItems[0] as StringRef).PropertyChanged += delegate { Requery(); };
 	        }
-
-            if (!internalUpdate)
-            {
-                Requery();
-            }
 	    }
 
 	    private void Requery()
