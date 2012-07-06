@@ -136,6 +136,9 @@ task Compile -depends Init {
 
 task Test -depends Compile {
 	Write-Host $test_prjs
+	Copy-Item (Get-DependencyPackageFiles 'Rx-Main' -frameworkVersion 'Net4') $build_dir -force
+	
+	
 	$test_prjs | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
 		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
