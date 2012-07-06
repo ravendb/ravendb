@@ -8,8 +8,8 @@
     <ProjectGuid>{0E513AE2-BEA8-40CF-B9F2-102B351F2FB2}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SignalR.Hosting.AspNet</RootNamespace>
-    <AssemblyName>SignalR.Hosting.AspNet</AssemblyName>
+    <RootNamespace>Raven.Imports.SignalR.Hosting.AspNet</RootNamespace>
+    <AssemblyName>Raven.Imports.SignalR.Hosting.AspNet</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
@@ -22,7 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\SignalR.Hosting.AspNet.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\Raven.Imports.SignalR.Hosting.AspNet.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -31,7 +31,13 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Release\SignalR.Hosting.AspNet.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\Raven.Imports.SignalR.Hosting.AspNet.xml</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>..\..\..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -73,6 +79,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\..\Raven.Database\RavenDB.snk">
+      <Link>RavenDB.snk</Link>
+    </None>
     <None Include="Properties\SignalR.Hosting.AspNet.nuspec">
       <SubType>Designer</SubType>
     </None>

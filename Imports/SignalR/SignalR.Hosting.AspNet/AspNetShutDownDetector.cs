@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Web.Hosting;
 
-namespace SignalR.Hosting.AspNet
+namespace Raven.Imports.SignalR.Hosting.AspNet
 {
     internal class AspNetShutDownDetector : IRegisteredObject
     {

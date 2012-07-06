@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Web;
 using System.Web.Routing;
-using SignalR.Hosting.AspNet.Infrastructure;
-using SignalR.Hubs;
-using SignalR.Infrastructure;
+using Raven.Imports.SignalR.Hubs;
 
-namespace SignalR.Hosting.AspNet.Routing
+namespace Raven.Imports.SignalR.Hosting.AspNet.Routing
 {
     public class HubDispatcherRouteHandler : IRouteHandler
     {

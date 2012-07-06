@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Web.Compilation;
-using SignalR.Hubs;
+using Raven.Imports.SignalR.Hubs;
 
-namespace SignalR.Hosting.AspNet.Infrastructure
+namespace Raven.Imports.SignalR.Hosting.AspNet.Infrastructure
 {
     public class AspNetAssemblyLocator : DefaultAssemblyLocator
     {

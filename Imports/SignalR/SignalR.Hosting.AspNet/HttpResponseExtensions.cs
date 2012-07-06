@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using System.Web;
 
-namespace SignalR.Hosting.AspNet
+namespace Raven.Imports.SignalR.Hosting.AspNet
 {
     internal static class HttpResponseExtensions
     {

@@ -1,13 +1,14 @@
 ﻿using System.Web;
 using System.Web.Routing;
-using SignalR.Hosting.AspNet;
+using Raven.Imports.SignalR.Hosting.AspNet;
+
 #if NET45
 using SignalR.Hosting.AspNet.WebSockets;
 #endif
 
-[assembly: PreApplicationStartMethod(typeof(AspNetBootstrapper), "Initialize")]
+//[assembly: PreApplicationStartMethod(typeof(AspNetBootstrapper), "Initialize")]
 
-namespace SignalR.Hosting.AspNet
+namespace Raven.Imports.SignalR.Hosting.AspNet
 {
     /// <summary>
     /// Initializes the AspNet hosting pipeline

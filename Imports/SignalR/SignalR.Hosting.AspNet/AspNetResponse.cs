@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Web;
 
-namespace SignalR.Hosting.AspNet
+namespace Raven.Imports.SignalR.Hosting.AspNet
 {
     public class AspNetResponse : IResponse
     {

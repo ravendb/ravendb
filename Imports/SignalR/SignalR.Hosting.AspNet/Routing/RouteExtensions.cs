@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Web.Routing;
-using SignalR.Hosting.AspNet.Infrastructure;
-using SignalR.Hosting.AspNet.Routing;
-using SignalR.Hubs;
+using Raven.Imports.SignalR;
+using Raven.Imports.SignalR.Hosting.AspNet.Infrastructure;
+using Raven.Imports.SignalR.Hosting.AspNet.Routing;
+using Raven.Imports.SignalR.Hubs;
 
-namespace SignalR
+namespace Raven.Imports.SignalR
 {
     /// <summary>
     /// Extensions to ASP.NET routing for SignalR

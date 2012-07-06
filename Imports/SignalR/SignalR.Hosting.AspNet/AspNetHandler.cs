@@ -3,12 +3,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
-namespace SignalR.Hosting.AspNet
+namespace Raven.Imports.SignalR.Hosting.AspNet
 {
     public class AspNetHandler : HttpTaskAsyncHandler
     {
         // This will fire when the app domain is shutting down
-        internal static readonly CancellationTokenSource AppDomainTokenSource = new CancellationTokenSource();
+    	public static readonly CancellationTokenSource AppDomainTokenSource = new CancellationTokenSource();
 
         private readonly PersistentConnection _connection;
         private readonly IDependencyResolver _resolver;

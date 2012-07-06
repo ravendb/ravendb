@@ -1,7 +1,7 @@
 ﻿using System.Web;
 using System.Web.Routing;
 
-namespace SignalR.Hosting.AspNet.Routing
+namespace Raven.Imports.SignalR.Hosting.AspNet.Routing
 {
     public class IncomingOnlyRouteConstraint : IRouteConstraint
     {

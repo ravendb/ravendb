@@ -1,6 +1,6 @@
 ﻿using System.Web;
 
-namespace SignalR.Hosting.AspNet
+namespace Raven.Imports.SignalR.Hosting.AspNet
 {
     internal class HttpCookieCollectionWrapper : IRequestCookieCollection
     {
