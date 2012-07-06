@@ -10,16 +10,25 @@ using Raven.Imports.SignalR;
 
 namespace Raven.Database.Server
 {
-	public class Notifications : PersistentConnection
+	public class NotificationsConnection : PersistentConnection
 	{
 		public event EventHandler Disposed = delegate { }; 
 		
 		private HttpServer httpServer;
 		private string theConnectionId;
 		private DocumentDatabase db;
+		private string idPrefix;
+		ChangeTypes changes;
 
 		public void Send(ChangeNotification notification)
 		{
+			if ((notification.Type & changes) == ChangeTypes.None)
+				return;
+
+			if (string.IsNullOrEmpty(idPrefix) == false &&
+				notification.Name.StartsWith(idPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
+				return;
+
 			Connection.Send(theConnectionId, notification);
 		}
 		public override void Initialize(IDependencyResolver resolver)
@@ -34,6 +43,13 @@ namespace Raven.Database.Server
 			this.theConnectionId = connectionId;
 
 			httpServer.RegisterConnection(db, this);
+
+			var changesAsStr = request.QueryString["changes"];
+
+			if(Enum.TryParse(changesAsStr, out changes) == false)
+				changes = ChangeTypes.All;
+
+			idPrefix = request.QueryString["idPrefix"];
 
 			return base.OnConnectedAsync(request, connectionId);
 		}

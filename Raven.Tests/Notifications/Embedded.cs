@@ -34,7 +34,7 @@ namespace Raven.Tests.Notifications
 				var changeNotification = list.Take();
 
 				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeType.Put);
+				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
 			}
 		}
 
@@ -45,7 +45,7 @@ namespace Raven.Tests.Notifications
 			{
 				var list = new BlockingCollection<ChangeNotification>();
 				store.Changes()
-					.Where(x=>x.Type == ChangeType.Delete)
+					.Where(x=>x.Type == ChangeTypes.Delete)
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -59,7 +59,7 @@ namespace Raven.Tests.Notifications
 				var changeNotification = list.Take();
 
 				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeType.Delete);
+				Assert.Equal(changeNotification.Type, ChangeTypes.Delete);
 			}
 		}
 
@@ -70,7 +70,7 @@ namespace Raven.Tests.Notifications
 			{
 				var list = new BlockingCollection<ChangeNotification>();
 				store.Changes()
-					.Where(x => x.Type == ChangeType.IndexUpdated)
+					.Where(x => x.Type == ChangeTypes.IndexUpdated)
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -84,7 +84,7 @@ namespace Raven.Tests.Notifications
 				var changeNotification = list.Take();
 
 				Assert.Equal("Raven/DocumentsByEntityName", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeType.IndexUpdated);
+				Assert.Equal(changeNotification.Type, ChangeTypes.IndexUpdated);
 			}
 		}
 	}

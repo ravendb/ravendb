@@ -216,7 +216,7 @@
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
-    <Compile Include="Server\Notifications.cs" />
+    <Compile Include="Server\NotificationsConnection.cs" />
     <Compile Include="Server\Responders\AdminRunIdleOperations.cs" />
     <Compile Include="Server\Responders\AdminStats.cs" />
     <Compile Include="Server\Responders\DatabaseSize.cs" />

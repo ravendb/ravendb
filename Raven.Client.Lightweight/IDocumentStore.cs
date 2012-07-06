@@ -33,7 +33,10 @@ namespace Raven.Client
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		IObservable<ChangeNotification> Changes(string database = null);
+		IObservable<ChangeNotification> Changes(
+			string database = null,
+			ChangeTypes changes = ChangeTypes.All,
+			string idPrefix = null);
 #endif
 		/// <summary>
 		/// Setup the context for aggressive caching.

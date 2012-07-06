@@ -100,26 +100,41 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		public override IObservable<ChangeNotification> Changes(string database = null)
+		public override IObservable<ChangeNotification> Changes(string database = null,
+			ChangeTypes changes = ChangeTypes.All,
+			string idPrefix = null)
 		{
 			if (string.IsNullOrEmpty(Url) == false)
-				return base.Changes(database);
+				return base.Changes(database, changes, idPrefix);
 
-			return new NotificationObservable(DocumentDatabase);
+			return new NotificationObservable(DocumentDatabase, changes, idPrefix);
 		}
 
 		private class NotificationObservable : IObservable<ChangeNotification>, IDisposable
 		{
+			private readonly ChangeTypes changes;
+			private readonly string idPrefix;
 			private readonly DocumentDatabase database;
 			private List<IObserver<ChangeNotification>> observers = new List<IObserver<ChangeNotification>>();
-			public NotificationObservable(DocumentDatabase database)
+
+			public NotificationObservable(DocumentDatabase database, ChangeTypes changes, string idPrefix)
 			{
 				this.database = database;
+				this.changes = changes;
+				this.idPrefix = idPrefix;
+
 				database.Notifications += Notify;
 			}
 
 			private void Notify(object sender, ChangeNotification notification)
 			{
+				if ((notification.Type & changes) == ChangeTypes.None)
+					return;
+
+				if (string.IsNullOrEmpty(idPrefix) == false &&
+					notification.Name.StartsWith(idPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
+					return;
+
 				foreach (var observer in observers)
 				{
 					observer.OnNext(notification);

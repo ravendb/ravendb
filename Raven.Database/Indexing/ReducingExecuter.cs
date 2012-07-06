@@ -119,7 +119,7 @@ namespace Raven.Database.Indexing
 				notifications(new ChangeNotification
 				{
 					Name = indexToWorkOn.IndexName,
-					Type = ChangeType.IndexUpdated
+					Type = ChangeTypes.IndexUpdated
 				});
 			}
 		}

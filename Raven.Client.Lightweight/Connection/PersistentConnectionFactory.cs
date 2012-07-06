@@ -4,7 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -21,17 +24,15 @@ namespace Raven.Client.Connection
 		private readonly DocumentConvention conventions;
 		public event Action<Imports.SignalR.Client.Connection> ConfigureConnection = delegate { };
 
-		public event Action HandleUnauthorizedResponse = delegate { };
-
 		public PersistentConnectionFactory(DocumentConvention conventions)
 		{
 			this.conventions = conventions;
 		}
 
-		public IObservable<ChangeNotification> Create(string url, ICredentials credentials)
+		public IObservable<ChangeNotification> Create(string url, ICredentials credentials, IDictionary<string, string> queryString)
 		{
 			var result = new FutureObservable<ChangeNotification>();
-			EstablishConnection(url, credentials, 0)
+			EstablishConnection(url, credentials, queryString, 0)
 				.ContinueWith(task =>
 				{
 					if(task.IsFaulted)
@@ -57,9 +58,11 @@ namespace Raven.Client.Connection
 			return unauthorizedResponseAsync;
 		}
 
-		private Task<Imports.SignalR.Client.Connection> EstablishConnection(string url, ICredentials credentials, int retries)
+		private Task<Imports.SignalR.Client.Connection> EstablishConnection(string url, ICredentials credentials, 
+			IDictionary<string,string> queryString, int retries)
 		{
-			var connection = new Imports.SignalR.Client.Connection(url)
+
+			var connection = new Imports.SignalR.Client.Connection(url, queryString)
 			{
 				Credentials = credentials
 			};
@@ -91,7 +94,7 @@ namespace Raven.Client.Connection
 						.ContinueWith(_ =>
 						{
 							_.Wait(); //throw on error
-							return EstablishConnection(url, credentials, retries + 1);
+							return EstablishConnection(url, credentials,queryString, retries + 1);
 						})
 						.Unwrap();
 				}).Unwrap();

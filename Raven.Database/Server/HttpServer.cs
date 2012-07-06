@@ -95,8 +95,8 @@ namespace Raven.Database.Server
 		private Timer databasesCleanupTimer;
 		private int physicalRequestsCount;
 
-		private ConcurrentDictionary<DocumentDatabase, ConcurrentSet<Notifications>> connectionsByDatabase =
-			new ConcurrentDictionary<DocumentDatabase, ConcurrentSet<Notifications>>();
+		private ConcurrentDictionary<DocumentDatabase, ConcurrentSet<NotificationsConnection>> connectionsByDatabase =
+			new ConcurrentDictionary<DocumentDatabase, ConcurrentSet<NotificationsConnection>>();
 
 		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
 		private readonly TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
@@ -152,7 +152,7 @@ namespace Raven.Database.Server
 			if (db == null)
 				return;
 
-			ConcurrentSet<Notifications> set;
+			ConcurrentSet<NotificationsConnection> set;
 			if (connectionsByDatabase.TryGetValue(db, out set) == false)
 				return;
 
@@ -162,9 +162,9 @@ namespace Raven.Database.Server
 			}
 		}
 
-		public void RegisterConnection(DocumentDatabase db, Notifications notifications)
+		public void RegisterConnection(DocumentDatabase db, NotificationsConnection notifications)
 		{
-			var set = connectionsByDatabase.GetOrAdd(db, _ => new ConcurrentSet<Notifications>());
+			var set = connectionsByDatabase.GetOrAdd(db, _ => new ConcurrentSet<NotificationsConnection>());
 			notifications.Disposed += (sender, args) => set.TryRemove(notifications);
 			set.Add(notifications);
 		}
@@ -283,7 +283,7 @@ namespace Raven.Database.Server
 			var serializer = new JsonNetSerializer(jsonSerializerSettings);
 			depResolver.Register(typeof (IJsonSerializer), () => serializer);
 			signalrServer = new ExternalHttpListenerServer(uri, depResolver, listener);
-			signalrServer.MapConnection<Notifications>("/signalr/notifications");
+			signalrServer.MapConnection<NotificationsConnection>("/signalr/notifications");
 		}
 
 		public void Init()

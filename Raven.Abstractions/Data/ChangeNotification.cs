@@ -9,15 +9,20 @@ namespace Raven.Abstractions.Data
 {
 	public class ChangeNotification : EventArgs
 	{
-		public ChangeType Type { get; set; }
+		public ChangeTypes Type { get; set; }
 		public string Name { get; set; }
 		public Guid? Etag { get; set; }
 	}
 
-	public enum ChangeType
+	[Flags]
+	public enum ChangeTypes
 	{
-		Put,
-		Delete,
-		IndexUpdated
+		None = 0,
+
+		Put = 1,
+		Delete = 2,
+		IndexUpdated = 4,
+
+		All = Put | Delete | IndexUpdated
 	}
 }

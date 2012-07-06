@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Connection;
@@ -630,7 +632,10 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		public override IObservable<ChangeNotification> Changes(string database = null)
+		public override IObservable<ChangeNotification> Changes(
+			string database = null,
+			ChangeTypes changes = ChangeTypes.All,
+			string idPrefix = null)
 		{
 			if (string.IsNullOrEmpty(Url))
 				throw new InvalidOperationException("Changes API requires usage of server/client");
@@ -641,8 +646,14 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(database) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
+			var nvc = new Dictionary<string, string>();
+
+			nvc["changes"] = changes.ToString();
+			if (string.IsNullOrEmpty(idPrefix) == false)
+				nvc["idPrefix"] = idPrefix;
+
 			var connection = persistentConnectionFactory
-				.Create(dbUrl + "/signalr/notifications", Credentials);
+				.Create(dbUrl + "/signalr/notifications", Credentials, nvc);
 			return connection;
 		}
 #endif

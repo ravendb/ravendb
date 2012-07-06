@@ -27,7 +27,7 @@ namespace Raven.Tests.Notifications
 			{
 				var list = new BlockingCollection<ChangeNotification>();
 				store.Changes()
-					.Where(x => x.Type == ChangeType.Put)
+					.Where(x => x.Type == ChangeTypes.Put)
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -40,7 +40,7 @@ namespace Raven.Tests.Notifications
 				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(15)));
 
 				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeType.Put);
+				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
 			}
 
 		}
@@ -57,7 +57,7 @@ namespace Raven.Tests.Notifications
 				store.DatabaseCommands.EnsureDatabaseExists("test");
 				var list = new BlockingCollection<ChangeNotification>();
 				store.Changes("test")
-					.Where(x => x.Type == ChangeType.Put)
+					.Where(x => x.Type == ChangeTypes.Put)
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession("test"))
@@ -70,7 +70,7 @@ namespace Raven.Tests.Notifications
 				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(15)));
 
 				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeType.Put);
+				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
 			}
 
 		}
@@ -88,7 +88,7 @@ namespace Raven.Tests.Notifications
 				store.DatabaseCommands.EnsureDatabaseExists("another");
 				var list = new BlockingCollection<ChangeNotification>();
 				store.Changes("test")
-					.Where(x => x.Type == ChangeType.Put)
+					.Where(x => x.Type == ChangeTypes.Put)
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession("another"))
@@ -107,7 +107,7 @@ namespace Raven.Tests.Notifications
 				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(15)));
 
 				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeType.Put);
+				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
 
 				Assert.False(list.TryTake(out changeNotification, TimeSpan.FromMilliseconds(250)));
 			}

@@ -43,7 +43,9 @@ namespace Raven.Client
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		public abstract IObservable<ChangeNotification> Changes(string database = null);
+		public abstract IObservable<ChangeNotification> Changes(string database = null,
+			ChangeTypes changes = ChangeTypes.All,
+			string idPrefix = null);
 #endif
 
 		public abstract IDisposable AggressivelyCacheFor(TimeSpan cahceDuration);

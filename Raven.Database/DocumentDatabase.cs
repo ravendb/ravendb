@@ -503,7 +503,7 @@ namespace Raven.Database
 					Notifications(this, new ChangeNotification
 					{
 						Name = key,
-						Type = ChangeType.Put,
+						Type = ChangeTypes.Put,
 						Etag = newEtag
 					});
 				});
@@ -642,7 +642,7 @@ namespace Raven.Database
 					Notifications(this, new ChangeNotification
 					{
 						Name = key,
-						Type = ChangeType.Delete,
+						Type = ChangeTypes.Delete,
 					});
 				});
 

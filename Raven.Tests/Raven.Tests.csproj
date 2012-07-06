@@ -674,6 +674,7 @@
     <Compile Include="MailingList\Troy.cs" />
     <Compile Include="MailingList\What.cs" />
     <Compile Include="Notifications\ClientServer.cs" />
+    <Compile Include="Notifications\Filtered.cs" />
     <Compile Include="Notifications\SecurityOAuth.cs" />
     <Compile Include="Notifications\Embedded.cs" />
     <Compile Include="Notifications\MultiTenant.cs" />
