@@ -32,7 +32,7 @@ namespace Raven.Client.Connection
 		public IObservable<ChangeNotification> Create(string url, ICredentials credentials, IDictionary<string, string> queryString)
 		{
 			var result = new FutureObservable<ChangeNotification>();
-			EstablishConnection(url, credentials, queryString, 0)
+			var changes = EstablishConnection(url, credentials, queryString, 0)
 				.ContinueWith(task =>
 				{
 					if(task.IsFaulted)
@@ -42,6 +42,10 @@ namespace Raven.Client.Connection
 					}
 					result.Add(task.Result.AsObservable<ChangeNotification>());
 				});
+
+			if (conventions.WaitForConnectionEstablishedInChanges)
+				changes.Wait();
+
 			return result;
 		}
 

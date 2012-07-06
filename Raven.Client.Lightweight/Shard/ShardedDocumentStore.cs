@@ -147,9 +147,7 @@ namespace Raven.Client.Shard
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		public override IObservable<ChangeNotification> Changes(string database = null,
-			ChangeTypes changes = ChangeTypes.Common,
-			string idPrefix = null)
+		public override IObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null)
 		{
 			var observables = ShardStrategy.Shards.Values.Select(x => x.Changes(database, changes, idPrefix)).ToArray();
 			return new ConcatObservable<ChangeNotification>(observables);

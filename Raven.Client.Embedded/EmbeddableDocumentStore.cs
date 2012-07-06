@@ -100,9 +100,7 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		public override IObservable<ChangeNotification> Changes(string database = null,
-			ChangeTypes changes = ChangeTypes.Common,
-			string idPrefix = null)
+		public override IObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null)
 		{
 			if (string.IsNullOrEmpty(Url) == false)
 				return base.Changes(database, changes, idPrefix);
