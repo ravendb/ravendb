@@ -28,6 +28,7 @@ using Raven.Client.Silverlight.Connection.Async;
 using System.Collections.Generic;
 #else
 using Raven.Client.Listeners;
+using Raven.Client.Util;
 using Raven.Imports.SignalR.Client;
 
 #endif
@@ -618,9 +619,16 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(database) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
+			var pushyObservable = new PushyObservable<ChangeNotification>();
 			var connection = new Imports.SignalR.Client.Connection(dbUrl + "/signalr/notifications");
-			connection.Start();
-			return connection.AsObservable<ChangeNotification>();
+			connection.Start()
+				.ContinueWith(task =>
+				{
+					if(task.IsFaulted)
+						pushyObservable.ForceError(task.Exception);
+				});
+			pushyObservable.Inner = connection.AsObservable<ChangeNotification>();
+			return pushyObservable;
 		}
 #endif
 		/// <summary>

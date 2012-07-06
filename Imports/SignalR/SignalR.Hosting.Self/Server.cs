@@ -50,10 +50,10 @@ namespace Raven.Imports.SignalR.Hosting.Self
 		/// <summary>
 		/// Process the request
 		/// </summary>
-		public Task ProcessRequestSafe(HttpListenerContext context)
+		public Task ProcessRequestSafe(HttpListenerContext context, string prefix)
 		{
 			// Process the request async
-			return ProcessRequestAsync(context).ContinueWith(task =>
+			return ProcessRequestAsync(context, prefix).ContinueWith(task =>
 			{
 				if (task.IsFaulted)
 				{
@@ -105,7 +105,7 @@ namespace Raven.Imports.SignalR.Hosting.Self
 			}
 		}
 
-		private Task ProcessRequestAsync(HttpListenerContext context)
+		private Task ProcessRequestAsync(HttpListenerContext context, string prefix)
 		{
 			try
 			{
@@ -113,7 +113,7 @@ namespace Raven.Imports.SignalR.Hosting.Self
 
 				PersistentConnection connection;
 
-				string path = ResolvePath(context.Request.Url);
+				string path = ResolvePath(context.Request.Url, prefix);
 
 				if (TryGetConnection(path, out connection))
 				{
@@ -159,11 +159,11 @@ namespace Raven.Imports.SignalR.Hosting.Self
 			}
 		}
 
-		private string ResolvePath(Uri url)
+		private string ResolvePath(Uri url, string prefix)
 		{
 			string baseUrl = url.GetComponents(UriComponents.Scheme | UriComponents.HostAndPort | UriComponents.Path, UriFormat.SafeUnescaped);
 
-			Match match = Regex.Match(baseUrl, "^" + _url);
+			Match match = Regex.Match(baseUrl, "^" + _url + prefix);
 			if (!match.Success)
 			{
 				throw new InvalidOperationException("Unable to resolve path");

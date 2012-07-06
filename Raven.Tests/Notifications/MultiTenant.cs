@@ -9,6 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Xunit;
 using System;
+using Raven.Client.Extensions;
 
 namespace Raven.Tests.Notifications
 {
@@ -35,7 +36,8 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				var changeNotification = list.Take();
+				ChangeNotification changeNotification;
+				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(15)));
 
 				Assert.Equal("items/1", changeNotification.Name);
 				Assert.Equal(changeNotification.Type, ChangeType.Put);

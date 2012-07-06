@@ -379,13 +379,13 @@ namespace Raven.Database.Server
 
 		private void HandleSignalRequest(IHttpContext context,HttpListenerContext listenerContext)
 		{
-			SetupRequestToProperDatabase(context);
+			var prefix = SetupRequestToProperDatabase(context);
 			try
 			{
 				if (!SetThreadLocalState(context))
 					return;
 
-				signalrServer.ProcessRequestSafe(listenerContext);
+				signalrServer.ProcessRequestSafe(listenerContext, prefix);
 			}
 			finally
 			{
@@ -719,7 +719,7 @@ namespace Raven.Database.Server
 			get { return currentDatabase.Value ?? SystemDatabase; }
 		}
 
-		private void SetupRequestToProperDatabase(IHttpContext ctx)
+		private string SetupRequestToProperDatabase(IHttpContext ctx)
 		{
 			var requestUrl = ctx.GetRequestUrlForTenantSelection();
 			var match = databaseQuery.Match(requestUrl);
@@ -730,6 +730,7 @@ namespace Raven.Database.Server
 				currentDatabase.Value = SystemDatabase;
 				currentConfiguration.Value = SystemConfiguration;
 				databaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.Now, (s, time) => SystemTime.Now);
+				return null;
 			}
 			else
 			{
@@ -750,6 +751,8 @@ namespace Raven.Database.Server
 					currentTenantId.Value = tenantId;
 					currentDatabase.Value = resourceStore;
 					currentConfiguration.Value = resourceStore.Configuration;
+
+					return requestUrl.Substring(1, match.Groups[1].Index + match.Groups[1].Length);
 				}
 				else
 				{

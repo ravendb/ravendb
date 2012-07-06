@@ -194,6 +194,7 @@
     <Compile Include="Shard\ShardRequestData.cs" />
     <Compile Include="Shard\ShardStrategy.cs" />
     <Compile Include="StoredEntityEventArgs.cs" />
+    <Compile Include="Util\ConcatObservable.cs" />
     <Compile Include="Util\ConcurrentDictionary.cs" />
     <Compile Include="Util\Inflector.cs" />
     <Compile Include="Util\ObjectReferenceEqualityComparerer.cs" />
