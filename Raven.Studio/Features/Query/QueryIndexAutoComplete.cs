@@ -25,7 +25,8 @@ namespace Raven.Studio.Features.Query
 			new Dictionary<string, Dictionary<string, List<string>>>();
 
 		private ICompletionProvider completionProvider;
-		public ICompletionProvider CompletionProvider
+
+	    public ICompletionProvider CompletionProvider
 		{
 			get { return completionProvider; }
 			set
@@ -35,15 +36,26 @@ namespace Raven.Studio.Features.Query
 			}
 		}
 
-		public QueryIndexAutoComplete(string indexName, Observable<string> query, IList<string> fields)
+        public QueryIndexAutoComplete(IList<string> fields) : this(fields, null, null)
+        {
+            
+        }
+
+		public QueryIndexAutoComplete(IList<string> fields, string indexName, Observable<string> query)
 		{
-			this.indexName = indexName;
-			this.query = query;
+            if (indexName != null && query != null)
+            {
+                this.indexName = indexName;
+                this.query = query; 
+                this.query.PropertyChanged += GetTermsForUsedFields;
+                CompletionProvider = new QueryIntelliPromptProvider(fields, indexName, fieldsTermsDictionary);
+            }
+            else
+            {
+                CompletionProvider = new QueryIntelliPromptProvider(fields, null, null);
+            }
 
-			this.fields.Match(fields);
-
-			this.query.PropertyChanged += GetTermsForUsedFields;
-			CompletionProvider = new QueryIntelliPromptProvider(indexName, fields, fieldsTermsDictionary);
+		    this.fields.Match(fields);
 		}
 
 		private void GetTermsForUsedFields(object sender, PropertyChangedEventArgs e)

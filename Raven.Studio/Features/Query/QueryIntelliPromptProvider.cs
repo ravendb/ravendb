@@ -21,12 +21,21 @@ namespace Raven.Studio.Features.Query
 		private readonly IList<string> fields;
 		private readonly Dictionary<string, Dictionary<string, List<string>>> fieldTermsDictionary;
         private static readonly HashSet<string> preTermOperators = new HashSet<string>() { "[", "(", "{", "TO", "-", "+"};
+	    private bool isInFieldsOnlyMode;
 
-		public QueryIntelliPromptProvider(string indexName, IList<string> fields, Dictionary<string, Dictionary<string, List<string>>> fieldTermsDictionary)
+		public QueryIntelliPromptProvider(IList<string> fields, string indexName, Dictionary<string, Dictionary<string, List<string>>> fieldTermsDictionary)
 		{
-			this.indexName = indexName;
-			this.fields = fields;
-			this.fieldTermsDictionary = fieldTermsDictionary;
+		    this.fields = fields;
+
+            if (indexName == null || fieldTermsDictionary == null)
+            {
+                isInFieldsOnlyMode = true;
+            }
+            else
+            {
+                this.indexName = indexName;
+                this.fieldTermsDictionary = fieldTermsDictionary;
+            }
 		}
 
 		public bool RequestSession(IEditorView view, bool canCommitWithoutPopup)
@@ -42,7 +51,10 @@ namespace Raven.Studio.Features.Query
 
             if (context.Field != null)
             {
-                PopulateTerm(context.Field, session, view, context.Prefix);
+                if (!isInFieldsOnlyMode)
+                {
+                    PopulateTerm(context.Field, session, view, context.Prefix);
+                }
             }
 			else
 			{

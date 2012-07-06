@@ -240,12 +240,15 @@ namespace Raven.Studio.Models
 						break;
 				}
 
-                if (dynamicSelectedOption != "AllDocs")
+			    if (dynamicSelectedOption != "AllDocs")
+			    {
+			        BeginUpdateFieldsAndSortOptions(dynamicSelectedOption);
+			    }
+			    else
                 {
-                    BeginUpdateFieldsAndSortOptions(dynamicSelectedOption);
-                }
-                else
-                {
+                    SortBy.Clear();
+                    SortByOptions.Clear();
+                    QueryIndexAutoComplete = new QueryIndexAutoComplete(new string[0]);
                     RestoreHistory();
                 }
 
@@ -261,8 +264,11 @@ namespace Raven.Studio.Models
 	                                                {
                                                         if (result.Results.Count > 0)
                                                         {
-                                                            var properties = DocumentHelpers.GetPropertiesFromJObjects(result.Results, includeNestedProperties:true, includeMetadata:false, excludeParentPropertyNames:true);
-                                                            SetSortByOptions(properties.ToList());
+                                                            var fields = DocumentHelpers.GetPropertiesFromJObjects(result.Results, includeNestedProperties:true, includeMetadata:false, excludeParentPropertyNames:true)
+                                                                .ToList();
+
+                                                            SetSortByOptions(fields);
+                                                            QueryIndexAutoComplete = new QueryIndexAutoComplete(fields);
                                                             RestoreHistory();
                                                         }
 	                                                });
@@ -363,7 +369,7 @@ namespace Raven.Studio.Models
 						return;
 					}
                     var fields = task.Result.Fields;
-					QueryIndexAutoComplete = new QueryIndexAutoComplete(IndexName, Query, fields);
+					QueryIndexAutoComplete = new QueryIndexAutoComplete(fields, IndexName, Query);
 					
 					const string spatialindexGenerate = "SpatialIndex.Generate";
 					IsSpatialQuerySupported =
