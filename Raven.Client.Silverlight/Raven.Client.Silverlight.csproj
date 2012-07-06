@@ -740,6 +740,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\HttpExtensions.cs">
       <Link>Connection\HttpExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\PersistentConnectionFactory.cs">
+      <Link>Imports\Connection\PersistentConnectionFactory.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\ConcurrentBoundedList.cs">
       <Link>Imports\Connection\Profiling\ConcurrentBoundedList.cs</Link>
     </Compile>
@@ -1265,7 +1268,6 @@
       <Link>Imports\Util\ObjectReferenceEqualityComparerer.cs</Link>
     </Compile>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
   <!-- <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" /> -->
   <ProjectExtensions>
