@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Documents;
 using Microsoft.Silverlight.Testing;
@@ -25,6 +26,11 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			
 			var tcs = new TaskCompletionSource<ChangeNotification>();
+			Task.Factory.StartNew(() =>
+			                      	{
+			                      		Thread.Sleep(5000);
+			                      		tcs.TrySetCanceled();
+			                      	});
 			using (var documentStore = new DocumentStore
 			{
 				Url = Url + Port,
