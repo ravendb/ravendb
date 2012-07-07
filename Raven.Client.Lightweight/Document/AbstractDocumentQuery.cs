@@ -254,10 +254,14 @@ namespace Raven.Client.Document
 			this.theAsyncDatabaseCommands = asyncDatabaseCommands;
 #endif
 			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
-			this.linqPathProvider= new LinqPathProvider(theSession.Conventions);
-			if (this.theSession != null &&  // tests may decide to send null here
-				this.theSession.DocumentStore.Conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+			if (this.theSession == null)// tests may send null here.
+				return;
+			linqPathProvider = new LinqPathProvider(theSession.Conventions);
+
+			if(this.theSession.DocumentStore.Conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+			{
 				WaitForNonStaleResultsAsOfLastWrite();
+			}
 		}
 
 		/// <summary>
