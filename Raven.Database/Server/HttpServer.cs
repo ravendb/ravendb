@@ -269,7 +269,6 @@ namespace Raven.Database.Server
 			Init();
 			listener.Start();
 	
-			TenantDatabaseModified.Occured += TenantDatabaseRemoved;
 
 			listener.BeginGetContext(GetContext, null);
 		}
@@ -294,6 +293,7 @@ namespace Raven.Database.Server
 
 		public void Init()
 		{
+			TenantDatabaseModified.Occured += TenantDatabaseRemoved;
 			databasesCleanupTimer = new Timer(CleanupDatabases, null, frequnecyToCheckForIdleDatabases, frequnecyToCheckForIdleDatabases);
 		}
 
