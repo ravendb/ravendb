@@ -18,10 +18,18 @@ namespace Raven.Database.Json
 	public class AdvancedJsonPatcher
 	{
 		private RavenJObject document;
+		private RavenJObject [] documents;
+		private bool batchApply = false;
 				
 		public AdvancedJsonPatcher(RavenJObject document)
 		{
 			this.document = document;
+		}
+
+		public AdvancedJsonPatcher(RavenJObject [] documents)
+		{
+			this.documents = documents;
+			this.batchApply = true;
 		}
 
 		public RavenJObject Apply(string script)
@@ -40,19 +48,39 @@ namespace Raven.Database.Json
 
 			var mapScript = GetFromResources("Raven.Database.Json.Map.js");
 			ctx.Execute(mapScript);
-			
-			var finalScript = String.Format(@"var doc = {0};
+
+			if (batchApply)
+			{
+				//foreach (var doc in documents)
+				//{
+				//    ApplySingleScript(document, script, ctx);
+				//}
+
+				//Things to consider, if we get one failed do we stop the whole batch,
+				//or do we stop it when we reach a threshold, i.e. 10% failures?
+				//Where do failures get logged to, or do they just throw exceptions??
+			}
+			else
+			{
+				var resultDocument = ApplySingleScript(ctx, document, script);
+				if (resultDocument != null)
+					document = resultDocument;
+			}
+		}
+
+		private RavenJObject ApplySingleScript(CSharp.Context ctx, RavenJObject doc, string script)
+		{
+			var wrapperScript = String.Format(@"var doc = {0};
 (function(doc){{
 	{1};
 }}).apply(doc);
-json_data = JSON.stringify(doc);", document, script);
-									
-			object result;
+json_data = JSON.stringify(doc);", doc, script);
 
+			object result;
 			try
 			{
-				result = ctx.Execute(finalScript);
-				document = RavenJObject.Parse(ctx.GetGlobalAs<string>("json_data"));
+				result = ctx.Execute(wrapperScript);
+				return RavenJObject.Parse(ctx.GetGlobalAs<string>("json_data"));
 			}
 			catch (IronJS.UserError uEx)
 			{
@@ -61,11 +89,8 @@ json_data = JSON.stringify(doc);", document, script);
 			catch (IronJS.Error.Error errorEx)
 			{
 
-			}
-			finally
-			{
-
-			}
+			}			
+			return null;
 		}
 
 		internal string GetFromResources(string resourceName)
