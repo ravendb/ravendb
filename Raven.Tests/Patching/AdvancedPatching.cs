@@ -33,19 +33,19 @@ this.Comments.Map(function(comment) {
 return (comment == ""one"") ? comment + "" test"" : comment;
 });";
 
-		//[Fact]
-		//public void CanApplyBasicScriptAsPatch()
-		//{
-		//    var resultJson = new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(sampleScript);
-		//    var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+		[Fact]
+		public void CanApplyBasicScriptAsPatch()
+		{
+			var resultJson = new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(sampleScript);
+			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
-		//    Assert.Equal("Something new", result.Id);
-		//    Assert.Equal(2, result.Comments.Count);
-		//    Assert.Equal("one test", result.Comments[0]);
-		//    Assert.Equal("two", result.Comments[1]);
-		//    Assert.Equal(12144, result.Value);
-		//    Assert.Equal("err!!", resultJson["newValue"]);
-		//}
+			Assert.Equal("Something new", result.Id);
+			Assert.Equal(2, result.Comments.Count);
+			Assert.Equal("one test", result.Comments[0]);
+			Assert.Equal("two", result.Comments[1]);
+			Assert.Equal(12144, result.Value);
+			Assert.Equal("err!!", resultJson["newValue"]);
+		}
 
 		//[Fact]
 		//public void CanPerformAdvancedPatching_Remotely()
