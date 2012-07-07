@@ -1120,7 +1120,7 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			if (theQueryText.Length < 1)
 			{
-				throw new InvalidOperationException("Missing where clause");
+				return;
 			}
 
 			theQueryText.Append(" AND");
@@ -1133,7 +1133,7 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			if (theQueryText.Length < 1)
 			{
-				throw new InvalidOperationException("Missing where clause");
+				return;
 			}
 
 			theQueryText.Append(" OR");
