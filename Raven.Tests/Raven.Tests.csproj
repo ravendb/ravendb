@@ -672,6 +672,7 @@
     <Compile Include="MailingList\Stockholm.cs" />
     <Compile Include="MailingList\Tony.cs" />
     <Compile Include="MailingList\Troy.cs" />
+    <Compile Include="MailingList\TwoLocations.cs" />
     <Compile Include="MailingList\What.cs" />
     <Compile Include="Notifications\ClientServer.cs" />
     <Compile Include="Notifications\Filtered.cs" />
