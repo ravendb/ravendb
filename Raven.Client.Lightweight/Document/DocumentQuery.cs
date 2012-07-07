@@ -255,6 +255,12 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
+		{
+			UsingDefaultOperator(queryOperator);
+			return this;
+		}
+
 		/// <summary>
 		/// Includes the specified path in the query, loading the document specified in that path
 		/// </summary>

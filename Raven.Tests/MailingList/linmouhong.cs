@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Xunit;
+using Raven.Client.Linq;
 
 namespace Raven.Tests.MailingList
 {
@@ -27,7 +28,7 @@ namespace Raven.Tests.MailingList
 				using(var session = store.OpenSession())
 				{
 					var s = session.Advanced.LuceneQuery<Item>("test").WhereEquals(x => x.Product.Name, "test").ToString();
-
+					
 					Assert.Equal("Product_Name:test", s);
 					s = session.Advanced.LuceneQuery<Item>().WhereEquals(x => x.Product.Name, "test").ToString();
 

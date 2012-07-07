@@ -287,6 +287,8 @@ namespace Raven.Client.Document
 			includes = other.includes;
 			queryListeners = other.queryListeners;
 			queryStats = other.queryStats;
+			defaultOperator = other.defaultOperator;
+			defaultField = other.defaultField;
 
 			AfterQueryExecuted(queryStats.UpdateQueryStats);
 		}
@@ -357,6 +359,11 @@ namespace Raven.Client.Document
 		public void UsingDefaultField(string field)
 		{
 			defaultField = field;
+		}
+
+		public void UsingDefaultOperator(QueryOperator @operator)
+		{
+			defaultOperator = @operator;
 		}
 
 		/// <summary>
@@ -1475,7 +1482,8 @@ If you really want to do in memory filtering on the data returned from the query
 					Latitude = lat,
 					Longitude = lng,
 					Radius = radius,
-					DefaultField = defaultField
+					DefaultField = defaultField,
+					DefaultOperator = defaultOperator
 				};
 			}
 
@@ -1490,7 +1498,8 @@ If you really want to do in memory filtering on the data returned from the query
 				CutoffEtag = cutoffEtag,
 				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 				FieldsToFetch = projectionFields,
-				DefaultField = defaultField
+				DefaultField = defaultField,
+				DefaultOperator = defaultOperator
 			};
 		}
 
@@ -1502,6 +1511,7 @@ If you really want to do in memory filtering on the data returned from the query
 #endif
 
 			);
+		private QueryOperator defaultOperator;
 
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.

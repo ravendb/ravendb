@@ -511,5 +511,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Select the default field to use for this query
 		/// </summary>
 		TSelf UsingDefaultField(string field);
+
+		/// <summary>
+		/// Select the default operator to use for this query
+		/// </summary>
+		TSelf UsingDefaultOperator(QueryOperator queryOperator);
 	}
 }

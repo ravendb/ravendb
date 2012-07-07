@@ -779,6 +779,12 @@ namespace Raven.Client.Document
 			UsingDefaultField(field);
 			return this;
 		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
+		{
+			UsingDefaultOperator(queryOperator);
+			return this;
+		}
 	}
 }
 #endif
