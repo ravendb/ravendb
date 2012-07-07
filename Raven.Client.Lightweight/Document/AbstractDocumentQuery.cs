@@ -40,7 +40,7 @@ namespace Raven.Client.Document
 	{
 		protected bool isSpatialQuery;
 		protected double lat, lng, radius;
-
+		private LinqPathProvider linqPathProvider;
 		/// <summary>
 		/// Whatever to negate the next operation
 		/// </summary>
@@ -254,7 +254,7 @@ namespace Raven.Client.Document
 			this.theAsyncDatabaseCommands = asyncDatabaseCommands;
 #endif
 			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
-
+			this.linqPathProvider= new LinqPathProvider(theSession.Conventions);
 			if (this.theSession != null &&  // tests may decide to send null here
 				this.theSession.DocumentStore.Conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
 				WaitForNonStaleResultsAsOfLastWrite();
@@ -273,6 +273,7 @@ namespace Raven.Client.Document
 			theAsyncDatabaseCommands = other.theAsyncDatabaseCommands;
 #endif
 			indexName = other.indexName;
+			linqPathProvider = other.linqPathProvider;
 			projectionFields = other.projectionFields;
 			theSession = other.theSession;
 			cutoff = other.cutoff;
@@ -1684,5 +1685,20 @@ If you really want to do in memory filtering on the data returned from the query
 				.ContinueWith(r => r.Result.TotalResults);
 		}
 #endif
+
+		public string GetMemberQueryPath(Expression expression)
+		{
+			var result = linqPathProvider.GetPath(expression);
+			result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
+
+			if (expression.NodeType == ExpressionType.ArrayLength)
+				result.Path += ".Length";
+
+			var propertyName = indexName == null || indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase)
+				? theSession.Conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, "", result.Path)
+				: theSession.Conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
+			return propertyName;
+
+		}
 	}
 }
