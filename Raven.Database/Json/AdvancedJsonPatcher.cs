@@ -70,11 +70,14 @@ namespace Raven.Database.Json
 
 		private RavenJObject ApplySingleScript(CSharp.Context ctx, RavenJObject doc, string script)
 		{
-			var wrapperScript = String.Format(@"var doc = {0};
+			var wrapperScript = String.Format(@"
+var doc = {0};
+
 (function(doc){{
-	{1};
+	{1}{2}
 }}).apply(doc);
-json_data = JSON.stringify(doc);", doc, script);
+
+json_data = JSON.stringify(doc);", doc, script, script.EndsWith(";") ? String.Empty : ";");
 
 			object result;
 			try

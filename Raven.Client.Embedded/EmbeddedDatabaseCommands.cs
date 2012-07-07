@@ -516,6 +516,46 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Perform a set based update using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript)
+		{
+			UpdateByIndex(indexName, queryToUpdate, patchScript, false);
+		}		
+
+		/// <summary>
+		/// Perform a set based update using the specified index.
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchRequests">The patch requests.</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
+			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
+		}
+
+		/// <summary>
+		/// Perform a set based update using the specified index
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript, bool allowStale)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
+			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchScript, allowStale);
+		}
+
+		/// <summary>
 		/// Perform a set based deletes using the specified index, not allowing the operation
 		/// if the index is stale
 		/// </summary>
@@ -538,21 +578,6 @@ namespace Raven.Client.Embedded
 			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
 			databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
 		}
-
-		/// <summary>
-		/// Perform a set based update using the specified index.
-		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patchRequests">The patch requests.</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
-		{
-			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
-			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
-		}
-
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts

@@ -1120,7 +1120,27 @@ namespace Raven.Database
 							}));
 		}
 
+		public PatchResult ApplyPatch(string docId, Guid? etag, string patchScript, TransactionInformation transactionInformation)
+		{
+			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc =>
+			{
+				// TODO because we've introduce a "closuse" this doesn't work as expected ("jsonDoc")
+				// in there is different from the the instance down below, 
+				return new AdvancedJsonPatcher(jsonDoc).Apply(patchScript);
+			});
+		}
+
 		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)
+		{
+			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc =>
+			{
+				return new JsonPatcher(jsonDoc).Apply(patchDoc);
+			});
+		}
+
+		private PatchResult ApplyPatchInternal(string docId, Guid? etag,
+												TransactionInformation transactionInformation,
+												Func<RavenJObject, RavenJObject> patcher)
 		{
 			if (docId == null) throw new ArgumentNullException("docId");
 			docId = docId.Trim();
@@ -1148,7 +1168,10 @@ namespace Raven.Database
 					else
 					{
 						var jsonDoc = doc.ToJson();
-						new JsonPatcher(jsonDoc).Apply(patchDoc);
+						//new JsonPatcher(jsonDoc).Apply(patchDoc);
+
+						///TODO Apply the patch (is this the best way to do it??????
+						jsonDoc = patcher(jsonDoc);
 						try
 						{
 							Put(doc.Key, doc.Etag, jsonDoc, jsonDoc.Value<RavenJObject>("@metadata"), transactionInformation);

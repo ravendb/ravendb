@@ -26,13 +26,13 @@ namespace Raven.Tests.Patching
 
 		//splice(2, 1) will remove 1 elements from position 2 onwards (zero-based)
 		string sampleScript = @"
-    this.Id = 'Something new'; 
-    this.Value++; 
-    this.Comments.splice(2, 1);
-    this.newValue = ""err!!"";
-    this.Comments.Map(function(comment) {   
-        return (comment == ""one"") ? comment + "" test"" : comment;
-    });";
+	this.Id = 'Something new'; 
+	this.Value++; 
+	this.Comments.splice(2, 1);
+	this.newValue = ""err!!"";
+	this.Comments.Map(function(comment) {   
+		return (comment == ""one"") ? comment + "" test"" : comment;
+	});";
 
 		[Fact]
 		public void CanApplyBasicScriptAsPatch()
@@ -136,7 +136,7 @@ namespace Raven.Tests.Patching
 			using (var s = store.OpenSession())
 			{                
 				s.Store(item1);
-				s.Store(item2);                
+				s.Store(item2);
 				s.SaveChanges();
 			}
 
@@ -150,9 +150,9 @@ namespace Raven.Tests.Patching
 			store.OpenSession().Advanced.LuceneQuery<object>("TestIndex")
 					.WaitForNonStaleResults().ToList();
 
-			//store.DatabaseCommands.UpdateByIndex("TestIndex",
-			//                                new IndexQuery { Query = "Owner:Bob" },
-			//                                sampleScript);
+			store.DatabaseCommands.UpdateByIndex("TestIndex",
+											new IndexQuery { Query = "Owner:Bob" },
+											sampleScript);
 
 			var item1ResultJson = store.DatabaseCommands.Get(item1.Id).DataAsJson;
 			var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());

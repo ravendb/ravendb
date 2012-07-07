@@ -1128,14 +1128,15 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		}
 
 		/// <summary>
-		/// Perform a set based deletes using the specified index, not allowing the operation
+		/// Perform a set based update using the specified index, not allowing the operation
 		/// if the index is stale
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToDelete">The query to delete.</param>
-		public void DeleteByIndex(string indexName, IndexQuery queryToDelete)
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript)
 		{
-			DeleteByIndex(indexName, queryToDelete, false);
+			throw new NotImplementedException();
 		}
 
 		/// <summary>
@@ -1170,6 +1171,28 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			});
 		}
 
+		/// <summary>
+		/// Perform a set based update using the specified index
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript, bool allowStale)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// Perform a set based deletes using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToDelete">The query to delete.</param>
+		public void DeleteByIndex(string indexName, IndexQuery queryToDelete)
+		{
+			DeleteByIndex(indexName, queryToDelete, false);
+		}
 
 		/// <summary>
 		/// Returns a list of suggestions based on the specified suggestion query.

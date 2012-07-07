@@ -248,6 +248,15 @@ namespace Raven.Client.Connection
 		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests);
 
 		/// <summary>
+		/// Perform a set based update using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript);
+
+		/// <summary>
 		/// Perform a set based update using the specified index
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
@@ -255,6 +264,15 @@ namespace Raven.Client.Connection
 		/// <param name="patchRequests">The patch requests.</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale);
+
+		/// <summary>
+		/// Perform a set based update using the specified index
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript, bool allowStale);
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
