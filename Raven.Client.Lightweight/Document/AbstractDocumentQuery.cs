@@ -117,6 +117,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected int start;
 
+		private DocumentConvention conventions;
 		/// <summary>
 		/// Timeout for this query
 		/// </summary>
@@ -254,11 +255,11 @@ namespace Raven.Client.Document
 			this.theAsyncDatabaseCommands = asyncDatabaseCommands;
 #endif
 			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
-			if (this.theSession == null)// tests may send null here.
-				return;
-			linqPathProvider = new LinqPathProvider(theSession.Conventions);
 
-			if(this.theSession.DocumentStore.Conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
+			linqPathProvider = new LinqPathProvider(conventions);
+
+			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
 			{
 				WaitForNonStaleResultsAsOfLastWrite();
 			}
@@ -280,6 +281,7 @@ namespace Raven.Client.Document
 			linqPathProvider = other.linqPathProvider;
 			projectionFields = other.projectionFields;
 			theSession = other.theSession;
+			conventions = other.conventions;
 			cutoff = other.cutoff;
 			orderByFields = other.orderByFields;
 			sortByHints = other.sortByHints;
@@ -1709,8 +1711,8 @@ If you really want to do in memory filtering on the data returned from the query
 				result.Path += ".Length";
 
 			var propertyName = indexName == null || indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase)
-				? theSession.Conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, "", result.Path)
-				: theSession.Conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
+				? conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, "", result.Path)
+				: conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
 			return propertyName;
 
 		}
