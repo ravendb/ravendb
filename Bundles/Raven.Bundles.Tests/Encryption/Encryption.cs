@@ -36,7 +36,7 @@ namespace Raven.Bundles.Tests.Encryption
 				new database::Raven.Database.Config.RavenConfiguration
 				{
 					Port = 8079,
-					RunInMemory = true,
+					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					DataDirectory = path,
 					Catalog =
 						{
