@@ -7,7 +7,17 @@ namespace Raven.Database.Util
 {
 	public class ConcurrentSet<T> : IEnumerable<T>
 	{
-		readonly ConcurrentDictionary<T,object> inner = new ConcurrentDictionary<T, object>();
+		readonly ConcurrentDictionary<T,object> inner;
+
+		public ConcurrentSet()
+		{
+			inner = new ConcurrentDictionary<T, object>();
+		}
+
+		public ConcurrentSet(IEqualityComparer<T> comparer)
+		{
+			inner = new ConcurrentDictionary<T, object>(comparer);
+		}
 
 		public int Count
 		{
