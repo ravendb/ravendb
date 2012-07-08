@@ -42,6 +42,7 @@ namespace Raven.Database.Config
 			MaxNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch / 2;
 			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 			InitialNumberOfItemsToReduceInSingleBatch = InitialNumberOfItemsToIndexInSingleBatch / 2;
+			MaxIndexingRunLatency = TimeSpan.FromMinutes(1);
 
 			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory/2);
 			MaxNumberOfParallelIndexTasks = 8;
@@ -97,6 +98,12 @@ namespace Raven.Database.Config
 								: TimeSpan.Parse(memoryCacheLimitCheckInterval);
 
 			// Index settings
+			var maxIndexingRunLatencyStr = Settings["Raven/MaxIndexingRunLatency"];
+			if(maxIndexingRunLatencyStr != null)
+			{
+				MaxIndexingRunLatency = TimeSpan.Parse(maxIndexingRunLatencyStr);
+			}
+
 			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
 			if (maxNumberOfItemsToIndexInSingleBatch != null)
 			{
@@ -671,6 +678,8 @@ namespace Raven.Database.Config
 		}
 
 		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }
+
+		public TimeSpan MaxIndexingRunLatency { get; set; }
 
 		protected void ResetContainer()
 		{

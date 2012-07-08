@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -19,6 +20,7 @@ namespace Raven.Database.Indexing
 
 		protected void HandleReduceForIndex(IndexToWorkOn indexToWorkOn)
 		{
+			TimeSpan reduceDuration= TimeSpan.Zero;
 			List<MappedResultInfo> reduceKeyAndEtags = null;
 			try
 			{
@@ -41,11 +43,13 @@ namespace Raven.Database.Indexing
 							log.Debug("No reduce keys found for {0}", indexToWorkOn.IndexName);
 					}
 
+					var sw = Stopwatch.StartNew();
 					new ReduceTask
 					{
 						Index = indexToWorkOn.IndexName,
 						ReduceKeys = reduceKeyAndEtags.Select(x => x.ReduceKey).Distinct().ToArray(),
 					}.Execute(context);
+					reduceDuration = sw.Elapsed;
 				});
 
 			}
@@ -67,7 +71,7 @@ namespace Raven.Database.Indexing
 						}
 					});
 
-					autoTuner.AutoThrottleBatchSize(reduceKeyAndEtags.Count, reduceKeyAndEtags.Sum(x => x.Size));
+					autoTuner.AutoThrottleBatchSize(reduceKeyAndEtags.Count, reduceKeyAndEtags.Sum(x => x.Size), reduceDuration);
 				}
 			}
 		}

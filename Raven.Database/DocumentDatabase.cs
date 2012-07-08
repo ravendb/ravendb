@@ -322,6 +322,7 @@ namespace Raven.Database
 				AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
 				AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
 				disposed = true;
+				if (workContext != null)
 				workContext.StopWork();
 			});
 			
