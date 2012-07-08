@@ -79,18 +79,18 @@ namespace Raven.Tests.Patching
 			}
 		}
 
-		//[Fact]
-		//public void CanPerformAdvancedWithSetBasedUpdates_Remotely()
-		//{
-		//    using (GetNewServer())
-		//    using (var store = new DocumentStore
-		//    {
-		//        Url = "http://localhost:8080"
-		//    }.Initialize())
-		//    {
-		//        ExecuteTest(store);
-		//    }
-		//}
+		[Fact]
+		public void CanPerformAdvancedWithSetBasedUpdates_Remotely()
+		{
+			using (var server = GetNewServer(port:8079))
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				ExecuteTest(store);
+			}
+		}
 
 		private void ExecuteTest(IDocumentStore store)
 		{
@@ -105,10 +105,12 @@ namespace Raven.Tests.Patching
 			// TODO this is wierd, we can change the Id in the Json to something other than the Key
 			// so we end up with a do that we can load via "someId" but result.Id = "Something new"
 			// we need to make sure the javascript can't change the Id field, or something else!??!
-			var resultJson = store.DatabaseCommands.Get(test.Id).DataAsJson;
+			var resultDoc = store.DatabaseCommands.Get(test.Id);
+			var resultJson = resultDoc.DataAsJson;
 			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
-			Assert.Equal("Something new", result.Id);
+			//Assert.Equal("Something new", result.Id);
+			Assert.NotEqual("Something new", resultDoc.Metadata["@id"]);
 			Assert.Equal(2, result.Comments.Count);
 			Assert.Equal("one test", result.Comments[0]);
 			Assert.Equal("two", result.Comments[1]);
@@ -147,7 +149,7 @@ namespace Raven.Tests.Patching
 									select new { doc.Owner }"
 					});
 
-			store.OpenSession().Advanced.LuceneQuery<object>("TestIndex")
+			store.OpenSession().Advanced.LuceneQuery<CustomType>("TestIndex")
 					.WaitForNonStaleResults().ToList();
 
 			store.DatabaseCommands.UpdateByIndex("TestIndex",
@@ -166,6 +168,7 @@ namespace Raven.Tests.Patching
 			var item2ResultJson = store.DatabaseCommands.Get(item2.Id).DataAsJson;
 			var item2Result = JsonConvert.DeserializeObject<CustomType>(item2ResultJson.ToString());
 			Console.WriteLine(item2ResultJson);
+			//Assert.Equal(item2, item2Result);
 			Assert.True(store.DatabaseCommands.Get(item2.Id).Metadata["@id"].ToString().StartsWith("someId"));
 			Assert.Equal(9999, item2Result.Value);
 			Assert.Equal(3, item2Result.Comments.Count);

@@ -1428,7 +1428,15 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		public void Patch(string key, string patchScript, Guid? etag)
 		{
-			throw new NotImplementedException();
+			Batch(new[]
+					{
+						new AdvancedPatchCommandData
+							{
+								Key = key,
+								PatchScript = patchScript,
+								Etag = etag
+							}
+					});
 		}
 
 		/// <summary>
@@ -1438,7 +1446,6 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		{
 			return jsonRequestFactory.DisableAllCaching();
 		}
-
 
 		#endregion
 
