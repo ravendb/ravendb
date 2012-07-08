@@ -6,6 +6,12 @@ namespace Raven.Bundles.Tests.Encryption
 {
 	public class Crud : Encryption
 	{
+		// store & load
+		// transactions
+		// map reduce
+		// simple indexes
+		// queries
+
 		[Fact]
 		public void StoreAndLoad()
 		{
