@@ -1161,7 +1161,8 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript, bool allowStale)
 		{
-			var requestData = RavenJObject.FromObject(new { Script = patchScript }).ToString();
+			var scriptItems = RavenJToken.FromObject(new [] { patchScript });
+			var requestData = new RavenJArray(scriptItems).ToString(Formatting.Indented);
 			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData);
 		}
 

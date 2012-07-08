@@ -33,7 +33,7 @@ namespace Raven.Database.Server.Responders
 		{
 			var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(context));
 			switch (context.Request.HttpMethod)
-			{                
+			{
 				case "POST":
 					Batch(context);
 					break;
@@ -41,6 +41,7 @@ namespace Raven.Database.Server.Responders
 					OnBulkOperation(context, databaseBulkOperations.DeleteByIndex);
 					break;
 				case "PATCH":
+					///TODO here we need to detect if it's a Script (Advanced) PATCH command OR the original one (PatchRequest)
 					var patchRequestJson = context.ReadJsonArray();
 					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 					OnBulkOperation(context, (index, query, allowStale) =>
