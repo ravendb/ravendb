@@ -23,7 +23,10 @@ namespace Raven.Bundles.Encryption.Plugin
 		{
 			if (key == Constants.InDatabaseKeyVerificationDocumentName)
 			{
-				if (!settings.CurrentlySettingKeyVerificationDocument && Database.Get(key, null) != null)
+				if (Database == null) // we haven't been called yet
+					return VetoResult.Allowed;
+
+				if (Database.Get(key, null) != null)
 					return VetoResult.Deny("The encryption verification document already exists and cannot be overwritten.");
 			}
 

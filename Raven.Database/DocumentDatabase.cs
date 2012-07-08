@@ -165,28 +165,27 @@ namespace Raven.Database
 				throw;
 			}
 
-			TransactionalStorage.Batch(actions => currentEtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
-
-			// Index codecs must be initialized before we try to read an index
-			InitializeCodecs();
-
-			IndexDefinitionStorage = new IndexDefinitionStorage(
-				configuration,
-				TransactionalStorage,
-				configuration.DataDirectory,
-				configuration.Container.GetExportedValues<AbstractViewGenerator>(),
-				Extensions);
-			IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
-
-			workContext.Configuration = configuration;
-			workContext.IndexStorage = IndexStorage;
-			workContext.TransactionaStorage = TransactionalStorage;
-			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
-
-
 			try
 			{
+
+				TransactionalStorage.Batch(actions => currentEtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
+
+				// Index codecs must be initialized before we try to read an index
 				InitializeTriggers();
+
+				IndexDefinitionStorage = new IndexDefinitionStorage(
+					configuration,
+					TransactionalStorage,
+					configuration.DataDirectory,
+					configuration.Container.GetExportedValues<AbstractViewGenerator>(),
+					Extensions);
+				IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
+
+				workContext.Configuration = configuration;
+				workContext.IndexStorage = IndexStorage;
+				workContext.TransactionaStorage = TransactionalStorage;
+				workContext.IndexDefinitionStorage = IndexDefinitionStorage;
+			
 				ExecuteStartupTasks();
 			}
 			catch (Exception)
@@ -201,7 +200,7 @@ namespace Raven.Database
 			Dispose();
 		}
 
-		private void InitializeCodecs()
+		private void InitializeTriggers()
 		{
 			IndexCodecs
 				.Init(disableAllTriggers)
@@ -210,16 +209,15 @@ namespace Raven.Database
 			DocumentCodecs
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-		}
 
-		private void InitializeTriggers()
-		{
 			PutTriggers
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
 			DeleteTriggers
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
 			ReadTriggers
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
@@ -231,9 +229,11 @@ namespace Raven.Database
 			AttachmentPutTriggers
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
 			AttachmentDeleteTriggers
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+
 			AttachmentReadTriggers
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));

@@ -72,7 +72,7 @@ namespace Raven.Bundles.Encryption
 			{
 				provider = GetCryptoProvider(null);
 				decryptor = provider.CreateDecryptor();
-				stream = new CryptoStream(dataStream, decryptor, CryptoStreamMode.Write);
+				stream = new CryptoStream(dataStream, decryptor, CryptoStreamMode.Read);
 				return stream.ReadSalt(key).DisposeTogetherWith(provider, decryptor);
 			}
 			catch

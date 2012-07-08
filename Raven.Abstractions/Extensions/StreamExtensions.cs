@@ -156,8 +156,7 @@ namespace Raven.Abstractions.Extensions
 
 			protected override void Dispose(bool disposing)
 			{
-				base.Dispose(disposing);
-
+				stream.Dispose();
 				if (disposing)
 				{
 					foreach (var d in disposables)

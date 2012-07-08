@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Runtime.Serialization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Raven.Bundles.Encryption.Settings
@@ -16,7 +17,6 @@ namespace Raven.Bundles.Encryption.Settings
 		private Func<SymmetricAlgorithm> algorithmGenerator;
 		private readonly bool encryptIndexes;
 
-		public bool CurrentlySettingKeyVerificationDocument;
 		public readonly Codec Codec;
 
 		public EncryptionSettings()
