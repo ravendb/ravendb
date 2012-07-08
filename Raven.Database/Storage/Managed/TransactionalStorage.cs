@@ -76,7 +76,7 @@ namespace Raven.Storage.Managed
 					idleTimer.Dispose();
 				if (persistenceSource != null)
 					persistenceSource.Dispose();
-				if(tableStroage != null)
+				if (tableStroage != null)
 					tableStroage.Dispose();
 			}
 			finally
@@ -87,7 +87,8 @@ namespace Raven.Storage.Managed
 
 		public Guid Id
 		{
-			get; private set;
+			get;
+			private set;
 		}
 
 		public void Batch(Action<IStorageActionsAccessor> action)
@@ -161,7 +162,7 @@ namespace Raven.Storage.Managed
 
 			tableStroage.Initialze();
 
-			if(persistenceSource.CreatedNew)
+			if (persistenceSource.CreatedNew)
 			{
 				Id = Guid.NewGuid();
 				Batch(accessor => tableStroage.Details.Put("id", Id.ToByteArray()));
@@ -200,6 +201,16 @@ namespace Raven.Storage.Managed
 		public bool HandleException(Exception exception)
 		{
 			return false;
+		}
+
+		public void Compact(InMemoryRavenConfiguration compactConfiguration)
+		{
+			using (var ps = new FileBasedPersistentSource(compactConfiguration.DataDirectory, "Raven", configuration.TransactionMode == TransactionMode.Safe))
+			using (var storage = new TableStorage(ps))
+			{
+				storage.Compact();
+			}
+
 		}
 
 		private void MaybeOnIdle(object _)
