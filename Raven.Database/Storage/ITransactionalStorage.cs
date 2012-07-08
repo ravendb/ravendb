@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Database.Config;
 using Raven.Database.Impl;
 
 namespace Raven.Database.Storage
@@ -23,5 +24,7 @@ namespace Raven.Database.Storage
 
 		string FriendlyName { get; }
 		bool HandleException(Exception exception);
+
+		void Compact(InMemoryRavenConfiguration configuration);
 	}
 }

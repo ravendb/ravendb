@@ -80,6 +80,8 @@ namespace Raven.Storage.Esent
 				path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
 			database = Path.Combine(path, "Data");
 
+			RecoverFromFailedCompact(database);
+
 			new TransactionalStorageConfigurator(configuration).LimitSystemCache();
 
 			Api.JetCreateInstance(out instance, database + Guid.NewGuid());
@@ -165,6 +167,66 @@ namespace Raven.Storage.Esent
 			// we need to protect ourselve from rollbacks happening in an async manner
 			// after the database was already shut down.
 			return e.Error == JET_err.InvalidInstance;
+		}
+
+		private static void RecoverFromFailedCompact(string file)
+		{
+			string renamedFile = file + ".RenameOp";
+			if (File.Exists(renamedFile) == false) // not in the middle of compact op, we are good
+				return;
+
+			if (File.Exists(file))
+			// we successfully renamed the new file and crashed before we could remove the old copy
+			{
+				//just complete the op and we are good (committed)
+				File.Delete(renamedFile);
+			}
+			else // we successfully renamed the old file and crashed before we could remove the new file
+			{
+				// just undo the op and we are good (rollback)
+				File.Move(renamedFile, file);
+			}
+		}
+
+		public void Compact(InMemoryRavenConfiguration ravenConfiguration)
+		{
+			var src = Path.Combine(ravenConfiguration.DataDirectory, "Data");
+			var compactPath = Path.Combine(ravenConfiguration.DataDirectory, "Data.Compact");
+			
+			if(File.Exists(compactPath))
+				File.Delete(compactPath);
+			RecoverFromFailedCompact(src);
+
+			JET_INSTANCE compactInstance;
+			Api.JetCreateInstance(out compactInstance, ravenConfiguration.DataDirectory + Guid.NewGuid());
+			try
+			{
+				new TransactionalStorageConfigurator(ravenConfiguration)
+					.ConfigureInstance(compactInstance, ravenConfiguration.DataDirectory);
+				Api.JetInit(ref compactInstance);
+				using(var session = new Session(compactInstance))
+				{
+					Api.JetAttachDatabase(session, src, AttachDatabaseGrbit.None);
+					try
+					{
+						Api.JetCompact(session, src, compactPath, null, null,
+								   CompactGrbit.None);
+					}
+					finally
+					{
+						Api.JetDetachDatabase(session, src);
+					}
+				}
+			}
+			finally
+			{
+				Api.JetTerm2(compactInstance, TermGrbit.Complete);
+			}
+
+			File.Move(src, src +".RenameOp");
+			File.Move(compactPath, src);
+			File.Delete(src + ".RenameOp");
+
 		}
 
 		public bool Initialize(IUuidGenerator uuidGenerator)

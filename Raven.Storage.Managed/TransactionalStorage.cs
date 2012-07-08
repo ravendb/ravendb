@@ -76,7 +76,7 @@ namespace Raven.Storage.Managed
 					idleTimer.Dispose();
 				if (persistenceSource != null)
 					persistenceSource.Dispose();
-				if(tableStroage != null)
+				if (tableStroage != null)
 					tableStroage.Dispose();
 			}
 			finally
@@ -87,7 +87,8 @@ namespace Raven.Storage.Managed
 
 		public Guid Id
 		{
-			get; private set;
+			get;
+			private set;
 		}
 
 		public void Batch(Action<IStorageActionsAccessor> action)
@@ -100,7 +101,7 @@ namespace Raven.Storage.Managed
 					return;
 				}
 			}
-		    disposerLock.EnterReadLock();
+			disposerLock.EnterReadLock();
 			try
 			{
 				if (disposed)
@@ -148,7 +149,7 @@ namespace Raven.Storage.Managed
 		public bool Initialize(IUuidGenerator generator)
 		{
 			uuidGenerator = generator;
-			if (configuration.RunInMemory  == false && Directory.Exists(configuration.DataDirectory) == false)
+			if (configuration.RunInMemory == false && Directory.Exists(configuration.DataDirectory) == false)
 				Directory.CreateDirectory(configuration.DataDirectory);
 
 			persistenceSource = configuration.RunInMemory
@@ -161,7 +162,7 @@ namespace Raven.Storage.Managed
 
 			tableStroage.Initialze();
 
-			if(persistenceSource.CreatedNew)
+			if (persistenceSource.CreatedNew)
 			{
 				Id = Guid.NewGuid();
 				Batch(accessor => tableStroage.Details.Put("id", Id.ToByteArray()));
@@ -179,7 +180,7 @@ namespace Raven.Storage.Managed
 		{
 			var backupOperation = new BackupOperation(database, persistenceSource, database.Configuration.DataDirectory, backupDestinationDirectory);
 			ThreadPool.QueueUserWorkItem(backupOperation.Execute);
-		
+
 		}
 
 		public void Restore(string backupLocation, string databaseLocation)
@@ -200,6 +201,16 @@ namespace Raven.Storage.Managed
 		public bool HandleException(Exception exception)
 		{
 			return false;
+		}
+
+		public void Compact(InMemoryRavenConfiguration compactConfiguration)
+		{
+			using (var ps = new FileBasedPersistentSource(compactConfiguration.DataDirectory, "Raven", configuration.TransactionMode == TransactionMode.Safe))
+			using (var storage = new TableStorage(ps))
+			{
+				storage.Compact();
+			}
+
 		}
 
 		private void MaybeOnIdle(object _)
