@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Net;
 using Raven.Client.Document;
 
 namespace Raven.Tryouts
@@ -9,18 +11,21 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			var val = "2012-05-31T20:58:43.9785585Z";
-			var formats = new[] { "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff", "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK" };
-
+			var webRequest = (HttpWebRequest)WebRequest.Create("http://localhost:8080/admin/compact?database=test");
+			webRequest.Method = "POST";
+			webRequest.UseDefaultCredentials = true;
+			webRequest.Credentials = CredentialCache.DefaultCredentials;
+			webRequest.ContentLength = 0;
 			try
 			{
-				var dateTime = DateTime.ParseExact(val, formats, CultureInfo.InvariantCulture, DateTimeStyles.None);
-				Console.WriteLine(dateTime.Kind);
+				webRequest.GetResponse();
+				Console.WriteLine("DONE");
 			}
-			catch (Exception e)
+			catch(WebException we)
 			{
-				Console.WriteLine(e);
+				Console.WriteLine(new StreamReader((we.Response.GetResponseStream())).ReadToEnd());
 			}
-		} 
+			Console.ReadLine();
+		}
 	}
 }
