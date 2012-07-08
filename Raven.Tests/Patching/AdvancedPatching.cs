@@ -48,18 +48,18 @@ namespace Raven.Tests.Patching
 			Assert.Equal("err!!", resultJson["newValue"]);
 		}
 
-		//[Fact]
-		//public void CanPerformAdvancedPatching_Remotely()
-		//{
-		//    using (GetNewServer())
-		//    using (var store = new DocumentStore
-		//    {
-		//        Url = "http://localhost:8080"
-		//    }.Initialize())
-		//    {
-		//        ExecuteTest(store);
-		//    }
-		//}
+		[Fact]
+		public void CanPerformAdvancedPatching_Remotely()
+		{
+			using (var server = GetNewServer(port:8079))
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				ExecuteTest(store);
+			}
+		}
 
 		[Fact]
 		public void CanPerformAdvancedPatching_Embedded()
@@ -71,26 +71,26 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
-		public void CanPerformAdvancedWithSetBasedUpdates_Embedded()
+		public void CanPerformAdvancedWithSetBasedUpdates_Remotely()
 		{
-			using (var store = NewDocumentStore())
+			using (var server = GetNewServer(port: 8079))
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
 			{
 				ExecuteSetBasedTest(store);
 			}
 		}
 
 		[Fact]
-		public void CanPerformAdvancedWithSetBasedUpdates_Remotely()
+		public void CanPerformAdvancedWithSetBasedUpdates_Embedded()
 		{
-			using (var server = GetNewServer(port:8079))
-			using (var store = new DocumentStore
+			using (var store = NewDocumentStore())
 			{
-				Url = "http://localhost:8079"
-			}.Initialize())
-			{
-				ExecuteTest(store);
+				ExecuteSetBasedTest(store);
 			}
-		}
+		}		
 
 		private void ExecuteTest(IDocumentStore store)
 		{

@@ -1136,7 +1136,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
 		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript)
 		{
-			throw new NotImplementedException();
+			UpdateByIndex(indexName, queryToUpdate, patchScript, false);
 		}
 
 		/// <summary>
@@ -1148,14 +1148,33 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
+			var requestData = new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented);
+			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData);
+		}
+
+		/// <summary>
+		/// Perform a set based update using the specified index
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript, bool allowStale)
+		{
+			var requestData = RavenJObject.FromObject(new { Script = patchScript }).ToString();
+			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData);
+		}
+
+		private void UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData)
+		{
 			ExecuteWithReplication<object>("PATCH", operationUrl =>
 			{
 				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, path, "PATCH", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
-				
-				request.Write(new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented));
+								
+				request.Write(requestData);
 				try
 				{
 					request.ReadResponseJson();
@@ -1169,18 +1188,6 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 				}
 				return null;
 			});
-		}
-
-		/// <summary>
-		/// Perform a set based update using the specified index
-		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript, bool allowStale)
-		{
-			throw new NotImplementedException();
 		}
 
 		/// <summary>
