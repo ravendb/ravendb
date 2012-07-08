@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Bundles.Encryption</RootNamespace>
     <AssemblyName>Raven.Bundles.Encryption</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -31,6 +31,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -50,11 +51,23 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants.cs" />
-    <Compile Include="DocumentEncryption.cs" />
-    <Compile Include="EncryptionSettings.cs" />
-    <Compile Include="EncryptionSettingsManager.cs" />
+    <Compile Include="Codec.cs" />
+    <Compile Include="CryptoTransformExtensions.cs" />
+    <Compile Include="Plugin\EncryptionSettingsPutTrigger.cs" />
+    <Compile Include="Streams\BlockReaderWriter.cs" />
+    <Compile Include="Streams\EncryptedFile.cs" />
+    <Compile Include="Streams\SeekableCryptoStream.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Streams\StructConverter.cs" />
+    <Compile Include="Plugin\IndexEncryption.cs" />
+    <Compile Include="Plugin\EncryptionSettingsDeleteTrigger.cs" />
+    <Compile Include="Plugin\DocumentEncryption.cs" />
+    <Compile Include="Settings\EncryptionSettings.cs" />
+    <Compile Include="Settings\EncryptionSettingsManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

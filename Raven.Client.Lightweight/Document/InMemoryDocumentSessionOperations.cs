@@ -596,13 +596,11 @@ more responsive application.
 				if (TryGetIdFromDynamic(entity, out id) == false)
 				{
 					id = GenerateKey(entity);
+					// If we generated a new id, store it back into the Id field so the client has access to to it                    
 					if (id != null)
-					{
-						// Store it back into the Id field so the client has access to to it                    
 						TrySetIdOnynamic(entity, id);
-					}
-					return id;
 				}
+				return id;
 			}
 #endif
 
@@ -624,19 +622,17 @@ more responsive application.
 			if (entity is IDynamicMetaObjectProvider)
 			{
 				string id;
-				if (TryGetIdFromDynamic(entity, out id) == false)
-				{
+				if (TryGetIdFromDynamic(entity, out id))
+					return CompletedTask.With(id);
+				else
 					return GenerateKeyAsync(entity)
 						.ContinueWith(task =>
 						{
+							// If we generated a new id, store it back into the Id field so the client has access to to it                    
 							if (task.Result != null)
-							{
-								// Store it back into the Id field so the client has access to to it                    
 								TrySetIdOnynamic(entity, task.Result);
-							}
 							return task.Result;
 						});
-				}
 			}
 			
 			return GetOrGenerateDocumentKeyAsync(entity)

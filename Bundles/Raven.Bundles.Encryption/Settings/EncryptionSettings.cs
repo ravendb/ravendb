@@ -7,14 +7,17 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Bundles.Encryption
+namespace Raven.Bundles.Encryption.Settings
 {
-	[Serializable]
-	public class EncryptionSettings : ISerializable
+	internal class EncryptionSettings
 	{
 		private byte[] encryptionKey;
 		private Type algorithmType;
 		private Func<SymmetricAlgorithm> algorithmGenerator;
+		private readonly bool encryptIndexes;
+
+		public bool CurrentlySettingKeyVerificationDocument;
+		public readonly Codec Codec;
 
 		public EncryptionSettings()
 			: this(GenerateRandomEncryptionKey())
@@ -27,8 +30,16 @@ namespace Raven.Bundles.Encryption
 		}
 
 		public EncryptionSettings(byte[] encryptionKey, Type symmetricAlgorithmType)
+			: this(encryptionKey, symmetricAlgorithmType, true)
+		{
+		}
+
+		public EncryptionSettings(byte[] encryptionKey, Type symmetricAlgorithmType, bool encryptIndexes)
 		{
 			this.EncryptionKey = encryptionKey;
+			this.encryptIndexes = encryptIndexes;
+
+			this.Codec = new Codec(this);
 
 			typeof(EncryptionSettings)
 				.GetMethod("SetSymmetricAlgorithmType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
@@ -38,13 +49,14 @@ namespace Raven.Bundles.Encryption
 
 		public static bool DontEncrypt(string key)
 		{
-			return key.StartsWith(Constants.DontEncryptDocumentsStartingWith, StringComparison.InvariantCultureIgnoreCase);
+			return key.StartsWith(Constants.DontEncryptDocumentsStartingWith, StringComparison.InvariantCultureIgnoreCase)
+				&& key != Constants.InDatabaseKeyVerificationDocumentName;
 		}
 
 		public byte[] EncryptionKey
 		{
 			get { return encryptionKey; }
-			set
+			private set
 			{
 				if (value == null)
 					throw new ArgumentNullException("EncryptionKey");
@@ -71,6 +83,11 @@ namespace Raven.Bundles.Encryption
 			get { return algorithmGenerator; }
 		}
 
+		public bool EncryptIndexes
+		{
+			get { return encryptIndexes; }
+		}
+
 		public static byte[] GenerateRandomEncryptionKey()
 		{
 			return GenerateRandomEncryptionKey(Constants.DefaultGeneratedEncryptionKeyLength);
@@ -81,16 +98,6 @@ namespace Raven.Bundles.Encryption
 			byte[] result = new byte[length];
 			RNGCryptoServiceProvider.Create().GetBytes(result);
 			return result;
-		}
-
-		protected EncryptionSettings(SerializationInfo info, StreamingContext context)
-			: this((byte[])info.GetValue("encryptionKey", typeof(byte[])),
-				(Type)info.GetValue("algorithmType", typeof(Type))) { }
-
-		void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
-		{
-			info.AddValue("encryptionKey", encryptionKey);
-			info.AddValue("algorithmType", algorithmType);
 		}
 	}
 }
