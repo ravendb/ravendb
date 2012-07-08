@@ -470,7 +470,7 @@ namespace Raven.Database
 				{
 					if (key.EndsWith("/"))
 					{
-						key += GetNextIdentityValueWithoutOverritingOnExistingDocuments(key, actions, transactionInformation);
+						key += GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions, transactionInformation);
 					}
 					if (transactionInformation == null)
 					{
@@ -501,7 +501,7 @@ namespace Raven.Database
 			};
 		}
 
-		private long GetNextIdentityValueWithoutOverritingOnExistingDocuments(string key, IStorageActionsAccessor actions, TransactionInformation transactionInformation)
+		private long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, IStorageActionsAccessor actions, TransactionInformation transactionInformation)
 		{
 			long nextIdentityValue;
 			do
@@ -1124,8 +1124,6 @@ namespace Raven.Database
 		{
 			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc =>
 			{
-				// TODO because we've introduce a "closuse" this doesn't work as expected ("jsonDoc")
-				// in there is different from the the instance down below, 
 				return new AdvancedJsonPatcher(jsonDoc).Apply(patchScript);
 			});
 		}
@@ -1167,18 +1165,14 @@ namespace Raven.Database
 					}
 					else
 					{
-						var jsonDoc = doc.ToJson();
-						//new JsonPatcher(jsonDoc).Apply(patchDoc);
-
-						///TODO Apply the patch (is this the best way to do it??????
-						jsonDoc = patcher(jsonDoc);
+						var jsonDoc = patcher(doc.ToJson());
 						try
 						{
 							Put(doc.Key, doc.Etag, jsonDoc, jsonDoc.Value<RavenJObject>("@metadata"), transactionInformation);
 						}
 						catch (ConcurrencyException)
 						{
-							if(retries-- > 0)
+							if (retries-- > 0)
 							{
 								shouldRetry = true;
 								return;
@@ -1201,8 +1195,8 @@ namespace Raven.Database
 
 			var commandDatas = commands.ToArray();
 			int retries = 128;
-			var shouldLock = commandDatas.Any(x=>x is PutCommandData || x is PatchCommandData);
-			var shouldRetryIfGotConcurrencyError = commandDatas.All(x => x is PatchCommandData);
+			var shouldLock = commandDatas.Any(x => (x is PutCommandData || x is PatchCommandData || x is AdvancedPatchCommandData));
+			var shouldRetryIfGotConcurrencyError = commandDatas.All(x => (x is PatchCommandData || x is AdvancedPatchCommandData));
 			bool shouldRetry = false;
 			if(shouldLock)
 				Monitor.Enter(putSerialLock);

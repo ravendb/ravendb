@@ -95,7 +95,5 @@ namespace Raven.Database.Impl
 			}
 			return array;
 		}
-
-
 	}
 }
