@@ -1,11 +1,8 @@
 ﻿extern alias database;
 
 using System;
-using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
-using Raven.Bundles.Versioning.Data;
-using Raven.Bundles.Versioning.Triggers;
 using Raven.Client.Document;
 using Raven.Server;
 
@@ -28,13 +25,10 @@ namespace Raven.Bundles.Tests.Versioning
 					Port = 8079,
 					DataDirectory = path,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					Catalog =
+					Settings =
 						{
-							Catalogs =
-								{
-									new AssemblyCatalog(typeof (VersioningPutTrigger).Assembly)
-								}
-						},
+							{"Raven/ActiveBundles", "Versioning"}
+						}
 				});
 			documentStore = new DocumentStore
 			{
@@ -43,17 +37,17 @@ namespace Raven.Bundles.Tests.Versioning
 			documentStore.Initialize();
 			using(var s = documentStore.OpenSession())
 			{
-				s.Store(new VersioningConfiguration
+				s.Store(new database::Raven.Bundles.Versioning.Data.VersioningConfiguration
 				{
 					Exclude = true,
 					Id = "Raven/Versioning/Users",
 				});
-				s.Store(new VersioningConfiguration
+				s.Store(new database::Raven.Bundles.Versioning.Data.VersioningConfiguration
 				{
 					Exclude = true,
 					Id = "Raven/Versioning/Comments",
 				});
-				s.Store(new VersioningConfiguration
+				s.Store(new database::Raven.Bundles.Versioning.Data.VersioningConfiguration
 				{
 					Exclude = false,
 					Id = "Raven/Versioning/DefaultConfiguration",

@@ -9,6 +9,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Bundles.MoreLikeThis;
 using Raven.Client.Indexes;
 using Xunit;
 using MoreLikeThisQueryParameters = Raven.Abstractions.Data.MoreLikeThisQueryParameters;
@@ -19,10 +20,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 	{
 		#region Test Setup
 
-		public MoreLikeThisTests() : base(config =>
-			{
-				config.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(database::Raven.Database.Bundles.MoreLikeThis.MoreLikeThisResponder).Assembly));
-			})
+		public MoreLikeThisTests() : base(config =>{})
 		{
 		}
 

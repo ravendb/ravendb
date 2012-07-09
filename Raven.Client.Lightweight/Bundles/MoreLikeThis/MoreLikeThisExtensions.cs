@@ -6,7 +6,7 @@ using Raven.Client.Document.SessionOperations;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
-namespace Raven.Client.Bundles
+namespace Raven.Client.Bundles.MoreLikeThis
 {
 	public static class MoreLikeThisExtensions
 	{

@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using Raven.Client.Document;
 
-namespace Raven.Client.Bundles
+namespace Raven.Client.Bundles.Versioning
 {
 	public static class VersioningExtensions
 	{
