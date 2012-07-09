@@ -11,6 +11,7 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Server.Responders.Admin
 {
@@ -34,41 +35,24 @@ namespace Raven.Database.Server.Responders.Admin
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var db = Uri.UnescapeDataString(match.Groups[1].Value);
 
+			DatabaseDocument dbDoc;
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
 					var document = Database.Get("Raven/Databases/" + db, null);
-					if(document == null)
+					if (document == null)
 					{
 						context.SetStatusToNotFound();
 						return;
 					}
-					var securedSettings = document.DataAsJson.Value<RavenJObject>("SecuredSettings");
-					if(securedSettings != null)
-					{
-						foreach (var securedSetting in securedSettings.Select(x=>x.Key).ToList())
-						{
-							var value = securedSettings.Value<string>(securedSetting);
-							var data = Convert.FromBase64String(value);
-							var entropy = Encoding.UTF8.GetBytes(securedSetting);
-							var unprotected = ProtectedData.Unprotect(data, entropy, DataProtectionScope.CurrentUser);
-							securedSettings[securedSetting] = Encoding.UTF8.GetString(unprotected);
-						}
-					}
-					context.WriteJson(document.DataAsJson);
+					dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
+					dbDoc.Id = db;	
+					server.Unprotect(dbDoc);
+					context.WriteJson(dbDoc);
 					break;
 				case "PUT":
-					var dbDoc = context.ReadJsonObject<DatabaseDocument>();
-					if(dbDoc.SecuredSettings != null)
-					{
-						foreach (var prop in dbDoc.SecuredSettings.ToList())
-						{
-							var bytes = Encoding.UTF8.GetBytes(prop.Value);
-							var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-							var protectedValue = ProtectedData.Protect(bytes, entrophy, DataProtectionScope.CurrentUser);
-							dbDoc.SecuredSettings[prop.Key] = Convert.ToBase64String(protectedValue);
-						}
-					}
+					dbDoc = context.ReadJsonObject<DatabaseDocument>();
+					server.Protect(dbDoc);
 					var json = RavenJObject.FromObject(dbDoc);
 					json.Remove("Id");
 
