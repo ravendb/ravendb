@@ -719,10 +719,10 @@ namespace Raven.Database.Config
 			switch (storageEngine.ToLowerInvariant())
 			{
 				case "esent":
-					storageEngine = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+					storageEngine = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 					break;
 				case "munin":
-					storageEngine = "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+					storageEngine = typeof (Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 					break;
 			}
 			var type = Type.GetType(storageEngine);
