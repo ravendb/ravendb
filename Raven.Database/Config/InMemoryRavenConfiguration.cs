@@ -60,10 +60,10 @@ namespace Raven.Database.Config
 
 		public void PostInit()
 		{
+			FilterActiveBundles();
+
 			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
 				SetupOAuth();
-
-			FilterActiveBundles();
 		}
 
 		public void Initialize()
@@ -223,6 +223,14 @@ namespace Raven.Database.Config
 				Catalog.Catalogs.Count == 1
 					? Catalog.Catalogs.First()
 					: new AggregateCatalog(Catalog.Catalogs);
+
+			var bundlesFilteredCatalog = catalog as BundlesFilteredCatalog;
+			if(bundlesFilteredCatalog != null)
+			{
+				bundlesFilteredCatalog.Bundles = bundles;
+				return;
+			}
+
 
 			Catalog.Catalogs.Clear();
 

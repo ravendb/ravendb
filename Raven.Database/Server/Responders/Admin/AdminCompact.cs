@@ -7,15 +7,8 @@ namespace Raven.Database.Server.Responders.Admin
 	{
 		public override void RespondToAdmin(IHttpContext context)
 		{
-			if(SystemDatabase != Database)
-			{
-				context.SetStatusToBadRequest();
-				context.WriteJson(new
-				{
-					Error = "Compact request can only be issued from the system database"
-				});
+			if (EnsureSystemDatabase(context) == false)
 				return;
-			}
 
 			var db = context.Request.QueryString["database"];
 			if(string.IsNullOrWhiteSpace(db))
@@ -42,5 +35,6 @@ namespace Raven.Database.Server.Responders.Admin
 			server.LockDatabase(db, () => 
 				SystemDatabase.TransactionalStorage.Compact(configuration));
 		}
+
 	}
 }

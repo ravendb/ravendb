@@ -8,6 +8,7 @@ using System;
 using System.Transactions;
 #endif
 using Raven.Client.Connection;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Extensions
@@ -32,25 +33,25 @@ namespace Raven.Client.Extensions
 		/// </remarks>
 		public static void EnsureDatabaseExists(this IDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			self = self.ForDefaultDatabase();
+			var serverClient = self.ForDefaultDatabase() as ServerClient;
+			if (serverClient == null)
+				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
+
 			var doc = MultiDatabase.CreateDatabaseDocument(name);
 			var docId = "Raven/Databases/" + name;
-			
-			using (new TransactionScope(TransactionScopeOption.Suppress))
+			try
 			{
-				try
-				{
-					if (self.Get(docId) != null)
-						return;
+				if (self.Get(docId) != null)
+					return;
 
-					self.Put(docId, null, doc, new RavenJObject());
-				}
-				catch (Exception)
-				{
-					if (ignoreFailures == false)
-						throw;
-
-				}
+				var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(name));
+				req.Write(doc.ToString(Formatting.Indented));
+				req.ExecuteRequest();
+			}
+			catch (Exception)
+			{
+				if (ignoreFailures == false)
+					throw;
 			}
 		}
 #endif
@@ -61,7 +62,10 @@ namespace Raven.Client.Extensions
 		///</summary>
 		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			self = self.ForDefaultDatabase();
+			var serverClient = self.ForDefaultDatabase() as AsyncServerClient;
+			if (serverClient == null)
+				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
+
 			var doc = MultiDatabase.CreateDatabaseDocument(name);
 			var docId = "Raven/Databases/" + name;
 
@@ -71,7 +75,9 @@ namespace Raven.Client.Extensions
 					if (get.Result != null)
 						return get;
 
-					return (Task)self.PutAsync(docId, null, doc, new RavenJObject());
+					var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(name));
+					req.Write(doc.ToString(Formatting.Indented));
+					return req.ExecuteRequestAsync();
 				})
 				.Unwrap()
 				.ContinueWith(x=>
