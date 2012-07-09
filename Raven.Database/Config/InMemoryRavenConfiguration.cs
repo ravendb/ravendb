@@ -738,16 +738,16 @@ namespace Raven.Database.Config
 		private string SelectStorageEngine()
 		{
 			if (RunInMemory)
-				return "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+				return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 
 			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
 				if (File.Exists(Path.Combine(DataDirectory, "Raven.ravendb")))
 				{
-					return "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+					return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 				}
 				if (File.Exists(Path.Combine(DataDirectory, "Data")))
-					return "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+					return typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 			}
 			return DefaultStorageTypeName;
 		}

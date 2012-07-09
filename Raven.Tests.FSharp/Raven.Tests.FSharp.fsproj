@@ -79,16 +79,6 @@
       <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
-      <Name>Raven.Storage.Esent</Name>
-      <Project>{9dee8674-d0cd-430d-bd9b-6cd95f3cab22}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
-      <Name>Raven.Storage.Managed</Name>
-      <Project>{da99a419-e137-40db-9495-0c363b479d4b}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <Reference Include="xunit">
       <HintPath>..\packages\xunit.1.9.0.1566\lib\xunit.dll</HintPath>
     </Reference>
