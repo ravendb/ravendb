@@ -459,7 +459,7 @@ task CreateNugetPackageFineGrained {
 	New-Item $nuget_dir\RavenDB.Bundles.MoreLikeThis\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.MoreLikeThis.nuspec $nuget_dir\RavenDB.Bundles.MoreLikeThis\RavenDB.Bundles.MoreLikeThis.nuspec
 	@("Raven.Bundles.MoreLikeThis.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.MoreLikeThis\lib\net40 }
-		
+
 	New-Item $nuget_dir\RavenDB.Client.UniqueConstraints\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.UniqueConstraints.nuspec $nuget_dir\RavenDB.Client.UniqueConstraints\RavenDB.Client.UniqueConstraints.nuspec
 	@("Raven.Client.UniqueConstraints.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.UniqueConstraints\lib\net40 }
@@ -476,6 +476,10 @@ task CreateNugetPackageFineGrained {
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Authorization.nuspec $nuget_dir\RavenDB.Bundles.Authorization\RavenDB.Bundles.Authorization.nuspec
 	@("Raven.Bundles.Authorization.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Authorization\lib\net40 }
 	
+	New-Item $nuget_dir\RavenDB.Client.Authorization\lib\net40 -Type directory | Out-Null
+	Copy-Item $base_dir\NuGet\RavenDB.Client.Authorization.nuspec $nuget_dir\RavenDB.Client.Authorization\RavenDB.Client.Authorization.nuspec
+	@("Raven.Client.Authorization.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client.Authorization\lib\net40 }
+
 	New-Item $nuget_dir\RavenDB.Bundles.CascadeDelete\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.CascadeDelete.nuspec $nuget_dir\RavenDB.Bundles.CascadeDelete\RavenDB.Bundles.CascadeDelete.nuspec
 	@("Raven.Bundles.CascadeDelete.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.CascadeDelete\lib\net40 }
