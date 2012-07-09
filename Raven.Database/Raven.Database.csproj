@@ -126,6 +126,7 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
@@ -236,8 +237,8 @@
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
     <Compile Include="Server\NotificationsConnection.cs" />
-    <Compile Include="Server\Responders\AdminRunIdleOperations.cs" />
-    <Compile Include="Server\Responders\AdminStats.cs" />
+    <Compile Include="Server\Responders\Admin\AdminRunIdleOperations.cs" />
+    <Compile Include="Server\Responders\Admin\AdminStats.cs" />
     <Compile Include="Server\Responders\DatabaseSize.cs" />
     <Compile Include="Server\Responders\Favicon.cs" />
     <Compile Include="Server\Responders\Licensing.cs" />
@@ -489,9 +490,9 @@
     <Compile Include="Queries\TermsQueryRunner.cs" />
     <Compile Include="Queries\TermsQueryRunnerExtensions.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
-    <Compile Include="Server\Responders\AdminBackup.cs" />
-    <Compile Include="Server\Responders\AdminStartIndexing.cs" />
-    <Compile Include="Server\Responders\AdminStopIndexing.cs" />
+    <Compile Include="Server\Responders\Admin\AdminBackup.cs" />
+    <Compile Include="Server\Responders\Admin\AdminStartIndexing.cs" />
+    <Compile Include="Server\Responders\Admin\AdminStopIndexing.cs" />
     <Compile Include="Server\Responders\BuildVersion.cs" />
     <Compile Include="Server\Responders\ClientAccessPolicy.cs" />
     <Compile Include="Server\Responders\Databases.cs" />
