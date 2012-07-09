@@ -439,6 +439,7 @@ task CreateNugetPackageFineGrained {
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
 	@("Raven.Client.Embedded.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Embedded\lib\net40 }
+	Remove-Item $nuget_dir\RavenDB.Embedded\lib\net40\*.xap | Out-Null
 	New-Item $nuget_dir\RavenDB.Embedded\content -Type directory | Out-Null
 	Copy-Item "$build_dir\Raven.Studio.xap" $nuget_dir\RavenDB.Embedded\content
 	

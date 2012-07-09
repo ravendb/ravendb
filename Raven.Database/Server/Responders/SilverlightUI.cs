@@ -64,6 +64,21 @@ namespace Raven.Database.Server.Responders
 			yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
 			// web ui path
 			yield return Path.Combine(webDir, fileName);
+
+			var options = new[]
+			              	{
+			              		@"..\..\..\packages", // assuming we are in slnDir\Project.Name\bin\debug 		
+			              		@"..\..\packages"
+			              	};
+			foreach (var option in options)
+			{
+				foreach (var dir in Directory.GetDirectories(option, "RavenDB.Embedded*").OrderByDescending(x => x))
+				{
+					var contentDir = Path.Combine(dir, "content");
+					if (Directory.Exists(contentDir))
+						yield return contentDir;
+				}
+			}
 		}
 	}
 }
