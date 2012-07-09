@@ -1,18 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿extern alias database;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using Lucene.Net.Analysis;
-using Lucene.Net.Analysis.Standard;
 using Raven.Abstractions.Indexing;
-using Raven.Bundles.MoreLikeThis;
 using Raven.Client.Indexes;
-using Raven.Client.MoreLikeThis;
 using Xunit;
-using MoreLikeThisQueryParameters = Raven.Client.MoreLikeThis.MoreLikeThisQueryParameters;
+using MoreLikeThisQueryParameters = Raven.Abstractions.Data.MoreLikeThisQueryParameters;
 
 
 namespace Raven.Bundles.Tests.MoreLikeThis
@@ -26,7 +19,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		public MoreLikeThis_should_support_MapReduce_indexes() :
 			base(config =>
 		{
-			config.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(MoreLikeThisResponder).Assembly));
+			config.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(database::Raven.Database.Bundles.MoreLikeThis.MoreLikeThisResponder).Assembly));
 		})
 		{
 			using (var session = documentStore.OpenSession())

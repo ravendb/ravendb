@@ -579,6 +579,7 @@
     <Compile Include="Data\JsonDocumentMetadata.cs" />
     <Compile Include="Data\LicensingStatus.cs" />
     <Compile Include="Data\LogItem.cs" />
+    <Compile Include="Data\MoreLikeThisQueryParameters.cs" />
     <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="Data\PatchCommandType.cs" />
     <Compile Include="Data\PatchRequest.cs" />
@@ -587,6 +588,7 @@
     <Compile Include="Data\ServerError.cs" />
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />
+    <Compile Include="Data\StopWordsSetup.cs" />
     <Compile Include="Data\StringDistanceTypes.cs" />
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />

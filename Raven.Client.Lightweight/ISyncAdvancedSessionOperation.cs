@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 #if !NET35
+using Raven.Abstractions.Data;
 using Raven.Client.Document.Batches;
 using Raven.Client.Connection.Async;
 #endif
@@ -19,6 +20,14 @@ namespace Raven.Client
 	/// </summary>
 	public interface ISyncAdvancedSessionOperation : IAdvancedDocumentSessionOperations
 	{
+
+		T[] MoreLikeThis<T, TIndexCreator>(string documentId) 
+			where TIndexCreator : AbstractIndexCreationTask, new();
+		T[] MoreLikeThis<T>(string index, string documentId);
+		T[] MoreLikeThis<T>(string index, MoreLikeThisQueryParameters parameters);
+		T[] MoreLikeThis<T, TIndexCreator>(MoreLikeThisQueryParameters parameters)
+			where TIndexCreator : AbstractIndexCreationTask, new();
+
 		/// <summary>
 		/// Refreshes the specified entity from Raven server.
 		/// </summary>

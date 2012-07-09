@@ -520,6 +520,26 @@ namespace Raven.Client.Shard
 			}
 		}
 
+		public T[] MoreLikeThis<T, TIndexCreator>(string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			throw new NotSupportedException("MoreLikeThis cannot work in a sharded envrionment");
+		}
+
+		public T[] MoreLikeThis<T>(string index, string documentId)
+		{
+			throw new NotSupportedException("MoreLikeThis cannot work in a sharded envrionment");
+		}
+
+		public T[] MoreLikeThis<T>(string index, MoreLikeThisQueryParameters parameters)
+		{
+			throw new NotSupportedException("MoreLikeThis cannot work in a sharded envrionment");
+		}
+
+		public T[] MoreLikeThis<T, TIndexCreator>(MoreLikeThisQueryParameters parameters) where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			throw new NotSupportedException("MoreLikeThis cannot work in a sharded envrionment");
+		}
+
 		void ISyncAdvancedSessionOperation.Refresh<T>(T entity)
 		{
 			DocumentMetadata value;

@@ -9,23 +9,19 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
-using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
-using Constants = Raven.Abstractions.Data.Constants;
 using Index = Raven.Database.Indexing.Index;
 
-namespace Raven.Bundles.MoreLikeThis
+namespace Raven.Database.Bundles.MoreLikeThis
 {
 	public class MoreLikeThisResponder : RequestResponder
 	{
@@ -42,7 +38,7 @@ namespace Raven.Bundles.MoreLikeThis
 		public override void Respond(IHttpContext context)
 		{
 			var parameters = MoreLikeThisQueryParameters.GetParametersFromPath(context.GetRequestUrl(), context.Request.QueryString);
-            
+
 			var index = Database.IndexStorage.GetIndexInstance(parameters.IndexName);
 			if (index == null)
 			{
@@ -71,13 +67,13 @@ namespace Raven.Bundles.MoreLikeThis
 				if (!string.IsNullOrEmpty(parameters.DocumentId))
 				{
 					documentQuery.Add(new TermQuery(new Term(Constants.DocumentIdFieldName, parameters.DocumentId.ToLowerInvariant())),
-					                  BooleanClause.Occur.MUST);
+									  BooleanClause.Occur.MUST);
 				}
 
 				foreach (string key in parameters.MapGroupFields.Keys)
 				{
 					documentQuery.Add(new TermQuery(new Term(key, parameters.MapGroupFields[key])),
-					                  BooleanClause.Occur.MUST);
+									  BooleanClause.Occur.MUST);
 				}
 
 				var td = searcher.Search(documentQuery, 1);
@@ -86,7 +82,7 @@ namespace Raven.Bundles.MoreLikeThis
 				if (td.ScoreDocs.Length == 0)
 				{
 					context.SetStatusToNotFound();
-					context.WriteJson(new {Error = "Document " + parameters.DocumentId + " could not be found"});
+					context.WriteJson(new { Error = "Document " + parameters.DocumentId + " could not be found" });
 					return;
 				}
 
@@ -191,7 +187,7 @@ namespace Raven.Bundles.MoreLikeThis
 					.ToArray();
 			}
 
-			var fields = searcher.Doc(baseDocId).GetFields().Cast<AbstractField>().Select(x=>x.Name()).Distinct().ToArray();
+			var fields = searcher.Doc(baseDocId).GetFields().Cast<AbstractField>().Select(x => x.Name()).Distinct().ToArray();
 			var etag = Database.GetIndexEtag(indexName, null);
 			return hits
 				.Where(hit => hit.doc != baseDocId)

@@ -571,6 +571,62 @@ namespace Raven.Client.Document
 			return Advanced.LuceneQuery<T>(indexName);
 		}
 
+		public T[] MoreLikeThis<T>(string index, MoreLikeThisQueryParameters parameters)
+		{
+			var cmd = this.DatabaseCommands as ServerClient;
+			if (cmd == null)
+				throw new NotImplementedException("Embedded client isn't supported by the MoreLikeThis bundle");
+
+			// /morelikethis/(index-name)/(ravendb-document-id)?fields=(fields)
+			EnsureIsNotNullOrEmpty(index, "index");
+
+			IncrementRequestCount();
+			var multiLoadOperation = new MultiLoadOperation(this, cmd.DisableAllCaching);
+			MultiLoadResult multiLoadResult;
+			do
+			{
+				multiLoadOperation.LogOperation();
+				using (multiLoadOperation.EnterMultiLoadContext())
+				{
+					var result = cmd.ExecuteGetRequest(parameters.GetRequestUri(index));
+
+					multiLoadResult = ((RavenJObject)result).Deserialize<MultiLoadResult>(Conventions);
+				}
+			} while (multiLoadOperation.SetResult(multiLoadResult));
+
+			return multiLoadOperation.Complete<T>();
+		}
+
+		public T[] MoreLikeThis<T, TIndexCreator>(string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			var indexCreator = new TIndexCreator();
+			return MoreLikeThis<T>(indexCreator.IndexName, new MoreLikeThisQueryParameters
+			{
+				DocumentId = documentId
+			});
+		}
+
+		public T[] MoreLikeThis<T, TIndexCreator>(MoreLikeThisQueryParameters parameters) where TIndexCreator : AbstractIndexCreationTask, new()
+		{
+			var indexCreator = new TIndexCreator();
+			return MoreLikeThis<T>(indexCreator.IndexName, parameters);
+		}
+
+
+		public T[] MoreLikeThis<T>(string index, string documentId)
+		{
+			return MoreLikeThis<T>(index, new MoreLikeThisQueryParameters
+			{
+				DocumentId = documentId
+			});
+		}
+
+		private static void EnsureIsNotNullOrEmpty(string key, string argName)
+		{
+			if (string.IsNullOrEmpty(key))
+				throw new ArgumentException("Key cannot be null or empty", argName);
+		}
+
 #if !NET35
 
 		/// <summary>

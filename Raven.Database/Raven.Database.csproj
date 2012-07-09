@@ -117,6 +117,17 @@
     </Compile>
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
+    <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
+    <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
+    <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
+    <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
+    <Compile Include="Bundles\Quotas\Documents\Triggers\DatabaseCountDocumentDeleteTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Documents\Triggers\DatabaseCountQoutaForDocumentsPutTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Size\SizeQuotaConfiguration.cs" />
+    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeAttachmentDeleteTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeDocumentDeleteTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeQoutaForAttachmentsPutTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeQoutaForDocumentsPutTrigger.cs" />
     <Compile Include="Bundles\Replication\Data\DestinationFailureInformation.cs" />
     <Compile Include="Bundles\Replication\Data\SourceReplicationInformation.cs" />
     <Compile Include="Bundles\Replication\Impl\ReplicationHiLo.cs" />

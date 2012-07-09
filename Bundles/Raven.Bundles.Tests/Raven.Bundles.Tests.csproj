@@ -184,10 +184,6 @@
       <Project>{2728BBA7-5142-445E-BAA5-142A25E0666D}</Project>
       <Name>Raven.Bundles.IndexReplication</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Bundles.MoreLikeThis\Raven.Bundles.MoreLikeThis.csproj">
-      <Project>{EA00C89B-161A-4D62-8A88-9063900F0BC2}</Project>
-      <Name>Raven.Bundles.MoreLikeThis</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.UniqueConstraints\Raven.Bundles.UniqueConstraints.csproj">
       <Project>{4C026F8A-FB36-4A30-82E9-324D207F6B48}</Project>
       <Name>Raven.Bundles.UniqueConstraints</Name>
@@ -204,11 +200,6 @@
     <ProjectReference Include="..\Raven.Client.IndexedProperties\Raven.Client.IndexedProperties.csproj">
       <Project>{F41C7F7E-A287-449A-A545-E7152937EF77}</Project>
       <Name>Raven.Client.IndexedProperties</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.MoreLikeThis\Raven.Client.MoreLikeThis.csproj">
-      <Project>{039CB1C3-C4F3-4D87-A2C0-7531E386E6A3}</Project>
-      <Name>Raven.Client.MoreLikeThis</Name>
-      <Aliases>global</Aliases>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.UniqueConstraints\Raven.Client.UniqueConstraints.csproj">
       <Project>{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}</Project>
