@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using Xunit;
-using Raven.Client.Versioning;
 
 namespace Raven.Bundles.Tests.Versioning
 {

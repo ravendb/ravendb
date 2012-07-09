@@ -118,6 +118,11 @@
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
+    <Compile Include="Bundles\Versioning\Data\VersioningConfiguration.cs" />
+    <Compile Include="Bundles\Versioning\Triggers\HideVersionedDocumentsFromIndexingTrigger.cs" />
+    <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
+    <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
+    <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />

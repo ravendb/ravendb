@@ -1,6 +1,5 @@
 using Raven.Bundles.Versioning.Data;
 using Xunit;
-using Raven.Client.Versioning;
 
 namespace Raven.Bundles.Tests.Versioning.Bugs
 {

@@ -188,10 +188,6 @@
       <Project>{4C026F8A-FB36-4A30-82E9-324D207F6B48}</Project>
       <Name>Raven.Bundles.UniqueConstraints</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Bundles.Versioning\Raven.Bundles.Versioning.csproj">
-      <Project>{22BCC20F-FC1F-4523-A717-77CDF8519C1D}</Project>
-      <Name>Raven.Bundles.Versioning</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Authorization\Raven.Client.Authorization.csproj">
       <Project>{3A852FD2-E0F9-449C-8F66-0C6A180D030A}</Project>
       <Name>Raven.Client.Authorization</Name>
@@ -204,10 +200,6 @@
     <ProjectReference Include="..\Raven.Client.UniqueConstraints\Raven.Client.UniqueConstraints.csproj">
       <Project>{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}</Project>
       <Name>Raven.Client.UniqueConstraints</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.Versioning\Raven.Client.Versioning.csproj">
-      <Project>{ADC25452-35F2-488E-9F2F-40C76F4927DB}</Project>
-      <Name>Raven.Client.Versioning</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

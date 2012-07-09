@@ -1,9 +1,9 @@
 ﻿using System.Linq;
 using Raven.Client.Document;
 
-namespace Raven.Client.Versioning
+namespace Raven.Client.Bundles
 {
-	public static class VersioningClientExtensions
+	public static class VersioningExtensions
 	{
 		public static T[] GetRevisionsFor<T>(this ISyncAdvancedSessionOperation session, string id, int start, int pageSize)
 		{
