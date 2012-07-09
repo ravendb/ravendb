@@ -25,7 +25,7 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			var fromTxId = new Guid(context.Request.QueryString["fromTxId"]);
-			context.WriteData(Database.PromoteTransaction(fromTxId), new RavenJObject(), Guid.NewGuid());
+			context.WriteData(Raven.Database.PromoteTransaction(fromTxId), new RavenJObject(), Guid.NewGuid());
 		}
 	}
 }

@@ -24,7 +24,7 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			var txId = context.Request.QueryString["tx"];
-			Database.Rollback(new Guid(txId));
+			Raven.Database.Rollback(new Guid(txId));
 			context.WriteJson(new { Rollbacked = txId });
 		}
 	}

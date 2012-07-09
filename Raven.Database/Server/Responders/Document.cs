@@ -42,7 +42,7 @@ namespace Raven.Database.Server.Responders
 					Get(context, docId);
 					break;
 				case "DELETE":
-					Database.Delete(docId, context.GetEtag(), GetRequestTransaction(context));
+					Raven.Database.Delete(docId, context.GetEtag(), GetRequestTransaction(context));
 					context.SetStatusToDeleted();
 					break;
 				case "PUT":
@@ -51,14 +51,14 @@ namespace Raven.Database.Server.Responders
 				case "PATCH":
 					var patchRequestJson = context.ReadJsonArray();
 					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
-					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchRequests, GetRequestTransaction(context));
+					var patchResult = Raven.Database.ApplyPatch(docId, context.GetEtag(), patchRequests, GetRequestTransaction(context));
 					switch (patchResult)
 					{
 						case PatchResult.DocumentDoesNotExists:
 							context.SetStatusToNotFound();
 							break;
 						case PatchResult.Patched:
-							context.Response.AddHeader("Location", Database.Configuration.GetFullUrl("/docs/" + docId));
+							context.Response.AddHeader("Location", Raven.Database.Configuration.GetFullUrl("/docs/" + docId));
 							context.WriteJson(new {Patched = true});
 							break;
 						default:
@@ -77,11 +77,11 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
-			Database.TransactionalStorage.Batch(
+			Raven.Database.TransactionalStorage.Batch(
 				_ => // we are running this here to ensure transactional safety for the two operations
 				{
 					var transactionInformation = GetRequestTransaction(context);
-					var documentMetadata = Database.GetDocumentMetadata(docId, transactionInformation);
+					var documentMetadata = Raven.Database.GetDocumentMetadata(docId, transactionInformation);
 					if (documentMetadata == null)
 					{
 						context.SetStatusToNotFound();
@@ -107,7 +107,7 @@ namespace Raven.Database.Server.Responders
 			context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
 
 			var transactionInformation = GetRequestTransaction(context);
-			var documentMetadata = Database.GetDocumentMetadata(docId, transactionInformation);
+			var documentMetadata = Raven.Database.GetDocumentMetadata(docId, transactionInformation);
 			if (documentMetadata == null)
 			{
 				context.SetStatusToNotFound();
@@ -131,7 +131,7 @@ namespace Raven.Database.Server.Responders
 
 		private void GetDocumentDirectly(IHttpContext context, string docId)
 		{
-			var doc = Database.Get(docId, GetRequestTransaction(context));
+			var doc = Raven.Database.Get(docId, GetRequestTransaction(context));
 			if (doc == null)
 			{
 				context.SetStatusToNotFound();
@@ -151,7 +151,7 @@ namespace Raven.Database.Server.Responders
 		{
 			var json = context.ReadJson();
 			context.SetStatusToCreated("/docs/" + docId);
-			var putResult = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders(), GetRequestTransaction(context));
+			var putResult = Raven.Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders(), GetRequestTransaction(context));
 			context.WriteJson(putResult);
 		}
 	}

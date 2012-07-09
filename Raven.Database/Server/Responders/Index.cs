@@ -42,7 +42,7 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "HEAD":
-					if(Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.InvariantCultureIgnoreCase) == false)
+					if(Raven.Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.InvariantCultureIgnoreCase) == false)
 						context.SetStatusToNotFound();
 					break;
 				case "GET":
@@ -52,12 +52,12 @@ namespace Raven.Database.Server.Responders
 					Put(context, index);
 					break;
 				case "RESET":
-					Database.ResetIndex(index);
+					Raven.Database.ResetIndex(index);
 					context.WriteJson(new {Reset = index});
 					break;
 				case "DELETE":
 					context.SetStatusToDeleted();
-					Database.DeleteIndex(index);
+					Raven.Database.DeleteIndex(index);
 					break;
 			}
 		}
@@ -72,7 +72,7 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 			context.SetStatusToCreated("/indexes/" + index);
-			context.WriteJson(new { Index = Database.PutIndex(index, data) });
+			context.WriteJson(new { Index = Raven.Database.PutIndex(index, data) });
 		}
 
 		private void OnGet(IHttpContext context, string index)
@@ -97,7 +97,7 @@ namespace Raven.Database.Server.Responders
 
 		private void GetIndexMappedResult(IHttpContext context, string index)
 		{
-			if(Database.IndexDefinitionStorage.GetIndexDefinition(index)==null)
+			if(Raven.Database.IndexDefinitionStorage.GetIndexDefinition(index)==null)
 			{
 				context.SetStatusToNotFound();
 				return;
@@ -105,7 +105,7 @@ namespace Raven.Database.Server.Responders
 
 			var etag = context.GetEtagFromQueryString() ?? Guid.Empty;
 			List<MappedResultInfo> mappedResult = null;
-			Database.TransactionalStorage.Batch(accessor =>
+			Raven.Database.TransactionalStorage.Batch(accessor =>
 			{
 				mappedResult = accessor.MappedResults.GetMappedResultsReduceKeysAfter(index, etag, 
 					loadData: true, 
@@ -131,7 +131,7 @@ namespace Raven.Database.Server.Responders
 					.Select(x => x["@metadata"].Value<string>("@id"))
 					.Where(x => x != null)
 				);
-			var command = new AddIncludesCommand(Database, GetRequestTransaction(context),
+			var command = new AddIncludesCommand(Raven.Database, GetRequestTransaction(context),
 			                                     (etag, doc) => queryResult.Includes.Add(doc), includes, loadedIds);
 			foreach (var result in queryResult.Results)
 			{
@@ -147,14 +147,14 @@ namespace Raven.Database.Server.Responders
 
 		private void GetIndexDefinition(IHttpContext context, string index)
 		{
-			var indexDefinition = Database.GetIndexDefinition(index);
+			var indexDefinition = Raven.Database.GetIndexDefinition(index);
 			if(indexDefinition == null)
 			{
 				context.SetStatusToNotFound();
 				return;
 			}
 
-			indexDefinition.Fields = Database.GetIndexFields(index);
+			indexDefinition.Fields = Raven.Database.GetIndexFields(index);
 
 			context.WriteJson(new
 			{
@@ -164,7 +164,7 @@ namespace Raven.Database.Server.Responders
 
 		private void GetIndexSource(IHttpContext context, string index)
 		{
-			var viewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(index);
+			var viewGenerator = Raven.Database.IndexDefinitionStorage.GetViewGenerator(index);
 			if (viewGenerator == null)
 			{
 				context.SetStatusToNotFound();
@@ -176,7 +176,7 @@ namespace Raven.Database.Server.Responders
 
 		private QueryResultWithIncludes ExecuteQuery(IHttpContext context, string index, out Guid indexEtag)
 		{
-			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+			var indexQuery = context.GetIndexQueryFromHttpContext(Raven.Database.Configuration.MaxPageSize);
 
 			RewriteDateQueriesFromOldClients(context,indexQuery);
 
@@ -236,15 +236,15 @@ namespace Raven.Database.Server.Responders
 
 		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
 		{
-			indexEtag = Database.GetIndexEtag(index, null);
+			indexEtag = Raven.Database.GetIndexEtag(index, null);
 			if (context.MatchEtag(indexEtag))
 			{
 				context.SetStatusToNotModified();
 				return null;
 			}
 
-			var queryResult = Database.Query(index, indexQuery);
-			indexEtag = Database.GetIndexEtag(index, queryResult.ResultEtag);
+			var queryResult = Raven.Database.Query(index, indexQuery);
+			indexEtag = Raven.Database.GetIndexEtag(index, queryResult.ResultEtag);
 			return queryResult;
 		}
 
@@ -254,12 +254,12 @@ namespace Raven.Database.Server.Responders
 			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
 				entityName = index.Substring("dynamic/".Length);
 
-			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);
+			var dynamicIndexName = Raven.Database.FindDynamicIndexName(entityName, indexQuery);
 
 			if (dynamicIndexName != null && 
-				Database.IndexStorage.HasIndex(dynamicIndexName))
+				Raven.Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
-				indexEtag = Database.GetIndexEtag(dynamicIndexName, null);
+				indexEtag = Raven.Database.GetIndexEtag(dynamicIndexName, null);
 				if (context.MatchEtag(indexEtag))
 				{
 					context.SetStatusToNotModified();
@@ -267,14 +267,14 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
-			var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
+			var queryResult = Raven.Database.ExecuteDynamicQuery(entityName, indexQuery);
 
 			// have to check here because we might be getting the index etag just 
 			// as we make a switch from temp to auto, and we need to refresh the etag
 			// if that is the case. This can also happen when the optmizer
 			// decided to switch indexes for a query.
 			indexEtag = (dynamicIndexName  == null || queryResult.IndexName == dynamicIndexName) ?
-				Database.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag) : 
+				Raven.Database.GetIndexEtag(queryResult.IndexName, queryResult.ResultEtag) : 
 				Guid.NewGuid();
 
 			return queryResult;

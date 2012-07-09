@@ -30,7 +30,7 @@ namespace Raven.Database.Server.Responders
 			{
 				case "GET":
 					Guid lastDocEtag = Guid.Empty;
-					Database.TransactionalStorage.Batch(accessor =>
+					Raven.Database.TransactionalStorage.Batch(accessor =>
 					{
 						lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 					});
@@ -45,15 +45,15 @@ namespace Raven.Database.Server.Responders
 
 						var startsWith = context.Request.QueryString["startsWith"];
 						if (string.IsNullOrEmpty(startsWith))
-							context.WriteJson(Database.GetDocuments(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize), context.GetEtagFromQueryString()));
+							context.WriteJson(Raven.Database.GetDocuments(context.GetStart(), context.GetPageSize(Raven.Database.Configuration.MaxPageSize), context.GetEtagFromQueryString()));
 						else
-							context.WriteJson(Database.GetDocumentsWithIdStartingWith(startsWith, context.GetStart(),
-																					  context.GetPageSize(Database.Configuration.MaxPageSize)));
+							context.WriteJson(Raven.Database.GetDocumentsWithIdStartingWith(startsWith, context.GetStart(),
+																					  context.GetPageSize(Raven.Database.Configuration.MaxPageSize)));
 					}
 					break;
 				case "POST":
 					var json = context.ReadJson();
-					var id = Database.Put(null, Guid.NewGuid(), json,
+					var id = Raven.Database.Put(null, Guid.NewGuid(), json,
 										  context.Request.Headers.FilterHeaders(),
 										  GetRequestTransaction(context));
 					context.SetStatusToCreated("/docs/" + id);

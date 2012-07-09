@@ -23,7 +23,7 @@ namespace Raven.Database.Server.Responders
 			{
 				case "GET":
 					Guid lastDocEtag = Guid.Empty;
-					Database.TransactionalStorage.Batch(accessor =>
+					Raven.Database.TransactionalStorage.Batch(accessor =>
 					{
 						lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
 					});
@@ -36,7 +36,7 @@ namespace Raven.Database.Server.Responders
 					{
 						context.WriteHeaders(new RavenJObject(), lastDocEtag);
 
-						context.WriteJson(Database.GetDocumentsWithIdStartingWith("Raven/Databases/", context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize)));
+						context.WriteJson(Raven.Database.GetDocumentsWithIdStartingWith("Raven/Databases/", context.GetStart(), context.GetPageSize(Raven.Database.Configuration.MaxPageSize)));
 					}
 					break;
 			}

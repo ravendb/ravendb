@@ -21,7 +21,7 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					var totalSizeOnDisk = Database.GetTotalSizeOnDisk();
+					var totalSizeOnDisk = Raven.Database.GetTotalSizeOnDisk();
 					context.WriteJson(new
 					{
 						DatabaseSize = totalSizeOnDisk,

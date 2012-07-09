@@ -39,9 +39,9 @@ namespace Raven.Database.Server.Responders
 			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
 			var transactionInformation = GetRequestTransaction(context);
 		    var includedEtags = new List<byte>();
-			Database.TransactionalStorage.Batch(actions =>
+			Raven.Database.TransactionalStorage.Batch(actions =>
 			{
-				var addIncludesCommand = new AddIncludesCommand(Database, transactionInformation, (etag, includedDoc) =>
+				var addIncludesCommand = new AddIncludesCommand(Raven.Database, transactionInformation, (etag, includedDoc) =>
 				{
 					includedEtags.AddRange(etag.ToByteArray());
 				    result.Includes.Add(includedDoc);
@@ -51,7 +51,7 @@ namespace Raven.Database.Server.Responders
 					var value = item.Value<string>();
 					if(loadedIds.Add(value)==false)
 						continue;
-					var documentByKey = Database.Get(value, transactionInformation);
+					var documentByKey = Raven.Database.Get(value, transactionInformation);
 					if (documentByKey == null)
 						continue;
 					result.Results.Add(documentByKey.ToJson());

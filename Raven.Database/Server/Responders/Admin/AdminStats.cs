@@ -7,7 +7,7 @@ namespace Raven.Database.Server.Responders.Admin
 	{
 		public override void RespondToAdmin(IHttpContext context)
 		{
-			if(ResourceStore != DefaultResourceStore)
+			if(Database != SystemDatabase)
 			{
 				context.SetStatusToBadRequest();
 				context.WriteJson(new

@@ -26,9 +26,9 @@ namespace Raven.Database.Server.Responders
 			var index = match.Groups[1].Value;
 
 			var facetSetupDoc = context.GetFacetSetupDocFromHttpContext();
-			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+			var indexQuery = context.GetIndexQueryFromHttpContext(Raven.Database.Configuration.MaxPageSize);
 
-			var jsonDocument = Database.Get(facetSetupDoc, null);
+			var jsonDocument = Raven.Database.Get(facetSetupDoc, null);
 			if(jsonDocument == null)
 			{
 				context.SetStatusToNotFound();
@@ -44,7 +44,7 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 			context.WriteETag(etag);
-			context.WriteJson(Database.ExecuteGetTermsQuery(index, indexQuery, facetSetupDoc));
+			context.WriteJson(Raven.Database.ExecuteGetTermsQuery(index, indexQuery, facetSetupDoc));
 		}
 
 		private Guid GetFacetsEtag(JsonDocument jsonDocument, string index)
@@ -52,7 +52,7 @@ namespace Raven.Database.Server.Responders
 			Guid etag;
 			using(var md5 = MD5.Create())
 			{
-				var etagBytes = md5.ComputeHash(Database.GetIndexEtag(index, null).ToByteArray().Concat(jsonDocument.Etag.Value.ToByteArray()).ToArray());
+				var etagBytes = md5.ComputeHash(Raven.Database.GetIndexEtag(index, null).ToByteArray().Concat(jsonDocument.Etag.Value.ToByteArray()).ToArray());
 				etag = new Guid(etagBytes);
 			}
 			return etag;

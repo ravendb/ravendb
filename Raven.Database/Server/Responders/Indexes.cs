@@ -27,9 +27,9 @@ namespace Raven.Database.Server.Responders
 			bool namesOnly;
 			RavenJArray indexes;
 			if(bool.TryParse(namesOnlyString, out namesOnly) && namesOnly)
-				indexes = Database.GetIndexNames(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize));
+				indexes = Raven.Database.GetIndexNames(context.GetStart(), context.GetPageSize(Raven.Database.Configuration.MaxPageSize));
 			else
-				indexes = Database.GetIndexes(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize));
+				indexes = Raven.Database.GetIndexes(context.GetStart(), context.GetPageSize(Raven.Database.Configuration.MaxPageSize));
 			context.WriteJson(indexes);
 		}
 	}
