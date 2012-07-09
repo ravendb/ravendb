@@ -26,7 +26,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] { "POST", "PATCH", "DELETE" }; }
+			get { return new[] { "POST", "PATCH", "ADVANCEDPATCH", "DELETE" }; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -41,11 +41,17 @@ namespace Raven.Database.Server.Responders
 					OnBulkOperation(context, databaseBulkOperations.DeleteByIndex);
 					break;
 				case "PATCH":
-					///TODO here we need to detect if it's a Script (Advanced) PATCH command OR the original one (PatchRequest)
 					var patchRequestJson = context.ReadJsonArray();
 					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 					OnBulkOperation(context, (index, query, allowStale) =>
 						databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale));
+					break;
+				case "ADVANCEDPATCH":
+					//TODO find a better way of doing this, withoug the dynamic funkiness
+					var advPatchRequestJson = context.ReadJsonObject<dynamic>();
+					var advPatchScript = advPatchRequestJson.Script.ToString();                    
+					OnBulkOperation(context, (index, query, allowStale) =>
+						databaseBulkOperations.UpdateByIndex(index, query, advPatchScript, allowStale));
 					break;
 			}
 		}

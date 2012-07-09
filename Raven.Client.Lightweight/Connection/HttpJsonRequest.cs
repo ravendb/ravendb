@@ -65,7 +65,8 @@ namespace Raven.Client.Connection
 			webRequest.Credentials = requestParams.Credentials;
 			webRequest.Method = requestParams.Method;
 			if (factory.DisableRequestCompression == false &&
-				(requestParams.Method == "POST" || requestParams.Method == "PUT" || requestParams.Method == "PATCH"))
+				(requestParams.Method == "POST" || requestParams.Method == "PUT" || 
+				 requestParams.Method == "PATCH" || requestParams.Method == "ADVANCEDPATCH"))
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
 			WriteMetadata(requestParams.Metadata);

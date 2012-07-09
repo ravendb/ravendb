@@ -15,6 +15,10 @@ using Newtonsoft.Json;
 
 namespace Raven.Database.Json
 {
+    //TODO 
+    // Need to have a way for the user to specify the current status of the doc
+    // then we can throw a ConcurrencyException is the doc is different, see
+    // EnsurePreviousValueMatchCurrentValue(..) in JsonPatcher.cs
 	public class AdvancedJsonPatcher
 	{
 		private RavenJObject document;
@@ -39,7 +43,7 @@ namespace Raven.Database.Json
 		}
 
 		private void ApplyImpl(string script)
-		{            
+		{
 			var ctx = new CSharp.Context();
 			ctx.CreatePrintFunction();
 			

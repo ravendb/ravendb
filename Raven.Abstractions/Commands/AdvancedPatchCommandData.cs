@@ -36,7 +36,7 @@ namespace Raven.Abstractions.Commands
 		/// <value>The method.</value>
 		public string Method
 		{
-			get { return "PATCH"; }
+			get { return "ADVANCEDPATCH"; }
 		}
 
 		/// <summary>

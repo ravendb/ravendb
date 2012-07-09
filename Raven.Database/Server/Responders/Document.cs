@@ -26,7 +26,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET", "DELETE", "PUT", "PATCH", "HEAD"}; }
+			get { return new[] {"GET", "DELETE", "PUT", "PATCH", "ADVANCEDPATCH", "HEAD"}; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -64,6 +64,24 @@ namespace Raven.Database.Server.Responders
 						default:
 							throw new ArgumentOutOfRangeException("Value " + patchResult + " is not understood");
 					}
+					break;
+				case "ADVANCEDPATCH":
+					//TODO fix this so that AdvancedPatching works in single doc mode (not batches)
+					var advPatchRequestJson = context.ReadJsonArray();
+					//var advPatchRequests = advPatchRequestJson.Cast<RavenJObject>().Select(AdvancedPatchRequest.FromJson).ToArray();
+					//var advPatchResult = Database.ApplyPatch(docId, context.GetEtag(), advPatchRequests, GetRequestTransaction(context));
+					//switch (advPatchResult)
+					//{
+					//    case PatchResult.DocumentDoesNotExists:
+					//        context.SetStatusToNotFound();
+					//        break;
+					//    case PatchResult.Patched:
+					//        context.Response.AddHeader("Location", Database.Configuration.GetFullUrl("/docs/" + docId));
+					//        context.WriteJson(new {Patched = true});
+					//        break;
+					//    default:
+					//        throw new ArgumentOutOfRangeException("Value " + advPatchResult + " is not understood");
+					//}
 					break;
 			}
 		}

@@ -1149,7 +1149,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
 			var requestData = new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented);
-			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData);
+			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "PATCH");
 		}
 
 		/// <summary>
@@ -1161,18 +1161,17 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript, bool allowStale)
 		{
-			var scriptItems = RavenJToken.FromObject(new [] { patchScript });
-			var requestData = new RavenJArray(scriptItems).ToString(Formatting.Indented);
-			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData);
+			var requestData = RavenJObject.FromObject(new { Script = patchScript}).ToString(Formatting.Indented);
+			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "ADVANCEDPATCH"); //or "PATCH"
 		}
 
-		private void UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData)
+		private void UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
 		{
-			ExecuteWithReplication<object>("PATCH", operationUrl =>
+			ExecuteWithReplication<object>(method, operationUrl =>
 			{
 				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, path, "PATCH", credentials, convention)
+					new CreateHttpJsonRequestParams(this, path, method, credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
 								
 				request.Write(requestData);

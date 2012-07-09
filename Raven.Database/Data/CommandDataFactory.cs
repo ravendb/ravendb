@@ -36,32 +36,27 @@ namespace Raven.Database.Data
 						TransactionInformation = transactionInformation
 					};
 				case "PATCH":
-					if (jsonCommand.ContainsKey("Script"))
+					return new PatchCommandData
 					{
-						return new AdvancedPatchCommandData
-						{
-							Key = key,
-							Etag = GetEtagFromCommand(jsonCommand),
-							TransactionInformation = transactionInformation,
-							PatchScript = jsonCommand.Value<String>("Script")
-						};
-					}
-					else
+						Key = key,
+						Etag = GetEtagFromCommand(jsonCommand),
+						TransactionInformation = transactionInformation,
+						Patches = jsonCommand
+							.Value<RavenJArray>("Patches")
+							.Cast<RavenJObject>()
+							.Select(PatchRequest.FromJson)
+							.ToArray()
+					};
+				case "ADVANCEDPATCH":
+					return new AdvancedPatchCommandData
 					{
-						return new PatchCommandData
-						{
-							Key = key,
-							Etag = GetEtagFromCommand(jsonCommand),
-							TransactionInformation = transactionInformation,
-							Patches = jsonCommand
-								.Value<RavenJArray>("Patches")
-								.Cast<RavenJObject>()
-								.Select(PatchRequest.FromJson)
-								.ToArray()
-						};
-					}
+						Key = key,
+						Etag = GetEtagFromCommand(jsonCommand),
+						TransactionInformation = transactionInformation,
+						PatchScript = jsonCommand.Value<String>("Script")
+					};
 				default:
-					throw new ArgumentException("Batching only supports PUT, PATCH and DELETE.");
+					throw new ArgumentException("Batching only supports PUT, PATCH, ADVANCEDPATCH and DELETE.");
 			}
 		}
 
