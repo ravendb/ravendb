@@ -33,7 +33,14 @@ namespace Raven.Abstractions.Json
 			}
 			if (reader.Value == null)
 				return null;
-			return Convert.ChangeType(reader.Value, typeof(T), CultureInfo.InvariantCulture);
+			try
+			{
+				return Convert.ChangeType(reader.Value, typeof(T), CultureInfo.InvariantCulture);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException("Could not convert '" + reader.Value + "' to " + objectType.Name, e);
+			}
 		}
 
 		public override bool CanConvert(Type objectType)

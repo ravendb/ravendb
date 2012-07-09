@@ -600,6 +600,7 @@
     <Compile Include="MailingList\Joel.cs" />
     <Compile Include="MailingList\Johnson.cs" />
     <Compile Include="MailingList\Jorre.cs" />
+    <Compile Include="MailingList\linmouhong2.cs" />
     <Compile Include="MailingList\Mark2.cs" />
     <Compile Include="MailingList\MattJohnson.cs" />
     <Compile Include="MailingList\Maverix.cs" />
