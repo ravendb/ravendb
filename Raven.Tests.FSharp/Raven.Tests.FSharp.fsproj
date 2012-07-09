@@ -39,6 +39,11 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Raven.Client.Lightweight.FSharp\Raven.Client.Lightweight.FSharp.fsproj">
+      <Name>Raven.Client.Lightweight.FSharp</Name>
+      <Project>{6996133d-ee21-4cc8-b29b-f6222ee476bb}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Server\Raven.Server.csproj">
       <Name>Raven.Server</Name>
       <Project>{3b90eb20-aea3-4972-8219-936f1a62768c}</Project>
