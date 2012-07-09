@@ -322,12 +322,16 @@ namespace Raven.Database
 				AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
 				AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
 				disposed = true;
+
 				if (workContext != null)
-				workContext.StopWork();
+					workContext.StopWork();
 			});
 			
 			exceptionAggregator.Execute(() =>
 			{
+				if (ExtensionsState == null)
+					return;
+
 				foreach (var value in ExtensionsState.Values.OfType<IDisposable>())
 				{
 					exceptionAggregator.Execute(value.Dispose);
@@ -372,8 +376,6 @@ namespace Raven.Database
 
 			if (workContext != null)
 				exceptionAggregator.Execute(workContext.Dispose);
-
-
 
 			exceptionAggregator.ThrowIfNeeded();
 		}
