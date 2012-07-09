@@ -1,32 +1,12 @@
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 
-namespace Raven.Database.Server.Responders
+namespace Raven.Database.Server.Responders.Admin
 {
-	public class AdminCompact : RequestResponder
+	public class AdminCompact : AdminResponder
 	{
-		public override string UrlPattern
+		public override void RespondToAdmin(IHttpContext context)
 		{
-			get { return "^/admin/compact$"; }
-		}
-
-		public override string[] SupportedVerbs
-		{
-			get { return new[]{"POST"}; }
-		}
-
-		public override void Respond(IHttpContext context)
-		{
-			if (context.User.IsAdministrator() == false)
-			{
-				context.SetStatusToUnauthorized();
-				context.WriteJson(new
-				{
-					Error = "Only administrators can initiate a database compact procedure"
-				});
-				return;
-			}
-
 			if(DefaultResourceStore != ResourceStore)
 			{
 				context.SetStatusToBadRequest();
