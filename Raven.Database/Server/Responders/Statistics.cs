@@ -22,7 +22,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			context.WriteJson(Raven.Database.Statistics);
+			context.WriteJson(Database.Statistics);
 		}
 	}
 }

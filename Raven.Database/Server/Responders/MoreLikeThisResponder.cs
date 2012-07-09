@@ -40,7 +40,7 @@ namespace Raven.Database.Bundles.MoreLikeThis
 		{
 			var parameters = MoreLikeThisQueryParameters.GetParametersFromPath(context.GetRequestUrl(), context.Request.QueryString);
 
-			var index = Raven.Database.IndexStorage.GetIndexInstance(parameters.IndexName);
+			var index = Database.IndexStorage.GetIndexInstance(parameters.IndexName);
 			if (index == null)
 			{
 				context.SetStatusToNotFound();
@@ -61,7 +61,7 @@ namespace Raven.Database.Bundles.MoreLikeThis
 		private void PerformSearch(IHttpContext context, string indexName, Index index, MoreLikeThisQueryParameters parameters)
 		{
 			IndexSearcher searcher;
-			using (Raven.Database.IndexStorage.GetCurrentIndexSearcher(indexName, out searcher))
+			using (Database.IndexStorage.GetCurrentIndexSearcher(indexName, out searcher))
 			{
 				var documentQuery = new BooleanQuery();
 
@@ -94,7 +94,7 @@ namespace Raven.Database.Bundles.MoreLikeThis
 
 				if (!string.IsNullOrWhiteSpace(parameters.StopWordsDocumentId))
 				{
-					var stopWordsDoc = Raven.Database.Get(parameters.StopWordsDocumentId, null);
+					var stopWordsDoc = Database.Get(parameters.StopWordsDocumentId, null);
 					if (stopWordsDoc == null)
 					{
 						context.SetStatusToNotFound();
@@ -120,7 +120,7 @@ namespace Raven.Database.Bundles.MoreLikeThis
 					mlt.SetAnalyzer(perFieldAnalyzerWrapper);
 
 					var mltQuery = mlt.Like(td.ScoreDocs[0].doc);
-					var tsdc = TopScoreDocCollector.create(context.GetPageSize(Raven.Database.Configuration.MaxPageSize), true);
+					var tsdc = TopScoreDocCollector.create(context.GetPageSize(Database.Configuration.MaxPageSize), true);
 					searcher.Search(mltQuery, tsdc);
 					var hits = tsdc.TopDocs().ScoreDocs;
 					var jsonDocuments = GetJsonDocuments(parameters, searcher, index, indexName, hits, td.ScoreDocs[0].doc);
@@ -128,9 +128,9 @@ namespace Raven.Database.Bundles.MoreLikeThis
 					var result = new MultiLoadResult();
 
 					var includedEtags = new List<byte>(jsonDocuments.SelectMany(x => x.Etag.Value.ToByteArray()));
-					includedEtags.AddRange(Raven.Database.GetIndexEtag(indexName, null).ToByteArray());
+					includedEtags.AddRange(Database.GetIndexEtag(indexName, null).ToByteArray());
 					var loadedIds = new HashSet<string>(jsonDocuments.Select(x => x.Key));
-					var addIncludesCommand = new AddIncludesCommand(Raven.Database, GetRequestTransaction(context), (etag, includedDoc) =>
+					var addIncludesCommand = new AddIncludesCommand(Database, GetRequestTransaction(context), (etag, includedDoc) =>
 					{
 						includedEtags.AddRange(etag.ToByteArray());
 						result.Includes.Add(includedDoc);
@@ -183,13 +183,13 @@ namespace Raven.Database.Bundles.MoreLikeThis
 					.Distinct();
 
 				return documentIds
-					.Select(docId => Raven.Database.Get(docId, null))
+					.Select(docId => Database.Get(docId, null))
 					.Where(it => it != null)
 					.ToArray();
 			}
 
 			var fields = searcher.Doc(baseDocId).GetFields().Cast<AbstractField>().Select(x => x.Name()).Distinct().ToArray();
-			var etag = Raven.Database.GetIndexEtag(indexName, null);
+			var etag = Database.GetIndexEtag(indexName, null);
 			return hits
 				.Where(hit => hit.doc != baseDocId)
 				.Select(hit => new JsonDocument

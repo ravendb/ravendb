@@ -24,7 +24,7 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			var txId = context.Request.QueryString["tx"];
-			Raven.Database.Commit(new Guid(txId));
+			Database.Commit(new Guid(txId));
 			context.WriteJson(new {Committed = txId});
 		}
 	}

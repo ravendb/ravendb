@@ -35,9 +35,9 @@ namespace Raven.Bundles.Replication.Responders
 				context.SetStatusToBadRequest();
 				return;
 			}
-			using (Raven.Database.DisableAllTriggersForCurrentThread())
+			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Raven.Database.Get(ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src, null);
+				var document = Database.Get(ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src, null);
 
 				SourceReplicationInformation sourceReplicationInformation;
 
@@ -45,13 +45,13 @@ namespace Raven.Bundles.Replication.Responders
 				{
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
-						ServerInstanceId = Raven.Database.TransactionalStorage.Id
+						ServerInstanceId = Database.TransactionalStorage.Id
 					};
 				}
 				else
 				{
 					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
-					sourceReplicationInformation.ServerInstanceId = Raven.Database.TransactionalStorage.Id;
+					sourceReplicationInformation.ServerInstanceId = Database.TransactionalStorage.Id;
 				}
 
 				log.Debug("Got replication last etag request from {0}: [Local: {1} Remote: {2}]", src,

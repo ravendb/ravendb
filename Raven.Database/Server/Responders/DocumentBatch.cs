@@ -31,7 +31,7 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			var databaseBulkOperations = new DatabaseBulkOperations(Raven.Database, GetRequestTransaction(context));
+			var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(context));
 			switch (context.Request.HttpMethod)
 			{                
 				case "POST":
@@ -91,7 +91,7 @@ namespace Raven.Database.Server.Responders
 				return sb.ToString();
 			}));
 
-			var batchResult = Raven.Database.Batch(commands);
+			var batchResult = Database.Batch(commands);
 			context.WriteJson(batchResult);
 		}
 	}

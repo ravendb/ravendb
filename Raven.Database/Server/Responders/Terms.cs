@@ -28,19 +28,19 @@ namespace Raven.Database.Server.Responders
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var index = match.Groups[1].Value;
 
-			var indexEtag = Raven.Database.GetIndexEtag(index, null);
+			var indexEtag = Database.GetIndexEtag(index, null);
 			if (context.MatchEtag(indexEtag))
 			{
 				context.SetStatusToNotModified();
 				return;
 			}
 			
-			var executeGetTermsQuery = Raven.Database.ExecuteGetTermsQuery(index, 
+			var executeGetTermsQuery = Database.ExecuteGetTermsQuery(index, 
 			                                                         context.Request.QueryString["field"],
 			                                                         context.Request.QueryString["fromValue"],
-			                                                         context.GetPageSize(Raven.Database.Configuration.MaxPageSize)
+			                                                         context.GetPageSize(Database.Configuration.MaxPageSize)
 				);
-			context.WriteETag(Raven.Database.GetIndexEtag(index, null));
+			context.WriteETag(Database.GetIndexEtag(index, null));
 			context.WriteJson(executeGetTermsQuery);
 		}
 	}

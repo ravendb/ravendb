@@ -30,9 +30,9 @@ namespace Raven.Database.Server.Responders
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					Raven.Database.TransactionalStorage.Batch(_=> // have to keep the session open for reading of the attachment stream
+					Database.TransactionalStorage.Batch(_=> // have to keep the session open for reading of the attachment stream
 					{
-						var attachmentAndHeaders = Raven.Database.GetStatic(filename);
+						var attachmentAndHeaders = Database.GetStatic(filename);
 						if (attachmentAndHeaders == null)
 						{
 							context.SetStatusToNotFound();
@@ -51,9 +51,9 @@ namespace Raven.Database.Server.Responders
 					});
 					break;
 				case "HEAD":
-					Raven.Database.TransactionalStorage.Batch(_ => // have to keep the session open for reading of the attachment stream
+					Database.TransactionalStorage.Batch(_ => // have to keep the session open for reading of the attachment stream
 					{
-						var attachmentAndHeaders = Raven.Database.GetStatic(filename);
+						var attachmentAndHeaders = Database.GetStatic(filename);
 						if (attachmentAndHeaders == null)
 						{
 							context.SetStatusToNotFound();
@@ -69,14 +69,14 @@ namespace Raven.Database.Server.Responders
 					});
 					break;
 				case "PUT":
-					var newEtag = Raven.Database.PutStatic(filename, context.GetEtag(), context.Request.InputStream,
+					var newEtag = Database.PutStatic(filename, context.GetEtag(), context.Request.InputStream,
 					                                 context.Request.Headers.FilterHeadersAttachment());
 
 					context.WriteETag(newEtag);
 					context.SetStatusToCreated("/static/" + filename);
 					break;
 				case "DELETE":
-					Raven.Database.DeleteStatic(filename, etag);
+					Database.DeleteStatic(filename, etag);
 					context.SetStatusToDeleted();
 					break;
 			}

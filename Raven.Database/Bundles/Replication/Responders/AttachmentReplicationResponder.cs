@@ -49,9 +49,9 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 			var array = context.ReadBsonArray();
-			using (Raven.Database.DisableAllTriggersForCurrentThread())
+			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				Raven.Database.TransactionalStorage.Batch(actions =>
+				Database.TransactionalStorage.Batch(actions =>
 				{
 					byte[] lastEtag = Guid.Empty.ToByteArray();
 					foreach (RavenJObject attachment in array)
@@ -70,7 +70,7 @@ namespace Raven.Bundles.Replication.Responders
 
 
 					var replicationDocKey = ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src;
-					var replicationDocument = Raven.Database.Get(replicationDocKey,null);
+					var replicationDocument = Database.Get(replicationDocKey,null);
 					var lastDocId = Guid.Empty;
 					if(replicationDocument != null)
 					{
@@ -78,12 +78,12 @@ namespace Raven.Bundles.Replication.Responders
 							replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().
 								LastDocumentEtag;
 					}
-					Raven.Database.Put(replicationDocKey, null,
+					Database.Put(replicationDocKey, null,
 								 RavenJObject.FromObject(new SourceReplicationInformation
 								 {
 									 LastDocumentEtag = lastDocId,
 									 LastAttachmentEtag = new Guid(lastEtag),
-									 ServerInstanceId = Raven.Database.TransactionalStorage.Id
+									 ServerInstanceId = Database.TransactionalStorage.Id
 								 }),
 								 new RavenJObject(), null);
 				});
@@ -123,8 +123,8 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 
-			Raven.Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() =>
-				Raven.Database.RaiseNotifications(new ChangeNotification
+			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+				Database.RaiseNotifications(new ChangeNotification
 				{
 					Name = id,
 					Type = ChangeTypes.AttachmentReplicationConflict
@@ -185,7 +185,7 @@ namespace Raven.Bundles.Replication.Responders
 		{
 			using (var md5 = MD5.Create())
 			{
-				var bytes = Encoding.UTF8.GetBytes(Raven.Database.TransactionalStorage.Id + "/" + existingEtag);
+				var bytes = Encoding.UTF8.GetBytes(Database.TransactionalStorage.Id + "/" + existingEtag);
 				return new Guid(md5.ComputeHash(bytes)).ToString();
 			}
 		}
