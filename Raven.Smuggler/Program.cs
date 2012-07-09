@@ -33,7 +33,10 @@ namespace Raven.Smuggler
 			            			                                                                     	{
 			            			                                                                     		try
 			            			                                                                     		{
-			            			                                                                     			options.OperateOnTypes = (ItemType) Enum.Parse(typeof (ItemType), value);
+			            			                                                                     			options.OperateOnTypes =
+                                                                                                                    (ItemType)
+                                                                                                                    options.ItemTypeParser(
+                                                                                                                        value);
 			            			                                                                     		}
 			            			                                                                     		catch (Exception e)
 			            			                                                                     		{
@@ -69,6 +72,8 @@ namespace Raven.Smuggler
 			var program = new Program();
 			program.Parse(args);
 		}
+
+       
 
 		private void Parse(string[] args)
 		{
