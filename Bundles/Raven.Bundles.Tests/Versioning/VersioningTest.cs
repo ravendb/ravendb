@@ -19,17 +19,18 @@ namespace Raven.Bundles.Tests.Versioning
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			ravenDbServer = new RavenDbServer(
-				new database::Raven.Database.Config.RavenConfiguration
-				{
-					Port = 8079,
-					DataDirectory = path,
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					Settings =
-						{
-							{"Raven/ActiveBundles", "Versioning"}
-						}
-				});
+			var cfg = new database::Raven.Database.Config.RavenConfiguration
+			          	{
+			          		Port = 8079,
+			          		DataDirectory = path,
+			          		RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+			          		Settings =
+			          			{
+			          				{"Raven/ActiveBundles", "Versioning"}
+			          			}
+			          	};
+			cfg.PostInit();
+			ravenDbServer = new RavenDbServer(cfg);
 			documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079"

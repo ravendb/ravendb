@@ -6,12 +6,13 @@ namespace Raven.Database.Plugins.Catalogs
 {
 	public class BundlesFilteredCatalog : FilteredCatalog
 	{
-		private readonly string[] bundles;
-
-		public BundlesFilteredCatalog(ComposablePartCatalog catalogToFilter, string[] bundles) : base(catalogToFilter)
+		public BundlesFilteredCatalog(ComposablePartCatalog catalogToFilter, string[] bundles)
+			: base(catalogToFilter)
 		{
-			this.bundles = bundles;
+			Bundles = bundles;
 		}
+
+		public string[] Bundles { get; set; }
 
 		protected override bool IsMatch(ExportDefinition exportDefinition)
 		{
@@ -20,7 +21,7 @@ namespace Raven.Database.Plugins.Catalogs
 			{
 				var bundleName = bundle as string;
 				if (bundleName != null)
-					return bundles.Contains(bundleName, StringComparer.InvariantCultureIgnoreCase);
+					return Bundles.Contains(bundleName, StringComparer.InvariantCultureIgnoreCase);
 			}
 			return base.IsMatch(exportDefinition);
 		}
