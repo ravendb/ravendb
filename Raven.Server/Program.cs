@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Configuration.Install;
 using System.Diagnostics;
 using System.IO;
@@ -13,6 +14,7 @@ using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
 using System.Xml;
+using System.Xml.Linq;
 using NDesk.Options;
 using NLog.Config;
 using Raven.Abstractions;
@@ -138,6 +140,22 @@ namespace Raven.Server
 					}},
 				{"dest=|destination=", "The {0:path} of the new new database", value => restoreLocation = value},
 				{"src=|source=", "The {0:path} of the backup", value => backupLocation = value},
+				{"encrypt-self-config", "Encrypt the RavenDB configuration file", file =>
+						{
+							actionToTake = () => ProtectConfiguration(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile);
+				        }},
+				{"encrypt-config=", "Encrypt the specified {0:configuration file}", file =>
+						{
+							actionToTake = () => ProtectConfiguration(file);
+				        }},
+				{"decrypt-self-config", "Decrypt the RavenDB configuration file", file =>
+						{
+							actionToTake = () => UnprotectConfiguration(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile);
+				        }},
+				{"decrypt-config=", "Decrypt the specified {0:configuration file}", file =>
+						{
+							actionToTake = () => UnprotectConfiguration(file);
+				        }}
 			};
 
 
@@ -160,6 +178,39 @@ namespace Raven.Server
 
 			actionToTake();
 
+		}
+
+		private static void ProtectConfiguration(string file)
+		{
+			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.InvariantCultureIgnoreCase))
+				file = Path.GetFileNameWithoutExtension(file);
+
+			var configuration = ConfigurationManager.OpenExeConfiguration(file);
+			var names = new[] {"appSettings", "connectionStrings"};
+
+			foreach (var section in names.Select(configuration.GetSection))
+			{
+				section.SectionInformation.ProtectSection("RsaProtectedConfigurationProvider");
+				section.SectionInformation.ForceSave = true;
+			}
+
+			configuration.Save(ConfigurationSaveMode.Full);
+		}
+
+		private static void UnprotectConfiguration(string file)
+		{
+			if (string.Equals(Path.GetExtension(file), ".config", StringComparison.InvariantCultureIgnoreCase))
+				file = Path.GetFileNameWithoutExtension(file);
+
+			var configuration = ConfigurationManager.OpenExeConfiguration(file);
+			var names = new[] { "appSettings", "connectionStrings" };
+
+			foreach (var section in names.Select(configuration.GetSection))
+			{
+				section.SectionInformation.UnprotectSection();
+				section.SectionInformation.ForceSave = true;
+			}
+			configuration.Save(ConfigurationSaveMode.Full);
 		}
 
 		private static void PrintConfig()
