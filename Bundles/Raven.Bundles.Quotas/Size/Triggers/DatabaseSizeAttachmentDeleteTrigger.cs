@@ -1,10 +1,13 @@
-﻿using Raven.Database.Plugins;
+﻿using System.ComponentModel.Composition;
+using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Quotas.Size.Triggers
 {
-	public class DatabaseSizeAttachmentDeleteTrigger : AbstractDeleteTrigger
+	[InheritedExport(typeof(AbstractAttachmentDeleteTrigger))]
+	[ExportMetadata("Bundle", "Quotas")]
+	public class DatabaseSizeAttachmentDeleteTrigger : AbstractAttachmentDeleteTrigger
 	{
-		public override void AfterDelete(string key, Abstractions.Data.TransactionInformation transactionInformation)
+		public override void AfterDelete(string key)
 		{
 			SizeQuotaConfiguration.GetConfiguration(Database).AfterDelete();
 		}
