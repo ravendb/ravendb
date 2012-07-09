@@ -4,7 +4,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class DatabaseSize : RequestResponder
+	public class DatabaseSize : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

@@ -10,7 +10,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class SilverlightEnsuresStartup : RequestResponder
+	public class SilverlightEnsuresStartup : AbstractRequestResponder
 	{
 		[ImportMany]
 		public OrderedPartCollection<ISilverlightRequestedAware> SilverlightRequestedAware { get; set; }

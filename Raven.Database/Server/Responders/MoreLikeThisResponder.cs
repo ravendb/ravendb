@@ -17,13 +17,14 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
+using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 using Index = Raven.Database.Indexing.Index;
 
 namespace Raven.Database.Bundles.MoreLikeThis
 {
-	public class MoreLikeThisResponder : RequestResponder
+	public class MoreLikeThisResponder : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

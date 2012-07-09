@@ -4,7 +4,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class TransactionStatus : RequestResponder
+	public class TransactionStatus : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

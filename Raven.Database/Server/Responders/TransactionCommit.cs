@@ -9,7 +9,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class TransactionCommit : RequestResponder
+	public class TransactionCommit : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

@@ -10,7 +10,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
-	public class TransactionPromote : RequestResponder
+	public class TransactionPromote : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

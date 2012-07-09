@@ -22,7 +22,7 @@ using Raven.Database.Storage;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Index : RequestResponder
+	public class Index : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

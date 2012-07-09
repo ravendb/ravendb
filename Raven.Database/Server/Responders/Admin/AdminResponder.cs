@@ -3,7 +3,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders.Admin
 {
-	public abstract class AdminResponder : RequestResponder
+	public abstract class AdminResponder : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

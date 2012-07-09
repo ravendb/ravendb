@@ -10,13 +10,12 @@ using Raven.Bundles.Replication.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.Responders;
 
 namespace Raven.Bundles.Replication.Responders
 {
 	[ExportMetadata("Bundle", "Replication")]
 	[InheritedExport(typeof(AbstractRequestResponder))]
-	public class ReplicationLastEtagResponser : RequestResponder
+	public class ReplicationLastEtagResponser : AbstractRequestResponder
 	{
 		private Logger log = LogManager.GetCurrentClassLogger();
 
