@@ -308,7 +308,7 @@ namespace Raven.Database
 				return;
 
 			var onDisposing = Disposing;
-			if(onDisposing!=null)
+			if (onDisposing != null)
 				onDisposing(this, EventArgs.Empty);
 
 			var exceptionAggregator = new ExceptionAggregator(log, "Could not properly dispose of DatabaseDocument");

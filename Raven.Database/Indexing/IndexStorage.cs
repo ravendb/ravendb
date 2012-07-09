@@ -166,6 +166,7 @@ namespace Raven.Database.Indexing
 
 						CheckIndexAndRecover(directory, indexDirectory);
 						IndexWriter.Unlock(directory);
+						directory.DeleteFile("write.lock");
 					}
 				}
 			}
