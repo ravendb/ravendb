@@ -40,7 +40,7 @@ namespace Raven.Client.Document
 	{
 		protected bool isSpatialQuery;
 		protected double lat, lng, radius;
-		private LinqPathProvider linqPathProvider;
+		private readonly LinqPathProvider linqPathProvider;
 		/// <summary>
 		/// Whatever to negate the next operation
 		/// </summary>
@@ -893,47 +893,6 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		public void WhereContains(string fieldName, object value)
-		{
-			WhereEquals(new WhereParams
-			{
-				AllowWildcards = true,
-				IsAnalyzed = true,
-				FieldName = fieldName,
-				Value = value
-			});
-		}
-
-		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		public void WhereContains(string fieldName, params object[] values)
-		{
-			if (values == null || values.Length == 0)
-			{
-				WhereEquals(fieldName, "Empty_Contains_" + Guid.NewGuid());
-				return;
-			}
-
-			OpenSubclause();
-
-			WhereContains(fieldName, values[0]);
-
-
-			for (var i = 1; i < values.Length; i++)
-			{
-				OrElse();
-				WhereContains(fieldName, values[i]);
-			}
-
-			CloseSubclause();
-		}
-
-		/// <summary>
 		/// Check that the field has one of the specified value
 		/// </summary>
 		public void WhereIn(string fieldName, IEnumerable<object> values)
@@ -966,15 +925,6 @@ If you really want to do in memory filtering on the data returned from the query
 				WhereEquals(fieldName, "Empty_In_" + Guid.NewGuid());
 
 			CloseSubclause();
-		}
-
-		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		public void WhereContains(string fieldName, IEnumerable<object> values)
-		{
-			WhereContains(fieldName, values.ToArray());
 		}
 
 		/// <summary>
