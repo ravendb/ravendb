@@ -19,6 +19,7 @@ using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using Raven.Client.Extensions;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Query
 {
@@ -51,8 +52,21 @@ namespace Raven.Studio.Features.Query
 		                           }
 		                       });
 
+            model.DocumentsResult.SetPriorityColumns(GetRelevantFields());
             model.CollectionSource.UpdateQuery(model.IndexName, CreateTemplateQuery());  
 		}
+
+	    private IList<string> GetRelevantFields()
+	    {
+	        return model.QueryDocument.GetTextOfAllTokensMatchingType("Field").Select(t => t.TrimEnd(':').Trim())
+	            .Concat(
+	                model.SortBy
+                    .Where(s => !string.IsNullOrEmpty(s.Value))
+                    .Select(s => s.Value.EndsWith("DESC") ? s.Value.Substring(0, s.Value.Length - 5) : s.Value))
+	            .Distinct()
+                .SelectMany(f => f.Contains("_") ? new[] {f, f.Replace("_", ".")} : new[] { f}) // if the field name contains underscores, it is likely referring to a property 
+	            .ToList();
+	    }
 
 	    private void ClearRecentQuery()
 		{

@@ -59,7 +59,10 @@ namespace Raven.Studio.Features.Documents
                 priorityColumns = DefaultPriorityColumns;
             }
 
-            var columns= DocumentHelpers.GetPropertiesFromDocuments(sampleDocuments, includeNestedPropeties: false)
+            // only consider nested properties if any of the priority columns refers to a nested property
+            var includeNestedProperties = priorityColumns.Any(c => c.PropertyNamePattern.Contains("\\."));
+
+            var columns = DocumentHelpers.GetPropertiesFromDocuments(sampleDocuments, includeNestedProperties)
                 .GroupBy(p => p)
                 .Select(g => new {Property = g.Key, Occurence = g.Count()/(double) sampleDocuments.Length})
                 .Select(p => new { p.Property, Importance = p.Occurence + ImportanceBoost(p.Property, context, priorityColumns) })
@@ -94,9 +97,18 @@ namespace Raven.Studio.Features.Documents
             {
                 return 1;
             }
+            else if (priorityColumns.Any(column => Regex.IsMatch(property, column.PropertyNamePattern, RegexOptions.IgnoreCase)))
+            {
+                return 0.75;
+            } 
+            else if (property.Contains("."))
+            {
+                // if the property is a nested property, and it isn't a priority column, demote it
+                return -0.5;
+            }
             else
             {
-                return priorityColumns.Any(column => Regex.IsMatch(property, column.PropertyNamePattern, RegexOptions.IgnoreCase)) ? 0.75 : 0;
+                return 0;
             }
         }
 
