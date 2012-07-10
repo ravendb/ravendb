@@ -533,10 +533,26 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(ApiKey) == false)
 				SetHeader(authRequest.Headers, "Api-Key", ApiKey);
 
-			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false &&
-			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false)
+			if (authRequest.RequestUri.Scheme.Equals("https", StringComparison.InvariantCultureIgnoreCase) == false &&
+			   jsonRequestFactory.EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers == false && 
+			   IsLocalHost(authRequest) == false)
+			{
 				throw new InvalidOperationException(BasicOAuthOverHttpError);
+			}
 			return authRequest;
+		}
+
+		private bool IsLocalHost(HttpWebRequest authRequest)
+		{
+			var host = authRequest.RequestUri.DnsSafeHost;
+			if (host.Equals("localhost"))
+				return true;
+			if (Environment.MachineName.Equals(host, StringComparison.InvariantCultureIgnoreCase))
+				return true;
+			if (host == "::1" || host == "127.0.0.1")
+				return true;
+			return false;
+
 		}
 
 		/// <summary>
