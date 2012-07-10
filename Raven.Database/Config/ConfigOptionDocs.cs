@@ -63,7 +63,7 @@ namespace Raven.Database.Config
 			{"Raven/TempIndexCleanupPeriod","int", null, "How often will temp dynamic indexes be purged from the system. The value is in seconds. Default: 10 minutes."},
 			{"Raven/TempIndexCleanupThreshold","int",null, "How long does a temporary index hang around if there are no queries made to it. The value is in seconds. Default: 20 minutes."},
 			{"Raven/TempIndexInMemoryMaxMB", "int", "1 - 1024 MB", "The max size in MB of a temporary index held in memory. When a temporary dynamic index exceeds that value, it will be using on disk indexing, rather then RAM indexing. Default: 25 MB."},
-
+			{"Raven/CreateTemporaryIndexesForAdHocQueriesIfNeeded", "bool", "true", "Whatever we allow creation of temporary indexes on dynamic queries"},
 			// Memory
 			{"Raven/MemoryCacheLimitMegabytes", "int", null, "The max size in MB for the internal document cache inside RavenDB server, default is half of the machine available RAM minus the size of the esent cache."},
 			{"Raven/MemoryCacheLimitPercentage","int", "0-99", "The percentage of memory that the internal document cache inside RavenDB server will use, default: auto."},

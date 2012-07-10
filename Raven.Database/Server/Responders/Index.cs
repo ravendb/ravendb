@@ -295,6 +295,20 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
+			if(dynamicIndexName == null && // would have to create a dynamic index
+				Database.Configuration.CreateTemporaryIndexesForAdHocQueriesIfNeeded == false) // but it is disabled
+			{
+				var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
+				context.SetStatusToBadRequest();
+				var target = entityName == null ? "all documents" : entityName + " documents";
+				context.WriteJson(new
+				                  	{
+				                  		Error = "Executing the query " + indexQuery.Query +" on " + target +" require creation of temporary index, and it has been explicitly disabled.",
+										Explanations = explanations
+				                  	});
+				return null;
+			}
+
 			var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
 
 			// have to check here because we might be getting the index etag just 

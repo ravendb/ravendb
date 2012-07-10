@@ -44,6 +44,8 @@ namespace Raven.Database.Config
 			InitialNumberOfItemsToReduceInSingleBatch = InitialNumberOfItemsToIndexInSingleBatch / 2;
 			MaxIndexingRunLatency = TimeSpan.FromMinutes(1);
 
+			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
+
 			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory/2);
 			MaxNumberOfParallelIndexTasks = 8;
 
@@ -160,6 +162,8 @@ namespace Raven.Database.Config
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
 			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 
+			CreateTemporaryIndexesForAdHocQueriesIfNeeded =
+				GetConfigurationValue<bool>("Raven/CreateTemporaryIndexesForAdHocQueriesIfNeeded") ?? true;
 
 			ResetIndexOnUncleanShutdown = GetConfigurationValue<bool>("Raven/ResetIndexOnUncleanShutdown") ?? false;
 			
@@ -670,6 +674,12 @@ namespace Raven.Database.Config
 		/// </summary>
 		public TimeSpan MemoryCacheExpiration { get; set; }
 
+		/// <summary>
+		/// Controls whatever RavenDB will create temporary indexes 
+		/// for queries that cannot be directed to standard indexes
+		/// </summary>
+		public bool CreateTemporaryIndexesForAdHocQueriesIfNeeded { get; set; }
+
 		public string IndexStoragePath
 		{
 			get
@@ -724,7 +734,7 @@ namespace Raven.Database.Config
 
 		public T? GetConfigurationValue<T>(string configName) where T : struct
 		{
-			// explicitly fail if we can convert it
+			// explicitly fail if we can't convert it
 			if (string.IsNullOrEmpty(Settings[configName]) == false)
 				return (T)Convert.ChangeType(Settings[configName], typeof(T));
 			return null;
