@@ -112,6 +112,7 @@ task BeforeCompile {
 
 task AfterCompile {
 	#new-item "$base_dir\Raven.Studio\Settings.dat" -type file -force
+	remote-item "$build_dir\nlog.config" -force
 }
 
 task Compile -depends Init {
