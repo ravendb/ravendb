@@ -298,6 +298,7 @@ namespace Raven.Database.Server.Responders
 			if(dynamicIndexName == null && // would have to create a dynamic index
 				Database.Configuration.CreateTemporaryIndexesForAdHocQueriesIfNeeded == false) // but it is disabled
 			{
+				indexEtag = Guid.NewGuid();
 				var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
 				context.SetStatusToBadRequest();
 				var target = entityName == null ? "all documents" : entityName + " documents";
