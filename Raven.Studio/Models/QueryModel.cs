@@ -234,7 +234,8 @@ namespace Raven.Studio.Models
 		public BindableCollection<string> DynamicOptions { get; set; }
 
 		private string dynamicSelectedOption;
-		public string DynamicSelectedOption
+	    private string queryUrl;
+	    public string DynamicSelectedOption
 		{
 			get { return dynamicSelectedOption; }
 			set
@@ -457,6 +458,16 @@ namespace Raven.Studio.Models
 				OnPropertyChanged(() => QueryTime);
 			}
 		}
+
+	    public string QueryUrl
+	    {
+	        get { return queryUrl; }
+            set
+            {
+                queryUrl = value;
+                OnPropertyChanged(() => QueryUrl);
+            }
+	    }
 
 	    public RavenQueryStatistics Results
 		{

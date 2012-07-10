@@ -53,7 +53,9 @@ namespace Raven.Studio.Features.Query
 		                       });
 
             model.DocumentsResult.SetPriorityColumns(GetRelevantFields());
-            model.CollectionSource.UpdateQuery(model.IndexName, CreateTemplateQuery());  
+		    var templateQuery = CreateTemplateQuery();
+		    model.QueryUrl = templateQuery.GetQueryString();
+		    model.CollectionSource.UpdateQuery(model.IndexName, templateQuery);  
 		}
 
 	    private IList<string> GetRelevantFields()

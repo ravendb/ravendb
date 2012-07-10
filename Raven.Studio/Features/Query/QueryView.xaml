@@ -344,7 +344,12 @@
                         CornerRadius="2"
                         Margin="0,5,0,0">
 
-                        <toolkit:WrapPanel Margin="3">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <toolkit:WrapPanel Margin="3" Grid.Row="0">
                             <toolkit:WrapPanel.Resources>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Margin" Value="0,2,25,2"/>
@@ -375,6 +380,13 @@
 					    <Run Text="{Binding Results.IndexEtag}" />
                                 </TextBlock>
                         </toolkit:WrapPanel>
+
+                        <toolkit:DockPanel Grid.Row="1" Margin="3">
+                            <TextBlock Text="Url:" toolkit:DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                            <TextBox IsReadOnly="True" Text="{Binding QueryUrl}" Margin="5" VerticalAlignment="Center" 
+                                     Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}"/>
+                        </toolkit:DockPanel>
+                    </Grid>
                 </Border>
             </Grid>
 		</Grid>
