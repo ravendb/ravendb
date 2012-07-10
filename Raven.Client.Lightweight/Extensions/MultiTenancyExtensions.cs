@@ -93,14 +93,8 @@ namespace Raven.Client.Extensions
 					if (get.Result != null)
 						return get;
 
-					var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(name));
-					return req.WriteAsync(doc.ToString(Formatting.Indented))
-						.ContinueWith(t =>
-						              	{
-						              		t.AssertNotFailed();
-						              		return req.ExecuteRequest();
-						              	})
-						.Unwrap();
+
+					return (Task)self.PutAsync(docId, null, doc, new RavenJObject());
 				})
 				.Unwrap()
 				.ContinueWith(x=>
