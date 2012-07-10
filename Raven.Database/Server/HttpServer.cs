@@ -392,9 +392,9 @@ namespace Raven.Database.Server
 
 		public T HandleSignalRequest<T>(IHttpContext context, Func<string, T> action)
 		{
-			var prefix = SetupRequestToProperDatabase(context);
 			try
 			{
+				var prefix = SetupRequestToProperDatabase(context);
 				if (!SetThreadLocalState(context))
 				{
 					context.FinalizeResonse();
@@ -405,9 +405,23 @@ namespace Raven.Database.Server
 			}
 			catch (Exception e)
 			{
-				HandleException(context, e);
-				if (ShouldLogException(e))
-					logger.WarnException("Error on request", e);
+				try
+				{
+					HandleException(context, e);
+					if (ShouldLogException(e))
+						logger.WarnException("Error on request", e);
+				}
+				finally
+				{
+					try
+					{
+						FinalizeRequestProcessing(context, null, true);
+					}
+					catch (Exception e2)
+					{
+						logger.ErrorException("Could not finalize request properly", e2);
+					}
+				}
 				return default(T);
 			}
 			finally
@@ -482,10 +496,11 @@ namespace Raven.Database.Server
 			}
 
 			ctx.FinalizeResonse();
-			sw.Stop();
 
 			if (ravenUiRequest || logHttpRequestStatsParam == null)
 				return;
+
+			sw.Stop();
 
 			LogHttpRequestStats(logHttpRequestStatsParam);
 			ctx.OutputSavedLogItems(logger);

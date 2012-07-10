@@ -676,6 +676,7 @@
     <Compile Include="MailingList\Troy.cs" />
     <Compile Include="MailingList\TwoLocations.cs" />
     <Compile Include="MailingList\What.cs" />
+    <Compile Include="Notifications\NotificationOnWrongDatabase.cs" />
     <Compile Include="Notifications\ClientServer.cs" />
     <Compile Include="Notifications\Filtered.cs" />
     <Compile Include="Notifications\SecurityOAuth.cs" />
