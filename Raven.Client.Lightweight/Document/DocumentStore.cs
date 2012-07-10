@@ -547,8 +547,10 @@ namespace Raven.Client.Document
 			var host = authRequest.RequestUri.DnsSafeHost;
 			if (host.Equals("localhost"))
 				return true;
+#if !SILVERLIGHT
 			if (Environment.MachineName.Equals(host, StringComparison.InvariantCultureIgnoreCase))
 				return true;
+#endif
 			if (host == "::1" || host == "127.0.0.1")
 				return true;
 			return false;

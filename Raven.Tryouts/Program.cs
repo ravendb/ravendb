@@ -11,21 +11,24 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			var webRequest = (HttpWebRequest)WebRequest.Create("http://localhost:8080/admin/compact?database=test");
-			webRequest.Method = "POST";
-			webRequest.UseDefaultCredentials = true;
-			webRequest.Credentials = CredentialCache.DefaultCredentials;
-			webRequest.ContentLength = 0;
-			try
+			var list = new HttpListener
+			           	{
+							AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication,
+			           		Prefixes = {"http://+:8080/"},
+			           		ExtendedProtectionSelectorDelegate = request =>
+			           		                                     	{
+			           		                                     		Console.WriteLine("request");
+			           		                                     		return null;
+			           		                                     	}
+			           	};
+
+			list.Start();
+
+			while (true)
 			{
-				webRequest.GetResponse();
-				Console.WriteLine("DONE");
+				var r = list.GetContext();
+				r.Response.Close();
 			}
-			catch(WebException we)
-			{
-				Console.WriteLine(new StreamReader((we.Response.GetResponseStream())).ReadToEnd());
-			}
-			Console.ReadLine();
 		}
 	}
 }
