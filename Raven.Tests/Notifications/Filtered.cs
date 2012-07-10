@@ -70,7 +70,8 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				var changeNotification = list.Take();
+				ChangeNotification changeNotification;
+				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
 
 				Assert.Equal("items/1", changeNotification.Name);
 				Assert.Equal(changeNotification.Type, ChangeTypes.Put);

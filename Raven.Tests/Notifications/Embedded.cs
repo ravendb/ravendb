@@ -31,7 +31,8 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				var changeNotification = list.Take();
+				ChangeNotification changeNotification;
+				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
 
 				Assert.Equal("items/1", changeNotification.Name);
 				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
@@ -56,7 +57,8 @@ namespace Raven.Tests.Notifications
 
 				store.DatabaseCommands.Delete("items/1", null);
 
-				var changeNotification = list.Take();
+				ChangeNotification changeNotification;
+				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
 
 				Assert.Equal("items/1", changeNotification.Name);
 				Assert.Equal(changeNotification.Type, ChangeTypes.Delete);
@@ -81,7 +83,8 @@ namespace Raven.Tests.Notifications
 
 				store.DatabaseCommands.Delete("items/1", null);
 
-				var changeNotification = list.Take();
+				ChangeNotification changeNotification;
+				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
 
 				Assert.Equal("Raven/DocumentsByEntityName", changeNotification.Name);
 				Assert.Equal(changeNotification.Type, ChangeTypes.IndexUpdated);
