@@ -47,6 +47,7 @@ namespace Raven.Database.Indexing
 						ReduceKeys = reduceKeyAndEtags.Select(x => x.ReduceKey).Distinct().ToArray(),
 					}.Execute(context);
 				});
+
 			}
 			finally
 			{

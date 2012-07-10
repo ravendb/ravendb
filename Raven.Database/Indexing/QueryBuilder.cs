@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using Lucene.Net.Analysis;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
+using Raven.Abstractions.Data;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -22,16 +23,19 @@ namespace Raven.Database.Indexing
 
 		public static Query BuildQuery(string query, PerFieldAnalyzerWrapper analyzer)
 		{
-			return BuildQuery(query, null, analyzer);
+			return BuildQuery(query, new IndexQuery(), analyzer);
 		}
 
-		public static Query BuildQuery(string query, string defaultField, PerFieldAnalyzerWrapper analyzer)
+		public static Query BuildQuery(string query, IndexQuery indexQuery, PerFieldAnalyzerWrapper analyzer)
 		{
 			var originalQuery = query;
 			Analyzer keywordAnalyzer = new KeywordAnalyzer();
 			try
 			{
-				var queryParser = new RangeQueryParser(Version.LUCENE_29, defaultField ?? string.Empty, analyzer);
+				var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer);
+				queryParser.SetDefaultOperator(indexQuery.DefaultOperator == QueryOperator.Or
+				                               	? QueryParser.Operator.OR
+				                               	: QueryParser.Operator.AND);
 				query = PreProcessUntokenizedTerms(query, queryParser);
 				query = PreProcessSearchTerms(query);
 				query = PreProcessDateTerms(query, queryParser);

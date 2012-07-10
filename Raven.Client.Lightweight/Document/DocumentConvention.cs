@@ -553,6 +553,7 @@ namespace Raven.Client.Document
 		/// Default: 5 minutes
 		/// </summary>
 		public TimeSpan MaxFailoverCheckPeriod { get; set; }
+
 	}
 
 

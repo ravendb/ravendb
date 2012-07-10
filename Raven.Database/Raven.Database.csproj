@@ -32,6 +32,8 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
     <TargetFrameworkProfile />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -214,6 +216,7 @@
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
+    <Compile Include="Server\NotificationsConnection.cs" />
     <Compile Include="Server\Responders\AdminRunIdleOperations.cs" />
     <Compile Include="Server\Responders\AdminStats.cs" />
     <Compile Include="Server\Responders\DatabaseSize.cs" />
@@ -632,6 +635,18 @@
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Imports\SignalR\SignalR.Hosting.Common\SignalR.Hosting.Common.csproj">
+      <Project>{3B71F0AE-D4B6-4F47-BF62-333D45615673}</Project>
+      <Name>SignalR.Hosting.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Imports\SignalR\SignalR.Hosting.Self\SignalR.Hosting.Self.csproj">
+      <Project>{A2BD866D-906A-4742-AB3B-DB8740830400}</Project>
+      <Name>SignalR.Hosting.Self</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Imports\SignalR\SignalR\SignalR.csproj">
+      <Project>{1B9A82C4-BCA1-4834-A33E-226F17BE070B}</Project>
+      <Name>SignalR %28SignalR\SignalR%29</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
@@ -652,4 +667,5 @@
       <Output ItemName="EmbeddedResource" TaskParameter="Include" />
     </CreateItem>
   </Target>
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
 </Project>

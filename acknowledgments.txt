@@ -14,3 +14,4 @@ The Raven Datbase is making use of the following OSS projects:
 * Castle Project (http://www.castleproject.org/) under the Apache license: http://www.apache.org/licenses/LICENSE-2.0.html
 * BouncyCastle.Crypto ( http://www.bouncycastle.org/csharp/) under the MIT X11 license http://www.bouncycastle.org/csharp/licence.html
 * FsLinqFixed (https://github.com/robertpi/FsLinqFixed) under the Apache license (https://raw.github.com/robertpi/FsLinqFixed/master/License.html)
+* SignalR - (https://github.com/SignalR/SignalR) under the MIT license (https://github.com/SignalR/SignalR/blob/master/LICENSE.md)

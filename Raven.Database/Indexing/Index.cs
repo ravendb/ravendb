@@ -714,7 +714,7 @@ namespace Raven.Database.Indexing
 						int intersectMatches = 0, skippedResultsInCurrentLoop = 0;
 						int previousBaseQueryMatches = 0, currentBaseQueryMatches = 0;
 
-						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0], indexQuery.DefaultField));
+						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0], indexQuery));
 
 						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
 						var search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
@@ -736,7 +736,7 @@ namespace Raven.Database.Indexing
 
 							for (int i = 1; i < subQueries.Length; i++)
 							{
-								var luceneSubQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[i], indexQuery.DefaultField));
+								var luceneSubQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[i], indexQuery));
 								indexSearcher.Search(luceneSubQuery, null, intersectionCollector);
 							}
 
@@ -848,7 +848,7 @@ namespace Raven.Database.Indexing
 
 			public Query GetLuceneQuery()
 			{
-				var q = GetLuceneQuery(indexQuery.Query, indexQuery.DefaultField);
+				var q = GetLuceneQuery(indexQuery.Query, indexQuery);
 				var spatialIndexQuery = indexQuery as SpatialIndexQuery;
 				if (spatialIndexQuery != null)
 				{
@@ -863,7 +863,7 @@ namespace Raven.Database.Indexing
 				return q;
 			}
 
-			private Query GetLuceneQuery(string query, string defaultField)
+			private Query GetLuceneQuery(string query, IndexQuery indexQuery)
 			{				
 				Query luceneQuery;
 				if (String.IsNullOrEmpty(query))
@@ -888,7 +888,7 @@ namespace Raven.Database.Indexing
 							}
 							return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
 						});
-						luceneQuery = QueryBuilder.BuildQuery(query, defaultField, searchAnalyzer);
+						luceneQuery = QueryBuilder.BuildQuery(query, indexQuery, searchAnalyzer);
 					}
 					finally
 					{

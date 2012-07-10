@@ -4,8 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
+using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Util;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
@@ -91,6 +96,68 @@ namespace Raven.Client.Embedded
 			{
 				DataDirectory = null;
 				base.Url = value;
+			}
+		}
+
+		/// <summary>
+		/// Subscribe to change notifications from the server
+		/// </summary>
+		public override TaskObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null)
+		{
+			if (string.IsNullOrEmpty(Url) == false)
+				return base.Changes(database, changes, idPrefix);
+
+			var notificationObservable = new NotificationObservable(DocumentDatabase, changes, idPrefix);
+			return new TaskObservable<ChangeNotification>(new CompletedTask<IObservable<ChangeNotification>>(notificationObservable));
+		}
+
+		private class NotificationObservable : IObservable<ChangeNotification>, IDisposable
+		{
+			private readonly ChangeTypes changes;
+			private readonly string idPrefix;
+			private readonly DocumentDatabase database;
+			private List<IObserver<ChangeNotification>> observers = new List<IObserver<ChangeNotification>>();
+
+			public NotificationObservable(DocumentDatabase database, ChangeTypes changes, string idPrefix)
+			{
+				this.database = database;
+				this.changes = changes;
+				this.idPrefix = idPrefix;
+
+				database.Notifications += Notify;
+			}
+
+			private void Notify(object sender, ChangeNotification notification)
+			{
+				if ((notification.Type & changes) == ChangeTypes.None)
+					return;
+
+				if (string.IsNullOrEmpty(idPrefix) == false &&
+					notification.Name.StartsWith(idPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
+					return;
+
+				foreach (var observer in observers)
+				{
+					observer.OnNext(notification);
+				}
+			}
+
+			public IDisposable Subscribe(IObserver<ChangeNotification> observer)
+			{
+				observers = new List<IObserver<ChangeNotification>>(observers)
+				{
+					observer
+				};
+				return new DisposableAction(() =>
+				{
+					observers = new List<IObserver<ChangeNotification>>(observers.Where(x => x != observer));
+					observer.OnCompleted();
+				});
+			}
+
+			public void Dispose()
+			{
+				database.Notifications -= Notify;
 			}
 		}
 

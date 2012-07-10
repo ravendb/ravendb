@@ -42,7 +42,8 @@ namespace Raven.VisualHost
 					Port = port,
 					//DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Server-" + port, "Data"),
 					RunInMemory = true,
-					AnonymousUserAccessMode = AnonymousUserAccessMode.All
+					AnonymousUserAccessMode = AnonymousUserAccessMode.All,
+
 				});
 
 				var serverLog = new ServerLog
@@ -211,6 +212,22 @@ namespace Raven.VisualHost
 					docStore.DatabaseCommands.Put("Raven/Replication/Destinations", null, doc, new RavenJObject());
 				}
 			}
+		}
+
+		private void sToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			var stoppedWorkers = ((ToolStripMenuItem)sender).Checked;
+			foreach (var ravenDbServer in servers)
+			{
+				ravenDbServer.Server.ForAllDatabases(database =>
+				{
+					if (stoppedWorkers)
+						database.SpinBackgroundWorkers();
+					else
+						database.StopBackgroundWorkers();
+				});
+			}
+			((ToolStripMenuItem) sender).Checked = !stoppedWorkers;
 		}
 	}
 }

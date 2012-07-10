@@ -11,7 +11,7 @@ properties {
 	$global:configuration = "Release"
 	
 	$web_dlls = @( "Raven.Abstractions.???","Raven.Web.???", (Get-DependencyPackageFiles 'NLog.2'), (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
-				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Spatial4n.Core.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???",
+				"Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Spatial4n.Core.???", "Lucene.Net.Contrib.SpellChecker.???","BouncyCastle.Crypto.???","Raven.Imports.SignalR.Hosting.AspNet.???", "Raven.Imports.SignalR.???", "Raven.Imports.SignalR.Hosting.Common.???"
 				"ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "Esent.Interop.???", "Raven.Database.???", "Raven.Storage.Esent.???", 
 				"Raven.Storage.Managed.???", "Raven.Munin.???" ) |
 		ForEach-Object { 
@@ -22,7 +22,7 @@ properties {
 	$web_files = @("Raven.Studio.xap", "..\DefaultConfigs\web.config" )
 	
 	$server_files = @( "Raven.Server.exe", "Raven.Studio.xap", (Get-DependencyPackageFiles 'NLog.2'), "Lucene.Net.???",
-					 "Lucene.Net.Contrib.Spatial.???", "Spatial4n.Core.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???",
+					 "Lucene.Net.Contrib.Spatial.???", "Spatial4n.Core.???", "Lucene.Net.Contrib.SpellChecker.???", "ICSharpCode.NRefactory.???", "Rhino.Licensing.???", "BouncyCastle.Crypto.???", "Raven.Imports.SignalR.???", "Raven.Imports.SignalR.Hosting.Common.???", "Raven.Imports.SignalR.Hosting.Self.???", 
 					"Esent.Interop.???", "Raven.Abstractions.???", "Raven.Database.???", "Raven.Storage.Esent.???",
 					"Raven.Storage.Managed.???", "Raven.Munin.???" ) |
 		ForEach-Object { 
@@ -31,7 +31,7 @@ properties {
 		}
 		
 	 
-	$client_dlls = @( (Get-DependencyPackageFiles 'NLog.2'), "Raven.Client.MvcIntegration.???", 
+	$client_dlls = @( (Get-DependencyPackageFiles 'NLog.2'), "Raven.Client.MvcIntegration.???", "Raven.Imports.SignalR.Client.???",
 					"Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Client.Lightweight.FSharp.???", "Raven.Client.Debug.???") |
 		ForEach-Object { 
 			if ([System.IO.Path]::IsPathRooted($_)) { return $_ }
@@ -50,7 +50,7 @@ properties {
 			return "$build_dir\$_"
 		}
  
-	$all_client_dlls = @( "Raven.Client.MvcIntegration.???", "Raven.Client.Lightweight.???", "Raven.Client.Lightweight.FSharp.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
+	$all_client_dlls = @( "Raven.Client.MvcIntegration.???", "Raven.Client.Lightweight.???", "Raven.Client.Lightweight.FSharp.???", "Raven.Client.Embedded.???", "Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???","Raven.Imports.SignalR.Client.???", "Raven.Imports.SignalR.???", "Raven.Imports.SignalR.Hosting.Common.???", "Raven.Imports.SignalR.Hosting.Self.???", 
 						  "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Spatial4n.Core.???",
 						  "Lucene.Net.Contrib.SpellChecker.???", (Get-DependencyPackageFiles 'NLog.2'),
 						  "Raven.Storage.Esent.???", "Raven.Storage.Managed.???", "Raven.Munin.???", "AsyncCtpLibrary.???", "Raven.Studio.xap"  ) |
@@ -136,6 +136,9 @@ task Compile -depends Init {
 
 task Test -depends Compile {
 	Write-Host $test_prjs
+	Copy-Item (Get-DependencyPackageFiles 'Rx-Main' -frameworkVersion 'Net4') $build_dir -force
+	
+	
 	$test_prjs | ForEach-Object { 
 		Write-Host "Testing $build_dir\$_"
 		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
@@ -401,7 +404,7 @@ task CreateNugetPackageFineGrained {
 	New-Item $nuget_dir\RavenDB.Client\lib\sl50 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.nuspec $nuget_dir\RavenDB.Client\RavenDB.Client.nuspec
 	
-	@("Raven.Abstractions.???", "Raven.Client.Lightweight.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\net40 }
+	@("Raven.Abstractions.???", "Raven.Client.Lightweight.???", "Raven.Imports.SignalR.Client.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\net40 }
 	@("Raven.Client.Silverlight-4.???", "AsyncCtpLibrary_Silverlight.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\sl40 }
 	@("Raven.Client.Silverlight.???", "AsyncCtpLibrary_Silverlight5.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Client\lib\sl50	}
 		
@@ -420,6 +423,7 @@ task CreateNugetPackageFineGrained {
 	New-Item $nuget_dir\RavenDB.Database\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Database.nuspec $nuget_dir\RavenDB.Database\RavenDB.Database.nuspec
 	@("Raven.Abstractions.???", "Raven.Database.???", "BouncyCastle.Crypto.???",
+		"Raven.Imports.SignalR.???", "Raven.Imports.SignalR.Hosting.Common.???", "Raven.Imports.SignalR.Hosting.Self.???", 
 			  "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Spatial4n.Core.???",
 			  "Lucene.Net.Contrib.SpellChecker.???", "Raven.Backup.???", "Raven.Smuggler.???", "Raven.Storage.Esent.???",
 			  "Raven.Storage.Managed.???", "Raven.Munin.???" ) |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Database\lib\net40 }
@@ -428,6 +432,7 @@ task CreateNugetPackageFineGrained {
 	Copy-Item $base_dir\NuGet\RavenDB.Server.nuspec $nuget_dir\RavenDB.Server\RavenDB.Server.nuspec
 	@("BouncyCastle.Crypto.???", "Esent.Interop.???", "ICSharpCode.NRefactory.???", "Lucene.Net.???", "Lucene.Net.Contrib.Spatial.???", "Spatial4n.Core.???",
 		"Lucene.Net.Contrib.SpellChecker.???", "NewtonSoft.Json.???", "NLog.???", "Raven.Abstractions.???", "Raven.Database.???",
+		"Raven.Imports.SignalR.???", "Raven.Imports.SignalR.Hosting.Common.???", "Raven.Imports.SignalR.Hosting.Self.???", 
 		"Raven.Munin.???", "Raven.Server.???", "Raven.Storage.Esent.???", "Raven.Storage.Managed.???",
 		"Raven.Studio.xap") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Server }	
 

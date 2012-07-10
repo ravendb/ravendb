@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Connection;
@@ -26,8 +28,13 @@ using Raven.Client.Listeners;
 using Raven.Client.Silverlight.Connection;
 using Raven.Client.Silverlight.Connection.Async;
 using System.Collections.Generic;
+using Raven.Client.Util;
+
 #else
 using Raven.Client.Listeners;
+using Raven.Client.Util;
+using Raven.Imports.SignalR.Client;
+
 #endif
 
 namespace Raven.Client.Document
@@ -56,6 +63,17 @@ namespace Raven.Client.Document
 #endif
 
 		private HttpJsonRequestFactory jsonRequestFactory;
+
+		private ChangesConnectionFactory changesConnectionFactory;
+
+		public ChangesConnectionFactory ChangesConnectionFactory
+		{
+			get
+			{
+				AssertInitialized();
+				return changesConnectionFactory;
+			}
+		}
 
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
@@ -348,6 +366,8 @@ namespace Raven.Client.Document
 
 			AssertValidConfiguration();
 
+			changesConnectionFactory = new ChangesConnectionFactory(Conventions);
+
 #if !SILVERLIGHT
 			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
 #else
@@ -427,9 +447,19 @@ namespace Raven.Client.Document
 					return;
 
 				SetHeader(args.Request.Headers, "Authorization", currentOauthToken);
-
 			};
+
+			changesConnectionFactory.ConfigureConnection += connection =>
+				connection.OnPrepareRequest += request =>
+				{
+					if (string.IsNullOrEmpty(currentOauthToken))
+						return;
+
+					request.AddHeader("Authorization", currentOauthToken);
+				};
+			
 #if !SILVERLIGHT
+			
 			Conventions.HandleUnauthorizedResponse = (response) =>
 			{
 				var oauthSource = response.Headers["OAuth-Source"];
@@ -602,6 +632,33 @@ namespace Raven.Client.Document
 #endif
 		}
 
+		/// <summary>
+		/// Subscribe to change notifications from the server
+		/// </summary>
+		public override TaskObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null)
+		{
+			AssertInitialized();
+
+			if (string.IsNullOrEmpty(Url))
+				throw new InvalidOperationException("Changes API requires usage of server/client");
+
+			database = database ?? DefaultDatabase;
+
+			var dbUrl = MultiDatabase.GetRootDatabaseUrl(Url);
+			if (string.IsNullOrEmpty(database) == false)
+				dbUrl = dbUrl + "/databases/" + database;
+
+			var nvc = new Dictionary<string, string>();
+
+			nvc["changes"] = changes.ToString();
+			if (string.IsNullOrEmpty(idPrefix) == false)
+				nvc["idPrefix"] = idPrefix;
+
+			var connection = changesConnectionFactory
+				.Create(dbUrl + "/signalr/notifications", Credentials, nvc);
+			return connection;
+		}
+		
 		/// <summary>
 		/// Setup the context for aggressive caching.
 		/// </summary>

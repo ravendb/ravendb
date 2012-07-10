@@ -32,6 +32,8 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
     <TargetFrameworkProfile />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -99,6 +101,9 @@
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Reactive">
+      <HintPath>..\packages\Rx-Main.1.0.11226\lib\Net4\System.Reactive.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
@@ -567,6 +572,7 @@
     <Compile Include="Issues\RavenDB_367.cs" />
     <Compile Include="Issues\RavenDB_381.cs" />
     <Compile Include="Issues\RavenDB_384.cs" />
+    <Compile Include="Issues\ReplicationBehavior.cs" />
     <Compile Include="Linq\LongCount.cs" />
     <Compile Include="MailingList\AccesscControlHeaders.cs" />
     <Compile Include="MailingList\Arun.cs" />
@@ -626,6 +632,7 @@
     <Compile Include="MailingList\Joel.cs" />
     <Compile Include="MailingList\Johnson.cs" />
     <Compile Include="MailingList\Jorre.cs" />
+    <Compile Include="MailingList\linmouhong.cs" />
     <Compile Include="MailingList\LinusK.cs" />
     <Compile Include="MailingList\Mark2.cs" />
     <Compile Include="MailingList\MattJohnson.cs" />
@@ -666,7 +673,15 @@
     <Compile Include="MailingList\Stockholm.cs" />
     <Compile Include="MailingList\Tony.cs" />
     <Compile Include="MailingList\Troy.cs" />
+    <Compile Include="MailingList\TwoLocations.cs" />
     <Compile Include="MailingList\What.cs" />
+    <Compile Include="Notifications\ClientServer.cs" />
+    <Compile Include="Notifications\Filtered.cs" />
+    <Compile Include="Notifications\SecurityOAuth.cs" />
+    <Compile Include="Notifications\Embedded.cs" />
+    <Compile Include="Notifications\MultiTenant.cs" />
+    <Compile Include="Notifications\Security_Windows.cs" />
+    <Compile Include="Notifications\WithIIS.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />
     <Compile Include="MailingList\WallaceTurner.cs" />
@@ -980,6 +995,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
