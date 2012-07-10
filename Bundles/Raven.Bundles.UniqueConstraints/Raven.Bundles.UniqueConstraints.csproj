@@ -46,6 +46,7 @@
     <Compile Include="Constants.cs" />
     <Compile Include="UniqueConstraintsDeleteTrigger.cs" />
     <Compile Include="UniqueConstraintsPutTrigger.cs" />
+    <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
