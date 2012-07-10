@@ -113,7 +113,7 @@ namespace Raven.Database.Queries
 
 						if (abstractViewGenerator.ReduceDefinition != null) // we can't choose a map/reduce index
 						{
-							explain(indexName, () => "Can't choose a map/reduce index for dyanmic queries.");
+							explain(indexName, () => "Can't choose a map/reduce index for dynamic queries.");
 							return false;
 						}
 

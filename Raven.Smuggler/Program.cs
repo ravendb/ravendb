@@ -72,8 +72,6 @@ namespace Raven.Smuggler
 			program.Parse(args);
 		}
 
-       
-
 		private void Parse(string[] args)
 		{
 			// Do these arguments the traditional way to maintain compatibility
