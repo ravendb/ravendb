@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Bundles.UniqueConstraints;
 
 namespace Raven.Bundles.Tests.UniqueConstraints
 {
@@ -17,13 +18,14 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 				session.SaveChanges();
 
 				// Ensures constraint was created
-				Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Uri.EscapeDataString("foo@bar.com")));
+				Assert.NotNull(
+					DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue(("foo@bar.com"))));
 				Assert.NotNull(DocumentStore.DatabaseCommands.Get("users/1"));
 
 				DocumentStore.DatabaseCommands.Delete("users/1", null);
 
 				// Both docs should be deleted
-				Assert.Null(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Uri.EscapeDataString("foo@bar.com")));
+				Assert.Null(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue("foo@bar.com")));
 				Assert.Null(DocumentStore.DatabaseCommands.Get("users/1"));
 			}
 		}
@@ -39,10 +41,10 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 				session.SaveChanges();
 
 				// Ensures constraint was created
-				Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Uri.EscapeDataString("foo@bar.com")));
+				Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue("foo@bar.com")));
 				Assert.NotNull(DocumentStore.DatabaseCommands.Get("users/1"));
 
-				DocumentStore.DatabaseCommands.Delete("UniqueConstraints/Users/Email/" + Uri.EscapeDataString("foo@bar.com"), null);
+				DocumentStore.DatabaseCommands.Delete("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue("foo@bar.com"), null);
 
 				// Base doc still intact
 				Assert.NotNull(DocumentStore.DatabaseCommands.Get("users/1"));

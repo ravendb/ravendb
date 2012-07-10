@@ -58,6 +58,9 @@
     <Compile Include="..\..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Bundles.UniqueConstraints\Util.cs">
+      <Link>UniqueConstraints\Util.cs</Link>
+    </Compile>
     <Compile Include="Authentication\AuthorizationTest.cs" />
     <Compile Include="Authentication\AsyncSimpleLogin.cs" />
     <Compile Include="Authentication\Bugs\Mojo2.cs" />
