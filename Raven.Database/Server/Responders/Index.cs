@@ -89,10 +89,39 @@ namespace Raven.Database.Server.Responders
 			{
 				GetIndexMappedResult(context, index);
 			}
+			else if (string.IsNullOrEmpty(context.Request.QueryString["explain"]) == false)
+			{
+				GetExplanation(context, index);
+			}
 			else 
 			{
 				GetIndexQueryRessult(context, index);
 			}
+		}
+
+		private void GetExplanation(IHttpContext context, string index)
+		{
+			var dynamicIndex = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) ||
+			                   index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase);
+
+			if(dynamicIndex == false)
+			{
+				context.SetStatusToBadRequest();
+				context.WriteJson(new
+				              	{
+				              		Error = "Explain can only work on dynamic indexes"
+				              	});
+				return;
+			}
+
+			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+			string entityName = null;
+			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
+				entityName = index.Substring("dynamic/".Length);
+
+			var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
+
+			context.WriteJson(explanations);
 		}
 
 		private void GetIndexMappedResult(IHttpContext context, string index)

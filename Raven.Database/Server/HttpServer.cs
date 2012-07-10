@@ -408,6 +408,7 @@ namespace Raven.Database.Server
 				HandleException(context, e);
 				if (ShouldLogException(e))
 					logger.WarnException("Error on request", e);
+				return default(T);
 			}
 			finally
 			{
