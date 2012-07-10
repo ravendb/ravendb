@@ -36,19 +36,14 @@ namespace Raven.Abstractions.Smuggler
 		/// </summary>
 		public ItemType OperateOnTypes { get; set; }
 
-	    public ItemType ItemTypeParser(string items)
-	    {
-	        var result = new ItemType();
-	        if (String.IsNullOrWhiteSpace(items))
-	        {
-	            return ItemType.Documents | ItemType.Indexes | ItemType.Attachments;
-	        }
-	        foreach (var item in items.Split(','))
-	        {
-	            result |= (ItemType)Enum.Parse(typeof(ItemType), item);
-	        }
-	        return result;
-	    }
+		public ItemType ItemTypeParser(string items)
+		{
+			if (String.IsNullOrWhiteSpace(items))
+			{
+				return ItemType.Documents | ItemType.Indexes | ItemType.Attachments;
+			}
+			return (ItemType)Enum.Parse(typeof(ItemType), items);
+		}
 		/// <summary>
 		/// The timeout for requests
 		/// </summary>
@@ -82,8 +77,8 @@ namespace Raven.Abstractions.Smuggler
 	[Flags]
 	public enum ItemType
 	{
-        Documents = 0x1,
-        Indexes = 0x2,
-        Attachments = 0x4
+		Documents = 0x1,
+		Indexes = 0x2,
+		Attachments = 0x4
 	}
 }
