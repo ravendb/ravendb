@@ -91,7 +91,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 		}
 
-		public HttpJsonRequest CreateRequest(string relativeUrl, string method)
+		public HttpJsonRequest CreateRequest(string method, string relativeUrl)
 		{
 			return jsonRequestFactory.CreateHttpJsonRequest(this, url + relativeUrl, method, credentials, convention);
 		}
