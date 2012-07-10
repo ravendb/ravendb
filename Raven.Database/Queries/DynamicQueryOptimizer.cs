@@ -19,7 +19,9 @@ namespace Raven.Database.Queries
 			this.database = database;
 		}
 
-		public string SelectAppropriateIndex(string entityName, IndexQuery indexQuery)
+		public string SelectAppropriateIndex(
+			string entityName, 
+			IndexQuery indexQuery)
 		{
 			// There isn't much point for query optimizer of aggregation indexes
 			// the main reason is that we must always aggregate on the same items, and using the same 
@@ -51,18 +53,22 @@ namespace Raven.Database.Queries
 				}
 			}
 
+			// there is no reason why we can't use indexes with transform results
+			// we merely need to disable the transform results for this particular query
+			indexQuery.SkipTransformResults = true;
 			return database.IndexDefinitionStorage.IndexNames
 					.Where(indexName =>
 					{
 						var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
 						if (abstractViewGenerator == null) // there is no matching view generator
+						{
 							return false;
+						}
 
 						if (abstractViewGenerator.ReduceDefinition != null) // we can't choose a map/reduce index
+						{
 							return false;
-
-						if (abstractViewGenerator.TransformResultsDefinition != null)// we can't choose an index with transform results
-							return false;
+						}
 
 						if (abstractViewGenerator.HasWhereClause) // without a where clause
 							return false;
