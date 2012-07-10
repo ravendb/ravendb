@@ -10,7 +10,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Bundles.Encryption.Plugin;
+using Raven.Bundles.Compression.Plugin;
 using Raven.Bundles.Expiration;
 using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Document;
@@ -20,16 +20,16 @@ using Xunit;
 using System.Linq;
 using System.Text;
 
-namespace Raven.Bundles.Tests.Encryption
+namespace Raven.Bundles.Tests.Compression
 {
-	public abstract class Encryption : IDisposable
+	public abstract class Compression : IDisposable
 	{
 		protected readonly string path;
 		protected readonly DocumentStore documentStore;
 		private readonly RavenDbServer ravenDbServer;
 		private bool closed = false;
 
-		public Encryption()
+		public Compression()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
@@ -44,12 +44,8 @@ namespace Raven.Bundles.Tests.Encryption
 						{
 							Catalogs =
 								{
-									new AssemblyCatalog(typeof (DocumentEncryption).Assembly)
+									new AssemblyCatalog(typeof (DocumentCompression).Assembly)
 								},
-						},
-					Settings =
-						{
-							{"Raven/Encryption/Key", "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8="}
 						}
 				});
 			documentStore = new DocumentStore

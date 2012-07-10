@@ -6,9 +6,9 @@ using Raven.Abstractions.Indexing;
 using Raven.Bundles.Tests.Versioning;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Encryption
+namespace Raven.Bundles.Tests.Compression
 {
-	public class Crud : Encryption
+	public class Crud : Compression
 	{
 		[Fact]
 		public void StoreAndLoad()
