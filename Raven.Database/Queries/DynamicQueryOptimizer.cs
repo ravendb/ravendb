@@ -84,6 +84,33 @@ namespace Raven.Database.Queries
 							return false;
 						}
 
+						if (entityName == null)
+						{
+							if (abstractViewGenerator.ForEntityNames.Count != 0)
+							{
+								explain(indexName, () => "Query is not specific for entity name, but the index filter by entity names.");
+								return false;
+							}
+						}
+						else
+						{
+							if (abstractViewGenerator.ForEntityNames.Count > 1) // we only allow indexes with a single entity name
+							{
+								explain(indexName, () => "Index contains more than a single entity name, may result in a different type being returned.");
+								return false;
+							}
+							if (abstractViewGenerator.ForEntityNames.Count == 0)
+							{
+								explain(indexName, () => "Query is specific for entity name, but the index searches across all of them, may result in a different type being returned.");
+								return false;
+							}
+							if (abstractViewGenerator.ForEntityNames.Contains(entityName) == false) // for the specified entity name
+							{
+								explain(indexName, () => string.Format("Index does not apply to entity name: {0}", entityName));
+								return false;
+							}
+						}
+
 						if (abstractViewGenerator.ReduceDefinition != null) // we can't choose a map/reduce index
 						{
 							explain(indexName, () => "Can't choose a map/reduce index for dyanmic queries.");
@@ -107,27 +134,6 @@ namespace Raven.Database.Queries
 							explain(indexName,
 									() => "Can't choose an index with a different number of from clauses / SelectMany, will affect queries like Count().");
 							return false;
-						}
-
-						if (entityName == null)
-						{
-							if (abstractViewGenerator.ForEntityNames.Count != 0)
-							{
-								explain(indexName, () => "Index is not specific for entity name, but the index filter by entity names.");
-								return false;
-							}
-						}
-						else
-						{
-							if (abstractViewGenerator.ForEntityNames.Count != 1) // we only allow indexes with a single entity name
-							{
-								explain(indexName, () => "Index contains more than a single entity name, may result in different type being returned.");
-							}
-							if (abstractViewGenerator.ForEntityNames.Contains(entityName) == false) // for the specified entity name
-							{
-								explain(indexName, () => string.Format("Index does not apply to entity name: {0}", entityName));
-								return false;
-							}
 						}
 
 						if (normalizedFieldsQueriedUpon.All(abstractViewGenerator.ContainsFieldOnMap) == false)
@@ -257,7 +263,7 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			explain(name, () => "Selected as best match");
+			explain(name ?? "Temporary index will be created", () => "Selected as best match");
 
 			return name;
 		}
