@@ -14,6 +14,5 @@ namespace Raven.Bundles.UniqueConstraints
 			// to avoid issues with ids, we encode the entire thing as safe Base64
 			return Convert.ToBase64String(Encoding.UTF8.GetBytes(stringToEscape));
 		}
- 
 	}
 }

@@ -403,6 +403,12 @@ namespace Raven.Database.Server
 
 				return action(prefix);
 			}
+			catch (Exception e)
+			{
+				HandleException(context, e);
+				if (ShouldLogException(e))
+					logger.WarnException("Error on request", e);
+			}
 			finally
 			{
 				ResetThreadLocalState();
