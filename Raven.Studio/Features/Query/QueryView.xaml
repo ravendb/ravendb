@@ -13,7 +13,8 @@
                          xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                          xmlns:Models="clr-namespace:Raven.Studio.Models"
-                         xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
+                         xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+                          mc:Ignorable="d"
                          d:DataContext="{d:DesignInstance Models:QueryModel}">
     <Infrastructure:PageView.Resources>
         <Storyboard x:Key="ShowErrorPanel">
@@ -381,10 +382,17 @@
                                 </TextBlock>
                         </toolkit:WrapPanel>
 
-                        <toolkit:DockPanel Grid.Row="1" Margin="3">
+                        <toolkit:DockPanel Grid.Row="1" Margin="3" >
                             <TextBlock Text="Url:" toolkit:DockPanel.Dock="Left" VerticalAlignment="Center"/>
-                            <TextBox IsReadOnly="True" Text="{Binding QueryUrl}" Margin="5" VerticalAlignment="Center" 
-                                     Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}"/>
+                            <toolkit:DockPanel LastChildFill="False" HorizontalAlignment="Left">
+                                <Button Style="{StaticResource Style_Button_MouseOverChrome}" Command="{StaticResource NavigateToExternalUrlCommand}"
+                                        CommandParameter="{Binding QueryUrl}" toolkit:DockPanel.Dock="Right"
+                                        ToolTipService.ToolTip="Open Url in Browser">
+                                    <Image Source="{StaticResource Image_VisitLink_Tiny}" Stretch="None"/>
+                                </Button>
+                              <TextBox IsReadOnly="True" Text="{Binding QueryUrl}" Margin="5" VerticalAlignment="Center" 
+                                         Style="{StaticResource Style_TextBox_ReadOnly_LogsDetails}" toolkit:DockPanel.Dock="Right"/>
+                            </toolkit:DockPanel>
                         </toolkit:DockPanel>
                     </Grid>
                 </Border>
