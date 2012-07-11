@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Net;
 using System.Reactive.Linq;
 using System.Windows.Input;
 using ActiproSoftware.Text;
@@ -335,7 +336,16 @@ namespace Raven.Studio.Models
 	            exception = ((AggregateException) exception).ExtractSingleInnerException();
 	        }
 
-	        QueryErrorMessage.Value = exception.Message;
+	        var message = exception
+	            .TryReadResponseIfWebException()
+	            .TryReadErrorPropertyFromJson();
+
+            if (string.IsNullOrEmpty(message))
+            {
+                message = exception.Message;
+            }
+
+            QueryErrorMessage.Value = message;
 	        IsErrorVisible.Value = true;
 	    }
 
