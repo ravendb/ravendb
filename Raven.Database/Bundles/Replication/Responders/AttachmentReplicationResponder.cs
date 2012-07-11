@@ -17,7 +17,6 @@ using Raven.Bundles.Replication.Plugins;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -27,7 +26,7 @@ namespace Raven.Bundles.Replication.Responders
 {
 	[ExportMetadata("Bundle", "Replication")]
 	[InheritedExport(typeof(AbstractRequestResponder))]
-	public class AttachmentReplicationResponder : RequestResponder
+	public class AttachmentReplicationResponder : AbstractRequestResponder
 	{
 		private Logger log = LogManager.GetCurrentClassLogger();
 

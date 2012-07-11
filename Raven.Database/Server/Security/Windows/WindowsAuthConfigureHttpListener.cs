@@ -23,7 +23,7 @@ namespace Raven.Database.Server.Security.Windows
 				case AnonymousUserAccessMode.None:
 					listener.AuthenticationSchemeSelectorDelegate = request =>
 					{
-						if (NeverSecret.Urls.Contains(request.Url.AbsolutePath, StringComparer.InvariantCultureIgnoreCase))
+						if (NeverSecret.Urls.Contains(request.Url.AbsolutePath))
 							return AuthenticationSchemes.Anonymous;
 						return AuthenticationSchemes.IntegratedWindowsAuthentication;
 					};
@@ -40,7 +40,7 @@ namespace Raven.Database.Server.Security.Windows
 				case AnonymousUserAccessMode.Get:
 					listener.AuthenticationSchemeSelectorDelegate = request =>
 					{
-						if (NeverSecret.Urls.Contains(request.Url.AbsolutePath, StringComparer.InvariantCultureIgnoreCase))
+						if (NeverSecret.Urls.Contains(request.Url.AbsolutePath))
 							return AuthenticationSchemes.Anonymous;
 					
 						return AbstractRequestAuthorizer.IsGetRequest(request.HttpMethod, request.Url.AbsolutePath) ?

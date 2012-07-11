@@ -16,7 +16,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
-	public class MultiGet : RequestResponder, IDisposable
+	public class MultiGet : AbstractRequestResponder, IDisposable
 	{
 		public override string UrlPattern
 		{

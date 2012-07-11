@@ -572,6 +572,7 @@
     <Compile Include="Issues\RavenDB_367.cs" />
     <Compile Include="Issues\RavenDB_381.cs" />
     <Compile Include="Issues\RavenDB_384.cs" />
+    <Compile Include="Issues\Raven_410.cs" />
     <Compile Include="Issues\ReplicationBehavior.cs" />
     <Compile Include="Linq\LongCount.cs" />
     <Compile Include="MailingList\AccesscControlHeaders.cs" />
@@ -675,6 +676,7 @@
     <Compile Include="MailingList\Troy.cs" />
     <Compile Include="MailingList\TwoLocations.cs" />
     <Compile Include="MailingList\What.cs" />
+    <Compile Include="Notifications\NotificationOnWrongDatabase.cs" />
     <Compile Include="Notifications\ClientServer.cs" />
     <Compile Include="Notifications\Filtered.cs" />
     <Compile Include="Notifications\SecurityOAuth.cs" />
@@ -943,10 +945,6 @@
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.Debug\Raven.Client.Debug.csproj">
-      <Project>{27153214-4630-4E2D-9807-0D5352687DD5}</Project>
-      <Name>Raven.Client.Debug</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Embedded\Raven.Client.Embedded.csproj">
       <Project>{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B}</Project>
       <Name>Raven.Client.Embedded</Name>
@@ -959,21 +957,9 @@
       <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
       <Name>Raven.Database</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Munin\Raven.Munin.csproj">
-      <Project>{486537C2-EDF7-404F-9CFB-EEE25996DF5F}</Project>
-      <Name>Raven.Munin</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Server\Raven.Server.csproj">
       <Project>{3B90EB20-AEA3-4972-8219-936F1A62768C}</Project>
       <Name>Raven.Server</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
-      <Project>{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}</Project>
-      <Name>Raven.Storage.Esent</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
-      <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
-      <Name>Raven.Storage.Managed</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

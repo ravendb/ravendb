@@ -383,37 +383,6 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// 	Matches substrings of the field
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereContains(string fieldName, object value)
-		{
-			WhereContains(fieldName, value);
-			return this;
-		}
-
-		/// <summary>
-		/// 	Matches substrings of the field
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereContains(string fieldName, params object[] values)
-		{
-			WhereContains(fieldName, values);
-			return this;
-		}
-
-		/// <summary>
-		/// 	Matches substrings of the field
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereContains(string fieldName, IEnumerable<object> values)
-		{
-			WhereContains(fieldName, values);
-			return this;
-		}
-
-
-		/// <summary>
 		/// Check that the field has one of the specified value
 		/// </summary>
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereIn(string fieldName, IEnumerable<object> values)

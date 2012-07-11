@@ -22,7 +22,7 @@ using Raven.Database.Storage;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Index : RequestResponder
+	public class Index : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -89,10 +89,39 @@ namespace Raven.Database.Server.Responders
 			{
 				GetIndexMappedResult(context, index);
 			}
+			else if (string.IsNullOrEmpty(context.Request.QueryString["explain"]) == false)
+			{
+				GetExplanation(context, index);
+			}
 			else 
 			{
 				GetIndexQueryRessult(context, index);
 			}
+		}
+
+		private void GetExplanation(IHttpContext context, string index)
+		{
+			var dynamicIndex = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) ||
+			                   index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase);
+
+			if(dynamicIndex == false)
+			{
+				context.SetStatusToBadRequest();
+				context.WriteJson(new
+				              	{
+				              		Error = "Explain can only work on dynamic indexes"
+				              	});
+				return;
+			}
+
+			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+			string entityName = null;
+			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
+				entityName = index.Substring("dynamic/".Length);
+
+			var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
+
+			context.WriteJson(explanations);
 		}
 
 		private void GetIndexMappedResult(IHttpContext context, string index)
@@ -256,8 +285,7 @@ namespace Raven.Database.Server.Responders
 
 			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);
 
-			if (dynamicIndexName != null && 
-				Database.IndexStorage.HasIndex(dynamicIndexName))
+			if (dynamicIndexName != null && Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
 				indexEtag = Database.GetIndexEtag(dynamicIndexName, null);
 				if (context.MatchEtag(indexEtag))
@@ -265,6 +293,21 @@ namespace Raven.Database.Server.Responders
 					context.SetStatusToNotModified();
 					return null;
 				}
+			}
+
+			if(dynamicIndexName == null && // would have to create a dynamic index
+				Database.Configuration.CreateTemporaryIndexesForAdHocQueriesIfNeeded == false) // but it is disabled
+			{
+				indexEtag = Guid.NewGuid();
+				var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
+				context.SetStatusToBadRequest();
+				var target = entityName == null ? "all documents" : entityName + " documents";
+				context.WriteJson(new
+				                  	{
+				                  		Error = "Executing the query " + indexQuery.Query +" on " + target +" require creation of temporary index, and it has been explicitly disabled.",
+										Explanations = explanations
+				                  	});
+				return null;
 			}
 
 			var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);

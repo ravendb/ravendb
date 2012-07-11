@@ -6,7 +6,7 @@
 	using Listeners;
 	using Json.Linq;
 
-	using Constants = Bundles.UniqueConstraints.Constants;
+	using Constants = Raven.Bundles.UniqueConstraints.Constants;
 
 	public class UniqueConstraintsStoreListener : IDocumentStoreListener
 	{

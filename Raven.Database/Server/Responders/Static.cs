@@ -10,7 +10,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Static : RequestResponder
+	public class Static : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

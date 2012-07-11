@@ -18,7 +18,6 @@ using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
-using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
@@ -26,7 +25,7 @@ namespace Raven.Bundles.Replication.Responders
 {
 	[ExportMetadata("Bundle", "Replication")]
 	[InheritedExport(typeof(AbstractRequestResponder))]
-	public class DocumentReplicationResponder : RequestResponder
+	public class DocumentReplicationResponder : AbstractRequestResponder
 	{
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
 

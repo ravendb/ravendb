@@ -33,7 +33,7 @@ namespace Raven.Smuggler
 			            			                                                                     	{
 			            			                                                                     		try
 			            			                                                                     		{
-			            			                                                                     			options.OperateOnTypes = (ItemType) Enum.Parse(typeof (ItemType), value);
+			            			                                                                     			options.OperateOnTypes = options.ItemTypeParser(value);
 			            			                                                                     		}
 			            			                                                                     		catch (Exception e)
 			            			                                                                     		{

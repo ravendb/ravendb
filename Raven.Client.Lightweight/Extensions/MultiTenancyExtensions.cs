@@ -4,10 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-#if !SILVERLIGHT
-using System.Transactions;
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection.Async;
 #endif
+using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Extensions
@@ -32,36 +34,56 @@ namespace Raven.Client.Extensions
 		/// </remarks>
 		public static void EnsureDatabaseExists(this IDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			self = self.ForDefaultDatabase();
+			var serverClient = self.ForDefaultDatabase() as ServerClient;
+			if (serverClient == null)
+				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
+
 			var doc = MultiDatabase.CreateDatabaseDocument(name);
 			var docId = "Raven/Databases/" + name;
-			
-			using (new TransactionScope(TransactionScopeOption.Suppress))
+			try
 			{
-				try
-				{
-					if (self.Get(docId) != null)
-						return;
+				if (self.Get(docId) != null)
+					return;
 
-					self.Put(docId, null, doc, new RavenJObject());
-				}
-				catch (Exception)
-				{
-					if (ignoreFailures == false)
-						throw;
-
-				}
+				var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(name));
+				req.Write(doc.ToString(Formatting.Indented));
+				req.ExecuteRequest();
 			}
+			catch (Exception)
+			{
+				if (ignoreFailures == false)
+					throw;
+			}
+		}
+
+		public static void CreateDatabase(this IDatabaseCommands self, DatabaseDocument databaseDocument)
+		{
+			var serverClient = self.ForDefaultDatabase() as ServerClient;
+			if (serverClient == null)
+				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
+
+			if(databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
+				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
+
+			var doc = RavenJObject.FromObject(databaseDocument);
+			doc.Remove("Id");
+
+			var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id));
+			req.Write(doc.ToString(Formatting.Indented));
+			req.ExecuteRequest();
 		}
 #endif
 
-#if !NET35
+#if SILVERLIGHT
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>
 		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			self = self.ForDefaultDatabase();
+			var serverClient = self.ForDefaultDatabase() as AsyncServerClient;
+			if (serverClient == null)
+				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
+
 			var doc = MultiDatabase.CreateDatabaseDocument(name);
 			var docId = "Raven/Databases/" + name;
 
@@ -71,7 +93,41 @@ namespace Raven.Client.Extensions
 					if (get.Result != null)
 						return get;
 
+
 					return (Task)self.PutAsync(docId, null, doc, new RavenJObject());
+				})
+				.Unwrap()
+				.ContinueWith(x=>
+				{
+					if (ignoreFailures == false)
+						x.Wait(); // will throw on error
+
+					var observedException = x.Exception;
+					GC.KeepAlive(observedException);
+				});
+		}
+#else
+		///<summary>
+		/// Ensures that the database exists, creating it if needed
+		///</summary>
+		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
+		{
+			var serverClient = self.ForDefaultDatabase() as AsyncServerClient;
+			if (serverClient == null)
+				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
+
+			var doc = MultiDatabase.CreateDatabaseDocument(name);
+			var docId = "Raven/Databases/" + name;
+
+			return self.GetAsync(docId)
+				.ContinueWith(get =>
+				{
+					if (get.Result != null)
+						return get;
+
+					var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(name));
+					req.Write(doc.ToString(Formatting.Indented));
+					return req.ExecuteRequestAsync();
 				})
 				.Unwrap()
 				.ContinueWith(x=>

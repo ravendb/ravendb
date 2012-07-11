@@ -932,6 +932,14 @@ namespace Raven.Client.Connection.Async
 			readStripingBase = -1;// this means that will have to use the master url first
 		}
 
+		public HttpJsonRequest CreateRequest(string method, string requestUrl)
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention).AddOperationHeaders(OperationsHeaders);
+			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
+		}
+
 		private Task ExecuteWithReplication(string method, Func<string, Task> operation)
 		{
 			// Convert the Func<string, Task> to a Func<string, Task<object>>

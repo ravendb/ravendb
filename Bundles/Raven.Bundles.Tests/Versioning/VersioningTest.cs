@@ -1,11 +1,8 @@
 ﻿extern alias database;
 
 using System;
-using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
-using Raven.Bundles.Versioning.Data;
-using Raven.Bundles.Versioning.Triggers;
 using Raven.Client.Document;
 using Raven.Server;
 
@@ -22,20 +19,18 @@ namespace Raven.Bundles.Tests.Versioning
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			ravenDbServer = new RavenDbServer(
-				new database::Raven.Database.Config.RavenConfiguration
-				{
-					Port = 8079,
-					DataDirectory = path,
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					Catalog =
-						{
-							Catalogs =
-								{
-									new AssemblyCatalog(typeof (VersioningPutTrigger).Assembly)
-								}
-						},
-				});
+			var cfg = new database::Raven.Database.Config.RavenConfiguration
+			          	{
+			          		Port = 8079,
+			          		DataDirectory = path,
+			          		RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+			          		Settings =
+			          			{
+			          				{"Raven/ActiveBundles", "Versioning"}
+			          			}
+			          	};
+			cfg.PostInit();
+			ravenDbServer = new RavenDbServer(cfg);
 			documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079"
@@ -43,17 +38,17 @@ namespace Raven.Bundles.Tests.Versioning
 			documentStore.Initialize();
 			using(var s = documentStore.OpenSession())
 			{
-				s.Store(new VersioningConfiguration
+				s.Store(new database::Raven.Bundles.Versioning.Data.VersioningConfiguration
 				{
 					Exclude = true,
 					Id = "Raven/Versioning/Users",
 				});
-				s.Store(new VersioningConfiguration
+				s.Store(new database::Raven.Bundles.Versioning.Data.VersioningConfiguration
 				{
 					Exclude = true,
 					Id = "Raven/Versioning/Comments",
 				});
-				s.Store(new VersioningConfiguration
+				s.Store(new database::Raven.Bundles.Versioning.Data.VersioningConfiguration
 				{
 					Exclude = false,
 					Id = "Raven/Versioning/DefaultConfiguration",

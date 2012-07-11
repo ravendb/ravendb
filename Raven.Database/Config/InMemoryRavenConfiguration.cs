@@ -42,6 +42,9 @@ namespace Raven.Database.Config
 			MaxNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch / 2;
 			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 			InitialNumberOfItemsToReduceInSingleBatch = InitialNumberOfItemsToIndexInSingleBatch / 2;
+			MaxIndexingRunLatency = TimeSpan.FromMinutes(1);
+
+			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
 
 			AvailableMemoryForRaisingIndexBatchSizeLimit = Math.Min(768, MemoryStatistics.TotalPhysicalMemory/2);
 			MaxNumberOfParallelIndexTasks = 8;
@@ -59,10 +62,10 @@ namespace Raven.Database.Config
 
 		public void PostInit()
 		{
+			FilterActiveBundles();
+
 			if (string.Equals(AuthenticationMode, "oauth", StringComparison.InvariantCultureIgnoreCase))
 				SetupOAuth();
-
-			FilterActiveBundles();
 		}
 
 		public void Initialize()
@@ -97,6 +100,12 @@ namespace Raven.Database.Config
 								: TimeSpan.Parse(memoryCacheLimitCheckInterval);
 
 			// Index settings
+			var maxIndexingRunLatencyStr = Settings["Raven/MaxIndexingRunLatency"];
+			if(maxIndexingRunLatencyStr != null)
+			{
+				MaxIndexingRunLatency = TimeSpan.Parse(maxIndexingRunLatencyStr);
+			}
+
 			var maxNumberOfItemsToIndexInSingleBatch = Settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"];
 			if (maxNumberOfItemsToIndexInSingleBatch != null)
 			{
@@ -153,6 +162,8 @@ namespace Raven.Database.Config
 			RunInMemory = GetConfigurationValue<bool>("Raven/RunInMemory") ?? false;
 			DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 
+			CreateTemporaryIndexesForAdHocQueriesIfNeeded =
+				GetConfigurationValue<bool>("Raven/CreateTemporaryIndexesForAdHocQueriesIfNeeded") ?? true;
 
 			ResetIndexOnUncleanShutdown = GetConfigurationValue<bool>("Raven/ResetIndexOnUncleanShutdown") ?? false;
 			
@@ -216,6 +227,14 @@ namespace Raven.Database.Config
 				Catalog.Catalogs.Count == 1
 					? Catalog.Catalogs.First()
 					: new AggregateCatalog(Catalog.Catalogs);
+
+			var bundlesFilteredCatalog = catalog as BundlesFilteredCatalog;
+			if(bundlesFilteredCatalog != null)
+			{
+				bundlesFilteredCatalog.Bundles = bundles;
+				return;
+			}
+
 
 			Catalog.Catalogs.Clear();
 
@@ -655,6 +674,12 @@ namespace Raven.Database.Config
 		/// </summary>
 		public TimeSpan MemoryCacheExpiration { get; set; }
 
+		/// <summary>
+		/// Controls whatever RavenDB will create temporary indexes 
+		/// for queries that cannot be directed to standard indexes
+		/// </summary>
+		public bool CreateTemporaryIndexesForAdHocQueriesIfNeeded { get; set; }
+
 		public string IndexStoragePath
 		{
 			get
@@ -671,6 +696,8 @@ namespace Raven.Database.Config
 		}
 
 		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }
+
+		public TimeSpan MaxIndexingRunLatency { get; set; }
 
 		protected void ResetContainer()
 		{
@@ -707,7 +734,7 @@ namespace Raven.Database.Config
 
 		public T? GetConfigurationValue<T>(string configName) where T : struct
 		{
-			// explicitly fail if we can convert it
+			// explicitly fail if we can't convert it
 			if (string.IsNullOrEmpty(Settings[configName]) == false)
 				return (T)Convert.ChangeType(Settings[configName], typeof(T));
 			return null;
@@ -719,10 +746,10 @@ namespace Raven.Database.Config
 			switch (storageEngine.ToLowerInvariant())
 			{
 				case "esent":
-					storageEngine = "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+					storageEngine = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 					break;
 				case "munin":
-					storageEngine = "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+					storageEngine = typeof (Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 					break;
 			}
 			var type = Type.GetType(storageEngine);
@@ -738,16 +765,16 @@ namespace Raven.Database.Config
 		private string SelectStorageEngine()
 		{
 			if (RunInMemory)
-				return "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+				return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 
 			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
 				if (File.Exists(Path.Combine(DataDirectory, "Raven.ravendb")))
 				{
-					return "Raven.Storage.Managed.TransactionalStorage, Raven.Storage.Managed";
+					return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 				}
 				if (File.Exists(Path.Combine(DataDirectory, "Data")))
-					return "Raven.Storage.Esent.TransactionalStorage, Raven.Storage.Esent";
+					return typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 			}
 			return DefaultStorageTypeName;
 		}

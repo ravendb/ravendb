@@ -150,6 +150,14 @@ namespace Raven.Client.Connection
 			});
 		}
 
+		public HttpJsonRequest CreateRequest(string method, string requestUrl)
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention).AddOperationHeaders(OperationsHeaders);
+			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
+		}
+
 		private void ExecuteWithReplication(string method, Action<string> operation)
 		{
 			ExecuteWithReplication<object>(method, operationUrl =>

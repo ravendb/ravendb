@@ -36,6 +36,14 @@ namespace Raven.Abstractions.Smuggler
 		/// </summary>
 		public ItemType OperateOnTypes { get; set; }
 
+		public ItemType ItemTypeParser(string items)
+		{
+			if (String.IsNullOrWhiteSpace(items))
+			{
+				return ItemType.Documents | ItemType.Indexes | ItemType.Attachments;
+			}
+			return (ItemType)Enum.Parse(typeof(ItemType), items);
+		}
 		/// <summary>
 		/// The timeout for requests
 		/// </summary>
@@ -58,7 +66,7 @@ namespace Raven.Abstractions.Smuggler
 					var val = tuple.Item1.Type == JTokenType.String
 								? tuple.Item1.Value<string>()
 								: tuple.Item1.ToString(Formatting.None);
-					if (string.Equals(val, filter.Value, StringComparison.InvariantCultureIgnoreCase) == false)
+					if (String.Equals(val, filter.Value, StringComparison.InvariantCultureIgnoreCase) == false)
 						return false;
 				}
 			}
@@ -69,8 +77,8 @@ namespace Raven.Abstractions.Smuggler
 	[Flags]
 	public enum ItemType
 	{
-		Documents,
-		Indexes,
-		Attachments,
+		Documents = 0x1,
+		Indexes = 0x2,
+		Attachments = 0x4
 	}
 }

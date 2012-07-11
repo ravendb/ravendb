@@ -1,4 +1,6 @@
-﻿namespace Raven.Client.UniqueConstraints
+﻿using System.Text;
+
+namespace Raven.Client.UniqueConstraints
 {
 	using System;
 	using System.Collections.Generic;
@@ -22,7 +24,9 @@
 			var body = (MemberExpression)keySelector.Body;
 			var propertyName = body.Member.Name;
 
-			string uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + Uri.EscapeDataString(value.ToString());
+
+			string uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" + 
+				Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value);
 			var constraintDoc = session.Include("Id").Load<ConstraintDocument>(uniqueId);
 			if (constraintDoc == null)
 				return default(T);
@@ -36,6 +40,7 @@
 
 			return default(T);
 		}
+
 
 		public static UniqueConstraintCheckResult<T> CheckForUniqueConstraints<T>(this IDocumentSession session, T entity)
 		{
@@ -54,7 +59,7 @@
 					if(propertyValue == null)
 						continue;
 					constraintsIds.Add("UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() + "/" + 
-						Uri.EscapeDataString(propertyValue.ToString()));
+						Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(propertyValue.ToString()));
 				}
 
 				ConstraintDocument[] constraintDocs = session.Include("Id").Load<ConstraintDocument>(constraintsIds.ToArray());

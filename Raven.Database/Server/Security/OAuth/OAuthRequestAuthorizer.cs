@@ -14,7 +14,7 @@ namespace Raven.Database.Server.Security.OAuth
 
 			var requestUrl = ctx.GetRequestUrl();
 			
-			if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
+			if (NeverSecret.Urls.Contains(requestUrl))
 				return true;
 
 			var isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);

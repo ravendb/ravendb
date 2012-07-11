@@ -15,7 +15,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Queries : RequestResponder
+	public class Queries : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

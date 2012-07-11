@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class ClientAccessPolicy : RequestResponder
+	public class ClientAccessPolicy : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

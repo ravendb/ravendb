@@ -64,10 +64,6 @@
       <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
       <Name>Raven.Client.Lightweight</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
-      <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
-      <Name>Raven.Storage.Managed</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

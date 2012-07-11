@@ -39,6 +39,11 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Raven.Client.Lightweight.FSharp\Raven.Client.Lightweight.FSharp.fsproj">
+      <Name>Raven.Client.Lightweight.FSharp</Name>
+      <Project>{6996133d-ee21-4cc8-b29b-f6222ee476bb}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Server\Raven.Server.csproj">
       <Name>Raven.Server</Name>
       <Project>{3b90eb20-aea3-4972-8219-936f1a62768c}</Project>
@@ -64,11 +69,6 @@
       <Project>{0f5287ad-37b3-4375-ba3e-3ced64b1fc5b}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.Lightweight.FSharp\Raven.Client.Lightweight.FSharp.fsproj">
-      <Name>Raven.Client.Lightweight.FSharp</Name>
-      <Project>{6996133d-ee21-4cc8-b29b-f6222ee476bb}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Name>Raven.Client.Lightweight</Name>
       <Project>{4e087ecb-e7ca-4891-ac3c-3c76702715b6}</Project>
@@ -77,16 +77,6 @@
     <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
       <Name>Raven.Database</Name>
       <Project>{212823cd-25e1-41ac-92d1-d6df4d53fc85}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
-      <Name>Raven.Storage.Esent</Name>
-      <Project>{9dee8674-d0cd-430d-bd9b-6cd95f3cab22}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
-      <Name>Raven.Storage.Managed</Name>
-      <Project>{da99a419-e137-40db-9495-0c363b479d4b}</Project>
       <Private>True</Private>
     </ProjectReference>
     <Reference Include="xunit">

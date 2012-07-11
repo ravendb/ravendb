@@ -62,10 +62,10 @@ namespace Raven.Database.Server.Security.OAuth
 			}
 
 			AccessTokenBody.DatabaseAccess[] authorizedDatabases;
-			if (!AuthenticateClient.Authenticate(ResourceStore, identity.Item1, identity.Item2, out authorizedDatabases))
+			if (!AuthenticateClient.Authenticate(Database, identity.Item1, identity.Item2, out authorizedDatabases))
 			{
-				if ((ResourceStore == DefaultResourceStore ||
-				     !AuthenticateClient.Authenticate(DefaultResourceStore, identity.Item1, identity.Item2, out authorizedDatabases)))
+				if ((Database == SystemDatabase ||
+				     !AuthenticateClient.Authenticate(SystemDatabase, identity.Item1, identity.Item2, out authorizedDatabases)))
 				{
 					context.Response.StatusCode = (int) HttpStatusCode.Unauthorized;
 					context.Response.AddHeader("WWW-Authenticate", "Basic realm=\"Raven DB\"");

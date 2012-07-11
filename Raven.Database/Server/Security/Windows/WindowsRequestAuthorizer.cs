@@ -35,7 +35,7 @@ namespace Raven.Database.Server.Security.Windows
 			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx, out onRejectingRequest))
 			{
 				var requestUrl = ctx.GetRequestUrl();
-				if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
+				if (NeverSecret.Urls.Contains(requestUrl))
 					return true;
 
 				onRejectingRequest();
@@ -49,7 +49,7 @@ namespace Raven.Database.Server.Security.Windows
 				IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) == false)
 			{
 				var requestUrl = ctx.GetRequestUrl();
-				if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
+				if (NeverSecret.Urls.Contains(requestUrl))
 					return true;
 
 				onRejectingRequest();
