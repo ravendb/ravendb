@@ -36,7 +36,7 @@ namespace Raven.Imports.SignalR.Client.Transports
 
         internal static Task<NegotiationResponse> GetNegotiationResponse(IHttpClient httpClient, IConnection connection)
         {
-            string negotiateUrl = connection.Url + "negotiate";
+            string negotiateUrl = connection.Url + "negotiate?noCache=" + Guid.NewGuid().GetHashCode();
 
             return httpClient.GetAsync(negotiateUrl, connection.PrepareRequest).Then(response =>
             {
