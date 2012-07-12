@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet type='text/xsl' href='_UpgradeReport_Files/UpgradeReport.xslt'?><UpgradeLog>
+<Properties><Property Name="Solution" Value="RavenDB">
+</Property><Property Name="Solution File" Value="C:\Users\michelle.peterson\Raven\ravendb\RavenDB.sln">
+</Property><Property Name="User Options File" Value="C:\Users\michelle.peterson\Raven\ravendb\RavenDB.v11.suo">
+</Property><Property Name="Date" Value="Thursday, July 12, 2012">
+</Property><Property Name="Time" Value="11:26 AM">
+</Property></Properties><Event ErrorLevel="3" Project="" Source="RavenDB.sln" Description="SafeUpgrade">
+</Event><Event ErrorLevel="0" Project="" Source="RavenDB.sln" Description="File successfully backed up as C:\Users\michelle.peterson\Raven\ravendb\Backup\RavenDB.sln">
+</Event><Event ErrorLevel="0" Project="" Source="RavenDB.v11.suo" Description="File successfully backed up as C:\Users\michelle.peterson\Raven\ravendb\Backup\RavenDB.v11.suo">
+</Event><Event ErrorLevel="2" Project="Raven.Studio" Source="Raven.Studio\Raven.Studio.csproj" Description="">
+</Event><Event ErrorLevel="2" Project="Raven.Client.Silverlight" Source="Raven.Client.Silverlight\Raven.Client.Silverlight.csproj" Description="">
+</Event><Event ErrorLevel="0" Project="" Source="RavenDB.sln" Description="Solution converted successfully">
+</Event><Event ErrorLevel="3" Project="" Source="RavenDB.sln" Description="Converted">
+</Event></UpgradeLog>
