@@ -33,7 +33,7 @@
 				if(value == null)
 					continue;
 				var checkKey = "UniqueConstraints/" + entityName + property + "/" +
-							   Uri.EscapeDataString(doc.DataAsJson.Value<string>(value));
+							   Util.EscapeUniqueValue(doc.DataAsJson.Value<string>(value));
 
 				Database.Delete(checkKey, null, transactionInformation);
 			}

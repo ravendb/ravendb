@@ -7,13 +7,12 @@ using System.Linq.Expressions;
 using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Bundles.MoreLikeThis;
+using Raven.Client.Bundles.MoreLikeThis;
 using Raven.Client.Indexes;
-using Raven.Client.MoreLikeThis;
 using Xunit;
-using MoreLikeThisQueryParameters = Raven.Client.MoreLikeThis.MoreLikeThisQueryParameters;
-using StopWordsSetup = Raven.Client.MoreLikeThis.StopWordsSetup;
+using MoreLikeThisQueryParameters = Raven.Abstractions.Data.MoreLikeThisQueryParameters;
 
 namespace Raven.Bundles.Tests.MoreLikeThis
 {
@@ -21,10 +20,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 	{
 		#region Test Setup
 
-		public MoreLikeThisTests() : base(config =>
-			{
-				config.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(MoreLikeThisResponder).Assembly));
-			})
+		public MoreLikeThisTests() : base(config =>{})
 		{
 		}
 
@@ -179,7 +175,18 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 				TestUtil.WaitForIndexing(documentStore);
 			}
 
-			using (var session = documentStore.OpenSession())			{				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters				{					DocumentId = key,					Fields = new[] { "Body" }				});				TestUtil.WaitForIndexing(documentStore);				Assert.Empty(list);			}		}
+			using (var session = documentStore.OpenSession())
+			{
+				var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQueryParameters
+				{
+					DocumentId = key,
+					Fields = new[] { "Body" }
+				});
+				TestUtil.WaitForIndexing(documentStore);
+
+				Assert.Empty(list);
+			}
+		}
 
 		[Fact]
 		public void Test_With_Lots_Of_Random_Data()

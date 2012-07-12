@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Json;
 using Raven.Json.Linq;
 using Raven.Imports.Newtonsoft.Json;
@@ -13,6 +14,8 @@ namespace Raven.Abstractions.Smuggler
 {
 	public abstract class SmugglerApiBase : ISmugglerApi
 	{
+		private const int MaxSizeOfUncomressedSizeToSendToDatabase = 16*1024*1024;
+		protected readonly SmugglerOptions smugglerOptions;
 		protected abstract RavenJArray GetIndexes(int totalCount);
 		protected abstract RavenJArray GetDocuments(Guid lastEtag);
 		protected abstract Guid ExportAttachments(JsonTextWriter jsonWriter, Guid lastEtag);
@@ -24,6 +27,11 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract void ShowProgress(string format, params object[] args);
 
 		protected bool ensuredDatabaseExists;
+
+		public SmugglerApiBase(SmugglerOptions smugglerOptions)
+		{
+			this.smugglerOptions = smugglerOptions;
+		}
 
 		public void ExportData(SmugglerOptions options, bool incremental = false)
 		{
@@ -188,13 +196,15 @@ namespace Raven.Abstractions.Smuggler
 		public void ImportData(Stream stream, SmugglerOptions options, bool importIndexes = true)
 		{
 			EnsureDatabaseExists();
+			Stream sizeStream;
 
 			var sw = Stopwatch.StartNew();
 			// Try to read the stream compressed, otherwise continue uncompressed.
 			JsonTextReader jsonReader;
 			try
 			{
-				var streamReader = new StreamReader(new GZipStream(stream, CompressionMode.Decompress));
+				sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
+				var streamReader = new StreamReader(sizeStream);
 
 				jsonReader = new JsonTextReader(streamReader);
 
@@ -203,6 +213,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 			catch (InvalidDataException)
 			{
+				sizeStream = stream;
 				stream.Seek(0, SeekOrigin.Begin);
 
 				var streamReader = new StreamReader(stream);
@@ -252,9 +263,18 @@ namespace Raven.Abstractions.Smuggler
 				throw new InvalidDataException("StartArray was expected");
 			var batch = new List<RavenJObject>();
 			int totalCount = 0;
+			long lastFlushedAt = 0;
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
+				var before = sizeStream.Position;
 				var document = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
+				var size = sizeStream.Position - before;
+				if(size > 1024*1024)
+				{
+					Console.WriteLine("{0:#,#.##;;0} kb - {1}",
+						(double)size/1024, 
+						document["@metadata"].Value<string>("@id"));
+				}
 				if ((options.OperateOnTypes & ItemType.Documents) != ItemType.Documents)
 					continue;
 				if (options.MatchFilters(document) == false)
@@ -262,8 +282,13 @@ namespace Raven.Abstractions.Smuggler
 
 				totalCount += 1;
 				batch.Add(document);
-				if (batch.Count >= 128)
+				var sizeOnDisk = (sizeStream.Position - lastFlushedAt);
+				if (batch.Count >= smugglerOptions.BatchSize ||
+					sizeOnDisk >= MaxSizeOfUncomressedSizeToSendToDatabase)
+				{
+					lastFlushedAt = sizeStream.Position;
 					FlushBatch(batch);
+				}
 			}
 			FlushBatch(batch);
 

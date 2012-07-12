@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
@@ -47,9 +49,11 @@ namespace Raven.Database.Indexing.Sorting
 		public class SpatialDistanceFieldComparator : FieldComparator
 		{
 			private readonly double[] values;
-			private double[] currentReaderValues;
 			private double bottom;
 			private readonly Point originPt;
+
+			private int currentDocBase;
+			private IndexReader currentIndexReader;
 
 			public SpatialDistanceFieldComparator(double lat, double lng, int numHits)
 			{
@@ -76,7 +80,7 @@ namespace Raven.Database.Indexing.Sorting
 
 			public override int CompareBottom(int doc)
 			{
-				var v2 = currentReaderValues[doc];
+				var v2 = CalculateDistance(doc);
 				if (bottom > v2)
 				{
 					return 1;
@@ -92,12 +96,35 @@ namespace Raven.Database.Indexing.Sorting
 
 			public override void Copy(int slot, int doc)
 			{
-				values[slot] = currentReaderValues[doc];
+				values[slot] = CalculateDistance(doc);
+			}
+
+			private double CalculateDistance(int doc)
+			{
+				var document = currentIndexReader.Document(doc);
+				if (document == null)
+					return double.NaN;
+				var field = document.GetField(Constants.SpatialShapeFieldName);
+				if(field == null)
+					return double.NaN;
+				var shapeAsText = field.StringValue();
+				Shape shape;
+				try
+				{
+					shape = SpatialIndex.Context.ReadShape(shapeAsText);
+				}
+				catch (InvalidOperationException)
+				{
+					return double.NaN;
+				}
+				var pt = shape as Point;
+				return SpatialIndex.Context.GetDistCalc().Distance(pt, originPt);
 			}
 
 			public override void SetNextReader(IndexReader reader, int docBase)
 			{
-				currentReaderValues = ComputeDistances(reader);
+				currentIndexReader = reader;
+				currentDocBase = docBase;
 			}
 
 			public override IComparable Value(int slot)
@@ -105,54 +132,6 @@ namespace Raven.Database.Indexing.Sorting
 				return values[slot];
 			}
 
-			protected internal double[] ComputeDistances(IndexReader reader)
-			{
-				double[] retArray = null;
-				var termDocs = reader.TermDocs();
-				var termEnum = reader.Terms(new Term(Constants.SpatialShapeFieldName));
-				try
-				{
-					do
-					{
-						Term term = termEnum.Term();
-						if (term == null)
-							break;
-
-						Debug.Assert(Constants.SpatialShapeFieldName.Equals(term.Field()));
-
-						Shape termval;
-						try
-						{
-							termval = SpatialIndex.Context.ReadShape(term.Text()); // read shape
-						}
-						catch (InvalidShapeException)
-						{
-							continue;
-						}
-
-						var pt = termval as Point;
-						if (pt == null)
-							continue;
-
-						var distance = SpatialIndex.Context.GetDistCalc().Distance(pt, originPt);
-
-						if (retArray == null)
-							// late init
-							retArray = new double[reader.MaxDoc()];
-						termDocs.Seek(termEnum);
-						while (termDocs.Next())
-						{
-							retArray[termDocs.Doc()] = distance;
-						}
-					} while (termEnum.Next());
-				}
-				finally
-				{
-					termDocs.Close();
-					termEnum.Close();
-				}
-				return retArray ?? new double[reader.MaxDoc()];
-			}
 		}
 	}
 }

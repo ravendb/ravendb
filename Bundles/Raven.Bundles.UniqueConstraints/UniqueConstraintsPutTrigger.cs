@@ -33,8 +33,7 @@ namespace Raven.Bundles.UniqueConstraints
 				var uniqueValue = document.Value<string>(propName);
 				if(uniqueValue == null)
 					continue;
-				string documentName = "UniqueConstraints/" + entityName + propName + "/" +
-									  Uri.EscapeDataString(uniqueValue);
+				string documentName = "UniqueConstraints/" + entityName + propName + "/" +Util.EscapeUniqueValue(uniqueValue);
 				Database.Put(
 					documentName,
 					null,
@@ -73,7 +72,7 @@ namespace Raven.Bundles.UniqueConstraints
 				if(uniqueValue == null)
 					continue;
 				var checkKey = "UniqueConstraints/" + entityName + propName + "/" +
-				               Uri.EscapeDataString(uniqueValue);
+				               Util.EscapeUniqueValue(uniqueValue);
 				var checkDoc = Database.Get(checkKey, transactionInformation);
 				if (checkDoc == null) 
 					continue;
@@ -129,7 +128,7 @@ namespace Raven.Bundles.UniqueConstraints
 				if (!uniqueValue.Equals(document.Value<string>(propName)))
 				{
 					Database.Delete(
-						"UniqueConstraints/" + entityName + propName + "/" + Uri.EscapeDataString(uniqueValue),
+						"UniqueConstraints/" + entityName + propName + "/" + Util.EscapeUniqueValue(uniqueValue),
 						null, transactionInformation);
 				}
 			}

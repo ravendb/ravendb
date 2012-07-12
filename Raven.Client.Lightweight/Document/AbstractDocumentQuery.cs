@@ -40,7 +40,7 @@ namespace Raven.Client.Document
 	{
 		protected bool isSpatialQuery;
 		protected double lat, lng, radius;
-
+		private readonly LinqPathProvider linqPathProvider;
 		/// <summary>
 		/// Whatever to negate the next operation
 		/// </summary>
@@ -117,6 +117,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		protected int start;
 
+		private DocumentConvention conventions;
 		/// <summary>
 		/// Timeout for this query
 		/// </summary>
@@ -255,9 +256,13 @@ namespace Raven.Client.Document
 #endif
 			this.AfterQueryExecuted(queryStats.UpdateQueryStats);
 
-			if (this.theSession != null &&  // tests may decide to send null here
-				this.theSession.DocumentStore.Conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
+			linqPathProvider = new LinqPathProvider(conventions);
+
+			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+			{
 				WaitForNonStaleResultsAsOfLastWrite();
+			}
 		}
 
 		/// <summary>
@@ -273,8 +278,10 @@ namespace Raven.Client.Document
 			theAsyncDatabaseCommands = other.theAsyncDatabaseCommands;
 #endif
 			indexName = other.indexName;
+			linqPathProvider = other.linqPathProvider;
 			projectionFields = other.projectionFields;
 			theSession = other.theSession;
+			conventions = other.conventions;
 			cutoff = other.cutoff;
 			orderByFields = other.orderByFields;
 			sortByHints = other.sortByHints;
@@ -286,6 +293,8 @@ namespace Raven.Client.Document
 			includes = other.includes;
 			queryListeners = other.queryListeners;
 			queryStats = other.queryStats;
+			defaultOperator = other.defaultOperator;
+			defaultField = other.defaultField;
 
 			AfterQueryExecuted(queryStats.UpdateQueryStats);
 		}
@@ -312,7 +321,16 @@ namespace Raven.Client.Document
 			WaitForNonStaleResults(waitTimeout);
 			return this;
 		}
-		
+
+		/// <summary>
+		/// When using spatial queries, instruct the query to sort by the distance from the origin point
+		/// </summary>
+		IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance()
+		{
+			OrderBy(Constants.DistanceFieldName);
+			return this;
+		}
+
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
@@ -347,6 +365,11 @@ namespace Raven.Client.Document
 		public void UsingDefaultField(string field)
 		{
 			defaultField = field;
+		}
+
+		public void UsingDefaultOperator(QueryOperator @operator)
+		{
+			defaultOperator = @operator;
 		}
 
 		/// <summary>
@@ -870,47 +893,6 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		public void WhereContains(string fieldName, object value)
-		{
-			WhereEquals(new WhereParams
-			{
-				AllowWildcards = true,
-				IsAnalyzed = true,
-				FieldName = fieldName,
-				Value = value
-			});
-		}
-
-		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		public void WhereContains(string fieldName, params object[] values)
-		{
-			if (values == null || values.Length == 0)
-			{
-				WhereEquals(fieldName, "Empty_Contains_" + Guid.NewGuid());
-				return;
-			}
-
-			OpenSubclause();
-
-			WhereContains(fieldName, values[0]);
-
-
-			for (var i = 1; i < values.Length; i++)
-			{
-				OrElse();
-				WhereContains(fieldName, values[i]);
-			}
-
-			CloseSubclause();
-		}
-
-		/// <summary>
 		/// Check that the field has one of the specified value
 		/// </summary>
 		public void WhereIn(string fieldName, IEnumerable<object> values)
@@ -943,15 +925,6 @@ If you really want to do in memory filtering on the data returned from the query
 				WhereEquals(fieldName, "Empty_In_" + Guid.NewGuid());
 
 			CloseSubclause();
-		}
-
-		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		public void WhereContains(string fieldName, IEnumerable<object> values)
-		{
-			WhereContains(fieldName, values.ToArray());
 		}
 
 		/// <summary>
@@ -1110,7 +1083,7 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			if (theQueryText.Length < 1)
 			{
-				throw new InvalidOperationException("Missing where clause");
+				return;
 			}
 
 			theQueryText.Append(" AND");
@@ -1123,7 +1096,7 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			if (theQueryText.Length < 1)
 			{
-				throw new InvalidOperationException("Missing where clause");
+				return;
 			}
 
 			theQueryText.Append(" OR");
@@ -1465,7 +1438,8 @@ If you really want to do in memory filtering on the data returned from the query
 					Latitude = lat,
 					Longitude = lng,
 					Radius = radius,
-					DefaultField = defaultField
+					DefaultField = defaultField,
+					DefaultOperator = defaultOperator
 				};
 			}
 
@@ -1480,7 +1454,8 @@ If you really want to do in memory filtering on the data returned from the query
 				CutoffEtag = cutoffEtag,
 				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 				FieldsToFetch = projectionFields,
-				DefaultField = defaultField
+				DefaultField = defaultField,
+				DefaultOperator = defaultOperator
 			};
 		}
 
@@ -1492,6 +1467,7 @@ If you really want to do in memory filtering on the data returned from the query
 #endif
 
 			);
+		private QueryOperator defaultOperator;
 
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
@@ -1675,5 +1651,20 @@ If you really want to do in memory filtering on the data returned from the query
 				.ContinueWith(r => r.Result.TotalResults);
 		}
 #endif
+
+		public string GetMemberQueryPath(Expression expression)
+		{
+			var result = linqPathProvider.GetPath(expression);
+			result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
+
+			if (expression.NodeType == ExpressionType.ArrayLength)
+				result.Path += ".Length";
+
+			var propertyName = indexName == null || indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase)
+				? conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, "", result.Path)
+				: conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
+			return propertyName;
+
+		}
 	}
 }

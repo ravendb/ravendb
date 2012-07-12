@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Backup
@@ -100,7 +102,7 @@ namespace Raven.Backup
 								{
 									Message = msg.Value<string>("Message"),
 									Timestamp = msg.Value<DateTime>("Timestamp"),
-									Severity = msg.Value<int>("Severity")
+									Severity = msg.Value<string>("Severity")
 								};
 
 			foreach (var msg in res)

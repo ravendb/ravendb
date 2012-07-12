@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Database.Config;
 
 namespace Raven.Database.Server.Abstractions
 {
@@ -11,16 +12,22 @@ namespace Raven.Database.Server.Abstractions
 	{
 		public static string GetRequestUrl(this IHttpContext context)
 		{
-			string localPath = context.Request.RawUrl;
+			var rawUrl = context.Request.RawUrl;
+			return GetRequestUrlFromRawUrl(rawUrl, context.Configuration);
+		}
+
+		public static string GetRequestUrlFromRawUrl(string rawUrl, InMemoryRavenConfiguration configuration)
+		{
+			string localPath = rawUrl;
 			var indexOfQuery = localPath.IndexOf('?');
 			if (indexOfQuery != -1)
 				localPath = localPath.Substring(0, indexOfQuery);
 			if (localPath.StartsWith("//"))
 				localPath = localPath.Substring(1);
-			if (context.Configuration.VirtualDirectory != "/" &&
-				localPath.StartsWith(context.Configuration.VirtualDirectory, StringComparison.InvariantCultureIgnoreCase))
+			if (configuration.VirtualDirectory != "/" &&
+			    localPath.StartsWith(configuration.VirtualDirectory, StringComparison.InvariantCultureIgnoreCase))
 			{
-				localPath = localPath.Substring(context.Configuration.VirtualDirectory.Length);
+				localPath = localPath.Substring(configuration.VirtualDirectory.Length);
 				if (localPath.Length == 0)
 					localPath = "/";
 			}

@@ -52,6 +52,8 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
+    <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\Async\IAsyncDatabaseCommands.cs" />
@@ -66,6 +68,7 @@
     <Compile Include="Connection\DocumentConventionJsonExtensions.cs" />
     <Compile Include="Connection\JsonLuceneDateTimeConverter.cs" />
     <Compile Include="Connection\MultiGetOperation.cs" />
+    <Compile Include="Connection\ChangesConnectionFactory.cs" />
     <Compile Include="Connection\Profiling\ConcurrentBoundedList.cs" />
     <Compile Include="Connection\Profiling\IHoldProfilingInformation.cs" />
     <Compile Include="Connection\Profiling\ProfilingContext.cs" />
@@ -144,6 +147,7 @@
     <Compile Include="Indexes\AbstractGenericIndexCreationTask.cs" />
     <Compile Include="Indexes\AbstractMultiMapIndexCreationTask.cs" />
     <Compile Include="Linq\Indexing\IndexingLinqExtensions.cs" />
+    <Compile Include="Linq\LinqPathProvider.cs" />
     <Compile Include="Linq\ReflectionExtensions.cs" />
     <Compile Include="Linq\SearchOptions.cs" />
     <Compile Include="Listeners\IDocumentConversionListener.cs" />
@@ -177,7 +181,6 @@
     <Compile Include="Linq\RavenQueryProvider.cs" />
     <Compile Include="Linq\RavenQueryProviderProcessor.cs" />
     <Compile Include="Linq\RavenQueryStatistics.cs" />
-    <Compile Include="Linq\ExpressionExtensions.cs" />
     <Compile Include="Linq\TypeSystem.cs" />
     <Compile Include="Shard\BaseShardedDocumentSession.cs" />
     <Compile Include="Shard\AsyncShardedDocumentSession.cs" />
@@ -194,7 +197,8 @@
     <Compile Include="Shard\ShardRequestData.cs" />
     <Compile Include="Shard\ShardStrategy.cs" />
     <Compile Include="StoredEntityEventArgs.cs" />
-    <Compile Include="Util\ConcurrentDictionary.cs" />
+    <Compile Include="Util\ConcatObservable.cs" />
+    <Compile Include="Util\TaskObservable.cs" />
     <Compile Include="Util\Inflector.cs" />
     <Compile Include="Util\ObjectReferenceEqualityComparerer.cs" />
     <Compile Include="Util\SimpleCache.cs" />
@@ -207,6 +211,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Imports\SignalR\SignalR.Client\SignalR.Client.csproj">
+      <Project>{EB46B9C6-EE37-48F9-835E-E49580E40E0A}</Project>
+      <Name>SignalR.Client</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>

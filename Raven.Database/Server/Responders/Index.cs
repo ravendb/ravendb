@@ -6,8 +6,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using NLog;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using System.Linq;
@@ -19,7 +22,7 @@ using Raven.Database.Storage;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Index : RequestResponder
+	public class Index : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -35,7 +38,7 @@ namespace Raven.Database.Server.Responders
 		{
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var index = match.Groups[1].Value;
-
+			
 			switch (context.Request.HttpMethod)
 			{
 				case "HEAD":
@@ -86,10 +89,39 @@ namespace Raven.Database.Server.Responders
 			{
 				GetIndexMappedResult(context, index);
 			}
+			else if (string.IsNullOrEmpty(context.Request.QueryString["explain"]) == false)
+			{
+				GetExplanation(context, index);
+			}
 			else 
 			{
 				GetIndexQueryRessult(context, index);
 			}
+		}
+
+		private void GetExplanation(IHttpContext context, string index)
+		{
+			var dynamicIndex = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) ||
+			                   index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase);
+
+			if(dynamicIndex == false)
+			{
+				context.SetStatusToBadRequest();
+				context.WriteJson(new
+				              	{
+				              		Error = "Explain can only work on dynamic indexes"
+				              	});
+				return;
+			}
+
+			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+			string entityName = null;
+			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
+				entityName = index.Substring("dynamic/".Length);
+
+			var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
+
+			context.WriteJson(explanations);
 		}
 
 		private void GetIndexMappedResult(IHttpContext context, string index)
@@ -175,6 +207,8 @@ namespace Raven.Database.Server.Responders
 		{
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
 
+			RewriteDateQueriesFromOldClients(context,indexQuery);
+
 			var sp = Stopwatch.StartNew();
 			var result = index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase) ? 
 				PerformQueryAgainstDynamicIndex(context, index, indexQuery, out indexEtag) : 
@@ -202,6 +236,33 @@ namespace Raven.Database.Server.Responders
 			return result;
 		}
 
+		static Regex oldDateTimeFormat = new Regex(@"(\:|\[|TO\s) \s* (\d{17})", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+
+		private void RewriteDateQueriesFromOldClients(IHttpContext context,IndexQuery indexQuery)
+		{
+			var clientVersion = context.Request.Headers["Raven-Client-Version"];
+			if (string.IsNullOrEmpty(clientVersion) == false) // new client
+				return;
+
+			var matches = oldDateTimeFormat.Matches(indexQuery.Query);
+			if (matches.Count == 0)
+				return;
+			var builder = new StringBuilder(indexQuery.Query);
+			for (int i = matches.Count-1; i >= 0; i--) // working in reverse so as to avoid invalidating previous indexes
+			{
+				var dateTimeString = matches[i].Groups[2].Value;
+
+				DateTime time;
+				if (DateTime.TryParseExact(dateTimeString, "yyyyMMddHHmmssfff", CultureInfo.InvariantCulture, DateTimeStyles.None, out time) == false)
+					continue;
+
+				builder.Remove(matches[i].Groups[2].Index, matches[i].Groups[2].Length);
+				var newDateTimeFormat = time.ToString(Default.DateTimeFormatsToWrite);
+				builder.Insert(matches[i].Groups[2].Index, newDateTimeFormat);
+			}
+			indexQuery.Query = builder.ToString();
+		}
+
 		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
 		{
 			indexEtag = Database.GetIndexEtag(index, null);
@@ -224,8 +285,7 @@ namespace Raven.Database.Server.Responders
 
 			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);
 
-			if (dynamicIndexName != null && 
-				Database.IndexStorage.HasIndex(dynamicIndexName))
+			if (dynamicIndexName != null && Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
 				indexEtag = Database.GetIndexEtag(dynamicIndexName, null);
 				if (context.MatchEtag(indexEtag))
@@ -233,6 +293,21 @@ namespace Raven.Database.Server.Responders
 					context.SetStatusToNotModified();
 					return null;
 				}
+			}
+
+			if(dynamicIndexName == null && // would have to create a dynamic index
+				Database.Configuration.CreateTemporaryIndexesForAdHocQueriesIfNeeded == false) // but it is disabled
+			{
+				indexEtag = Guid.NewGuid();
+				var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
+				context.SetStatusToBadRequest();
+				var target = entityName == null ? "all documents" : entityName + " documents";
+				context.WriteJson(new
+				                  	{
+				                  		Error = "Executing the query " + indexQuery.Query +" on " + target +" require creation of temporary index, and it has been explicitly disabled.",
+										Explanations = explanations
+				                  	});
+				return null;
 			}
 
 			var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);

@@ -1,6 +1,6 @@
 using System;
+using Raven.Client.Bundles.Versioning;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Client.Versioning;
 using Xunit;
 
 namespace Raven.Bundles.Tests.Versioning.Bugs

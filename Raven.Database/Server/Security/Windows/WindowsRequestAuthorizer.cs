@@ -32,10 +32,10 @@ namespace Raven.Database.Server.Security.Windows
 		public override bool Authorize(IHttpContext ctx)
 		{
 			Action onRejectingRequest;
-			if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx, out onRejectingRequest))
+			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && IsInvalidUser(ctx, out onRejectingRequest))
 			{
 				var requestUrl = ctx.GetRequestUrl();
-				if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
+				if (NeverSecret.Urls.Contains(requestUrl))
 					return true;
 
 				onRejectingRequest();
@@ -44,12 +44,12 @@ namespace Raven.Database.Server.Security.Windows
 
 			var httpRequest = ctx.Request;
 
-			if (server.DefaultConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
+			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
 				IsInvalidUser(ctx, out onRejectingRequest) &&
 				IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath) == false)
 			{
 				var requestUrl = ctx.GetRequestUrl();
-				if (NeverSecret.Urls.Contains(requestUrl, StringComparer.InvariantCultureIgnoreCase))
+				if (NeverSecret.Urls.Contains(requestUrl))
 					return true;
 
 				onRejectingRequest();

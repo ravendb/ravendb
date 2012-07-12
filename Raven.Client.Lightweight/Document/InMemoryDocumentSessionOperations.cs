@@ -389,6 +389,7 @@ more responsive application.
 		/// <param name="entity">The entity.</param>
 		public void Delete<T>(T entity)
 		{
+			if(ReferenceEquals(entity,null)) throw new ArgumentNullException("entity");
 			DocumentMetadata value;
 			if (entitiesAndMetadata.TryGetValue(entity, out value) == false)
 				throw new InvalidOperationException(entity + " is not associated with the session, cannot delete unknown entity instance");

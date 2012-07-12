@@ -4,7 +4,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Licensing : RequestResponder
+	public class Licensing : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

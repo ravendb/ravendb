@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 #if !NET35
+using Raven.Abstractions.Data;
 using Raven.Client.Document.Batches;
 using Raven.Client.Connection.Async;
 #endif

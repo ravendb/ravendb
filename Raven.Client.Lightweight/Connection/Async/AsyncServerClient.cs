@@ -826,7 +826,7 @@ namespace Raven.Client.Connection.Async
 									Data = () => memoryStream,
 									Size = task.Result.Length,
 									Etag = request.GetEtagHeader(),
-									Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
+									Metadata = request.ResponseHeaders.FilterHeadersAttachment()
 								};
 
 							case TaskStatus.Faulted:
@@ -930,6 +930,14 @@ namespace Raven.Client.Connection.Async
 		public void ForceReadFromMaster()
 		{
 			readStripingBase = -1;// this means that will have to use the master url first
+		}
+
+		public HttpJsonRequest CreateRequest(string method, string requestUrl)
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention).AddOperationHeaders(OperationsHeaders);
+			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
 
 		private Task ExecuteWithReplication(string method, Func<string, Task> operation)

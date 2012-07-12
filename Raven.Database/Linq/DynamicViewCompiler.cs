@@ -382,12 +382,18 @@ Reduce only fields: {2}
 				if (objectInitializer.CreateExpressions.OfType<NamedArgumentExpression>().Any(x => x.Name == Constants.DocumentIdFieldName))
 					return false;
 
-				objectInitializer.CreateExpressions.Add(
-					new NamedArgumentExpression
-					{
-						Name = Constants.DocumentIdFieldName,
-						Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
-					});
+
+				objectCreateExpression.ObjectInitializer = new CollectionInitializerExpression(objectInitializer.CreateExpressions.ToList())
+				{
+					CreateExpressions =
+						{
+							new NamedArgumentExpression
+							{
+								Name = Constants.DocumentIdFieldName,
+								Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
+							}
+						}
+				};
 
 				return true;
 			}

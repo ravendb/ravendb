@@ -1,0 +1,1276 @@
+<?xml version="1.0"?><doc><assembly><name>ActiproSoftware.MicroCharts.Silverlight</name></assembly><members><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase"><summary>
+            Provides the base class for a micro series.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.NotifyPropertyChanged(System.String)"><summary>
+            Notifies that a property has changed.
+            </summary><param name="propertyName">The name of the property that was changed.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.OnItemsSourceChanged(System.Collections.IEnumerable,System.Collections.IEnumerable)"><summary>
+            Occurs when the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.ItemsSource" /> value is changed.
+            </summary><param name="oldValue">Old value of the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.ItemsSource" /> property.</param><param name="newValue">New value of the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.ItemsSource" /> property.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.OnItemsSourceCollectionChanged(System.Object,System.Collections.Specialized.NotifyCollectionChangedEventArgs)"><summary>
+            Handles the <c>CollectionChanged</c> event of the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.ItemsSource" /> collection.
+            </summary><param name="sender">The source of the event.</param><param name="e">The <see cref="T:System.Collections.Specialized.NotifyCollectionChangedEventArgs" /> instance containing the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs)"><summary>
+            Raises the <see cref="E:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.PropertyChanged" /> event.
+            </summary><param name="e">The <see cref="T:System.ComponentModel.PropertyChangedEventArgs" /> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.Refresh"><summary>
+            Updates the series based on the current state.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.#ctor"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase" /> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.Index"><summary>
+            Gets the index of this series in the associated chart.
+            This is a dependency property.
+            </summary><value>
+            The index of this series in the associated chart.
+            The default value is <c>-1</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.ItemsSource"><summary>
+            Gets or sets a collection used to generate the data points of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase" />.
+            This is a dependency property.
+            </summary><value>
+            A collection used to generate the data points of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase" />.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.LogicalOrientation"><summary>
+            Gets the logical orientation of the series.
+            </summary></member><member name="E:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.PropertyChanged"><summary>
+            Occurs when a property has been changed.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.IndexProperty"><summary>
+            Identifies the read-only <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.Index" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.Index" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.ItemsSourceProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.ItemsSource" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase.ItemsSource" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase"><summary>
+            Provides the base class for a micro series that uses an X/Y axis.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.GetMinimumMargin"><summary>
+            Gets the minimum margin around the plotted area required by the series.
+            </summary><returns>The minimum margin around the plotted area required by the series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.NormalizeValue(System.Object,System.Object)"><summary>
+            Normalizes the value using the specified baseline
+            </summary><param name="value">The value to normalize.</param><param name="baselineValue">The baseline value.</param><returns>A normalized value.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.PlotSeries(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter)"><summary>
+            Plots the series to the associated chart using the specified plotter.
+            </summary><param name="plotter">The plotter used to render shapes on the chart.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.PrepareSeries(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter)"><summary>
+            Prepares the series to be plotted to the associated chart using the specified plotter.
+            </summary><param name="plotter">The plotter.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.Refresh"><summary>
+            Updates the series based on the current state.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.AggregationFactor"><summary>
+            Gets or sets a factor between 0 and 1 that indicates the number of data points generated based on the size of the chart.
+            This is a dependency property.
+            </summary><value>
+            A factor between 0 and 1 that indicates the number of data points generated based on the size of the chart.
+            The default value is <c>0.2</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.Chart"><summary>
+            Gets the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" /> that owns this series.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.DataPoints"><summary>
+            Gets the data points associated with this series.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.Description"><summary>
+            Gets or sets a description of the series.
+            This is a dependency property.
+            </summary><value>
+            A description of the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.IsAggregationEnabled"><summary>
+            Gets or sets a value indicating whether the data points will be an aggregation of the source data.
+            This is a dependency property.
+            </summary><value><c>true</c> if the data points will be an aggregation of the source data; otherwise, <c>false</c>.
+            The default value is <c>true</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.LegendItemTemplate"><summary>
+            Gets or sets the data template used when presenting a legend item for the series.
+            This is a dependency property.
+            </summary><value>
+            The data template used when presenting a legend item for the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.LegendMarkerStyle"><summary>
+            Gets or sets a <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> element used when presenting a legend item for the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> used when presenting a legend item for the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.LegendStringFormat"><summary>
+            Gets or sets the string format used when presenting a legend item for the series.
+            This is a dependency property.
+            </summary><value>
+            The string format used when presenting legend item for the series.
+            The default value is <c>"{0}"</c>.
+            </value><remarks>
+            The format string will be passed the following parameters:
+            <list type="bullet"><item><term>
+            {0} - The value of the primary axis.
+            </term></item><item><term>
+            {1} - The value of the secondary axis.
+            </term></item><item><term>
+            {2} - The X value.
+            </term></item><item><term>
+            {3} - The Y value.
+            </term></item><item><term>
+            {4} - Reserved.
+            </term></item><item><term>
+            {5} - Description.
+            </term></item></list></remarks></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerFirstStyle"><summary>
+            Gets or sets a <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> element used to render the first marker along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> element used to render the first marker along the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerHighStyle"><summary>
+            Gets or sets a <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> elements used to render the high markers along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> elements used to render the high markers along the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerLastStyle"><summary>
+            Gets or sets a <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> element used to render the last marker along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> element used to render the last marker along the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerLowStyle"><summary>
+            Gets or sets a <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> elements used to render the low markers along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> used to render the low markers along the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerNegativeStyle"><summary>
+            Gets or sets a negative <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> elements used to render the markers along the series.
+            This is a dependency property.
+            </summary><value>
+            A negative <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> used to render the markers along the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerStyle"><summary>
+            Gets or sets a <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> elements used to render the markers along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> used to render the markers along the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerStyleKinds"><summary>
+            Gets or sets a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerStyleKinds" /> which indicates what style kinds are used for markers along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerStyleKinds" /> which indicates what style kinds are used for markers along the series.
+            The default value is <c>MicroChartMarkerStyleKinds.None</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.PrimaryAggregationKind"><summary>
+            Gets or sets a value indicating which kind of aggregation to perform along the primary axis.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroAggregationKind" /> indicating which kind of aggregation to perform along the primary axis.
+            The default value is <c>MicroAggregationKind.Average</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.RequiresNormalizedValues"><summary>
+            Gets a value indicating whether the values presented by this series must be normalized.
+            </summary><value><c>true</c> if the values presented by this series must be normalized; otherwise, <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.RequiresSlottedLayout"><summary>
+            Gets a value indicating whether the series requires slotted layout.
+            </summary><value><c>true</c> if the series requires slotted layout; otherwise, <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.SecondaryAggregationKind"><summary>
+            Gets or sets a value indicating which kind of aggregation to perform along the secondary axis.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroAggregationKind" /> indicating which kind of aggregation to perform along the secondary axis.
+            The default value is <c>MicroAggregationKind.First</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.StackKind"><summary>
+            Gets or sets a value indicating the kind of stacking applied to the series.
+            This is a dependency property.
+            </summary><value>
+            The kind of stacking applied to the series.
+            The default value is <c>MicroXYSeriesStackKind.None</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.XPath"><summary>
+            Gets or sets the path to the item property represented along the X-axis.
+            This is a dependency property.
+            </summary><value>
+            The path to the item property represented along the X-axis.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.YPath"><summary>
+            Gets or sets the path to the item property represented along the Y-axis.
+            This is a dependency property.
+            </summary><value>
+            The path to the item property represented along the Y-axis.
+            The default value is <see langword="null" />.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.DescriptionProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.Description" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.Description" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.AggregationFactorProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.AggregationFactor" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.AggregationFactor" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.IsAggregationEnabledProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.IsAggregationEnabled" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.IsAggregationEnabled" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.LegendItemTemplateProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.LegendItemTemplate" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.LegendItemTemplate" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.LegendMarkerStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.LegendMarkerStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.LegendMarkerStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.LegendStringFormatProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.LegendStringFormat" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.LegendStringFormat" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerFirstStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerFirstStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerFirstStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerHighStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerHighStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerHighStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerLastStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerLastStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerLastStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerLowStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerLowStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerLowStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerNegativeStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerNegativeStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerNegativeStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerStyleKindsProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerStyleKinds" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.MarkerStyleKinds" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.PrimaryAggregationKindProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.PrimaryAggregationKind" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.PrimaryAggregationKind" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.SecondaryAggregationKindProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.SecondaryAggregationKind" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.SecondaryAggregationKind" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.StackKindProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.StackKind" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.StackKind" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.XPathProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.XPath" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.XPath" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.YPathProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.YPath" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase.YPath" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase"><summary>
+            Represents a base class for line and area series for use in a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" />.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.GetMinimumMargin"><summary>
+            Gets the minimum margin around the plotted area required by the series.
+            </summary><returns>The minimum margin around the plotted area required by the series.</returns></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineNegativeStyle"><summary>
+            Gets or sets a negative <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> used to render the series.
+            This is a dependency property.
+            </summary><value>
+            A negative <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> used to render the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineKind"><summary>
+            Gets or sets a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesLineKind" />, which indicates what kind of line should be rendered by the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesLineKind" />, which indicates what kind of line should be rendered by the series.
+            The default value is <c>MicroXYSeriesLineKind.Normal</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineStyle"><summary>
+            Gets or sets a <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> used to render the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> used to render the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineStyleKinds"><summary>
+            Gets or sets a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesStyleKinds" /> which indicates what style kinds are used for lines along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesStyleKinds" /> which indicates what style kinds are used for lines along the series.
+            The default value is <c>MicroLineSeriesStyleKinds.None</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.MarkerVisibility"><summary>
+            Gets or sets a value indicating which markers are rendered along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerVisibility" /> indicating which markers are rendered along the series.
+            The default value is <c>MicroChartMarkerVisibility.None</c>.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineNegativeStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineNegativeStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineNegativeStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineKindProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineKind" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineKind" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineStyleKindsProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineStyleKinds" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.LineStyleKinds" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.MarkerVisibilityProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.MarkerVisibility" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLineSeriesBase.MarkerVisibility" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeries"><summary>
+            Represents a line series for use in a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" />.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeries.PlotSeries(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter)"><summary>
+            Plots the series to the associated chart using the specified plotter.
+            </summary><param name="plotter">The plotter used to render shapes on the chart.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeries.#ctor"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeries" /> class.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerStyleKinds"><summary>
+            Specifies the various alternate styles that can be used when rendering a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerStyleKinds.None"><summary>
+            Indicates that no alternate styles will be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerStyleKinds.Negative"><summary>
+            Indicates that a negative style can be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerStyleKinds.High"><summary>
+            Indicates that a high style can be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerStyleKinds.Low"><summary>
+            Indicates that a low style can be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerStyleKinds.First"><summary>
+            Indicates that a first style can be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerStyleKinds.Last"><summary>
+            Indicates that a last style can be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerStyleKinds.All"><summary>
+            Indicates that all styles can be used.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind"><summary>
+            Specifies the built-in palette options for a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind.Default"><summary>
+            The default colors.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind.Autumn"><summary>
+            Red to green colors.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind.Beach"><summary>
+            Blue, yellow, and green colors.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind.Earth"><summary>
+            Yellow and brown colors.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind.Fishbowl"><summary>
+            Blue, tan, and orange colors.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind.Forest"><summary>
+            Green, blue, and brown colors.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind.Mesa"><summary>
+            Blue/green, tan, and red colors.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind.Plum"><summary>
+            Purple colors.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind.Rainbow"><summary>
+            Rainbow colors.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind.Roman"><summary>
+            Red, tan, and blue colors.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind.Rose"><summary>
+            Rose reddish colors.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind.Tulip"><summary>
+            Red, green, yellow, and purple colors.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker"><summary>
+            Represents a control capable of rendering predefined shapes.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker.OnApplyTemplate"><summary>
+            Invoked whenever application code or internal processes call <c>ApplyTemplate</c>.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker.UpdatePath"><summary>
+            Updates the <see cref="T:System.Windows.Media.Geometry" /> of the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker.Path" /> element.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker.#ctor"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker.Path"><summary>
+            Gets the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker.Path" /> associated with the marker.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker.ShapeKind"><summary>
+            Gets or sets a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind" />, which indicates what kind of shape should be rendered by the marker.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind" />, which indicates what kind of shape should be rendered by the marker.
+            The default value is <c>MicroChartMarkerShapeKind.Ellipse</c>.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker.ShapeKindProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker.ShapeKind" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker.ShapeKind" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind"><summary>
+            Specifies the various predefined shapes supported by <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind.Diamond"><summary>
+            Indicates a diamond shape will be rendered.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind.Ellipse"><summary>
+            Indicates an ellipse shape will be rendered.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind.Hexagon"><summary>
+            Indicates a hexagon shape will be rendered.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind.Pentagon"><summary>
+            Indicates a pentagon shape will be rendered.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind.Octagon"><summary>
+            Indicates an octagon shape will be rendered.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind.Rectangle"><summary>
+            Indicates a rectangle shape will be rendered.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind.RoundedRectangle"><summary>
+            Indicates a rounded rectangle shape will be rendered.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind.Star4Points"><summary>
+            Indicates an 4-pointed star shape will be rendered.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind.Star5Points"><summary>
+            Indicates an 5-pointed star shape will be rendered.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind.Star6Points"><summary>
+            Indicates an 6-pointed star shape will be rendered.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind.Star8Points"><summary>
+            Indicates an 8-pointed star shape will be rendered.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerShapeKind.Triangle"><summary>
+            Indicates a triangle shape will be rendered.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesCollection"><summary>
+            Represents a collection of <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase" /> objects.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesCollection.ClearItems"><summary>
+            Removes all items from the collection.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesCollection.InsertItem(System.Int32,ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase)"><summary>
+            Inserts an item into the collection at the specified index.
+            </summary><param name="index">The zero-based index at which <paramref name="item" /> should be inserted.</param><param name="item">The object to insert.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesCollection.RemoveItem(System.Int32)"><summary>
+            Removes the item at the specified index of the collection.
+            </summary><param name="index">The zero-based index of the item to remove.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesCollection.SetItem(System.Int32,ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase)"><summary>
+            Replaces the element at the specified index.
+            </summary><param name="index">The zero-based index of the item to replace.</param><param name="item">The new value for the element at the specified index.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesCollection.#ctor(ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart)"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" /> class.
+            </summary><param name="chart">The <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" /> that owns this collection and the associated series.</param></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroAggregationKind"><summary>
+            Specifies the various kinds of built-in aggregation functions.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAggregationKind.Average"><summary>
+            Indicates that the values will be averaged together.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAggregationKind.Maximum"><summary>
+            Indicates that the maximum value will be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAggregationKind.Minimum"><summary>
+            Indicates that the minimum value will be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAggregationKind.First"><summary>
+            Indicates that the first value will be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAggregationKind.Last"><summary>
+            Indicates that the last value will be used.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis"><summary>
+            Provides the base requirements for a axis used by a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" />.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis.GetPosition(System.Object)"><summary>
+            Gets a plot coordinate for the specified value.
+            </summary><param name="value">The value whose position should be returned.</param><returns>A plot coordinate for the specified value.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis.GetPercentagePosition(System.Object,System.Object)"><summary>
+            Gets a plot coordinate for the specified value using it's overall percentage for the given key.
+            </summary><param name="key">The key associated with the specified value.</param><param name="value">The value whose position should be returned.</param><returns>A plot coordinate for the specified value using it's overall percentage for the given key.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis.GetValue(System.Double)"><summary>
+            Gets a value for the specified plot coordinate.
+            </summary><param name="position">A plot coordinate whose value should be returned.</param><returns>A value for the specified plot coordinate.</returns></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis.Baseline"><summary>
+            Gets the baseline value for the axis.
+            </summary><value>
+            The baseline value for the axis.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis.Maximum"><summary>
+            Gets the maximum value of the axis.
+            </summary><value>
+            The maximum value of the axis.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis.Minimum"><summary>
+            Gets the minimum value of the axis.
+            </summary><value>
+            The minimum value of the axis.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis.SlotCount"><summary>
+            Gets the number of slots for data points of the axis when using slotted layout.
+            </summary><value>
+            The number of slots for data points of the axis when using slotted layout.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis.SlotInterval"><summary>
+            Gets the slot interval for data points of the axis when using slotted layout.
+            </summary><value>
+            The slot interval for data points of the axis when using slotted layout.
+            </value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroDataPointCollectionViewBase`1"><summary>
+            Represents a base class for collection views into a source collection.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroDataPointCollectionViewBase`1.GetEnumerator"><summary>
+            Returns an enumerator that iterates through the collection.
+            </summary><returns>
+            A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.
+            </returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroDataPointCollectionViewBase`1.EnsureInitialized"><summary>
+            Ensures that this instance is currently initialized.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroDataPointCollectionViewBase`1.IndexOf(`0)"><summary>
+            Returns the index at which the specified item is located.
+            </summary><param name="item">The item to locate.</param><returns>The index at which the specified item is located, or <c>–1</c> if the item is unknown.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroDataPointCollectionViewBase`1.Initialize"><summary>
+            Initializes this instance.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroDataPointCollectionViewBase`1.Collection"><summary>
+            Gets or sets the <see cref="T:System.Collections.Generic.IEnumerable`1" /> presented by this view.
+            </summary><value>
+            The <see cref="T:System.Collections.Generic.IEnumerable`1" /> presented by this view.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroDataPointCollectionViewBase`1.Count"><summary>
+            Gets the number of records in the view.
+            </summary><value>
+            The number of records in the view, or <c>–1</c> if the number of records is unknown.
+            </value><remarks>
+            If a filter is set, this property value only includes items that pass the filter.
+            If the underlying collection is of type <see cref="T:System.Collections.IEnumerable" />, this is an O(N) operation.
+            This value is cached until the collection changes.
+            </remarks></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView"><summary>
+            Represents a collection view that generates <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPoint" /> from a specified source collection.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.GetItemFromXValue(System.Object)"><summary>
+            Gets a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPoint" /> associated with a specified X value, if that data is available.
+            </summary><param name="value">The X value.</param><returns>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPoint" /> associated with a specified X value, if that data is available.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.GetItemFromYValue(System.Object)"><summary>
+            Gets a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPoint" /> associated with a specified Y value, if that data is available.
+            </summary><param name="value">The Y value.</param><returns>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPoint" /> associated with a specified Y value, if that data is available.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.Initialize"><summary>
+            Initializes this instance.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.#ctor(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase,System.Object,System.Int32)"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView" /> class.
+            </summary><param name="series">The series associated with the view.</param><param name="baselineValue">The baseline value.</param><param name="optimalAggregationCount">The optimal number of data points used when aggregation is enabled.</param></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.FirstDataPoint"><summary>
+            Gets the first data point of the collection.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.LastDataPoint"><summary>
+            Gets the last data point of the collection.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.MaxXDataPoint"><summary>
+            Gets the maximum data point along the X-axis.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.MaxXValue"><summary>
+            Gets the maximum value along the X-axis.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.MaxXValueResolved"><summary>
+            Gets the maximum resolved value along the X-axis.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.MaxYDataPoint"><summary>
+            Gets the maximum data point along the Y-axis.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.MaxYValue"><summary>
+            Gets the maximum value along the Y-axis.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.MaxYValueResolved"><summary>
+            Gets the maximum resolved value along the Y-axis.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.MinXDataPoint"><summary>
+            Gets the minimum data point along the X-axis.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.MinXValue"><summary>
+            Gets the minimum value along the X-axis.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.MinXValueResolved"><summary>
+            Gets the minimum resolved value along the X-axis.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.MinYDataPoint"><summary>
+            Gets the minimum data point along the Y-axis.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.MinYValue"><summary>
+            Gets the minimum value along the Y-axis.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.MinYValueResolved"><summary>
+            Gets the minimum resolved value along the Y-axis.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.XType"><summary>
+            Gets the <see cref="T:System.Type" /> of data along the X-axis.
+            </summary><value>
+            The <see cref="T:System.Type" /> of data along the X-axis.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPointCollectionView.YType"><summary>
+            Gets the <see cref="T:System.Type" /> of data along the X-axis.
+            </summary><value>
+            The <see cref="T:System.Type" /> of data along the X-axis.
+            </value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase"><summary>
+            Represents a base class for bar series used in a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" />.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.GetMinimumMargin"><summary>
+            Gets the minimum margin around the plotted area required by the series.
+            </summary><returns>The minimum margin around the plotted area required by the series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.PlotSeries(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter)"><summary>
+            Plots the series to the associated chart using the specified plotter.
+            </summary><param name="plotter">The plotter used to render shapes on the chart.</param></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarHighStyle"><summary>
+            Gets or sets a <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> element used to render the high bar along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> element used to render the high bar along the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarLowStyle"><summary>
+            Gets or sets a <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> element used to render the low bar along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> element used to render the low bar along the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarNegativeStyle"><summary>
+            Gets or sets a negative <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> used to render the series.
+            This is a dependency property.
+            </summary><value>
+            A negative <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> used to render the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarSpacing"><summary>
+            Gets or sets the amount of spacing applied to either side of the individual bar shapes.
+            This is a dependency property.
+            </summary><value>
+            The amount of spacing applied to either side of the individual bar shapes.
+            The default value is <c>1px</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarStyle"><summary>
+            Gets or sets a <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> used to render the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> used to render the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarStyleKinds"><summary>
+            Gets or sets a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroBarSeriesStyleKinds" /> which indicates what style kinds are used for bars along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroBarSeriesStyleKinds" /> which indicates what style kinds are used for bars along the series.
+            The default value is <c>MicroBarSeriesStyleKinds.None</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.LogicalOrientation"><summary>
+            Gets the logical orientation of the series.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.MarkerVisibility"><summary>
+            Gets or sets a value indicating which markers are rendered along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerVisibility" /> indicating which markers are rendered along the series.
+            The default value is <c>MicroChartMarkerVisibility.None</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.Orientation"><summary>
+            Gets or sets the orientation of the series.
+            This is a dependency property.
+            </summary><value>
+            The orientation of the series.
+            The default value is <c>Orientation.Horizontal</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.RequiresSlottedLayout"><summary>
+            Gets a value indicating whether the series requires slotted layout.
+            </summary><value><c>true</c> if the series requires slotted layout; otherwise, <c>false</c>.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarHighStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarHighStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarHighStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarLowStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarLowStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarLowStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarNegativeStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarNegativeStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarNegativeStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarSpacingProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarSpacing" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarSpacing" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarStyleKindsProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarStyleKinds" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.BarStyleKinds" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.MarkerVisibilityProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.MarkerVisibility" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.MarkerVisibility" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.OrientationProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.Orientation" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroBarSeriesBase.Orientation" /> dependency property.</value></member><member name="T:ActiproSoftware.Products.MicroCharts.SR"><summary>
+            Provides access to the string resources of this assembly, also allowing for their customization.
+            </summary><remarks>
+            Call the <see cref="M:ActiproSoftware.Products.MicroCharts.SR.GetString(System.String)" /> method to return a resolved resource string.
+            If a custom string has been set for a specified string resource name, it will be returned.
+            Otherwise, the default string resource value is returned.
+            <para>
+            If any of the resource strings are customized via a call to <see cref="M:ActiproSoftware.Products.MicroCharts.SR.SetCustomString(System.String,System.String)" />,
+            it is best to do so before any other classes in this assembly are referenced,
+            such as in the application startup.
+            </para></remarks></member><member name="M:ActiproSoftware.Products.MicroCharts.SR.ClearCustomStrings"><summary>
+            Removes all custom strings.
+            </summary></member><member name="M:ActiproSoftware.Products.MicroCharts.SR.ContainsCustomString(System.String)"><summary>
+            Returns whether a custom string is defined for the specified string resource.
+            </summary><param name="name">The name of the resource for which to search.</param><returns><c>true</c> if a custom string is defined for the specified string resource; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Products.MicroCharts.SR.GetCustomString(System.String)"><summary>
+            Returns custom string that is stored for the specified string resource, if any.
+            </summary><param name="name">The name of the resource to get.</param><returns>The custom string that is stored for the specified string resource, if any.</returns></member><member name="M:ActiproSoftware.Products.MicroCharts.SR.GetString(System.String)"><summary>
+            Returns the resolved value of the specified string resource.
+            </summary><param name="name">The name of the resource to get.</param><returns>
+            The value of the resource localized for the caller's current culture settings. 
+            If a best match is not possible, <see langword="null" /> is returned.
+            </returns></member><member name="M:ActiproSoftware.Products.MicroCharts.SR.GetString(ActiproSoftware.Products.MicroCharts.SRName)"><summary>
+            Returns the resolved value of the specified string resource.
+            </summary><param name="name">The name of the resource to get.</param><returns>
+            The value of the resource localized for the caller's current culture settings. 
+            If a best match is not possible, <see langword="null" /> is returned.
+            </returns></member><member name="M:ActiproSoftware.Products.MicroCharts.SR.GetString(System.String,System.Object[])"><summary>
+            Returns the resolved value of the specified string resource, by calling <c>String.Format</c> using supplied arguments.
+            </summary><param name="name">The name of the resource to get.</param><param name="args">The arguments to pass to <c>String.Format</c>.</param><returns>
+            The value of the resource localized for the caller's current culture settings. 
+            If a best match is not possible, <see langword="null" /> is returned.
+            </returns></member><member name="M:ActiproSoftware.Products.MicroCharts.SR.GetString(ActiproSoftware.Products.MicroCharts.SRName,System.Object[])"><summary>
+            Returns the resolved value of the specified string resource, by calling <c>String.Format</c> using supplied arguments.
+            </summary><param name="name">The name of the resource to get.</param><param name="args">The arguments to pass to <c>String.Format</c>.</param><returns>
+            The value of the resource localized for the caller's current culture settings. 
+            If a best match is not possible, <see langword="null" /> is returned.
+            </returns></member><member name="M:ActiproSoftware.Products.MicroCharts.SR.RemoveCustomString(System.String)"><summary>
+            Removes any custom string that is defined for the specified string resource.
+            </summary><param name="name">The name of the resource to remove.</param></member><member name="M:ActiproSoftware.Products.MicroCharts.SR.SetCustomString(System.String,System.String)"><summary>
+            Sets a custom string value for the specified string resource.
+            </summary><param name="name">The name of the resource to set.</param><param name="value">The value of the resource to set.</param></member><member name="P:ActiproSoftware.Products.MicroCharts.SR.ResourceManager"><summary>
+            Gets the <see cref="P:ActiproSoftware.Products.MicroCharts.SR.ResourceManager" /> that provides the default resources. 
+            </summary><value>The <see cref="P:ActiproSoftware.Products.MicroCharts.SR.ResourceManager" /> that provides the default resources.</value></member><member name="T:ActiproSoftware.Products.MicroCharts.SRName"><summary>
+            Specifies the names of string resources for this assembly.
+            </summary></member><member name="F:ActiproSoftware.Products.MicroCharts.SRName.ExAxisTypeNotSupported"><summary>An exception message string.</summary></member><member name="F:ActiproSoftware.Products.MicroCharts.SRName.ExTypeNotSupported"><summary>An exception message string.</summary></member><member name="T:ActiproSoftware.Products.MicroCharts.MicroChartsLogo"><summary>
+            Represents the logo for this product.
+            </summary></member><member name="M:ActiproSoftware.Products.MicroCharts.MicroChartsLogo.InitializeComponent"><summary>
+            InitializeComponent
+            </summary></member><member name="M:ActiproSoftware.Products.MicroCharts.MicroChartsLogo.#ctor"><summary>
+            Initializes a new instance of the <c>MicroChartsLogo</c> class.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroDataPointBase"><summary>
+            Represents a base class for a data point presented by a chart series.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroDataPointBase.Index"><summary>
+            Gets or sets the index of the data point.
+            </summary><value>
+            The index of the data point;
+            The default value is <c>0</c>.
+            </value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPoint"><summary>
+            Represents a data point presented by a a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase" /> series.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPoint.StackedDataPoint"><summary>
+            Gets the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPoint" /> that this data point is stacked on top of.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPoint.XValue"><summary>
+            Gets the X-value of the data point.
+            </summary><value>
+            The X-value of the data point.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPoint.XValueResolved"><summary>
+            Gets the resolved X-value of the data point.
+            </summary><value>
+            The resolved X-value of the data point.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPoint.YValue"><summary>
+            Gets the Y-value of the data point.
+            </summary><value>
+            The Y-value of the data point.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYDataPoint.YValueResolved"><summary>
+            Gets the resolved Y-value of the data point.
+            </summary><value>
+            The resolved Y-value of the data point.
+            </value></member><member name="T:ActiproSoftware.Windows.Themes.MicroChartsThemeCatalog"><summary>
+            A theme catalog that describes the theme group name implementations and
+            available themed resource dictionaries within this assembly.
+            </summary></member><member name="M:ActiproSoftware.Windows.Themes.MicroChartsThemeCatalog.#ctor"><summary>
+            Initializes a new instance of the <c>MicroChartsThemeCatalog</c> class. 
+            </summary></member><member name="P:ActiproSoftware.Windows.Themes.MicroChartsThemeCatalog.DictionaryReferences"><summary>
+            Gets the collection of <see cref="T:ActiproSoftware.Windows.Themes.ThemedResourceDictionaryReference" /> objects for the assembly.
+            </summary><value>The collection of <see cref="T:ActiproSoftware.Windows.Themes.ThemedResourceDictionaryReference" /> objects for the assembly.</value></member><member name="P:ActiproSoftware.Windows.Themes.MicroChartsThemeCatalog.GroupImplementations"><summary>
+            Gets the collection of group names (e.g. Ribbon, NavigationBar, etc.) that indicates the groups of controls
+            that are implemented in the assembly via procedural code.
+            </summary><value>The collection of group names.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind"><summary>
+            Specifies the kind of brush to use for a series element.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.Default"><summary>
+            Use the exact palette color.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.Light"><summary>
+            Use a slightly lighter version of the palette color.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.Dark"><summary>
+            Use a slightly darker version of the palette color.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.SemiTransparent"><summary>
+            Use a semi-transparent version of the palette color.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.DarkToLightGradient"><summary>
+            Use a gradient, from the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.Dark" /> to <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.Light" /> color.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.LightToDarkGradient"><summary>
+            Use a gradient, from the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.Light" /> to <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.Dark" /> color.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.Complement"><summary>
+            Use a complement of the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.Default" /> color.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.ComplementLight"><summary>
+            Use a complement of the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.Light" /> color.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.ComplementDark"><summary>
+            Use a complement of the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.Dark" /> color.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.ComplementSemiTransparent"><summary>
+            Use a semi-transparent version of the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.Complement" /> color.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.ComplementDarkToLightGradient"><summary>
+            Use a gradient, from the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.ComplementDark" /> to <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.ComplementLight" /> color.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.ComplementLightToDarkGradient"><summary>
+            Use a gradient, from the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.ComplementLight" /> to <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind.ComplementDark" /> color.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroBarSeriesStyleKinds"><summary>
+            Specifies the various alternate styles that can be used when rendering a bar.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroBarSeriesStyleKinds.None"><summary>
+            Indicates that no alternate styles will be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroBarSeriesStyleKinds.Negative"><summary>
+            Indicates that a negative style can be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroBarSeriesStyleKinds.High"><summary>
+            Indicates that a high style can be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroBarSeriesStyleKinds.Low"><summary>
+            Indicates that a low style can be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroBarSeriesStyleKinds.All"><summary>
+            Indicates that all styles can be used.
+            </summary></member><member name="T:ActiproSoftware.Products.MicroCharts.AssemblyInfo"><summary>
+            Provides a class for retrieving information about the <c>ActiproSoftware.MicroCharts</c> assembly.
+            </summary></member><member name="P:ActiproSoftware.Products.MicroCharts.AssemblyInfo.Instance"><summary>
+            Gets the instance of the <see cref="T:ActiproSoftware.Products.AssemblyInfo" /> class for this assembly.
+            </summary><value>The instance of the <see cref="T:ActiproSoftware.Products.AssemblyInfo" /> class for this assembly.</value></member><member name="P:ActiproSoftware.Products.MicroCharts.AssemblyInfo.LicenseType"><summary>
+            Gets the type of license that is available for the assembly.
+            </summary><value>A <see cref="T:ActiproSoftware.Products.AssemblyLicenseType" /> specifying the type of license that is available for the assembly.</value></member><member name="P:ActiproSoftware.Products.MicroCharts.AssemblyInfo.Platform"><summary>
+            Gets the target platform for the assembly.
+            </summary><value>A <see cref="T:ActiproSoftware.Products.AssemblyPlatform" /> specifying the target platform for the assembly.</value></member><member name="P:ActiproSoftware.Products.MicroCharts.AssemblyInfo.ProductCode"><summary>
+            Gets the product code of the assembly.
+            </summary><value>A three-letter product code of the assembly.</value></member><member name="P:ActiproSoftware.Products.MicroCharts.AssemblyInfo.ProductId"><summary>
+            Gets the product ID of the assembly.
+            </summary><value>The product ID of the assembly.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartBase"><summary>
+            Provides the base class for a micro chart control.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartBase.Refresh"><summary>
+            Updates the chart based on the current state.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartBase.SeriesStyleSelector"><summary>
+            Gets or sets custom style-selection logic for a style that can be applied to each element in the associated series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector" /> object that contains logic that chooses the style to use for each element in the associated series.
+            The default value is <see langword="null" />.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartBase.SeriesStyleSelectorProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartBase.SeriesStyleSelector" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartBase.SeriesStyleSelector" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart"><summary>
+            Represents a micro chart control that uses an X/Y coordinate system.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.OnApplyTemplate"><summary>
+            Invoked whenever application code or internal processes call <c>ApplyTemplate</c>.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.OnMouseEnter(System.Windows.Input.MouseEventArgs)"><summary>
+            Called before the <c>MouseEnter</c> event occurs.
+            </summary><param name="e">The data for the event.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.OnMouseLeave(System.Windows.Input.MouseEventArgs)"><summary>
+            Called before the <c>MouseLeave</c> event occurs.
+            </summary><param name="e">The data for the event.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.OnMouseMove(System.Windows.Input.MouseEventArgs)"><summary>
+            Called before the <c>MouseMove</c> event occurs.
+            </summary><param name="e">The data for the event.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.OnSizeChanged(System.Object,System.Windows.SizeChangedEventArgs)"><summary>
+            Handles the <c>SizeChanged</c> event of the control.
+            </summary><param name="sender">The source of the event.</param><param name="e">The <see cref="T:System.Windows.SizeChangedEventArgs" /> instance containing the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.Refresh"><summary>
+            Updates the chart based on the current state.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.#ctor"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" /> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.AxisBaselineStyle"><summary>
+            Gets or sets a <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> element used to render the baseline along the chart.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> element used to render the baseline along the chart.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.AxisBaselineValue"><summary>
+            Gets or sets the baseline value for the oriented axis.
+            This is a dependency property.
+            </summary><value>
+            The baseline value for the oriented axis.
+            The default value is <see langword="null" />, which indicates to automatically calculate the baseline value.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.IsAxisBaselineVisible"><summary>
+            Gets or sets a value indicating whether a line is rendered at the baseline value.
+            This is a dependency property.
+            </summary><value><c>true</c> if a line is rendered at the baseline value; otherwise, <c>false</c>.
+            The default value is <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.IsHotTrackingEnabled"><summary>
+            Gets or sets a value indicating whether hot tracking is enabled, which is displays a tooltip with the associated value nearest the mouse cursor.
+            This is a dependency property.
+            </summary><value><c>true</c> if hot tracking is enabled; otherwise, <c>false</c>.
+            The default value is <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.Ranges"><summary>
+            Gets the collection of ranges displayed by this chart.
+            </summary><value>
+            The collection of ranges displayed by this chart.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.Series"><summary>
+            Gets the collection of series displayed by this chart.
+            </summary><value>
+            The collection of series displayed by this chart.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.XAxisMaximum"><summary>
+            Gets or sets the maximum value along the X-axis.
+            This is a dependency property.
+            </summary><value>
+            The maximum value along the X-axis.
+            The default value is <see langword="null" />, which indicates to automatically calculate the maximum value.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.XAxisMinimum"><summary>
+            Gets or sets the minimum value along the X-axis.
+            This is a dependency property.
+            </summary><value>
+            The minimum value along the X-axis.
+            The default value is <see langword="null" />, which indicates to automatically calculate the minimum value.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.XAxisSlotInterval"><summary>
+            Gets or sets the slot interval value along the X-axis.
+            This is a dependency property.
+            </summary><value>
+            The slot interval value along the X-axis.
+            The default value is <see langword="null" />, which indicates to automatically calculate the slot interval value.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.YAxisMaximum"><summary>
+            Gets or sets the maximum value along the Y-axis.
+            This is a dependency property.
+            </summary><value>
+            The maximum value along the Y-axis.
+            The default value is <see langword="null" />, which indicates to automatically calculate the maximum value.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.YAxisMinimum"><summary>
+            Gets or sets the minimum value along the Y-axis.
+            This is a dependency property.
+            </summary><value>
+            The minimum value along the Y-axis.
+            The default value is <see langword="null" />, which indicates to automatically calculate the minimum value.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.YAxisSlotInterval"><summary>
+            Gets or sets the slot interval value along the Y-axis.
+            This is a dependency property.
+            </summary><value>
+            The slot interval value along the Y-axis.
+            The default value is <see langword="null" />, which indicates to automatically calculate the slot interval value.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.AxisBaselineStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.AxisBaselineStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.AxisBaselineStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.AxisBaselineValueProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.AxisBaselineValue" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.AxisBaselineValue" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.IsAxisBaselineVisibleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.IsAxisBaselineVisible" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.IsAxisBaselineVisible" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.IsHotTrackingEnabledProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.IsHotTrackingEnabled" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.IsHotTrackingEnabled" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.XAxisMaximumProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.XAxisMaximum" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.XAxisMaximum" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.XAxisMinimumProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.XAxisMinimum" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.XAxisMinimum" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.XAxisSlotIntervalProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.XAxisSlotInterval" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.XAxisSlotInterval" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.YAxisMaximumProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.YAxisMaximum" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.YAxisMaximum" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.YAxisMinimumProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.YAxisMinimum" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.YAxisMinimum" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.YAxisSlotIntervalProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.YAxisSlotInterval" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart.YAxisSlotInterval" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroScatterSeries"><summary>
+            Represents a scatter series for use in a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" />.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroScatterSeries.GetMinimumMargin"><summary>
+            Gets the minimum margin around the plotted area required by the series.
+            </summary><returns>The minimum margin around the plotted area required by the series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroScatterSeries.PlotSeries(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter)"><summary>
+            Plots the series to the associated chart using the specified plotter.
+            </summary><param name="plotter">The plotter used to render shapes on the chart.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroScatterSeries.#ctor"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroScatterSeries" /> class.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroBarSeries"><summary>
+            Represents a bar series for use in a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" />.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroBarSeries.#ctor"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroBarSeries" /> class.
+            </summary></member><member name="T:ActiproSoftware.Products.MicroCharts.Resources"><summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary></member><member name="P:ActiproSoftware.Products.MicroCharts.Resources.ResourceManager"><summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary></member><member name="P:ActiproSoftware.Products.MicroCharts.Resources.Culture"><summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary></member><member name="P:ActiproSoftware.Products.MicroCharts.Resources.ExAxisTypeNotSupported"><summary>
+              Looks up a localized string similar to Type '{0}' is not a supported axis type..
+            </summary></member><member name="P:ActiproSoftware.Products.MicroCharts.Resources.ExTypeNotSupported"><summary>
+              Looks up a localized string similar to Type '{0}' is not supported..
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroWinLossSeries"><summary>
+            Represents a win/loss series for use in a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" />.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroWinLossSeries.#ctor"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroWinLossSeries" /> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroWinLossSeries.RequiresNormalizedValues"><summary>
+            Gets a value indicating whether the values presented by this series must be normalized.
+            </summary><value><c>true</c> if the values presented by this series must be normalized; otherwise, <c>false</c>.
+            </value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesVisibility"><summary>
+            Specifies the visibility of the various kinds of a line.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesVisibility.None"><summary>
+            Indicates that no lines will be visible.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesVisibility.Positive"><summary>
+            Indicates that positive lines will be visible.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesVisibility.Negative"><summary>
+            Indicates that negative lines will be visible.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesVisibility.All"><summary>
+            Indicates that all markers will be visible.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette"><summary>
+            Provides a palette of colors for use in charts.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.OnChanged(System.EventArgs)"><summary>
+            Raises the <c>Changed</c> event.
+            </summary><param name="e">An <c>EventArgs</c> that contains the event data.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.#ctor"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette" /> class.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.#ctor(ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind)"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette" /> class.
+            </summary><param name="kind">A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind" /> that indicates the built-in palette to use.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.#ctor(System.Windows.Media.Color[])"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette" /> class.
+            </summary><param name="paletteBaseColors">The palette <see cref="T:System.Windows.Media.Color" /> values.</param></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.BaseColors"><summary>
+            Gets the collection of palette base <see cref="T:System.Windows.Media.Color" /> objects used to generate the palette.
+            </summary><value>The collection of palette base <see cref="T:System.Windows.Media.Color" /> objects used to generate the palette.</value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.Colors"><summary>
+            Gets the read-only collection of <see cref="T:System.Windows.Media.Color" /> objects in this palette.
+            </summary><value>The read-only collection of <see cref="T:System.Windows.Media.Color" /> objects in this palette.</value><remarks>
+            This collection includes the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.BaseColors" /> values, along with other shade variants if the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.IsShadeGenerationEnabled" />
+            property is set to <c>true</c>.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.IsShadeGenerationEnabled" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.ColorSelectionHint"><summary>
+            Gets or sets a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroColorSelectionHint" /> that provides a hint on how to perform color selection for this palette.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroColorSelectionHint" /> that provides a hint on how to perform color selection for this palette.
+            The default hint is <c>UniformDistribution</c>.
+            </value><remarks>
+            See the documentation on the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroColorSelectionHint" /> for more information on usage.
+            </remarks></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.IsShadeGenerationEnabled"><summary>
+            Gets or sets whether dark and light shade variants of the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.BaseColors" /> will be appended to the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.Colors" /> collection.
+            </summary><value><c>true</c> if shade generation is enabled; otherwise, <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.Kind"><summary>
+            Gets or sets a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind" /> that indicates the built-in palette to use.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPaletteKind" /> that indicates the built-in palette to use.</value></member><member name="E:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette.Changed"><summary>
+            Occurs after the palette has been changed.
+            </summary><eventdata>
+            The event handler receives an argument of type <c>EventArgs</c> containing data related to this event.
+            </eventdata></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter"><summary>
+            Represents a class that is capable of plotting various shapes on to a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" />.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.AddBaseline(System.Double,System.Double,System.Double,System.Double)"><summary>
+            Adds a baseline to the associated chart.
+            </summary><param name="x1">The X-coordinate of the first point.</param><param name="y1">The Y-coordinate of the first point.</param><param name="x2">The X-coordinate of the second point.</param><param name="y2">The Y-coordinate of the second point.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.AddHorizontalBaseline(System.Double)"><summary>
+            Adds a horizontal baseline to the associated chart.
+            </summary><param name="y">The Y-coordinate of the baseline.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.AddMarker(System.Windows.Point,System.Windows.Style)"><summary>
+            Adds a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> to the associated chart.
+            </summary><param name="point">The point at which the marker should be added.</param><param name="style">The style that should be applied to the marker.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.AddMarker(System.Double,System.Double,System.Windows.Style)"><summary>
+            Adds a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> to the associated chart.
+            </summary><param name="x">The X coordinate at which the marker should be added.</param><param name="y">The Y coordinate at which the marker should be added.</param><param name="style">The style that should be applied to the marker.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.AddPolyline(System.Windows.Media.PointCollection,System.Windows.Style,System.Windows.Media.Geometry,System.Nullable{System.Windows.Rect})"><summary>
+            Adds a <see cref="T:System.Windows.Shapes.Polyline" /> to the associated chart using with the given points.
+            </summary><param name="points">The points that make up the shape.</param><param name="style">The <see cref="T:System.Windows.Style" /> to be applied to the shape.</param><param name="clip">The clipping geometry to be used by the shape.</param><param name="clipBounds">The clipping bounds of the shape.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.AddPolygon(System.Windows.Media.PointCollection,System.Windows.Style,System.Windows.Media.Geometry,System.Nullable{System.Windows.Rect})"><summary>
+            Adds a <see cref="T:System.Windows.Shapes.Polygon" /> to the associated chart using with the given points.
+            </summary><param name="points">The points that make up the shape.</param><param name="style">The <see cref="T:System.Windows.Style" /> to be applied to the shape.</param><param name="clip">The clipping geometry to be used by the shape.</param><param name="clipBounds">The clipping bounds of the shape.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.AddShape(System.Windows.Shapes.Shape)"><summary>
+            Adds the shape to the associated chart.
+            </summary><param name="shape">The shape to add.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.AddVerticalBaseline(System.Double)"><summary>
+            Adds a vertical baseline to the associated chart.
+            </summary><param name="x">The X-coordinate of the baseline.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.GetXAxis(System.Type)"><summary>
+            Gets an <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis" /> associated with the specified type for use along the X-axis.
+            </summary><param name="type">The type of axis.</param><returns>An <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis" /> associated with the specified type for use along the X-axis.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.GetYAxis(System.Type)"><summary>
+            Gets an <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis" /> associated with the specified type for use along the Y-axis.
+            </summary><param name="type">The type of axis.</param><returns>An <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.IMicroXYAxis" /> associated with the specified type for use along the Y-axis.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.Plot"><summary>
+            Plots the series and ranges on the associated chart.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.StartHotTracking(System.Windows.Point)"><summary>
+            Starts the hot tracking.
+            </summary><param name="position">The position of the mouse cursor.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.StopHotTracking"><summary>
+            Stops the hot tracking.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.UpdateHotTracking(System.Windows.Point)"><summary>
+            Updates the hot tracking.
+            </summary><param name="position">The position of the mouse cursor.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.#ctor(ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart)"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" /> class.
+            </summary><param name="chart">The chart associated with the plotter.</param></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.Height"><summary>
+            Gets the height of the plot area.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.IsAxisBaselineVisible"><summary>
+            Gets a value indicating whether a line is rendered at the baseline value.
+            </summary><value><c>true</c> if a line is rendered at the baseline value; otherwise, <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.IsHotTracking"><summary>
+            Gets a value indicating whether this instance is hot tracking.
+            </summary><value><c>true</c> if this instance is hot tracking; otherwise, <c>false</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.Margin"><summary>
+            Gets or sets the margin around the plot area.
+            </summary><value>
+            The margin around the plot area.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.SeriesStyleSelector"><summary>
+            Gets or sets custom style-selection logic for a style that can be applied to each element in the associated series.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector" /> object that contains logic that chooses the style to use for each element in the associated series.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter.Width"><summary>
+            Gets the width of the plot area.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeriesStyleKinds"><summary>
+            Specifies the various alternate styles that can be used when rendering an area.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeriesStyleKinds.None"><summary>
+            Indicates that no alternate styles will be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeriesStyleKinds.Negative"><summary>
+            Indicates that a negative style can be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeriesStyleKinds.All"><summary>
+            Indicates that all styles can be used.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries"><summary>
+            Represents an area series for use in a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" />.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.PlotSeries(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter)"><summary>
+            Plots the series to the associated chart using the specified plotter.
+            </summary><param name="plotter">The plotter used to render shapes on the chart.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.#ctor"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries" /> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.AreaNegativeStyle"><summary>
+            Gets or sets a negative <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> used to render the series.
+            This is a dependency property.
+            </summary><value>
+            A negative <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> used to render the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.AreaStyle"><summary>
+            Gets or sets a <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> used to render the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:System.Windows.Style" />, which is applied to the <see cref="T:System.Windows.Shapes.Shape" /> used to render the series.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.AreaStyleKinds"><summary>
+            Gets or sets a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeriesStyleKinds" /> which indicates what style kinds are used for areas along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeriesStyleKinds" /> which indicates what style kinds are used for areas along the series.
+            The default value is <c>MicroAreaSeriesStyleKinds.None</c>.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.LineVisibility"><summary>
+            Gets or sets a value indicating which lines are rendered along the series.
+            This is a dependency property.
+            </summary><value>
+            A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesVisibility" /> indicating which lines are rendered along the series.
+            The default value is <c>MicroLineSeriesVisibility.None</c>.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.AreaNegativeStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.AreaNegativeStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.AreaNegativeStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.AreaStyleProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.AreaStyle" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.AreaStyle" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.AreaStyleKindsProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.AreaStyleKinds" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.AreaStyleKinds" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.LineVisibilityProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.LineVisibility" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries.LineVisibility" /> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesStackKind"><summary>
+            Specifies the stacking methods supported by a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase" /> series.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesStackKind.None"><summary>
+            Indicates the series will not be stacked.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesStackKind.Normal"><summary>
+            Indicates the series will be stacked by adding its values to the values of other stacked series.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesStackKind.Percentage"><summary>
+            Indicates the series will be stacked by calculating percentages of its values based on the total values of all stacked series.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesStyleKinds"><summary>
+            Specifies the various alternate styles that can be used when rendering a line.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesStyleKinds.None"><summary>
+            Indicates that no alternate styles will be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesStyleKinds.Negative"><summary>
+            Indicates that a negative style can be used.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeriesStyleKinds.All"><summary>
+            Indicates that all styles can be used.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas"><summary>
+            Represents a panel were child elements are positioned using explicit/relative coordinates.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.ArrangeOverride(System.Windows.Size)"><summary>
+            When overridden in a derived class, positions child elements and determines a size for a
+            <see cref="T:System.Windows.FrameworkElement" /> derived class.
+            </summary><param name="finalSize">
+            The final area within the parent that this element should use to arrange itself and its children.
+            </param><returns>The actual size used.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.MeasureOverride(System.Windows.Size)"><summary>
+            When overridden in a derived class, measures the size in layout required for child elements and determines a size for
+            the <see cref="T:System.Windows.FrameworkElement" />-derived class.
+            </summary><param name="availableSize">
+            The available size that this element can give to child elements. Infinity can be specified as a value to indicate that
+            the element will size to whatever content is available.
+            </param><returns>
+            The size that this element determines it needs during layout, based on its calculations of child element sizes.
+            </returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.GetX(System.Windows.UIElement)"><summary>
+            Gets the value of the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.XProperty" /> attached property for a specified element.
+            </summary><param name="element">The element to which the attached property is retrieved.</param><returns>The X-coordinate value.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.SetX(System.Windows.UIElement,System.Double)"><summary>
+            Sets the value of the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.XProperty" /> attached property to a specified element.
+            </summary><param name="element">The element to which the attached property is written.</param><param name="value">The X-coordinate value.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.GetY(System.Windows.UIElement)"><summary>
+            Gets the value of the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.YProperty" /> attached property for a specified element.
+            </summary><param name="element">The element to which the attached property is retrieved.</param><returns>The Y-coordinate value.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.SetY(System.Windows.UIElement,System.Double)"><summary>
+            Sets the value of the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.YProperty" /> attached property to a specified element.
+            </summary><param name="element">The element to which the attached property is written.</param><param name="value">The Y-coordinate value.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.GetZIndex(System.Windows.UIElement)"><summary>
+            Gets the value of the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.ZIndexProperty" /> attached property for the specified element.
+            </summary><param name="element">The element to which the attached property is retrieved.</param><returns>The element's value.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.SetZIndex(System.Windows.UIElement,System.Int32)"><summary>
+            Sets the value of the <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.ZIndexProperty" /> attached property to the specified element.
+            </summary><param name="element">The element to which the attached property is written.</param><param name="value">The value to set.</param></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.XProperty"><summary>
+            Identifies the <c>X</c> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <c>X</c> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.YProperty"><summary>
+            Identifies the <c>Y</c> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <c>Y</c> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroChartCanvas.ZIndexProperty"><summary>
+            Identifies the <c>ZIndex</c> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <c>ZIndex</c> dependency property.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesLineKind"><summary>
+            Specifies the line kinds supported by a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroLineSeries" /> and <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroAreaSeries" /> series.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesLineKind.Normal"><summary>
+            Indicates a normal line will be used to connect the data points.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesLineKind.Spline"><summary>
+            Indicates a spline will be used to connect the data points.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYSeriesLineKind.Step"><summary>
+            Indicates stepped lines will be used to connect the data points.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector"><summary>
+            Provides a way to apply series styles based on custom logic.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectAreaHighStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the high area <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectAreaLowStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the low area <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectAreaNegativeStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the negative area <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectAreaStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the area <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectLegendMarkerStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase,System.Windows.Style)"><summary>
+            Returns the legend marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectLineNegativeStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the negative line <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectLineStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the line <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectMarkerFirstStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the first marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectMarkerHighStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the high marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectMarkerLastStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the last marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectMarkerLowStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the low marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectMarkerNegativeStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the negative marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector.SelectMarkerStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroColorSelectionHint"><summary>
+            Specifies a hint for how a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector" /> should select colors for a series.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroColorSelectionHint.Sequential"><summary>
+            Pick palette colors sequentially.
+            The first series gets the first palette color.
+            The second series gets the second palette color, and so on.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroColorSelectionHint.UniformDistribution"><summary>
+            Pick palette colors based on a uniform distribution.
+            If the palette consists of nine base colors and the chart being rendered has three series,
+            the first series gets one of the first three colors in the palette.
+            The second series gets one of the middle three colors in the palette.
+            And the third series gets one of the last three colors in the palette.
+            If there are more series being rendered than base colors in the palette,
+            fallback is to <see cref="F:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroColorSelectionHint.Sequential" /> mode.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLegendItem"><summary>
+            Represents an item used in a chart legend.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLegendItem.MarkerStyle"><summary>
+            Gets the <see cref="T:System.Windows.Style" /> applied to the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" /> used to present the legend item.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroLegendItem.Text"><summary>
+            Gets a description of the legend item.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRangeCollection"><summary>
+            Represents a collection of <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange" /> objects.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRangeCollection.ClearItems"><summary>
+            Removes all items from the collection.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRangeCollection.InsertItem(System.Int32,ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange)"><summary>
+            Inserts an item into the collection at the specified index.
+            </summary><param name="index">The zero-based index at which <paramref name="item" /> should be inserted.</param><param name="item">The object to insert.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRangeCollection.RemoveItem(System.Int32)"><summary>
+            Removes the item at the specified index of the collection.
+            </summary><param name="index">The zero-based index of the item to remove.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRangeCollection.SetItem(System.Int32,ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange)"><summary>
+            Replaces the element at the specified index.
+            </summary><param name="index">The zero-based index of the item to replace.</param><param name="item">The new value for the element at the specified index.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRangeCollection.#ctor(ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart)"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" /> class.
+            </summary><param name="chart">The <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" /> that owns this collection and the associated ranges.</param></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelectorConverter"><summary>
+            Represents a type converter for the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelector" /> type.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelectorConverter.CanConvertFrom(System.ComponentModel.ITypeDescriptorContext,System.Type)"><summary>
+            Returns whether the type converter can convert an object from the specified type to the type of this converter.
+            </summary><param name="context">An object that provides a format context.</param><param name="sourceType">The type you want to convert from.</param><returns><c>true</c> if this converter can perform the conversion; otherwise, <c>false</c>.
+            </returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroSeriesStyleSelectorConverter.ConvertFrom(System.ComponentModel.ITypeDescriptorContext,System.Globalization.CultureInfo,System.Object)"><summary>
+            Converts from the specified value to the intended conversion type of the converter.
+            </summary><param name="context">An object that provides a format context.</param><param name="culture">The <see cref="T:System.Globalization.CultureInfo" /> to use as the current culture.</param><param name="value">The value to convert to the type of this converter.</param><returns>
+            The converted value.
+            </returns></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerVisibility"><summary>
+            Specifies the visibility of the various kinds of <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarker" />.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerVisibility.None"><summary>
+            Indicates that no markers will be visible.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerVisibility.Positive"><summary>
+            Indicates that positive markers will be visible.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerVisibility.Negative"><summary>
+            Indicates that negative markers will be visible.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerVisibility.High"><summary>
+            Indicates that high markers will be visible.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerVisibility.Low"><summary>
+            Indicates that low markers will be visible.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerVisibility.First"><summary>
+            Indicates that the first marker will be visible.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerVisibility.Last"><summary>
+            Indicates that the last marker will be visible.
+            </summary></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroChartMarkerVisibility.All"><summary>
+            Indicates that all markers will be visible.
+            </summary></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector"><summary>
+            Provides a way to apply series styles based on a palette of colors.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectAreaHighStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the high area <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectAreaLowStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the low area <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectAreaNegativeStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the negative area <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectAreaStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the area <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectLegendMarkerStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYSeriesBase,System.Windows.Style)"><summary>
+            Returns the legend marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectLineNegativeStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the negative line <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectLineStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the line <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectMarkerFirstStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the first marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectMarkerHighStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the high marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectMarkerLastStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the last marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectMarkerLowStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the low marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectMarkerNegativeStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the negative marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.SelectMarkerStyle(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroSeriesBase,System.Windows.Style)"><summary>
+            Returns the marker <see cref="T:System.Windows.Style" /> to use for the specified series.
+            </summary><param name="series">The series to examine.</param><param name="defaultStyle">The default <see cref="T:System.Windows.Style" /> to use.</param><returns>The <see cref="T:System.Windows.Style" /> to use for the specified series.</returns></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.#ctor"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector" /> class.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.#ctor(ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette)"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector" /> class.
+            </summary><param name="palette">The <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette" /> of colors to use.</param></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaBrushCustom"><summary>
+            Gets or sets the custom <see cref="T:System.Windows.Media.Brush" /> to use for areas.
+            </summary><value>The custom <see cref="T:System.Windows.Media.Brush" /> to use for areas.</value><remarks>
+            When specified, this brush will directly be used instead of the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaBrushKind" /> setting.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaBrushKind"><summary>
+            Gets or sets the kind of brush to use for areas.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind" /> indicating the kind of brush to use for areas.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaBrushCustom" /><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaTintColor" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaTintColor"><summary>
+            Gets or sets the tint color to apply to the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaBrushKind" /> setting.
+            </summary><value>The tint color, if tinting should be applied.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaHighBrushCustom"><summary>
+            Gets or sets the custom <see cref="T:System.Windows.Media.Brush" /> to use for the high area.
+            </summary><value>The custom <see cref="T:System.Windows.Media.Brush" /> to use for the high area.</value><remarks>
+            When specified, this brush will directly be used instead of the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaHighBrushKind" /> setting.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaHighBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaHighBrushKind"><summary>
+            Gets or sets the kind of brush to use for the high area.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind" /> indicating the kind of brush to use for the high area.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaHighBrushCustom" /><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaHighTintColor" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaHighTintColor"><summary>
+            Gets or sets the tint color to apply to the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaHighBrushKind" /> setting.
+            </summary><value>The tint color, if tinting should be applied.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaHighBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaLowBrushCustom"><summary>
+            Gets or sets the custom <see cref="T:System.Windows.Media.Brush" /> to use for the low area.
+            </summary><value>The custom <see cref="T:System.Windows.Media.Brush" /> to use for the low area.</value><remarks>
+            When specified, this brush will directly be used instead of the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaLowBrushKind" /> setting.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaLowBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaLowBrushKind"><summary>
+            Gets or sets the kind of brush to use for the low area.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind" /> indicating the kind of brush to use for the low area.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaLowBrushCustom" /><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaLowTintColor" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaLowTintColor"><summary>
+            Gets or sets the tint color to apply to the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaLowBrushKind" /> setting.
+            </summary><value>The tint color, if tinting should be applied.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaLowBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaNegativeBrushCustom"><summary>
+            Gets or sets the custom <see cref="T:System.Windows.Media.Brush" /> to use for negative areas.
+            </summary><value>The custom <see cref="T:System.Windows.Media.Brush" /> to use for negative areas.</value><remarks>
+            When specified, this brush will directly be used instead of the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaNegativeBrushKind" /> setting.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaNegativeBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaNegativeBrushKind"><summary>
+            Gets or sets the kind of brush to use for negative areas.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind" /> indicating the kind of brush to use for negative areas.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaNegativeBrushCustom" /><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaNegativeTintColor" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaNegativeTintColor"><summary>
+            Gets or sets the tint color to apply to the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaNegativeBrushKind" /> setting.
+            </summary><value>The tint color, if tinting should be applied.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaNegativeBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineBrushCustom"><summary>
+            Gets or sets the custom <see cref="T:System.Windows.Media.Brush" /> to use for lines.
+            </summary><value>The custom <see cref="T:System.Windows.Media.Brush" /> to use for lines.</value><remarks>
+            When specified, this brush will directly be used instead of the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineBrushKind" /> setting.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineBrushKind"><summary>
+            Gets or sets the kind of brush to use for lines.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind" /> indicating the kind of brush to use for lines.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineBrushCustom" /><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineTintColor" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineTintColor"><summary>
+            Gets or sets the tint color to apply to the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineBrushKind" /> setting.
+            </summary><value>The tint color, if tinting should be applied.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineNegativeBrushCustom"><summary>
+            Gets or sets the custom <see cref="T:System.Windows.Media.Brush" /> to use for negative lines.
+            </summary><value>The custom <see cref="T:System.Windows.Media.Brush" /> to use for negative lines.</value><remarks>
+            When specified, this brush will directly be used instead of the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineNegativeBrushKind" /> setting.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineNegativeBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineNegativeBrushKind"><summary>
+            Gets or sets the kind of brush to use for negative lines.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind" /> indicating the kind of brush to use for negative lines.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineNegativeBrushCustom" /><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineNegativeTintColor" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineNegativeTintColor"><summary>
+            Gets or sets the tint color to apply to the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineNegativeBrushKind" /> setting.
+            </summary><value>The tint color, if tinting should be applied.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.LineNegativeBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerBrushCustom"><summary>
+            Gets or sets the custom <see cref="T:System.Windows.Media.Brush" /> to use for markers.
+            </summary><value>The custom <see cref="T:System.Windows.Media.Brush" /> to use for markers.</value><remarks>
+            When specified, this brush will directly be used instead of the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerBrushKind" /> setting.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerBrushKind"><summary>
+            Gets or sets the kind of brush to use for markers.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind" /> indicating the kind of brush to use for markers.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerBrushCustom" /><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerTintColor" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerTintColor"><summary>
+            Gets or sets the tint color to apply to the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerBrushKind" /> setting.
+            </summary><value>The tint color, if tinting should be applied.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerFirstBrushCustom"><summary>
+            Gets or sets the custom <see cref="T:System.Windows.Media.Brush" /> to use for the first marker.
+            </summary><value>The custom <see cref="T:System.Windows.Media.Brush" /> to use for the first marker.</value><remarks>
+            When specified, this brush will directly be used instead of the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerFirstBrushKind" /> setting.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerFirstBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerFirstBrushKind"><summary>
+            Gets or sets the kind of brush to use for the first marker.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind" /> indicating the kind of brush to use for the first marker.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerFirstBrushCustom" /><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerFirstTintColor" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerFirstTintColor"><summary>
+            Gets or sets the tint color to apply to the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerFirstBrushKind" /> setting.
+            </summary><value>The tint color, if tinting should be applied.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerFirstBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerHighBrushCustom"><summary>
+            Gets or sets the custom <see cref="T:System.Windows.Media.Brush" /> to use for the high marker.
+            </summary><value>The custom <see cref="T:System.Windows.Media.Brush" /> to use for the high marker.</value><remarks>
+            When specified, this brush will directly be used instead of the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerHighBrushKind" /> setting.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerHighBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerHighBrushKind"><summary>
+            Gets or sets the kind of brush to use for the high marker.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind" /> indicating the kind of brush to use for the high marker.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerHighBrushCustom" /><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerHighTintColor" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerHighTintColor"><summary>
+            Gets or sets the tint color to apply to the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerHighBrushKind" /> setting.
+            </summary><value>The tint color, if tinting should be applied.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerHighBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLastBrushCustom"><summary>
+            Gets or sets the custom <see cref="T:System.Windows.Media.Brush" /> to use for the last marker.
+            </summary><value>The custom <see cref="T:System.Windows.Media.Brush" /> to use for the last marker.</value><remarks>
+            When specified, this brush will directly be used instead of the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLastBrushKind" /> setting.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLastBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLastBrushKind"><summary>
+            Gets or sets the kind of brush to use for the last marker.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind" /> indicating the kind of brush to use for the last marker.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLastBrushCustom" /><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLastTintColor" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLastTintColor"><summary>
+            Gets or sets the tint color to apply to the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLastBrushKind" /> setting.
+            </summary><value>The tint color, if tinting should be applied.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLastBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLowBrushCustom"><summary>
+            Gets or sets the custom <see cref="T:System.Windows.Media.Brush" /> to use for the low marker.
+            </summary><value>The custom <see cref="T:System.Windows.Media.Brush" /> to use for the low marker.</value><remarks>
+            When specified, this brush will directly be used instead of the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLowBrushKind" /> setting.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLowBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLowBrushKind"><summary>
+            Gets or sets the kind of brush to use for the low marker.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind" /> indicating the kind of brush to use for the low marker.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLowBrushCustom" /><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLowTintColor" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLowTintColor"><summary>
+            Gets or sets the tint color to apply to the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLowBrushKind" /> setting.
+            </summary><value>The tint color, if tinting should be applied.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerLowBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerNegativeBrushCustom"><summary>
+            Gets or sets the custom <see cref="T:System.Windows.Media.Brush" /> to use for negative markers.
+            </summary><value>The custom <see cref="T:System.Windows.Media.Brush" /> to use for negative markers.</value><remarks>
+            When specified, this brush will directly be used instead of the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerNegativeBrushKind" /> setting.
+            </remarks><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerNegativeBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerNegativeBrushKind"><summary>
+            Gets or sets the kind of brush to use for negative markers.
+            </summary><value>A <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesBrushKind" /> indicating the kind of brush to use for negative markers.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerNegativeBrushCustom" /><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.AreaHighTintColor" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerNegativeTintColor"><summary>
+            Gets or sets the tint color to apply to the resulting brush from the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerNegativeBrushKind" /> setting.
+            </summary><value>The tint color, if tinting should be applied.</value><seealso cref="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.MarkerNegativeBrushKind" /></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroSeriesPaletteStyleSelector.Palette"><summary>
+            Gets or sets the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette" /> of colors to use.
+            </summary><value>The <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.Palettes.MicroPalette" /> of colors to use.</value></member><member name="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange"><summary>
+            Represents a range for use in a <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" />.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.PlotRange(ActiproSoftware.Windows.Controls.MicroCharts.Primitives.MicroXYChartPlotter)"><summary>
+            Plots the range to the associated chart using the specified plotter.
+            </summary><param name="plotter">The plotter used to render shapes on the chart.</param></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Refresh"><summary>
+            Updates the range based on the current state.
+            </summary></member><member name="M:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.#ctor"><summary>
+            Initializes a new instance of the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange" /> class.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Chart"><summary>
+            Gets the <see cref="T:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYChart" /> that owns this range.
+            </summary></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Maximum"><summary>
+            Gets or sets the maximum value of the range.
+            This is a dependency property.
+            </summary><value>
+            The maximum value of the range.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Minimum"><summary>
+            Gets or sets the minimum value of the range.
+            This is a dependency property.
+            </summary><value>
+            The minimum value of the range.
+            The default value is <see langword="null" />.
+            </value></member><member name="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Orientation"><summary>
+            Gets or sets the orientation of the range.
+            This is a dependency property.
+            </summary><value>
+            The orientation of the range.
+            The default value is <c>Orientation.Horizontal</c>.
+            </value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.MaximumProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Maximum" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Maximum" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.MinimumProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Minimum" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Minimum" /> dependency property.</value></member><member name="F:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.OrientationProperty"><summary>
+            Identifies the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Orientation" /> dependency property.  This field is read-only.
+            </summary><value>The identifier for the <see cref="P:ActiproSoftware.Windows.Controls.MicroCharts.MicroXYRange.Orientation" /> dependency property.</value></member></members></doc>

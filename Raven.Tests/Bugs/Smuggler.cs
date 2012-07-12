@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
 using Raven.Smuggler;
 using Raven.Client.Extensions;
 using Xunit;
@@ -12,7 +13,7 @@ namespace Raven.Tests.Bugs
 	public class SmugglerTester : SmugglerApi
 	{
 		public SmugglerTester(RavenConnectionStringOptions connectionStringOptions)
-			: base(connectionStringOptions)
+			: base(new SmugglerOptions(), connectionStringOptions)
 		{
 		}
 

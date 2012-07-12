@@ -43,6 +43,14 @@ namespace Raven.Client.Document
 		private Dictionary<Type, PropertyInfo> idPropertyCache = new Dictionary<Type, PropertyInfo>();
 		private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
 
+#if !SILVERLIGHT
+		private Dictionary<Type, Func<IDatabaseCommands, object, string>> typesToRegisteredIdConventions =
+			new Dictionary<Type, Func<IDatabaseCommands, object, string>>();
+#endif
+
+		private Dictionary<Type, Func<IAsyncDatabaseCommands, object, Task<string>>> typesToAsyncRegisteredIdConventions =
+			new Dictionary<Type, Func<IAsyncDatabaseCommands, object, Task<string>>>();
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentConvention"/> class.
 		/// </summary>
@@ -253,12 +261,24 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public string GenerateDocumentKey(IDatabaseCommands databaseCommands,object entity)
 		{
+			var type = entity.GetType();
+			foreach (var typeToRegisteredIdConvention in typesToRegisteredIdConventions
+				.Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Key.IsAssignableFrom(type)))
+			{
+				return typeToRegisteredIdConvention.Value(databaseCommands, entity);
+			}
 			return DocumentKeyGenerator(databaseCommands,entity);
 		}
 #endif
 #if !NET35
 		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands,object entity)
 		{
+			var type = entity.GetType();
+			foreach (var typeToRegisteredIdConvention in typesToAsyncRegisteredIdConventions
+				.Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Key.IsAssignableFrom(type)))
+			{
+				return typeToRegisteredIdConvention.Value(databaseCommands, entity);
+			}
 			return AsyncDocumentKeyGenerator(databaseCommands,entity);
 		}
 #endif
@@ -382,6 +402,27 @@ namespace Raven.Client.Document
 		/// when handling lazy requests
 		/// </summary>
 		public bool UseParallelMultiGet { get; set; }
+#if !SILVERLIGHT
+		/// <summary>
+		/// Register an id convention for a single type (and all of its derived types.
+		/// Note that you can still fall back to the DocumentKeyGenerator if you want.
+		/// </summary>
+		public DocumentConvention RegisterIdConvention<TEntity>(Func<IDatabaseCommands,TEntity, string> func)
+		{
+			typesToRegisteredIdConventions[typeof(TEntity)] = (commands, o) => func(commands, (TEntity)o);
+			return this;
+		}
+#endif
+
+		/// <summary>
+		/// Register an async id convention for a single type (and all of its derived types.
+		/// Note that you can still fall back to the DocumentKeyGenerator if you want.
+		/// </summary>
+		public DocumentConvention RegisterAsyncIdConvention<TEntity>(Func<IAsyncDatabaseCommands, TEntity, Task<string>> func)
+		{
+			typesToAsyncRegisteredIdConventions[typeof (TEntity)] = (commands, o) => func(commands, (TEntity) o);
+			return this;
+		}
 
 		/// <summary>
 		/// Creates the serializer.
@@ -512,6 +553,7 @@ namespace Raven.Client.Document
 		/// Default: 5 minutes
 		/// </summary>
 		public TimeSpan MaxFailoverCheckPeriod { get; set; }
+
 	}
 
 

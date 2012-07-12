@@ -150,6 +150,14 @@ namespace Raven.Client.Connection
 			});
 		}
 
+		public HttpJsonRequest CreateRequest(string method, string requestUrl)
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention).AddOperationHeaders(OperationsHeaders);
+			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
+		}
+
 		private void ExecuteWithReplication(string method, Action<string> operation)
 		{
 			ExecuteWithReplication<object>(method, operationUrl =>
@@ -371,6 +379,26 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
+		/// Gets the attachments starting with the specified prefix
+		/// </summary>
+		public IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize)
+		{
+			return ExecuteWithReplication("GET", operationUrl => DirectGetAttachmentHeadersStartingWith("GET", idPrefix, start, pageSize, operationUrl));
+		}
+
+		private IEnumerable<Attachment> DirectGetAttachmentHeadersStartingWith(string method, string idPrefix, int start, int pageSize, string operationUrl)
+		{
+			var webRequest =
+				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+				                                                                         operationUrl + "/static/?startsWith=" +
+				                                                                         idPrefix + "&start=" + start + "&pageSize=" +
+				                                                                         pageSize, method, credentials, convention));
+			var result = webRequest.ReadResponseJson();
+
+			return convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result));
+		}
+
+		/// <summary>
 		/// Gets the attachment by the specified key
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -411,12 +439,13 @@ namespace Raven.Client.Connection
 						throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
 					};
 				}
+
 				return new Attachment
 				{
 					Data = data,
 					Size = len,
 					Etag = webRequest.GetEtagHeader(),
-					Metadata = webRequest.ResponseHeaders.FilterHeaders(isServerDocument: false)
+					Metadata = webRequest.ResponseHeaders.FilterHeadersAttachment()
 				};
 			}
 			catch (WebException e)
@@ -1225,6 +1254,10 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
+			foreach (var getRequest in requests)
+			{
+				getRequest.Headers["Raven-Client-Version"] = HttpJsonRequest.ClientVersion;
+			}
 			return ExecuteWithReplication("GET", // this is a logical GET, physical POST
 										  operationUrl =>
 										  {

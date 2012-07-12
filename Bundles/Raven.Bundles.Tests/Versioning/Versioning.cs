@@ -3,8 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using Raven.Client.Bundles.Versioning;
 using Xunit;
-using Raven.Client.Versioning;
 
 namespace Raven.Bundles.Tests.Versioning
 {

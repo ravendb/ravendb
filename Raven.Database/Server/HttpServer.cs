@@ -8,18 +8,18 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
-using Raven.Database.Plugins;
-using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server.Responders;
+using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
@@ -36,6 +36,9 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
+using Raven.Database.Util;
+using Raven.Imports.SignalR;
+using Raven.Imports.SignalR.Hosting.Self;
 
 namespace Raven.Database.Server
 {
@@ -43,21 +46,23 @@ namespace Raven.Database.Server
 	{
 		private readonly DateTime startUpTime = DateTime.UtcNow;
 		private const int MaxConcurrentRequests = 192;
-		public DocumentDatabase DefaultResourceStore { get; private set; }
-		public InMemoryRavenConfiguration DefaultConfiguration { get; private set; }
+		public DocumentDatabase SystemDatabase { get; private set; }
+		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly AbstractRequestAuthorizer requestAuthorizer;
 
-		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { }; 
+		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { };
 
 		private readonly ThreadLocal<string> currentTenantId = new ThreadLocal<string>();
 		private readonly ThreadLocal<DocumentDatabase> currentDatabase = new ThreadLocal<DocumentDatabase>();
 		private readonly ThreadLocal<InMemoryRavenConfiguration> currentConfiguration = new ThreadLocal<InMemoryRavenConfiguration>();
 
+		protected readonly ConcurrentSet<string> LockedDatabases =
+			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
 		protected readonly ConcurrentDictionary<string, DocumentDatabase> ResourcesStoresCache =
 			new ConcurrentDictionary<string, DocumentDatabase>(StringComparer.InvariantCultureIgnoreCase);
 
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
-
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
 
 		public int NumberOfRequests
@@ -75,13 +80,14 @@ namespace Raven.Database.Server
 		{
 			get
 			{
-				return DefaultConfiguration;
+				return SystemConfiguration;
 			}
 		}
 
 		private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)", RegexOptions.IgnoreCase);
+		public static readonly Regex SiganlRQuery = new Regex("^(/databases/([^/]+))?/signalr/", RegexOptions.IgnoreCase);
 
-
+		private ExternalHttpListenerServer signalrServer;
 		private HttpListener listener;
 
 		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
@@ -94,6 +100,9 @@ namespace Raven.Database.Server
 		private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(MaxConcurrentRequests);
 		private Timer databasesCleanupTimer;
 		private int physicalRequestsCount;
+
+		private ConcurrentDictionary<DocumentDatabase, ConcurrentSet<NotificationsConnection>> connectionsByDatabase =
+			new ConcurrentDictionary<DocumentDatabase, ConcurrentSet<NotificationsConnection>>();
 
 		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
 		private readonly TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
@@ -108,9 +117,10 @@ namespace Raven.Database.Server
 		{
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 
-			DefaultResourceStore = resourceStore;
-			DefaultConfiguration = configuration;
+			SystemDatabase = resourceStore;
+			SystemConfiguration = configuration;
 
+			SystemDatabase.Notifications += OnDatabaseNotifications;
 			int val;
 			if (int.TryParse(configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
 				val = 900;
@@ -142,9 +152,32 @@ namespace Raven.Database.Server
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
 		}
 
+		private void OnDatabaseNotifications(object sender, ChangeNotification changeNotification)
+		{
+			var db = sender as DocumentDatabase;
+			if (db == null)
+				return;
+
+			ConcurrentSet<NotificationsConnection> set;
+			if (connectionsByDatabase.TryGetValue(db, out set) == false)
+				return;
+
+			foreach (var notification in set)
+			{
+				notification.Send(changeNotification);
+			}
+		}
+
+		public void RegisterConnection(DocumentDatabase db, NotificationsConnection notifications)
+		{
+			var set = connectionsByDatabase.GetOrAdd(db, _ => new ConcurrentSet<NotificationsConnection>());
+			notifications.Disposed += (sender, args) => set.TryRemove(notifications);
+			set.Add(notifications);
+		}
+
 		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
 		{
-			if (@event.Database != DefaultResourceStore)
+			if (@event.Database != SystemDatabase)
 				return; // we ignore anything that isn't from the root db
 
 			CleanupDatabase(@event.Name, skipIfActive: false);
@@ -160,13 +193,13 @@ namespace Raven.Database.Server
 					Uptime = DateTime.UtcNow - startUpTime,
 					LoadedDatabases =
 						from documentDatabase in ResourcesStoresCache
-								.Concat(new[] {new KeyValuePair<string, DocumentDatabase>("Default", DefaultResourceStore),})
+								.Concat(new[] { new KeyValuePair<string, DocumentDatabase>("System", SystemDatabase), })
 						let totalSizeOnDisk = documentDatabase.Value.GetTotalSizeOnDisk()
 						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Key)
 						select new
 						{
 							Name = documentDatabase.Key,
-							LastActivity =  new[]
+							LastActivity = new[]
 							{
 								lastUsed, 
 								documentDatabase.Value.WorkContext.LastWorkTime,
@@ -226,26 +259,47 @@ namespace Raven.Database.Server
 		public void StartListening()
 		{
 			listener = new HttpListener();
-			string virtualDirectory = DefaultConfiguration.VirtualDirectory;
+			string virtualDirectory = SystemConfiguration.VirtualDirectory;
 			if (virtualDirectory.EndsWith("/") == false)
 				virtualDirectory = virtualDirectory + "/";
-			listener.Prefixes.Add("http://" + (DefaultConfiguration.HostName ?? "+") + ":" + DefaultConfiguration.Port + virtualDirectory);
+			var uri = "http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
+			listener.Prefixes.Add(uri);
+
+			SetupSignalR(uri);
 
 			foreach (var configureHttpListener in ConfigureHttpListeners)
 			{
-				configureHttpListener.Value.Configure(listener, DefaultConfiguration);
+				configureHttpListener.Value.Configure(listener, SystemConfiguration);
 			}
 
 			Init();
 			listener.Start();
-	
-			TenantDatabaseModified.Occured += TenantDatabaseRemoved;
+
 
 			listener.BeginGetContext(GetContext, null);
 		}
 
+		private void SetupSignalR(string uri)
+		{
+			var depResolver = CreateDependencyResolver();
+			signalrServer = new ExternalHttpListenerServer(uri, depResolver, listener);
+			signalrServer.MapConnection<NotificationsConnection>("/signalr/notifications");
+		}
+
+		public DefaultDependencyResolver CreateDependencyResolver()
+		{
+			var depResolver = new DefaultDependencyResolver();
+			depResolver.Register(typeof(HttpServer), () => this);
+			var jsonSerializerSettings = new JsonSerializerSettings();
+			jsonSerializerSettings.Converters.AddRange(Default.Converters);
+			var serializer = new JsonNetSerializer(jsonSerializerSettings);
+			depResolver.Register(typeof(IJsonSerializer), () => serializer);
+			return depResolver;
+		}
+
 		public void Init()
 		{
+			TenantDatabaseModified.Occured += TenantDatabaseRemoved;
 			databasesCleanupTimer = new Timer(CleanupDatabases, null, frequnecyToCheckForIdleDatabases, frequnecyToCheckForIdleDatabases);
 		}
 
@@ -285,7 +339,7 @@ namespace Raven.Database.Server
 				}
 				try
 				{
-					
+
 					database.Dispose();
 				}
 				catch (Exception e)
@@ -301,9 +355,11 @@ namespace Raven.Database.Server
 		private void GetContext(IAsyncResult ar)
 		{
 			IHttpContext ctx;
+			HttpListenerContext httpListenerContext;
 			try
 			{
-				ctx = new HttpListenerContextAdpater(listener.EndGetContext(ar), DefaultConfiguration);
+				httpListenerContext = listener.EndGetContext(ar);
+				ctx = new HttpListenerContextAdpater(httpListenerContext, SystemConfiguration);
 				//setup waiting for the next request
 				listener.BeginGetContext(GetContext, null);
 			}
@@ -322,11 +378,55 @@ namespace Raven.Database.Server
 			try
 			{
 				Interlocked.Increment(ref physicalRequestsCount);
-				HandleActualRequest(ctx);
+				if (SiganlRQuery.IsMatch(ctx.GetRequestUrl()))
+					HandleSignalRequest(ctx, prefix => signalrServer.ProcessRequestSafe(httpListenerContext, prefix));
+				else
+					HandleActualRequest(ctx);
 			}
 			finally
 			{
 				concurretRequestSemaphore.Release();
+			}
+		}
+
+
+		public T HandleSignalRequest<T>(IHttpContext context, Func<string, T> action)
+		{
+			try
+			{
+				var prefix = SetupRequestToProperDatabase(context);
+				if (!SetThreadLocalState(context))
+				{
+					context.FinalizeResonse();
+					return default(T);
+				}
+
+				return action(prefix);
+			}
+			catch (Exception e)
+			{
+				try
+				{
+					HandleException(context, e);
+					if (ShouldLogException(e))
+						logger.WarnException("Error on request", e);
+				}
+				finally
+				{
+					try
+					{
+						FinalizeRequestProcessing(context, null, true);
+					}
+					catch (Exception e2)
+					{
+						logger.ErrorException("Could not finalize request properly", e2);
+					}
+				}
+				return default(T);
+			}
+			finally
+			{
+				ResetThreadLocalState();
 			}
 		}
 
@@ -396,10 +496,11 @@ namespace Raven.Database.Server
 			}
 
 			ctx.FinalizeResonse();
-			sw.Stop();
 
 			if (ravenUiRequest || logHttpRequestStatsParam == null)
 				return;
+
+			sw.Stop();
 
 			LogHttpRequestStats(logHttpRequestStatsParam);
 			ctx.OutputSavedLogItems(logger);
@@ -542,22 +643,18 @@ namespace Raven.Database.Server
 
 		private bool DispatchRequest(IHttpContext ctx)
 		{
-			SetupRequestToProperDatabase(ctx);
-
-			CurrentOperationContext.Headers.Value = new NameValueCollection(ctx.Request.Headers);
-
-			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
-			CurrentOperationContext.User.Value = null;
-			if (ctx.RequiresAuthentication &&
-				requestAuthorizer.Authorize(ctx) == false)
-				return false;
-
 			Action onResponseEnd = null;
+
+			SetupRequestToProperDatabase(ctx);
 			try
 			{
+
+				if (!SetThreadLocalState(ctx))
+					return false;
+
 				OnDispatchingRequest(ctx);
 
-				if (DefaultConfiguration.HttpCompression)
+				if (SystemConfiguration.HttpCompression)
 					AddHttpCompressionIfClientCanAcceptIt(ctx);
 
 				HandleHttpCompressionFromClient(ctx);
@@ -580,7 +677,7 @@ namespace Raven.Database.Server
 						var sp = Stopwatch.StartNew();
 						requestResponder.Respond(ctx);
 						sp.Stop();
-						ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,# ms",CultureInfo.InvariantCulture));
+						ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,# ms", CultureInfo.InvariantCulture));
 						return requestResponder.IsUserInterfaceRequest;
 					}
 				}
@@ -599,21 +696,37 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
-				try
-				{
-					CurrentOperationContext.Headers.Value = new NameValueCollection();
-					CurrentOperationContext.User.Value = null;
-					currentDatabase.Value = DefaultResourceStore;
-					currentConfiguration.Value = DefaultConfiguration;
-				}
-				catch
-				{
-					// this can happen during system shutdown
-				}
+				ResetThreadLocalState();
 				if (onResponseEnd != null)
 					onResponseEnd();
 			}
 			return false;
+		}
+
+		private bool SetThreadLocalState(IHttpContext ctx)
+		{
+			CurrentOperationContext.Headers.Value = new NameValueCollection(ctx.Request.Headers);
+			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = "";
+			CurrentOperationContext.User.Value = null;
+			if (ctx.RequiresAuthentication &&
+				requestAuthorizer.Authorize(ctx) == false)
+				return false;
+			return true;
+		}
+
+		private void ResetThreadLocalState()
+		{
+			try
+			{
+				CurrentOperationContext.Headers.Value = new NameValueCollection();
+				CurrentOperationContext.User.Value = null;
+				currentDatabase.Value = SystemDatabase;
+				currentConfiguration.Value = SystemConfiguration;
+			}
+			catch
+			{
+				// this can happen during system shutdown
+			}
 		}
 
 		public Func<IHttpContext, Action> BeforeDispatchingRequest { get; set; }
@@ -639,7 +752,12 @@ namespace Raven.Database.Server
 			ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
 		}
 
-		private void SetupRequestToProperDatabase(IHttpContext ctx)
+		public DocumentDatabase CurrentDatabase
+		{
+			get { return currentDatabase.Value ?? SystemDatabase; }
+		}
+
+		private string SetupRequestToProperDatabase(IHttpContext ctx)
 		{
 			var requestUrl = ctx.GetRequestUrlForTenantSelection();
 			var match = databaseQuery.Match(requestUrl);
@@ -647,9 +765,10 @@ namespace Raven.Database.Server
 			if (match.Success == false)
 			{
 				currentTenantId.Value = Constants.DefaultDatabase;
-				currentDatabase.Value = DefaultResourceStore;
-				currentConfiguration.Value = DefaultConfiguration;
-				databaseLastRecentlyUsed.AddOrUpdate("Default", SystemTime.Now, (s, time) => SystemTime.Now);
+				currentDatabase.Value = SystemDatabase;
+				currentConfiguration.Value = SystemConfiguration;
+				databaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.Now, (s, time) => SystemTime.Now);
+				return null;
 			}
 			else
 			{
@@ -670,6 +789,8 @@ namespace Raven.Database.Server
 					currentTenantId.Value = tenantId;
 					currentDatabase.Value = resourceStore;
 					currentConfiguration.Value = resourceStore.Configuration;
+
+					return requestUrl.Substring(1, match.Groups[1].Index + match.Groups[1].Length);
 				}
 				else
 				{
@@ -678,73 +799,124 @@ namespace Raven.Database.Server
 			}
 		}
 
+		public void LockDatabase(string tenantId, Action actionToTake)
+		{
+			if (LockedDatabases.TryAdd(tenantId) == false)
+				throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed");
+			try
+			{
+				CleanupDatabase(tenantId, false);
+				actionToTake();
+			}
+			finally
+			{
+				LockedDatabases.TryRemove(tenantId);
+			}
+
+		}
+
+		public void ForAllDatabases(Action<DocumentDatabase> action)
+		{
+			action(SystemDatabase);
+			foreach (var db in ResourcesStoresCache)
+			{
+				action(db.Value);
+			}
+		}
+
 		protected bool TryGetOrCreateResourceStore(string tenantId, out DocumentDatabase database)
 		{
 			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
 				return true;
 
-			JsonDocument jsonDocument;
+			if (LockedDatabases.Contains(tenantId))
+				throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed");
 
-			using (DefaultResourceStore.DisableAllTriggersForCurrentThread())
-				jsonDocument = DefaultResourceStore.Get("Raven/Databases/" + tenantId, null);
-
-			if (jsonDocument == null ||
-				jsonDocument.Metadata == null ||
-				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) || 
-				jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))
+			var config = CreateTenantConfiguration(tenantId);
+			if (config == null)
 				return false;
-
-			var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
 			database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s =>
 			{
-				var config = new InMemoryRavenConfiguration
-				{
-					Settings = new NameValueCollection(DefaultConfiguration.Settings),
-				};
-
-				SetupTenantDatabaseConfiguration(config);
-
-				config.CustomizeValuesForTenant(tenantId);
-
-				var dataDir = document.Settings["Raven/DataDir"];
-				if (dataDir == null)
-					throw new InvalidOperationException("Could not find Raven/DataDir");
-				
-				foreach (var setting in document.Settings)
-				{
-					config.Settings[setting.Key] = setting.Value;
-				}
-
-				if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
-				{
-					var baseDataPath = Path.GetDirectoryName(DefaultResourceStore.Configuration.DataDirectory);
-					if (baseDataPath == null)
-						throw new InvalidOperationException("Could not find root data path");
-					config.Settings["Raven/DataDir"] = Path.Combine(baseDataPath, dataDir.Substring(2));
-				}
-				config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
-
-				config.DatabaseName = tenantId;
-
-				config.Initialize();
-				config.CopyParentSettings(DefaultConfiguration);
 				var documentDatabase = new DocumentDatabase(config);
+				documentDatabase.Notifications += OnDatabaseNotifications;
 				documentDatabase.SpinBackgroundWorkers();
 				return documentDatabase;
 			});
 			return true;
 		}
 
+		public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId)
+		{
+			var document = GetTenantDatabaseDocument(tenantId);
+			if (document == null)
+				return null;
+
+			var config = new InMemoryRavenConfiguration
+			{
+				Settings = new NameValueCollection(SystemConfiguration.Settings),
+			};
+
+			SetupTenantDatabaseConfiguration(config);
+
+			config.CustomizeValuesForTenant(tenantId);
+
+
+			foreach (var setting in document.Settings)
+			{
+				config.Settings[setting.Key] = setting.Value;
+			}
+			Unprotect(document);
+
+			foreach (var securedSetting in document.SecuredSettings)
+			{
+				config.Settings[securedSetting.Key] = securedSetting.Value;
+			}
+
+			var dataDir = document.Settings["Raven/DataDir"];
+			if (dataDir.StartsWith("~/") || dataDir.StartsWith(@"~\"))
+			{
+				var baseDataPath = Path.GetDirectoryName(SystemDatabase.Configuration.DataDirectory);
+				if (baseDataPath == null)
+					throw new InvalidOperationException("Could not find root data path");
+				config.Settings["Raven/DataDir"] = Path.Combine(baseDataPath, dataDir.Substring(2));
+			}
+			config.Settings["Raven/VirtualDir"] = config.Settings["Raven/VirtualDir"] + "/" + tenantId;
+
+			config.DatabaseName = tenantId;
+
+			config.Initialize();
+			config.CopyParentSettings(SystemConfiguration);
+			return config;
+		}
+
+		private DatabaseDocument GetTenantDatabaseDocument(string tenantId)
+		{
+			JsonDocument jsonDocument;
+			using (SystemDatabase.DisableAllTriggersForCurrentThread())
+				jsonDocument = SystemDatabase.Get("Raven/Databases/" + tenantId, null);
+			if (jsonDocument == null ||
+				jsonDocument.Metadata == null ||
+				jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists) ||
+				jsonDocument.Metadata.Value<bool>(Constants.RavenDeleteMarker))
+				return null;
+
+			var document = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+			if (document.Settings["Raven/DataDir"] == null)
+				throw new InvalidOperationException("Could not find Raven/DataDir");
+
+			return document;
+		}
+
 
 		private void AddAccessControlHeaders(IHttpContext ctx)
 		{
-			if (string.IsNullOrEmpty(DefaultConfiguration.AccessControlAllowOrigin))
+			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlAllowOrigin))
 				return;
-			ctx.Response.AddHeader("Access-Control-Allow-Origin", DefaultConfiguration.AccessControlAllowOrigin);
-			ctx.Response.AddHeader("Access-Control-Max-Age", DefaultConfiguration.AccessControlMaxAge);
-			ctx.Response.AddHeader("Access-Control-Allow-Methods", DefaultConfiguration.AccessControlAllowMethods);
-			if (string.IsNullOrEmpty(DefaultConfiguration.AccessControlRequestHeaders))
+			ctx.Response.AddHeader("Access-Control-Allow-Origin", SystemConfiguration.AccessControlAllowOrigin);
+			ctx.Response.AddHeader("Access-Control-Max-Age", SystemConfiguration.AccessControlMaxAge);
+			ctx.Response.AddHeader("Access-Control-Allow-Methods", SystemConfiguration.AccessControlAllowMethods);
+			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlRequestHeaders))
 			{
 				// allow whatever headers are being requested
 				var hdr = ctx.Request.Headers["Access-Control-Request-Headers"]; // typically: "x-requested-with"
@@ -752,7 +924,7 @@ namespace Raven.Database.Server
 			}
 			else
 			{
-				ctx.Response.AddHeader("Access-Control-Request-Headers", DefaultConfiguration.AccessControlRequestHeaders);
+				ctx.Response.AddHeader("Access-Control-Request-Headers", SystemConfiguration.AccessControlRequestHeaders);
 			}
 		}
 
@@ -787,6 +959,52 @@ namespace Raven.Database.Server
 		{
 			Interlocked.Exchange(ref reqNum, 0);
 			Interlocked.Exchange(ref physicalRequestsCount, 0);
+		}
+
+		public DocumentDatabase GetDatabase(string name)
+		{
+			if (string.Equals("System", name, StringComparison.InvariantCultureIgnoreCase))
+				return SystemDatabase;
+
+			DocumentDatabase db;
+			if (TryGetOrCreateResourceStore(name, out db))
+				return db;
+
+			throw new BadRequestException("Could not find a database named: " + name);
+		}
+
+		public void Protect(DatabaseDocument databaseDocument)
+		{
+			if (databaseDocument.SecuredSettings == null)
+			{
+				databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+				return;
+			}
+
+			foreach (var prop in databaseDocument.SecuredSettings.ToList())
+			{
+				var bytes = Encoding.UTF8.GetBytes(prop.Value);
+				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
+				var protectedValue = ProtectedData.Protect(bytes, entrophy, DataProtectionScope.CurrentUser);
+				databaseDocument.SecuredSettings[prop.Key] = Convert.ToBase64String(protectedValue);
+			}
+		}
+
+		public void Unprotect(DatabaseDocument databaseDocument)
+		{
+			if (databaseDocument.SecuredSettings == null)
+			{
+				databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+				return;
+			}
+
+			foreach (var prop in databaseDocument.SecuredSettings.ToList())
+			{
+				var bytes = Convert.FromBase64String(prop.Value);
+				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
+				var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
+				databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);
+			}
 		}
 	}
 }

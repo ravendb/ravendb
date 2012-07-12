@@ -45,7 +45,7 @@ namespace Raven.Client.Connection
 		public object Headers;
 		private Stream postedStream;
 		private bool writeCalled;
-		private static readonly string ClientVersion = typeof (HttpJsonRequest).Assembly.GetName().Version.ToString();
+		public static readonly string ClientVersion = typeof (HttpJsonRequest).Assembly.GetName().Version.ToString();
 
 		/// <summary>
 		/// Gets or sets the response headers.

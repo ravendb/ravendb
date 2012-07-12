@@ -548,6 +548,7 @@
     <Compile Include="Commands\DeleteCommandData.cs" />
     <Compile Include="Commands\PatchCommandData.cs" />
     <Compile Include="Commands\PutCommandData.cs" />
+    <Compile Include="Connection\CountingStream.cs" />
     <Compile Include="Connection\HttpRavenRequest.cs" />
     <Compile Include="Connection\HttpRavenRequestFactory.cs" />
     <Compile Include="Connection\HttpRequestHelper.cs" />
@@ -559,6 +560,7 @@
     <Compile Include="Data\BatchResult.cs" />
     <Compile Include="Data\BoostedValue.cs" />
     <Compile Include="Data\BuildNumber.cs" />
+    <Compile Include="Data\ChangeNotification.cs" />
     <Compile Include="Data\ConnectionStringParser.cs" />
     <Compile Include="Data\Constants.cs" />
     <Compile Include="Data\DatabaseDocument.cs" />
@@ -577,6 +579,7 @@
     <Compile Include="Data\JsonDocumentMetadata.cs" />
     <Compile Include="Data\LicensingStatus.cs" />
     <Compile Include="Data\LogItem.cs" />
+    <Compile Include="Data\MoreLikeThisQueryParameters.cs" />
     <Compile Include="Data\MultiLoadResult.cs" />
     <Compile Include="Data\PatchCommandType.cs" />
     <Compile Include="Data\PatchRequest.cs" />
@@ -585,6 +588,7 @@
     <Compile Include="Data\ServerError.cs" />
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />
+    <Compile Include="Data\StopWordsSetup.cs" />
     <Compile Include="Data\StringDistanceTypes.cs" />
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />

@@ -8,6 +8,7 @@ using System;
 using System.ComponentModel.Composition;
 using System.IO;
 using Raven.Abstractions.Data;
+using Raven.Database.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Plugins
@@ -39,12 +40,24 @@ namespace Raven.Database.Plugins
 		}
 
 		/// <summary>
-		///  Allow the trigger the option of modifying the document and metadata instances
+		///  Allow the trigger the option of modifying the attachment and metadata instances
 		///  before the user can see them. 
 		///  </summary><remarks>
 		///  The modified values are transient, and are NOT saved to the database.
 		/// </remarks>
 		public virtual void OnRead(string key, Attachment attachment)
+		{
+		}
+
+
+
+		/// <summary>
+		///  Allow the trigger the option of modifying the attachment and metadata instances
+		///  before the user can see them. 
+		///  </summary><remarks>
+		///  The modified values are transient, and are NOT saved to the database.
+		/// </remarks>
+		public virtual void OnRead(AttachmentInformation information)
 		{
 		}
 

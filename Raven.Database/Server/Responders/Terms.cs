@@ -11,7 +11,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Terms : RequestResponder
+	public class Terms : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

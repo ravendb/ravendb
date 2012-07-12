@@ -34,6 +34,8 @@
     <Utf8Output>true</Utf8Output>
     <ExpressionBlendVersion>4.0.20525.0</ExpressionBlendVersion>
     <TargetFrameworkProfile />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <!-- This property group is only here to support building this project using the 
        MSBuild 3.5 toolset. In order to work correctly with this older toolset, it needs 
@@ -63,13 +65,20 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ActiproSoftware.Shared.Silverlight">
+    <Reference Include="ActiproSoftware.Shared.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Shared.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="ActiproSoftware.SyntaxEditor.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.SyntaxEditor.Silverlight.dll</HintPath>
     </Reference>
+    <Reference Include="ActiproSoftware.Text.LLParser.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.LLParser.Silverlight.dll</HintPath>
+    </Reference>
     <Reference Include="ActiproSoftware.Text.Silverlight, Version=11.2.121.0, Culture=neutral, PublicKeyToken=f5ebeca6de33c9f3, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\ActiproSoftwareSilverlightStudio\ActiproSoftware.Text.Silverlight.dll</HintPath>
     </Reference>
     <Reference Include="AsyncCtpLibrary_Silverlight5">
@@ -147,10 +156,12 @@
     <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
     <Compile Include="Behaviors\BindSuggestionsProvider.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
+    <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickCommandBehavior.cs" />
     <Compile Include="Behaviors\FadeTrimming.cs" />
     <Compile Include="Behaviors\FocusElementAction.cs" />
+    <Compile Include="Behaviors\HighlightSyntaxErrorAction.cs" />
     <Compile Include="Behaviors\IAutoCompleteSuggestionProvider.cs" />
     <Compile Include="Behaviors\OpenDropDownAction.cs" />
     <Compile Include="Behaviors\SelectAllAction.cs" />
@@ -176,6 +187,7 @@
     <Compile Include="Extensions\IObservableExtensions.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
+    <Compile Include="Extensions\SyntaxEditorExtensions.cs" />
     <Compile Include="Features\Documents\AllDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\CollectionDocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\ColumnDefinition.cs" />
@@ -198,6 +210,27 @@
     <Compile Include="Features\Documents\IndexDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\PriorityColumn.cs" />
     <Compile Include="Features\Documents\SingleDocumentNavigator.cs" />
+    <Compile Include="Features\JsonEditor\IJsonClassificationTypeProvider.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonArrayNode.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonAstNodeId.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonClassificationTypeProvider.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonExampleTextProvider.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonGrammar.cs" />
+    <Compile Include="Features\JsonEditor\JsonLexer.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonLexicalStateId.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonObjectNode.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonOutliner.cs" />
+    <Compile Include="Features\JsonEditor\JsonOutliningSource.cs" />
+    <Compile Include="Features\JsonEditor\JsonParser.cs" />
+    <Compile Include="Features\JsonEditor\JsonPropertyValuePairNode.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonStringNode.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonSyntaxLanguage.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonSyntaxLanguageExtended.cs" />
+    <Compile Include="Features\JsonEditor\JsonTextFormatter.cs" />
+    <Compile Include="Features\JsonEditor\JsonTokenId.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonTokenReader.cs" />
+    <Compile Include="Features\JsonEditor\JsonTokenTagger.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonTokenTaggerProvider.g.cs" />
     <Compile Include="Features\Query\IndexQueryHelpers.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Query\QueryDocumentsCollectionSource.cs" />
@@ -212,6 +245,7 @@
     <Compile Include="Features\Util\ErrorListWindow.xaml.cs">
       <DependentUpon>ErrorListWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Impl\SplitButton\SplitButtonPopup.cs" />
     <Compile Include="Impl\SplitButton\GlobalSuppressions.cs" />
     <Compile Include="Impl\SplitButton\MenuButton.cs" />
     <Compile Include="Impl\SplitButton\SplitButton.cs" />
@@ -233,6 +267,7 @@
     <Compile Include="Infrastructure\FlexibleTemplateItemsControl.cs" />
     <Compile Include="Infrastructure\INotifyBusyness.cs" />
     <Compile Include="Infrastructure\ItemsRealizedEventArgs.cs" />
+    <Compile Include="Infrastructure\ParserDispatcherManager.cs" />
     <Compile Include="Infrastructure\ProvideVisibleItemRangeFromDataGridBehavior.cs" />
     <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
     <Compile Include="Infrastructure\DeferredActionInvoker.cs" />
@@ -249,6 +284,7 @@
     <Compile Include="Infrastructure\RecyclingContentLoader.cs" />
     <Compile Include="Infrastructure\RefreshMode.cs" />
     <Compile Include="Infrastructure\Schedulers.cs" />
+    <Compile Include="Infrastructure\Settings.cs" />
     <Compile Include="Infrastructure\SparseList.cs" />
     <Compile Include="Infrastructure\Validation.cs" />
     <Compile Include="Infrastructure\Validators\DataGridLengthAttribute.cs" />
@@ -519,6 +555,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Assets\SplitButtonPopup.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Assets\DataGridStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -534,6 +574,10 @@
     <Page Include="Assets\TreeViewStyles.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Assets\Vectors.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Assets\WatermarkedTextBox.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -800,6 +844,7 @@
     <Resource Include="Assets\Images\error_small.png" />
     <Resource Include="Assets\Images\navigate_first_tiny.png" />
     <Resource Include="Assets\Images\navigate_last_tiny.png" />
+    <Resource Include="Assets\Images\Collapse_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
@@ -833,4 +878,5 @@
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
 </Project>

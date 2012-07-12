@@ -17,7 +17,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Document : RequestResponder
+	public class Document : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -151,7 +151,7 @@ namespace Raven.Database.Server.Responders
 		{
 			var json = context.ReadJson();
 			context.SetStatusToCreated("/docs/" + docId);
-			var putResult = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders(isServerDocument: true), GetRequestTransaction(context));
+			var putResult = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders(), GetRequestTransaction(context));
 			context.WriteJson(putResult);
 		}
 	}

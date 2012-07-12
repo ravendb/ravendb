@@ -124,6 +124,9 @@
                     </Button.Content>
                 </Button>
                 
+                <ToggleButton IsChecked="{Binding ShowFields, Mode=TwoWay}" Content="Show fields" 
+                              Style="{StaticResource Style_ToggleButton_MouseOverChrome}"
+                              ToolTipService.ToolTip="Show fields from matching index entries instead of matching documents" />
             </StackPanel>
         </Border>
         

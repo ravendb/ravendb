@@ -19,5 +19,6 @@ namespace Raven.Database.Storage
 		Attachment GetAttachment(string key);
 		IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start);
 		IEnumerable<AttachmentInformation> GetAttachmentsAfter(Guid value, int take);
+		IEnumerable<AttachmentInformation> GetAttachmentsStartingWith(string idPrefix, int start, int pageSize);
 	}
 }

@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Facets : RequestResponder
+	public class Facets : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

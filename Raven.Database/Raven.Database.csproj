@@ -32,6 +32,8 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
     <TargetFrameworkProfile />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -65,6 +67,9 @@
     <Reference Include="BouncyCastle.Crypto, Version=1.7.4137.9688, Culture=neutral, PublicKeyToken=a4292a325f69b123, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\BouncyCastle.1.7.0\lib\Net40-Client\BouncyCastle.Crypto.dll</HintPath>
+    </Reference>
+    <Reference Include="Esent.Interop">
+      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -115,6 +120,44 @@
     </Compile>
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
+    <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
+    <Compile Include="Bundles\Versioning\Data\VersioningConfiguration.cs" />
+    <Compile Include="Bundles\Versioning\Triggers\HideVersionedDocumentsFromIndexingTrigger.cs" />
+    <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
+    <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
+    <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
+    <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
+    <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
+    <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
+    <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
+    <Compile Include="Bundles\Quotas\Documents\Triggers\DatabaseCountDocumentDeleteTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Documents\Triggers\DatabaseCountQoutaForDocumentsPutTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Size\SizeQuotaConfiguration.cs" />
+    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeAttachmentDeleteTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeDocumentDeleteTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeQoutaForAttachmentsPutTrigger.cs" />
+    <Compile Include="Bundles\Quotas\Size\Triggers\DatabaseSizeQoutaForDocumentsPutTrigger.cs" />
+    <Compile Include="Bundles\Replication\Data\DestinationFailureInformation.cs" />
+    <Compile Include="Bundles\Replication\Data\SourceReplicationInformation.cs" />
+    <Compile Include="Bundles\Replication\Impl\ReplicationHiLo.cs" />
+    <Compile Include="Bundles\Replication\Plugins\AbstractAttachmentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\Replication\Plugins\AbstractDocumentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\Replication\ReplicationConstants.cs" />
+    <Compile Include="Bundles\Replication\Responders\AttachmentReplicationResponder.cs" />
+    <Compile Include="Bundles\Replication\Responders\DocumentReplicationResponder.cs" />
+    <Compile Include="Bundles\Replication\Responders\ReplicationLastEtagResponser.cs" />
+    <Compile Include="Bundles\Replication\Tasks\ReplicationTask.cs" />
+    <Compile Include="Bundles\Replication\Triggers\AncestryPutTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\AttachmentAncestryPutTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\HideVirtuallyDeletedAttachmentsReadTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\HideVirtuallyDeletedDocumentsReadTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\PreventConflictDocumentsPutTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\PreventIndexingConflictDocumentsReadTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentPutTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnPutTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\VirtualAttachmentDeleteTrigger.cs" />
+    <Compile Include="Bundles\Replication\Triggers\VirtualDeleteTrigger.cs" />
     <Compile Include="Commercial\ValidateLicense.cs" />
     <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
@@ -194,16 +237,16 @@
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
-    <Compile Include="Server\Responders\AdminRunIdleOperations.cs" />
-    <Compile Include="Server\Responders\AdminStats.cs" />
+    <Compile Include="Server\NotificationsConnection.cs" />
+    <Compile Include="Server\Responders\Admin\AdminCompact.cs" />
+    <Compile Include="Server\Responders\Admin\AdminRunIdleOperations.cs" />
+    <Compile Include="Server\Responders\Admin\AdminStats.cs" />
     <Compile Include="Server\Responders\DatabaseSize.cs" />
     <Compile Include="Server\Responders\Favicon.cs" />
     <Compile Include="Server\Responders\Licensing.cs" />
     <Compile Include="Server\Responders\Logs.cs" />
     <Compile Include="Server\Responders\RavenRoot.cs" />
     <Compile Include="Server\Responders\RavenUI.cs" />
-    <Compile Include="Server\Responders\SilverlightPlugin.cs" />
-    <Compile Include="Server\Responders\SilverlightPlugins.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
@@ -449,9 +492,9 @@
     <Compile Include="Queries\TermsQueryRunner.cs" />
     <Compile Include="Queries\TermsQueryRunnerExtensions.cs" />
     <Compile Include="Server\Responders\AddIncludesCommand.cs" />
-    <Compile Include="Server\Responders\AdminBackup.cs" />
-    <Compile Include="Server\Responders\AdminStartIndexing.cs" />
-    <Compile Include="Server\Responders\AdminStopIndexing.cs" />
+    <Compile Include="Server\Responders\Admin\AdminBackup.cs" />
+    <Compile Include="Server\Responders\Admin\AdminStartIndexing.cs" />
+    <Compile Include="Server\Responders\Admin\AdminStopIndexing.cs" />
     <Compile Include="Server\Responders\BuildVersion.cs" />
     <Compile Include="Server\Responders\ClientAccessPolicy.cs" />
     <Compile Include="Server\Responders\Databases.cs" />
@@ -463,7 +506,6 @@
     <Compile Include="Server\Responders\Indexes.cs" />
     <Compile Include="Server\Responders\MultiGet.cs" />
     <Compile Include="Server\Responders\Queries.cs" />
-    <Compile Include="Server\Responders\RequestResponder.cs" />
     <Compile Include="Server\Responders\SilverlightEnsuresStartup.cs" />
     <Compile Include="Server\Responders\Static.cs" />
     <Compile Include="Server\Responders\Statics.cs" />
@@ -476,6 +518,28 @@
     <Compile Include="Server\Responders\TransactionStatus.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
+    <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />
+    <Compile Include="Storage\Esent\Backup\EsentBackup.cs" />
+    <Compile Include="Storage\Esent\Backup\RestoreOperation.cs" />
+    <Compile Include="Storage\Esent\EsentExtension.cs" />
+    <Compile Include="Storage\Esent\SchemaCreator.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\ISchemaUpdate.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\SchemaUpdaterHelper.cs" />
+    <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
+    <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
+    <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
+    <Compile Include="Storage\Esent\StorageActions\General.cs" />
+    <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
+    <Compile Include="Storage\Esent\StorageActions\MappedResults.cs" />
+    <Compile Include="Storage\Esent\StorageActions\OptimizedIndexReader.cs" />
+    <Compile Include="Storage\Esent\StorageActions\Queue.cs" />
+    <Compile Include="Storage\Esent\StorageActions\Staleness.cs" />
+    <Compile Include="Storage\Esent\StorageActions\TableProperties.cs" />
+    <Compile Include="Storage\Esent\StorageActions\Tasks.cs" />
+    <Compile Include="Storage\Esent\StorageActions\Util.cs" />
+    <Compile Include="Storage\Esent\TableColumnsCache.cs" />
+    <Compile Include="Storage\Esent\TransactionalStorage.cs" />
+    <Compile Include="Storage\Esent\TransactionalStorageConfigurator.cs" />
     <Compile Include="Storage\GetMappedResultsParams.cs" />
     <Compile Include="Storage\IAttachmentsStorageActions.cs" />
     <Compile Include="Storage\IDocumentStorageActions.cs" />
@@ -491,6 +555,47 @@
     <Compile Include="Storage\ITransactionalStorage.cs" />
     <Compile Include="Storage\ITransactionStorageActions.cs" />
     <Compile Include="Queries\SuggestionQueryRunner.cs" />
+    <Compile Include="Storage\Managed\AttachmentsStorageActions.cs" />
+    <Compile Include="Storage\Managed\Backup\BackupOperation.cs" />
+    <Compile Include="Storage\Managed\Backup\RestoreOperation.cs" />
+    <Compile Include="Storage\Managed\DocumentsStorageActions.cs" />
+    <Compile Include="Storage\Managed\GeneralStorageActions.cs" />
+    <Compile Include="Storage\Managed\Impl\TableStorage.cs" />
+    <Compile Include="Storage\Managed\IndexingStorageActions.cs" />
+    <Compile Include="Storage\Managed\MappedResultsStorageAction.cs" />
+    <Compile Include="Storage\Managed\Munin\AbstractPersistentSource.cs" />
+    <Compile Include="Storage\Managed\Munin\Command.cs" />
+    <Compile Include="Storage\Managed\Munin\CommandType.cs" />
+    <Compile Include="Storage\Managed\Munin\ComparableByteArray.cs" />
+    <Compile Include="Storage\Managed\Munin\Database.cs" />
+    <Compile Include="Storage\Managed\Munin\FileBasedPersistentSource.cs" />
+    <Compile Include="Storage\Managed\Munin\IComparerAndEquality.cs" />
+    <Compile Include="Storage\Managed\Munin\IPersistentSource.cs" />
+    <Compile Include="Storage\Managed\Munin\MemoryPersistentSource.cs" />
+    <Compile Include="Storage\Managed\Munin\ModifiedJTokenComparer.cs" />
+    <Compile Include="Storage\Managed\Munin\PersistentDictionaryState.cs" />
+    <Compile Include="Storage\Managed\Munin\PositionInFile.cs" />
+    <Compile Include="Storage\Managed\Munin\RavenJTokenComparer.cs" />
+    <Compile Include="Storage\Managed\Munin\ReadOnlyFileBasedPersistentSource.cs" />
+    <Compile Include="Storage\Managed\Munin\RecordingComparer.cs" />
+    <Compile Include="Storage\Managed\Munin\RemoteManagedStorageState.cs" />
+    <Compile Include="Storage\Managed\Munin\ReverseComparableByteArrayWhichIgnoresNull.cs" />
+    <Compile Include="Storage\Managed\Munin\SecondaryIndex.cs" />
+    <Compile Include="Storage\Managed\Munin\StreamsPool.cs" />
+    <Compile Include="Storage\Managed\Munin\Table.cs" />
+    <Compile Include="Storage\Managed\Munin\Tree\AVLTree.cs" />
+    <Compile Include="Storage\Managed\Munin\Tree\EmptyAVLTree.cs" />
+    <Compile Include="Storage\Managed\Munin\Tree\EmptyStack.cs" />
+    <Compile Include="Storage\Managed\Munin\Tree\IBinarySearchTree.cs" />
+    <Compile Include="Storage\Managed\Munin\Tree\IStack.cs" />
+    <Compile Include="Storage\Managed\Munin\Tree\Stack.cs" />
+    <Compile Include="Storage\Managed\QueueStorageActions.cs" />
+    <Compile Include="Storage\Managed\StalenessStorageActions.cs" />
+    <Compile Include="Storage\Managed\StorageActionsAccessor.cs" />
+    <Compile Include="Storage\Managed\StorageHelper.cs" />
+    <Compile Include="Storage\Managed\TasksStorageActions.cs" />
+    <Compile Include="Storage\Managed\TransactionalStorage.cs" />
+    <Compile Include="Storage\Managed\TransactionStorageActions.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
@@ -612,6 +717,18 @@
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Imports\SignalR\SignalR.Hosting.Common\SignalR.Hosting.Common.csproj">
+      <Project>{3B71F0AE-D4B6-4F47-BF62-333D45615673}</Project>
+      <Name>SignalR.Hosting.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Imports\SignalR\SignalR.Hosting.Self\SignalR.Hosting.Self.csproj">
+      <Project>{A2BD866D-906A-4742-AB3B-DB8740830400}</Project>
+      <Name>SignalR.Hosting.Self</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Imports\SignalR\SignalR\SignalR.csproj">
+      <Project>{1B9A82C4-BCA1-4834-A33E-226F17BE070B}</Project>
+      <Name>SignalR %28SignalR\SignalR%29</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
@@ -632,4 +749,5 @@
       <Output ItemName="EmbeddedResource" TaskParameter="Include" />
     </CreateItem>
   </Target>
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
 </Project>

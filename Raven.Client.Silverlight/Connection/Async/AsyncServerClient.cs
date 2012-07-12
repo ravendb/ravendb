@@ -91,7 +91,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 		}
 
-		public HttpJsonRequest CreateRequest(string relativeUrl, string method)
+		public HttpJsonRequest CreateRequest(string method, string relativeUrl)
 		{
 			return jsonRequestFactory.CreateHttpJsonRequest(this, url + relativeUrl, method, credentials, convention);
 		}
@@ -186,7 +186,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 							Key = docKey,
 							LastModified = DateTime.ParseExact(request.ResponseHeaders[Constants.LastModified].First(), "r", CultureInfo.InvariantCulture).ToLocalTime(),
 							Etag = request.GetEtagHeader(),
-							Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
+							Metadata = request.ResponseHeaders.FilterHeaders()
 						};
 					}
 					catch (AggregateException e)
@@ -980,7 +980,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 									{
 										Data = () => new MemoryStream(buffer),
 										Etag = request.GetEtagHeader(),
-										Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
+										Metadata = request.ResponseHeaders.FilterHeaders()
 									};
 						}
 						catch (AggregateException e)
@@ -1087,7 +1087,11 @@ namespace Raven.Client.Silverlight.Connection.Async
 		private Task ExecuteWithReplication(string method, Func<string, Task> operation)
 		{
 			// Convert the Func<string, Task> to a Func<string, Task<object>>
-			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t => null));
+			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t =>
+			{
+				t.Wait();
+				return null;
+			}));
 		}
 
 		private Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)

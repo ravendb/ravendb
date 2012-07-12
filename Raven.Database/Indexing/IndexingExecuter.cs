@@ -59,12 +59,17 @@ namespace Raven.Database.Indexing
 
 			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
 
+			TimeSpan indexingDuration = TimeSpan.Zero;
 			JsonDocument[] jsonDocs = null;
 			try
 			{
 				transactionalStorage.Batch(actions =>
 				{
-					jsonDocs = actions.Documents.GetDocumentsAfter(lastIndexedGuidForAllIndexes, autoTuner.NumberOfItemsToIndexInSingleBatch)
+					jsonDocs = actions.Documents
+						.GetDocumentsAfter(
+							lastIndexedGuidForAllIndexes, 
+							autoTuner.NumberOfItemsToIndexInSingleBatch,
+							autoTuner.MaximumSizeAllowedToFetchFromStorage)
 						.Where(x => x != null)
 						.Select(doc =>
 						{
@@ -81,6 +86,7 @@ namespace Raven.Database.Indexing
 				{
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 					indexesToWorkOn = result.Select(x => x.Item1).ToList();
+					var sw = Stopwatch.StartNew();
 					BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, result, (indexToWorkOn,_) =>
 					{
 						var index = indexToWorkOn.Item1;
@@ -89,6 +95,7 @@ namespace Raven.Database.Indexing
 							actions => IndexDocuments(actions, index.IndexName, docs));
 					
 					});
+					indexingDuration = sw.Elapsed;
 				}
 			}
 			finally
@@ -114,7 +121,7 @@ namespace Raven.Database.Indexing
 						}
 					});
 
-					autoTuner.AutoThrottleBatchSize(jsonDocs.Length, jsonDocs.Sum(x => x.SerializedSizeOnDisk));
+					autoTuner.AutoThrottleBatchSize(jsonDocs.Length, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
 				}
 			}
 		}

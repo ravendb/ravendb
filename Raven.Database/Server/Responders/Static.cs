@@ -10,7 +10,7 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Static : RequestResponder
+	public class Static : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{
@@ -70,7 +70,7 @@ namespace Raven.Database.Server.Responders
 					break;
 				case "PUT":
 					var newEtag = Database.PutStatic(filename, context.GetEtag(), context.Request.InputStream,
-					                                 context.Request.Headers.FilterHeaders(isServerDocument:false));
+					                                 context.Request.Headers.FilterHeadersAttachment());
 
 					context.WriteETag(newEtag);
 					context.SetStatusToCreated("/static/" + filename);

@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-extern alias replication;
 extern alias database;
 
 using System;
@@ -41,15 +40,16 @@ namespace Raven.Bundles.Tests.Replication
 		private IDocumentStore CreateStoreAtPort(int port, Action<DocumentStore> configureStore = null)
 		{
 			database::Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-			var assemblyCatalog = new AssemblyCatalog(typeof (replication::Raven.Bundles.Replication.Triggers.AncestryPutTrigger).Assembly);
+			var assemblyCatalog = new AssemblyCatalog(typeof (database::Raven.Bundles.Replication.Triggers.AncestryPutTrigger).Assembly);
 			var serverConfiguration = new database::Raven.Database.Config.RavenConfiguration
 			                          {
+										Settings = {{"Raven/ActiveBundles", "replication"}},
 			                          	AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.All,
 			                          	Catalog = {Catalogs = {assemblyCatalog}},
 			                          	DataDirectory = "Data #" + servers.Count,
 			                          	RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 			                          	RunInMemory = true,
-			                          	Port = port
+			                          	Port = port,
 			                          };
 			ConfigureServer(serverConfiguration);
 			IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
@@ -162,7 +162,7 @@ namespace Raven.Bundles.Tests.Replication
 		protected void SetupReplication(IDatabaseCommands source, params string[] urls)
 		{
 			Assert.NotEmpty(urls);
-			source.Put(replication::Raven.Bundles.Replication.ReplicationConstants.RavenReplicationDestinations,
+			source.Put(database::Raven.Bundles.Replication.ReplicationConstants.RavenReplicationDestinations,
 			           null, new RavenJObject
 			           {
 			           	{

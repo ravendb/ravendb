@@ -6,6 +6,7 @@ using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing;
 
 namespace Raven.Database.Queries
 {
@@ -31,7 +32,7 @@ namespace Raven.Database.Queries
 			IndexSearcher currentIndexSearcher;
 			using (database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
 			{
-				foreach (var facet in facets)
+				BackgroundTaskExecuter.Instance.ExecuteAll(database.Configuration, database.BackgroundTaskScheduler, facets, (facet, counter) =>
 				{
 					switch (facet.Mode)
 					{
@@ -44,8 +45,7 @@ namespace Raven.Database.Queries
 						default:
 							throw new ArgumentException(string.Format("Could not understand '{0}'", facet.Mode));
 					}
-				}
-
+				});
 			}
 
 			return results;

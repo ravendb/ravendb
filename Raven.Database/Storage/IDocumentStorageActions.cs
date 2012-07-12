@@ -15,7 +15,7 @@ namespace Raven.Database.Storage
 		Tuple<int, int> FirstAndLastDocumentIds();
 
 		IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take);
-		IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take);
+		IEnumerable<JsonDocument> GetDocumentsAfter(Guid etag, int take, long? maxSize = null);
 		IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take);
 
 		long GetDocumentsCount();

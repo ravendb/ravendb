@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Authorization.Model;
 using Raven.Database.Extensions;
+using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Responders;
 using System.Linq;
@@ -11,7 +12,7 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Bundles.Authorization.Responders
 {
-	public class IsAllowed : RequestResponder
+	public class IsAllowed : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

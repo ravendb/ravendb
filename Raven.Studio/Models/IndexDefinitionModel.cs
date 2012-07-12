@@ -17,6 +17,7 @@ namespace Raven.Studio.Models
 		private readonly Observable<DatabaseStatistics> statistics;
 		private IndexDefinition index;
 		private string originalIndex;
+	    private bool isNewIndex;
 
 		public IndexDefinitionModel()
 		{
@@ -35,6 +36,12 @@ namespace Raven.Studio.Models
 		private void UpdateFromIndex(IndexDefinition indexDefinition)
 		{
 			index = indexDefinition;
+
+            if (index.Maps.Count == 0)
+            {
+                index.Maps.Add("");
+            }
+
 			Maps.Set(index.Maps.Select(x => new MapItem {Text = x}));
 
 			ShowReduce = Reduce != null;
@@ -53,7 +60,11 @@ namespace Raven.Studio.Models
 			var urlParser = new UrlParser(parameters);
 			if (urlParser.GetQueryParam("mode") == "new")
 			{
+			    IsNewIndex = true;
 				Header = "New Index";
+
+                UpdateFromIndex(new IndexDefinition());
+
 				return;
 			}
 
@@ -62,6 +73,8 @@ namespace Raven.Studio.Models
 				HandleIndexNotFound(null);
 
 			Header = name;
+            IsNewIndex = false;
+
 			DatabaseCommands.GetIndexAsync(name)
 				.ContinueOnUIThread(task =>
 				                   {
@@ -330,16 +343,29 @@ namespace Raven.Studio.Models
 				var mapIndexes = (from mapItem in index.Maps where mapItem.Text == "" select index.Maps.IndexOf(mapItem)).ToList();
 				mapIndexes.Sort();
 
-				for (int i = mapIndexes.Count - 1; i >= 0; i++)
+				for (int i = mapIndexes.Count - 1; i >= 0; i--)
 				{
 					index.Maps.RemoveAt(mapIndexes[i]);
 				}
 
 					ApplicationModel.Current.AddNotification(new Notification("saving index " + index.Name));
 				DatabaseCommands.PutIndexAsync(index.Name, index.index, true)
-					.ContinueOnSuccess(() => ApplicationModel.Current.AddNotification(new Notification("index " + index.Name + " saved")))
+					.ContinueOnSuccess(() =>
+					                       {
+					                           ApplicationModel.Current.AddNotification(
+					                               new Notification("index " + index.Name + " saved"));
+					                           PutIndexNameInUrl(index.Name);
+					                       })
 					.Catch();
 			}
+
+		    private void PutIndexNameInUrl(string name)
+		    {
+		        if (index.IsNewIndex || index.Header != name)
+		        {
+		            UrlUtil.Navigate("/indexes/" + name, true);
+		        }
+		    }
 		}
 
 		private class ResetIndexCommand : Command
@@ -370,7 +396,7 @@ namespace Raven.Studio.Models
 
 			public override bool CanExecute(object parameter)
 			{
-				return index != null && string.IsNullOrWhiteSpace(index.Name) == false;
+				return index != null && index.IsNewIndex == false;
 			}
 
 			public override void Execute(object parameter)
@@ -437,5 +463,15 @@ namespace Raven.Studio.Models
 		{
 			get { return "Edit Index"; }
 		}
+
+	    public bool IsNewIndex
+	    {
+	        get { return isNewIndex; }
+            set
+            {
+                isNewIndex = value;
+                OnPropertyChanged(() => IsNewIndex);
+            }
+	    }
 	}
 }

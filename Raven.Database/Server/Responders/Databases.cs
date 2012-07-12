@@ -5,7 +5,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Responders
 {
-	public class Databases : RequestResponder
+	public class Databases : AbstractRequestResponder
 	{
 		public override string UrlPattern
 		{

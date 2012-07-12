@@ -126,7 +126,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public IAsyncDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
 		{
-			WhereEquals(propertySelector.GetPropertyName(), value);
+			WhereEquals(GetMemberQueryPath(propertySelector.Body), value);
 			return this;
 		}
 
@@ -150,7 +150,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		public IAsyncDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool isAnalyzed)
 		{
-			WhereEquals(propertySelector.GetPropertyName(), value, isAnalyzed);
+			WhereEquals(GetMemberQueryPath(propertySelector.Body), value, isAnalyzed);
 			return this;
 		}
 
@@ -160,36 +160,6 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(WhereParams whereParams)
 		{
 			WhereEquals(whereParams);
-			return this;
-		}
-
-		/// <summary>
-		/// 	Matches substrings of the field
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereContains(string fieldName, object value)
-		{
-			WhereContains(fieldName, value);
-			return this;
-		}
-
-		/// <summary>
-		/// 	Matches substrings of the field
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereContains(string fieldName, params object[] values)
-		{
-			WhereContains(fieldName, values);
-			return this;
-		}
-
-		/// <summary>
-		/// 	Matches substrings of the field
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereContains(string fieldName, IEnumerable<object> values)
-		{
-			WhereContains(fieldName, values);
 			return this;
 		}
 
@@ -207,7 +177,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IAsyncDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
 		{
-			//WhereIn(propertySelector.GetPropertyName(), values.Cast<object>());
+			//WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
 			return this;
 		}
 
@@ -229,7 +199,7 @@ namespace Raven.Client.Document
 		/// <param name = "value">The value.</param>
 		public IAsyncDocumentQuery<T> WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
 		{
-			WhereStartsWith(propertySelector.GetPropertyName(), value);
+			WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value);
 			return this;
 		}
 
@@ -251,7 +221,7 @@ namespace Raven.Client.Document
 		/// <param name = "value">The value.</param>
 		public IAsyncDocumentQuery<T> WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
 		{
-			WhereEndsWith(propertySelector.GetPropertyName(), value);
+			WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value);
 			return this;
 		}
 
@@ -275,7 +245,7 @@ namespace Raven.Client.Document
 		/// <param name = "end">The end.</param>
 		public IAsyncDocumentQuery<T> WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
 		{
-			WhereBetween(propertySelector.GetPropertyName(), start, end);
+			WhereBetween(GetMemberQueryPath(propertySelector.Body), start, end);
 			return this;
 		}
 
@@ -299,7 +269,7 @@ namespace Raven.Client.Document
 		/// <param name = "end">The end.</param>
 		public IAsyncDocumentQuery<T> WhereBetweenOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
 		{
-			WhereBetweenOrEqual(propertySelector.GetPropertyName(), start, end);
+			WhereBetweenOrEqual(GetMemberQueryPath(propertySelector.Body), start, end);
 			return this;
 		}
 
@@ -321,7 +291,7 @@ namespace Raven.Client.Document
 		/// <param name = "value">The value.</param>
 		public IAsyncDocumentQuery<T> WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
 		{
-			WhereGreaterThan(propertySelector.GetPropertyName(), value);
+			WhereGreaterThan(GetMemberQueryPath(propertySelector.Body), value);
 			return this;
 		}
 
@@ -343,7 +313,7 @@ namespace Raven.Client.Document
 		/// <param name = "value">The value.</param>
 		public IAsyncDocumentQuery<T> WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
 		{
-			WhereGreaterThanOrEqual(propertySelector.GetPropertyName(), value);
+			WhereGreaterThanOrEqual(GetMemberQueryPath(propertySelector.Body), value);
 			return this;
 		}
 
@@ -365,7 +335,7 @@ namespace Raven.Client.Document
 		/// <param name = "value">The value.</param>
 		public IAsyncDocumentQuery<T> WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
 		{
-			WhereLessThan(propertySelector.GetPropertyName(), value);
+			WhereLessThan(GetMemberQueryPath(propertySelector.Body), value);
 			return this;
 		}
 
@@ -387,7 +357,7 @@ namespace Raven.Client.Document
 		/// <param name = "value">The value.</param>
 		public IAsyncDocumentQuery<T> WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
 		{
-			WhereGreaterThanOrEqual(propertySelector.GetPropertyName(), value);
+			WhereGreaterThanOrEqual(GetMemberQueryPath(propertySelector.Body), value);
 			return this;
 		}
 
@@ -501,7 +471,7 @@ namespace Raven.Client.Document
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		public IAsyncDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
-			OrderBy(propertySelectors.Select(x => x.GetPropertyName()).ToArray());
+			OrderBy(propertySelectors.Select(x => GetMemberQueryPath(x)).ToArray());
 			return this;
 		}
 
@@ -656,7 +626,7 @@ namespace Raven.Client.Document
 		/// <param name = "descending">if set to <c>true</c> [descending].</param>
 		public IAsyncDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending)
 		{
-			AddOrder(propertySelector.GetPropertyName(), descending);
+			AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
 			return this;
 		}
 
@@ -717,7 +687,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IAsyncDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms)
 		{
-			Search(propertySelector.GetPropertyName(), searchTerms);
+			Search(GetMemberQueryPath(propertySelector.Body), searchTerms);
 			return this;
 		}
 
@@ -739,7 +709,7 @@ namespace Raven.Client.Document
 		///</remarks>
 		public IAsyncDocumentQuery<T> GroupBy<TValue>(AggregationOperation aggregationOperation, params Expression<Func<T, TValue>>[] groupPropertySelectors)
 		{
-			GroupBy(aggregationOperation, groupPropertySelectors.Select(x => x.GetPropertyName()).ToArray());
+			GroupBy(aggregationOperation, groupPropertySelectors.Select(GetMemberQueryPath).ToArray());
 			return this;
 		}
 
@@ -777,6 +747,12 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.UsingDefaultField(string field)
 		{
 			UsingDefaultField(field);
+			return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
+		{
+			UsingDefaultOperator(queryOperator);
 			return this;
 		}
 	}

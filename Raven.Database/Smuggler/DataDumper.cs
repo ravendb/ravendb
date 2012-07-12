@@ -19,7 +19,7 @@ namespace Raven.Database.Smuggler
 {
 	public class DataDumper : SmugglerApiBase
 	{
-		public DataDumper(DocumentDatabase database)
+		public DataDumper(DocumentDatabase database, SmugglerOptions options) : base(options)
 		{
 			_database = database;
 		}
@@ -70,8 +70,7 @@ namespace Raven.Database.Smuggler
 				};
 			}).ToArray());
 
-			ShowProgress("Wrote {0} documents in {1}", batch.Count, sw.ElapsedMilliseconds);
-			ShowProgress(" in {0:#,#;;0} ms", sw.ElapsedMilliseconds);
+			ShowProgress("Wrote {0:#,#} documents in {1:#,#;;0} ms", batch.Count, sw.ElapsedMilliseconds);
 			batch.Clear();
 		}
 
@@ -112,7 +111,7 @@ namespace Raven.Database.Smuggler
 		private RavenJArray GetAttachments(int start, Guid? etag)
 		{
 			var array = new RavenJArray();
-			var attachmentInfos = _database.GetAttachments(start, 128, etag);
+			var attachmentInfos = _database.GetAttachments(start, 128, etag, null);
 
 			foreach (var attachmentInfo in attachmentInfos)
 			{

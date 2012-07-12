@@ -18,7 +18,7 @@ namespace Raven.Tests.MailingList.MapReduceIssue
 			{
 				using (var stream = typeof(CanPageThroughReduceResults).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.MapReduceIssue.MvcMusicStore_Dump.json"))
 				{
-					new SmugglerApi(new RavenConnectionStringOptions {Url = store.Url}).ImportData(stream, new SmugglerOptions());
+					new SmugglerApi(new SmugglerOptions(), new RavenConnectionStringOptions {Url = store.Url}).ImportData(stream, new SmugglerOptions());
 				}
 
 				using (var session = store.OpenSession())

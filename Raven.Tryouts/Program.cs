@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Net;
 using Raven.Client.Document;
 
 namespace Raven.Tryouts
@@ -9,18 +11,24 @@ namespace Raven.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			var val = "2012-05-31T20:58:43.9785585Z";
-			var formats = new[] { "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff", "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK" };
+			var list = new HttpListener
+			           	{
+							AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication,
+			           		Prefixes = {"http://+:8080/"},
+			           		ExtendedProtectionSelectorDelegate = request =>
+			           		                                     	{
+			           		                                     		Console.WriteLine("request");
+			           		                                     		return null;
+			           		                                     	}
+			           	};
 
-			try
+			list.Start();
+
+			while (true)
 			{
-				var dateTime = DateTime.ParseExact(val, formats, CultureInfo.InvariantCulture, DateTimeStyles.None);
-				Console.WriteLine(dateTime.Kind);
+				var r = list.GetContext();
+				r.Response.Close();
 			}
-			catch (Exception e)
-			{
-				Console.WriteLine(e);
-			}
-		} 
+		}
 	}
 }

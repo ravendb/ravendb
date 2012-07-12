@@ -47,7 +47,7 @@ namespace Raven.Client.Connection
 						LastModified = lastModified,
 						Etag = etag,
 						NonAuthoritativeInformation = nai,
-						Metadata = metadata.FilterHeaders(isServerDocument: false),
+						Metadata = metadata.FilterHeaders(),
 						DataAsJson = doc,
 					});
 			}
@@ -129,7 +129,7 @@ namespace Raven.Client.Connection
 			HttpStatusCode statusCode)
 		{
 			var jsonData = (RavenJObject)requestJson;
-			var meta = headers.FilterHeaders(isServerDocument: false);
+			var meta = headers.FilterHeaders();
 			
 #if !SILVERLIGHT
 			var etag = headers["ETag"];
@@ -163,7 +163,7 @@ namespace Raven.Client.Connection
 			RavenJObject meta = null;
 			try
 			{
-				meta = headers.FilterHeaders(isServerDocument: false);
+				meta = headers.FilterHeaders();
 			}
 			catch (JsonReaderException jre)
 			{

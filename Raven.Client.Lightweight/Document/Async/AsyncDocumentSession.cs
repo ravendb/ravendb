@@ -349,7 +349,7 @@ namespace Raven.Client.Document.Async
 
 		protected override Task<string> GenerateKeyAsync(object entity)
 		{
-			return Conventions.AsyncDocumentKeyGenerator(AsyncDatabaseCommands, entity);
+			return Conventions.GenerateDocumentKeyAsync(AsyncDatabaseCommands, entity);
 		}
 	}
 }

@@ -144,24 +144,6 @@ namespace Raven.Client.Document
 		void WhereIn(string fieldName, IEnumerable<object> values);
 
 		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		void WhereContains(string fieldName, object value);
-
-		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		void WhereContains(string fieldName, params object [] values);
-
-		/// <summary>
-		///   Avoid using WhereContains(), use Search() instead
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		void WhereContains(string fieldName, IEnumerable<object> values);
-
-		/// <summary>
 		///   Matches fields which starts with the specified value.
 		/// </summary>
 		/// <param name = "fieldName">Name of the field.</param>

@@ -9,6 +9,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using Raven.Database.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -199,6 +200,26 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
+		/// Get the attachment information for the attachments with the same idprefix
+		/// </summary>
+		public IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			return database.GetStaticsStartingWith(idPrefix, start, pageSize)
+				.Select(x => new Attachment
+				{
+					Etag = x.Etag,
+					Metadata = x.Metadata,
+					Size = x.Size,
+					Key = x.Key,
+					Data = () =>
+					{
+						throw new InvalidOperationException("Cannot get attachment data from an attachment header");
+					}
+				});
+		}
+
+		/// <summary>
 		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -211,7 +232,7 @@ namespace Raven.Client.Embedded
 				return null;
 			attachment.Data = () =>
 			{
-				throw new InvalidOperationException("");
+				throw new InvalidOperationException("Cannot get attachment data from an attachment header");
 			};
 			return attachment;
 		}

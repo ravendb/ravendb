@@ -1,4 +1,5 @@
-﻿using Raven.Bundles.MoreLikeThis;
+﻿using System.Web;
+using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
@@ -23,8 +24,8 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			Assert.Equal("/morelikethis/?index=dataIndex&docid=foo%2F1&fields=Body&boost=true&minDocFreq=1&minWordLen=3&", uri);
 
 			var path = uri.Substring(0, uri.IndexOf('?'));
-
-			var decodedParameters = MoreLikeThisQueryParameters.GetParametersFromPath(uri);
+			var queryString = HttpUtility.ParseQueryString(uri.Substring(uri.IndexOf('?')));
+			var decodedParameters = MoreLikeThisQueryParameters.GetParametersFromPath(path, queryString);
 
 			Assert.Equal("dataIndex", decodedParameters.IndexName);
 			Assert.Equal(JsonConvert.SerializeObject(parameters), JsonConvert.SerializeObject(decodedParameters));
@@ -48,8 +49,8 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			Assert.Equal("/morelikethis/?index=dataIndex&docid=foo%3Dbar%3Bbe%3Dbop&fields=Body&boost=true&minDocFreq=1&minWordLen=3&", uri);
 
 			var path = uri.Substring(0, uri.IndexOf('?'));
-
-			var decodedParameters = MoreLikeThisQueryParameters.GetParametersFromPath(uri);
+			var queryString = HttpUtility.ParseQueryString(uri.Substring(uri.IndexOf('?')));
+			var decodedParameters = MoreLikeThisQueryParameters.GetParametersFromPath(path, queryString);
 
 			Assert.Equal("dataIndex", decodedParameters.IndexName);
 			Assert.Equal(JsonConvert.SerializeObject(parameters), JsonConvert.SerializeObject(decodedParameters));

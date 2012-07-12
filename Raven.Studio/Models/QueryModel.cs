@@ -112,7 +112,20 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		#region Sorting
+	    private bool showFields;
+
+	    public bool ShowFields
+	    {
+	        get { return showFields; }
+            set
+            {
+                showFields = value;
+                OnPropertyChanged(() => ShowFields);
+                Requery();
+            }
+	    }
+
+	    #region Sorting
 
 		public const string SortByDescSuffix = " DESC";
 

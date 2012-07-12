@@ -84,6 +84,11 @@ namespace Raven.Studio.Features.Query
 	            q.SortedFields = sortedFields.ToArray();
 	        }
 
+            if (model.ShowFields)
+            {
+                q.FieldsToFetch = new[] { Constants.AllFields };
+            }
+
 	        if (model.IsSpatialQuerySupported &&
 	            model.Latitude.HasValue && model.Longitude.HasValue)
 	        {

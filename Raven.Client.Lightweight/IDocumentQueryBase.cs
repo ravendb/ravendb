@@ -141,25 +141,6 @@ If you really want to do in memory filtering on the data returned from the query
 		TSelf WhereEquals (WhereParams whereParams);
 
 		/// <summary>
-		///   Matches substrings of the field
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		TSelf WhereContains(string fieldName, object value);
-
-		/// <summary>
-		///   Matches substrings of the field
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		TSelf WhereContains(string fieldName, params object[] values);
-
-		/// <summary>
-		///   Matches substrings of the field
-		/// </summary>
-		[Obsolete("Avoid using WhereContains(), use Search() instead")]
-		TSelf WhereContains(string fieldName, IEnumerable<object> values);
-
-
-		/// <summary>
 		/// Check that the field has one of the specified value
 		/// </summary>
 		TSelf WhereIn(string fieldName, IEnumerable<object> values);
@@ -511,5 +492,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Select the default field to use for this query
 		/// </summary>
 		TSelf UsingDefaultField(string field);
+
+		/// <summary>
+		/// Select the default operator to use for this query
+		/// </summary>
+		TSelf UsingDefaultOperator(QueryOperator queryOperator);
 	}
 }

@@ -1,4 +1,5 @@
 using System;
+using Raven.Bundles.UniqueConstraints;
 
 namespace Raven.Bundles.Tests.UniqueConstraints
 {
@@ -17,15 +18,15 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 				session.SaveChanges();
 
 				// Ensures constraint was created
-				Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Uri.EscapeDataString("foo@bar.com")));
+				Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue("foo@bar.com")));
 				Assert.NotNull(DocumentStore.DatabaseCommands.Get("users/1"));
 
 				user.Email = "bar@foo.com";
 				session.SaveChanges();
 
 				// Both docs should be deleted
-				Assert.Null(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Uri.EscapeDataString("foo@bar.com")));
-				Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Uri.EscapeDataString("bar@foo.com")));
+				Assert.Null(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue("foo@bar.com")));
+				Assert.NotNull(DocumentStore.DatabaseCommands.Get("UniqueConstraints/Users/Email/" + Util.EscapeUniqueValue("bar@foo.com")));
 			}
 		}
 	}

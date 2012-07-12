@@ -43,7 +43,7 @@
 
                     <TextBlock Text="Field"
                                VerticalAlignment="Center" />
-                    <TextBox Text="{Binding Name, Mode=TwoWay}"
+                    <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              Grid.Column="1"
                              Grid.ColumnSpan="3"
                              VerticalAlignment="Center" />
@@ -101,7 +101,7 @@
                                Grid.Column="2"
                                Margin="8,0,4,0"
                                VerticalAlignment="Center" />
-                    <TextBox Text="{Binding Analyzer}"
+                    <TextBox Text="{Binding Analyzer, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              Grid.Row="4"
                              Grid.Column="3"
                              MinWidth="160"
@@ -255,7 +255,8 @@
                                 CommandParameter="{Binding Name, StringFormat=/terms/\{0\}}"
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Left"
-                                Margin="0">
+                                Margin="0"
+                            IsEnabled="{Binding IsNewIndex, Converter={StaticResource NegatingBool}}">
                         <Button.Content>
                             <StackPanel Orientation="Horizontal"
                                             VerticalAlignment="Center">
@@ -275,7 +276,8 @@
                                 Margin="4 0 0 0"
                                 ToolTipService.ToolTip="Query this index"
                                 Command="{StaticResource NavigateToCommand}"
-                                CommandParameter="{Binding Name, StringFormat='/query/\{0\}'}">
+                                CommandParameter="{Binding Name, StringFormat='/query/\{0\}'}"
+                            IsEnabled="{Binding IsNewIndex, Converter={StaticResource NegatingBool}}">
                         <Image Source="{StaticResource Image_Query_Small}"
                                    Stretch="None" />
                     </Button>
@@ -287,7 +289,8 @@
                                 HorizontalAlignment="Left"
                                 Margin="4 0 0 0"
                                 ToolTipService.ToolTip="Undo all changes"
-                                Command="{Binding ResetIndex}">
+                                Command="{Binding ResetIndex}"
+                                IsEnabled="{Binding IsNewIndex, Converter={StaticResource NegatingBool}}">
                         <Image Source="{StaticResource Image_Undo_Small}"
                                    Stretch="None" />
                     </Button>
@@ -297,7 +300,8 @@
                                 HorizontalAlignment="Left"
                                 Margin="4 0 0 0"
                                 ToolTipService.ToolTip="Delete this index"
-                                Command="{Binding DeleteIndex}">
+                                Command="{Binding DeleteIndex}"
+                                IsEnabled="{Binding IsNewIndex, Converter={StaticResource NegatingBool}}">
                         <Image Source="{StaticResource Image_Delete_Tiny}"
                                    Stretch="None" />
                     </Button>
@@ -334,7 +338,7 @@
                            VerticalAlignment="Center"
                            Style="{StaticResource Style_TextBlock_PagePartHeader}" />
                     <TextBox Grid.Column="1"
-                         Text="{Binding Name, Mode=TwoWay}"
+                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,10,24,10"
                          VerticalAlignment="Center" />
 

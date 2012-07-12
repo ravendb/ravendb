@@ -14,6 +14,7 @@ namespace Raven.Studio.Controls
     {
         public static readonly DependencyProperty BusyBodyProperty =
             DependencyProperty.Register("BusyBody", typeof(INotifyBusyness), typeof(BusynessIndicator), new PropertyMetadata(default(INotifyBusyness), HandleSourceChanged));
+        private bool _isLoaded;
 
         private static void HandleSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -21,12 +22,12 @@ namespace Raven.Studio.Controls
 
             if (e.OldValue != null)
             {
-                (e.OldValue as INotifyBusyness).IsBusyChanged -= notifier.IsBusyChanged;
+                notifier.StopListening(e.OldValue as INotifyBusyness);
             }
 
-            if (e.NewValue != null)
+            if (e.NewValue != null && notifier._isLoaded)
             {
-                (e.NewValue as INotifyBusyness).IsBusyChanged += notifier.IsBusyChanged;
+               notifier.StartListening();
             }
         }
 
@@ -65,6 +66,35 @@ namespace Raven.Studio.Controls
             InitializeComponent();
 
             VisualStateManager.GoToState(this, "Idle", true);
+
+            Loaded += delegate
+                          {
+                              _isLoaded = true;
+                              StartListening();
+                              UpdateState();
+                          };
+
+            Unloaded += delegate
+            {
+                StopListening(BusyBody);
+                _isLoaded = false;
+            };
+        }
+
+        private void StartListening()
+        {
+            if (BusyBody != null)
+            {
+                BusyBody.IsBusyChanged += IsBusyChanged;
+            }
+        }
+
+        private void StopListening(INotifyBusyness busyBody)
+        {
+            if (busyBody != null)
+            {
+                busyBody.IsBusyChanged -= IsBusyChanged;
+            }
         }
     }
 }

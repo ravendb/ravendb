@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Abstractions.Extensions;
@@ -20,6 +22,15 @@ namespace Raven.Database.Queries
 		public static string FindDynamicIndexName(this DocumentDatabase self, string entityName, IndexQuery query)
 		{
 			return new DynamicQueryOptimizer(self).SelectAppropriateIndex(entityName, query.Clone());
+		}
+
+
+		public static List<DynamicQueryOptimizer.Explanation> ExplainDynamicIndexSelection(this DocumentDatabase self, string entityName, IndexQuery query)
+		{
+			var explanations = new List<DynamicQueryOptimizer.Explanation>();
+			new DynamicQueryOptimizer(self)
+				.SelectAppropriateIndex(entityName, query.Clone(), explanations);
+			return explanations;
 		}
 	}
 }

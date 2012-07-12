@@ -174,5 +174,7 @@ namespace Raven.Database.Indexing
 				serverErrors.Enqueue(serverError);
 			}
 		}
+
+		public Action<ChangeNotification> RaiseChangeNotification { get; set; }
 	}
 }

@@ -40,7 +40,7 @@ namespace Raven.Client.Silverlight.Connection
 		internal HttpWebRequest webRequest;
 		private byte[] postedData;
 		private int retries;
-		private static readonly string ClientVersion = new AssemblyName(typeof(HttpJsonRequest).Assembly.FullName).Version.ToString();
+		public static readonly string ClientVersion = new AssemblyName(typeof(HttpJsonRequest).Assembly.FullName).Version.ToString();
 
 		private Task RecreateWebRequest(Action<HttpWebRequest> result)
 		{
@@ -76,7 +76,6 @@ namespace Raven.Client.Silverlight.Connection
 			this.conventions = conventions;
 			this.factory = factory;
 			webRequest = (HttpWebRequest)WebRequestCreator.ClientHttp.Create(new Uri(url));
-
 			var tcs = new TaskCompletionSource<object>();
 			tcs.SetResult(null);
 			WaitForTask = tcs.Task;

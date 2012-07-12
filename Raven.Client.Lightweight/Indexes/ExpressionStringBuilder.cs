@@ -1006,7 +1006,7 @@ namespace Raven.Client.Indexes
 			}
 			Out(" => ");
 			var body = node.Body;
-			if(castLambdas)
+			if (castLambdas)
 			{
 				switch (body.NodeType)
 				{
@@ -1041,7 +1041,16 @@ namespace Raven.Client.Indexes
 				{
 					Out(", ");
 				}
-				Out(node.Initializers[num].ToString());
+				Out("{");
+				bool first = true;
+				foreach (var expression in node.Initializers[num].Arguments)
+				{
+					if (first == false)
+						Out(", ");
+					first = false;
+					Visit(expression);
+				}
+				Out("}");
 				num++;
 			}
 			Out("}");
@@ -1329,7 +1338,8 @@ namespace Raven.Client.Indexes
 		/// </returns>
 		protected override Expression VisitNew(NewExpression node)
 		{
-			Out("new " + node.Type.Name);
+			Out("new ");
+			VisitType(node.Type);
 			Out("(");
 			for (var i = 0; i < node.Arguments.Count; i++)
 			{
@@ -1346,7 +1356,7 @@ namespace Raven.Client.Indexes
 					if (constantExpression != null && constantExpression.Value == null)
 					{
 						Out("(");
-						Out(GetMemberType(node.Members[i]).FullName);
+						VisitType(GetMemberType(node.Members[i]));
 						Out(")");
 					}
 				}
@@ -1355,6 +1365,30 @@ namespace Raven.Client.Indexes
 			}
 			Out(")");
 			return node;
+		}
+
+		private void VisitType(Type type)
+		{
+			if (type.IsGenericType == false || CheckIfAnonymousType(type))
+			{
+				Out(type.Name);
+				return;
+			}
+			var genericArguments = type.GetGenericArguments();
+			var genericTypeDefinition = type.GetGenericTypeDefinition();
+			var lastIndexOfTag = genericTypeDefinition.FullName.LastIndexOf('`');
+
+			Out(genericTypeDefinition.FullName.Substring(0, lastIndexOfTag));
+			Out("<");
+			bool first = true;
+			foreach (var genericArgument in genericArguments)
+			{
+				if (first == false)
+					Out(", ");
+				first = false;
+				VisitType(genericArgument);
+			}
+			Out(">");
 		}
 
 		/// <summary>

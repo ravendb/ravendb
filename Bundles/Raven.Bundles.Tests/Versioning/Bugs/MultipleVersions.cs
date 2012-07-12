@@ -1,6 +1,6 @@
-using Raven.Bundles.Versioning.Data;
+extern alias database;
+using Raven.Client.Bundles.Versioning;
 using Xunit;
-using Raven.Client.Versioning;
 
 namespace Raven.Bundles.Tests.Versioning.Bugs
 {
@@ -12,7 +12,7 @@ namespace Raven.Bundles.Tests.Versioning.Bugs
 		{
 			using(var s = documentStore.OpenSession())
 			{
-				s.Store(new VersioningConfiguration
+				s.Store(new database::Raven.Bundles.Versioning.Data.VersioningConfiguration
 				{
 					Exclude = false,
 					Id = "Raven/Versioning/DefaultConfiguration",
