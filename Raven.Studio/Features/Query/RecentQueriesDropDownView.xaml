@@ -6,36 +6,92 @@
              xmlns:Query="clr-namespace:Raven.Studio.Features.Query"
           xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
                      xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
-                     xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
-    d:DesignHeight="300" d:DesignWidth="550" d:DataContext="{d:DesignInstance Query:RecentQueriesModel}">
+                     xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+                     xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit" mc:Ignorable="d"
+    d:DesignHeight="300" d:DesignWidth="600" d:DataContext="{d:DesignInstance Query:RecentQueriesModel}">
     
-    <Grid x:Name="LayoutRoot" Background="White" Width="550">
+    <Grid x:Name="LayoutRoot" Background="White" Width="600">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Border Grid.Row="0" Background="LightGray">
-            <TextBlock Text="Recent Queries" Margin="3"/>
+                <TextBlock Text="Pinned Queries" Margin="3"/>
         </Border>
-        <ItemsControl ItemsSource="{Binding RecentQueries}"
+        <ItemsControl ItemsSource="{Binding PinnedQueries}"
                       Grid.Row="1"
                       Style="{StaticResource Style_ItemsControl_VerticallyScrollable}"
-                      MaxHeight="600">
+                      MaxHeight="300">
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="Query:SavedQuery">
-                    <Button Command="{Binding Path=DataContext.GoToQuery, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                    <toolkit:DockPanel>
+                        <Button Command="{Binding Path=DataContext.UnPinQuery, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Style="{StaticResource Style_Button_MouseOverChrome}"
                             CommandParameter="{Binding}"
-                            HorizontalContentAlignment="Left"
-                            Style="{StaticResource Style_Button_MouseOverChrome}" Padding="2,4,4,4">
-                        <StackPanel Orientation="Horizontal">
-                            <Image Source="{StaticResource Image_Query_Small}" VerticalAlignment="Top"/>
-                            <StackPanel Margin="6,0,0,0" VerticalAlignment="Top">
-                                <TextBlock Text="{Binding IndexName}"
-                                           Behaviors:FadeTrimming.IsEnabled="True" />
-                                <TextBlock Text="{Binding Query}" Margin="0,4,0,0" />
+                                ToolTipService.ToolTip="Un Pin Query"
+                                toolkit:DockPanel.Dock="Right"
+                                Margin="5,3"
+                                VerticalAlignment="Center">
+                            <Image Source="{StaticResource Image_UnPin_Tiny}" Stretch="None"/>
+                        </Button>
+                        <Button Command="{Binding Path=DataContext.GoToQuery, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}"
+                                HorizontalContentAlignment="Left"
+                                Style="{StaticResource Style_Button_MouseOverChrome}" Padding="2,4,4,4">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource Image_Query_Small}" VerticalAlignment="Top"/>
+                                <StackPanel Margin="6,0,0,0" VerticalAlignment="Top">
+                                    <TextBlock Text="{Binding IndexName}"
+                                               Behaviors:FadeTrimming.IsEnabled="True" />
+                                    <TextBlock Text="{Binding Query}" Margin="0,4,0,0" />
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
-                    </Button>
+                        </Button>
+                    </toolkit:DockPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Border Grid.Row="2" Background="LightGray">
+            <toolkit:DockPanel>
+                <Button Command="{Binding ClearHistory}" Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Clear History"
+                        toolkit:DockPanel.Dock="Right"
+                        Margin="5,3">
+                    <Image Source="{StaticResource Image_ClearHistory_Tiny}" Stretch="None"/>
+                </Button>
+                <TextBlock Text="Recent Queries" Margin="3"/>
+            </toolkit:DockPanel>
+        </Border>
+        <ItemsControl ItemsSource="{Binding RecentQueries}"
+                      Grid.Row="3"
+                      Style="{StaticResource Style_ItemsControl_VerticallyScrollable}"
+                      MaxHeight="300">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="Query:SavedQuery">
+                    <toolkit:DockPanel>
+                        <Button Command="{Binding Path=DataContext.PinQuery, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Style="{StaticResource Style_Button_MouseOverChrome}"
+                            CommandParameter="{Binding}"
+                                ToolTipService.ToolTip="Pin Query"
+                                toolkit:DockPanel.Dock="Right"
+                                Margin="5,3"
+                                VerticalAlignment="Center">
+                            <Image Source="{StaticResource Image_Pin_Tiny}" Stretch="None"/>
+                        </Button>
+                        <Button Command="{Binding Path=DataContext.GoToQuery, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}"
+                                HorizontalContentAlignment="Left"
+                                Style="{StaticResource Style_Button_MouseOverChrome}" Padding="2,4,4,4">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{StaticResource Image_Query_Small}" VerticalAlignment="Top"/>
+                                <StackPanel Margin="6,0,0,0" VerticalAlignment="Top">
+                                    <TextBlock Text="{Binding IndexName}"
+                                               Behaviors:FadeTrimming.IsEnabled="True" />
+                                    <TextBlock Text="{Binding Query}" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Button>
+                        </toolkit:DockPanel>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

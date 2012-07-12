@@ -873,6 +873,9 @@
     <Resource Include="Assets\Images\index_skiptransform.png" />
     <Resource Include="Assets\Images\VisitLink_Tiny.png" />
     <Resource Include="Assets\Images\recent_queries_tiny.png" />
+    <Resource Include="Assets\Images\clear_history_tiny.png" />
+    <Resource Include="Assets\Images\pin_tiny.png" />
+    <Resource Include="Assets\Images\un_pin_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

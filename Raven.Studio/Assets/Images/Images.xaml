@@ -48,5 +48,8 @@
     <BitmapImage x:Key="Image_SkipTransform_Tiny" UriSource="index_skiptransform.png"/>
     <BitmapImage x:Key="Image_VisitLink_Tiny" UriSource="VisitLink_Tiny.png"/>
     <BitmapImage x:Key="Image_RecentQueries_Tiny" UriSource="recent_queries_tiny.png"/>
+    <BitmapImage x:Key="Image_ClearHistory_Tiny" UriSource="clear_history_tiny.png"/>
+    <BitmapImage x:Key="Image_Pin_Tiny" UriSource="pin_tiny.png"/>
+    <BitmapImage x:Key="Image_UnPin_Tiny" UriSource="un_pin_tiny.png"/>
     
 </ResourceDictionary>

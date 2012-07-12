@@ -43,7 +43,7 @@ namespace Raven.Studio.Features.Query
                                       {
                                           using (var storage = IsolatedStorageFile.GetUserStoreForSite())
                                           {
-                                              var path = "QueryHistory/" + databaseName;
+                                              var path = GetFolderPath();
                                               if (!storage.DirectoryExists(path))
                                               {
                                                   storage.CreateDirectory(path);
@@ -53,7 +53,8 @@ namespace Raven.Studio.Features.Query
 
                                               var queries = (from fileName in files
                                                              let content = storage.ReadEntireFile(path + "/" + fileName)
-                                                             let lastWriteTime = storage.GetLastWriteTime(path + "/" + fileName)
+                                                             let lastWriteTime =
+                                                                 storage.GetLastWriteTime(path + "/" + fileName)
                                                              let query =
                                                                  JsonConvert.DeserializeObject<SavedQuery>(content)
                                                              orderby lastWriteTime descending
@@ -83,7 +84,8 @@ namespace Raven.Studio.Features.Query
                                                         }
 
                                                         OnQueriesChanged(EventArgs.Empty);
-                                                    });
+                                                    })
+                .Catch();
         }
 
         public void StoreQuery(QueryState state)
@@ -121,7 +123,7 @@ namespace Raven.Studio.Features.Query
 
                             using (var storage = IsolatedStorageFile.GetUserStoreForSite())
                             {
-                                var path = "QueryHistory/" + databaseName;
+                                var path = GetFolderPath();
                                 if (!storage.DirectoryExists(path))
                                 {
                                     return;
@@ -149,8 +151,13 @@ namespace Raven.Studio.Features.Query
                             }
 
                         })
-                    .CatchIgnore();
+                    .Catch();
             }
+        }
+
+        private string GetFolderPath()
+        {
+            return "QueryHistory/" + databaseName;
         }
 
         private void WriteToDisk(SavedQuery query)
@@ -159,7 +166,7 @@ namespace Raven.Studio.Features.Query
             {
                 using (var storage = IsolatedStorageFile.GetUserStoreForSite())
                 {
-                    var path = "QueryHistory/" + databaseName;
+                    var path = GetFolderPath();
                     if (!storage.DirectoryExists(path))
                     {
                         storage.CreateDirectory(path);
@@ -210,6 +217,72 @@ namespace Raven.Studio.Features.Query
         {
             LinkedListNode<SavedQuery> node;
             return queriesByHash.TryGetValue(hashCode, out node) ? ToQueryState(node.Value) : null;
+        }
+
+        public void PinQuery(SavedQuery query)
+        {
+            query.IsPinned = true;
+
+            WriteToDisk(query);
+            OnQueriesChanged(EventArgs.Empty);
+        }
+
+        public void UnPinQuery(SavedQuery query)
+        {
+            query.IsPinned = false;
+
+            var node = queriesByHash[query.Hashcode];
+            recentQueries.Remove(node);
+            recentQueries.AddFirst(node);
+
+            WriteToDisk(query);
+            OnQueriesChanged(EventArgs.Empty);
+        }
+
+        public void ClearHistory()
+        {
+            var node = recentQueries.First;
+
+            var filesToRemove = new List<string>();
+
+            while (node != null)
+            {
+                var next = node.Next;
+
+                if (!node.Value.IsPinned)
+                {
+                    queriesByHash.Remove(node.Value.Hashcode);
+                    recentQueries.Remove(node);
+                    filesToRemove.Add(node.Value.Hashcode);
+                }
+
+                node = next;
+            }
+
+            var currentTime = DateTimeOffset.Now;
+
+            Task.Factory.StartNew(() =>
+                                      {
+                                          using (var storage = IsolatedStorageFile.GetUserStoreForSite())
+                                          {
+                                              var folder = GetFolderPath();
+                                              foreach (var file in filesToRemove)
+                                              {
+                                                  var path = folder + "/" + file + ".query";
+                                                  var lastAccessTime = storage.GetLastAccessTime(path);
+
+                                                  if (lastAccessTime > currentTime)
+                                                  {
+                                                      continue;
+                                                  }
+
+                                                  storage.DeleteFile(path);
+                                              }
+                                          }
+                                      })
+                .Catch();
+
+            OnQueriesChanged(EventArgs.Empty);
         }
     }
 }

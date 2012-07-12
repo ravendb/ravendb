@@ -33,6 +33,7 @@ namespace Raven.Studio.Features.Query
         {
             get { return MD5Core.GetHashString(IndexName + Query); }
         }
+        public bool IsPinned { get; set; }
 
         public void UpdateFrom(QueryState state)
         {

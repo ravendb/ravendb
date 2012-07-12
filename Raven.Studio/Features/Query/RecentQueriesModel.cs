@@ -22,20 +22,38 @@ namespace Raven.Studio.Features.Query
     public class RecentQueriesModel : ViewModel
     {
         private ICommand goToQuery;
+        private ICommand pinQuery;
+        private ICommand clearHistory;
+        private ICommand unpinQuery;
         public ObservableCollection<SavedQuery> RecentQueries { get; private set; }
+        public ObservableCollection<SavedQuery> PinnedQueries { get; private set; }
 
         public event EventHandler<EventArgs> QuerySelected;
 
-       
-
         public RecentQueriesModel()
         {
-            RecentQueries = new ObservableCollection<SavedQuery>();    
+            RecentQueries = new ObservableCollection<SavedQuery>();
+            PinnedQueries = new ObservableCollection<SavedQuery>();    
         }
 
         public ICommand GoToQuery
         {
             get { return goToQuery ?? (goToQuery = new ActionCommand(HandleGoToQuery)); }
+        }
+
+        public ICommand PinQuery
+        {
+            get { return pinQuery ?? (pinQuery = new ActionCommand(HandlePinQuery)); }
+        }
+
+        public ICommand UnPinQuery
+        {
+            get { return unpinQuery ?? (unpinQuery = new ActionCommand(HandleUnPinQuery)); }
+        }
+
+        public ICommand ClearHistory
+        {
+            get { return clearHistory ?? (clearHistory = new ActionCommand(() => PerDatabaseState.QueryHistoryManager.ClearHistory())); }
         }
 
         protected override void OnViewLoaded()
@@ -52,7 +70,32 @@ namespace Raven.Studio.Features.Query
         private void LoadQueries()
         {
             RecentQueries.Clear();
-            RecentQueries.AddRange(PerDatabaseState.QueryHistoryManager.RecentQueries);
+            RecentQueries.AddRange(PerDatabaseState.QueryHistoryManager.RecentQueries.Where(q => !q.IsPinned));
+
+            PinnedQueries.Clear();
+            PinnedQueries.AddRange(PerDatabaseState.QueryHistoryManager.RecentQueries.Where(q => q.IsPinned).OrderBy(q => q.IndexName).ThenBy(q => q.Query));
+        }
+
+        private void HandlePinQuery(object param)
+        {
+            var query = param as SavedQuery;
+            if (query == null)
+            {
+                return;
+            }
+
+            PerDatabaseState.QueryHistoryManager.PinQuery(query);
+        }
+
+        private void HandleUnPinQuery(object param)
+        {
+            var query = param as SavedQuery;
+            if (query == null)
+            {
+                return;
+            }
+
+            PerDatabaseState.QueryHistoryManager.UnPinQuery(query);
         }
 
         private void HandleGoToQuery(object param)

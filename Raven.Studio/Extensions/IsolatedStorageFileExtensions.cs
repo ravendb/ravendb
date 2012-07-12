@@ -27,9 +27,13 @@ namespace Raven.Studio.Extensions
         public static void WriteAllToFile(this IsolatedStorageFile store, string fileName, string contents)
         {
             using (var file = store.OpenFile(fileName, FileMode.OpenOrCreate, FileAccess.Write))
-            using (var writer = new StreamWriter(file))
             {
-                writer.Write(contents);
+                file.SetLength(0);
+
+                using (var writer = new StreamWriter(file))
+                {
+                    writer.Write(contents);
+                }
             }
         }
     }
