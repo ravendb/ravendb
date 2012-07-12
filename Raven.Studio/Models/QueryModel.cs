@@ -445,38 +445,53 @@ namespace Raven.Studio.Models
 		    var url = new UrlParser(UrlUtil.Url);
 		    var recentQueryHashCode = url.GetQueryParam("recentQuery");
 
-		    var state = string.IsNullOrEmpty(recentQueryHashCode) ? PerDatabaseState.QueryHistoryManager.GetMostRecentStateForIndex(IndexName) 
-		                           : PerDatabaseState.QueryHistoryManager.GetStateByHashCode(recentQueryHashCode);
-
-		    if (state == null)
+            if (PerDatabaseState.QueryHistoryManager.IsHistoryLoaded)
             {
-                return;
+                ApplyQueryState(recentQueryHashCode);
             }
-
-            internalUpdate = true;
-
-            try
+            else
             {
-                Query = state.Query;
-                SortBy.Clear();
-
-                foreach (var sortOption in state.SortOptions)
-                {
-                    if (SortByOptions.Contains(sortOption))
-                    {
-                        SortBy.Add(new StringRef() { Value = sortOption });
-                    }
-                }
+                PerDatabaseState.QueryHistoryManager.WaitForHistoryAsync()
+                    .ContinueOnUIThread(_ => ApplyQueryState(recentQueryHashCode));
             }
-            finally
-            {
-                internalUpdate = false;
-            }
-
-		    Requery();
+		    
 		}
 
-		public ICommand Execute { get { return executeQuery ?? (executeQuery = new ExecuteQueryCommand(this)); } }
+        private void ApplyQueryState(string recentQueryHashCode)
+	    {
+            var state = string.IsNullOrEmpty(recentQueryHashCode)
+                           ? PerDatabaseState.QueryHistoryManager.GetMostRecentStateForIndex(IndexName)
+                           : PerDatabaseState.QueryHistoryManager.GetStateByHashCode(recentQueryHashCode);
+
+	        if (state == null)
+	        {
+	            return;
+	        }
+
+	        internalUpdate = true;
+
+	        try
+	        {
+	            Query = state.Query;
+	            SortBy.Clear();
+
+	            foreach (var sortOption in state.SortOptions)
+	            {
+	                if (SortByOptions.Contains(sortOption))
+	                {
+	                    SortBy.Add(new StringRef() {Value = sortOption});
+	                }
+	            }
+	        }
+	        finally
+	        {
+	            internalUpdate = false;
+	        }
+
+	        Requery();
+	    }
+
+	    public ICommand Execute { get { return executeQuery ?? (executeQuery = new ExecuteQueryCommand(this)); } }
 
         public Observable<string> QueryErrorMessage { get; private set; }
         public Observable<bool> IsErrorVisible { get; private set; }

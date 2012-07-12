@@ -29,6 +29,7 @@ namespace Raven.Studio.Features.Query
         private readonly LinkedList<SavedQuery> recentQueries = new LinkedList<SavedQuery>();
         private readonly Dictionary<string, LinkedListNode<SavedQuery>> queriesByHash = new Dictionary<string, LinkedListNode<SavedQuery>>();
         private DateTime lastCleanupStarted = DateTime.MinValue;
+        private Task loadHistoryTask;
         public event EventHandler<EventArgs> QueriesChanged;
 
         public QueryHistoryManager(string databaseName)
@@ -39,52 +40,61 @@ namespace Raven.Studio.Features.Query
 
         private void LoadPreviousQueriesFromDiskInBackground()
         {
-            Task.Factory.StartNew(() =>
-                                      {
-                                          using (var storage = IsolatedStorageFile.GetUserStoreForSite())
-                                          {
-                                              var path = GetFolderPath();
-                                              if (!storage.DirectoryExists(path))
-                                              {
-                                                  storage.CreateDirectory(path);
-                                              }
+            loadHistoryTask = Task.Factory.StartNew(
+                () =>
+                    {
+                        using (
+                            var storage =
+                                IsolatedStorageFile.GetUserStoreForSite())
+                        {
+                            var path = GetFolderPath();
+                            if (!storage.DirectoryExists(path))
+                            {
+                                storage.CreateDirectory(path);
+                            }
 
-                                              var files = storage.GetFileNames(path + "/*.query");
+                            var files = storage.GetFileNames(path + "/*.query");
 
-                                              var queries = (from fileName in files
-                                                             let content = storage.ReadEntireFile(path + "/" + fileName)
-                                                             let lastWriteTime =
-                                                                 storage.GetLastWriteTime(path + "/" + fileName)
-                                                             let query =
-                                                                 JsonConvert.DeserializeObject<SavedQuery>(content)
-                                                             orderby lastWriteTime descending
-                                                             select query)
-                                                  .ToList();
+                            var queries = (from fileName in files
+                                           let content =
+                                               storage.ReadEntireFile(path + "/" +
+                                                                      fileName)
+                                           let lastWriteTime =
+                                               storage.GetLastWriteTime(path +
+                                                                        "/" +
+                                                                        fileName)
+                                           let query =
+                                               JsonConvert.DeserializeObject
+                                               <SavedQuery>(content)
+                                           orderby lastWriteTime descending
+                                           select query)
+                                .ToList();
 
-                                              return queries;
-                                          }
-                                      })
-                .ContinueOnSuccessInTheUIThread(queries =>
-                                                    {
-                                                        foreach (var query in queries)
-                                                        {
-                                                            LinkedListNode<SavedQuery> node;
+                            return queries;
+                        }
+                    })
+                .ContinueWith(
+                    t =>
+                        {
+                            foreach (var query in t.Result)
+                            {
+                                LinkedListNode<SavedQuery> node;
 
-                                                            if (!queriesByHash.TryGetValue(query.Hashcode, out node))
-                                                            {
-                                                                node = new LinkedListNode<SavedQuery>(query);
-                                                                queriesByHash.Add(query.Hashcode, node);
-                                                                recentQueries.AddLast(node);
-                                                            }
-                                                            else
-                                                            {
-                                                                // if the query was found, that must mean
-                                                                // the user has just updated it, so don't overwrite anything
-                                                            }
-                                                        }
+                                if (!queriesByHash.TryGetValue(query.Hashcode, out node))
+                                {
+                                    node = new LinkedListNode<SavedQuery>(query);
+                                    queriesByHash.Add(query.Hashcode, node);
+                                    recentQueries.AddLast(node);
+                                }
+                                else
+                                {
+                                    // if the query was found, that must mean
+                                    // the user has just updated it, so don't overwrite anything
+                                }
+                            }
 
-                                                        OnQueriesChanged(EventArgs.Empty);
-                                                    })
+                            OnQueriesChanged(EventArgs.Empty);
+                        }, Schedulers.UIScheduler)
                 .Catch();
         }
 
@@ -211,6 +221,16 @@ namespace Raven.Studio.Features.Query
         {
             EventHandler<EventArgs> handler = QueriesChanged;
             if (handler != null) handler(this, e);
+        }
+
+        public bool IsHistoryLoaded
+        {
+            get { return loadHistoryTask != null && loadHistoryTask.IsCompleted; }
+        }
+
+        public Task WaitForHistoryAsync()
+        {
+            return loadHistoryTask;
         }
 
         public QueryState GetStateByHashCode(string hashCode)
