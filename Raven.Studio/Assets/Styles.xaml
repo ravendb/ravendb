@@ -21,6 +21,7 @@
 		<ResourceDictionary Source="TreeViewStyles.xaml" />
 		<ResourceDictionary Source="SplitButton.xaml" />
 		<ResourceDictionary Source="SplitButtonPopup.xaml" />
+		<ResourceDictionary Source="PopupButton.xaml" />
 		<ResourceDictionary Source="WatermarkedTextBox.xaml" />
 		<ResourceDictionary Source="ComboBoxStyles.xaml" />
 		<ResourceDictionary Source="ProgressBarStyles.xaml" />
@@ -1077,7 +1078,29 @@
 		</toolkit:WrapPanel>
 	</ItemsPanelTemplate>
 
-	<Style x:Name="Style_ItemsControl_Fluid"
+    <Style x:Name="Style_ItemsControl_VerticallyScrollable"
+		   TargetType="ItemsControl">
+        <Setter Property="BorderThickness"
+				Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ItemsControl">
+                    <ScrollViewer BorderThickness="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsPresenter/>
+                    </ScrollViewer>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style x:Name="Style_ItemsControl_Fluid"
 		   TargetType="ItemsControl">
 		<Setter Property="ItemsPanel"
 				Value="{StaticResource FluidWrapPanel}" />

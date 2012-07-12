@@ -155,6 +155,7 @@
     <Compile Include="Behaviors\BindColumnVisibility.cs" />
     <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
     <Compile Include="Behaviors\BindSuggestionsProvider.cs" />
+    <Compile Include="Behaviors\CloseSplitButtonPopupAction.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
@@ -185,6 +186,7 @@
     <Compile Include="Controls\WordHighlightTagger.cs" />
     <Compile Include="Extensions\DoubleExtensions.cs" />
     <Compile Include="Extensions\IObservableExtensions.cs" />
+    <Compile Include="Extensions\IsolatedStorageFileExtensions.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\SyntaxEditorExtensions.cs" />
@@ -235,7 +237,14 @@
     <Compile Include="Features\Query\IndexQueryHelpers.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Query\QueryDocumentsCollectionSource.cs" />
+    <Compile Include="Features\Query\QueryHistoryManager.cs" />
     <Compile Include="Features\Query\QueryIndexAutoComplete.cs" />
+    <Compile Include="Features\Query\QueryState.cs" />
+    <Compile Include="Features\Query\RecentQueriesDropDownView.xaml.cs">
+      <DependentUpon>RecentQueriesDropDownView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Query\RecentQueriesModel.cs" />
+    <Compile Include="Features\Query\SavedQuery.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
     <Compile Include="Features\Tasks\TaskView.xaml.cs">
       <DependentUpon>TaskView.xaml</DependentUpon>
@@ -246,6 +255,7 @@
     <Compile Include="Features\Util\ErrorListWindow.xaml.cs">
       <DependentUpon>ErrorListWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Impl\SplitButton\PopupButton.cs" />
     <Compile Include="Impl\SplitButton\SplitButtonPopup.cs" />
     <Compile Include="Impl\SplitButton\GlobalSuppressions.cs" />
     <Compile Include="Impl\SplitButton\MenuButton.cs" />
@@ -305,7 +315,6 @@
     <Compile Include="Models\ApplicationState.cs" />
     <Compile Include="Models\DocumentSize.cs" />
     <Compile Include="Models\DocumentViewStateStore.cs" />
-    <Compile Include="Models\QueryState.cs" />
     <Compile Include="Models\QueryStateStore.cs" />
     <Compile Include="Models\StudioErrorListModel.cs" />
     <Compile Include="Models\GoToDocumentModel.cs" />
@@ -558,6 +567,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Assets\PopupButton.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Assets\ProgressBarStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -607,6 +620,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Documents\DocumentsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Query\RecentQueriesDropDownView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -855,6 +872,7 @@
     <Resource Include="Assets\Images\index_showfields.png" />
     <Resource Include="Assets\Images\index_skiptransform.png" />
     <Resource Include="Assets\Images\VisitLink_Tiny.png" />
+    <Resource Include="Assets\Images\recent_queries_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

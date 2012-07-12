@@ -374,16 +374,31 @@ namespace Raven.Studio.Models
 
 			if (urlParser.GetQueryParam("mode") == "dynamic")
 			{
+			    var collection = urlParser.GetQueryParam("collection");
+
 				IsDynamicQuery = true;
 				DatabaseCommands.GetTermsAsync("Raven/DocumentsByEntityName", "Tag", "", 100)
 					.ContinueOnSuccessInTheUIThread(collections =>
 					                       {
 					                           DynamicOptions.Match(new[] {"AllDocs"}.Concat(collections).ToArray());
-                                               DynamicSelectedOption = DynamicOptions[0];
+
+					                           string selectedOption = null;
+					                           if (!string.IsNullOrEmpty(collection))
+                                               {
+                                                   selectedOption = DynamicOptions.FirstOrDefault(s => s.Equals(collection));
+                                               }
+
+                                               if (selectedOption == null)
+                                               {
+                                                   selectedOption  = DynamicOptions[0];
+                                               }
+
+                                               DynamicSelectedOption = selectedOption;
 					                       });
 				return;
 			}
 
+	        IsDynamicQuery = false;
 			IndexName = urlParser.Path.Trim('/');
 
 			DatabaseCommands.GetIndexAsync(IndexName)
@@ -420,32 +435,45 @@ namespace Raven.Studio.Models
 
 	    public void RememberHistory()
 	    {
-	        var state = PerDatabaseState.QueryState.GetState(IndexName);
+            var state = new QueryState(IndexName, Query, SortBy.Select(r => r.Value));
 
-	        state.Query = Query;
-            state.SortOptions.Clear();
-	        state.SortOptions.AddRange(SortBy.Select(r => r.Value).ToList());
+            PerDatabaseState.QueryHistoryManager.StoreQuery(state);
 		}
 
 		public void RestoreHistory()
 		{
-            var state = PerDatabaseState.QueryState.GetState(IndexName);
+		    var url = new UrlParser(UrlUtil.Url);
+		    var recentQueryHashCode = url.GetQueryParam("recentQuery");
+
+		    var state = string.IsNullOrEmpty(recentQueryHashCode) ? PerDatabaseState.QueryHistoryManager.GetMostRecentStateForIndex(IndexName) 
+		                           : PerDatabaseState.QueryHistoryManager.GetStateByHashCode(recentQueryHashCode);
+
+		    if (state == null)
+            {
+                return;
+            }
 
             internalUpdate = true;
 
-            Query = state.Query;
-            SortBy.Clear();
+            try
+            {
+                Query = state.Query;
+                SortBy.Clear();
 
-		    foreach (var sortOption in state.SortOptions)
-		    {
-		        if (SortByOptions.Contains(sortOption))
-		        {
-		            SortBy.Add(new StringRef() { Value = sortOption});
-		        }
-		    }
-		    internalUpdate = false;
+                foreach (var sortOption in state.SortOptions)
+                {
+                    if (SortByOptions.Contains(sortOption))
+                    {
+                        SortBy.Add(new StringRef() { Value = sortOption });
+                    }
+                }
+            }
+            finally
+            {
+                internalUpdate = false;
+            }
 
-            Requery();
+		    Requery();
 		}
 
 		public ICommand Execute { get { return executeQuery ?? (executeQuery = new ExecuteQueryCommand(this)); } }

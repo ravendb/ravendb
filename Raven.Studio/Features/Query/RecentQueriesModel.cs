@@ -1,0 +1,89 @@
+﻿using System;
+using System.Collections.ObjectModel;
+using System.Net;
+using System.Reactive.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Ink;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Shapes;
+using Microsoft.Expression.Interactivity.Core;
+using Raven.Studio.Infrastructure;
+using System.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.Studio.Models;
+using Raven.Studio.Extensions;
+
+namespace Raven.Studio.Features.Query
+{
+    public class RecentQueriesModel : ViewModel
+    {
+        private ICommand goToQuery;
+        public ObservableCollection<SavedQuery> RecentQueries { get; private set; }
+
+        public event EventHandler<EventArgs> QuerySelected;
+
+       
+
+        public RecentQueriesModel()
+        {
+            RecentQueries = new ObservableCollection<SavedQuery>();    
+        }
+
+        public ICommand GoToQuery
+        {
+            get { return goToQuery ?? (goToQuery = new ActionCommand(HandleGoToQuery)); }
+        }
+
+        protected override void OnViewLoaded()
+        {
+            Observable.FromEventPattern<EventArgs>(
+                h => PerDatabaseState.QueryHistoryManager.QueriesChanged += h,
+                h => PerDatabaseState.QueryHistoryManager.QueriesChanged -= h)
+                .TakeUntil(Unloaded)
+                .SubscribeWeakly(this, (target, args) => target.LoadQueries());
+
+            LoadQueries();
+        }
+
+        private void LoadQueries()
+        {
+            RecentQueries.Clear();
+            RecentQueries.AddRange(PerDatabaseState.QueryHistoryManager.RecentQueries);
+        }
+
+        private void HandleGoToQuery(object param)
+        {
+            var query = param as SavedQuery;
+            if (query == null)
+            {
+                return;
+            }
+
+            string url;
+            if (query.IndexName.StartsWith("dynamic/"))
+            {
+                var collection = query.IndexName.Substring("dynamic/".Length);
+                url = string.Format("/query/?mode=dynamic&collection={0}&recentQuery={1}", Uri.EscapeDataString(collection), query.Hashcode);
+            }
+            else
+            {
+                url = string.Format("/query/{0}?recentQuery={1}", Uri.EscapeDataString(query.IndexName), query.Hashcode);
+            }
+
+            UrlUtil.Navigate(url);
+
+            OnQuerySelected(EventArgs.Empty);
+        }
+
+
+        protected void OnQuerySelected(EventArgs e)
+        {
+            EventHandler<EventArgs> handler = QuerySelected;
+            if (handler != null) handler(this, e);
+        }
+    }
+}

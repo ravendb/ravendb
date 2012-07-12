@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using Raven.Studio.Features.Query;
 
 namespace Raven.Studio.Models
 {
@@ -20,10 +21,13 @@ namespace Raven.Studio.Models
             DatabaseName = databaseName;
             DocumentViewState = new DocumentViewStateStore();
             QueryState = new QueryStateStore();
+            QueryHistoryManager = new QueryHistoryManager(DatabaseName);
         }
 
         public DocumentViewStateStore DocumentViewState { get; private set; }
 
         public QueryStateStore QueryState { get; private set; }
+
+        public QueryHistoryManager QueryHistoryManager { get; private set; }
     }
 }
