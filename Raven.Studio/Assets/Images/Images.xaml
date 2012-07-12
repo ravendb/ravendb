@@ -17,7 +17,7 @@
     <BitmapImage x:Key="Image_Undo_Small" UriSource="undo_tiny.png"/>
     <BitmapImage x:Key="Image_Query_Small" UriSource="index_query_tiny.png"/>
     <BitmapImage x:Key="Image_Edit_Small" UriSource="edit_tiny.png"/>
-    <BitmapImage x:Key="Image_OpenDocument_Small" UriSource="edit_pencil_write_icon.png"/>
+    <BitmapImage x:Key="Image_OpenDocument_Small" UriSource="edit_tiny.png"/>
     <BitmapImage x:Key="Image_Reformat_Small" UriSource="reformatjson_tiny.png"/>
     <BitmapImage x:Key="Image_Delete_Tiny" UriSource="remove_tiny.png"/>
     <BitmapImage x:Key="Image_Refresh_Small" UriSource="refresh_tiny.png"/>
