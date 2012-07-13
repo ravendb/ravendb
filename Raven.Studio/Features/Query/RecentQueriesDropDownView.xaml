@@ -23,20 +23,21 @@
         </Style>
     </Infrastructure:View.Resources>
     
-    <Grid x:Name="LayoutRoot" Background="White" Width="700">
+    <Grid x:Name="LayoutRoot" Background="White" Width="700" TextOptions.TextHintingMode="Animated">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Border Grid.Row="0" Background="LightGray">
-                <TextBlock Text="Pinned Queries" Margin="3"/>
+        <Border Grid.Row="0" Background="{StaticResource Brush_ToolbarBackground}" Height="28" Visibility="{Binding PinnedQueries.Count, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}">
+                <TextBlock Text="Pinned Queries" Margin="3" FontWeight="Bold" VerticalAlignment="Center"/>
         </Border>
         <ItemsControl ItemsSource="{Binding PinnedQueries}"
                       Grid.Row="1"
                       Style="{StaticResource Style_ItemsControl_VerticallyScrollable}"
-                      MaxHeight="300">
+                      MaxHeight="300"
+                      Visibility="{Binding PinnedQueries.Count, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="Query:SavedQuery">
                     <toolkit:DockPanel>
@@ -76,21 +77,26 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <Border Grid.Row="2" Background="LightGray">
+        <Border Grid.Row="2" Background="{StaticResource Brush_ToolbarBackground}" Height="28">
             <toolkit:DockPanel>
                 <Button Command="{Binding ClearHistory}" Style="{StaticResource Style_Button_MouseOverChrome}"
                         ToolTipService.ToolTip="Clear History"
                         toolkit:DockPanel.Dock="Right"
                         Margin="5,3">
-                    <Image Source="{StaticResource Image_ClearHistory_Tiny}" Stretch="None"/>
+                    <Image Source="{StaticResource Image_ClearHistory_Tiny}" Stretch="None" VerticalAlignment="Center"/>
                 </Button>
-                <TextBlock Text="Recent Queries" Margin="3"/>
+                <TextBlock Text="Recent Queries" Margin="3" VerticalAlignment="Center" FontWeight="Bold"/>
             </toolkit:DockPanel>
         </Border>
+        <TextBlock Text="There are no recent queries" FontStyle="Italic" Foreground="Gray" Margin="0,5" 
+                   HorizontalAlignment="Center"
+                   Grid.Row="3"
+                   Visibility="{Binding RecentQueries.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"/>
         <ItemsControl ItemsSource="{Binding RecentQueries}"
                       Grid.Row="3"
                       Style="{StaticResource Style_ItemsControl_VerticallyScrollable}"
-                      MaxHeight="300">
+                      MaxHeight="300"
+                      Visibility="{Binding RecentQueries.Count, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="Query:SavedQuery">
                     <toolkit:DockPanel>
@@ -130,5 +136,6 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
+
     </Grid>
 </Infrastructure:View>
