@@ -21,6 +21,43 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="QueryButtonStyle" TargetType="Button" BasedOn="{StaticResource Style_Button_MouseOverChrome}">
+            <Setter Property="Command" Value="{Binding Path=DataContext.GoToQuery, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+            <Setter Property="CommandParameter" Value="{Binding}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="2,4,4,4"/>
+            <Setter Property="Content" Value="{Binding}"/>
+            <Setter Property="ContentTemplate">
+              <Setter.Value>
+                    <DataTemplate DataType="Query:SavedQuery">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Image Source="{StaticResource Image_Query_Small}" VerticalAlignment="Top" Grid.Row="0" Grid.Column="0"
+                                       Margin="0,0,4,0"/>
+                            <TextBlock Text="{Binding IndexName}"
+                                           Behaviors:FadeTrimming.IsEnabled="True" 
+                                           Grid.Row="0" Grid.Column="1" VerticalAlignment="Top"/>
+                            <Editors:QuerySyntaxTextBlock Text="{Binding Query, Converter={StaticResource StringToSingleLine}}"  Grid.Row="1" Grid.Column="1" Margin="0,2,0,0" 
+                                                          Visibility="{Binding Query, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,2,0,0" 
+                                                          Visibility="{Binding IsSpatialQuery, Converter={StaticResource BooleanToVisibility}}"
+                                       FontStyle="Italic">
+                                Longitude: <Run Text="{Binding Longitude}"/>, Latitude: <Run Text="{Binding Latitude}"/>, Radius: <Run Text="{Binding Radius}"/>
+                            </TextBlock>
+                        </Grid>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Infrastructure:View.Resources>
     
     <Grid x:Name="LayoutRoot" Background="White" Width="700" TextOptions.TextHintingMode="Animated">
@@ -49,29 +86,10 @@
                                 VerticalAlignment="Center">
                             <Image Source="{StaticResource Image_UnPin_Tiny}" Stretch="None"/>
                         </Button>
-                        <Button Command="{Binding Path=DataContext.GoToQuery, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                CommandParameter="{Binding}"
-                                HorizontalContentAlignment="Stretch"
-                                Style="{StaticResource Style_Button_MouseOverChrome}" Padding="2,4,4,4">
+                        <Button Style="{StaticResource QueryButtonStyle}" Padding="2,4,4,4">
                             <ToolTipService.ToolTip>
                                 <ToolTip Style="{StaticResource QueryToolTipStyle}" Content="{Binding Query}"/>
                             </ToolTipService.ToolTip>
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Image Source="{StaticResource Image_Query_Small}" VerticalAlignment="Top" Grid.Row="0" Grid.Column="0"
-                                       Margin="0,0,4,0"/>
-                                <TextBlock Text="{Binding IndexName}"
-                                           Behaviors:FadeTrimming.IsEnabled="True" 
-                                           Grid.Row="0" Grid.Column="1" VerticalAlignment="Top"/>
-                                <Editors:QuerySyntaxTextBlock Text="{Binding Query, Converter={StaticResource StringToSingleLine}}"  Grid.Row="1" Grid.Column="1" Margin="0,2,0,0"  />
-                            </Grid>
                         </Button>
                     </toolkit:DockPanel>
                 </DataTemplate>
@@ -108,31 +126,12 @@
                                 VerticalAlignment="Center">
                             <Image Source="{StaticResource Image_Pin_Tiny}" Stretch="None"/>
                         </Button>
-                        <Button Command="{Binding Path=DataContext.GoToQuery, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                CommandParameter="{Binding}"
-                                HorizontalContentAlignment="Stretch"
-                                Style="{StaticResource Style_Button_MouseOverChrome}" Padding="2,4,4,4">
+                        <Button Style="{StaticResource QueryButtonStyle}" Padding="2,4,4,4">
                             <ToolTipService.ToolTip>
                                 <ToolTip Style="{StaticResource QueryToolTipStyle}" Content="{Binding Query}"/>
                             </ToolTipService.ToolTip>
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Image Source="{StaticResource Image_Query_Small}" VerticalAlignment="Top" Grid.Row="0" Grid.Column="0"
-                                       Margin="0,0,4,0"/>
-                                <TextBlock Text="{Binding IndexName}"
-                                           Behaviors:FadeTrimming.IsEnabled="True" 
-                                           Grid.Row="0" Grid.Column="1" VerticalAlignment="Top"/>
-                                <Editors:QuerySyntaxTextBlock Text="{Binding Query, Converter={StaticResource StringToSingleLine}}"  Grid.Row="1" Grid.Column="1" Margin="0,2,0,0"  />
-                            </Grid>
                         </Button>
-                        </toolkit:DockPanel>
+                    </toolkit:DockPanel>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

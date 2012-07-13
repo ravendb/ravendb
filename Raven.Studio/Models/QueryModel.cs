@@ -54,6 +54,11 @@ namespace Raven.Studio.Models
 			set
 			{
 				isSpatialQuerySupported = value;
+                if (!isSpatialQuerySupported)
+                {
+                    IsSpatialQuery = false;
+                }
+
 				OnPropertyChanged(() => IsSpatialQuerySupported);
 			}
 		}
@@ -65,6 +70,13 @@ namespace Raven.Studio.Models
 			set
 			{
 				isSpatialQuery = value;
+                if (!isSpatialQuery)
+                {
+                    Latitude = null;
+                    Longitude = null;
+                    Radius = null;
+                }
+
 				OnPropertyChanged(() => IsSpatialQuery);
 			}
 		}
@@ -372,6 +384,8 @@ namespace Raven.Studio.Models
 		{
 			var urlParser = new UrlParser(parameters);
 
+	        ClearCurrentQuery();
+
 			if (urlParser.GetQueryParam("mode") == "dynamic")
 			{
 			    var collection = urlParser.GetQueryParam("collection");
@@ -423,6 +437,16 @@ namespace Raven.Studio.Models
 				}).Catch();
 		}
 
+	    private void ClearCurrentQuery()
+	    {
+	        Query = string.Empty;
+            SortBy.Clear();
+	        IsSpatialQuery = false;
+	        Latitude = null;
+	        Longitude = null;
+	        Radius = null;
+	    }
+
 	    public bool HasTransform
 	    {
             get { return hasTransform; }
@@ -435,7 +459,7 @@ namespace Raven.Studio.Models
 
 	    public void RememberHistory()
 	    {
-            var state = new QueryState(IndexName, Query, SortBy.Select(r => r.Value));
+            var state = new QueryState(IndexName, Query, SortBy.Select(r => r.Value), IsSpatialQuery, Latitude, Longitude, Radius);
 
             PerDatabaseState.QueryHistoryManager.StoreQuery(state);
 		}
@@ -473,6 +497,11 @@ namespace Raven.Studio.Models
 	        try
 	        {
 	            Query = state.Query;
+	            IsSpatialQuery = state.IsSpatialQuery;
+	            Latitude = state.Latitude;
+	            Longitude = state.Longitude;
+	            Radius = state.Radius;
+
 	            SortBy.Clear();
 
 	            foreach (var sortOption in state.SortOptions)

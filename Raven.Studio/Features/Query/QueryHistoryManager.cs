@@ -209,7 +209,7 @@ namespace Raven.Studio.Features.Query
 
         private static QueryState ToQueryState(SavedQuery savedQuery)
         {
-            return new QueryState(savedQuery.IndexName, savedQuery.Query, savedQuery.SortOptions);
+            return new QueryState(savedQuery.IndexName, savedQuery.Query, savedQuery.SortOptions, savedQuery.IsSpatialQuery, savedQuery.Latitude, savedQuery.Longitude, savedQuery.Radius);
         }
 
         public IEnumerable<SavedQuery> RecentQueries
