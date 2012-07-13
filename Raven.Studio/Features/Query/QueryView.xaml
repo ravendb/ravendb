@@ -245,7 +245,15 @@
 
 					<StackPanel Visibility="{Binding IsSpatialQuerySupported, Converter={StaticResource BooleanToVisibility}}"
 								Margin="0,5">
-						<CheckBox Content="Make spatial queries"
+
+                        <i:Interaction.Triggers>
+                            <Behaviors:StudioKeyTrigger Key="Enter"
+									   Modifiers="Control">
+                                <i:InvokeCommandAction Command="{Binding Execute}" />
+                            </Behaviors:StudioKeyTrigger>
+                        </i:Interaction.Triggers>
+                        
+                        <CheckBox Content="Make spatial queries"
 								  Foreground="{StaticResource Brush_ContrastColor}"
 								  IsChecked="{Binding IsSpatialQuery, Mode=TwoWay}" />
 
@@ -259,7 +267,7 @@
 									 Text="{Binding Longitude, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 									 VerticalAlignment="Center" />
 
-							<TextBlock Text="Latitude:"
+						  <TextBlock Text="Latitude:"
 									   VerticalAlignment="Center" />
 							<TextBox Margin="5,0,5,0"
 									 Width="100"
