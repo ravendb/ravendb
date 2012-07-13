@@ -6,51 +6,6 @@
              xmlns:syntaxeditor="http://schemas.actiprosoftware.com/winfx/xaml/syntaxeditor" mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="400">
     
-    <UserControl.Resources>
-        <Style TargetType="syntaxeditor:SyntaxEditor">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="CaretBrush" Value="Transparent" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="SelectionBackgroundActive" Value="Transparent" />
-            <Setter Property="SelectionBackgroundInactive" Value="Transparent" />
-            <Setter Property="VisibleWhitespaceForeground" Value="Transparent" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="syntaxeditor:SyntaxEditor">
-
-                        <Border x:Name="background" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-							Background="{TemplateBinding Background}" Margin="{TemplateBinding Padding}">
-                            <syntaxeditor:EditorViewHost x:Name="PART_EditorViewHost" />
-                        </Border>
-
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- editorPrimitives:EditorView -->
-        <Style TargetType="syntaxeditor:EditorView">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="syntaxeditor:EditorView">
-
-                        <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-							Background="{TemplateBinding Background}" Margin="{TemplateBinding Padding}">
-                            <ContentPresenter Content="{TemplateBinding Content}" />
-                        </Border>
-
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </UserControl.Resources>
-    <syntaxeditor:SyntaxEditor x:Name="Editor" 
-                               Background="Transparent" 
-                               IsMultiLine="False"
-                               />
+    <RichTextBlock x:Name="TextBlock" FontFamily="Consolas, Courier New" 
+                   IsHitTestVisible="False"/>
 </UserControl>
