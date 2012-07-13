@@ -178,6 +178,9 @@
     <Compile Include="Controls\BusynessIndicator.xaml.cs">
       <DependentUpon>BusynessIndicator.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\Editors\QuerySyntaxTextBlock.xaml.cs">
+      <DependentUpon>QuerySyntaxTextBlock.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\GoToDocumentControl.xaml.cs">
       <DependentUpon>GoToDocumentControl.xaml</DependentUpon>
     </Compile>
@@ -606,6 +609,10 @@
     <Page Include="Controls\BusynessIndicator.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\Editors\QuerySyntaxTextBlock.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\GoToDocumentControl.xaml">
       <SubType>Designer</SubType>

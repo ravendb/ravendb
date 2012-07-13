@@ -12,6 +12,8 @@ namespace Raven.Studio.Controls.Editors
     {
 		public QueryEditor()
 		{
+		    IsSelectionMarginVisible = false;
+		    IsOutliningMarginVisible = false;
 			AreLineModificationMarksVisible = false;
 
 			foreach (var key in InputBindings.Where(x => x.Key == Key.Enter && x.Modifiers == ModifierKeys.Control).ToList())

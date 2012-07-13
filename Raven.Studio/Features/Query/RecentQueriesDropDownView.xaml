@@ -7,10 +7,11 @@
           xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
                      xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
                      xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-                     xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit" mc:Ignorable="d"
+                     xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                     xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors" mc:Ignorable="d"
     d:DesignHeight="300" d:DesignWidth="600" d:DataContext="{d:DesignInstance Query:RecentQueriesModel}">
     
-    <Grid x:Name="LayoutRoot" Background="White" Width="600">
+    <Grid x:Name="LayoutRoot" Background="White" Width="700">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto" />
@@ -44,7 +45,7 @@
                                 <StackPanel Margin="6,0,0,0" VerticalAlignment="Top">
                                     <TextBlock Text="{Binding IndexName}"
                                                Behaviors:FadeTrimming.IsEnabled="True" />
-                                    <TextBlock Text="{Binding Query}" Margin="0,4,0,0" />
+                                    <Editors:QuerySyntaxTextBlock Text="{Binding Query}" Margin="0,4,0,0" />
                                 </StackPanel>
                             </StackPanel>
                         </Button>
@@ -80,16 +81,24 @@
                         </Button>
                         <Button Command="{Binding Path=DataContext.GoToQuery, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                 CommandParameter="{Binding}"
-                                HorizontalContentAlignment="Left"
+                                HorizontalContentAlignment="Stretch"
                                 Style="{StaticResource Style_Button_MouseOverChrome}" Padding="2,4,4,4">
-                            <StackPanel Orientation="Horizontal">
-                                <Image Source="{StaticResource Image_Query_Small}" VerticalAlignment="Top"/>
-                                <StackPanel Margin="6,0,0,0" VerticalAlignment="Top">
-                                    <TextBlock Text="{Binding IndexName}"
-                                               Behaviors:FadeTrimming.IsEnabled="True" />
-                                    <TextBlock Text="{Binding Query}" Margin="0,4,0,0" />
-                                </StackPanel>
-                            </StackPanel>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Source="{StaticResource Image_Query_Small}" VerticalAlignment="Top" Grid.Row="0" Grid.Column="0"
+                                       Margin="0,0,4,0"/>
+                                <TextBlock Text="{Binding IndexName}"
+                                           Behaviors:FadeTrimming.IsEnabled="True" 
+                                           Grid.Row="0" Grid.Column="1" VerticalAlignment="Top"/>
+                                <Editors:QuerySyntaxTextBlock Text="{Binding Query}"  Grid.Row="1" Grid.Column="1" Margin="0,2,0,0"  />
+                            </Grid>
                         </Button>
                         </toolkit:DockPanel>
                 </DataTemplate>
