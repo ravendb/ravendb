@@ -12,13 +12,13 @@ using System.Reflection;
 using System.IO;
 using IronJS.Hosting;
 using Newtonsoft.Json;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Json
 {
-    //TODO 
-    // Need to have a way for the user to specify the current status of the doc
-    // then we can throw a ConcurrencyException is the doc is different, see
-    // EnsurePreviousValueMatchCurrentValue(..) in JsonPatcher.cs
+	//TODO Need to have a way for the user to specify the current status of the doc
+	// then we can throw a ConcurrencyException is the doc is different, see
+	// EnsurePreviousValueMatchCurrentValue(..) in JsonPatcher.cs
 	public class AdvancedJsonPatcher
 	{
 		private RavenJObject document;
@@ -36,9 +36,10 @@ namespace Raven.Database.Json
 			this.batchApply = true;
 		}
 
-		public RavenJObject Apply(string script)
+		public RavenJObject Apply(AdvancedPatchRequest patch)
 		{
-			ApplyImpl(script);
+			//TODO check that patch.PrevVal is valid (or null)
+			ApplyImpl(patch.Script);
 			return document;
 		}
 

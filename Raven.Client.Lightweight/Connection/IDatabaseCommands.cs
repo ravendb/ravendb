@@ -253,8 +253,8 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
-		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript);
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, AdvancedPatchRequest patch);
 
 		/// <summary>
 		/// Perform a set based update using the specified index
@@ -270,9 +270,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
+        /// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript, bool allowStale);
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, AdvancedPatchRequest patch, bool allowStale);
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
@@ -317,8 +317,8 @@ namespace Raven.Client.Connection
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
-		/// <param name="patchScript">Javascript code to use to patch the doc</param>
-		void Patch(string key, string patchScript);
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		void Patch(string key, AdvancedPatchRequest patch);
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -332,9 +332,9 @@ namespace Raven.Client.Connection
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
-		/// <param name="patchScript">Javascript code to use to patch the doc</param>
+        /// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		void Patch(string key, string patchScript, Guid? etag);
+		void Patch(string key, AdvancedPatchRequest patch, Guid? etag);
 
 		/// <summary>
 		/// Disable all caching within the given scope

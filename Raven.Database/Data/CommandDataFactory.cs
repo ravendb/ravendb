@@ -53,7 +53,7 @@ namespace Raven.Database.Data
 						Key = key,
 						Etag = GetEtagFromCommand(jsonCommand),
 						TransactionInformation = transactionInformation,
-						PatchScript = jsonCommand.Value<String>("Script")
+						Patch = AdvancedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("Patch"))
 					};
 				default:
 					throw new ArgumentException("Batching only supports PUT, PATCH, ADVANCEDPATCH and DELETE.");

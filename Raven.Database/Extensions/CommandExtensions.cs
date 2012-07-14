@@ -47,7 +47,7 @@ namespace Raven.Database.Extensions
 			if (advPatchCommandData != null)
 			{
 				database.ApplyPatch(advPatchCommandData.Key, advPatchCommandData.Etag,
-									advPatchCommandData.PatchScript, advPatchCommandData.TransactionInformation);
+									advPatchCommandData.Patch, advPatchCommandData.TransactionInformation);
 
 				var doc = database.Get(advPatchCommandData.Key, advPatchCommandData.TransactionInformation);
 				if (doc != null)

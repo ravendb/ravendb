@@ -37,7 +37,7 @@ namespace Raven.Tests.Patching
 		[Fact]
 		public void CanApplyBasicScriptAsPatch()
 		{
-			var resultJson = new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(sampleScript);
+			var resultJson = new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest { Script = sampleScript });
 			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
 			Assert.Equal("Something new", result.Id);
@@ -99,8 +99,8 @@ namespace Raven.Tests.Patching
 				s.Store(test);
 				s.SaveChanges();
 			}
-			
-			store.DatabaseCommands.Patch(test.Id, sampleScript);
+
+			store.DatabaseCommands.Patch(test.Id, new AdvancedPatchRequest { Script = sampleScript });
 
 			// TODO this is wierd, we can change the Id in the Json to something other than the Key
 			// so we end up with a do that we can load via "someId" but result.Id = "Something new"
@@ -154,7 +154,7 @@ namespace Raven.Tests.Patching
 
 			store.DatabaseCommands.UpdateByIndex("TestIndex",
 											new IndexQuery { Query = "Owner:Bob" },
-											sampleScript);
+											new AdvancedPatchRequest { Script = sampleScript });
 
 			var item1ResultJson = store.DatabaseCommands.Get(item1.Id).DataAsJson;
 			var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());

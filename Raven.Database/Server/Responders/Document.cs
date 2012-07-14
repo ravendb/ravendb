@@ -67,6 +67,7 @@ namespace Raven.Database.Server.Responders
 					break;
 				case "ADVANCEDPATCH":
 					//TODO fix this so that AdvancedPatching works in single doc mode (not batches)
+					//Not sure how to write a test to exercise this though (Patch and UpdateByIndex in Server/Client go via DocumentBatch.cs)
 					var advPatchRequestJson = context.ReadJsonArray();
 					//var advPatchRequests = advPatchRequestJson.Cast<RavenJObject>().Select(AdvancedPatchRequest.FromJson).ToArray();
 					//var advPatchResult = Database.ApplyPatch(docId, context.GetEtag(), advPatchRequests, GetRequestTransaction(context));

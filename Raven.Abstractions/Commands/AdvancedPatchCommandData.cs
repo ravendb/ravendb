@@ -16,10 +16,13 @@ namespace Raven.Abstractions.Commands
 	public class AdvancedPatchCommandData : ICommandData
 	{
 		/// <summary>
-		/// Gets or sets the JavaScript that is used to patch the document
+		/// Gets or sets the AdvancedPatchRequest (using JavaScript) that is used to patch the document
 		/// </summary>
 		/// <value>The Script.</value>
-		public string PatchScript{ get; set;}
+		public AdvancedPatchRequest Patch 
+		{ 
+			get; set; 
+		}
 
 		/// <summary>
 		/// Gets the key.
@@ -67,7 +70,7 @@ namespace Raven.Abstractions.Commands
 					{
 						{"Key", Key},
 						{"Method", Method},
-						{"Script", PatchScript}
+						{"Patch", RavenJObject.FromObject(Patch)}
 					};
 			if (Etag != null)
 				ret.Add("Etag", Etag.ToString());

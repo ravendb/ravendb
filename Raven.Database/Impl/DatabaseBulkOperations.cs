@@ -44,11 +44,11 @@ namespace Raven.Database.Impl
 			});
 		}
 
-		public RavenJArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript, bool allowStale)
+		public RavenJArray UpdateByIndex(string indexName, IndexQuery queryToUpdate, AdvancedPatchRequest patch, bool allowStale)
 		{
 			return PerformBulkOperation(indexName, queryToUpdate, allowStale, (docId, tx) =>
 			{
-				var patchResult = database.ApplyPatch(docId, null, patchScript, tx);
+				var patchResult = database.ApplyPatch(docId, null, patch, tx);
 				return new { Document = docId, Result = patchResult };
 			});
 		}

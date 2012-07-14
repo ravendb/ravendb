@@ -1120,11 +1120,11 @@ namespace Raven.Database
 							}));
 		}
 
-		public PatchResult ApplyPatch(string docId, Guid? etag, string patchScript, TransactionInformation transactionInformation)
+		public PatchResult ApplyPatch(string docId, Guid? etag, AdvancedPatchRequest patch, TransactionInformation transactionInformation)
 		{
 			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc =>
 			{
-				return new AdvancedJsonPatcher(jsonDoc).Apply(patchScript);
+				return new AdvancedJsonPatcher(jsonDoc).Apply(patch);
 			});
 		}
 

@@ -521,10 +521,10 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript)
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, AdvancedPatchRequest patch)
 		{
-			UpdateByIndex(indexName, queryToUpdate, patchScript, false);
+			UpdateByIndex(indexName, queryToUpdate, patch, false);
 		}		
 
 		/// <summary>
@@ -546,13 +546,13 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patchScript">The JavaScript to use for patch requests.</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, string patchScript, bool allowStale)
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, AdvancedPatchRequest patch, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
-			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchScript, allowStale);
+			databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
 		}
 
 		/// <summary>
@@ -648,10 +648,10 @@ namespace Raven.Client.Embedded
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
-		/// <param name="patchScript">Javascript code to use to patch the doc</param>
-		public void Patch(string key, string patchScript)
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		public void Patch(string key, AdvancedPatchRequest patch)
 		{
-			Patch(key, patchScript, null);
+			Patch(key, patch, null);
 		}
 
 		/// <summary>
@@ -677,16 +677,16 @@ namespace Raven.Client.Embedded
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
-		/// <param name="patchScript">Javascript code to use to patch the doc</param>
+        /// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		public void Patch(string key, string patchScript, Guid? etag)
+		public void Patch(string key, AdvancedPatchRequest patch, Guid? etag)
 		{
 			Batch(new[]
 					{
 						new AdvancedPatchCommandData 
 								{ 
 									Key = key,  
-									PatchScript = patchScript, 
+									Patch = patch,
 									Etag = etag
 								}
 					});

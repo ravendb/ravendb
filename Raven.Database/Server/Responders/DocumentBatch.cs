@@ -47,11 +47,10 @@ namespace Raven.Database.Server.Responders
 						databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale));
 					break;
 				case "ADVANCEDPATCH":
-					//TODO find a better way of doing this, withoug the dynamic funkiness
-					var advPatchRequestJson = context.ReadJsonObject<dynamic>();
-					var advPatchScript = advPatchRequestJson.Script.ToString();                    
+					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
+					var advPatch = AdvancedPatchRequest.FromJson(advPatchRequestJson);
 					OnBulkOperation(context, (index, query, allowStale) =>
-						databaseBulkOperations.UpdateByIndex(index, query, advPatchScript, allowStale));
+						databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale));
 					break;
 			}
 		}
