@@ -1198,7 +1198,7 @@ namespace Raven.Database
 			var shouldLock = commandDatas.Any(x => (x is PutCommandData || x is PatchCommandData || x is AdvancedPatchCommandData));
 			var shouldRetryIfGotConcurrencyError = commandDatas.All(x => (x is PatchCommandData || x is AdvancedPatchCommandData));
 			bool shouldRetry = false;
-			if(shouldLock)
+			if (shouldLock)
 				Monitor.Enter(putSerialLock);
 			try
 			{

@@ -47,7 +47,8 @@ namespace Raven.Database.Server.Responders
 						databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale));
 					break;
 				case "ADVANCEDPATCH":
-					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
+					//var advPatchRequestJson = context.ReadJsonObject<RavenJArray>();
+                    var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
 					var advPatch = AdvancedPatchRequest.FromJson(advPatchRequestJson);
 					OnBulkOperation(context, (index, query, allowStale) =>
 						databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale));
@@ -70,7 +71,6 @@ namespace Raven.Database.Server.Responders
 			var array = batchOperation(index, indexQuery, allowStale);
 
 			context.WriteJson(array);
-
 		}
 		
 		private void Batch(IHttpContext context)
@@ -84,7 +84,7 @@ namespace Raven.Database.Server.Responders
 
 			context.Log(log => log.Debug(()=>
 			{
-				if(commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
+				if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
 				{
 					return "\tExecuted " + string.Join(", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key)));
 				}

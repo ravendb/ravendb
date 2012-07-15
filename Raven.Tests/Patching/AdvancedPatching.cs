@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Tests.Patching
 {
@@ -61,6 +62,19 @@ namespace Raven.Tests.Patching
 			}
 		}
 
+        [Fact]
+        public void CanPerformAdvancedPatchingWithConcurrencyException_Remotely()
+        {
+            using (var server = GetNewServer(port: 8079))
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8079"
+            }.Initialize())
+            {
+                ExecuteConcurrencyExceptionTest(store);
+            }
+        }
+
 		[Fact]
 		public void CanPerformAdvancedPatching_Embedded()
 		{
@@ -69,6 +83,15 @@ namespace Raven.Tests.Patching
 				ExecuteTest(store);
 			}
 		}
+
+        [Fact]
+        public void CanPerformAdvancedPatchingWithConcurrencyException_Embedded()
+        {
+            using (var store = NewDocumentStore())
+            {
+                ExecuteConcurrencyExceptionTest(store);
+            }
+        }
 
 		[Fact]
 		public void CanPerformAdvancedWithSetBasedUpdates_Remotely()
@@ -117,6 +140,21 @@ namespace Raven.Tests.Patching
 			Assert.Equal(12144, result.Value);
 			Assert.Equal("err!!", resultJson["newValue"]);
 		}
+
+        private void ExecuteConcurrencyExceptionTest(IDocumentStore store)
+        {
+            using (var s = store.OpenSession())
+            {
+                s.Store(test);
+                s.SaveChanges();
+            }
+
+            //Delibrately set the prevVal Json to something else, so it throws
+            var testAsJson = RavenJObject.FromObject(test);
+            testAsJson["Value"] = 999;
+            Assert.Throws<ConcurrencyException>(() =>
+            store.DatabaseCommands.Patch(test.Id, new AdvancedPatchRequest { Script = sampleScript, PrevVal = testAsJson }));
+        }
 
 		private void ExecuteSetBasedTest(IDocumentStore store)
 		{

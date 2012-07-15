@@ -13,12 +13,11 @@ using System.IO;
 using IronJS.Hosting;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using IronJS;
 
 namespace Raven.Database.Json
-{
-	//TODO Need to have a way for the user to specify the current status of the doc
-	// then we can throw a ConcurrencyException is the doc is different, see
-	// EnsurePreviousValueMatchCurrentValue(..) in JsonPatcher.cs
+{	
 	public class AdvancedJsonPatcher
 	{
 		private RavenJObject document;
@@ -37,8 +36,14 @@ namespace Raven.Database.Json
 		}
 
 		public RavenJObject Apply(AdvancedPatchRequest patch)
-		{
-			//TODO check that patch.PrevVal is valid (or null)
+		{			
+            EnsurePreviousValueMatchCurrentValue(patch, document);
+            if (document == null)
+                return document;
+
+            if (String.IsNullOrEmpty(patch.Script))
+                throw new InvalidOperationException("Patch script must be non-null and not empty");
+
 			ApplyImpl(patch.Script);
 			return document;
 		}
@@ -90,18 +95,18 @@ json_data = JSON.stringify(doc);", doc, script, script.EndsWith(";") ? String.Em
 				result = ctx.Execute(wrapperScript);
 				return RavenJObject.Parse(ctx.GetGlobalAs<string>("json_data"));
 			}
-			catch (IronJS.UserError uEx)
+			catch (UserError uEx)
 			{
-
+                throw;
 			}
-			catch (IronJS.Error.Error errorEx)
+			catch (Error.Error errorEx)
 			{
-
+                throw;
 			}			
 			return null;
 		}
 
-		internal string GetFromResources(string resourceName)
+		private string GetFromResources(string resourceName)
 		{
 			Assembly assem = this.GetType().Assembly;
 			using (Stream stream = assem.GetManifestResourceStream(resourceName))
@@ -112,5 +117,25 @@ json_data = JSON.stringify(doc);", doc, script, script.EndsWith(";") ? String.Em
 				}
 			}
 		}
+
+        private static void EnsurePreviousValueMatchCurrentValue(AdvancedPatchRequest patchCmd, RavenJObject document)
+        {
+            var prevVal = patchCmd.PrevVal;
+            if (prevVal == null)
+                return;
+            switch (prevVal.Type)
+            {
+                //case JsonToken.Undefined
+                //    if (document != null)
+                //        throw new ConcurrencyException();
+                //    break;
+                default:
+                    if (document == null)
+                        throw new ConcurrencyException();
+                    if (RavenJObject.DeepEquals(document, prevVal) == false)
+                        throw new ConcurrencyException();
+                    break;
+            }
+        }
 	}
 }
