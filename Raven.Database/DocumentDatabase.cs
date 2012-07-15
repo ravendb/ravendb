@@ -49,6 +49,9 @@ namespace Raven.Database
 	public class DocumentDatabase : IUuidGenerator, IDisposable
 	{
 		[ImportMany]
+		public OrderedPartCollection<IStartupTask> StartupTasks { get; set; }
+
+		[ImportMany]
 		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
 
 		[ImportMany]
@@ -75,7 +78,7 @@ namespace Raven.Database
 		[ImportMany]
 		public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
 
-		private List<IDisposable> toDispose = new List<IDisposable>();
+		private readonly List<IDisposable> toDispose = new List<IDisposable>();
 
 		/// <summary>
 		/// The name of the database.
@@ -233,12 +236,12 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
-			foreach (var task in Configuration.Container.GetExportedValues<IStartupTask>())
+			foreach (var task in StartupTasks)
 			{
 				var disposable = task as IDisposable;
 				if(disposable != null)
 					toDispose.Add(disposable);
-				task.Execute(this);
+				task.Value.Execute(this);
 			}
 		}
 
