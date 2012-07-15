@@ -603,6 +603,8 @@ more responsive application.
 			var metadata = new RavenJObject();
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
+			if (id != null)
+				knownMissingIds.Remove(id);
 			StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
 		}
 
