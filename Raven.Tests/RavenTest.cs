@@ -77,6 +77,11 @@ namespace Raven.Tests
 
 		}
 
+		protected virtual void ModifyStore(DocumentStore documentStore)
+		{
+
+		}
+
 		static public void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore)
 		{
 			if (Debugger.IsAttached == false)
@@ -233,6 +238,19 @@ namespace Raven.Tests
 			var timeTaken = SystemTime.Now.Subtract(startTime);
 			Console.WriteLine("Time take (ms)- " + timeTaken.TotalMilliseconds);
 			return timeTaken.TotalMilliseconds;
+		}
+
+		public IDocumentStore NewRemoteDocumentStore()
+		{
+			var ravenDbServer = GetNewServer();
+			var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			};
+
+			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
+			ModifyStore(store);
+			return store.Initialize();
 		}
 
 		public virtual void Dispose()
