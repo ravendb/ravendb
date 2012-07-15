@@ -141,7 +141,7 @@ namespace Raven.Database.Queries
 							explain(indexName, () =>
 												{
 													var missingFields =
-														normalizedFieldsQueriedUpon.Where(abstractViewGenerator.ContainsFieldOnMap);
+														normalizedFieldsQueriedUpon.Where(s => abstractViewGenerator.ContainsFieldOnMap(s) == false);
 													return "The following fields are missing: " + string.Join(", ", missingFields);
 												});
 							return false;
