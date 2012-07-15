@@ -23,6 +23,7 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly bool waitForNonStaleResults;
 		private readonly TimeSpan timeout;
 		private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults;
+		private readonly HashSet<string> includes;
 		private QueryResult currentQueryResults;
 		private readonly string[] projectionFields;
 		private bool firstRequest = true;
@@ -44,15 +45,7 @@ namespace Raven.Client.Document.SessionOperations
 
 		private Stopwatch sp;
 
-		public QueryOperation(InMemoryDocumentSessionOperations sessionOperations,
-			string indexName,
-			IndexQuery indexQuery,
-			string[] projectionFields,
-			HashSet<KeyValuePair<string, Type>> sortByHints,
-			bool waitForNonStaleResults,
-			Action<string, string> setOperationHeaders,
-			TimeSpan timeout,
-			Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults)
+		public QueryOperation(InMemoryDocumentSessionOperations sessionOperations, string indexName, IndexQuery indexQuery, string[] projectionFields, HashSet<KeyValuePair<string, Type>> sortByHints, bool waitForNonStaleResults, Action<string, string> setOperationHeaders, TimeSpan timeout, Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults, HashSet<string> includes)
 		{
 			this.indexQuery = indexQuery;
 			this.sortByHints = sortByHints;
@@ -60,6 +53,7 @@ namespace Raven.Client.Document.SessionOperations
 			this.setOperationHeaders = setOperationHeaders;
 			this.timeout = timeout;
 			this.transformResults = transformResults;
+			this.includes = includes;
 			this.projectionFields = projectionFields;
 			this.sessionOperations = sessionOperations;
 			this.indexName = indexName;
@@ -114,6 +108,8 @@ namespace Raven.Client.Document.SessionOperations
 			var list = queryResult.Results
 				.Select(Deserialize<T>)
 				.ToList();
+
+			sessionOperations.RegisterMissingIncludes(queryResult.Results, includes);
 
 			if (transformResults == null)
 				return list;

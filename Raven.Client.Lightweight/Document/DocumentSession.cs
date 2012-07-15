@@ -206,7 +206,10 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		public T Load<T>(string id)
 		{
-			if (id == null) throw new ArgumentNullException("id", "The document id cannot be null");
+			if (id == null) 
+				throw new ArgumentNullException("id", "The document id cannot be null");
+			if (IsDeleted(id))
+				return default(T);
 			object existingEntity;
 			if (entitiesByKey.TryGetValue(id, out existingEntity))
 			{
@@ -271,7 +274,7 @@ namespace Raven.Client.Document
 				return new T[0];
 
 			IncrementRequestCount();
-			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
+			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
 			MultiLoadResult multiLoadResult;
 			do
 			{
@@ -291,14 +294,14 @@ namespace Raven.Client.Document
 				return new T[0];
 
 			// only load documents that aren't already cached
-			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false)
+			var idsOfNotExistingObjects = ids.Where(id => IsLoaded(id) == false && IsDeleted(id) == false)
 				.Distinct(StringComparer.InvariantCultureIgnoreCase)
 				.ToArray();
 
 			if (idsOfNotExistingObjects.Length > 0)
 			{
 				IncrementRequestCount();
-				var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, idsOfNotExistingObjects);
+				var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, idsOfNotExistingObjects, null);
 				MultiLoadResult multiLoadResult;
 				do
 				{
@@ -320,6 +323,7 @@ namespace Raven.Client.Document
 			}).ToArray();
 		}
 
+		
 		/// <summary>
 		/// Queries the specified index using Linq.
 		/// </summary>
@@ -601,7 +605,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval)
 		{
-			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids);
+			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);
 			var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
 			return AddLazyOperation(lazyOp, onEval);
 		}

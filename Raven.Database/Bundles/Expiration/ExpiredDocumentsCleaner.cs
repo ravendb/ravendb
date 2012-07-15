@@ -9,6 +9,7 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
 using NLog;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -64,9 +65,8 @@ namespace Raven.Bundles.Expiration
 			executing = true;
 			try
 			{
-				string nowAsStr;
-				DateTime currentTime;
-				UpdateTimes(out nowAsStr, out currentTime);
+				DateTime currentTime = ExpirationReadTrigger.GetCurrentUtcDate();
+				string nowAsStr = currentTime.ToString(Default.DateTimeFormatsToWrite);
 				logger.Debug("Trying to find expired documents to delete");
 				var query = "Expiry:[* TO " + nowAsStr + "]";
 
@@ -112,12 +112,6 @@ namespace Raven.Bundles.Expiration
 				executing = false;
 			}
 
-		}
-
-		private static void UpdateTimes(out string nowAsStr, out DateTime currentTime)
-		{
-			currentTime = ExpirationReadTrigger.GetCurrentUtcDate();
-			nowAsStr = DateTools.DateToString(currentTime, DateTools.Resolution.SECOND);
 		}
 
 		/// <summary>

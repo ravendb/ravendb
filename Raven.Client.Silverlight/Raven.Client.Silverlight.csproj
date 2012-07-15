@@ -851,6 +851,9 @@
     <Compile Include="..\Raven.Abstractions\SystemTime.cs">
       <Link>Imports\SystemTime.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\IncludesUtil.cs">
+      <Link>Imports\Util\IncludesUtil.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
       <Link>Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
     </Compile>

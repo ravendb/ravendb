@@ -428,7 +428,8 @@ namespace Raven.Client.Document
 												theWaitForNonStaleResults,
 												setOperationHeaders,
 												timeout,
-												transformResultsFunc);
+												transformResultsFunc,
+												includes);
 		}
 
 #if !SILVERLIGHT

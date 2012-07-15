@@ -145,7 +145,7 @@ namespace Raven.Client.Shard
 					Keys = idsForCurrentShards
 				}, (commands, i) =>
 				{
-					var multiLoadOperation = new MultiLoadOperation(this, commands.DisableAllCaching, idsForCurrentShards);
+					var multiLoadOperation = new MultiLoadOperation(this, commands.DisableAllCaching, idsForCurrentShards, includes);
 
 					Func<Task<MultiLoadOperation>> executer = null;
 					executer = () =>
