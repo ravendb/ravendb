@@ -10,7 +10,6 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Bundles.Expiration;
 using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -41,7 +40,7 @@ namespace Raven.Bundles.Tests.Expiration
 						{
 							Catalogs =
 								{
-									new AssemblyCatalog(typeof (ExpirationReadTrigger).Assembly)
+									new AssemblyCatalog(typeof (database::Raven.Bundles.Expiration.ExpirationReadTrigger).Assembly)
 								}
 						},
 					Settings =
@@ -49,7 +48,7 @@ namespace Raven.Bundles.Tests.Expiration
 							{"Raven/Expiration/DeleteFrequencySeconds", "1"}
 						}
 				});
-			ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
+			database::Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
 			documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079"
@@ -98,7 +97,7 @@ namespace Raven.Bundles.Tests.Expiration
 				session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new RavenJValue(expiry);
 				session.SaveChanges();
 			}
-			ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
+			database::Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
 		   
 			using (var session = documentStore.OpenSession())
 			{
@@ -126,7 +125,7 @@ namespace Raven.Bundles.Tests.Expiration
 					.WaitForNonStaleResults()
 					.ToList();
 			}
-			ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
+			database::Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
 
 			using (var session = documentStore.OpenSession())
 			{

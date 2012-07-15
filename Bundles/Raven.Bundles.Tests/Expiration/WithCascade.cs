@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Bundles.CascadeDelete;
-using Raven.Bundles.Expiration;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Server;
@@ -36,7 +35,7 @@ namespace Raven.Bundles.Tests.Expiration
 						{
 							Catalogs =
 								{
-									new AssemblyCatalog(typeof (ExpirationReadTrigger).Assembly),
+									new AssemblyCatalog(typeof (database::Raven.Bundles.Expiration.ExpirationReadTrigger).Assembly),
 									new AssemblyCatalog(typeof(CascadeDeleteTrigger).Assembly)
 								}
 						},
@@ -45,7 +44,7 @@ namespace Raven.Bundles.Tests.Expiration
 							{"Raven/Expiration/DeleteFrequencySeconds", "1"}
 						}
 				});
-			ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
+			database::Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
 			documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079"
