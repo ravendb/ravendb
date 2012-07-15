@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Threading;
 using NLog;
@@ -16,6 +17,8 @@ using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Expiration
 {
+	[InheritedExport(typeof(IStartupTask))]
+	[ExportMetadata("Bundle", "Expiration")]
 	public class ExpiredDocumentsCleaner : IStartupTask, IDisposable
 	{
 		public const string RavenDocumentsByExpirationDate = "Raven/DocumentsByExpirationDate";

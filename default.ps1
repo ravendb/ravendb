@@ -456,10 +456,6 @@ task CreateNugetPackageFineGrained {
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.CascadeDelete.nuspec $nuget_dir\RavenDB.Bundles.CascadeDelete\RavenDB.Bundles.CascadeDelete.nuspec
 	@("Raven.Bundles.CascadeDelete.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.CascadeDelete\lib\net40 }
 	
-	New-Item $nuget_dir\RavenDB.Bundles.Expiration\lib\net40 -Type directory | Out-Null
-	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Expiration.nuspec $nuget_dir\RavenDB.Bundles.Expiration\RavenDB.Bundles.Expiration.nuspec
-	@("Raven.Bundles.Expiration.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Expiration\lib\net40 }
-	
 	New-Item $nuget_dir\RavenDB.Bundles.IndexReplication\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.IndexReplication.nuspec $nuget_dir\RavenDB.Bundles.IndexReplication\RavenDB.Bundles.IndexReplication.nuspec
 	@("Raven.Bundles.IndexReplication.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.IndexReplication\lib\net40 }

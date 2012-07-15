@@ -120,6 +120,8 @@
     </Compile>
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
+    <Compile Include="Bundles\Expiration\ExpirationReadTrigger.cs" />
+    <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
     <Compile Include="Bundles\Versioning\Data\VersioningConfiguration.cs" />
     <Compile Include="Bundles\Versioning\Triggers\HideVersionedDocumentsFromIndexingTrigger.cs" />
