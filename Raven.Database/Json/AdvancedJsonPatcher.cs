@@ -17,13 +17,13 @@ using Raven.Abstractions.Exceptions;
 using IronJS;
 
 namespace Raven.Database.Json
-{	
+{
 	public class AdvancedJsonPatcher
 	{
 		private RavenJObject document;
 		private RavenJObject [] documents;
 		private bool batchApply = false;
-				
+
 		public AdvancedJsonPatcher(RavenJObject document)
 		{
 			this.document = document;
@@ -36,13 +36,13 @@ namespace Raven.Database.Json
 		}
 
 		public RavenJObject Apply(AdvancedPatchRequest patch)
-		{			
-            EnsurePreviousValueMatchCurrentValue(patch, document);
-            if (document == null)
-                return document;
+		{
+			EnsurePreviousValueMatchCurrentValue(patch, document);
+			if (document == null)
+				return document;
 
-            if (String.IsNullOrEmpty(patch.Script))
-                throw new InvalidOperationException("Patch script must be non-null and not empty");
+			if (String.IsNullOrEmpty(patch.Script))
+				throw new InvalidOperationException("Patch script must be non-null and not empty");
 
 			ApplyImpl(patch.Script);
 			return document;
@@ -97,12 +97,12 @@ json_data = JSON.stringify(doc);", doc, script, script.EndsWith(";") ? String.Em
 			}
 			catch (UserError uEx)
 			{
-                throw;
+				throw;
 			}
 			catch (Error.Error errorEx)
 			{
-                throw;
-			}			
+				throw;
+			}
 			return null;
 		}
 
@@ -118,24 +118,16 @@ json_data = JSON.stringify(doc);", doc, script, script.EndsWith(";") ? String.Em
 			}
 		}
 
-        private static void EnsurePreviousValueMatchCurrentValue(AdvancedPatchRequest patchCmd, RavenJObject document)
-        {
-            var prevVal = patchCmd.PrevVal;
-            if (prevVal == null)
-                return;
-            switch (prevVal.Type)
-            {
-                //case JsonToken.Undefined
-                //    if (document != null)
-                //        throw new ConcurrencyException();
-                //    break;
-                default:
-                    if (document == null)
-                        throw new ConcurrencyException();
-                    if (RavenJObject.DeepEquals(document, prevVal) == false)
-                        throw new ConcurrencyException();
-                    break;
-            }
-        }
+		private static void EnsurePreviousValueMatchCurrentValue(AdvancedPatchRequest patchCmd, RavenJObject document)
+		{
+			var prevVal = patchCmd.PrevVal;
+			if (prevVal == null)
+				return;
+			
+			if (document == null)
+				throw new ConcurrencyException();
+			if (RavenJObject.DeepEquals(document, prevVal) == false)
+				throw new ConcurrencyException();
+		}
 	}
 }

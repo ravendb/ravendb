@@ -62,18 +62,18 @@ namespace Raven.Tests.Patching
 			}
 		}
 
-        [Fact]
-        public void CanPerformAdvancedPatchingWithConcurrencyException_Remotely()
-        {
-            using (var server = GetNewServer(port: 8079))
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
-            {
-                ExecuteConcurrencyExceptionTest(store);
-            }
-        }
+		[Fact]
+		public void CanPerformAdvancedPatchingWithConcurrencyException_Remotely()
+		{
+			using (var server = GetNewServer(port: 8079))
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				ExecuteConcurrencyExceptionTest(store);
+			}
+		}
 
 		[Fact]
 		public void CanPerformAdvancedPatching_Embedded()
@@ -84,14 +84,14 @@ namespace Raven.Tests.Patching
 			}
 		}
 
-        [Fact]
-        public void CanPerformAdvancedPatchingWithConcurrencyException_Embedded()
-        {
-            using (var store = NewDocumentStore())
-            {
-                ExecuteConcurrencyExceptionTest(store);
-            }
-        }
+		[Fact]
+		public void CanPerformAdvancedPatchingWithConcurrencyException_Embedded()
+		{
+			using (var store = NewDocumentStore())
+			{
+				ExecuteConcurrencyExceptionTest(store);
+			}
+		}
 
 		[Fact]
 		public void CanPerformAdvancedWithSetBasedUpdates_Remotely()
@@ -141,21 +141,6 @@ namespace Raven.Tests.Patching
 			Assert.Equal("err!!", resultJson["newValue"]);
 		}
 
-        private void ExecuteConcurrencyExceptionTest(IDocumentStore store)
-        {
-            using (var s = store.OpenSession())
-            {
-                s.Store(test);
-                s.SaveChanges();
-            }
-
-            //Delibrately set the prevVal Json to something else, so it throws
-            var testAsJson = RavenJObject.FromObject(test);
-            testAsJson["Value"] = 999;
-            Assert.Throws<ConcurrencyException>(() =>
-            store.DatabaseCommands.Patch(test.Id, new AdvancedPatchRequest { Script = sampleScript, PrevVal = testAsJson }));
-        }
-
 		private void ExecuteSetBasedTest(IDocumentStore store)
 		{
 			var item1 = new CustomType
@@ -195,8 +180,7 @@ namespace Raven.Tests.Patching
 											new AdvancedPatchRequest { Script = sampleScript });
 
 			var item1ResultJson = store.DatabaseCommands.Get(item1.Id).DataAsJson;
-			var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());
-			Console.WriteLine(item1ResultJson);
+			var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());			
 			Assert.Equal(2, item1Result.Comments.Count);
 			Assert.Equal("one test", item1Result.Comments[0]);
 			Assert.Equal("two", item1Result.Comments[1]);
@@ -204,8 +188,7 @@ namespace Raven.Tests.Patching
 			Assert.Equal("err!!", item1ResultJson["newValue"]);
 
 			var item2ResultJson = store.DatabaseCommands.Get(item2.Id).DataAsJson;
-			var item2Result = JsonConvert.DeserializeObject<CustomType>(item2ResultJson.ToString());
-			Console.WriteLine(item2ResultJson);
+			var item2Result = JsonConvert.DeserializeObject<CustomType>(item2ResultJson.ToString());			
 			//Assert.Equal(item2, item2Result);
 			var doc = store.DatabaseCommands.Get(item2.Id);
 			//TODO work out why the @id metadata item is missing here (when run in client server mode)?
@@ -216,6 +199,21 @@ namespace Raven.Tests.Patching
 			Assert.Equal("one", item2Result.Comments[0]);
 			Assert.Equal("two", item2Result.Comments[1]);
 			Assert.Equal("seven", item2Result.Comments[2]);
+		}
+
+		private void ExecuteConcurrencyExceptionTest(IDocumentStore store)
+		{
+			using (var s = store.OpenSession())
+			{
+				s.Store(test);
+				s.SaveChanges();
+			}
+
+			//Delibrately set the prevVal Json to something else, so it throws
+			var testAsJson = RavenJObject.FromObject(test);
+			testAsJson["Value"] = 999;
+			Assert.Throws<ConcurrencyException>(() =>
+			store.DatabaseCommands.Patch(test.Id, new AdvancedPatchRequest { Script = sampleScript, PrevVal = testAsJson }));
 		}
 
 		class CustomType
