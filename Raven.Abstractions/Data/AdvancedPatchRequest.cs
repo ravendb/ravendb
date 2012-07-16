@@ -28,8 +28,7 @@ namespace Raven.Abstractions.Data
 
 		public static AdvancedPatchRequest FromJson(RavenJObject patchRequestJson)
 		{
-			//return patchRequestJson.Cast<RavenJObject>().FirstOrDefault().JsonDeserialization<AdvancedPatchRequest>();
-            return patchRequestJson.JsonDeserialization<AdvancedPatchRequest>();
+			return patchRequestJson.JsonDeserialization<AdvancedPatchRequest>();
 		}
 	}
 }

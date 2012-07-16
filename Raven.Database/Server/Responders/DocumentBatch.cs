@@ -47,8 +47,7 @@ namespace Raven.Database.Server.Responders
 						databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale));
 					break;
 				case "ADVANCEDPATCH":
-					//var advPatchRequestJson = context.ReadJsonObject<RavenJArray>();
-                    var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
+					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
 					var advPatch = AdvancedPatchRequest.FromJson(advPatchRequestJson);
 					OnBulkOperation(context, (index, query, allowStale) =>
 						databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale));
@@ -79,7 +78,7 @@ namespace Raven.Database.Server.Responders
 
 			var transactionInformation = GetRequestTransaction(context);
 			var commands = (from RavenJObject jsonCommand in jsonCommandArray
-			                select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
+							select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
 				.ToArray();
 
 			context.Log(log => log.Debug(()=>

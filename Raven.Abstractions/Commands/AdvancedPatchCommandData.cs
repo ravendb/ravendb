@@ -7,6 +7,7 @@ using System;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Commands
 {
@@ -70,7 +71,11 @@ namespace Raven.Abstractions.Commands
 					{
 						{"Key", Key},
 						{"Method", Method},
-						{"Patch", RavenJObject.FromObject(Patch)}
+						{"Patch", new RavenJObject
+						{
+							{ "Script", Patch.Script },
+							{ "PrevVal", Patch.PrevVal },
+						}}
 					};
 			if (Etag != null)
 				ret.Add("Etag", Etag.ToString());
