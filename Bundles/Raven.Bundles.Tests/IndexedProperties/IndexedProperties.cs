@@ -22,7 +22,7 @@ namespace Raven.Bundles.Tests.IndexedProperties
 			{
 				store.Configuration.RunInMemory = true;
 				//This lets us wire up the Trigger (only works in embedded mode though)
-				store.Configuration.Container = new CompositionContainer(new TypeCatalog(typeof(IndexedPropertiesTrigger)));
+				store.Configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(IndexedPropertiesTrigger)));
 				store.Initialize();
 				new Orders_ByCustomer_Count().Execute(store);	
 				//Create another index, so we can check we use the index specified in the SetupDoc

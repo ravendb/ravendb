@@ -1,6 +1,8 @@
 ﻿using System;
+using System.ComponentModel.Composition.Hosting;
 using System.Threading;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
 public class Program

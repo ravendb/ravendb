@@ -30,24 +30,20 @@ namespace Raven.Bundles.Tests.Expiration
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			var ravenConfiguration = new database::Raven.Database.Config.RavenConfiguration
+			{
+				Port = 8079,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				DataDirectory = path,
+				Settings =
+					{
+						{"Raven/Expiration/DeleteFrequencySeconds", "1"},
+						{"Raven/ActiveBundles", "Expiration"}
+					}
+			};
+			ravenConfiguration.PostInit();
 			ravenDbServer = new RavenDbServer(
-				new database::Raven.Database.Config.RavenConfiguration
-				{
-					Port = 8079,
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					DataDirectory = path,
-					Catalog =
-						{
-							Catalogs =
-								{
-									new AssemblyCatalog(typeof (database::Raven.Bundles.Expiration.ExpirationReadTrigger).Assembly)
-								}
-						},
-					Settings =
-						{
-							{"Raven/Expiration/DeleteFrequencySeconds", "1"}
-						}
-				});
+				ravenConfiguration);
 			database::Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
 			documentStore = new DocumentStore
 			{
