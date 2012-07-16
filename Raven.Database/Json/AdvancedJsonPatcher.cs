@@ -61,14 +61,12 @@ namespace Raven.Database.Json
 
 			if (batchApply)
 			{
-				//foreach (var doc in documents)
-				//{
-				//    ApplySingleScript(document, script, ctx);
-				//}
-
-				//Things to consider, if we get one failed do we stop the whole batch,
-				//or do we stop it when we reach a threshold, i.e. 10% failures?
-				//Where do failures get logged to, or do they just throw exceptions??
+				foreach (var doc in documents)
+				{
+					var resultDocument = ApplySingleScript(ctx, doc, script);
+					if (resultDocument != null)
+						document = resultDocument;
+				}
 			}
 			else
 			{
@@ -88,22 +86,20 @@ var doc = {0};
 }}).apply(doc);
 
 json_data = JSON.stringify(doc);", doc, script, script.EndsWith(";") ? String.Empty : ";");
-
-			object result;
+			
 			try
 			{
-				result = ctx.Execute(wrapperScript);
+				object result = ctx.Execute(wrapperScript);
 				return RavenJObject.Parse(ctx.GetGlobalAs<string>("json_data"));
 			}
 			catch (UserError uEx)
 			{
-				throw;
+				throw new InvalidOperationException("Unable to parse JavaScript: " + script, uEx); 
 			}
 			catch (Error.Error errorEx)
 			{
-				throw;
+				throw new InvalidOperationException("Unable to parse JavaScript: " + script, errorEx);
 			}
-			return null;
 		}
 
 		private string GetFromResources(string resourceName)
