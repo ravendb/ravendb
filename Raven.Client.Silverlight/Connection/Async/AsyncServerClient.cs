@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Text;
+using System.Windows.Browser;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
@@ -556,6 +557,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
 				if (etag != null)
 					metadata["ETag"] = new RavenJValue(etag.Value.ToString());
+				key = HttpUtility.UrlEncode(key);
 				var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, method, metadata, credentials, convention);
 				request.AddOperationHeaders(OperationsHeaders);
 
