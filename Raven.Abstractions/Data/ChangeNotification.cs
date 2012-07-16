@@ -12,6 +12,11 @@ namespace Raven.Abstractions.Data
 		public ChangeTypes Type { get; set; }
 		public string Name { get; set; }
 		public Guid? Etag { get; set; }
+
+		public override string ToString()
+		{
+			return string.Format("{0} on {1}", Type, Name);
+		}
 	}
 
 	[Flags]
