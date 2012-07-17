@@ -11,12 +11,6 @@ namespace Raven.Studio.Features.Tasks
 		{
 			Name = "Toggle Indexing";
 			Description = "Enable and disable indexing";
-			//ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetIndexingStatus()
-			//    .ContinueOnSuccessInTheUIThread(x =>
-			//                                        {
-			//                                            IndexingStatus = x;
-			//                                            TaskDatas.Add(new TaskData("Current Status:", x));
-			//                                        });
 
 			IndexingStatus = "Started";
 			TaskDatas.Add(new TaskData("Current Status:", IndexingStatus));
@@ -51,9 +45,9 @@ namespace Raven.Studio.Features.Tasks
 			get
 			{
 				if (IndexingStatus == "Indexing")
-					return new StopIndexingCommand(line => Execute.OnTheUI(() => Output.Add(line)));
+					return new StopIndexingCommand(line => Execute.OnTheUI(() => Output.Add(line)), ()=>ForceTimerTicked());
 				if (IndexingStatus == "Paused")
-					return new StartIndexingCommand(line => Execute.OnTheUI(() => Output.Add(line)));
+					return new StartIndexingCommand(line => Execute.OnTheUI(() => Output.Add(line)), () => ForceTimerTicked());
 				return null;
 			}
 		}
