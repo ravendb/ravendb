@@ -25,6 +25,8 @@ namespace Raven.Studio
 		private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
 		{
 			HighlightCurrentPage(e.Uri);
+            ApplicationModel.Current.Server.Value.SetCurrentDatabase(new UrlParser(e.Uri.OriginalString));
+
 			GC.Collect();
 		}
 
