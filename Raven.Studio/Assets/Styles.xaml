@@ -737,7 +737,8 @@
   <!-- LayoutRoot Grid Style -->
   <Style x:Key="LayoutRootGridStyle" TargetType="Grid">
 	<Setter Property="Background" Value="#FFFFFFFF"/>
-  </Style>
+        <Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
+    </Style>
 
   <!-- Content Border Style -->
   <Style x:Key="ContentBorderStyle" TargetType="Border">
@@ -1521,7 +1522,7 @@
 	<Style x:Key="Style_Text_HeaderLink" TargetType="HyperlinkButton">
 		<Setter Property="FontFamily" Value="Arial"/>
 		<Setter Property="FontWeight" Value="Bold"/>
-		<Setter Property="FontSize" Value="12"/>
+		<Setter Property="FontSize" Value="13"/>
 		<Setter Property="Foreground" Value="#FF666666"/>
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
 		<Setter Property="Padding" Value="14,6"/>
@@ -2020,7 +2021,7 @@
 		<Setter Property="Foreground" Value="#FF666666"/>
 		<Setter Property="FontFamily" Value="Arial"/>
 		<Setter Property="FontWeight" Value="Bold"/>
-		<Setter Property="FontSize" Value="14.667"/>
+		<Setter Property="FontSize" Value="16"/>
 		
 	</Style>
 		
