@@ -373,5 +373,29 @@ namespace Raven.Json.Linq
 		}
 		
 		#endregion
+
+		#region Unsupported Write methods
+
+		/// <summary>
+		/// Overrides the WriteRaw method of <see cref="JsonWriter"/> which is not supported.
+		/// </summary>
+		/// <param name="json">The json to write</param>
+		/// <exception cref="NotSupportedException">always</exception>
+		public override void WriteRaw(string json)
+		{
+			throw new NotSupportedException("Writing raw json is not supported.");
+		}
+
+		/// <summary>
+		/// Overrides the WriteRawValue method of <see cref="JsonWriter"/> which is not supported.
+		/// </summary>
+		/// <param name="json">The json to write</param>
+		/// <exception cref="NotSupportedException">always</exception>
+		public override void WriteRawValue(string json)
+		{
+			throw new NotSupportedException("Writing raw json is not supported.");
+		}
+
+		#endregion
 	}
 }
