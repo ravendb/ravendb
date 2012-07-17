@@ -3,7 +3,6 @@ using System.Linq;
 using Lucene.Net.Documents;
 using NLog;
 using Raven.Abstractions.Data;
-using Raven.Client.IndexedProperties;
 using Raven.Database;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;

@@ -44,6 +44,7 @@
   <ItemGroup>
     <Compile Include="IndexedPropertiesTrigger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SetupDoc.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
@@ -57,10 +58,6 @@
     <ProjectReference Include="..\..\Raven.Tests\Raven.Tests.csproj">
       <Project>{267AC60C-751E-42E9-AA18-66035DEFF63A}</Project>
       <Name>Raven.Tests</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.IndexedProperties\Raven.Client.IndexedProperties.csproj">
-      <Project>{F41C7F7E-A287-449A-A545-E7152937EF77}</Project>
-      <Name>Raven.Client.IndexedProperties</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
