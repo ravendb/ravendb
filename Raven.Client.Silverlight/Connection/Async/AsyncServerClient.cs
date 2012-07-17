@@ -335,6 +335,31 @@ namespace Raven.Client.Silverlight.Connection.Async
 				}).Unwrap();
 		}
 
+		public Task StartIndexing()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/admin/StartIndexing").NoCache(), "POST", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ExecuteRequest();
+		}
+
+		public Task StopIndexing()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/admin/StopIndexing").NoCache(), "POST", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ExecuteRequest();
+		}
+
+		public Task<string> GetIndexingStatus()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/admin/IndexingStatus").NoCache(), "GET", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => task.Result.Value<string>("IndexingStatus"));
+		}
+
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize)
 		{
 			var metadata = new RavenJObject();
