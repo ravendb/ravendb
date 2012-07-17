@@ -102,7 +102,8 @@ namespace Raven.Database
 
 		public TaskScheduler BackgroundTaskScheduler { get { return backgroundTaskScheduler; } }
 
-		public event EventHandler<ChangeNotification> Notifications = delegate { }; 
+		public event EventHandler<DocumentChangeNotification> DocumentNotifications = delegate { };
+		public event EventHandler<IndexChangeNotification> IndexNotifications = delegate { }; 
 
 		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
 		private System.Threading.Tasks.Task indexingBackgroundTask;
@@ -146,7 +147,7 @@ namespace Raven.Database
 			{
 				IndexUpdateTriggers = IndexUpdateTriggers,
 				ReadTriggers = ReadTriggers,
-				RaiseChangeNotification = RaiseNotifications
+				RaiseIndexChangeNotification = RaiseNotifications
 			};
 
 			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
@@ -406,9 +407,14 @@ namespace Raven.Database
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
-		public void RaiseNotifications(ChangeNotification obj)
+		public void RaiseNotifications(DocumentChangeNotification obj)
 		{
-			Notifications(this, obj);
+			DocumentNotifications(this, obj);
+		}
+
+		public void RaiseNotifications(IndexChangeNotification obj)
+		{
+			IndexNotifications(this, obj);
 		}
 
 		public void RunIdleOperations()
@@ -507,10 +513,10 @@ namespace Raven.Database
 				.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 				{
 					PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
-					Notifications(this, new ChangeNotification
+					DocumentNotifications(this, new DocumentChangeNotification
 					{
 						Name = key,
-						Type = ChangeTypes.Put,
+						Type = DocumentChangeTypes.Put,
 						Etag = newEtag
 					});
 				});
@@ -646,10 +652,10 @@ namespace Raven.Database
 				.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 				{
 					DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
-					Notifications(this, new ChangeNotification
+					DocumentNotifications(this, new DocumentChangeNotification
 					{
 						Name = key,
-						Type = ChangeTypes.Delete,
+						Type = DocumentChangeTypes.Delete,
 					});
 				});
 

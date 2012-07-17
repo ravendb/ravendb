@@ -44,9 +44,11 @@ namespace Raven.Client
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		public abstract TaskObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null);
 
 		public abstract IDisposable AggressivelyCacheFor(TimeSpan cahceDuration);
+
+		public abstract DatabaseChanges Changes(string database);
+
 		public abstract IDisposable DisableAggressiveCaching();
 		
 #if !SILVERLIGHT

@@ -101,9 +101,6 @@ namespace Raven.Database.Server
 		private Timer databasesCleanupTimer;
 		private int physicalRequestsCount;
 
-		private ConcurrentDictionary<DocumentDatabase, ConcurrentSet<NotificationsConnection>> connectionsByDatabase =
-			new ConcurrentDictionary<DocumentDatabase, ConcurrentSet<NotificationsConnection>>();
-
 		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
 		private readonly TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 		private bool disposed;
@@ -120,7 +117,8 @@ namespace Raven.Database.Server
 			SystemDatabase = resourceStore;
 			SystemConfiguration = configuration;
 
-			SystemDatabase.Notifications += OnDatabaseNotifications;
+			SystemDatabase.DocumentNotifications += OnDatabaseNotifications;
+			SystemDatabase.IndexNotifications += OnDatabaseNotifications;
 			int val;
 			if (int.TryParse(configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
 				val = 900;
@@ -152,27 +150,14 @@ namespace Raven.Database.Server
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
 		}
 
-		private void OnDatabaseNotifications(object sender, ChangeNotification changeNotification)
+		private void OnDatabaseNotifications(object sender, IndexChangeNotification changeNotification)
 		{
-			var db = sender as DocumentDatabase;
-			if (db == null)
-				return;
-
-			ConcurrentSet<NotificationsConnection> set;
-			if (connectionsByDatabase.TryGetValue(db, out set) == false)
-				return;
-
-			foreach (var notification in set)
-			{
-				notification.Send(changeNotification);
-			}
+			
 		}
 
-		public void RegisterConnection(DocumentDatabase db, NotificationsConnection notifications)
+		private void OnDatabaseNotifications(object sender, DocumentChangeNotification changeNotification)
 		{
-			var set = connectionsByDatabase.GetOrAdd(db, _ => new ConcurrentSet<NotificationsConnection>());
-			notifications.Disposed += (sender, args) => set.TryRemove(notifications);
-			set.Add(notifications);
+
 		}
 
 		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
@@ -283,7 +268,7 @@ namespace Raven.Database.Server
 		{
 			var depResolver = CreateDependencyResolver();
 			signalrServer = new ExternalHttpListenerServer(uri, depResolver, listener);
-			signalrServer.MapConnection<NotificationsConnection>("/signalr/notifications");
+			signalrServer.MapHubs();
 		}
 
 		public DefaultDependencyResolver CreateDependencyResolver()
@@ -839,7 +824,8 @@ namespace Raven.Database.Server
 			database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s =>
 			{
 				var documentDatabase = new DocumentDatabase(config);
-				documentDatabase.Notifications += OnDatabaseNotifications;
+				documentDatabase.DocumentNotifications += OnDatabaseNotifications;
+				documentDatabase.IndexNotifications += OnDatabaseNotifications;
 				documentDatabase.SpinBackgroundWorkers();
 				return documentDatabase;
 			});

@@ -17,11 +17,7 @@ namespace Raven.Bundles.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			Console.WriteLine("starting...");
-			using (var x = new David())
-			{
-				x.Can_replicate_between_two_instances_create_delete_create_quickly();
-			}
+			
 		}
 	}
 }

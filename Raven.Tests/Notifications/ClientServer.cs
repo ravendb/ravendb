@@ -13,15 +13,30 @@ namespace Raven.Tests.Notifications
 		{
 		}
 
+		public override void Dispose()
+		{
+			base.Dispose();
+			GC.Collect(GC.MaxGeneration);
+			GC.WaitForPendingFinalizers();
+		}
+
 		[Fact]
 		public void CanGetNotificationAboutDocumentPut()
 		{
 			using(GetNewServer())
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8079"
+				Url = "http://ipv4.fiddler:8079",
+				Conventions =
+					{
+						FailoverBehavior = FailoverBehavior.FailImmediately
+					}
 			}.Initialize())
 			{
+				using (var session = store.OpenSession())
+				{
+					session.Load<object>("test-start");
+				}
 				var list = new BlockingCollection<ChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
@@ -36,7 +51,7 @@ namespace Raven.Tests.Notifications
 				}
 
 				ChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
+				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(5)));
 
 				Assert.Equal("items/1", changeNotification.Name);
 				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
