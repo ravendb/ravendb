@@ -283,6 +283,7 @@
     <Compile Include="Infrastructure\FlexibleTemplateItemsControl.cs" />
     <Compile Include="Infrastructure\INotifyBusyness.cs" />
     <Compile Include="Infrastructure\ItemsRealizedEventArgs.cs" />
+    <Compile Include="Infrastructure\MarkupExtensions\ResourceKeyBinding.cs" />
     <Compile Include="Infrastructure\ParserDispatcherManager.cs" />
     <Compile Include="Infrastructure\ProvideVisibleItemRangeFromDataGridBehavior.cs" />
     <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
@@ -884,6 +885,9 @@
     <Resource Include="Assets\Images\clear_history_tiny.png" />
     <Resource Include="Assets\Images\pin_tiny.png" />
     <Resource Include="Assets\Images\un_pin_tiny.png" />
+    <Resource Include="Assets\Images\backup_tiny.png" />
+    <Resource Include="Assets\Images\export_data_tiny.png" />
+    <Resource Include="Assets\Images\import_data_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

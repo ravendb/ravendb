@@ -51,5 +51,8 @@
     <BitmapImage x:Key="Image_ClearHistory_Tiny" UriSource="clear_history_tiny.png"/>
     <BitmapImage x:Key="Image_Pin_Tiny" UriSource="pin_tiny.png"/>
     <BitmapImage x:Key="Image_UnPin_Tiny" UriSource="un_pin_tiny.png"/>
+    <BitmapImage x:Key="Image_Import_Tiny" UriSource="import_data_tiny.png"/>
+    <BitmapImage x:Key="Image_Export_Tiny" UriSource="export_data_tiny.png"/>
+    <BitmapImage x:Key="Image_Backup_Tiny" UriSource="backup_tiny.png"/>
     
 </ResourceDictionary>
