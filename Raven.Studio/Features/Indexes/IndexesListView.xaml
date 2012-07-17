@@ -21,7 +21,7 @@
 			<Converters:DataTemplateSelectorConverter.DataTemplates>
 				<Converters:TargetedDataTemplate TargetType="Raven.Studio.Models.IndexItem">
 					<Converters:TargetedDataTemplate.Template>
-						<DataTemplate>
+						<DataTemplate DataType="Models:IndexItem">
 							<Grid Width="390"
 								  Height="35">
 								<Grid.ColumnDefinitions>
@@ -58,17 +58,17 @@
 										   VerticalAlignment="Center"
 										   Margin="2"
 										   Grid.Column="0" />
-									<HyperlinkButton Content="{Binding IndexName}"
+									<HyperlinkButton Content="{Binding Name}"
 													 Command="{StaticResource NavigateToCommand}"
-													 CommandParameter="{Binding IndexName, StringFormat=/query/\{0\}}"
+													 CommandParameter="{Binding Name, StringFormat=/query/\{0\}}"
 													 VerticalAlignment="Center"
 													 HorizontalAlignment="Left"
 													 Style="{StaticResource Style_Link_DrillDown}"
-													 ToolTipService.ToolTip="{Binding IndexName}"
+													 ToolTipService.ToolTip="{Binding Name}"
 													 Grid.Column="1" />
 									<HyperlinkButton Grid.Column="2"
 													 Command="{StaticResource NavigateToCommand}"
-													 CommandParameter="{Binding IndexName, StringFormat=/indexes/\{0\}}"
+													 CommandParameter="{Binding Name, StringFormat=/indexes/\{0\}}"
 													 VerticalAlignment="Center"
 													 Style="{StaticResource Style_Button_MouseOverChrome}"
 													 Padding="4"
@@ -86,7 +86,7 @@
 				</Converters:TargetedDataTemplate>
 				<Converters:TargetedDataTemplate TargetType="Raven.Studio.Models.IndexGroupHeader">
 					<Converters:TargetedDataTemplate.Template>
-						<DataTemplate>
+						<DataTemplate DataType="Models:IndexGroupHeader">
 							<Grid Width="390"
 								  Height="35">
 								<TextBlock Text="{Binding Name}"
@@ -173,18 +173,16 @@
 							   Margin="10,5">
             <i:Interaction.Behaviors>
                 <Behaviors:SelectItemOnRightClick/>
+                <Behaviors:BindSelectedItemsBehavior Target="{Binding ItemSelection}"/>
             </i:Interaction.Behaviors>
 			<Controls:ContextMenuService.ContextMenu>
 				<Controls:ContextMenu x:Name="IndexesContextMenu">
 					<Controls:MenuItem Header="Delete index"
-									   Command="{Binding Source={StaticResource DeleteIndexCommand}}"
-									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+									   Command="{Binding DeleteIndex}"/>
 					<Controls:MenuItem Header="Promote to auto index"
-									   Command="{Binding Source={StaticResource PromoteToAutoIndexCommand}}"
-									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+									   Command="{Binding PromoteIndex}"/>
 					<Controls:MenuItem Header="Reset index"
-									   Command="{Binding Source={StaticResource ResetIndexCommand}}"
-									   CommandParameter="{Binding RelativeSource={RelativeSource Self}}" />
+									   Command="{Binding ResetIndex}"/>
 				</Controls:ContextMenu>
 			</Controls:ContextMenuService.ContextMenu>
 		</ListBox>
