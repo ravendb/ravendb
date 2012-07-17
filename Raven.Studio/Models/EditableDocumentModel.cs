@@ -954,7 +954,7 @@ namespace Raven.Studio.Models
 				}
 
 				parentModel.UpdateMetadata(metadata);
-				ApplicationModel.Current.AddNotification(new Notification("Saving document " + parentModel.Key + " ..."));
+				ApplicationModel.Current.AddInfoNotification("Saving document " + parentModel.Key + " ...");
 
 				Guid? etag = string.Equals(parentModel.DocumentKey , parentModel.Key, StringComparison.InvariantCultureIgnoreCase) ? 
 					parentModel.Etag : Guid.Empty;
@@ -962,14 +962,14 @@ namespace Raven.Studio.Models
 				DatabaseCommands.PutAsync(parentModel.Key, etag, doc, metadata)
 					.ContinueOnSuccess(result =>
 					{
-						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
+                        ApplicationModel.Current.AddInfoNotification("Document " + result.Key + " saved");
 					    parentModel.HasUnsavedChanges = false;
                         parentModel.Etag = result.ETag;
 					    parentModel.PutDocumentKeyInUrl(result.Key, dontOpenNewTab:true);
 					    parentModel.SetCurrentDocumentKey(result.Key);
 					})
 					.ContinueOnSuccess(() => new RefreshDocumentCommand(parentModel).Execute(null))
-					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
+					.Catch(exception => ApplicationModel.Current.AddErrorNotification(exception, "Could not save document."));
 			}
 		}
 

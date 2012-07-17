@@ -480,16 +480,11 @@ namespace Raven.Studio.Models
 					                                	{
 			                                    if (t.IsFaulted)
 			                                    {
-					                                		ApplicationModel.Current.AddNotification(
-			                                            new Notification("index " + index.Name +
-			                                                             " could not be deleted", NotificationLevel.Error,
-			                                                             t.Exception));
+					                                		ApplicationModel.Current.AddErrorNotification(t.Exception,"index " + index.Name +" could not be deleted");
 			                                    }
 			                                    else
 			                                    {
-			                                        ApplicationModel.Current.AddNotification(
-			                                            new Notification("index " + index.Name +
-			                                                             " successfully deleted"));
+			                                        ApplicationModel.Current.AddInfoNotification("index " + index.Name +" successfully deleted");
 					                                		UrlUtil.Navigate("/indexes");
 			                                    }
 					                                	});
