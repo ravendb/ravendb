@@ -14,7 +14,8 @@
                          xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                          xmlns:Models="clr-namespace:Raven.Studio.Models"
                          xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" xmlns:Delay="clr-namespace:Delay"
-                         xmlns:Query="clr-namespace:Raven.Studio.Features.Query" mc:Ignorable="d"
+                         xmlns:Query="clr-namespace:Raven.Studio.Features.Query"
+                         xmlns:Controls1="clr-namespace:Raven.Studio.Controls" mc:Ignorable="d"
                          d:DataContext="{d:DesignInstance Models:QueryModel}">
     <Infrastructure:PageView.Resources>
         <Storyboard x:Key="ShowErrorPanel">
@@ -152,36 +153,7 @@
 
                 <Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
                 
-                <Delay:PopupButton x:Name="RecentQueriesPopup"
-							Margin="4,0"
-							ToolTipService.ToolTip="Show Recent Queries">
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="{StaticResource Image_RecentQueries_Tiny}"
-							       Stretch="None" VerticalAlignment="Center"/>
-                        <TextBlock VerticalAlignment="Center"
-										   Margin="2,0,0,0" >Recent Queries</TextBlock>
-                    </StackPanel>
-                    <Delay:PopupButton.PopupContent>
-                        <Border Background="#EFEFEF"
-					                BorderThickness="1"
-					                BorderBrush="Gray"
-					                Margin="0,20,0,0">
-                            <Border.Effect>
-                                <DropShadowEffect Opacity="0.4" />
-                            </Border.Effect>
-                            <Query:RecentQueriesDropDownView>
-                                <Query:RecentQueriesDropDownView.DataContext>
-                                    <Query:RecentQueriesModel/>
-                                </Query:RecentQueriesDropDownView.DataContext>
-                                <i:Interaction.Triggers>
-                                    <i:EventTrigger EventName="QuerySelected" SourceObject="{Binding}">
-                                        <Behaviors:CloseSplitButtonPopupAction TargetObject="{Binding ElementName=RecentQueriesPopup}"/>
-                                    </i:EventTrigger>
-                                </i:Interaction.Triggers>
-                            </Query:RecentQueriesDropDownView>
-                        </Border>
-                    </Delay:PopupButton.PopupContent>
-                </Delay:PopupButton>
+                <Controls1:RecentQueriesButton/>
             </StackPanel>
         </Border>
         

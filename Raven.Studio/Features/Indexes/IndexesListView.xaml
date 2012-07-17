@@ -161,7 +161,10 @@
 							    </StackPanel>
 						    </HyperlinkButton.Content>
 					    </HyperlinkButton>
-				    </StackPanel>
+
+                        <Controls1:RecentQueriesButton/>
+
+                    </StackPanel>
                 </Border>
             </toolkit:DockPanel>
 		</toolkit:HeaderedContentControl.Header>
