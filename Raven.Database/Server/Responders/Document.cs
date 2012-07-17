@@ -52,24 +52,30 @@ namespace Raven.Database.Server.Responders
 					var patchRequestJson = context.ReadJsonArray();
 					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchRequests, GetRequestTransaction(context));
-					switch (patchResult)
-					{
-						case PatchResult.DocumentDoesNotExists:
-							context.SetStatusToNotFound();
-							break;
-						case PatchResult.Patched:
-							context.Response.AddHeader("Location", Database.Configuration.GetFullUrl("/docs/" + docId));
-							context.WriteJson(new {Patched = true});
-							break;
-						default:
-							throw new ArgumentOutOfRangeException("Value " + patchResult + " is not understood");
-					}
+					ProcessPatchResult(context, docId, patchResult);
 					break;
 				case "ADVANCEDPATCH":
-					//TODO fix this so that AdvancedPatching works in single doc mode (not batches)
-					//Not sure how to write a test to exercise this though (Patch and UpdateByIndex in Server/Client go via DocumentBatch.cs)
-					var advPatchRequestJson = context.ReadJsonArray();
+					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
+					var advPatch = AdvancedPatchRequest.FromJson(advPatchRequestJson);
+					var advPatchResult = Database.ApplyPatch(docId, context.GetEtag(), advPatch, GetRequestTransaction(context));
+					ProcessPatchResult(context, docId, advPatchResult);
 					break;
+			}
+		}
+
+		private void ProcessPatchResult(IHttpContext context, string docId, PatchResult patchResult)
+		{
+			switch (patchResult)
+			{
+				case PatchResult.DocumentDoesNotExists:
+					context.SetStatusToNotFound();
+					break;
+				case PatchResult.Patched:
+					context.Response.AddHeader("Location", Database.Configuration.GetFullUrl("/docs/" + docId));
+					context.WriteJson(new {Patched = true});
+					break;
+				default:
+					throw new ArgumentOutOfRangeException("Value " + patchResult + " is not understood");
 			}
 		}
 
