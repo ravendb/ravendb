@@ -1,10 +1,11 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace Raven.Abstractions.Util
 {
-	public class AtomicDictionary<TVal>
+	public class AtomicDictionary<TVal> : IEnumerable<KeyValuePair<string, TVal>>
 	{
 		private readonly ConcurrentDictionary<string, object> locks;
 		private readonly ConcurrentDictionary<string, TVal> items;
@@ -54,6 +55,16 @@ namespace Raven.Abstractions.Util
 				TVal val;
 				items.TryRemove(key, out val);
 			}
+		}
+
+		public IEnumerator<KeyValuePair<string, TVal>> GetEnumerator()
+		{
+			return items.GetEnumerator();
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
 		}
 	}
 }
