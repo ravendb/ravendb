@@ -124,7 +124,16 @@ namespace Raven.Imports.SignalR.Hubs
             }
 
             return resultTask
-                .ContinueWith(_ => base.OnReceivedAsync(request, connectionId, data))
+                .ContinueWith(_ =>
+                              	{
+									if(_.IsFaulted)
+									{
+										var aggregateException = _.Exception; // observe exception
+										Trace.TraceInformation("Failed to process response {0}", aggregateException);
+									}
+
+                              		return base.OnReceivedAsync(request, connectionId, data);
+                              	})
                 .FastUnwrap();
         }
 
