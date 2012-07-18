@@ -501,7 +501,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public int GetReadStripingBase()
+		public virtual int GetReadStripingBase()
 		{
 			return Interlocked.Increment(ref readStripingBase);
 		}
