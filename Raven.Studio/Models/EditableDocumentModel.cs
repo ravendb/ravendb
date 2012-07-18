@@ -82,9 +82,9 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/edit";
 
-			dataSection = new DocumentSection() {Name = "Data", Document = new EditorDocument() {Language = JsonLanguage, TabSize = 2}};
+			dataSection = new DocumentSection() { Name = "Data", Document = new EditorDocument() { Language = JsonLanguage, TabSize = 2 } };
 			metaDataSection = new DocumentSection() { Name = "Metadata", Document = new EditorDocument() { Language = JsonLanguage, TabSize = 2 } };
-			DocumentSections = new List<DocumentSection>() { dataSection, metaDataSection};
+			DocumentSections = new List<DocumentSection>() { dataSection, metaDataSection };
 			CurrentSection = dataSection;
 
 			References = new ObservableCollection<LinkModel>();
@@ -137,7 +137,7 @@ namespace Raven.Studio.Models
 
 			foreach (var parseError in parseData.Errors)
 			{
-				DocumentErrors.Add(new DocumentError() {Section = section, ParseError = parseError});
+				DocumentErrors.Add(new DocumentError() { Section = section, ParseError = parseError });
 			}
 		}
 
@@ -145,7 +145,7 @@ namespace Raven.Studio.Models
 		{
 			document.Value = new JsonDocument
 								{
-									 DataAsJson = {{"Name", "..."}},
+									DataAsJson = { { "Name", "..." } },
 									Etag = Guid.Empty
 								};
 		}
@@ -263,7 +263,7 @@ namespace Raven.Studio.Models
 				TotalItems = 0;
 				SetCurrentDocumentKey(null);
 				ParentPathSegments.Clear();
-				ParentPathSegments.Add(new PathSegment() { Name = "Documents", Url = "/documents"});
+				ParentPathSegments.Add(new PathSegment() { Name = "Documents", Url = "/documents" });
 				return;
 			}
 
@@ -271,41 +271,41 @@ namespace Raven.Studio.Models
 
 			Navigator.GetDocument().ContinueOnSuccessInTheUIThread(
 				result =>
+				{
+					if (result.Document == null)
 					{
-						if (result.Document == null)
-						{
-							HandleDocumentNotFound();
-							return;
-						}
+						HandleDocumentNotFound();
+						return;
+					}
 
-						if (string.IsNullOrEmpty(result.Document.Key))
-						{
-							Mode = DocumentMode.Projection;
-							LocalId = Guid.NewGuid().ToString();
-						}
-						else
-						{
-							Mode = DocumentMode.DocumentWithId;
-							LocalId = result.Document.Key;
-							SetCurrentDocumentKey(result.Document.Key);
-						}
+					if (string.IsNullOrEmpty(result.Document.Key))
+					{
+						Mode = DocumentMode.Projection;
+						LocalId = Guid.NewGuid().ToString();
+					}
+					else
+					{
+						Mode = DocumentMode.DocumentWithId;
+						LocalId = result.Document.Key;
+						SetCurrentDocumentKey(result.Document.Key);
+					}
 
-						urlForFirst = result.UrlForFirst;
-						urlForPrevious = result.UrlForPrevious;
-						urlForLast = result.UrlForLast;
-						urlForNext = result.UrlForNext;
+					urlForFirst = result.UrlForFirst;
+					urlForPrevious = result.UrlForPrevious;
+					urlForLast = result.UrlForLast;
+					urlForNext = result.UrlForNext;
 
-						isLoaded = true;
-						document.Value = result.Document;
-						CurrentIndex = (int) result.Index;
-						TotalItems = (int) result.TotalDocuments;
+					isLoaded = true;
+					document.Value = result.Document;
+					CurrentIndex = (int)result.Index;
+					TotalItems = (int)result.TotalDocuments;
 
-						ParentPathSegments.Clear();
-						ParentPathSegments.AddRange(result.ParentPath);
+					ParentPathSegments.Clear();
+					ParentPathSegments.AddRange(result.ParentPath);
 
-						WhenParsingComplete(dataSection.Document)
-							.ContinueOnUIThread(t => ApplyOutliningMode());
-					})
+					WhenParsingComplete(dataSection.Document)
+						.ContinueOnUIThread(t => ApplyOutliningMode());
+				})
 				.Catch();
 		}
 
@@ -327,10 +327,10 @@ namespace Raven.Studio.Models
 		}
 
 		private int CurrentIndex
-			{
+		{
 			get { return currentIndex; }
 			set
-				{
+			{
 				currentIndex = value;
 				OnPropertyChanged(() => CurrentItemNumber);
 				OnPropertyChanged(() => HasPrevious);
@@ -360,7 +360,7 @@ namespace Raven.Studio.Models
 		public bool HasNext
 		{
 			get { return !string.IsNullOrEmpty(urlForNext); }
-			}
+		}
 
 		public bool CanNavigate
 		{
@@ -530,19 +530,19 @@ namespace Raven.Studio.Models
 
 		private void UpdateDocumentSize()
 		{
-			double byteCount = Encoding.UTF8.GetByteCount(JsonDataDocument.CurrentSnapshot.Text) 
+			double byteCount = Encoding.UTF8.GetByteCount(JsonDataDocument.CurrentSnapshot.Text)
 				+ Encoding.UTF8.GetByteCount(MetaDataDocument.CurrentSnapshot.Text);
 
 			string sizeTerm = "Bytes";
-			if (byteCount >= 1024*1024)
+			if (byteCount >= 1024 * 1024)
 			{
 				sizeTerm = "MBytes";
-				byteCount = byteCount/(1024*1024);
+				byteCount = byteCount / (1024 * 1024);
 			}
 			else if (byteCount >= 1024)
 			{
 				sizeTerm = "KBytes";
-				byteCount = byteCount/1024;
+				byteCount = byteCount / 1024;
 			}
 
 			DocumentSize = string.Format("Content-Length: {0:#,#.##;;0} {1}", byteCount, sizeTerm);
@@ -566,26 +566,49 @@ namespace Raven.Studio.Models
 						if (notifiedOnDelete)
 							return;
 						notifiedOnDelete = true;
-											   ApplicationModel.Current.AddNotification(
-												   new Notification("Document " + Key + " was deleted on the server"));
+						ApplicationModel.Current.AddNotification(
+							new Notification("Document " + Key + " was deleted on the server"));
 					}
 					else if (docOnServer.Etag != Etag)
 					{
 						if (notifiedOnChange)
 							return;
 						notifiedOnChange = true;
-											   ApplicationModel.Current.AddNotification(
-												   new Notification("Document " + Key + " was changed on the server"));
+						ApplicationModel.Current.AddNotification(
+							new Notification("Document " + Key + " was changed on the server"));
 					}
 				});
 		}
 
 		private void UpdateReferences()
 		{
-			if (Seperator == null) 
+			if (Seperator == null)
 				return;
 
 			References.Clear();
+			var parentids = new List<string>();
+			var id = LocalId;
+			var lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
+
+			while (!string.IsNullOrWhiteSpace(id) && lastindex != -1)
+			{
+				id = id.Remove(lastindex);
+				parentids.Add(id);
+				lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
+			}
+
+			ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(parentids.ToArray(), null)
+				.ContinueOnSuccessInTheUIThread(x =>
+													{
+														foreach (var parentid in x.Results.Select(result => result["@metadata"].SelectToken("@id").ToString()))
+														{
+															References.Insert(0, new LinkModel
+																					{
+																						Title = parentid,
+																						HRef = "/Edit?id=" + parentid
+																					});
+														}
+													});
 
 			var pattern = @"(\w+(" + Seperator + @"\w+)+)";
 			var referencesIds = Regex.Matches(JsonData, pattern);
@@ -921,15 +944,15 @@ namespace Raven.Studio.Models
 				parentModel.UpdateMetadata(metadata);
 				ApplicationModel.Current.AddNotification(new Notification("Saving document " + parentModel.Key + " ..."));
 
-				Guid? etag = string.Equals(parentModel.DocumentKey , parentModel.Key, StringComparison.InvariantCultureIgnoreCase) ? 
+				Guid? etag = string.Equals(parentModel.DocumentKey, parentModel.Key, StringComparison.InvariantCultureIgnoreCase) ?
 					parentModel.Etag : Guid.Empty;
-			
+
 				DatabaseCommands.PutAsync(parentModel.Key, etag, doc, metadata)
 					.ContinueOnSuccess(result =>
 					{
 						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
 						parentModel.Etag = result.ETag;
-						parentModel.PutDocumentKeyInUrl(result.Key, dontOpenNewTab:true);
+						parentModel.PutDocumentKeyInUrl(result.Key, dontOpenNewTab: true);
 						parentModel.SetCurrentDocumentKey(result.Key);
 					})
 					.ContinueOnSuccess(() => new RefreshDocumentCommand(parentModel).Execute(null))
