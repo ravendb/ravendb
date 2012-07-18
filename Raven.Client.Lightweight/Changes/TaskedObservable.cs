@@ -9,16 +9,17 @@ namespace Raven.Client.Changes
 {
 	public class TaskedObservable<T> : IObservableWithTask<T>
 	{
-		private readonly Action onSubscriptionDisposal;
-		private ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<IObserver<T>>();
+		private readonly LocalConnectionState localConnectionState;
+		private readonly Func<T, bool> filter;
+		private readonly ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<IObserver<T>>();
 
-		public TaskedObservable(
-			Task task, 
-			Func<T, bool> filter, 
-			Action onSubscriptionDisposal)
+		internal TaskedObservable(
+			LocalConnectionState localConnectionState, 
+			Func<T, bool> filter)
 		{
-			this.onSubscriptionDisposal = onSubscriptionDisposal;
-			Task = task;
+			this.localConnectionState = localConnectionState;
+			this.filter = filter;
+			Task = localConnectionState.Task;
 		}
 
 		public Task Task { get; private set; }
@@ -28,13 +29,16 @@ namespace Raven.Client.Changes
 			subscribers.TryAdd(observer);
 			return new DisposableAction(() =>
 			{
-				onSubscriptionDisposal();
+				localConnectionState.Dec();
 				subscribers.TryRemove(observer);
 			});
 		}
 
 		public void Send(T msg)
 		{
+			if (filter(msg) == false)
+				return;
+
 			foreach (var subscriber in subscribers)
 			{
 				subscriber.OnNext(msg);

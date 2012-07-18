@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Threading;
 using Raven.Imports.SignalR;
 
-namespace Raven.Database.Server
+namespace Raven.Database.Server.SignalR
 {
 	public class SeqentialConnectionIdGenerator : IConnectionIdGenerator
 	{

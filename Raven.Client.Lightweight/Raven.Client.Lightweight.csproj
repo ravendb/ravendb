@@ -55,6 +55,7 @@
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
     <Compile Include="Changes\IDatabaseChanges.cs" />
+    <Compile Include="Changes\LocalConnectionState.cs" />
     <Compile Include="Changes\RemoteDatabaseChanges.cs" />
     <Compile Include="Changes\TaskedObservable.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />

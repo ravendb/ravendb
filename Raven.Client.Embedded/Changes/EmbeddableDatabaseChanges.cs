@@ -16,8 +16,6 @@ namespace Raven.Client.Embedded.Changes
 			Task = new CompletedTask();
 			indexesObservable = new EmbeddableObserableWithTask<IndexChangeNotification>();
 			documentsObservable = new EmbeddableObserableWithTask<DocumentChangeNotification>();
-			embeddableDocumentStore.DocumentDatabase.DocumentNotifications += documentsObservable.Notify;
-			embeddableDocumentStore.DocumentDatabase.IndexNotifications += indexesObservable.Notify;
 		}
 
 		public Task Task { get; private set; }

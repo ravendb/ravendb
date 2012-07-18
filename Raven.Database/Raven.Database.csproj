@@ -128,6 +128,7 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Server\ChangesConnection.cs" />
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
     <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
@@ -239,7 +240,6 @@
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
-    <Compile Include="Server\NotificationsHub.cs" />
     <Compile Include="Server\Responders\Admin\AdminCompact.cs" />
     <Compile Include="Server\Responders\Admin\AdminRunIdleOperations.cs" />
     <Compile Include="Server\Responders\Admin\AdminStats.cs" />
@@ -518,7 +518,9 @@
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Server\Responders\TransactionStatus.cs" />
-    <Compile Include="Server\SeqentialConnectionIdGenerator.cs" />
+    <Compile Include="Server\SignalR\SeqentialConnectionIdGenerator.cs" />
+    <Compile Include="Server\SignalR\SignalRState.cs" />
+    <Compile Include="Server\SignalR\TimeSensitiveStore.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />

@@ -19,6 +19,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
 using Raven.Database.Server.Responders;
+using Raven.Database.Server.SignalR;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
@@ -117,8 +118,6 @@ namespace Raven.Database.Server
 			SystemDatabase = resourceStore;
 			SystemConfiguration = configuration;
 
-			SystemDatabase.DocumentNotifications += OnDatabaseNotifications;
-			SystemDatabase.IndexNotifications += OnDatabaseNotifications;
 			int val;
 			if (int.TryParse(configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
 				val = 900;
@@ -148,20 +147,6 @@ namespace Raven.Database.Server
 			}
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
-		}
-
-		private void OnDatabaseNotifications(object sender, IndexChangeNotification changeNotification)
-		{
-			var connectionManager = signalrServer.DependencyResolver.Resolve<IConnectionManager>();
-			var hubContext = connectionManager.GetHubContext<NotificationsHub>();
-			hubContext.Clients["indexes/" + changeNotification.Name].Index(changeNotification);
-		}
-
-		private void OnDatabaseNotifications(object sender, DocumentChangeNotification changeNotification)
-		{
-			var connectionManager = signalrServer.DependencyResolver.Resolve<IConnectionManager>();
-			var hubContext = connectionManager.GetHubContext<NotificationsHub>();
-			hubContext.Clients["docs/"+changeNotification.Name].Document(changeNotification);
 		}
 
 		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
@@ -272,7 +257,7 @@ namespace Raven.Database.Server
 		{
 			var resolver = CreateDependencyResolver();
 			signalrServer = new ExternalHttpListenerServer(uri, resolver, listener);
-			signalrServer.MapHubs();
+			signalrServer.MapConnection<ChangesConnection>("/signalr/changes");
 		}
 
 		public DefaultDependencyResolver CreateDependencyResolver()
@@ -830,8 +815,6 @@ namespace Raven.Database.Server
 			database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s =>
 			{
 				var documentDatabase = new DocumentDatabase(config);
-				documentDatabase.DocumentNotifications += OnDatabaseNotifications;
-				documentDatabase.IndexNotifications += OnDatabaseNotifications;
 				documentDatabase.SpinBackgroundWorkers();
 				return documentDatabase;
 			});

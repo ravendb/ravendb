@@ -16,6 +16,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Raven.Database.Server.SignalR;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
@@ -102,9 +103,6 @@ namespace Raven.Database
 
 		public TaskScheduler BackgroundTaskScheduler { get { return backgroundTaskScheduler; } }
 
-		public event EventHandler<DocumentChangeNotification> DocumentNotifications = delegate { };
-		public event EventHandler<IndexChangeNotification> IndexNotifications = delegate { }; 
-
 		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
 		private System.Threading.Tasks.Task indexingBackgroundTask;
 		private System.Threading.Tasks.Task reducingBackgroundTask;
@@ -177,7 +175,7 @@ namespace Raven.Database
 			workContext.IndexStorage = IndexStorage;
 			workContext.TransactionaStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
-
+			SignalRState = new SignalRState();
 
 			try
 			{
@@ -409,12 +407,12 @@ namespace Raven.Database
 
 		public void RaiseNotifications(DocumentChangeNotification obj)
 		{
-			DocumentNotifications(this, obj);
+			SignalRState.Send(obj);
 		}
 
 		public void RaiseNotifications(IndexChangeNotification obj)
 		{
-			IndexNotifications(this, obj);
+			SignalRState.Send(obj);
 		}
 
 		public void RunIdleOperations()
@@ -513,7 +511,7 @@ namespace Raven.Database
 				.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 				{
 					PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
-					DocumentNotifications(this, new DocumentChangeNotification
+					RaiseNotifications(new DocumentChangeNotification
 					{
 						Name = key,
 						Type = DocumentChangeTypes.Put,
@@ -652,7 +650,7 @@ namespace Raven.Database
 				.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 				{
 					DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
-					DocumentNotifications(this, new DocumentChangeNotification
+					RaiseNotifications(new DocumentChangeNotification
 					{
 						Name = key,
 						Type = DocumentChangeTypes.Delete,
@@ -1480,6 +1478,8 @@ namespace Raven.Database
 		{
 			get { return disposed; }
 		}
+		
+		public SignalRState SignalRState { get; private set; }
 
 		/// <summary>
 		/// Get the total size taken by the database on the disk.
