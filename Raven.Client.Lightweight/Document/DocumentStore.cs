@@ -64,7 +64,7 @@ namespace Raven.Client.Document
 		private readonly ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
 #endif
 
-		private AtomicDictionary<string, IDatabaseChanges> databaseChanges = new AtomicDictionary<string, IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
+		private AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
 
 		private HttpJsonRequestFactory jsonRequestFactory;
 
@@ -647,7 +647,7 @@ namespace Raven.Client.Document
 		{
 			AssertInitialized();
 
-			return databaseChanges.GetOrAdd(database ?? DefaultDatabase ?? "System", 
+			return databaseChanges.GetOrAdd(database ?? DefaultDatabase, 
 				CreateDatabaseChanges);
 		}
 

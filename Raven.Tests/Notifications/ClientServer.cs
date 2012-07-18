@@ -40,9 +40,9 @@ namespace Raven.Tests.Notifications
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				taskObservable
-					.DocumentSubscription("items/1")
-					.Subscribe(list.Add);
+				var observableWithTask = taskObservable.DocumentSubscription("items/1");
+				observableWithTask.Task.Wait();
+				observableWithTask.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
 				{
@@ -50,11 +50,11 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				DocumentChangeNotification DocumentChangeNotification;
-				Assert.True(list.TryTake(out DocumentChangeNotification, TimeSpan.FromSeconds(5)));
+				DocumentChangeNotification documentChangeNotification;
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromMinutes(5)));
 
-				Assert.Equal("items/1", DocumentChangeNotification.Name);
-				Assert.Equal(DocumentChangeNotification.Type, DocumentChangeTypes.Put);
+				Assert.Equal("items/1", documentChangeNotification.Name);
+				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
 			}
 		}
 

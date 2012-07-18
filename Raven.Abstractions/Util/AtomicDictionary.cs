@@ -4,37 +4,42 @@ using System.Collections.Generic;
 
 namespace Raven.Abstractions.Util
 {
-	public class AtomicDictionary<TKey, TVal>
+	public class AtomicDictionary<TVal>
 	{
-		private readonly ConcurrentDictionary<TKey, object> locks;
-		private readonly ConcurrentDictionary<TKey, TVal> items;
-
+		private readonly ConcurrentDictionary<string, object> locks;
+		private readonly ConcurrentDictionary<string, TVal> items;
+		private static string NullValue = "Null Replacement: " + Guid.NewGuid();
 		public AtomicDictionary()
 		{
-			items = new ConcurrentDictionary<TKey, TVal>();
-			locks = new ConcurrentDictionary<TKey, object>();
+			items = new ConcurrentDictionary<string, TVal>();
+			locks = new ConcurrentDictionary<string, object>();
 		}
 
-		public AtomicDictionary(IEqualityComparer<TKey> comparer)
+		public AtomicDictionary(IEqualityComparer<string> comparer)
 		{
-			items = new ConcurrentDictionary<TKey, TVal>(comparer);
-			locks = new ConcurrentDictionary<TKey, object>(comparer);
+			items = new ConcurrentDictionary<string, TVal>(comparer);
+			locks = new ConcurrentDictionary<string, object>(comparer);
 	
 		}
 
-		public TVal GetOrAdd(TKey key, Func<TKey, TVal> valueGenerator)
+		public TVal GetOrAdd(string key, Func<string, TVal> valueGenerator)
 		{
+			var actualGenerator = valueGenerator;
+			if (key == null)
+				actualGenerator = s => valueGenerator(null);
+			key = key ?? NullValue;
 			TVal val;
 			if (items.TryGetValue(key, out val))
 				return val;
 			lock (locks.GetOrAdd(key, new object()))
 			{
-				return items.GetOrAdd(key, valueGenerator);
+				return items.GetOrAdd(key, actualGenerator);
 			}
 		}
 
-		public void Remove(TKey key)
+		public void Remove(string key)
 		{
+			key = key ?? NullValue;
 			object value;
 			if(locks.TryGetValue(key, out value) == false)
 			{

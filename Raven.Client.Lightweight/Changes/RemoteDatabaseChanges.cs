@@ -24,7 +24,7 @@ namespace Raven.Client.Changes
 		private readonly DocumentConvention conventions;
 		private HubConnection hubConnection;
 		private IHubProxy proxy;
-		private readonly AtomicDictionary<string, Counter> counters = new AtomicDictionary<string, Counter>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly AtomicDictionary<Counter> counters = new AtomicDictionary<Counter>(StringComparer.InvariantCultureIgnoreCase);
 
 		private class Counter
 		{
@@ -114,7 +114,7 @@ namespace Raven.Client.Changes
 					task.AssertNotFailed();
 
 					hubConnection = temporaryConnection;
-					proxy = hubConnection.CreateProxy("Notifications");
+					proxy = hubConnection.CreateProxy("NotificationsHub");
 				});
 		}
 
@@ -133,24 +133,28 @@ namespace Raven.Client.Changes
 
 		public Task Task { get; private set; }
 
-		private Task AfterConnection<T>(Func<T> action)
+		private Task AfterConnection<T>(Func<Task<T>> action)
 		{
 			return Task.ContinueWith(task =>
 			{
 				task.AssertNotFailed();
 				return action();
-			});
+			})
+			.Unwrap();
 		}
 
 		public IObservableWithTask<IndexChangeNotification> IndexSubscription(string indexName)
 		{
 			var counter = counters.GetOrAdd("indexes/"+indexName, s =>
 			{
-				var indexSubscriptionTask = AfterConnection(() =>
-				{
-					proxy.Invoke("StartWatchingIndex", indexName);
-					return hubConnection.AsObservable<IndexChangeNotification>();
-				});
+				var indexSubscriptionTask = AfterConnection(() => 
+					proxy.Invoke("StartWatchingIndex", indexName)
+				        .ContinueWith(task =>
+				        {
+				            task.AssertNotFailed();
+				            return hubConnection.AsObservable<IndexChangeNotification>();
+				        }));
+
 				return new Counter(
 					() =>
 					{
@@ -173,10 +177,12 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("docs/" + docId, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-				{
-					proxy.Invoke("StartWatchingDocument", docId);
-					return hubConnection.AsObservable<DocumentChangeNotification>();
-				});
+						proxy.Invoke("StartWatchingDocument", docId)
+							.ContinueWith(task =>
+							{
+								task.AssertNotFailed();
+								return hubConnection.AsObservable<DocumentChangeNotification>();
+							}));
 				return new Counter(
 					() =>
 					{

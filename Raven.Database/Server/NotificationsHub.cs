@@ -30,25 +30,5 @@ namespace Raven.Database.Server
 		{
 			Groups.Remove(Context.ConnectionId, "docs/" + docId);
 		}
-
-		public void ObserveIndex(string indexName, IndexChangeTypes change, Guid? etag)
-		{
-			Groups.Send("indexes/" + indexName, new IndexChangeNotification
-			{
-				Etag = etag,
-				Name = indexName,
-				Type = change
-			});
-		}
-
-		public void ObserveDocument(string docId, DocumentChangeTypes change, Guid? etag)
-		{
-			Groups.Send("docs/" + docId, new DocumentChangeNotification
-			{
-				Etag = etag,
-				Name = docId,
-				Type = change
-			});
-		}
 	}
 }

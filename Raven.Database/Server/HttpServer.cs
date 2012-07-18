@@ -152,12 +152,16 @@ namespace Raven.Database.Server
 
 		private void OnDatabaseNotifications(object sender, IndexChangeNotification changeNotification)
 		{
-			
+			var connectionManager = signalrServer.DependencyResolver.Resolve<IConnectionManager>();
+			var hubContext = connectionManager.GetHubContext<NotificationsHub>();
+			hubContext.Groups.Send("indexes/" + changeNotification.Name,changeNotification);
 		}
 
 		private void OnDatabaseNotifications(object sender, DocumentChangeNotification changeNotification)
 		{
-
+			var connectionManager = signalrServer.DependencyResolver.Resolve<IConnectionManager>();
+			var hubContext = connectionManager.GetHubContext<NotificationsHub>();
+			hubContext.Groups.Send("docs/" + changeNotification.Name, changeNotification);
 		}
 
 		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
@@ -266,8 +270,8 @@ namespace Raven.Database.Server
 
 		private void SetupSignalR(string uri)
 		{
-			var depResolver = CreateDependencyResolver();
-			signalrServer = new ExternalHttpListenerServer(uri, depResolver, listener);
+			var resolver = CreateDependencyResolver();
+			signalrServer = new ExternalHttpListenerServer(uri, resolver, listener);
 			signalrServer.MapHubs();
 		}
 

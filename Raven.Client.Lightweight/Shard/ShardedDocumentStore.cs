@@ -147,8 +147,8 @@ namespace Raven.Client.Shard
 
 #endif
 
-		private readonly AtomicDictionary<string, IDatabaseChanges> changes =
-			new AtomicDictionary<string, IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly AtomicDictionary<IDatabaseChanges> changes =
+			new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
 		public override IDatabaseChanges Changes(string database = null)
 		{
 			return changes.GetOrAdd(database, 
