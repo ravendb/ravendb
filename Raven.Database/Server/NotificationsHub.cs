@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Imports.SignalR.Hubs;
 
@@ -11,24 +12,24 @@ namespace Raven.Database.Server
 {
 	public class NotificationsHub : Hub
 	{
-		public void StartWatchingIndex(string indexName)
+		public Task StartWatchingIndex(string indexName)
 		{
-			Groups.Add(Context.ConnectionId, "indexes/" + indexName);
+			return Groups.Add(Context.ConnectionId, "indexes/" + indexName);
 		}
 
-		public void StopWatchingIndex(string indexName)
+		public Task StopWatchingIndex(string indexName)
 		{
-			Groups.Remove(Context.ConnectionId, "indexes/" + indexName);
+			return Groups.Remove(Context.ConnectionId, "indexes/" + indexName);
 		}
 
-		public void StartWatchingDocument(string docId)
+		public Task StartWatchingDocument(string docId)
 		{
-			Groups.Add(Context.ConnectionId, "docs/" + docId);
+			return Groups.Add(Context.ConnectionId, "docs/" + docId);
 		}
 
-		public void StopWatchingDocument(string docId)
+		public Task StopWatchingDocument(string docId)
 		{
-			Groups.Remove(Context.ConnectionId, "docs/" + docId);
+			return Groups.Remove(Context.ConnectionId, "docs/" + docId);
 		}
 	}
 }

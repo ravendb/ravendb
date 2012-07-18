@@ -154,14 +154,14 @@ namespace Raven.Database.Server
 		{
 			var connectionManager = signalrServer.DependencyResolver.Resolve<IConnectionManager>();
 			var hubContext = connectionManager.GetHubContext<NotificationsHub>();
-			hubContext.Groups.Send("indexes/" + changeNotification.Name,changeNotification);
+			hubContext.Clients["indexes/" + changeNotification.Name].Index(changeNotification);
 		}
 
 		private void OnDatabaseNotifications(object sender, DocumentChangeNotification changeNotification)
 		{
 			var connectionManager = signalrServer.DependencyResolver.Resolve<IConnectionManager>();
 			var hubContext = connectionManager.GetHubContext<NotificationsHub>();
-			hubContext.Groups.Send("docs/" + changeNotification.Name, changeNotification);
+			hubContext.Clients["docs/"+changeNotification.Name].Document(changeNotification);
 		}
 
 		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
@@ -279,6 +279,8 @@ namespace Raven.Database.Server
 		{
 			var depResolver = new DefaultDependencyResolver();
 			depResolver.Register(typeof(HttpServer), () => this);
+			var seqentialConnectionIdGenerator = new SeqentialConnectionIdGenerator();
+			depResolver.Register(typeof(IConnectionIdGenerator), () => seqentialConnectionIdGenerator);
 			var jsonSerializerSettings = new JsonSerializerSettings();
 			jsonSerializerSettings.Converters.AddRange(Default.Converters);
 			var serializer = new JsonNetSerializer(jsonSerializerSettings);

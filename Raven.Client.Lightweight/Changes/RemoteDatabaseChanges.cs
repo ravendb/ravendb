@@ -83,7 +83,7 @@ namespace Raven.Client.Changes
 				Credentials = credentials
 			};
 			temporaryConnection.OnPrepareRequest += jsonRequestFactory.InvokeConfigureSignalRConnection;
-
+			temporaryConnection.CreateProxy("NotificationsHub");
 			return temporaryConnection.Start()
 				.ContinueWith(task =>
 				{
@@ -133,7 +133,7 @@ namespace Raven.Client.Changes
 
 		public Task Task { get; private set; }
 
-		private Task AfterConnection<T>(Func<Task<T>> action)
+		private Task AfterConnection(Func<Task> action)
 		{
 			return Task.ContinueWith(task =>
 			{
@@ -147,13 +147,7 @@ namespace Raven.Client.Changes
 		{
 			var counter = counters.GetOrAdd("indexes/"+indexName, s =>
 			{
-				var indexSubscriptionTask = AfterConnection(() => 
-					proxy.Invoke("StartWatchingIndex", indexName)
-				        .ContinueWith(task =>
-				        {
-				            task.AssertNotFailed();
-				            return hubConnection.AsObservable<IndexChangeNotification>();
-				        }));
+				var indexSubscriptionTask = AfterConnection(() => proxy.Invoke("StartWatchingIndex", indexName));
 
 				return new Counter(
 					() =>
@@ -164,11 +158,24 @@ namespace Raven.Client.Changes
 					indexSubscriptionTask);
 			});
 			counter.Inc();
-			var taskFilteringObservable = new TaskFilteringObservable<IndexChangeNotification>(
-				(Task<IObservable<IndexChangeNotification>>)counter.Task, 
+			var taskedObservable = new TaskedObservable<IndexChangeNotification>(
+				counter.Task, 
 				notification => string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase),
 				counter.Dec);
-			return taskFilteringObservable;
+
+			counter.Task.ContinueWith(task =>
+			{
+				if (task.IsFaulted)
+					return;
+				proxy.On<IndexChangeNotification>("Index", notification =>
+				{
+					if (string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase) == false)
+						return;
+					taskedObservable.Send(notification);
+				});
+			});
+
+			return taskedObservable;
 
 		}
 
@@ -177,12 +184,7 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("docs/" + docId, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						proxy.Invoke("StartWatchingDocument", docId)
-							.ContinueWith(task =>
-							{
-								task.AssertNotFailed();
-								return hubConnection.AsObservable<DocumentChangeNotification>();
-							}));
+						proxy.Invoke("StartWatchingDocument", docId));
 				return new Counter(
 					() =>
 					{
@@ -191,11 +193,23 @@ namespace Raven.Client.Changes
 					},
 					documentSubscriptionTask);
 			});
-			var taskFilteringObservable = new TaskFilteringObservable<DocumentChangeNotification>(
-				(Task<IObservable<DocumentChangeNotification>>)counter.Task, 
+			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
+				counter.Task, 
 				notification => string.Equals(notification.Name, docId, StringComparison.InvariantCultureIgnoreCase),
 				counter.Dec);
-			return taskFilteringObservable;
+
+			counter.Task.ContinueWith(task =>
+			{
+				if (task.IsFaulted)
+					return;
+				proxy.On<DocumentChangeNotification>("Document", notification =>
+				{
+					if (string.Equals(notification.Name, docId, StringComparison.InvariantCultureIgnoreCase) == false)
+						return;
+					taskedObservable.Send(notification);
+				});
+			});
+			return taskedObservable;
 		}
 
 		public IObservableWithTask<DocumentChangeNotification> DocumentPrefixSubscription(string docIdPrefix)

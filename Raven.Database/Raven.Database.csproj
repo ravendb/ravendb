@@ -518,6 +518,7 @@
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Server\Responders\TransactionStatus.cs" />
+    <Compile Include="Server\SeqentialConnectionIdGenerator.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />
@@ -603,7 +604,6 @@
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Util\BoundedMemoryTarget.cs" />
-    <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\PortUtil.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -854,6 +854,9 @@
     <Compile Include="..\Raven.Abstractions\Util\AtomicDictionary.cs">
       <Link>Imports\Util\AtomicDictionary.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\ConcurrentSet.cs">
+      <Link>Imports\Util\ConcurrentSet.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Util\IncludesUtil.cs">
       <Link>Imports\Util\IncludesUtil.cs</Link>
     </Compile>
@@ -863,8 +866,8 @@
     <Compile Include="..\Raven.Client.Lightweight\Changes\RemoteDatabaseChanges.cs">
       <Link>Imports\Changes\RemoteDatabaseChanges.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Changes\TaskFilteringObservable.cs">
-      <Link>Imports\Changes\TaskFilteringObservable.cs</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Changes\TaskedObservable.cs">
+      <Link>Imports\Changes\TaskedObservable.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Changes\TaskObservable.cs">
       <Link>Imports\Changes\TaskObservable.cs</Link>
