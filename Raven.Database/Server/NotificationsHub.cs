@@ -11,14 +11,24 @@ namespace Raven.Database.Server
 {
 	public class NotificationsHub : Hub
 	{
-		public void IndexSubscription(string indexName)
+		public void StartWatchingIndex(string indexName)
 		{
 			Groups.Add(Context.ConnectionId, "indexes/" + indexName);
 		}
 
-		public void DocumentSubscription(string docId)
+		public void StopWatchingIndex(string indexName)
+		{
+			Groups.Remove(Context.ConnectionId, "indexes/" + indexName);
+		}
+
+		public void StartWatchingDocument(string docId)
 		{
 			Groups.Add(Context.ConnectionId, "docs/" + docId);
+		}
+
+		public void StopWatchingDocument(string docId)
+		{
+			Groups.Remove(Context.ConnectionId, "docs/" + docId);
 		}
 
 		public void ObserveIndex(string indexName, IndexChangeTypes change, Guid? etag)

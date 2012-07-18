@@ -19,14 +19,14 @@ namespace Raven.Tests.Notifications
 		}
 
 		[IISExpressInstalledFact]
-		public void CanHandleCaseSensitivityInProperties()
+		public void CheckNotificationInIIS()
 		{
 			using (var store = NewDocumentStore())
 			{
-				var list = new BlockingCollection<ChangeNotification>();
+				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				taskObservable.Subscribe(list.Add);
+				taskObservable.DocumentSubscription("items/1").Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
 				{
@@ -34,11 +34,11 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				ChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(30)));
+				DocumentChangeNotification documentChangeNotification;
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(30)));
 
-				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
+				Assert.Equal("items/1", documentChangeNotification.Name);
+				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
 			}
 		}
 	}

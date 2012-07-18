@@ -25,7 +25,7 @@ namespace Raven.Tests.Silverlight
 		{
 			var dbname = GenerateNewDatabaseName();
 			
-			var tcs = new TaskCompletionSource<ChangeNotification>();
+			var tcs = new TaskCompletionSource<DocumentChangeNotification>();
 			Task.Factory.StartNew(() =>
 			                      	{
 			                      		Thread.Sleep(5000);
@@ -43,6 +43,7 @@ namespace Raven.Tests.Silverlight
 				yield return taskObservable.Task;
 
 				taskObservable
+					.DocumentSubscription("companies/1")
 					.Subscribe(tcs.SetResult);
 
 				var entity1 = new Company { Name = "Async Company #1" };

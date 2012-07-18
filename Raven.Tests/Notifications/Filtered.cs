@@ -23,10 +23,11 @@ namespace Raven.Tests.Notifications
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				var list = new BlockingCollection<ChangeNotification>();
-				var taskObservable = store.Changes(changes: ChangeTypes.IndexUpdated);
+				var list = new BlockingCollection<IndexChangeNotification>();
+				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
 				taskObservable
+					.IndexSubscription("Raven/DocumentsByEntityName")
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -35,11 +36,11 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				ChangeNotification changeNotification;
+				IndexChangeNotification changeNotification;
 				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
 
 				Assert.Equal("Raven/DocumentsByEntityName", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.IndexUpdated);
+				Assert.Equal(changeNotification.Type, IndexChangeTypes.MapCompleted);
 			}
 		}
 
@@ -52,11 +53,12 @@ namespace Raven.Tests.Notifications
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				var list = new BlockingCollection<ChangeNotification>();
-				var taskObservable = store.Changes(changes: ChangeTypes.Put, idPrefix: "items");
+				var list = new BlockingCollection<DocumentChangeNotification>();
+				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
 				taskObservable
-				.Subscribe(list.Add);
+					.DocumentPrefixSubscription("items")
+					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
 				{
@@ -70,11 +72,11 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				ChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
+				DocumentChangeNotification documentChangeNotification;
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
 
-				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
+				Assert.Equal("items/1", documentChangeNotification.Name);
+				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
 			}
 		}
 	}

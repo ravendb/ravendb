@@ -13,6 +13,7 @@ using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.SignalR;
 using Raven.Imports.SignalR.Hosting.AspNet;
+using Raven.Imports.SignalR.Hubs;
 
 namespace Raven.Web
 {
@@ -45,7 +46,7 @@ namespace Raven.Web
 
 			if (HttpServer.SiganlRQuery.IsMatch(reqUrl))
 			{
-				var aspNetHandler = new AspNetHandler(defaultDependencyResolver, new NotificationsConnection());
+				var aspNetHandler = new AspNetHandler(defaultDependencyResolver, new HubDispatcher("/signalr"));
 				return new SiganlRCurrentDatabaseForwardingHandler(server, aspNetHandler);
 			}
 

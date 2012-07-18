@@ -25,11 +25,11 @@ namespace Raven.Tests.Notifications
 				DefaultDatabase = "test"
 			}.Initialize())
 			{
-				var list = new BlockingCollection<ChangeNotification>();
+				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
 				taskObservable
-					.Where(x => x.Type == ChangeTypes.Put)
+					.DocumentSubscription("items/1")
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -38,11 +38,11 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				ChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(15)));
+				DocumentChangeNotification documentChangeNotification;
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(15)));
 
-				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
+				Assert.Equal("items/1", documentChangeNotification.Name);
+				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
 			}
 
 		}
@@ -57,11 +57,11 @@ namespace Raven.Tests.Notifications
 			}.Initialize())
 			{
 				store.DatabaseCommands.EnsureDatabaseExists("test");
-				var list = new BlockingCollection<ChangeNotification>();
+				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes("test");
 				taskObservable.Task.Wait();
 				taskObservable
-					.Where(x => x.Type == ChangeTypes.Put)
+					.DocumentSubscription("items/1")
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession("test"))
@@ -70,11 +70,11 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				ChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(15)));
+				DocumentChangeNotification DocumentChangeNotification;
+				Assert.True(list.TryTake(out DocumentChangeNotification, TimeSpan.FromSeconds(15)));
 
-				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
+				Assert.Equal("items/1", DocumentChangeNotification.Name);
+				Assert.Equal(DocumentChangeNotification.Type, DocumentChangeTypes.Put);
 			}
 
 		}
@@ -90,11 +90,11 @@ namespace Raven.Tests.Notifications
 			{
 				store.DatabaseCommands.EnsureDatabaseExists("test");
 				store.DatabaseCommands.EnsureDatabaseExists("another");
-				var list = new BlockingCollection<ChangeNotification>();
+				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes("test");
 				taskObservable.Task.Wait();
 				taskObservable
-					.Where(x => x.Type == ChangeTypes.Put)
+					.DocumentSubscription("items/1")
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession("another"))
@@ -109,13 +109,13 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				ChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(15)));
+				DocumentChangeNotification DocumentChangeNotification;
+				Assert.True(list.TryTake(out DocumentChangeNotification, TimeSpan.FromSeconds(15)));
 
-				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
+				Assert.Equal("items/1", DocumentChangeNotification.Name);
+				Assert.Equal(DocumentChangeNotification.Type, DocumentChangeTypes.Put);
 
-				Assert.False(list.TryTake(out changeNotification, TimeSpan.FromMilliseconds(250)));
+				Assert.False(list.TryTake(out DocumentChangeNotification, TimeSpan.FromMilliseconds(250)));
 			}
 		}
 	}

@@ -11,6 +11,8 @@ using System.Net;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
+using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Connection.Profiling;
@@ -62,18 +64,9 @@ namespace Raven.Client.Document
 		private readonly ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
 #endif
 
+		private AtomicDictionary<string, IDatabaseChanges> databaseChanges = new AtomicDictionary<string, IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
+
 		private HttpJsonRequestFactory jsonRequestFactory;
-
-		private ChangesConnectionFactory changesConnectionFactory;
-
-		public ChangesConnectionFactory ChangesConnectionFactory
-		{
-			get
-			{
-				AssertInitialized();
-				return changesConnectionFactory;
-			}
-		}
 
 		///<summary>
 		/// Get the <see cref="HttpJsonRequestFactory"/> for the stores
@@ -366,8 +359,6 @@ namespace Raven.Client.Document
 
 			AssertValidConfiguration();
 
-			changesConnectionFactory = new ChangesConnectionFactory(Conventions);
-
 #if !SILVERLIGHT
 			jsonRequestFactory = new HttpJsonRequestFactory(MaxNumberOfCachedRequests);
 #else
@@ -449,8 +440,7 @@ namespace Raven.Client.Document
 				SetHeader(args.Request.Headers, "Authorization", currentOauthToken);
 			};
 
-			changesConnectionFactory.ConfigureConnection += connection =>
-				connection.OnPrepareRequest += request =>
+			jsonRequestFactory.ConfigureSignalRConnection += request =>
 				{
 					if (string.IsNullOrEmpty(currentOauthToken))
 						return;
@@ -619,7 +609,7 @@ namespace Raven.Client.Document
 				ReplicationInformer result;
 				if (!replicationInformers.TryGetValue(key, out result))
 				{
-					result = Conventions.ReplicationInformerFactory();
+					result = Conventions.ReplicationInformerFactory(key);
 					replicationInformers.Add(key, result);
 				}
 				return result;
@@ -653,10 +643,16 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		public override TaskObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null)
+		public override IDatabaseChanges Changes(string database = null)
 		{
 			AssertInitialized();
 
+			return databaseChanges.GetOrAdd(database ?? DefaultDatabase ?? "System", 
+				CreateDatabaseChanges);
+		}
+
+		protected virtual IDatabaseChanges CreateDatabaseChanges(string database)
+		{
 			if (string.IsNullOrEmpty(Url))
 				throw new InvalidOperationException("Changes API requires usage of server/client");
 
@@ -666,17 +662,9 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(database) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
-			var nvc = new Dictionary<string, string>();
-
-			nvc["changes"] = changes.ToString();
-			if (string.IsNullOrEmpty(idPrefix) == false)
-				nvc["idPrefix"] = idPrefix;
-
-			var connection = changesConnectionFactory
-				.Create(dbUrl + "/signalr/notifications", Credentials, nvc);
-			return connection;
+			return new RemoteDatabaseChanges(dbUrl, credentials, jsonRequestFactory, Conventions);
 		}
-		
+
 		/// <summary>
 		/// Setup the context for aggressive caching.
 		/// </summary>

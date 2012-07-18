@@ -54,6 +54,9 @@
     </Compile>
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
+    <Compile Include="Changes\IDatabaseChanges.cs" />
+    <Compile Include="Changes\RemoteDatabaseChanges.cs" />
+    <Compile Include="Changes\TaskFilteringObservable.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\Async\IAsyncDatabaseCommands.cs" />
@@ -68,7 +71,6 @@
     <Compile Include="Connection\DocumentConventionJsonExtensions.cs" />
     <Compile Include="Connection\JsonLuceneDateTimeConverter.cs" />
     <Compile Include="Connection\MultiGetOperation.cs" />
-    <Compile Include="Connection\ChangesConnectionFactory.cs" />
     <Compile Include="Connection\Profiling\ConcurrentBoundedList.cs" />
     <Compile Include="Connection\Profiling\IHoldProfilingInformation.cs" />
     <Compile Include="Connection\Profiling\ProfilingContext.cs" />
@@ -186,6 +188,7 @@
     <Compile Include="Shard\AsyncShardedDocumentSession.cs" />
     <Compile Include="Shard\AsyncShardedHiloKeyGenerator.cs" />
     <Compile Include="Shard\IShardResolutionStrategy.cs" />
+    <Compile Include="Shard\ShardedDatabaseChanges.cs" />
     <Compile Include="Shard\ShardedDocumentSession.cs" />
     <Compile Include="Shard\ShardedDocumentStore.cs" />
     <Compile Include="Shard\ShardedHiloKeyGenerator.cs" />
@@ -194,11 +197,12 @@
     <Compile Include="Shard\ParallelShardAccessStrategy.cs" />
     <Compile Include="Shard\SequentialShardAccessStrategy.cs" />
     <Compile Include="Shard\DefaultShardResolutionStrategy.cs" />
+    <Compile Include="Shard\ShardedObservableWithTask.cs" />
     <Compile Include="Shard\ShardRequestData.cs" />
     <Compile Include="Shard\ShardStrategy.cs" />
     <Compile Include="StoredEntityEventArgs.cs" />
     <Compile Include="Util\ConcatObservable.cs" />
-    <Compile Include="Util\TaskObservable.cs" />
+    <Compile Include="Changes\TaskObservable.cs" />
     <Compile Include="Util\Inflector.cs" />
     <Compile Include="Util\ObjectReferenceEqualityComparerer.cs" />
     <Compile Include="Util\SimpleCache.cs" />

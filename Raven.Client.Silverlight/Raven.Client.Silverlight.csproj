@@ -851,14 +851,26 @@
     <Compile Include="..\Raven.Abstractions\SystemTime.cs">
       <Link>Imports\SystemTime.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\AtomicDictionary.cs">
+      <Link>Imports\Util\AtomicDictionary.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Util\IncludesUtil.cs">
       <Link>Imports\Util\IncludesUtil.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Changes\IDatabaseChanges.cs">
+      <Link>Imports\Changes\IDatabaseChanges.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Changes\RemoteDatabaseChanges.cs">
+      <Link>Imports\Changes\RemoteDatabaseChanges.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Changes\TaskFilteringObservable.cs">
+      <Link>Imports\Changes\TaskFilteringObservable.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Changes\TaskObservable.cs">
+      <Link>Imports\Changes\TaskObservable.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
       <Link>Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\ChangesConnectionFactory.cs">
-      <Link>Imports\Connection\ChangesConnectionFactory.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\CompletedTask.cs">
       <Link>Connection\CompletedTask.cs</Link>
@@ -1012,9 +1024,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
       <Link>Imports\Util\ConcatObservable.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Util\TaskObservable.cs">
-      <Link>Imports\Util\TaskObservable.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Types.cs">
       <Link>Imports\Util\Types.cs</Link>

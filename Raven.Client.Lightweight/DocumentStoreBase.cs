@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Extensions;
@@ -47,7 +48,7 @@ namespace Raven.Client
 
 		public abstract IDisposable AggressivelyCacheFor(TimeSpan cahceDuration);
 
-		public abstract DatabaseChanges Changes(string database);
+		public abstract IDatabaseChanges Changes(string database = null);
 
 		public abstract IDisposable DisableAggressiveCaching();
 		

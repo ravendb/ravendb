@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Net;
 using Raven.Abstractions.Data;
+using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
@@ -34,7 +35,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		TaskObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null);
+		IDatabaseChanges Changes(string database = null);
 
 		/// <summary>
 		/// Setup the context for aggressive caching.
