@@ -13,7 +13,7 @@ namespace Raven.Database.Server
 		{
 			// Ensure the connection id is unique, but at the same time, has a 
 			// part that is human readable
-			return Interlocked.Increment(ref counter).ToString("#,#", CultureInfo.InvariantCulture) + "@" + Guid.NewGuid("d");
+			return Interlocked.Increment(ref counter).ToString("#,#", CultureInfo.InvariantCulture) + "@" + Guid.NewGuid().ToString("d");
 		}
 	}
 }
