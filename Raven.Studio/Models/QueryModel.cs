@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Reactive.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Client.Linq;
@@ -91,6 +92,19 @@ namespace Raven.Studio.Models
 		}
 
 		#endregion
+
+		private int exceptionLine;
+		public int ExceptionLine
+		{
+			get { return exceptionLine; }
+			set { exceptionLine = value; }
+		}
+		private int exceptionColumn;
+		public int ExceptionColumn
+		{
+			get { return exceptionColumn; }
+			set { exceptionColumn = value; }
+		}
 
 		private string indexName;
 		public string IndexName
@@ -242,6 +256,8 @@ namespace Raven.Studio.Models
 		public QueryModel()
 		{
 			ModelUrl = "/query";
+			ExceptionLine = -1;
+			ExceptionColumn = -1;
 			
 			CollectionSource = new QueryDocumentsCollectionSource();
 			Observable.FromEventPattern<QueryStatisticsUpdatedEventArgs>(h => CollectionSource.QueryStatisticsUpdated += h,
@@ -278,6 +294,8 @@ namespace Raven.Studio.Models
 			DynamicSelectedOption = DynamicOptions[0];
 		}
 
+		Regex errorLocation = new Regex(@"at line (\d+), column (\d+)");
+
 		private void HandleQueryError(Exception exception)
 		{
 			if (exception is AggregateException)
@@ -285,7 +303,39 @@ namespace Raven.Studio.Models
 				exception = ((AggregateException) exception).ExtractSingleInnerException();
 			}
 
-			QueryErrorMessage.Value = exception.Message;
+			var indexRaven = exception.Message.IndexOf("at Raven.", System.StringComparison.Ordinal);
+			var indexLucene = exception.Message.IndexOf("at Lucene.", System.StringComparison.Ordinal);
+			var index = Math.Min(indexLucene, indexRaven);
+			if (index != -1)
+			{
+				var trimmedMessage = exception.Message.Remove(index);
+				QueryErrorMessage.Value = trimmedMessage;
+			}
+			else
+			{
+				QueryErrorMessage.Value = exception.Message;
+			}
+
+
+			var match = errorLocation.Match(QueryErrorMessage.Value);
+
+			if (match.Success)
+			{
+				var success = int.TryParse(match.Groups[1].Value, out exceptionLine);
+				if (success)
+				{
+					success = int.TryParse(match.Groups[2].Value, out exceptionColumn);
+				}
+
+				if (!success)
+				{
+					ExceptionLine = -1;
+					ExceptionColumn = -1;
+				}
+					
+			}
+
+
 			IsErrorVisible.Value = true;
 		}
 
