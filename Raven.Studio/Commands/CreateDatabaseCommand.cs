@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -27,17 +28,25 @@ namespace Raven.Studio.Commands
 						throw new ArgumentException("Cannot create a database with invalid path characters: " + databaseName);
 
 					ApplicationModel.Current.AddNotification(new Notification("Creating database: " + databaseName));
-					DatabaseCommands.EnsureDatabaseExistsAsync(databaseName)
-						.ContinueOnSuccess(() => DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
-						.ContinueOnSuccessInTheUIThread(() =>
-															{
-																var model = parameter as DatabasesListModel;
-																if (model != null)
-																	model.ForceTimerTicked();
-																ApplicationModel.Current.AddNotification(new Notification("Database " + databaseName + " created"));
-																Command.ExecuteCommand(new ChangeDatabaseCommand(), databaseName);
-															})
-						.Catch();
+					try
+					{
+						DatabaseCommands.EnsureDatabaseExistsAsync(databaseName).ContinueOnSuccess(
+							() => DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
+							.ContinueOnSuccessInTheUIThread(() =>
+							                                	{
+							                                		var model = parameter as DatabasesListModel;
+							                                		if (model != null)
+							                                			model.ForceTimerTicked();
+							                                		ApplicationModel.Current.AddNotification(
+							                                			new Notification("Database " + databaseName + " created"));
+							                                		Command.ExecuteCommand(new ChangeDatabaseCommand(), databaseName);
+							                                	})
+							.Catch();
+					}
+					catch (Exception ex)
+					{
+						Infrastructure.Execute.OnTheUI(() => ApplicationModel.Current.AddErrorNotification(ex));
+					}
 				});
 		}
 	}
