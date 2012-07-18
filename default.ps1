@@ -356,7 +356,7 @@ task DoRelease -depends Compile, `
 	CopyRootFiles, `
 	CopySamples, `
 	ZipOutput, `
-	CreateNugetPackageFineGrained, `
+	CreateNugetPackages, `
 	ResetBuildArtifcats {	
 	Write-Host "Done building RavenDB"
 }
@@ -390,7 +390,7 @@ task UploadStable -depends Stable, DoRelease, Upload
 
 task UploadUnstable -depends Unstable, DoRelease, Upload
 
-task CreateNugetPackageFineGrained {
+task CreateNugetPackages {
 
 	Remove-Item $base_dir\RavenDB*.nupkg
 	
@@ -436,9 +436,10 @@ task CreateNugetPackageFineGrained {
 	New-Item $nuget_dir\RavenDB.Embedded\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Embedded.nuspec $nuget_dir\RavenDB.Embedded\RavenDB.Embedded.nuspec
 	@("Raven.Client.Embedded.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Embedded\lib\net40 }
-	Remove-Item $nuget_dir\RavenDB.Embedded\lib\net40\*.xap | Out-Null
-	New-Item $nuget_dir\RavenDB.Embedded\content -Type directory | Out-Null
-	Copy-Item "$build_dir\Raven.Studio.xap" $nuget_dir\RavenDB.Embedded\content
+	New-Item $nuget_dir\RavenDB.Embedded\tools -Type directory | Out-Null
+	Copy-Item $build_dir\Raven.Studio.xap $nuget_dir\RavenDB.Embedded\tools
+	Copy-Item $base_dir\NuGet\RavenDB.Embedded.install.ps1 $nuget_dir\RavenDB.Embedded\tools\install.ps1
+	Copy-Item $base_dir\NuGet\RavenDB.Embedded.uninstall.ps1 $nuget_dir\RavenDB.Embedded\tools\uninstall.ps1
 		
 	New-Item $nuget_dir\RavenDB.Client.UniqueConstraints\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Client.UniqueConstraints.nuspec $nuget_dir\RavenDB.Client.UniqueConstraints\RavenDB.Client.UniqueConstraints.nuspec
@@ -475,9 +476,12 @@ task CreateNugetPackageFineGrained {
 	New-Item $nuget_dir\RavenDB.AspNetHost\content -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.AspNetHost\lib\net40 -Type directory | Out-Null
 	@("Raven.Web.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.AspNetHost\lib\net40 }
-	Copy-Item $build_dir\Raven.Studio.xap $nuget_dir\RavenDB.AspNetHost\content
 	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.nuspec $nuget_dir\RavenDB.AspNetHost\RavenDB.AspNetHost.nuspec
 	Copy-Item $base_dir\DefaultConfigs\Nupack.Web.config $nuget_dir\RavenDB.AspNetHost\content\Web.config.transform
+	New-Item $nuget_dir\RavenDB.AspNetHost\tools -Type directory | Out-Null
+	Copy-Item $build_dir\Raven.Studio.xap $nuget_dir\RavenDB.AspNetHost\tools
+	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.install.ps1 $nuget_dir\RavenDB.AspNetHost\tools\install.ps1
+	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.uninstall.ps1 $nuget_dir\RavenDB.AspNetHost\tools\uninstall.ps1
 	
 	$nugetVersion = "$version.$env:buildlabel"
 	if ($global:uploadCategory -and $global:uploadCategory.EndsWith("-Unstable")){
