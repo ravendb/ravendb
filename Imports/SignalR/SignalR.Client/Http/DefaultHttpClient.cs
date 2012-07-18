@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace Raven.Imports.SignalR.Client.Http
@@ -17,8 +18,9 @@ namespace Raven.Imports.SignalR.Client.Http
         /// <returns>A <see cref="Task{IResponse}"/>.</returns>
         public Task<IResponse> GetAsync(string url, Action<IRequest> prepareRequest)
         {
-            return HttpHelper.GetAsync(url, request => prepareRequest(new HttpWebRequestWrapper(request)))
-                             .Then(response => (IResponse)new HttpWebResponseWrapper(response));
+        	HttpWebRequest cachedRequest = null;
+            return HttpHelper.GetAsync(url, request => prepareRequest(new HttpWebRequestWrapper(cachedRequest = request)))
+							 .Then(response => (IResponse)new HttpWebResponseWrapper(cachedRequest, response));
         }
 
         /// <summary>
@@ -30,8 +32,9 @@ namespace Raven.Imports.SignalR.Client.Http
         /// <returns>A <see cref="Task{IResponse}"/>.</returns>
         public Task<IResponse> PostAsync(string url, Action<IRequest> prepareRequest, Dictionary<string, string> postData)
         {
-            return HttpHelper.PostAsync(url, request => prepareRequest(new HttpWebRequestWrapper(request)), postData)
-                             .Then(response => (IResponse)new HttpWebResponseWrapper(response));
+        	HttpWebRequest cachedRequest = null;
+            return HttpHelper.PostAsync(url, request => prepareRequest(new HttpWebRequestWrapper(cachedRequest = request)), postData)
+							 .Then(response => (IResponse)new HttpWebResponseWrapper(cachedRequest, response));
         }
     }
 }

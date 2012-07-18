@@ -6,14 +6,16 @@ namespace Raven.Imports.SignalR.Client.Http
 {
     public class HttpWebResponseWrapper : IResponse
     {
-        private readonly HttpWebResponse _response;
+    	private readonly HttpWebRequest _request;
+    	private readonly HttpWebResponse _response;
 
-        public HttpWebResponseWrapper(HttpWebResponse response)
+        public HttpWebResponseWrapper(HttpWebRequest request,HttpWebResponse response)
         {
-            _response = response;
+        	this._request = request;
+        	_response = response;
         }
 
-        public string ReadAsString()
+    	public string ReadAsString()
         {
             return _response.ReadAsString();   
         }
@@ -25,6 +27,8 @@ namespace Raven.Imports.SignalR.Client.Http
 
         public void Close()
         {
+			if (_request != null)
+        		_request.Abort();
             ((IDisposable)_response).Dispose();
         }
     }
