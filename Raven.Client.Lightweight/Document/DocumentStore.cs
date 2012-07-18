@@ -257,7 +257,15 @@ namespace Raven.Client.Document
 			
 			if (jsonRequestFactory != null)
 				jsonRequestFactory.Dispose();
-			
+
+			foreach (var databaseChange in databaseChanges)
+			{
+				using(databaseChange.Value as IDisposable)
+				{
+					
+				}
+			}
+
 			foreach (var replicationInformer in replicationInformers)
 			{
 				replicationInformer.Value.Dispose();

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,13 +11,14 @@ using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 #endif
+using Raven.Database.Util;
 using Raven.Imports.SignalR.Client;
 using Raven.Imports.SignalR.Client.Hubs;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Changes
 {
-	public class RemoteDatabaseChanges : IDatabaseChanges
+	public class RemoteDatabaseChanges : IDatabaseChanges, IDisposable
 	{
 		private readonly string url;
 		private readonly ICredentials credentials;
@@ -30,8 +32,8 @@ namespace Raven.Client.Changes
 		{
 			private readonly Action onZero;
 			private readonly Task task;
-			private int value;
-
+			private int value = 1;
+			private readonly ConcurrentSet<Task<IDisposable>> toDispose = new ConcurrentSet<Task<IDisposable>>();
 			public Task Task
 			{
 				get { return task; }
@@ -51,7 +53,28 @@ namespace Raven.Client.Changes
 			public void Dec()
 			{
 				if (Interlocked.Decrement(ref value) == 0)
-					onZero();
+				{
+					Dispose();
+				}
+			}
+
+			public void Add(Task<IDisposable> disposableTask)
+			{
+				if(value == 0)
+				{
+					disposableTask.ContinueWith(_ => { using(_.Result){} });
+					return;
+				}
+				toDispose.Add(disposableTask);
+			}
+
+			public void Dispose()
+			{
+				foreach (var disposableTask in toDispose)
+				{
+					disposableTask.ContinueWith(_ => { using (_.Result) { } });
+				}
+				onZero();
 			}
 		}
 		
@@ -163,18 +186,18 @@ namespace Raven.Client.Changes
 				notification => string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase),
 				counter.Dec);
 
-			counter.Task.ContinueWith(task =>
+			var disposableTask = counter.Task.ContinueWith(task =>
 			{
 				if (task.IsFaulted)
-					return;
-				proxy.On<IndexChangeNotification>("Index", notification =>
+					return null;
+				return proxy.On<IndexChangeNotification>("Index", notification =>
 				{
 					if (string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase) == false)
 						return;
 					taskedObservable.Send(notification);
 				});
 			});
-
+			counter.Add(disposableTask);
 			return taskedObservable;
 
 		}
@@ -197,24 +220,38 @@ namespace Raven.Client.Changes
 				counter.Task, 
 				notification => string.Equals(notification.Name, docId, StringComparison.InvariantCultureIgnoreCase),
 				counter.Dec);
-
-			counter.Task.ContinueWith(task =>
+			var disposableTask = counter.Task.ContinueWith(task =>
 			{
 				if (task.IsFaulted)
-					return;
-				proxy.On<DocumentChangeNotification>("Document", notification =>
+					return null;
+				return proxy.On<DocumentChangeNotification>("Document", notification =>
 				{
 					if (string.Equals(notification.Name, docId, StringComparison.InvariantCultureIgnoreCase) == false)
+					{
 						return;
+					}
 					taskedObservable.Send(notification);
 				});
 			});
+			counter.Add(disposableTask);
 			return taskedObservable;
 		}
 
 		public IObservableWithTask<DocumentChangeNotification> DocumentPrefixSubscription(string docIdPrefix)
 		{
 			return DocumentSubscription(docIdPrefix);
+		}
+
+		public void Dispose()
+		{
+			foreach (var keyValuePair in counters)
+			{
+				keyValuePair.Value.Dispose();
+			}
+			if(hubConnection != null)
+			{
+				hubConnection.Stop();
+			}
 		}
 	}
 }
