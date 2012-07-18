@@ -619,7 +619,7 @@ namespace Raven.Client.Document
 				ReplicationInformer result;
 				if (!replicationInformers.TryGetValue(key, out result))
 				{
-					result = new ReplicationInformer(Conventions);
+					result = Conventions.ReplicationInformerFactory();
 					replicationInformers.Add(key, result);
 				}
 				return result;

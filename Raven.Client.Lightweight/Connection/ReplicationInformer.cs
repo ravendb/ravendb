@@ -47,7 +47,7 @@ namespace Raven.Client.Connection
 		private readonly object replicationLock = new object();
 		private List<string> replicationDestinations = new List<string>();
 		private static readonly List<string> Empty = new List<string>();
-		protected int readStripingBase;
+		protected static int readStripingBase;
 
 		/// <summary>
 		/// Notify when the failover status changed
