@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Windows.Input;
+using Raven.Abstractions.Data;
 using Raven.Client.Linq;
 using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
@@ -16,10 +17,10 @@ namespace Raven.Studio.Models
 {
 	public class QueryModel : PageViewModel, IHasPageTitle
 	{
-        private string error;
-        private ICommand executeQuery;
+		private string error;
+		private ICommand executeQuery;
 
-        public QueryDocumentsCollectionSource CollectionSource { get; private set; }
+		public QueryDocumentsCollectionSource CollectionSource { get; private set; }
 
 		private QueryIndexAutoComplete queryIndexAutoComplete;
 		public QueryIndexAutoComplete QueryIndexAutoComplete
@@ -106,26 +107,37 @@ namespace Raven.Studio.Models
 				}
 
 				indexName = value;
-                DocumentsResult.Context = "Index/" + indexName;
+				DocumentsResult.Context = "Index/" + indexName;
 				OnPropertyChanged(() => IndexName);
 				RestoreHistory();
 			}
 		}
 
-	    private bool showFields;
+		private QueryOperator defualtOperator;
+		public QueryOperator DefualtOperator
+		{
+			get { return defualtOperator; }
+			set
+			{
+				defualtOperator = value;
+				OnPropertyChanged(() => DefualtOperator);
+			}
+		}
 
-	    public bool ShowFields
-	    {
-	        get { return showFields; }
-            set
-            {
-                showFields = value;
-                OnPropertyChanged(() => ShowFields);
-                Requery();
-            }
-	    }
+		private bool showFields;
 
-	    #region Sorting
+		public bool ShowFields
+		{
+			get { return showFields; }
+			set
+			{
+				showFields = value;
+				OnPropertyChanged(() => ShowFields);
+				Requery();
+			}
+		}
+
+		#region Sorting
 
 		public const string SortByDescSuffix = " DESC";
 
@@ -180,7 +192,7 @@ namespace Raven.Studio.Models
 
 		private void SetSortByOptions(ICollection<string> items)
 		{
-            SortByOptions.Clear();
+			SortByOptions.Clear();
 
 			foreach (var item in items)
 			{
@@ -231,74 +243,74 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/query";
 			
-            CollectionSource = new QueryDocumentsCollectionSource();
-		    Observable.FromEventPattern<QueryStatisticsUpdatedEventArgs>(h => CollectionSource.QueryStatisticsUpdated += h,
-		                                                                 h => CollectionSource.QueryStatisticsUpdated -= h)
-		        .SampleResponsive(TimeSpan.FromSeconds(0.5))
-                .TakeUntil(Unloaded)
-		        .ObserveOnDispatcher()
-		        .Subscribe(e =>
-		                       {
-		                           QueryTime = e.EventArgs.QueryTime;
-		                           Results = e.EventArgs.Statistics;
-		                       });
-		    Observable.FromEventPattern<QueryErrorEventArgs>(h => CollectionSource.QueryError += h,
-		                                                     h => CollectionSource.QueryError -= h)
-		        .ObserveOnDispatcher()
-		        .Subscribe(e => HandleQueryError(e.EventArgs.Exception));
+			CollectionSource = new QueryDocumentsCollectionSource();
+			Observable.FromEventPattern<QueryStatisticsUpdatedEventArgs>(h => CollectionSource.QueryStatisticsUpdated += h,
+																		 h => CollectionSource.QueryStatisticsUpdated -= h)
+				.SampleResponsive(TimeSpan.FromSeconds(0.5))
+				.TakeUntil(Unloaded)
+				.ObserveOnDispatcher()
+				.Subscribe(e =>
+							   {
+								   QueryTime = e.EventArgs.QueryTime;
+								   Results = e.EventArgs.Statistics;
+							   });
+			Observable.FromEventPattern<QueryErrorEventArgs>(h => CollectionSource.QueryError += h,
+															 h => CollectionSource.QueryError -= h)
+				.ObserveOnDispatcher()
+				.Subscribe(e => HandleQueryError(e.EventArgs.Exception));
 
-		    DocumentsResult = new DocumentsModel(CollectionSource)
-		                          {
-                                      Header = "Results",
-                                      SkipAutoRefresh = true,
-                                      DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index, IndexName, CollectionSource.TemplateQuery),
-		                          };
+			DocumentsResult = new DocumentsModel(CollectionSource)
+								  {
+									  Header = "Results",
+									  SkipAutoRefresh = true,
+									  DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index, IndexName, CollectionSource.TemplateQuery),
+								  };
 
-            Query = new Observable<string>();
-            QueryErrorMessage = new Observable<string>();
-            IsErrorVisible = new Observable<bool>();
+			Query = new Observable<string>();
+			QueryErrorMessage = new Observable<string>();
+			IsErrorVisible = new Observable<bool>();
 
 			SortBy = new BindableCollection<StringRef>(x => x.Value);
-		    SortBy.CollectionChanged += HandleSortByChanged;
+			SortBy.CollectionChanged += HandleSortByChanged;
 			SortByOptions = new BindableCollection<string>(x => x);
 			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
 			DynamicSelectedOption = DynamicOptions[0];
 		}
 
-	    private void HandleQueryError(Exception exception)
-	    {
-	        if (exception is AggregateException)
-	        {
-	            exception = ((AggregateException) exception).ExtractSingleInnerException();
-	        }
+		private void HandleQueryError(Exception exception)
+		{
+			if (exception is AggregateException)
+			{
+				exception = ((AggregateException) exception).ExtractSingleInnerException();
+			}
 
-	        QueryErrorMessage.Value = exception.Message;
-	        IsErrorVisible.Value = true;
-	    }
+			QueryErrorMessage.Value = exception.Message;
+			IsErrorVisible.Value = true;
+		}
 
-	    public void ClearQueryError()
-	    {
-	        QueryErrorMessage.Value = string.Empty;
-	        IsErrorVisible.Value = false;
-	    }
+		public void ClearQueryError()
+		{
+			QueryErrorMessage.Value = string.Empty;
+			IsErrorVisible.Value = false;
+		}
 
-	    private void HandleSortByChanged(object sender, NotifyCollectionChangedEventArgs e)
-	    {
-	        if (e.Action == NotifyCollectionChangedAction.Add)
-	        {
-	            (e.NewItems[0] as StringRef).PropertyChanged += delegate { Requery(); };
-	        }
+		private void HandleSortByChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			if (e.Action == NotifyCollectionChangedAction.Add)
+			{
+				(e.NewItems[0] as StringRef).PropertyChanged += delegate { Requery(); };
+			}
 
-            Requery();
-	    }
+			Requery();
+		}
 
-	    private void Requery()
-	    {
-	        Execute.Execute(null);
-	    }
+		private void Requery()
+		{
+			Execute.Execute(null);
+		}
 
-	    public override void LoadModelParameters(string parameters)
+		public override void LoadModelParameters(string parameters)
 		{
 			var urlParser = new UrlParser(parameters);
 
@@ -320,13 +332,13 @@ namespace Raven.Studio.Models
 						IndexDefinitionModel.HandleIndexNotFound(IndexName);
 						return;
 					}
-                    var fields = task.Result.Fields;
+					var fields = task.Result.Fields;
 					QueryIndexAutoComplete = new QueryIndexAutoComplete(IndexName, Query, fields);
 					
 					const string spatialindexGenerate = "SpatialIndex.Generate";
 					IsSpatialQuerySupported =
-                        task.Result.Maps.Any(x => x.Contains(spatialindexGenerate)) ||
-                        (task.Result.Reduce != null && task.Result.Reduce.Contains(spatialindexGenerate));
+						task.Result.Maps.Any(x => x.Contains(spatialindexGenerate)) ||
+						(task.Result.Reduce != null && task.Result.Reduce.Contains(spatialindexGenerate));
 
 					SetSortByOptions(fields);
 					Execute.Execute(string.Empty);
@@ -350,8 +362,8 @@ namespace Raven.Studio.Models
 
 		public ICommand Execute { get { return executeQuery ?? (executeQuery = new ExecuteQueryCommand(this)); } }
 
-        public Observable<string> QueryErrorMessage { get; private set; }
-        public Observable<bool> IsErrorVisible { get; private set; } 
+		public Observable<string> QueryErrorMessage { get; private set; }
+		public Observable<bool> IsErrorVisible { get; private set; } 
 		public Observable<string> Query { get; private set; }
 
 		private TimeSpan queryTime;

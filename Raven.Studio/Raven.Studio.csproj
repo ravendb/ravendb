@@ -256,6 +256,7 @@
     <Compile Include="Impl\WatermarkedTextBox\WatermarkedTextBox.cs" />
     <Compile Include="Infrastructure\ArrayContainer.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringToDefaultOperatorConverter.cs" />
     <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\NegatingBoolConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringValueToObjectConverter.cs" />
