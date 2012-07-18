@@ -35,6 +35,7 @@ namespace Raven.Studio.Commands
 																if (model != null)
 																	model.ForceTimerTicked();
 																ApplicationModel.Current.AddNotification(new Notification("Database " + databaseName + " created"));
+																Command.ExecuteCommand(new ChangeDatabaseCommand(), databaseName);
 															})
 						.Catch();
 				});
