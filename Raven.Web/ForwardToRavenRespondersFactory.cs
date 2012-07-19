@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Web;
 using System.Web.Hosting;
 using NLog;
@@ -46,7 +47,7 @@ namespace Raven.Web
 
 			if (HttpServer.SiganlRQuery.IsMatch(reqUrl))
 			{
-				var aspNetHandler = new AspNetHandler(defaultDependencyResolver, new HubDispatcher("/signalr"));
+				var aspNetHandler = new AspNetHandler(defaultDependencyResolver, new ChangesConnection());
 				return new SiganlRCurrentDatabaseForwardingHandler(server, aspNetHandler);
 			}
 
@@ -62,7 +63,7 @@ namespace Raven.Web
 		{
 			if (database != null)
 				return;
-
+			
 			lock (locker)
 			{
 				if (database != null)
