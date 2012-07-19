@@ -352,7 +352,11 @@ namespace Raven.Client.Silverlight.Connection
 				.ContinueWith(task =>
 				{
 					var stream = task.Result.GetResponseStream();
-					return (IObservable<string>)new ObservableLineStream(stream);
+					return (IObservable<string>)new ObservableLineStream(stream, () =>
+					                                                             	{
+					                                                             		webRequest.Abort();
+																						task.Result.Close();
+					                                                             	});
 				})
 				.ContinueWith(task =>
 				{

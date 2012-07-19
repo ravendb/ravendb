@@ -70,8 +70,9 @@ namespace Raven.Tests.Notifications
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				taskObservable
-					.DocumentSubscription("items/1")
+				var observableWithTask = taskObservable.DocumentSubscription("items/1");
+				observableWithTask.Task.Wait();
+				observableWithTask
 					.Where(x => x.Type == DocumentChangeTypes.Delete)
 					.Subscribe(list.Add);
 
@@ -103,8 +104,9 @@ namespace Raven.Tests.Notifications
 				var list = new BlockingCollection<IndexChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				taskObservable
-					.IndexSubscription("Raven/DocumentsByEntityName")
+				var observableWithTask = taskObservable.IndexSubscription("Raven/DocumentsByEntityName");
+				observableWithTask.Task.Wait();
+				observableWithTask
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -116,7 +118,7 @@ namespace Raven.Tests.Notifications
 				store.DatabaseCommands.Delete("items/1", null);
 
 				IndexChangeNotification indexChangeNotification;
-				Assert.True(list.TryTake(out indexChangeNotification, TimeSpan.FromSeconds(2)));
+				Assert.True(list.TryTake(out indexChangeNotification, TimeSpan.FromSeconds(5)));
 
 				Assert.Equal("Raven/DocumentsByEntityName", indexChangeNotification.Name);
 				Assert.Equal(indexChangeNotification.Type, IndexChangeTypes.MapCompleted);

@@ -634,7 +634,11 @@ namespace Raven.Client.Connection
 				.ContinueWith(task =>
 				              	{
 				              		var stream = task.Result.GetResponseStreamWithHttpDecompression();
-				              		var observableLineStream = new ObservableLineStream(stream);
+				              		var observableLineStream = new ObservableLineStream(stream, () =>
+				              		                                                            	{
+				              		                                                            		webRequest.Abort();
+																										task.Result.Close();
+				              		                                                            	});
 									observableLineStream.Start();
 				              		return (IObservable<string>)observableLineStream;
 				              	})

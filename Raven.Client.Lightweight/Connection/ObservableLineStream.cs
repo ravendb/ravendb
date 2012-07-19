@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Database.Util;
 
 namespace Raven.Client.Connection
 {
@@ -18,12 +19,14 @@ namespace Raven.Client.Connection
 		private readonly Stream stream;
 		private readonly byte[] buffer = new byte[8192];
 		private int posInBuffer;
+		private Action onDispose;
 
-		private readonly List<IObserver<string>> subscribers = new List<IObserver<string>>();
+		private readonly ConcurrentSet<IObserver<string>> subscribers = new ConcurrentSet<IObserver<string>>();
 
-		public ObservableLineStream(Stream stream)
+		public ObservableLineStream(Stream stream, Action onDispose)
 		{
 			this.stream = stream;
+			this.onDispose = onDispose;
 		}
 
 		public void Start()
@@ -103,8 +106,8 @@ namespace Raven.Client.Connection
 
 		public IDisposable Subscribe(IObserver<string> observer)
 		{
-			subscribers.Add(observer);
-			return new DisposableAction(() => subscribers.Remove(observer));
+			subscribers.TryAdd(observer);
+			return new DisposableAction(() => subscribers.TryRemove(observer));
 		}
 
 		public void Dispose()
@@ -114,7 +117,7 @@ namespace Raven.Client.Connection
 				subscriber.OnCompleted();
 			}
 
-			stream.Dispose();
+			onDispose();
 		}
 	}
 }
