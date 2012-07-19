@@ -1,10 +1,8 @@
 using System;
 using System.Net;
-using System.Threading.Tasks;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
-using Raven.Imports.SignalR.Client.Http;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Silverlight.Connection
@@ -69,13 +67,6 @@ namespace Raven.Client.Silverlight.Connection
 
 		public void Dispose()
 		{
-		}
-
-		public event Action<IRequest> ConfigureSignalRConnection = delegate { };
-
-		public void InvokeConfigureSignalRConnection(IRequest obj)
-		{
-			ConfigureSignalRConnection(obj);
 		}
 	}
 

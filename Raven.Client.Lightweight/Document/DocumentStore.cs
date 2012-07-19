@@ -570,7 +570,7 @@ namespace Raven.Client.Document
 #if !NET35
 #if SILVERLIGHT
 			// required to ensure just a single auth dialog
-			var task = jsonRequestFactory.CreateHttpJsonRequest(new HttpJsonRequestFactory.CreateHttpJsonRequestParams(this, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions))
+			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions))
 				.ExecuteRequest();
 #endif
 			asyncDatabaseCommandsGenerator = () =>
