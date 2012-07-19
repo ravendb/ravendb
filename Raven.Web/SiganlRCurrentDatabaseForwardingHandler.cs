@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
 using System.Web;
+using Raven.Abstractions.Util;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.SignalR.Hosting.AspNet;
@@ -26,7 +27,8 @@ namespace Raven.Web
 		{
 			var httpContextAdapter = new HttpContextAdapter(HttpContext.Current, server.Configuration);
 			return server.HandleSignalRequest(httpContextAdapter, 
-				prefix => handler.ProcessRequestAsync(context));
+				prefix => handler.ProcessRequestAsync(context),
+				() => new CompletedTask());
 		}
 	}
 }

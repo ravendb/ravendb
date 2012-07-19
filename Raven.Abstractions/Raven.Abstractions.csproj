@@ -665,6 +665,7 @@
     <Compile Include="Smuggler\SmugglerOptions.cs" />
     <Compile Include="SystemTime.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
+    <Compile Include="Util\CompletedTask.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
   </ItemGroup>

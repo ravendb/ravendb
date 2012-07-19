@@ -18,6 +18,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
+using Raven.Abstractions.Util;
 using Raven.Database.Server.Responders;
 using Raven.Database.Server.SignalR;
 using Raven.Database.Util;
@@ -355,7 +356,7 @@ namespace Raven.Database.Server
 			{
 				Interlocked.Increment(ref physicalRequestsCount);
 				if (SiganlRQuery.IsMatch(ctx.GetRequestUrl()))
-					HandleSignalRequest(ctx, prefix => signalrServer.ProcessRequestSafe(httpListenerContext, prefix));
+					HandleSignalRequest(ctx, prefix => signalrServer.ProcessRequestSafe(httpListenerContext, prefix), () => new CompletedTask());
 				else
 					HandleActualRequest(ctx);
 			}
@@ -366,7 +367,7 @@ namespace Raven.Database.Server
 		}
 
 
-		public T HandleSignalRequest<T>(IHttpContext context, Func<string, T> action)
+		public T HandleSignalRequest<T>(IHttpContext context, Func<string, T> action, Func<T> defaultValueGenerator)
 		{
 			try
 			{
@@ -374,7 +375,7 @@ namespace Raven.Database.Server
 				if (!SetThreadLocalState(context))
 				{
 					context.FinalizeResonse();
-					return default(T);
+					return defaultValueGenerator();
 				}
 
 				return action(prefix);
@@ -398,7 +399,7 @@ namespace Raven.Database.Server
 						logger.ErrorException("Could not finalize request properly", e2);
 					}
 				}
-				return default(T);
+				return defaultValueGenerator();
 			}
 			finally
 			{
