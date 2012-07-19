@@ -5,10 +5,13 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Net;
 using System.Reactive.Linq;
 using Raven.Abstractions.Data;
 using Raven.Tests.Bugs.Identifiers;
 using Xunit;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Tests.Notifications
 {
@@ -26,7 +29,10 @@ namespace Raven.Tests.Notifications
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				taskObservable.DocumentSubscription("items/1").Subscribe(list.Add);
+				var observableWithTask = taskObservable.DocumentSubscription("items/1");
+				observableWithTask.Task.Wait();
+				
+				observableWithTask.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
 				{
@@ -35,7 +41,7 @@ namespace Raven.Tests.Notifications
 				}
 
 				DocumentChangeNotification documentChangeNotification;
-				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(30)));
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(5)));
 
 				Assert.Equal("items/1", documentChangeNotification.Name);
 				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);

@@ -64,8 +64,9 @@ namespace Raven.Tests.Notifications
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				taskObservable
-					.DocumentSubscription("items/1")
+				var documentSubscription = taskObservable.DocumentSubscription("items/1");
+				documentSubscription.Task.Wait();
+				documentSubscription
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
