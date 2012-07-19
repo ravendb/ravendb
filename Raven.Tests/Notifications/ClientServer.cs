@@ -64,7 +64,7 @@ namespace Raven.Tests.Notifications
 			using (GetNewServer())
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost.fiddler:8079"
+				Url = "http://localhost:8079"
 			}.Initialize())
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
