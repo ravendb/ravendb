@@ -81,35 +81,36 @@ namespace Raven.Client.Changes
 			temporaryConnection.OnPrepareRequest += jsonRequestFactory.InvokeConfigureSignalRConnection;
 			return temporaryConnection.Start()
 				.ContinueWith(task =>
-				{
-					var webException = task.Exception.ExtractSingleInnerException() as WebException;
-					if (webException == null || retries >= 3)
-						return task;// effectively throw
-
-					var httpWebResponse = webException.Response as HttpWebResponse;
-					if (httpWebResponse == null ||
-						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
-						return task; // effectively throw
-
-					var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
-
-					if (authorizeResponse == null)
-						return task; // effectively throw
-
-					return authorizeResponse
-						.ContinueWith(_ =>
-						{
-							_.Wait(); //throw on error
-							return EstablishConnection(retries + 1);
-						})
-						.Unwrap();
-				}).Unwrap()
+				              	{
+				              		if(task.IsFaulted == false)
+										connection = temporaryConnection;
+				              		return task;
+				              	})
+				.Unwrap()
 				.ContinueWith(task =>
-				{
-					task.AssertNotFailed();
+				              	{
+				              		var webException = task.Exception.ExtractSingleInnerException() as WebException;
+				              		if (webException == null || retries >= 3)
+				              			return task; // effectively throw
 
-					connection = temporaryConnection;
-				});
+				              		var httpWebResponse = webException.Response as HttpWebResponse;
+				              		if (httpWebResponse == null ||
+				              		    httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+				              			return task; // effectively throw
+
+				              		var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
+
+				              		if (authorizeResponse == null)
+				              			return task; // effectively throw
+
+				              		return authorizeResponse
+				              			.ContinueWith(_ =>
+				              			              	{
+				              			              		_.Wait(); //throw on error
+				              			              		return EstablishConnection(retries + 1);
+				              			              	})
+				              			.Unwrap();
+				              	}).Unwrap();
 		}
 
 		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
@@ -132,6 +133,8 @@ namespace Raven.Client.Changes
 			return Task.ContinueWith(task =>
 			{
 				task.AssertNotFailed();
+				if(ConnectedToServer == false)
+					throw new InvalidOperationException("Not connected to server");
 				return action();
 			})
 			.Unwrap();
@@ -142,12 +145,13 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("indexes/"+indexName, s =>
 			{
 				var indexSubscriptionTask = AfterConnection(() =>
-					connection.Send(new { Type = "WatchIndex", Name = indexName}));
+					connection.Send(new { Type = "WatchIndex", Name = indexName })).CatchAndIgnore();
 
 				return new LocalConnectionState(
 					() =>
 						{
-							connection.Send(new {Type = "UnwatchIndex", Name = indexName});
+							if (ConnectedToServer)
+								connection.Send(new { Type = "UnwatchIndex", Name = indexName }).CatchAndIgnore();
 							counters.Remove("indexes/" + indexName);
 						},
 					indexSubscriptionTask);
@@ -172,16 +176,22 @@ namespace Raven.Client.Changes
 
 		}
 
+		protected bool ConnectedToServer
+		{
+			get { return connection != null && connection.State != ConnectionState.Disconnected; }
+		}
+
 		public IObservableWithTask<DocumentChangeNotification> DocumentSubscription(string docId)
 		{
 			var counter = counters.GetOrAdd("docs/" + docId, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						connection.Send(new { Type = "WatchDocument", Name = docId }));
+						connection.Send(new { Type = "WatchDocument", Name = docId })).CatchAndIgnore();
 				return new LocalConnectionState(
 					() =>
 						{
-							connection.Send(new {Type = "UnwatchDocument", Name = docId});
+							if (ConnectedToServer)
+								connection.Send(new { Type = "UnwatchDocument", Name = docId }).CatchAndIgnore();
 							counters.Remove("docs/" + docId);
 						},
 					documentSubscriptionTask);
@@ -208,11 +218,12 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						connection.Send(new { Type = "WatchDocumentPrefix", Name = docIdPrefix }));
+						connection.Send(new { Type = "WatchDocumentPrefix", Name = docIdPrefix })).CatchAndIgnore();
 				return new LocalConnectionState(
 					() =>
 					{
-						connection.Send(new { Type = "UnwatchDocumentPrefix", Name = docIdPrefix });
+						if (connection.State != ConnectionState.Disconnected)
+							connection.Send(new { Type = "UnwatchDocumentPrefix", Name = docIdPrefix }).CatchAndIgnore();
 						counters.Remove("prefixes/" + docIdPrefix);
 					},
 					documentSubscriptionTask);
