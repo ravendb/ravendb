@@ -37,16 +37,22 @@ namespace Raven.Database.Server.SignalR
 			return connections.GetOrAdd(connectionId, new ConnectionState(connectionId, connection));
 		}
 
+		public event Action<object, IndexChangeNotification> OnIndexChangeNotification = delegate { }; 
+
 		public void Send(IndexChangeNotification indexChangeNotification)
 		{
+			OnIndexChangeNotification(this, indexChangeNotification);
 			foreach (var connectionState in connections)
 			{
 				connectionState.Value.Send(indexChangeNotification);
 			}
 		}
 
+		public event Action<object, DocumentChangeNotification> OnDocumentChangeNotification = delegate { }; 
+
 		public void Send(DocumentChangeNotification documentChangeNotification)
 		{
+			OnDocumentChangeNotification(this, documentChangeNotification);
 			foreach (var connectionState in connections)
 			{
 				connectionState.Value.Send(documentChangeNotification);

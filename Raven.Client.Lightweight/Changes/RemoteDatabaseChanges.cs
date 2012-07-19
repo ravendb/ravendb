@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -10,10 +11,10 @@ using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 #endif
+using Raven.Database.Util;
 using Raven.Imports.SignalR.Client;
 using Raven.Imports.SignalR.Client.Hubs;
 using Raven.Client.Extensions;
-using Raven.Json.Linq;
 
 namespace Raven.Client.Changes
 {
@@ -23,49 +24,75 @@ namespace Raven.Client.Changes
 		private readonly ICredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly DocumentConvention conventions;
-		private Imports.SignalR.Client.Connection connection;
-		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.InvariantCultureIgnoreCase);
+		private HubConnection hubConnection;
+		private IHubProxy proxy;
+		private readonly AtomicDictionary<Counter> counters = new AtomicDictionary<Counter>(StringComparer.InvariantCultureIgnoreCase);
 
+		private class Counter
+		{
+			private readonly Action onZero;
+			private readonly Task task;
+			private int value = 1;
+			private readonly ConcurrentSet<Task<IDisposable>> toDispose = new ConcurrentSet<Task<IDisposable>>();
+			public Task Task
+			{
+				get { return task; }
+			}
+
+			public Counter(Action onZero, Task task)
+			{
+				this.onZero = onZero;
+				this.task = task;
+			}
+
+			public void Inc()
+			{
+				Interlocked.Increment(ref value);
+			}
+
+			public void Dec()
+			{
+				if (Interlocked.Decrement(ref value) == 0)
+				{
+					Dispose();
+				}
+			}
+
+			public void Add(Task<IDisposable> disposableTask)
+			{
+				if(value == 0)
+				{
+					disposableTask.ContinueWith(_ => { using(_.Result){} });
+					return;
+				}
+				toDispose.Add(disposableTask);
+			}
+
+			public void Dispose()
+			{
+				foreach (var disposableTask in toDispose)
+				{
+					disposableTask.ContinueWith(_ => { using (_.Result) { } });
+				}
+				onZero();
+			}
+		}
 		
 		[CLSCompliant(false)]
 		public ConnectionState State
 		{
-			get { return connection.State; }
+			get { return hubConnection.State; }
 		}
 
 		public event Action<StateChange> StateChanged
 		{
-			add { connection.StateChanged += value; }
-			remove { connection.StateChanged -= value; }
-		}
-
-		private void ParseAndSend(string dataFromConnection)
-		{
-			var ravenJObject = RavenJObject.Parse(dataFromConnection);
-			var value = ravenJObject.Value<RavenJObject>("Value");
-			switch (ravenJObject.Value<string>("Type"))
-			{
-				case "DocumentChangeNotification":
-					var documentChangeNotification = value.JsonDeserialization<DocumentChangeNotification>();
-
-					foreach (var counter in counters)
-					{
-						counter.Value.Send(documentChangeNotification);
-					}
-					break;
-
-				case "IndexChangeNotification":
-					var indexChangeNotification = value.JsonDeserialization<IndexChangeNotification>();
-					foreach (var counter in counters)
-					{
-						counter.Value.Send(indexChangeNotification);
-					}break;
-			}
+			add { hubConnection.StateChanged += value; }
+			remove { hubConnection.StateChanged -= value; }
 		}
 
 		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions)
 		{
-			this.url = url + (url.EndsWith("/") ? "signalr/changes" : "/signalr/changes");
+			this.url = url;
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.conventions = conventions;
@@ -74,11 +101,12 @@ namespace Raven.Client.Changes
 
 		private Task EstablishConnection(int retries)
 		{
-			var temporaryConnection = new Imports.SignalR.Client.Connection(url)
+			var temporaryConnection = new HubConnection(url)
 			{
 				Credentials = credentials
 			};
 			temporaryConnection.OnPrepareRequest += jsonRequestFactory.InvokeConfigureSignalRConnection;
+			temporaryConnection.CreateProxy("NotificationsHub");
 			return temporaryConnection.Start()
 				.ContinueWith(task =>
 				{
@@ -108,7 +136,8 @@ namespace Raven.Client.Changes
 				{
 					task.AssertNotFailed();
 
-					connection = temporaryConnection;
+					hubConnection = temporaryConnection;
+					proxy = hubConnection.CreateProxy("NotificationsHub");
 				});
 		}
 
@@ -141,32 +170,33 @@ namespace Raven.Client.Changes
 		{
 			var counter = counters.GetOrAdd("indexes/"+indexName, s =>
 			{
-				var indexSubscriptionTask = AfterConnection(() =>
-					connection.Send(new { Type = "WatchIndex", Name = indexName}));
+				var indexSubscriptionTask = AfterConnection(() => proxy.Invoke("StartWatchingIndex", indexName));
 
-				return new LocalConnectionState(
+				return new Counter(
 					() =>
-						{
-							connection.Send(new {Type = "UnwatchIndex", Name = indexName});
-							counters.Remove("indexes/" + indexName);
-						},
+					{
+						proxy.Invoke("StopWatchingIndex", indexName);
+						counters.Remove("indexes/"+indexName);
+					},
 					indexSubscriptionTask);
 			});
 			counter.Inc();
 			var taskedObservable = new TaskedObservable<IndexChangeNotification>(
-				counter, 
-				notification => string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase));
-
-			counter.OnIndexChangeNotification += taskedObservable.Send;
+				counter.Task, 
+				notification => string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase),
+				counter.Dec);
 
 			var disposableTask = counter.Task.ContinueWith(task =>
 			{
 				if (task.IsFaulted)
 					return null;
-				connection.Received += ParseAndSend;
-				return (IDisposable) new DisposableAction(() => connection.Stop());
+				return proxy.On<IndexChangeNotification>("Index", notification =>
+				{
+					if (string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase) == false)
+						return;
+					taskedObservable.Send(notification);
+				});
 			});
-
 			counter.Add(disposableTask);
 			return taskedObservable;
 
@@ -177,27 +207,31 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("docs/" + docId, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						connection.Send(new { Type = "WatchDocument", Name = docId }));
-				return new LocalConnectionState(
+						proxy.Invoke("StartWatchingDocument", docId));
+				return new Counter(
 					() =>
-						{
-							connection.Send(new {Type = "UnwatchDocument", Name = docId});
-							counters.Remove("docs/" + docId);
-						},
+					{
+						proxy.Invoke("StopWatchingDocument", docId);
+						counters.Remove("docs/"+docId);
+					},
 					documentSubscriptionTask);
 			});
 			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
-				counter, 
-				notification => string.Equals(notification.Name, docId, StringComparison.InvariantCultureIgnoreCase));
-
-			counter.OnDocumentChangeNotification += taskedObservable.Send;
-			
+				counter.Task, 
+				notification => string.Equals(notification.Name, docId, StringComparison.InvariantCultureIgnoreCase),
+				counter.Dec);
 			var disposableTask = counter.Task.ContinueWith(task =>
 			{
 				if (task.IsFaulted)
 					return null;
-				connection.Received += ParseAndSend;
-				return (IDisposable)new DisposableAction(() => connection.Stop());
+				return proxy.On<DocumentChangeNotification>("Document", notification =>
+				{
+					if (string.Equals(notification.Name, docId, StringComparison.InvariantCultureIgnoreCase) == false)
+					{
+						return;
+					}
+					taskedObservable.Send(notification);
+				});
 			});
 			counter.Add(disposableTask);
 			return taskedObservable;
@@ -214,9 +248,9 @@ namespace Raven.Client.Changes
 			{
 				keyValuePair.Value.Dispose();
 			}
-			if(connection != null)
+			if(hubConnection != null)
 			{
-				connection.Stop();
+				hubConnection.Stop();
 			}
 		}
 	}
