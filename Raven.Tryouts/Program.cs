@@ -18,37 +18,37 @@ public class Program
 		{
 			Console.WriteLine(i);
 
-			using (var x = new ClientServer())
+			using (var x = new WithIIS())
 			{
-				x.CanGetNotificationAboutDocumentPut();
+				x.CheckNotificationInIIS();
 			}
 
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
 
-			using (var x = new ClientServer())
-			{
-				x.CanGetNotificationAboutDocumentDelete();
-			}
-			GC.Collect(2);
-			GC.WaitForPendingFinalizers();
+			//using (var x = new ClientServer())
+			//{
+			//    x.CanGetNotificationAboutDocumentDelete();
+			//}
+			//GC.Collect(2);
+			//GC.WaitForPendingFinalizers();
 
 
-			using (var x = new NotificationOnWrongDatabase())
-			{
-				x.ShouldNotCrashServer();
-			}
-			GC.Collect(2);
-			GC.WaitForPendingFinalizers();
-			using (var x = new ClientServer())
-			{
-				x.CanGetNotificationAboutDocumentIndexUpdate();
-			}
+			//using (var x = new NotificationOnWrongDatabase())
+			//{
+			//    x.ShouldNotCrashServer();
+			//}
+			//GC.Collect(2);
+			//GC.WaitForPendingFinalizers();
+			//using (var x = new ClientServer())
+			//{
+			//    x.CanGetNotificationAboutDocumentIndexUpdate();
+			//}
 
 
 
-			GC.Collect(2);
-			GC.WaitForPendingFinalizers();
+			//GC.Collect(2);
+			//GC.WaitForPendingFinalizers();
 		}
 	}
 }

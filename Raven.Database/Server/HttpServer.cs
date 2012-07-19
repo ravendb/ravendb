@@ -351,7 +351,7 @@ namespace Raven.Database.Server
 			{
 				Interlocked.Increment(ref physicalRequestsCount);
 				if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
-					HandleChangesRequest(ctx);
+					HandleChangesRequest(ctx, () => { });
 				else
 					HandleActualRequest(ctx);
 			}
@@ -362,7 +362,7 @@ namespace Raven.Database.Server
 		}
 
 
-		public Task HandleChangesRequest(IHttpContext context)
+		public Task HandleChangesRequest(IHttpContext context, Action onDisconnect)
 		{
 			try
 			{
@@ -370,9 +370,11 @@ namespace Raven.Database.Server
 				if (!SetThreadLocalState(context))
 				{
 					context.FinalizeResonse();
+					onDisconnect();
 					return new CompletedTask();
 				}
 				var eventsTransport = new EventsTransport(context);
+				eventsTransport.Disconnected += onDisconnect;
 				CurrentDatabase.TransportState.Register(eventsTransport);
 				return eventsTransport.ProcessAsync();
 			}
@@ -395,6 +397,7 @@ namespace Raven.Database.Server
 						logger.ErrorException("Could not finalize request properly", e2);
 					}
 				}
+				onDisconnect();
 				return new CompletedTask();
 			}
 			finally

@@ -23,7 +23,16 @@ namespace Raven.Web
 
 		public Task ProcessRequestAsync(HttpContext context)
 		{
-			return server.HandleChangesRequest(new HttpContextAdapter(HttpContext.Current, server.Configuration));
+			var tcs = new TaskCompletionSource<object>();
+			server.HandleChangesRequest(new HttpContextAdapter(HttpContext.Current, server.Configuration), ()=> tcs.SetResult(null))
+				.ContinueWith(task =>
+				              	{
+				              		if(task.IsFaulted)
+				              			tcs.SetException(task.Exception);
+									else if (task.IsCanceled)
+										tcs.SetCanceled();
+				              	});
+			return tcs.Task;
 		}
 
 		public void ProcessRequest(HttpContext context)
@@ -38,6 +47,7 @@ namespace Raven.Web
 
 		public IAsyncResult BeginProcessRequest(HttpContext context, AsyncCallback cb, object extraData)
 		{
+			context.Response.BufferOutput = false;
 			return ProcessRequestAsync(context)
 				.ContinueWith(task => cb(task));
 		}
