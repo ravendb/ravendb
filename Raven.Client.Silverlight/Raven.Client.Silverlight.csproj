@@ -854,6 +854,9 @@
     <Compile Include="..\Raven.Abstractions\Util\AtomicDictionary.cs">
       <Link>Imports\Util\AtomicDictionary.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\CompletedTask.cs">
+      <Link>Imports\Util\CompletedTask.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Util\ConcurrentSet.cs">
       <Link>Imports\Util\ConcurrentSet.cs</Link>
     </Compile>
@@ -872,14 +875,14 @@
     <Compile Include="..\Raven.Client.Lightweight\Changes\TaskedObservable.cs">
       <Link>Imports\Changes\TaskedObservable.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Changes\TaskErrorExtensions.cs">
+      <Link>Imports\Changes\TaskErrorExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Changes\TaskObservable.cs">
       <Link>Imports\Changes\TaskObservable.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
       <Link>Connection\Async\AsyncDatabaseCommandsExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\CompletedTask.cs">
-      <Link>Connection\CompletedTask.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\DocumentConventionJsonExtensions.cs">
       <Link>Imports\Connection\DocumentConventionJsonExtensions.cs</Link>

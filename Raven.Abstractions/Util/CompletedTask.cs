@@ -1,7 +1,6 @@
-﻿#if !NET35
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
-namespace Raven.Client.Connection
+namespace Raven.Abstractions.Util
 {
 	public class CompletedTask : CompletedTask<object>
 	{
@@ -48,4 +47,3 @@ namespace Raven.Client.Connection
 		}
 	}
 }
-#endif

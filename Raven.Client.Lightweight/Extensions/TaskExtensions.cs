@@ -6,6 +6,7 @@ using System.Net;
 using System.Security;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 
 #if SILVERLIGHT

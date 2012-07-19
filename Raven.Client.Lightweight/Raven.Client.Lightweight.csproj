@@ -58,11 +58,11 @@
     <Compile Include="Changes\LocalConnectionState.cs" />
     <Compile Include="Changes\RemoteDatabaseChanges.cs" />
     <Compile Include="Changes\TaskedObservable.cs" />
+    <Compile Include="Changes\TaskErrorExtensions.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\Async\IAsyncDatabaseCommands.cs" />
     <Compile Include="Connection\CachedRequest.cs" />
-    <Compile Include="Connection\CompletedTask.cs" />
     <Compile Include="Connection\CreateHttpJsonRequestParams.cs" />
     <Compile Include="Connection\HttpExtensions.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
