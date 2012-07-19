@@ -863,6 +863,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Changes\IDatabaseChanges.cs">
       <Link>Imports\Changes\IDatabaseChanges.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Changes\LocalConnectionState.cs">
+      <Link>Imports\Changes\LocalConnectionState.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Changes\RemoteDatabaseChanges.cs">
       <Link>Imports\Changes\RemoteDatabaseChanges.cs</Link>
     </Compile>

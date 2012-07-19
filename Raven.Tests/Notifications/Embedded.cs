@@ -74,8 +74,11 @@ namespace Raven.Tests.Notifications
 			using (var store = NewDocumentStore())
 			{
 				var list = new BlockingCollection<IndexChangeNotification>();
-				store.Changes()
-					.IndexSubscription("Raven/DocumentsByEntityName")
+				var databaseChanges = store.Changes();
+				databaseChanges.Task.Wait();
+				var indexSubscription = databaseChanges.IndexSubscription("Raven/DocumentsByEntityName");
+				indexSubscription.Task.Wait();
+				indexSubscription
 					.Where(x=>x.Type==IndexChangeTypes.MapCompleted)
 					.Subscribe(list.Add);
 

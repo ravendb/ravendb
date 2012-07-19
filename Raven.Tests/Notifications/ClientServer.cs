@@ -26,7 +26,7 @@ namespace Raven.Tests.Notifications
 			using(GetNewServer())
 			using (var store = new DocumentStore
 			{
-				Url = "http://ipv4.fiddler:8079",
+				Url = "http://localhost:8079",
 				Conventions =
 					{
 						FailoverBehavior = FailoverBehavior.FailImmediately
