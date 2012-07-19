@@ -11,7 +11,7 @@ namespace Raven.Client.Changes
 {
 	internal static class TaskErrorExtensions
 	{
-		 public static Task CatchAndIgnore(this Task self)
+		 public static Task ObserveException(this Task self)
 		 {
 			 // this merely observe the exception task, nothing else
 			 return self.ContinueWith(task =>

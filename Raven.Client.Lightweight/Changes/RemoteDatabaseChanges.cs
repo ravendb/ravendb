@@ -69,7 +69,8 @@ namespace Raven.Client.Changes
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.conventions = conventions;
-			Task = EstablishConnection(0);
+			Task = EstablishConnection(0)
+				.ObserveException();
 		}
 
 		private Task EstablishConnection(int retries)
@@ -145,13 +146,13 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("indexes/"+indexName, s =>
 			{
 				var indexSubscriptionTask = AfterConnection(() =>
-					connection.Send(new { Type = "WatchIndex", Name = indexName })).CatchAndIgnore();
+					connection.Send(new { Type = "WatchIndex", Name = indexName })).ObserveException();
 
 				return new LocalConnectionState(
 					() =>
 						{
 							if (ConnectedToServer)
-								connection.Send(new { Type = "UnwatchIndex", Name = indexName }).CatchAndIgnore();
+								connection.Send(new { Type = "UnwatchIndex", Name = indexName }).ObserveException();
 							counters.Remove("indexes/" + indexName);
 						},
 					indexSubscriptionTask);
@@ -186,12 +187,12 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("docs/" + docId, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						connection.Send(new { Type = "WatchDocument", Name = docId })).CatchAndIgnore();
+						connection.Send(new { Type = "WatchDocument", Name = docId })).ObserveException();
 				return new LocalConnectionState(
 					() =>
 						{
 							if (ConnectedToServer)
-								connection.Send(new { Type = "UnwatchDocument", Name = docId }).CatchAndIgnore();
+								connection.Send(new { Type = "UnwatchDocument", Name = docId }).ObserveException();
 							counters.Remove("docs/" + docId);
 						},
 					documentSubscriptionTask);
@@ -218,12 +219,12 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						connection.Send(new { Type = "WatchDocumentPrefix", Name = docIdPrefix })).CatchAndIgnore();
+						connection.Send(new { Type = "WatchDocumentPrefix", Name = docIdPrefix })).ObserveException();
 				return new LocalConnectionState(
 					() =>
 					{
 						if (connection.State != ConnectionState.Disconnected)
-							connection.Send(new { Type = "UnwatchDocumentPrefix", Name = docIdPrefix }).CatchAndIgnore();
+							connection.Send(new { Type = "UnwatchDocumentPrefix", Name = docIdPrefix }).ObserveException();
 						counters.Remove("prefixes/" + docIdPrefix);
 					},
 					documentSubscriptionTask);
