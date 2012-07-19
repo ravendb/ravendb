@@ -44,5 +44,13 @@ namespace Raven.Client.Changes
 				subscriber.OnNext(msg);
 			}
 		}
+
+		public void Error(Exception obj)
+		{
+			foreach (var subscriber in subscribers)
+			{
+				subscriber.OnError(obj);
+			}
+		}
 	}
 }

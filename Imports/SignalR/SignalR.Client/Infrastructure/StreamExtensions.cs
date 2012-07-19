@@ -33,6 +33,8 @@ namespace Raven.Imports.SignalR.Client.Infrastructure
             }
             catch (Exception ex)
             {
+				if (ex.Message == "Unable to read data from the transport connection: The connection was closed.")
+				{}
                 return TaskAsyncHelper.FromError(ex);
             }
 #endif

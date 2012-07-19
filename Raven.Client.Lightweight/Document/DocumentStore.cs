@@ -4,8 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Connection;
@@ -15,7 +13,6 @@ using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
-using Raven.Client.Connection.Profiling;
 #if !NET35
 using System.Collections.Concurrent;
 using Raven.Client.Connection.Async;
@@ -33,9 +30,6 @@ using System.Collections.Generic;
 using Raven.Client.Util;
 
 #else
-using Raven.Client.Listeners;
-using Raven.Client.Util;
-using Raven.Imports.SignalR.Client;
 
 #endif
 
@@ -447,14 +441,6 @@ namespace Raven.Client.Document
 
 				SetHeader(args.Request.Headers, "Authorization", currentOauthToken);
 			};
-
-			jsonRequestFactory.ConfigureSignalRConnection += request =>
-				{
-					if (string.IsNullOrEmpty(currentOauthToken))
-						return;
-
-					request.AddHeader("Authorization", currentOauthToken);
-				};
 			
 #if !SILVERLIGHT
 			
@@ -584,7 +570,7 @@ namespace Raven.Client.Document
 #if !NET35
 #if SILVERLIGHT
 			// required to ensure just a single auth dialog
-			var task = jsonRequestFactory.CreateHttpJsonRequest(this, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions)
+			var task = jsonRequestFactory.CreateHttpJsonRequest(new HttpJsonRequestFactory.CreateHttpJsonRequestParams(this, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions))
 				.ExecuteRequest();
 #endif
 			asyncDatabaseCommandsGenerator = () =>

@@ -14,37 +14,38 @@ public class Program
 {
 	public static void Main()
 	{
-		using (var store = new DocumentStore
-		                   	{
-								Url = "http://localhost.fiddler:9001"
-		                   	}.Initialize())
+		for (int i = 0; i < 100; i++)
 		{
-			var list = new BlockingCollection<DocumentChangeNotification>();
-			var taskObservable = store.Changes();
-			taskObservable.Task.Wait();
-			var observableWithTask = taskObservable.DocumentSubscription("items/1");
-			observableWithTask.Task.Wait();
+			Console.WriteLine(i);
 
-			observableWithTask.Subscribe(list.Add);
-
-			using (var session = store.OpenSession())
+			using (var x = new NotificationOnWrongDatabase())
 			{
-				session.Store(new Item(), "items/1");
-				session.SaveChanges();
+				x.ShouldNotCrashServer();
 			}
+			GC.Collect(2);
+			GC.WaitForPendingFinalizers();
 
-			DocumentChangeNotification documentChangeNotification;
-			if(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(5)))
+			using (var x = new ClientServer())
 			{
-				Assert.Equal("items/1", documentChangeNotification.Name);
-				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);	
+				x.CanGetNotificationAboutDocumentDelete();
 			}
-			else
-			{
-				Console.WriteLine("NOT FOUND");
-			}
+			GC.Collect(2);
+			GC.WaitForPendingFinalizers();
 
-			
+			//using (var x = new ClientServer())
+			//{
+			//    x.CanGetNotificationAboutDocumentIndexUpdate();
+			//}
+
+			//GC.Collect(2);
+			//GC.WaitForPendingFinalizers();
+			//using (var x = new ClientServer())
+			//{
+			//    x.CanGetNotificationAboutDocumentPut();
+			//}
+
+			//GC.Collect(2);
+			//GC.WaitForPendingFinalizers();
 		}
 	}
 }

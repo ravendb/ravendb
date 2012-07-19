@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -14,6 +15,21 @@ using Raven.Client.Connection;
 #endif
 namespace Raven.Client.Extensions
 {
+	public static class Time
+	{
+		public static Task Delay(TimeSpan timeOut)
+		{
+			var tcs = new TaskCompletionSource<object>();
+
+			var timer = new Timer(tcs.SetResult,
+			                      null,
+			                      timeOut,
+			                      TimeSpan.FromMilliseconds(-1));
+
+			return tcs.Task.ContinueWith(_ => timer.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+		}
+	}
+
 	public static class TaskExtensions
 	{
 		public static void AssertNotFailed(this Task task)

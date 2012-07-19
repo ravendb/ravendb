@@ -706,6 +706,7 @@ namespace Raven.Imports.SignalR
 
             internal static Task<TResult> RunTask(Task<T> task, Func<Task<T>, TResult> successor)
             {
+            	var st = new StackTrace(true);
                 var tcs = new TaskCompletionSource<TResult>();
                 task.ContinueWith(t =>
                 {
@@ -728,6 +729,10 @@ namespace Raven.Imports.SignalR
                             tcs.SetException(ex);
                         }
                     }
+					if(DateTime.Now.Ticks==1)
+					{
+						Console.WriteLine(st);
+					}
                 });
 
                 return tcs.Task;

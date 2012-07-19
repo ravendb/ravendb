@@ -626,5 +626,45 @@ namespace Raven.Client.Connection
 				stream.Flush();
 			}
 		}
+
+		public Task<IObservable<string>>  ServerPullAsync(int retries = 0)
+		{
+			return Task.Factory.FromAsync<WebResponse>(webRequest.BeginGetResponse, webRequest.EndGetResponse, null)
+				.ContinueWith(task =>
+				              	{
+				              		var stream = task.Result.GetResponseStreamWithHttpDecompression();
+				              		return (IObservable<string>)new ObservableLineStream(stream);
+				              	})
+				.ContinueWith(task =>
+				{
+					var webException = task.Exception.ExtractSingleInnerException() as WebException;
+					if (webException == null || retries >= 3)
+						return task;// effectively throw
+
+					var httpWebResponse = webException.Response as HttpWebResponse;
+					if (httpWebResponse == null ||
+						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+						return task; // effectively throw
+
+					var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
+
+					if (authorizeResponse == null)
+						return task; // effectively throw
+
+					return authorizeResponse
+						.ContinueWith(_ =>
+						{
+							_.Wait(); //throw on error
+							return ServerPullAsync(retries + 1);
+						})
+						.Unwrap();
+				}).Unwrap();
+		}
+
+		public Task ExecuteWriteAsync(string data)
+		{
+			Write(data);
+			return ExecuteRequestAsync();
+		}
 	}
 }

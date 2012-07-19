@@ -87,12 +87,12 @@ namespace Raven.Client.Silverlight.Connection
 
 		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, Document.DocumentConvention convention)
 		{
-			return requestor.JsonRequestFactory.CreateHttpJsonRequest(requestor, url, "GET", credentials, convention);
+			return requestor.JsonRequestFactory.CreateHttpJsonRequest(new HttpJsonRequestFactory.CreateHttpJsonRequestParams(requestor, url, "GET", credentials, convention));
 		}
 
 		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, DocumentConvention convention, IDictionary<string, string> operationsHeaders, string method)
 		{
-			var httpJsonRequest = requestor.JsonRequestFactory.CreateHttpJsonRequest(requestor, url, method, credentials, convention);
+			var httpJsonRequest = requestor.JsonRequestFactory.CreateHttpJsonRequest(new HttpJsonRequestFactory.CreateHttpJsonRequestParams(requestor, url, method, credentials, convention));
 			httpJsonRequest.AddOperationHeaders(operationsHeaders);
 			return httpJsonRequest;
 		}

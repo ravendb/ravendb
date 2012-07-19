@@ -33,6 +33,11 @@ namespace Raven.Tests
 
 		private string path;
 
+		static RavenTest()
+		{
+			File.Delete("test.log");
+		}
+
 		public EmbeddableDocumentStore NewDocumentStore(string storageType = "munin", bool inMemory = true, int? allocatedMemory = null, bool deleteExisting = true)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
@@ -195,7 +200,7 @@ namespace Raven.Tests
 
 		public RavenTest()
 		{
-
+			File.AppendAllText("tests.log", GetType().FullName + Environment.NewLine);
 			BoundedMemoryTarget boundedMemoryTarget = null;
 			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
 			{
@@ -256,6 +261,8 @@ namespace Raven.Tests
 		public virtual void Dispose()
 		{
 			ClearDatabaseDirectory();
+			GC.Collect(2);
+			GC.WaitForPendingFinalizers();
 		}
 	}
 }

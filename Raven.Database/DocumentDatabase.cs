@@ -16,6 +16,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Raven.Database.Server.Connections;
 using Raven.Database.Server.SignalR;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
@@ -175,7 +176,7 @@ namespace Raven.Database
 			workContext.IndexStorage = IndexStorage;
 			workContext.TransactionaStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
-			SignalRState = new SignalRState();
+			TransportState = new TransportState();
 
 			try
 			{
@@ -407,16 +408,17 @@ namespace Raven.Database
 
 		public void RaiseNotifications(DocumentChangeNotification obj)
 		{
-			SignalRState.Send(obj);
+			TransportState.Send(obj);
 		}
 
 		public void RaiseNotifications(IndexChangeNotification obj)
 		{
-			SignalRState.Send(obj);
+			TransportState.Send(obj);
 		}
 
 		public void RunIdleOperations()
 		{
+			TransportState.OnIdle();
 			workContext.IndexStorage.RunIdleOperations();
 		}
 
@@ -1479,7 +1481,7 @@ namespace Raven.Database
 			get { return disposed; }
 		}
 		
-		public SignalRState SignalRState { get; private set; }
+		public TransportState TransportState { get; private set; }
 
 		/// <summary>
 		/// Get the total size taken by the database on the disk.

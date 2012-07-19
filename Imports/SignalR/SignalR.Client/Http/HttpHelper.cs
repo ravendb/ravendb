@@ -19,7 +19,25 @@ namespace Raven.Imports.SignalR.Client.Http
         {
             try
             {
-                return Task.Factory.FromAsync<HttpWebResponse>(request.BeginGetResponse, ar => (HttpWebResponse)request.EndGetResponse(ar), null);
+            	var st = new StackTrace(true);
+                return Task.Factory.FromAsync<HttpWebResponse>(request.BeginGetResponse, ar =>
+                                                                                         	{
+                                                                                         		try
+                                                                                         		{
+                                                                                         			return
+                                                                                         				(HttpWebResponse)
+                                                                                         				request.EndGetResponse(ar);
+                                                                                         		}
+                                                                                         		catch (Exception e)
+                                                                                         		{
+																									if (e.Message == "An existing connection was forcibly closed by the remote host")
+																									{}
+                                                                                         			Console.WriteLine(
+                                                                                         				st);
+                                                                                         			
+                                                                                         			throw;
+                                                                                         		}
+                                                                                         	}, null);
             }
             catch (Exception ex)
             {

@@ -59,6 +59,8 @@ namespace Raven.Client.Changes
 
 		public event Action<IndexChangeNotification> OnIndexChangeNotification = delegate { };
 
+		public Action<Exception> OnError = delegate { };
+
 		public void Send(DocumentChangeNotification documentChangeNotification)
 		{
 			OnDocumentChangeNotification(documentChangeNotification);
@@ -67,6 +69,11 @@ namespace Raven.Client.Changes
 		public void Send(IndexChangeNotification indexChangeNotification)
 		{
 			OnIndexChangeNotification(indexChangeNotification);
+		}
+
+		public void Error(Exception e)
+		{
+			OnError(e);	
 		}
 	}
 }

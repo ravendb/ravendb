@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace Raven.Abstractions.Util
 {
@@ -13,10 +14,22 @@ namespace Raven.Abstractions.Util
 		{
 			return new CompletedTask<T>(result);
 		}
+
+
+		public CompletedTask()
+		{
+			
+		}
+
+		public CompletedTask(Exception error) : base(error)
+		{
+		}
 	}
+
 
 	public class CompletedTask<T>
 	{
+		private readonly Exception error;
 		public readonly T Result;
 
 		public CompletedTask() : this(default(T)) { }
@@ -26,12 +39,20 @@ namespace Raven.Abstractions.Util
 			this.Result = result;
 		}
 
+		public CompletedTask(Exception error)
+		{
+			this.error = error;
+		}
+
 		public Task<T> Task
 		{
 			get
 			{
 				var tcs = new TaskCompletionSource<T>();
-				tcs.SetResult(Result);
+				if(error == null)
+					tcs.SetResult(Result);
+				else
+					tcs.SetException(error);
 				return tcs.Task;
 			}
 		}

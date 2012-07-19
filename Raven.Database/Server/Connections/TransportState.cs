@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="SignalRState.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="TransportState.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -8,13 +8,13 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Database.Server.SignalR;
 using Raven.Database.Util;
-using Raven.Imports.SignalR;
 using System.Linq;
 
-namespace Raven.Database.Server.SignalR
+namespace Raven.Database.Server.Connections
 {
-	public class SignalRState
+	public class TransportState
 	{
 		readonly TimeSensitiveStore<string> timeSensitiveStore = new TimeSensitiveStore<string>(TimeSpan.FromSeconds(45));
 
@@ -31,10 +31,15 @@ namespace Raven.Database.Server.SignalR
 			timeSensitiveStore.ForAllExpired(s => connections.TryRemove(s, out _));
 		}
 
-		public ConnectionState Register(string connectionId, IConnection connection)
+		public ConnectionState Register(EventsTransport transport)
 		{
-			timeSensitiveStore.Seen(connectionId);
-			return connections.GetOrAdd(connectionId, new ConnectionState(connectionId, connection));
+			timeSensitiveStore.Seen(transport.Id);
+			transport.Disconnected += () => TimeSensitiveStore.Missing(transport.Id);
+			return connections.AddOrUpdate(transport.Id, new ConnectionState(transport), (s, state) =>
+			                                                                             	{
+			                                                                             		state.Reconnect(transport);
+			                                                                             		return state;
+			                                                                             	});
 		}
 
 		public event Action<object, IndexChangeNotification> OnIndexChangeNotification = delegate { }; 
@@ -58,12 +63,20 @@ namespace Raven.Database.Server.SignalR
 				connectionState.Value.Send(documentChangeNotification);
 			}
 		}
+
+		public ConnectionState For(string id)
+		{
+			return connections.GetOrAdd(id, _ =>
+			                                	{
+			                                		var connectionState = new ConnectionState(null);
+			                                		TimeSensitiveStore.Missing(id);
+			                                		return connectionState;
+			                                	});
+		}
 	}
 
 	public class ConnectionState
 	{
-		private readonly string id;
-		private readonly IConnection connection;
 		private readonly ConcurrentSet<string> matchingIndexes =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ConcurrentSet<string> matchingDocuments =
@@ -71,16 +84,17 @@ namespace Raven.Database.Server.SignalR
 
 		private readonly ConcurrentSet<string> matchingDocumentPrefixes =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		
-		
+
+		private readonly ConcurrentQueue<object> pendingMessages = new ConcurrentQueue<object>();
+
+		private EventsTransport eventsTransport;
+
 		private int watchAllDocuments;
 
-		public ConnectionState(string id, IConnection connection)
+		public ConnectionState(EventsTransport eventsTransport)
 		{
-			this.id = id;
-			this.connection = connection;
+			this.eventsTransport = eventsTransport;
 		}
-
 		
 		public void WatchIndex(string name)
 		{
@@ -97,13 +111,13 @@ namespace Raven.Database.Server.SignalR
 			var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
 			if (watchAllDocuments > 0)
 			{
-				connection.Send(id, value);
+				Enqueue(value);
 				return;
 			}
 
 			if(matchingDocuments.Contains(documentChangeNotification.Name))
 			{
-				connection.Send(id, value);
+				Enqueue(value);
 				return;
 			}
 
@@ -111,7 +125,7 @@ namespace Raven.Database.Server.SignalR
 			if (hasPrefix == false)
 				return;
 
-			connection.Send(id, value);
+			Enqueue(value);
 		}
 
 		public void Send(IndexChangeNotification indexChangeNotification)
@@ -119,7 +133,25 @@ namespace Raven.Database.Server.SignalR
 			if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
 				return;
 
-			connection.Send(id, new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
+
+			Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
+		}
+
+		private void Enqueue(object msg)
+		{
+			if (eventsTransport == null || eventsTransport.Connected == false)
+			{
+				pendingMessages.Enqueue(msg);
+				return;
+			}
+
+			eventsTransport.SendAsync(msg)
+				.ContinueWith(task =>
+				              	{
+				              		if (task.IsFaulted == false)
+				              			return;
+				              		pendingMessages.Enqueue(msg);
+				              	});
 		}
 
 		public void WatchAllDocuments()
@@ -150,6 +182,28 @@ namespace Raven.Database.Server.SignalR
 		public void UnwatchDocumentPrefix(string name)
 		{
 			matchingDocumentPrefixes.TryRemove(name);
+		}
+
+		public void Reconnect(EventsTransport transport)
+		{
+			eventsTransport = transport;
+			var items = new List<object>();
+			object result;
+			while (pendingMessages.TryDequeue(out result))
+			{
+				items.Add(result);
+			}
+
+			eventsTransport.SendManyAsync(items)
+				.ContinueWith(task =>
+				{
+					if (task.IsFaulted == false)
+						return;
+					foreach (var item in items)
+					{
+						pendingMessages.Enqueue(item);
+					}
+				});
 		}
 	}
 }

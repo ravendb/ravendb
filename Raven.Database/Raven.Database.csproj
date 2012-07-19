@@ -128,9 +128,10 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
-    <Compile Include="Server\ChangesConnection.cs" />
+    <Compile Include="Server\Connections\EventsTransport.cs" />
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
     <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
+    <Compile Include="Server\Responders\ChangesConfig.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
@@ -241,7 +242,6 @@
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
     <Compile Include="Server\Responders\Admin\AdminCompact.cs" />
-    <Compile Include="Server\Responders\Admin\AdminRunIdleOperations.cs" />
     <Compile Include="Server\Responders\Admin\AdminStats.cs" />
     <Compile Include="Server\Responders\DatabaseSize.cs" />
     <Compile Include="Server\Responders\Favicon.cs" />
@@ -518,9 +518,8 @@
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Server\Responders\TransactionStatus.cs" />
-    <Compile Include="Server\SignalR\SeqentialConnectionIdGenerator.cs" />
-    <Compile Include="Server\SignalR\SignalRState.cs" />
-    <Compile Include="Server\SignalR\TimeSensitiveStore.cs" />
+    <Compile Include="Server\Connections\TransportState.cs" />
+    <Compile Include="Server\Connections\TimeSensitiveStore.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />
@@ -721,18 +720,6 @@
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Imports\SignalR\SignalR.Hosting.Common\SignalR.Hosting.Common.csproj">
-      <Project>{3B71F0AE-D4B6-4F47-BF62-333D45615673}</Project>
-      <Name>SignalR.Hosting.Common</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Imports\SignalR\SignalR.Hosting.Self\SignalR.Hosting.Self.csproj">
-      <Project>{A2BD866D-906A-4742-AB3B-DB8740830400}</Project>
-      <Name>SignalR.Hosting.Self</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Imports\SignalR\SignalR\SignalR.csproj">
-      <Project>{1B9A82C4-BCA1-4834-A33E-226F17BE070B}</Project>
-      <Name>SignalR %28SignalR\SignalR%29</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>

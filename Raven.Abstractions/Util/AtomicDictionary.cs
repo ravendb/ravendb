@@ -66,5 +66,11 @@ namespace Raven.Abstractions.Util
 		{
 			return GetEnumerator();
 		}
+
+		public void Clear()
+		{
+			items.Clear();
+			locks.Clear();
+		}
 	}
 }

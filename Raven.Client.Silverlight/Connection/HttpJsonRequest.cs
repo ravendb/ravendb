@@ -224,7 +224,7 @@ namespace Raven.Client.Silverlight.Connection
 			}
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 
-			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
+			using (var responseStream = response.GetResponseStream())
 			{
 				return handleResponse(responseStream);
 			}
@@ -344,6 +344,52 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			webRequest.Headers[key] = value;
 			return this;
+		}
+
+		public Task<IObservable<string>> ServerPullAsync(int retries = 0)
+		{
+			return Task.Factory.FromAsync<WebResponse>(webRequest.BeginGetResponse, webRequest.EndGetResponse, null)
+				.ContinueWith(task =>
+				{
+					var stream = task.Result.GetResponseStream();
+					return (IObservable<string>)new ObservableLineStream(stream);
+				})
+				.ContinueWith(task =>
+				{
+					var webException = task.Exception.ExtractSingleInnerException() as WebException;
+					if (webException == null || retries >= 3)
+						return task;// effectively throw
+
+					var httpWebResponse = webException.Response as HttpWebResponse;
+					if (httpWebResponse == null ||
+						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+						return task; // effectively throw
+
+					var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
+
+					if (authorizeResponse == null)
+						return task; // effectively throw
+
+					return authorizeResponse
+						.ContinueWith(_ =>
+						{
+							_.Wait(); //throw on error
+							return ServerPullAsync(retries + 1);
+						})
+						.Unwrap();
+				}).Unwrap();
+		}
+
+		public Task ExecuteWriteAsync(string data)
+		{
+			return WriteAsync(data)
+				.ContinueWith(task =>
+				              	{
+				              		if (task.IsFaulted)
+				              			return task;
+				              		return ExecuteRequest();
+				              	})
+				.Unwrap();
 		}
 	}
 }

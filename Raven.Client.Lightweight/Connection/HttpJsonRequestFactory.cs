@@ -5,7 +5,6 @@ using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Util;
-using Raven.Imports.SignalR.Client.Http;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -29,11 +28,6 @@ namespace Raven.Client.Connection
 		/// Occurs when a json request is created
 		/// </summary>
 		public event EventHandler<WebRequestEventArgs> ConfigureRequest = delegate { };
-
-		/// <summary>
-		/// Occurs when a SignalR connection is prepared
-		/// </summary>
-		public event Action<IRequest> ConfigureSignalRConnection = delegate { }; 
 
 		/// <summary>
 		/// Occurs when a json request is completed
@@ -64,7 +58,9 @@ namespace Raven.Client.Connection
 				throw new ObjectDisposedException(typeof(HttpJsonRequestFactory).FullName);
 			var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
 			{
-				ShouldCacheRequest = createHttpJsonRequestParams.Convention.ShouldCacheRequest(createHttpJsonRequestParams.Url)
+				ShouldCacheRequest =
+					createHttpJsonRequestParams.AvoidCachingRequest == false && 
+					createHttpJsonRequestParams.Convention.ShouldCacheRequest(createHttpJsonRequestParams.Url)
 			};
 
 			if (request.ShouldCacheRequest && createHttpJsonRequestParams.Method == "GET" && !DisableHttpCaching)
@@ -254,12 +250,6 @@ namespace Raven.Client.Connection
 				AggressiveCacheDuration = oldAgressiveCaching;
 				DisableHttpCaching = oldHttpCaching;
 			});
-		}
-
-		[CLSCompliant(false)]
-		public void InvokeConfigureSignalRConnection(IRequest request)
-		{
-			ConfigureSignalRConnection(request);
 		}
 	}
 }
