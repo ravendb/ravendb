@@ -51,7 +51,7 @@ namespace Raven.Tests.Notifications
 				}
 
 				DocumentChangeNotification documentChangeNotification;
-				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(5)));
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(3)));
 
 				Assert.Equal("items/1", documentChangeNotification.Name);
 				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
@@ -64,7 +64,7 @@ namespace Raven.Tests.Notifications
 			using (GetNewServer())
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8079"
+				Url = "http://localhost.fiddler:8079"
 			}.Initialize())
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Net;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -18,7 +20,7 @@ namespace Raven.Client.Changes
 {
 	public class RemoteDatabaseChanges : IDatabaseChanges, IDisposable, IObserver<string>
 	{
-		private ILog logger = LogProvider.GetCurrentClassLogger();
+		private readonly ILog logger = LogProvider.GetCurrentClassLogger();
 
 		private readonly string url;
 		private readonly ICredentials credentials;
@@ -28,8 +30,12 @@ namespace Raven.Client.Changes
 		private int reconnectAttemptsRemaining;
 		private IDisposable connection;
 
+		private static int connectionCounter;
+		private readonly string id;
+
 		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions)
 		{
+			id = Interlocked.Increment(ref connectionCounter) + "/" + Guid.NewGuid();
 			this.url = url;
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
@@ -40,7 +46,7 @@ namespace Raven.Client.Changes
 
 		private Task EstablishConnection()
 		{
-			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events", "GET", credentials, conventions)
+			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id="+id, "GET", credentials, conventions)
 			                    	{
 			                    		AvoidCachingRequest = true
 			                    	};
@@ -80,12 +86,12 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("indexes/"+indexName, s =>
 			{
 				var indexSubscriptionTask = AfterConnection(() =>
-					Send(new { Type = "WatchIndex", Name = indexName })).ObserveException();
+					Send(new { Type = "WatchIndex", Name = indexName }));
 
 				return new LocalConnectionState(
 					() =>
 						{
-								Send(new { Type = "UnwatchIndex", Name = indexName }).ObserveException();
+							Send(new { Type = "UnwatchIndex", Name = indexName });
 							counters.Remove("indexes/" + indexName);
 						},
 					indexSubscriptionTask);
@@ -102,7 +108,17 @@ namespace Raven.Client.Changes
 			{
 				if (task.IsFaulted)
 					return null;
-				return (IDisposable) new DisposableAction(() => connection.Dispose());
+				return (IDisposable) new DisposableAction(() =>
+				                                          	{
+				                                          		try
+				                                          		{
+				                                          			connection.Dispose();
+				                                          		}
+				                                          		catch (Exception)
+				                                          		{
+				                                          			// nothing to do here
+				                                          		}
+				                                          	});
 			});
 
 			counter.Add(disposableTask);
@@ -112,9 +128,16 @@ namespace Raven.Client.Changes
 
 		private Task Send(object msg)
 		{
-			var requestParams = new CreateHttpJsonRequestParams(null, "/changes/config", "POST", credentials, conventions);
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-			return httpJsonRequest.ExecuteWriteAsync(JsonConvert.SerializeObject(msg));
+			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/config?id="+id, "POST", credentials, conventions);
+			try
+			{
+				var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
+				return httpJsonRequest.ExecuteWriteAsync(JsonConvert.SerializeObject(msg)).ObserveException();
+			}
+			catch (Exception e)
+			{
+				return new CompletedTask(e).Task.ObserveException();
+			}
 		}
 
 		public IObservableWithTask<DocumentChangeNotification> DocumentSubscription(string docId)
@@ -122,11 +145,11 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("docs/" + docId, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						Send(new { Type = "WatchDocument", Name = docId })).ObserveException();
+						Send(new { Type = "WatchDocument", Name = docId }));
 				return new LocalConnectionState(
 					() =>
 						{
-							Send(new { Type = "UnwatchDocument", Name = docId }).ObserveException();
+							Send(new { Type = "UnwatchDocument", Name = docId });
 							counters.Remove("docs/" + docId);
 						},
 					documentSubscriptionTask);
@@ -152,11 +175,11 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						Send(new { Type = "WatchDocumentPrefix", Name = docIdPrefix })).ObserveException();
+						Send(new { Type = "WatchDocumentPrefix", Name = docIdPrefix }));
 				return new LocalConnectionState(
 					() =>
 					{
-						Send(new { Type = "UnwatchDocumentPrefix", Name = docIdPrefix }).ObserveException();
+						Send(new { Type = "UnwatchDocumentPrefix", Name = docIdPrefix });
 						counters.Remove("prefixes/" + docIdPrefix);
 					},
 					documentSubscriptionTask);
@@ -177,8 +200,10 @@ namespace Raven.Client.Changes
 			return taskedObservable;
 		}
 
+
 		public void Dispose()
 		{
+			reconnectAttemptsRemaining = 0;
 			foreach (var keyValuePair in counters)
 			{
 				keyValuePair.Value.Dispose();
@@ -216,6 +241,9 @@ namespace Raven.Client.Changes
 		public void OnError(Exception error)
 		{
 			logger.ErrorException("Got error from server connection", error);
+			if (reconnectAttemptsRemaining <= 0)
+				return;
+
 			EstablishConnection()
 				.ObserveException()
 				.ContinueWith(task =>

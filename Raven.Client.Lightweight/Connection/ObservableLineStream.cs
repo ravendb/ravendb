@@ -13,7 +13,7 @@ using Raven.Abstractions.Util;
 
 namespace Raven.Client.Connection
 {
-	public class ObservableLineStream : IObservable<string>
+	public class ObservableLineStream : IObservable<string>, IDisposable
 	{
 		private readonly Stream stream;
 		private readonly byte[] buffer = new byte[8192];
@@ -42,7 +42,7 @@ namespace Raven.Client.Connection
 				              			if (prev == '\r' && buffer[i] == '\n')
 				              			{
 											// yeah, we found a line, let us give it to the users
-											var data = Encoding.UTF8.GetString(buffer, startPos, i - 2);
+											var data = Encoding.UTF8.GetString(buffer, startPos, i-1);
 				              				startPos = i;
 				              				foreach (var subscriber in subscribers)
 				              				{
@@ -73,6 +73,8 @@ namespace Raven.Client.Connection
 											// explicitly ignoring this
 										}
 										var aggregateException = task.Exception;
+										if (aggregateException.ExtractSingleInnerException() is ObjectDisposedException)
+											return; // this isn't an error
 										foreach (var subscriber in subscribers)
 										{
 											subscriber.OnError(aggregateException);
@@ -103,6 +105,16 @@ namespace Raven.Client.Connection
 		{
 			subscribers.Add(observer);
 			return new DisposableAction(() => subscribers.Remove(observer));
+		}
+
+		public void Dispose()
+		{
+			foreach (var subscriber in subscribers)
+			{
+				subscriber.OnCompleted();
+			}
+
+			stream.Dispose();
 		}
 	}
 }

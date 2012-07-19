@@ -14,6 +14,7 @@ using System.Threading;
 #if !NET35
 using System.Threading.Tasks;
 #endif
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -633,7 +634,9 @@ namespace Raven.Client.Connection
 				.ContinueWith(task =>
 				              	{
 				              		var stream = task.Result.GetResponseStreamWithHttpDecompression();
-				              		return (IObservable<string>)new ObservableLineStream(stream);
+				              		var observableLineStream = new ObservableLineStream(stream);
+									observableLineStream.Start();
+				              		return (IObservable<string>)observableLineStream;
 				              	})
 				.ContinueWith(task =>
 				{
@@ -663,8 +666,15 @@ namespace Raven.Client.Connection
 
 		public Task ExecuteWriteAsync(string data)
 		{
-			Write(data);
-			return ExecuteRequestAsync();
+			try
+			{
+				Write(data);
+				return ExecuteRequestAsync();
+			}
+			catch (Exception e)
+			{
+				return new CompletedTask(e);
+			}
 		}
 	}
 }

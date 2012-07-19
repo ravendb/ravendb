@@ -14,13 +14,14 @@ namespace Raven.Client.Changes
 		 public static Task ObserveException(this Task self)
 		 {
 			 // this merely observe the exception task, nothing else
-			 return self.ContinueWith(task =>
-			                          	{
-											if(task.IsFaulted)
-			                          			GC.KeepAlive(task.Exception);
-			                          		return task;
-			                          	})
-				 .Unwrap();
+		 	self.ContinueWith(task =>
+		 	                  	{
+		 	                  		if (task.IsFaulted)
+		 	                  		{
+		 	                  			GC.KeepAlive(task.Exception);
+		 	                  		}
+		 	                  	});
+		 	return self;
 		 }
 	}
 }
