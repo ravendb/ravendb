@@ -159,7 +159,7 @@ namespace Raven.Imports.SignalR.Client.Transports
             try
             {
                 // Attempt to perform a clean disconnect, but only wait 2 seconds
-                _httpClient.PostAsync(url, connection.PrepareRequest).Wait(TimeSpan.FromSeconds(2));
+                _httpClient.PostAsync(url, connection.PrepareRequest).Catch().Wait(TimeSpan.FromSeconds(2));
             }
             catch (Exception ex)
             {
