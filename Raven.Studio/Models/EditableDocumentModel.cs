@@ -600,7 +600,9 @@ namespace Raven.Studio.Models
 			ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(parentids.ToArray(), null)
 				.ContinueOnSuccessInTheUIThread(x =>
 													{
-														foreach (var parentid in x.Results.Select(result => result["@metadata"].SelectToken("@id").ToString()))
+														foreach (var parentid in x.Results
+															.Where(result=>result!=null)
+															.Select(result => result["@metadata"].SelectToken("@id").ToString()))
 														{
 															References.Insert(0, new LinkModel
 																					{
