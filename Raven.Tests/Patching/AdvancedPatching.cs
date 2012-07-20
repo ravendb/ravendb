@@ -67,6 +67,15 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
+		public void CanThrowIfValueIsWrong()
+		{
+			var invalidOperationException = Assert.Throws<InvalidOperationException>(
+				() => new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest {Script = "raise 'problem'"}));
+
+			Assert.Contains("problem", invalidOperationException.Message);
+		}
+
+		[Fact]
 		public void CanOutputDebugInformation()
 		{
 			var advancedJsonPatcher = new AdvancedJsonPatcher(RavenJObject.FromObject(test));
