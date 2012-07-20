@@ -244,6 +244,9 @@ namespace Raven.Client.Silverlight.Connection
 
 		private void WriteMetadata(RavenJObject metadata)
 		{
+			if (metadata == null)
+				return;
+
 			foreach (var prop in metadata)
 			{
 				if (prop.Value == null)
