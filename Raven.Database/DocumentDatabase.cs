@@ -1228,10 +1228,7 @@ namespace Raven.Database
 
 		public PatchResult ApplyPatch(string docId, Guid? etag, AdvancedPatchRequest patch, TransactionInformation transactionInformation)
 		{
-			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc =>
-			{
-				return new AdvancedJsonPatcher(jsonDoc).Apply(patch);
-			});
+			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc => new AdvancedJsonPatcher(jsonDoc).Apply(patch));
 		}
 
 		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)

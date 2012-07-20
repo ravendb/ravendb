@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 using Raven.Client.Document;
 using Raven.Client;
 using Raven.Json.Linq;
 using Raven.Database.Json;
-using Newtonsoft.Json;
-using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Exceptions;
@@ -47,6 +45,56 @@ namespace Raven.Tests.Patching
 			Assert.Equal("two", result.Comments[1]);
 			Assert.Equal(12144, result.Value);
 			Assert.Equal("err!!", resultJson["newValue"]);
+		}
+
+		[Fact]
+		public void CanHandleNonsensePatching()
+		{
+			Assert.Throws<InvalidOperationException>(
+				() =>
+				new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest { Script = "this.Id = 'Somethi" }));
+		}
+
+		[Fact]
+		public void CanOutputDebugInformation()
+		{
+			var advancedJsonPatcher = new AdvancedJsonPatcher(RavenJObject.FromObject(test));
+			advancedJsonPatcher.Apply(new AdvancedPatchRequest
+			                                                             	{
+																				Script = "output(this.Id)"
+			                                                             	});
+		
+			Assert.Equal("someId", advancedJsonPatcher.Debug[0]);
+		}
+
+		[Fact]
+		public void CannotUseWhile()
+		{
+			var advancedJsonPatcher = new AdvancedJsonPatcher(RavenJObject.FromObject(test));
+			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(new AdvancedPatchRequest
+			                                                                         	{
+			                                                                         		Script = "while(true) {}"
+			                                                                         	}));
+		}
+
+		[Fact]
+		public void DefiningFunctionForbidden()
+		{
+			var advancedJsonPatcher = new AdvancedJsonPatcher(RavenJObject.FromObject(test));
+			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(new AdvancedPatchRequest
+			{
+				Script = "function a() { a(); }"
+			}));
+		}
+
+		[Fact]
+		public void LongStringRejected()
+		{
+			var advancedJsonPatcher = new AdvancedJsonPatcher(RavenJObject.FromObject(test));
+			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(new AdvancedPatchRequest
+			{
+				Script = new string('a', 8193)
+			}));
 		}
 
 		[Fact]
@@ -125,14 +173,10 @@ namespace Raven.Tests.Patching
 
 			store.DatabaseCommands.Patch(test.Id, new AdvancedPatchRequest { Script = sampleScript });
 
-			// TODO this is wierd, we can change the Id in the Json to something other than the Key
-			// so we end up with a do that we can load via "someId" but result.Id = "Something new"
-			// we need to make sure the javascript can't change the Id field, or something else!??!
 			var resultDoc = store.DatabaseCommands.Get(test.Id);
 			var resultJson = resultDoc.DataAsJson;
 			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
-			//Assert.Equal("Something new", result.Id);
 			Assert.NotEqual("Something new", resultDoc.Metadata["@id"]);
 			Assert.Equal(2, result.Comments.Count);
 			Assert.Equal("one test", result.Comments[0]);
@@ -189,11 +233,6 @@ namespace Raven.Tests.Patching
 
 			var item2ResultJson = store.DatabaseCommands.Get(item2.Id).DataAsJson;
 			var item2Result = JsonConvert.DeserializeObject<CustomType>(item2ResultJson.ToString());			
-			//Assert.Equal(item2, item2Result);
-			var doc = store.DatabaseCommands.Get(item2.Id);
-			//TODO work out why the @id metadata item is missing here (when run in client server mode)?
-			var metadata = store.DatabaseCommands.Get(item2.Id).Metadata["@id"];
-			//Assert.True(metadata.ToString().StartsWith("someId"));
 			Assert.Equal(9999, item2Result.Value);
 			Assert.Equal(3, item2Result.Comments.Count);
 			Assert.Equal("one", item2Result.Comments[0]);
@@ -209,11 +248,8 @@ namespace Raven.Tests.Patching
 				s.SaveChanges();
 			}
 
-			//Delibrately set the prevVal Json to something else, so it throws
-			var testAsJson = RavenJObject.FromObject(test);
-			testAsJson["Value"] = 999;
 			Assert.Throws<ConcurrencyException>(() =>
-			store.DatabaseCommands.Patch(test.Id, new AdvancedPatchRequest { Script = sampleScript, PrevVal = testAsJson }));
+			store.DatabaseCommands.Patch(test.Id, new AdvancedPatchRequest { Script = sampleScript }));
 		}
 
 		class CustomType

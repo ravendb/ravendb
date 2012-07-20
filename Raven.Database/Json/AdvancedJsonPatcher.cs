@@ -5,13 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Text.RegularExpressions;
 using Raven.Json.Linq;
 using System.Reflection;
 using System.IO;
 using IronJS.Hosting;
-using Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using IronJS;
@@ -22,6 +20,8 @@ namespace Raven.Database.Json
 	{
 		private RavenJObject document;
 
+		public List<string> Debug = new List<string>();
+
 		public AdvancedJsonPatcher(RavenJObject document)
 		{
 			this.document = document;
@@ -29,7 +29,6 @@ namespace Raven.Database.Json
 
 		public RavenJObject Apply(AdvancedPatchRequest patch)
 		{
-			EnsurePreviousValueMatchCurrentValue(patch, document);
 			if (document == null)
 				return document;
 
@@ -43,13 +42,12 @@ namespace Raven.Database.Json
 		private void ApplyImpl(string script)
 		{
 			var ctx = new CSharp.Context();
-			ctx.CreatePrintFunction();
 
-			var toJsonScript = GetFromResources("Raven.Database.Json.ToJson.js");
-			ctx.Execute(toJsonScript);
+			ctx.Execute(GetFromResources("Raven.Database.Json.ToJson.js"));
 
-			var mapScript = GetFromResources("Raven.Database.Json.Map.js");
-			ctx.Execute(mapScript);
+			ctx.Execute(GetFromResources("Raven.Database.Json.Map.js"));
+
+			ctx.Execute(GetFromResources("Raven.Database.Json.Output.js"));
 			
 			var resultDocument = ApplySingleScript(ctx, document, script);
 			if (resultDocument != null)
@@ -58,6 +56,7 @@ namespace Raven.Database.Json
 
 		private RavenJObject ApplySingleScript(CSharp.Context ctx, RavenJObject doc, string script)
 		{
+			AssertValidScript(script);
 			var wrapperScript = String.Format(@"
 var doc = {0};
 
@@ -69,7 +68,13 @@ json_data = JSON.stringify(doc);", doc, script, script.EndsWith(";") ? String.Em
 			
 			try
 			{
-				object result = ctx.Execute(wrapperScript);
+				ctx.Execute(wrapperScript);
+				var boxedValue = ctx.GetGlobal("debug_outputs");
+				for (int i = 0; i < boxedValue.Array.Length; i++)
+				{
+					var value = boxedValue.Array.Get(i);
+					Debug.Add(value.String);
+				}
 				return RavenJObject.Parse(ctx.GetGlobalAs<string>("json_data"));
 			}
 			catch (UserError uEx)
@@ -82,6 +87,22 @@ json_data = JSON.stringify(doc);", doc, script, script.EndsWith(";") ? String.Em
 			}
 		}
 
+		private static readonly Regex ForbiddenKeywords = 
+			new Regex(@"(^ \s * (while|for) ) | ([};] \s* (while|for))", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+		
+		private static readonly Regex ForbiddenFunction =
+			new Regex(@"function ((\s*\()| (\s+ \w+\())", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+
+		private void AssertValidScript(string script)
+		{
+			if (script.Length > 8192)
+				throw new NotSupportedException("Script is too complex, please use scripts that are less than 8KB in size");
+			if (ForbiddenKeywords.IsMatch(script))
+				throw new NotSupportedException("Keywords 'while' and 'for' are not supported");
+			if(ForbiddenFunction.IsMatch(script))
+				throw new NotSupportedException("Defining functions is not supported");
+		}
+
 		private string GetFromResources(string resourceName)
 		{
 			Assembly assem = this.GetType().Assembly;
@@ -92,18 +113,6 @@ json_data = JSON.stringify(doc);", doc, script, script.EndsWith(";") ? String.Em
 					return reader.ReadToEnd();
 				}
 			}
-		}
-
-		private static void EnsurePreviousValueMatchCurrentValue(AdvancedPatchRequest patchCmd, RavenJObject document)
-		{
-			var prevVal = patchCmd.PrevVal;
-			if (prevVal == null)
-				return;
-			
-			if (document == null)
-				throw new ConcurrencyException();
-			if (RavenJObject.DeepEquals(document, prevVal) == false)
-				throw new ConcurrencyException();
 		}
 	}
 }
