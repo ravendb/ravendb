@@ -45,6 +45,11 @@ namespace Raven.Studio.Infrastructure.MarkupExtensions
 
             public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
             {
+                if (value == null)
+                {
+                    return null;
+                }
+
                 return targetObject.TryFindResource(value);
             }
 
