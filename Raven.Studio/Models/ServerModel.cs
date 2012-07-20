@@ -108,22 +108,22 @@ namespace Raven.Studio.Models
 				{
 					var databaseModels = names.Select(db => new DatabaseModel(db, documentStore));
 					Databases.Match(defaultDatabase.Concat(databaseModels).ToArray());
-					if (firstTick)
+					if (firstTick == false)
+						return;
+					
+					firstTick = false;
+					if (names.Length == 0 || (names.Length == 1 && names[0] == "System"))
 					{
-						firstTick = false;
-						if (names.Length == 0 || (names.Length == 1 && names[0] == "System"))
-						{
-							CreateNewDatabase = true;
-						}
+						CreateNewDatabase = true;
+					}
 
-						if (IsolatedStorageSettings.ApplicationSettings.Contains("SelectedDatabase"))
+					if (IsolatedStorageSettings.ApplicationSettings.Contains("SelectedDatabase"))
+					{
+						var databaseName = Settings.Instance.SelectedDatabase;
+						if (names.Contains(databaseName))
 						{
-							var databaseName = Settings.Instance.SelectedDatabase;
-							if (names.Contains(databaseName))
-							{
-								var database = databaseModels.FirstOrDefault(model => model.Name == (string)databaseName);
-								SelectedDatabase.Value = database;
-							}
+							var database = databaseModels.FirstOrDefault(model => model.Name == (string) databaseName);
+							SelectedDatabase.Value = database;
 						}
 					}
 				})
