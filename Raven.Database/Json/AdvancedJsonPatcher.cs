@@ -102,7 +102,7 @@ json_data = JSON.stringify(doc);", doc, patch.Script, patch.Script.EndsWith(";")
 			new Regex(@"(^ \s * (while|for) ) | ([};] \s* (while|for))", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 		
 		private static readonly Regex ForbiddenFunction =
-			new Regex(@"function ((\s*\()| (\s+ \w+\())", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+			new Regex(@"(?<! \. \s* Map \s* \() function ((\s*\()| (\s+ \w+\())", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
 		private void AssertValidScript(string script)
 		{
