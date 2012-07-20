@@ -10,7 +10,7 @@ namespace Raven.Tests.Silverlight
 	public abstract class RavenTestBase : AsynchronousTaskTest
 	{
 		protected const int Port = 8079;
-		protected const string Url = "http://localhost.fiddler:";
+		protected const string Url = "http://localhost:";
 
 		protected static string GenerateNewDatabaseName()
 		{
