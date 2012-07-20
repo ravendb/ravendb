@@ -16,15 +16,7 @@ namespace Raven.Abstractions.Data
 		/// The JavaScript function to use the patch a document
 		/// </summary>
 		/// <value>The type.</value>
-		public String Script { get; set; }
-
-		/// <summary>
-		/// Gets or sets the previous value, which is compared against the current value to verify a
-		/// change isn't overwriting new values.
-		/// If the value is null, the operation is always successful
-		/// </summary>
-		/// <value>The previous value.</value>
-		public RavenJObject PrevVal { get; set; }
+		public string Script { get; set; }
 
 		public static AdvancedPatchRequest FromJson(RavenJObject patchRequestJson)
 		{
