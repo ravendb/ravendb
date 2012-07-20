@@ -48,6 +48,35 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
+		public void CanRemoveFromCollectionByValue()
+		{
+			var resultJson = new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest
+			                                                                              	{
+			                                                                              		Script = @"
+this.Comments.Remove('two');
+"
+																							});
+			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+
+			Assert.Equal(new[]{"one","seven"}.ToList(), result.Comments);
+		}
+
+		[Fact]
+		public void CanRemoveFromCollectionByCondition()
+		{
+			var advancedJsonPatcher = new AdvancedJsonPatcher(RavenJObject.FromObject(test));
+			var resultJson = advancedJsonPatcher.Apply(new AdvancedPatchRequest
+			{
+				Script = @"
+this.Comments.RemoveWhere(function(el) {return el == 'seven';});
+"
+			});
+			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+
+			Assert.Equal(new[] { "one", "two" }.ToList(), result.Comments);
+		}
+
+		[Fact]
 		public void CanPatchUsingVars()
 		{
 			var resultJson = new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest

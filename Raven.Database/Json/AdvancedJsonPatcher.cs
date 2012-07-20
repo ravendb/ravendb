@@ -86,11 +86,7 @@ json_data = JSON.stringify(doc);", doc, patch.Script, patch.Script.EndsWith(";")
 				var result = ctx.GetGlobalAs<string>("json_data");
 				return RavenJObject.Parse(result);
 			}
-			catch (UserError uEx)
-			{
-				throw new InvalidOperationException("Unable to execute JavaScript: " + patch.Script, uEx); 
-			}
-			catch (Error.Error errorEx)
+			catch (Exception errorEx)
 			{
 				OutputLog(ctx);
 				throw new InvalidOperationException("Unable to execute JavaScript: " +Environment.NewLine + patch.Script + 
@@ -119,7 +115,7 @@ json_data = JSON.stringify(doc);", doc, patch.Script, patch.Script.EndsWith(";")
 			new Regex(@"(^|\s) eval \s* \(", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
 		private static readonly Regex ForbiddenFunction =
-			new Regex(@"(?<! \. \s* Map \s* \() function ((\s*\()| (\s+ \w+\())", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+			new Regex(@"(?<! \. \s* (Map|Remove|Where|RemoveWhere|filter) \s* \() function ((\s*\()| (\s+ \w+\())", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
 		private void AssertValidScript(string script)
 		{
