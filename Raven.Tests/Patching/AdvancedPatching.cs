@@ -131,19 +131,6 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
-		public void CanPerformAdvancedPatchingWithConcurrencyException_Remotely()
-		{
-			using (var server = GetNewServer(port: 8079))
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize())
-			{
-				ExecuteConcurrencyExceptionTest(store);
-			}
-		}
-
-		[Fact]
 		public void CanPerformAdvancedPatching_Embedded()
 		{
 			using (var store = NewDocumentStore())
@@ -152,14 +139,6 @@ namespace Raven.Tests.Patching
 			}
 		}
 
-		[Fact]
-		public void CanPerformAdvancedPatchingWithConcurrencyException_Embedded()
-		{
-			using (var store = NewDocumentStore())
-			{
-				ExecuteConcurrencyExceptionTest(store);
-			}
-		}
 
 		[Fact]
 		public void CanPerformAdvancedWithSetBasedUpdates_Remotely()
@@ -260,17 +239,6 @@ namespace Raven.Tests.Patching
 			Assert.Equal("seven", item2Result.Comments[2]);
 		}
 
-		private void ExecuteConcurrencyExceptionTest(IDocumentStore store)
-		{
-			using (var s = store.OpenSession())
-			{
-				s.Store(test);
-				s.SaveChanges();
-			}
-
-			Assert.Throws<ConcurrencyException>(() =>
-			store.DatabaseCommands.Patch(test.Id, new AdvancedPatchRequest { Script = sampleScript }));
-		}
 
 		class CustomType
 		{
