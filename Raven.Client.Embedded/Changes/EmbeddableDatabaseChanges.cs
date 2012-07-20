@@ -30,6 +30,12 @@ namespace Raven.Client.Embedded.Changes
 				notification => string.Equals(indexName, notification.Name, StringComparison.InvariantCultureIgnoreCase));
 		}
 
+		public IObservableWithTask<DocumentChangeNotification> ForAllDocuments()
+		{
+			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
+				notification => true);
+		}
+
 		public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
 		{
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable, 

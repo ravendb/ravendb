@@ -170,6 +170,36 @@ namespace Raven.Client.Changes
 			return taskedObservable;
 		}
 
+		public IObservableWithTask<DocumentChangeNotification> ForAllDocuments()
+		{
+			var counter = counters.GetOrAdd("all-docs", s =>
+			{
+				var documentSubscriptionTask = AfterConnection(() =>
+						Send(new { Type = "WatchAllDocuments" }));
+				return new LocalConnectionState(
+					() =>
+					{
+						Send(new { Type = "UnwatchAllDocuments" });
+						counters.Remove("all-docs");
+					},
+					documentSubscriptionTask);
+			});
+			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
+				counter,
+				notification => true);
+
+			counter.OnDocumentChangeNotification += taskedObservable.Send;
+
+			var disposableTask = counter.Task.ContinueWith(task =>
+			{
+				if (task.IsFaulted)
+					return null;
+				return (IDisposable)new DisposableAction(() => connection.Dispose());
+			});
+			counter.Add(disposableTask);
+			return taskedObservable;
+		}
+
 		public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
 		{
 			var counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
