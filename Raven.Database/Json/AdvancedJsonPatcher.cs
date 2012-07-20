@@ -14,18 +14,25 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using IronJS;
 using Environment = System.Environment;
+using System.Linq;
 
 namespace Raven.Database.Json
 {
 	public class AdvancedJsonPatcher
 	{
 		private RavenJObject document;
+		private readonly Func<string, RavenJObject> loadDocument;
 
 		public List<string> Debug = new List<string>();
 
-		public AdvancedJsonPatcher(RavenJObject document)
+		public AdvancedJsonPatcher(RavenJObject document, Func<string, RavenJObject> loadDocument = null)
 		{
 			this.document = document;
+			this.loadDocument = loadDocument ?? (s =>
+			                                     	{
+			                                     		throw new InvalidOperationException(
+			                                     			"Cannot load by id without database context");
+			                                     	});
 		}
 
 		public RavenJObject Apply(AdvancedPatchRequest patch)
@@ -42,7 +49,7 @@ namespace Raven.Database.Json
 
 			ctx.Execute(GetFromResources("Raven.Database.Json.Map.js"));
 
-			ctx.Execute(GetFromResources("Raven.Database.Json.Output.js"));
+			ctx.Execute(GetFromResources("Raven.Database.Json.RavenDB.js"));
 			
 			var resultDocument = ApplySingleScript(ctx, document, patch);
 			if (resultDocument != null)
@@ -68,13 +75,22 @@ json_data = JSON.stringify(doc);", doc, patch.Script, patch.Script.EndsWith(";")
 				{
 					ctx.SetGlobal(kvp.Key, kvp.Value);
 				}
+				ctx.SetGlobal("LoadDocumentInternal", IronJS.Native.Utils.CreateFunction<Func<BoxedValue, dynamic>>(ctx.Environment, 1,
+					value =>
+						{
+							var loadedDoc = loadDocument(value.String);
+							if(loadedDoc == null)
+								return null;
+							return loadedDoc.ToString();
+						}));
 				ctx.Execute(wrapperScript);
 				OutputLog(ctx);
-				return RavenJObject.Parse(ctx.GetGlobalAs<string>("json_data"));
+				var result = ctx.GetGlobalAs<string>("json_data");
+				return RavenJObject.Parse(result);
 			}
 			catch (UserError uEx)
 			{
-				throw new InvalidOperationException("Unable to parse JavaScript: " + patch.Script, uEx); 
+				throw new InvalidOperationException("Unable to execute JavaScript: " + patch.Script, uEx); 
 			}
 			catch (Error.Error errorEx)
 			{

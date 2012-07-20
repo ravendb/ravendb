@@ -1229,11 +1229,17 @@ namespace Raven.Database
 		public Tuple<PatchResult, List<string>> ApplyPatch(string docId, Guid? etag, AdvancedPatchRequest patch, TransactionInformation transactionInformation)
 		{
 			AdvancedJsonPatcher advancedJsonPatcher = null;
-			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc =>
-			                                                                                 	{
-			                                                                                 		advancedJsonPatcher = new AdvancedJsonPatcher(jsonDoc);
-			                                                                                 		return advancedJsonPatcher.Apply(patch);
-			                                                                                 	});
+			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation, 
+				jsonDoc =>
+			    {
+			        advancedJsonPatcher = new AdvancedJsonPatcher(jsonDoc, 
+						s =>
+			            {
+			                var jsonDocument = Get(s,transactionInformation);
+							return jsonDocument == null ? null : jsonDocument.ToJson();
+			            });
+			        return advancedJsonPatcher.Apply(patch);
+			    });
 			return Tuple.Create(applyPatchInternal, advancedJsonPatcher.Debug);
 		}
 

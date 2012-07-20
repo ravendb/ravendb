@@ -162,6 +162,35 @@ namespace Raven.Tests.Patching
 			}
 		}		
 
+		[Fact]
+		public void CanUpdateBasedOnAnotherDocumentProperty()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new CustomType { Value = 2});
+					s.Store(new CustomType {  Value = 1 });
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.Patch("CustomTypes/1", new AdvancedPatchRequest
+				                                              	{
+				                                              		Script = @"
+var another = LoadDocument(anotherId);
+this.Value = another.Value;
+",
+				                                              		Values = {{"anotherId", "CustomTypes/2"}}
+				                                              	});
+
+				var resultDoc = store.DatabaseCommands.Get("CustomTypes/1");
+				var resultJson = resultDoc.DataAsJson;
+				var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+
+				Assert.Equal(1, result.Value);
+			}
+		}
+
 		private void ExecuteTest(IDocumentStore store)
 		{
 			using (var s = store.OpenSession())
