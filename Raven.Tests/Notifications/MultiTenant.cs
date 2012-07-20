@@ -29,7 +29,7 @@ namespace Raven.Tests.Notifications
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
 				taskObservable
-					.DocumentSubscription("items/1")
+					.ForDocument("items/1")
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -61,7 +61,7 @@ namespace Raven.Tests.Notifications
 				var taskObservable = store.Changes("test");
 				taskObservable.Task.Wait();
 				taskObservable
-					.DocumentSubscription("items/1")
+					.ForDocument("items/1")
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession("test"))
@@ -94,7 +94,7 @@ namespace Raven.Tests.Notifications
 				var taskObservable = store.Changes("test");
 				taskObservable.Task.Wait();
 				taskObservable
-					.DocumentSubscription("items/1")
+					.ForDocument("items/1")
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession("another"))

@@ -29,7 +29,7 @@ namespace Raven.Tests.Notifications
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				var observableWithTask = taskObservable.DocumentSubscription("items/1");
+				var observableWithTask = taskObservable.ForDocument("items/1");
 				observableWithTask.Task.Wait();
 				
 				observableWithTask.Subscribe(list.Add);

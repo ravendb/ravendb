@@ -25,21 +25,21 @@ namespace Raven.Client.Shard
 
 		public Task Task { get; private set; }
 
-		public IObservableWithTask<IndexChangeNotification> IndexSubscription(string indexName)
+		public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
 		{
-			var observableWithTasks = shardedDatabaseChanges.Select(x=>x.IndexSubscription(indexName)).ToArray();
+			var observableWithTasks = shardedDatabaseChanges.Select(x=>x.ForIndex(indexName)).ToArray();
 			return new ShardedObservableWithTask<IndexChangeNotification>(observableWithTasks);
 		}
 
-		public IObservableWithTask<DocumentChangeNotification> DocumentSubscription(string docId)
+		public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
 		{
-			var observableWithTasks = shardedDatabaseChanges.Select(x => x.DocumentSubscription(docId)).ToArray();
+			var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForDocument(docId)).ToArray();
 			return new ShardedObservableWithTask<DocumentChangeNotification>(observableWithTasks);
 		}
 
-		public IObservableWithTask<DocumentChangeNotification> DocumentPrefixSubscription(string docIdPrefix)
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
 		{
-			var observableWithTasks = shardedDatabaseChanges.Select(x => x.DocumentPrefixSubscription(docIdPrefix)).ToArray();
+			var observableWithTasks = shardedDatabaseChanges.Select(x => x.ForDocumentsStartingWith(docIdPrefix)).ToArray();
 			return new ShardedObservableWithTask<DocumentChangeNotification>(observableWithTasks);
 		}
 	}

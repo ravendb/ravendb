@@ -40,7 +40,7 @@ namespace Raven.Tests.Notifications
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				var observableWithTask = taskObservable.DocumentSubscription("items/1");
+				var observableWithTask = taskObservable.ForDocument("items/1");
 				observableWithTask.Task.Wait();
 				observableWithTask.Subscribe(list.Add);
 
@@ -70,7 +70,7 @@ namespace Raven.Tests.Notifications
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				var observableWithTask = taskObservable.DocumentSubscription("items/1");
+				var observableWithTask = taskObservable.ForDocument("items/1");
 				observableWithTask.Task.Wait();
 				observableWithTask
 					.Where(x => x.Type == DocumentChangeTypes.Delete)
@@ -104,7 +104,7 @@ namespace Raven.Tests.Notifications
 				var list = new BlockingCollection<IndexChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				var observableWithTask = taskObservable.IndexSubscription("Raven/DocumentsByEntityName");
+				var observableWithTask = taskObservable.ForIndex("Raven/DocumentsByEntityName");
 				observableWithTask.Task.Wait();
 				observableWithTask
 					.Subscribe(list.Add);

@@ -7,8 +7,8 @@ namespace Raven.Client.Changes
 	public interface IDatabaseChanges
 	{
 		Task Task { get; }
-		IObservableWithTask<IndexChangeNotification> IndexSubscription(string indexName);
-		IObservableWithTask<DocumentChangeNotification> DocumentSubscription(string docId);
-		IObservableWithTask<DocumentChangeNotification> DocumentPrefixSubscription(string docIdPrefix);
+		IObservableWithTask<IndexChangeNotification> ForIndex(string indexName);
+		IObservableWithTask<DocumentChangeNotification> ForDocument(string docId);
+		IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix);
 	}
 }

@@ -24,19 +24,19 @@ namespace Raven.Client.Embedded.Changes
 
 		public Task Task { get; private set; }
 
-		public IObservableWithTask<IndexChangeNotification> IndexSubscription(string indexName)
+		public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
 		{
 			return new FilteringObservableWithTask<IndexChangeNotification>(indexesObservable, 
 				notification => string.Equals(indexName, notification.Name, StringComparison.InvariantCultureIgnoreCase));
 		}
 
-		public IObservableWithTask<DocumentChangeNotification> DocumentSubscription(string docId)
+		public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
 		{
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable, 
 				notification => string.Equals(docId, notification.Name, StringComparison.InvariantCultureIgnoreCase));
 		}
 
-		public IObservableWithTask<DocumentChangeNotification> DocumentPrefixSubscription(string docIdPrefix)
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
 		{
 			if (docIdPrefix == null) throw new ArgumentNullException("docIdPrefix");
 

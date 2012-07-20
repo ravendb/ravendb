@@ -81,7 +81,7 @@ namespace Raven.Client.Changes
 			.Unwrap();
 		}
 
-		public IObservableWithTask<IndexChangeNotification> IndexSubscription(string indexName)
+		public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
 		{
 			var counter = counters.GetOrAdd("indexes/"+indexName, s =>
 			{
@@ -140,7 +140,7 @@ namespace Raven.Client.Changes
 			}
 		}
 
-		public IObservableWithTask<DocumentChangeNotification> DocumentSubscription(string docId)
+		public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
 		{
 			var counter = counters.GetOrAdd("docs/" + docId, s =>
 			{
@@ -170,7 +170,7 @@ namespace Raven.Client.Changes
 			return taskedObservable;
 		}
 
-		public IObservableWithTask<DocumentChangeNotification> DocumentPrefixSubscription(string docIdPrefix)
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
 		{
 			var counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
 			{

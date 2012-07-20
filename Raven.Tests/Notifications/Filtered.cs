@@ -27,7 +27,7 @@ namespace Raven.Tests.Notifications
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
 				taskObservable
-					.IndexSubscription("Raven/DocumentsByEntityName")
+					.ForIndex("Raven/DocumentsByEntityName")
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -56,7 +56,7 @@ namespace Raven.Tests.Notifications
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				var documentPrefixSubscription = taskObservable.DocumentPrefixSubscription("items");
+				var documentPrefixSubscription = taskObservable.ForDocumentsStartingWith("items");
 				documentPrefixSubscription.Task.Wait();
 				documentPrefixSubscription
 					.Subscribe(list.Add);

@@ -24,7 +24,7 @@ namespace Raven.Tests.Notifications
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				store.Changes()
-					.DocumentSubscription("items/1")
+					.ForDocument("items/1")
 					.Subscribe(list.Add);
 
 				using(var session = store.OpenSession())
@@ -48,7 +48,7 @@ namespace Raven.Tests.Notifications
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				store.Changes()
-					.DocumentSubscription("items/1")
+					.ForDocument("items/1")
 					.Where(x=>x.Type == DocumentChangeTypes.Delete)
 					.Subscribe(list.Add);
 
@@ -76,7 +76,7 @@ namespace Raven.Tests.Notifications
 				var list = new BlockingCollection<IndexChangeNotification>();
 				var databaseChanges = store.Changes();
 				databaseChanges.Task.Wait();
-				var indexSubscription = databaseChanges.IndexSubscription("Raven/DocumentsByEntityName");
+				var indexSubscription = databaseChanges.ForIndex("Raven/DocumentsByEntityName");
 				indexSubscription.Task.Wait();
 				indexSubscription
 					.Where(x=>x.Type==IndexChangeTypes.MapCompleted)
