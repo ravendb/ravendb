@@ -235,7 +235,7 @@ namespace Raven.Client.Changes
 		{
 			if (disposed)
 				return;
- 
+
 			DisposeAsync();
 		}
 

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
@@ -84,8 +85,7 @@ namespace Raven.Database.Server.Abstractions
 
 		public void FinalizeResonse()
 		{
-			context.Response.Flush();
-			context.Response.Close();
+			
 		}
 
 		public void SetResponseFilter(Func<Stream, Stream> responseFilter)
