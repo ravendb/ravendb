@@ -26,7 +26,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET", "DELETE", "PUT", "PATCH", "ADVANCEDPATCH", "HEAD"}; }
+			get { return new[] {"GET", "DELETE", "PUT", "PATCH", "EVAL", "HEAD"}; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -54,7 +54,7 @@ namespace Raven.Database.Server.Responders
 					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchRequests, GetRequestTransaction(context));
 					ProcessPatchResult(context, docId, patchResult, null);
 					break;
-				case "ADVANCEDPATCH":
+				case "EVAL":
 					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
 					var advPatch = AdvancedPatchRequest.FromJson(advPatchRequestJson);
 					var advPatchResult = Database.ApplyPatch(docId, context.GetEtag(), advPatch, GetRequestTransaction(context));

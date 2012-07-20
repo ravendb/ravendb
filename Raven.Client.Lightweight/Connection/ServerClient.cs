@@ -1136,7 +1136,7 @@ namespace Raven.Client.Connection
 		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, AdvancedPatchRequest patch, bool allowStale)
 			{
 			var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
-			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "ADVANCEDPATCH"); //or "PATCH"
+			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");
 		}
 
 		private void UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
