@@ -207,11 +207,8 @@ namespace Raven.Database.Server
 				{
 					lock (ResourcesStoresCache)
 					{
-						foreach (var documentDatabase in ResourcesStoresCache)
-						{
-							var database = documentDatabase.Value;
-							exceptionAggregator.Execute(database.Dispose);
-						}
+						// shut down all databases in parallel, avoid having to wait for each one
+						Parallel.ForEach(ResourcesStoresCache, val => val.Value.Dispose());
 						ResourcesStoresCache.Clear();
 					}
 				});
