@@ -52,31 +52,31 @@ namespace Raven.Database.Server.Responders
 					var patchRequestJson = context.ReadJsonArray();
 					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 					var patchResult = Database.ApplyPatch(docId, context.GetEtag(), patchRequests, GetRequestTransaction(context));
-					ProcessPatchResult(context, docId, patchResult);
+					ProcessPatchResult(context, docId, patchResult, null);
 					break;
 				case "ADVANCEDPATCH":
 					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
 					var advPatch = AdvancedPatchRequest.FromJson(advPatchRequestJson);
 					var advPatchResult = Database.ApplyPatch(docId, context.GetEtag(), advPatch, GetRequestTransaction(context));
-					ProcessPatchResult(context, docId, advPatchResult);
+					ProcessPatchResult(context, docId, advPatchResult.Item1, advPatchResult.Item2);
 					break;
 			}
 		}
 
-		private void ProcessPatchResult(IHttpContext context, string docId, PatchResult patchResult)
+		private void ProcessPatchResult(IHttpContext context, string docId, PatchResult patchResult, object debug)
 		{
-					switch (patchResult)
-					{
-						case PatchResult.DocumentDoesNotExists:
-							context.SetStatusToNotFound();
-							break;
-						case PatchResult.Patched:
-							context.Response.AddHeader("Location", Database.Configuration.GetFullUrl("/docs/" + docId));
-							context.WriteJson(new {Patched = true});
-							break;
-						default:
-							throw new ArgumentOutOfRangeException("Value " + patchResult + " is not understood");
-					}
+				switch (patchResult)
+				{
+					case PatchResult.DocumentDoesNotExists:
+						context.SetStatusToNotFound();
+						break;
+					case PatchResult.Patched:
+						context.Response.AddHeader("Location", Database.Configuration.GetFullUrl("/docs/" + docId));
+						context.WriteJson(new {Patched = true, Debug = debug});
+						break;
+					default:
+						throw new ArgumentOutOfRangeException("Value " + patchResult + " is not understood");
+				}
 		}
 
 		private void Get(IHttpContext context, string docId)

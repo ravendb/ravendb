@@ -1226,9 +1226,15 @@ namespace Raven.Database
 							}));
 		}
 
-		public PatchResult ApplyPatch(string docId, Guid? etag, AdvancedPatchRequest patch, TransactionInformation transactionInformation)
+		public Tuple<PatchResult, List<string>> ApplyPatch(string docId, Guid? etag, AdvancedPatchRequest patch, TransactionInformation transactionInformation)
 		{
-			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc => new AdvancedJsonPatcher(jsonDoc).Apply(patch));
+			AdvancedJsonPatcher advancedJsonPatcher = null;
+			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc =>
+			                                                                                 	{
+			                                                                                 		advancedJsonPatcher = new AdvancedJsonPatcher(jsonDoc);
+			                                                                                 		return advancedJsonPatcher.Apply(patch);
+			                                                                                 	});
+			return Tuple.Create(applyPatchInternal, advancedJsonPatcher.Debug);
 		}
 
 		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)

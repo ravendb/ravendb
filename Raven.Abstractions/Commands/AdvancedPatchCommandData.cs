@@ -74,7 +74,6 @@ namespace Raven.Abstractions.Commands
 						{"Patch", new RavenJObject
 						{
 							{ "Script", Patch.Script },
-							{ "PrevVal", Patch.PrevVal },
 						}}
 					};
 			if (Etag != null)
