@@ -105,28 +105,28 @@ namespace Raven.Studio.Models
 
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(1024)
 				.ContinueOnSuccess(names =>
-				{
-					var databaseModels = names.Select(db => new DatabaseModel(db, documentStore));
-					Databases.Match(defaultDatabase.Concat(databaseModels).ToArray());
-					if (firstTick == false)
-						return;
-					
-					firstTick = false;
-					if (names.Length == 0 || (names.Length == 1 && names[0] == "System"))
-					{
-						CreateNewDatabase = true;
-					}
+				                   	{
+				                   		var databaseModels = names.Select(db => new DatabaseModel(db, documentStore));
+				                   		Databases.Match(defaultDatabase.Concat(databaseModels).ToArray());
+				                   		if (firstTick == false)
+				                   			return;
 
-					if (IsolatedStorageSettings.ApplicationSettings.Contains("SelectedDatabase"))
-					{
-						var databaseName = Settings.Instance.SelectedDatabase;
-						if (names.Contains(databaseName))
-						{
-							var database = databaseModels.FirstOrDefault(model => model.Name == (string) databaseName);
-							SelectedDatabase.Value = database;
-						}
-					}
-				})
+				                   		firstTick = false;
+				                   		if (names.Length == 0 || (names.Length == 1 && names[0] == "System"))
+				                   		{
+				                   			CreateNewDatabase = true;
+				                   		}
+
+				                   		if (string.IsNullOrEmpty(Settings.Instance.SelectedDatabase))
+				                   			return;
+				                   	
+										var databaseName = Settings.Instance.SelectedDatabase;
+				                   		
+				                   		var database = databaseModels.FirstOrDefault(model => model.Name == databaseName);
+				                   		if(database == null)
+				                   			return;
+										SelectedDatabase.Value = database;
+				                   	})
 				.Catch();
 		}
 
