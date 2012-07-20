@@ -1,0 +1,7676 @@
+<?xml version="1.0" encoding="utf-8"?>
+<doc>
+<assembly><name>IronJS</name></assembly>
+<members>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.ArgumentsObject.CreateForVariadicFunction(IronJS.FunctionObject,IronJS.BoxedValue[],IronJS.BoxedValue[],IronJS.BoxedValue[])">
+
+</member>
+<member name="M:IronJS.ArgumentsObject.CreateForFunction(IronJS.FunctionObject,IronJS.BoxedValue[],IronJS.BoxedValue[],System.Int32,IronJS.BoxedValue[])">
+
+</member>
+<member name="M:IronJS.ArgumentsObject.CopyLinkedValues">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.ArgumentsObject">
+
+</member>
+<member name="">
+
+</member>
+<member name="F:IronJS.IronJS.ArrayObject.length@1287">
+<summary>
+ Internal length property
+</summary>
+</member>
+<member name="F:IronJS.IronJS.ArrayObject.sparse">
+<summary>
+ Internal sparse array
+</summary>
+</member>
+<member name="F:IronJS.IronJS.ArrayObject.dense">
+<summary>
+ Internal dense array
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.ArrayObject.PutLength(System.Double)">
+
+</member>
+<member name="M:IronJS.ArrayObject.PutLength(System.UInt32)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.ArrayObject.Put(System.UInt32,IronJS.BoxedValue)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.ArrayObject.HasIndex(System.UInt32)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.ArrayObject.GetAllIndexProperties(System.Collections.Generic.Dictionary{System.UInt32,IronJS.BoxedValue},System.UInt32)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.ArrayObject">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.BooleanObject">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.BoxedValue">
+<summary>
+ This is a NaN-tagged struct that is used for representing
+ values that don&apos;t have a known type at runtime
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.BoxingUtils">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="P:IronJS.CommonObject.Length(System.UInt32)">
+<summary>
+ Default implementation of Length used for
+ all objects except ArrayObject
+</summary>
+</member>
+<member name="P:IronJS.CommonObject.Length(System.UInt32)">
+<summary>
+ Gets and sets the .length property
+</summary>
+</member>
+<member name="P:IronJS.CommonObject.RequiredStorage">
+
+</member>
+<member name="">
+
+</member>
+<member name="P:IronJS.CommonObject.Length">
+<summary>
+ Default implementation of Length used for
+ all objects except ArrayObject
+</summary>
+</member>
+<member name="P:IronJS.CommonObject.Length">
+<summary>
+ Gets and sets the .length property
+</summary>
+</member>
+<member name="P:IronJS.CommonObject.HasPrototype">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.CommonObject.TryCastTo``1(``0@)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.CommonObject.GetAllIndexProperties(System.Collections.Generic.Dictionary{System.UInt32,IronJS.BoxedValue},System.UInt32)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.CommonObject.Find(System.String)">
+<summary>
+ Finds a property in the prototype chain
+</summary>
+</member>
+<member name="M:IronJS.CommonObject.ExpandStorage">
+<summary>
+ Expands object property storage
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.CommonObject.CreateIndex(System.String)">
+<summary>
+ Creates an index for property named &apos;name&apos;
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.CommonObject.CheckType``1">
+
+</member>
+<member name="M:IronJS.CommonObject.CastTo``1">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Constructors">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Descriptor">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.DynamicScopeHelpers.Set(System.String,IronJS.BoxedValue,Microsoft.FSharp.Collections.FSharpList{System.Tuple`2{System.Int32,IronJS.CommonObject}},System.Int32,IronJS.CommonObject,IronJS.BoxedValue[],System.Int32)">
+
+</member>
+<member name="M:IronJS.DynamicScopeHelpers.Push(Microsoft.FSharp.Collections.FSharpList{System.Tuple`2{System.Int32,IronJS.CommonObject}}@,IronJS.CommonObject,System.Int32)">
+
+</member>
+<member name="M:IronJS.DynamicScopeHelpers.Pop(Microsoft.FSharp.Collections.FSharpList{System.Tuple`2{System.Int32,IronJS.CommonObject}}@)">
+
+</member>
+<member name="M:IronJS.DynamicScopeHelpers.Get(System.String,Microsoft.FSharp.Collections.FSharpList{System.Tuple`2{System.Int32,IronJS.CommonObject}},System.Int32,IronJS.CommonObject,IronJS.BoxedValue[],System.Int32)">
+
+</member>
+<member name="M:IronJS.DynamicScopeHelpers.Delete(Microsoft.FSharp.Collections.FSharpList{System.Tuple`2{System.Int32,IronJS.CommonObject}},IronJS.CommonObject,System.String)">
+
+</member>
+<member name="M:IronJS.DynamicScopeHelpers.Call``1(System.String,System.Object[],Microsoft.FSharp.Collections.FSharpList{System.Tuple`2{System.Int32,IronJS.CommonObject}},System.Int32,IronJS.CommonObject,IronJS.BoxedValue[],System.Int32)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.DynamicScopeHelpers">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Environment">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.ErrorObject">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.EvalCode">
+<summary>
+ Delegate for code compiled in an eval call, this
+ delegate differs from the other types in that it
+ get its private, shared and dynamic scope passed
+ into it from the calling context, it also returns
+ a CLR boxed value like GlobalCode.
+</summary>
+</member>
+<member name="T:IronJS.FO">
+<summary>
+ Alias for FunctionObject
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.FinallyBreakJump">
+<summary>
+ Exception used to break out of
+ a finally block, which the CLR
+ doesn&apos;t allow.
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.FinallyContinueJump">
+<summary>
+ Exception used to continue out of
+ a finally block, which the CLR
+ doesn&apos;t allow.
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.FinallyReturnJump">
+<summary>
+ Exception used to return out of
+ a finally block, which the CLR
+ doesn&apos;t allow.
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.FunctionMetaData.GetDelegate``1(IronJS.FunctionObject)">
+<summary>
+ Retrieves and already compiled delegate for the current
+ function, or compiles a new one if there is needed.
+</summary>
+</member>
+<member name="M:IronJS.FunctionMetaData.GetDelegate(IronJS.FunctionObject,System.Type)">
+
+</member>
+<member name="M:IronJS.FunctionMetaData.#ctor(System.UInt64,IronJS.FunctionType,Microsoft.FSharp.Core.FSharpFunc`2{IronJS.FunctionObject,Microsoft.FSharp.Core.FSharpFunc`2{System.Type,System.Delegate}})">
+<summary>
+ This constructor is for host functions, which we don&apos;t
+ need parameter storage information about.
+</summary>
+</member>
+<member name="M:IronJS.FunctionMetaData.#ctor(System.UInt64,Microsoft.FSharp.Core.FSharpFunc`2{IronJS.FunctionObject,Microsoft.FSharp.Core.FSharpFunc`2{System.Type,System.Delegate}},System.Tuple`2{IronJS.ParameterStorageType,System.Int32}[])">
+<summary>
+ This constructor is for user functions, which we know
+ always have ConstructorMode.User.
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.FunctionMetaData">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.FunctionObject">
+<summary>
+ Type that is used for representing objects that also
+ support the [[Call]] and [[Construct]] functions
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.GlobalCode">
+<summary>
+ Delegate for global code, it has the same
+ signature as StaticArityFunction but we need
+ a separate type so we can distinguish between 
+ code compiled in the global scope and a function
+ called with zero arguments.
+</summary>
+</member>
+<member name="T:IronJS.HFO`1">
+<summary>
+ Host function alias
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.HostFunction`1">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Maps">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.MathObject">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.NumberObject">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Prototypes">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Schema">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.SparseArray.Unshift(IronJS.BoxedValue[])">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.SparseArray.Sort(Microsoft.FSharp.Core.FSharpFunc`2{IronJS.BoxedValue,Microsoft.FSharp.Core.FSharpFunc`2{IronJS.BoxedValue,System.Int32}})">
+
+</member>
+<member name="M:IronJS.SparseArray.Shift">
+
+</member>
+<member name="M:IronJS.SparseArray.Reverse(System.UInt32)">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.SparseArray.PutLength(System.UInt32,System.UInt32)">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.SparseArray.OfDense(IronJS.Descriptor[])">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.SparseArray.GetAllIndexProperties(System.Collections.Generic.Dictionary{System.UInt32,IronJS.BoxedValue},System.UInt32)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.SparseArray">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.StringObject">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.SuffixString.ToString">
+
+</member>
+<member name="M:IronJS.SuffixString.Concat(System.Object,System.Object)">
+
+</member>
+<member name="M:IronJS.SuffixString.Concat(IronJS.SuffixString,System.Object)">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.SuffixString">
+
+</member>
+<member name="T:IronJS.TC">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.TypeConverter.ToString(System.Double)">
+<summary>
+ These steps are outlined in the ECMA-262, Section 9.8.1
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.TypeConverter.ToObject(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.TypeConverter.ToObject(IronJS.Environment,IronJS.BoxedValue)">
+
+</member>
+<member name="M:IronJS.TypeConverter.ToObject(IronJS.Environment,System.Boolean)">
+
+</member>
+<member name="M:IronJS.TypeConverter.ToObject(IronJS.Environment,System.Double)">
+
+</member>
+<member name="M:IronJS.TypeConverter.ToObject(IronJS.Environment,System.String)">
+
+</member>
+<member name="M:IronJS.TypeConverter.ToObject(IronJS.Environment,System.Object)">
+
+</member>
+<member name="M:IronJS.TypeConverter.ToObject(IronJS.Environment,IronJS.Undefined)">
+
+</member>
+<member name="M:IronJS.TypeConverter.ToObject(IronJS.Environment,IronJS.FunctionObject)">
+
+</member>
+<member name="M:IronJS.TypeConverter.ToObject(IronJS.Environment,IronJS.CommonObject)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.TypeConverter.ConvertTo(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression,System.Type)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.TypeTag">
+
+</member>
+<member name="T:IronJS.Undef">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.UserError">
+<summary>
+ Exception that represent an exception
+ thrown by javascript code, or an exception
+ thrown from within the engine which is supposed
+ to be catchable by user code.
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.VariadicFunction">
+<summary>
+ This delegate type is used for functions that are called
+ with more then four arguments. Instead of compiling a function
+ for each arity above six we pass in an array of BV values 
+ instead and then sort it out inside the function body.
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.ArgumentsLinkArray">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Array">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.BoxFields">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.BoxedValueOffsets">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Caches.WeakCache`2">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Caches.SplayCache`2">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Caches.LimitCache`2">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.EvalTarget">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Compiler.Analyzer.findVariable(System.String,Microsoft.FSharp.Core.FSharpOption{IronJS.Compiler.Parser.ScopeData})">
+<summary>
+ Tries to find a variable in a ScopeData chain
+</summary>
+</member>
+<member name="T:IronJS.Compiler.Analyzer">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.Variable">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.ScopeOption">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.CatchScope">
+<summary>
+ Represents a catch scope
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.FunctionScope">
+<summary>
+ Represents a function scope
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.LookupMode">
+<summary>
+ The two different types of lookup modes that a 
+ function can use, dynamic is used if a function 
+ contains either an eval call or a with statement
+ otherwise static is used (which is a lot faster)
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.EvalMode">
+<summary>
+ The ways in a function can be effected by eval
+ 
+ Clean = No eval call that can effect this function detected
+ Contains = An eval call exists inside this function
+ Effected = An eval call exists in one of the scopes containing this function
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.ScopeType">
+<summary>
+ The two different types of scopes possible
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.Cases">
+<summary>
+ Switch statement cases
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.Tree">
+<summary>
+ The AST tree type, contains all AST nodes
+ except Case and Default nodes for switch statements
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.Directive">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.UnaryOp">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.BinaryOp">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.promotePrivateToShared(System.String,Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.createSharedVariable(System.String,System.Int32,System.Int32,Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.createPrivateVariable(System.String,Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.addVariable(System.String,IronJS.Compiler.Ast.Variable,Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.addFunction(IronJS.Compiler.Ast.Tree,Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.addParameterName(System.String,Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.increasePrivateCount(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.increaseSharedCount(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.catchScopes(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.sharedCount(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.privateCount(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.parameterCount(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.parameterNames(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.variableCount(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.hasVariable(System.String,Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.variables(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.hasArgumentsObject(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.hasDynamicLookup(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.increaseWithCount(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.setSelfReference(System.String,Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.setDynamicLookup(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.setContainsEval(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.setContainsArguments(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.closureLevel(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.globalLevel(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.isGlobal(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.isFunction(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.id(Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.clone``1(Microsoft.FSharp.Core.FSharpRef{``0})">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.createCatchScope(System.String,System.Int32,System.Int32)">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.createGlobalScope">
+
+</member>
+<member name="M:IronJS.Compiler.Ast.Utils.createFunctionScope">
+
+</member>
+<member name="T:IronJS.Compiler.Ast.Utils">
+
+</member>
+<member name="T:IronJS.Compiler.Ast">
+
+</member>
+<member name="M:IronJS.Compiler.Binary.compoundAssign(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.BinaryOp,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Ast.Tree)">
+<summary>
+ Implements compilation for 
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Binary.assign(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Ast.Tree)">
+<summary>
+ Implements compilation for 11.13.1 assignment operator =
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Binary.compile(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.BinaryOp,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Ast.Tree)">
+<summary>
+ Implements compilation for: 
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Binary.compileExpr(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.BinaryOp,System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Binary.equalityOperator``1(Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,System.Linq.Expressions.Expression}},Microsoft.FSharp.Core.FSharpFunc`2{System.Tuple`2{System.Linq.Expressions.Expression,System.Linq.Expressions.Expression},System.Linq.Expressions.Expression},``0,System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Binary.relationalOperator(Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,System.Linq.Expressions.Expression}},Microsoft.FSharp.Core.FSharpFunc`2{System.Tuple`2{System.Linq.Expressions.Expression,System.Linq.Expressions.Expression},System.Linq.Expressions.Expression},System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Binary.addOperator(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Binary.bitShiftOperator``3(Microsoft.FSharp.Core.FSharpFunc`2{``0,Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,``1}},Microsoft.FSharp.Core.FSharpFunc`2{``2,``0},``2,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Binary.bitOperator``1(Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,``0}},System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Binary.numericOperator``1(Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,``0}},System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Binary.getStaticExpression(System.Collections.Generic.List{System.Linq.Expressions.ParameterExpression},System.Collections.Generic.List{System.Linq.Expressions.Expression},System.Linq.Expressions.Expression)">
+<summary>
+ This method is intended for internal use only 
+ and uses mutable lists for performance reasons
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Binary.toInt32(System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Binary.toUInt32(System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Binary.toNumber(System.Linq.Expressions.Expression)">
+
+</member>
+<member name="T:IronJS.Compiler.Binary">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Compiler.Context.getInternalVariables(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Context.getInternalParameters(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Context.compile(IronJS.Compiler.Ast.Tree,IronJS.Compiler.Context.T)">
+
+</member>
+<member name="T:IronJS.Compiler.Context">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Compiler.ControlFlow.continue'(IronJS.Compiler.Context.T,Microsoft.FSharp.Core.FSharpOption{System.String})">
+<summary>
+ 12.7 continue
+</summary>
+</member>
+<member name="M:IronJS.Compiler.ControlFlow.compileJump``1(Microsoft.FSharp.Collections.FSharpList{System.Tuple`2{Microsoft.FSharp.Collections.FSharpMap{System.String,System.Tuple`2{System.Int32,System.Linq.Expressions.LabelTarget}},Microsoft.FSharp.Core.FSharpRef{Microsoft.FSharp.Collections.FSharpMap{System.Int32,System.Linq.Expressions.LabelTarget}}}},System.String,System.Linq.Expressions.LabelTarget)">
+
+</member>
+<member name="M:IronJS.Compiler.ControlFlow.locateLabelGroup``1(System.String,Microsoft.FSharp.Collections.FSharpList{System.Tuple`2{Microsoft.FSharp.Collections.FSharpMap{System.String,System.Tuple`2{System.Int32,System.Linq.Expressions.LabelTarget}},Microsoft.FSharp.Core.FSharpRef{Microsoft.FSharp.Collections.FSharpMap{System.Int32,System.Linq.Expressions.LabelTarget}}}},``0)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.ControlFlow">
+
+</member>
+<member name="M:IronJS.Compiler.Core.compileFunctionT``1(IronJS.Environment,IronJS.Compiler.Ast.Tree)">
+
+</member>
+<member name="M:IronJS.Compiler.Core.compileFunction(IronJS.Environment,System.Type,IronJS.Compiler.Ast.Tree)">
+
+</member>
+<member name="M:IronJS.Compiler.Core.compileEval(IronJS.Environment,IronJS.Compiler.Ast.Tree)">
+
+</member>
+<member name="M:IronJS.Compiler.Core.compileGlobal(IronJS.Environment,IronJS.Compiler.Ast.Tree)">
+
+</member>
+<member name="M:IronJS.Compiler.Core.compile(IronJS.Compiler.Target.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Core.cloneScope(IronJS.Compiler.Target.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Core.compileAst(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree)">
+
+</member>
+<member name="M:IronJS.Compiler.Core.compileDirective(IronJS.Compiler.Ast.Directive,IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Core.compileRegExp(System.String,System.String,IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Core.compileComma(IronJS.Compiler.Ast.Tree,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Core.compileBlock(Microsoft.FSharp.Collections.FSharpList{IronJS.Compiler.Ast.Tree},IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Core.compileVar(IronJS.Compiler.Ast.Tree,IronJS.Compiler.Context.T)">
+
+</member>
+<member name="T:IronJS.Compiler.Core">
+
+</member>
+<member name="M:IronJS.Compiler.Exception.try'(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree,Microsoft.FSharp.Core.FSharpOption{IronJS.Compiler.Ast.Tree},Microsoft.FSharp.Core.FSharpOption{IronJS.Compiler.Ast.Tree})">
+
+</member>
+<member name="M:IronJS.Compiler.Exception.finally'(System.Linq.Expressions.Expression,System.Collections.Generic.IEnumerable{System.Linq.Expressions.CatchBlock},IronJS.Compiler.Ast.Tree,IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Exception.buildCatchJumpBlock(System.Type,Microsoft.FSharp.Core.FSharpRef{Microsoft.FSharp.Collections.FSharpMap{System.Int32,System.Linq.Expressions.LabelTarget}})">
+
+</member>
+<member name="M:IronJS.Compiler.Exception.returnCompiler(System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Exception.compileCatch(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree)">
+
+</member>
+<member name="M:IronJS.Compiler.Exception.throw(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree)">
+
+</member>
+<member name="T:IronJS.Compiler.Exception">
+
+</member>
+<member name="M:IronJS.Compiler.Function.evalInvocation(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree)">
+
+</member>
+<member name="M:IronJS.Compiler.Function.return'(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree)">
+<summary>
+ 12.9 the return statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Function.invoke(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree,System.Collections.Generic.IEnumerable{IronJS.Compiler.Ast.Tree})">
+<summary>
+ 11.2.3 function calls
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Function.new'(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree,System.Collections.Generic.IEnumerable{IronJS.Compiler.Ast.Tree})">
+<summary>
+ 11.2.2 the new operator
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Function.createTempVars(Microsoft.FSharp.Collections.FSharpList{System.Linq.Expressions.Expression})">
+
+</member>
+<member name="M:IronJS.Compiler.Function.invokeIndex(IronJS.Compiler.Context.T,System.Linq.Expressions.Expression,System.Linq.Expressions.Expression,Microsoft.FSharp.Collections.FSharpList{System.Linq.Expressions.Expression})">
+
+</member>
+<member name="M:IronJS.Compiler.Function.invokeProperty``1(IronJS.Compiler.Context.T,System.Linq.Expressions.Expression,``0,Microsoft.FSharp.Collections.FSharpList{System.Linq.Expressions.Expression})">
+
+</member>
+<member name="M:IronJS.Compiler.Function.invokeIdentifier(IronJS.Compiler.Context.T,System.String,Microsoft.FSharp.Collections.FSharpList{System.Linq.Expressions.Expression})">
+
+</member>
+<member name="M:IronJS.Compiler.Function.invokeIdentifierDynamic``1(IronJS.Compiler.Context.T,System.String,System.Collections.Generic.IEnumerable{``0})">
+
+</member>
+<member name="M:IronJS.Compiler.Function.invokeFunction(IronJS.Compiler.Context.T,System.Linq.Expressions.Expression,Microsoft.FSharp.Collections.FSharpList{System.Linq.Expressions.Expression},System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Function.invokeVariadic``1(System.Linq.Expressions.Expression,Microsoft.FSharp.Core.FSharpOption{``0},Microsoft.FSharp.Collections.FSharpList{System.Linq.Expressions.Expression})">
+
+</member>
+<member name="M:IronJS.Compiler.Function.create(IronJS.Compiler.Context.T,Microsoft.FSharp.Core.FSharpRef{IronJS.Compiler.Ast.FunctionScope},IronJS.Compiler.Ast.Tree)">
+
+</member>
+<member name="M:IronJS.Compiler.Function.getScopeParameterStorage(IronJS.Compiler.Ast.FunctionScope)">
+
+</member>
+<member name="M:IronJS.Compiler.Function.createCompiler(Microsoft.FSharp.Core.FSharpFunc`2{IronJS.Compiler.Target.T,System.Delegate},IronJS.Compiler.Ast.Tree,IronJS.Compiler.Context.T)">
+
+</member>
+<member name="T:IronJS.Compiler.Function">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.HostFunction">
+
+</member>
+<member name="M:IronJS.Compiler.Identifier.setValue(IronJS.Compiler.Context.T,System.String,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Identifier.getValue(IronJS.Compiler.Context.T,System.String)">
+
+</member>
+<member name="M:IronJS.Compiler.Identifier.isGlobal(IronJS.Compiler.Context.T,System.String)">
+
+</member>
+<member name="M:IronJS.Compiler.Identifier.setValueDynamic(IronJS.Compiler.Context.T,System.String,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Identifier.getValueDynamic(IronJS.Compiler.Context.T,System.String)">
+
+</member>
+<member name="M:IronJS.Compiler.Identifier.getDynamicArgs(IronJS.Compiler.Context.T,System.String)">
+
+</member>
+<member name="M:IronJS.Compiler.Identifier.getVariableStorage(System.String,IronJS.Compiler.Context.T)">
+
+</member>
+<member name="T:IronJS.Compiler.Identifier">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Labels.T">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Compiler.Labels.addLoopLabels(Microsoft.FSharp.Core.FSharpOption{System.String},System.Linq.Expressions.LabelTarget,System.Linq.Expressions.LabelTarget,IronJS.Compiler.Labels.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Labels.addNamedBreak(System.String,System.Linq.Expressions.LabelTarget,IronJS.Compiler.Labels.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Labels.setDefaultBreak(System.Linq.Expressions.LabelTarget,IronJS.Compiler.Labels.T)">
+
+</member>
+<member name="T:IronJS.Compiler.Labels">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Lexer.Input">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Lexer.Symbol">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Lexer.Char">
+
+</member>
+<member name="T:IronJS.Compiler.Lexer">
+
+</member>
+<member name="M:IronJS.Compiler.Object.getMember_Ast(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree,System.String,System.Boolean)">
+<summary>
+ MemberExpression . String
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Object.getMember(IronJS.Compiler.Context.T,System.Linq.Expressions.Expression,System.String,System.Boolean)">
+<summary>
+ MemberExpression . String
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Object.putMember_Ast(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree,System.String,IronJS.Compiler.Ast.Tree)">
+<summary>
+ MemberExpression . String = Expression
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Object.putMember(IronJS.Compiler.Context.T,System.Linq.Expressions.Expression,System.String,System.Linq.Expressions.Expression)">
+<summary>
+ MemberExpression . String = Expression
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Object.getIndex_Ast(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Ast.Tree)">
+
+</member>
+<member name="M:IronJS.Compiler.Object.getIndex(IronJS.Compiler.Context.T,System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+<summary>
+ MemberExpression [ Expression ]
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Compiler.Object.Index.putConvert``1(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression,System.Linq.Expressions.Expression,Microsoft.FSharp.Core.FSharpOption{``0})">
+
+</member>
+<member name="T:IronJS.Compiler.Object.Index">
+
+</member>
+<member name="M:IronJS.Compiler.Object.Property.attr(System.Linq.Expressions.Expression,System.UInt16,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Object.Property.delete(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Object.Property.get(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Object.Property.put(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Object.Property">
+
+</member>
+<member name="T:IronJS.Compiler.Object">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Parameters.T">
+
+</member>
+<member name="M:IronJS.Compiler.Parameters.returnBox(IronJS.Compiler.Parameters.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Parameters.globals(IronJS.Compiler.Parameters.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Parameters.environment(IronJS.Compiler.Parameters.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Parameters.functionAsExpr(IronJS.Compiler.Parameters.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Parameters.thisAsExpr(IronJS.Compiler.Parameters.T)">
+
+</member>
+<member name="T:IronJS.Compiler.Parameters">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Compiler.Parser.parse(System.String,IronJS.Environment)">
+<summary>
+ Parses a source string into 
+ an abstract syntax tree
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Compiler.Parser.directive``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements:
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.codeBlock``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.identifier``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.for'``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 12.6.3 The for Statement
+ Implements: 12.6.4 The for-in Statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.var``1(System.Boolean,``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 12.2 Variable statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.function'``1(System.Boolean,``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 
+</summary>
+</member>
+<member name="P:IronJS.Compiler.Parser.functionDefinitionNotAllowed">
+<summary>
+ Implements: 11.2.5 Function Expressions
+ Implements: 13 Function Definition
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.objectLiteral``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 11.1.5 Object Initialiser
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.arrayLiteral``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 11.1.4 Array Initialiser
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.continue'``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 12.7 The continue Statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.break'``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 12.8 The break Statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.throw``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 12.13 The throw statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.return'``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 12.9 The return Statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.call'``1(``0,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 11.2.3 Function Calls
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.new'``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 11.2.2 The new Operator
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.indexAccessor``1(``0,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Parser.State)">
+<summary>
+ Expect that the current token is
+ an identifier and skip it
+ Implements: 11.2.1 Property Accessors
+ The index version []
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.propertyAccessor``1(``0,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 11.2.1 Property Accessors
+ The property version .
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Compiler.Parser.doWhile``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 12.6.1 The do-while Statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.while'``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 12.6.2 The while statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.regExp``3(``0,System.String,``1,``2,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 7.8.5 Regular Expression Literals
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.simpleAssignment``1(``0,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 11.13.1 Simple Assignment ( = )
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.if'(System.Int32,System.String,System.Int32,System.Int32,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 12.5 The if Statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.switch``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 12.11 The switch Statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.grouping``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 11.1.6 The Grouping Operator
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.comma``1(``0,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 11.14 Comma Operator ( , )
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.condition``1(``0,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 11.12 Conditional Operator ( ?: )
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.try'``1(``0,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 12.14 The try statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.postfixOrPrefix(System.Int32,IronJS.Compiler.Ast.UnaryOp,IronJS.Compiler.Ast.UnaryOp,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 11.3.1 Postfix Increment Operator
+ Implements: 11.3.2 Postfix Decrement Operator
+ Implements: 11.4.4 Prefix Increment Operator
+ Implements: 11.4.5 Prefix Decrement Operator
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.compoundAssign(System.Int32,IronJS.Compiler.Ast.BinaryOp,IronJS.Compiler.Parser.State)">
+<summary>
+ Implements: 11.13.2 Compound Assignment ( op= )
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.nullStmt(System.Int32,IronJS.Compiler.Parser.State)">
+<summary>
+ Defines a null statement, used for single line terminators
+ and semicolons that occur where a statement could be
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.simplef(System.Int32,Microsoft.FSharp.Core.FSharpFunc`2{System.Tuple`4{System.Int32,System.String,System.Int32,System.Int32},IronJS.Compiler.Ast.Tree},IronJS.Compiler.Parser.State)">
+<summary>
+ Defines a simple symbol that applies a function 
+ to a token for generating it&apos;s output AST
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.simple(System.Int32,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Parser.State)">
+<summary>
+ Defines a simple symbol that has a fixed AST output
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.unary(System.Int32,System.Int32,IronJS.Compiler.Ast.UnaryOp,IronJS.Compiler.Parser.State)">
+<summary>
+ Defines a unary operator
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.binary(System.Int32,System.Int32,IronJS.Compiler.Ast.BinaryOp,IronJS.Compiler.Parser.State)">
+<summary>
+ Defines a binary operator
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.argumentList(IronJS.Compiler.Parser.State)">
+<summary>
+ Parses an argument list, which is
+ zero or more expressions separated
+ by commas ending with a right 
+ parenthesis
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.block(IronJS.Compiler.Parser.State)">
+<summary>
+ Parses a block, which is either
+ a single statement or a left curly brace 
+ followed by zero or more statements and then 
+ a closing right curly brace
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.statementList(IronJS.Compiler.Parser.State)">
+<summary>
+ Parses a list of statements
+ untill we reach end of input
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.statement(IronJS.Compiler.Parser.State)">
+<summary>
+ Parses a statement, which is either
+ a token that has a statement function
+ or an expression statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.expressionStatement(IronJS.Compiler.Parser.State)">
+<summary>
+ Parses an expression statement, which
+ is any expression followed by either
+ a semi colon, newline, right brace
+ or end of input or it&apos;s an identifier
+ followed by a colon (a label) followed
+ by another non-expression statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.tryEndStatement(IronJS.Compiler.Parser.State)">
+<summary>
+ Tries to end a statement by
+ looking at the current symbol
+ or if we just passed a line
+ terminator
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Compiler.Parser.expression(System.Int32,System.Int32,IronJS.Compiler.Parser.State)">
+<summary>
+ Parses the next expression untill
+ either a token with the same symbol
+ as stop is found or a token
+ with a bindingpower that is less
+ then rbpw is found
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.expect(System.Int32,IronJS.Compiler.Parser.State)">
+<summary>
+ Consumes the current token if it&apos;s
+ symbol is equal to s and forwards
+ to the next non-line terminator token
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.consumeIdentifier(IronJS.Compiler.Parser.State)">
+<summary>
+ Consumes an identifier and 
+ returns its name
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.consume(IronJS.Compiler.Parser.State)">
+<summary>
+ Consumes the current token and
+ forwards to the next non-line
+ terminator token
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.cstmt(IronJS.Compiler.Parser.State)">
+<summary>
+ The current tokens statement binding
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.cleft(IronJS.Compiler.Parser.State)">
+<summary>
+ The current tokens left binding
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.cnull(IronJS.Compiler.Parser.State)">
+<summary>
+ The current tokens null binding
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.cpower(IronJS.Compiler.Parser.State)">
+<summary>
+ The current tokens binding power
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.cvalue(IronJS.Compiler.Parser.State)">
+<summary>
+ The current tokens value
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.csymbol(IronJS.Compiler.Parser.State)">
+<summary>
+ The current tokens symbol
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Parser.hexToNumber(System.String)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Compiler.Parser.toOctal(System.String)">
+<summary>
+ Util function for converting
+ a string to an octal value
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Parser.BindingPowers">
+
+</member>
+<member name="T:IronJS.Compiler.Parser">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.compile(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.compileAsClrValue(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.initHoistedFunctions(Microsoft.FSharp.Core.FSharpFunc`2{IronJS.Compiler.Context.T,Microsoft.FSharp.Core.FSharpFunc`2{System.String,Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,System.Linq.Expressions.Expression}}},IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.getAst(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.initDynamicScope(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.with'(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree,IronJS.Compiler.Ast.Tree)">
+<summary>
+ 12.10 the with statement
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Scope.EvalScope.compile(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="T:IronJS.Compiler.Scope.EvalScope">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.GlobalScope.compile(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.GlobalScope.putHoistedFunction(IronJS.Compiler.Context.T,System.String,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.GlobalScope.initGlobalVariables(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.GlobalScope.initPrivateAndSharedScopes(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="T:IronJS.Compiler.Scope.GlobalScope">
+<summary>
+ Global scope compiler
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.compile(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.initArgumentsObject(Microsoft.FSharp.Core.FSharpFunc`2{IronJS.Compiler.Context.T,Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,System.Linq.Expressions.Expression}},IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.initSelfReference(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.fromThisScope``1(IronJS.Compiler.Context.T,``0,IronJS.Compiler.Ast.Variable)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.initDefinedVariable``1(IronJS.Compiler.Context.T,``0,IronJS.Compiler.Ast.Variable)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.compileAst(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.initSharedScope(IronJS.Compiler.Context.T)">
+<summary>
+ Initializes the shared scope storage
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.initPrivateScope(IronJS.Compiler.Context.T)">
+<summary>
+ Initializes the private scope storage
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.VariadicArity.compile(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.VariadicArity.initArgument(System.Linq.Expressions.Expression,IronJS.Compiler.Context.T,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.VariadicArity.initVariables(System.Linq.Expressions.ParameterExpression,IronJS.Compiler.Context.T)">
+
+</member>
+<member name="T:IronJS.Compiler.Scope.FunctionScope.VariadicArity">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.StaticArity.compile(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.StaticArity.initArguments(IronJS.Compiler.Context.T,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.StaticArity.getDelegateType(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="M:IronJS.Compiler.Scope.FunctionScope.StaticArity.initVariables(IronJS.Compiler.Context.T)">
+
+</member>
+<member name="T:IronJS.Compiler.Scope.FunctionScope.StaticArity">
+
+</member>
+<member name="T:IronJS.Compiler.Scope.FunctionScope">
+<summary>
+ Function scope compiler
+</summary>
+</member>
+<member name="T:IronJS.Compiler.Scope">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Target.T">
+<summary>
+ Record that represents a compilation target
+ which is a grouping of the following properties:
+ 
+ * Ast - The syntax tree to compile
+ * Mode - The target mode (eval, global or function)
+ * DelegateType - The target delegate signature we&apos;re targeting
+ * ParameterTypes - The parameter types of the delegate signature&apos;s invoke method
+ * Environment - The IronJS environment object we&apos;re compiling for
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Target.Mode">
+<summary>
+ There are three types of compilation
+ targets. Eval for code compiled through
+ the eval function, Global for code
+ that is compiled in the global scope
+ and Function for code inside function bodies
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Target.createGlobal(IronJS.Compiler.Ast.Tree,IronJS.Environment)">
+<summary>
+ Creates a new T record with Global mode
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Target.createEval(IronJS.Compiler.Ast.Tree,IronJS.Environment)">
+<summary>
+ Creates a new T record with Eval mode
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Target.create(IronJS.Compiler.Ast.Tree,IronJS.Compiler.Target.Mode,Microsoft.FSharp.Core.FSharpOption{System.Type},IronJS.Environment)">
+<summary>
+ Creates a new T record
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Target.getParameterTypes(Microsoft.FSharp.Core.FSharpOption{System.Type})">
+<summary>
+ Extracts the parameter types from a delegate
+</summary>
+</member>
+<member name="M:IronJS.Compiler.Target.parameterCount(IronJS.Compiler.Target.T)">
+<summary>
+ The amount of parameters for this target
+</summary>
+</member>
+<member name="T:IronJS.Compiler.Target">
+
+</member>
+<member name="M:IronJS.Compiler.Unary.compile(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.UnaryOp,IronJS.Compiler.Ast.Tree)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Unary">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.ensureFunction``2(IronJS.Compiler.Context.T,System.Linq.Expressions.Expression,Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,``0},Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,``1})">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.ensureObject``2(IronJS.Compiler.Context.T,System.Linq.Expressions.Expression,Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,``0},Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,``1})">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.toStatic(System.Collections.Generic.List{System.Linq.Expressions.ParameterExpression},System.Collections.Generic.List{System.Linq.Expressions.Expression},System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.compileIndex(IronJS.Compiler.Context.T,IronJS.Compiler.Ast.Tree)">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.assign(System.Linq.Expressions.Expression,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.tempBlockT``1(System.Linq.Expressions.Expression,Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,Microsoft.FSharp.Collections.FSharpList{System.Linq.Expressions.Expression}})">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.tempBlock(System.Linq.Expressions.Expression,Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,Microsoft.FSharp.Collections.FSharpList{System.Linq.Expressions.Expression}})">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.clrBoxed(System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.unbox(System.Type,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.box(System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.normalizeVal(System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.voidAsUndefined(System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.isBoxed(System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.|IsBox|IsRef|IsVal|(System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.Convert.toObject(IronJS.Compiler.Context.T,System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.Convert.toNumber(System.Linq.Expressions.Expression)">
+
+</member>
+<member name="M:IronJS.Compiler.Utils.Convert.convert``2(System.Linq.Expressions.Expression,Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,``0},Microsoft.FSharp.Core.FSharpFunc`2{System.Linq.Expressions.Expression,``1},Microsoft.FSharp.Core.FSharpFunc`2{Microsoft.FSharp.Core.Unit,System.Linq.Expressions.Expression})">
+
+</member>
+<member name="T:IronJS.Compiler.Utils.Convert">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Utils.Box">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Compiler.Utils.Constants.Boxed">
+
+</member>
+<member name="T:IronJS.Compiler.Utils.Constants">
+
+</member>
+<member name="T:IronJS.Compiler.Utils">
+
+</member>
+<member name="M:IronJS.DelegateUtils.getCallSiteDelegateForArguments``1(``0[])">
+
+</member>
+<member name="M:IronJS.DelegateUtils.getCallSiteDelegate(System.Collections.Generic.IEnumerable{System.Type})">
+
+</member>
+<member name="M:IronJS.DelegateUtils.hasVariadicParameter(System.Type)">
+
+</member>
+<member name="M:IronJS.DelegateUtils.getPublicParameterTypes(System.Type)">
+
+</member>
+<member name="M:IronJS.DelegateUtils.getInternalParameterTypes">
+
+</member>
+<member name="M:IronJS.DelegateUtils.hasInternalParameters(System.Type)">
+
+</member>
+<member name="M:IronJS.DelegateUtils.getAllParameterTypes(System.Type)">
+
+</member>
+<member name="M:IronJS.DelegateUtils.getReturnType(System.Type)">
+
+</member>
+<member name="M:IronJS.DelegateUtils.removeInternalParameters(System.Type[])">
+
+</member>
+<member name="M:IronJS.DelegateUtils.containsInternalParameters(System.Type[])">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.DelegateUtils">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.DescriptorAttrs">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Dlr.ExtensionMethods">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Dlr.Operators">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Dlr.Utils">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Dlr.FSharp">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Dlr.Restrict">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Dlr.Fast.String">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Dlr.Fast.Object">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Dlr.Fast.Utils">
+
+</member>
+<member name="T:IronJS.Dlr.Fast">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Dlr.ArrayUtils">
+
+</member>
+<member name="T:IronJS.Dlr">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Error.RuntimeError">
+<summary>
+ Represents an error raised during runtime
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Error.CompileError">
+<summary>
+ Represents an error raised from the 
+ lexer, parser, analyzer or compiler
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Error.Error">
+<summary>
+ Base class of all IronJS exceptions
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="P:IronJS.Error.sprintError">
+<summary>
+ Partially applied sprintError function
+ that prints the default 3 lines above and
+ 0 lines after for IronJS
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Error.SourceCodePrinter">
+
+</member>
+<member name="T:IronJS.Error">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.ErrorUtils">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.FSharp.Reflection">
+
+</member>
+<member name="M:IronJS.FSharp.Ref.decru64(Microsoft.FSharp.Core.FSharpRef{System.UInt64})">
+
+</member>
+<member name="M:IronJS.FSharp.Ref.incru64(Microsoft.FSharp.Core.FSharpRef{System.UInt64})">
+
+</member>
+<member name="T:IronJS.FSharp.Ref">
+
+</member>
+<member name="M:IronJS.FSharp.Array.skip``1(System.Int32,``0[])">
+
+</member>
+<member name="M:IronJS.FSharp.Array.appendOne``1(``0,``0[])">
+
+</member>
+<member name="M:IronJS.FSharp.Array.removeLast``1(``0[])">
+
+</member>
+<member name="M:IronJS.FSharp.Array.removeFirst``1(``0[])">
+
+</member>
+<member name="M:IronJS.FSharp.Array.shrinkEnd``1(System.Int32,``0[])">
+
+</member>
+<member name="M:IronJS.FSharp.Array.shrinkStart``1(System.Int32,``0[])">
+
+</member>
+<member name="M:IronJS.FSharp.Array.shrink``1(System.Int32,System.Int32,``0[])">
+
+</member>
+<member name="M:IronJS.FSharp.Array.copyFrom``1(System.Int32,``0[])">
+
+</member>
+<member name="M:IronJS.FSharp.Array.expandBack``1(System.Int32,``0[])">
+
+</member>
+<member name="M:IronJS.FSharp.Array.expandFront``1(System.Int32,``0[])">
+
+</member>
+<member name="M:IronJS.FSharp.Array.expand``1(System.Int32,System.Boolean,``0[])">
+
+</member>
+<member name="M:IronJS.FSharp.Array.copyRange``1(System.Int32,System.Int32,``0[])">
+
+</member>
+<member name="T:IronJS.FSharp.Array">
+
+</member>
+<member name="M:IronJS.FSharp.List.tryHead``1(Microsoft.FSharp.Collections.FSharpList{``0})">
+
+</member>
+<member name="M:IronJS.FSharp.List.headOr``1(System.Lazy{``0},Microsoft.FSharp.Collections.FSharpList{``0})">
+
+</member>
+<member name="T:IronJS.FSharp.List">
+
+</member>
+<member name="M:IronJS.FSharp.Seq.first``1(System.Collections.Generic.IEnumerable{``0})">
+
+</member>
+<member name="T:IronJS.FSharp.Seq">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.FSharp.Utils">
+
+</member>
+<member name="M:IronJS.FSharp.String.couldBeNumber(System.String)">
+
+</member>
+<member name="T:IronJS.FSharp.String">
+
+</member>
+<member name="M:IronJS.FSharp.Char.isDigit(System.Char)">
+
+</member>
+<member name="T:IronJS.FSharp.Char">
+
+</member>
+<member name="T:IronJS.FSharp">
+
+</member>
+<member name="">
+
+</member>
+<member name="P:IronJS.Hosting.CSharp.Context.Globals">
+
+</member>
+<member name="P:IronJS.Hosting.CSharp.Context.Environment">
+
+</member>
+<member name="M:IronJS.Hosting.CSharp.Context.SetGlobal``1(System.String,``0)">
+
+</member>
+<member name="M:IronJS.Hosting.CSharp.Context.GetGlobalAs``1(System.String)">
+
+</member>
+<member name="M:IronJS.Hosting.CSharp.Context.GetGlobal(System.String)">
+
+</member>
+<member name="M:IronJS.Hosting.CSharp.Context.GetFunctionAs``1(System.String)">
+
+</member>
+<member name="M:IronJS.Hosting.CSharp.Context.ExecuteFile``1(System.String)">
+
+</member>
+<member name="M:IronJS.Hosting.CSharp.Context.ExecuteFile(System.String)">
+
+</member>
+<member name="M:IronJS.Hosting.CSharp.Context.Execute``1(System.String)">
+
+</member>
+<member name="M:IronJS.Hosting.CSharp.Context.Execute(System.String)">
+
+</member>
+<member name="M:IronJS.Hosting.CSharp.Context.CreatePrintFunction">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Hosting.CSharp.Context">
+
+</member>
+<member name="T:IronJS.Hosting.CSharp">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Hosting.FSharp.T">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.executeFileAs``1(System.String,IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.executeFile(System.String,IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.executeAs``1(System.String,IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.execute(System.String,IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.compileFile(System.String,IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.compile(System.String,IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.run(System.Delegate,IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.getFunctionAs``1(System.String,IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.getGlobalAs``1(System.String,IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.getGlobal(System.String,IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.setGlobal(System.String,System.Object,IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.globals(IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.env(IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.createContext">
+
+</member>
+<member name="M:IronJS.Hosting.FSharp.Utils.createPrintFunction(IronJS.Hosting.FSharp.T)">
+
+</member>
+<member name="T:IronJS.Hosting.FSharp.Utils">
+
+</member>
+<member name="T:IronJS.Hosting.FSharp">
+
+</member>
+<member name="M:IronJS.Hosting.Environment.create">
+
+</member>
+<member name="T:IronJS.Hosting.Environment">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Markers">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.MarshalModes">
+
+</member>
+<member name="T:IronJS.Native.Array.Sort">
+
+</member>
+<member name="M:IronJS.Native.Array.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.Array.constructor'(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue[])">
+
+</member>
+<member name="M:IronJS.Native.Array.Prototype.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.Array.Prototype.create(IronJS.Environment,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.Array.Prototype.splice(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue[])">
+<summary>
+ Implements: 15.4.4.12 Array.prototype.splice (start, deleteCount [ , item1 [ , item2 [ , … ] ] ] )
+</summary>
+</member>
+<member name="M:IronJS.Native.Array.Prototype.unshift(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue[])">
+<summary>
+ Implements: 15.4.4.13 Array.prototype.unshift ( [ item1 [, item2 [, ...]]])
+</summary>
+</member>
+<member name="M:IronJS.Native.Array.Prototype.slice(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue,IronJS.BoxedValue)">
+<summary>
+ Implements: 15.4.4.10 Array.prototype.slice (start, end)
+</summary>
+</member>
+<member name="M:IronJS.Native.Array.Prototype.sort(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+<summary>
+ Implements: 15.4.4.11 Array.prototype.sort (comparefn)
+</summary>
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Native.Array.Prototype.reverse(IronJS.FunctionObject,IronJS.CommonObject)">
+<summary>
+ Implements: 15.4.4.8 Array.prototype.reverse ( )
+</summary>
+</member>
+<member name="M:IronJS.Native.Array.Prototype.shift(IronJS.FunctionObject,IronJS.CommonObject)">
+<summary>
+ Implements: 15.4.4.9 Array.prototype.shift ( )
+</summary>
+</member>
+<member name="M:IronJS.Native.Array.Prototype.push(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue[])">
+<summary>
+ Implements: 15.4.4.7 Array.prototype.push ( [ item1 [ , item2 [ , … ] ] ] )
+</summary>
+</member>
+<member name="M:IronJS.Native.Array.Prototype.pop(IronJS.FunctionObject,IronJS.CommonObject)">
+<summary>
+ Implements: 15.4.4.6 Array.prototype.pop ( )
+</summary>
+</member>
+<member name="M:IronJS.Native.Array.Prototype.toLocaleString(IronJS.FunctionObject,IronJS.CommonObject)">
+<summary>
+ Implements: 15.4.4.3 Array.prototype.toLocaleString ( )
+</summary>
+</member>
+<member name="M:IronJS.Native.Array.Prototype.toString(IronJS.FunctionObject,IronJS.CommonObject)">
+<summary>
+ Implements: 15.4.4.2 Array.prototype.toString ( )
+</summary>
+</member>
+<member name="M:IronJS.Native.Array.Prototype.join(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+<summary>
+ Implements: 15.4.4.5 Array.prototype.join (separator)
+</summary>
+</member>
+<member name="M:IronJS.Native.Array.Prototype.concat(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue[])">
+<summary>
+ Implements: 15.4.4.4 Array.prototype.concat ( [ item1 [ , item2 [ , … ] ] ] )
+</summary>
+</member>
+<member name="T:IronJS.Native.Array.Prototype">
+
+</member>
+<member name="T:IronJS.Native.Array">
+
+</member>
+<member name="M:IronJS.Native.Boolean.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.Boolean.constructor'(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+
+</member>
+<member name="M:IronJS.Native.Boolean.Prototype.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.Boolean.Prototype.create(IronJS.Environment,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.Boolean.Prototype.toString(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.Boolean.Prototype.valueOf(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="T:IronJS.Native.Boolean.Prototype">
+
+</member>
+<member name="T:IronJS.Native.Boolean">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Native.Date.Prototype.DT">
+
+</member>
+<member name="T:IronJS.Native.Date.Prototype">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Native.Date.Formats">
+
+</member>
+<member name="T:IronJS.Native.Date">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Native.Error.Utils">
+
+</member>
+<member name="T:IronJS.Native.Error">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Native.EvalError">
+
+</member>
+<member name="M:IronJS.Native.Function.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.Function.constructor'(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue[])">
+
+</member>
+<member name="M:IronJS.Native.Function.Prototype.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.Function.Prototype.create(IronJS.Environment,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.Function.Prototype.call(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue[])">
+
+</member>
+<member name="M:IronJS.Native.Function.Prototype.apply(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.Function.Prototype.getThisObject(IronJS.Environment,IronJS.BoxedValue)">
+
+</member>
+<member name="M:IronJS.Native.Function.Prototype.toString(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.Function.Prototype.prototype``1(IronJS.FunctionObject,``0)">
+
+</member>
+<member name="T:IronJS.Native.Function.Prototype">
+
+</member>
+<member name="T:IronJS.Native.Function">
+
+</member>
+<member name="M:IronJS.Native.Global.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.Global.encodeURIComponent(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+
+</member>
+<member name="M:IronJS.Native.Global.encodeURI(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Native.Global.decodeURIComponent(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+
+</member>
+<member name="M:IronJS.Native.Global.decodeURI(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Native.Global.isFinite(System.Double)">
+
+</member>
+<member name="M:IronJS.Native.Global.isNaN(System.Double)">
+
+</member>
+<member name="M:IronJS.Native.Global.parseFloat(IronJS.BoxedValue)">
+<summary>
+ These steps are outlined in the ECMA-262, Section 15.1.2.3
+</summary>
+</member>
+<member name="M:IronJS.Native.Global.parseInt(IronJS.BoxedValue,IronJS.BoxedValue)">
+<summary>
+ These steps are outlined in the ECMA-262, Section 15.1.2.2
+</summary>
+</member>
+<member name="M:IronJS.Native.Global.parseWithRadix(System.String,System.Int32)">
+
+</member>
+<member name="M:IronJS.Native.Global.eval(IronJS.Compiler.EvalTarget)">
+
+</member>
+<member name="T:IronJS.Native.Global">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Native.Math">
+
+</member>
+<member name="M:IronJS.Native.Number.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.Number.constructor'(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue[])">
+
+</member>
+<member name="M:IronJS.Native.Number.Prototype.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.Number.Prototype.create(IronJS.Environment,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.Number.Prototype.toPrecision(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+
+</member>
+<member name="M:IronJS.Native.Number.Prototype.toExponential(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+<summary>
+ This implementation is a C# to F# adaption of the Jint sources
+</summary>
+</member>
+<member name="M:IronJS.Native.Number.Prototype.toFixed(IronJS.FunctionObject,IronJS.CommonObject,System.Double)">
+<summary>
+ These steps are outlined in the ECMA-262, Section 15.7.4.5
+</summary>
+</member>
+<member name="M:IronJS.Native.Number.Prototype.verifyFractions(IronJS.Environment,System.Int32)">
+
+</member>
+<member name="M:IronJS.Native.Number.Prototype.valueOf(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.Number.Prototype.toLocaleString(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.Number.Prototype.toString(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+
+</member>
+<member name="M:IronJS.Native.Number.Prototype.nanToString(System.Double)">
+
+</member>
+<member name="T:IronJS.Native.Number.Prototype">
+
+</member>
+<member name="T:IronJS.Native.Number">
+
+</member>
+<member name="M:IronJS.Native.Object.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.Object.constructor'(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+
+</member>
+<member name="M:IronJS.Native.Object.Prototype.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.Object.Prototype.create(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.Object.Prototype.propertyIsEnumerable(IronJS.FunctionObject,IronJS.CommonObject,System.String)">
+
+</member>
+<member name="M:IronJS.Native.Object.Prototype.isPrototypeOf(IronJS.FunctionObject,IronJS.CommonObject,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.Object.Prototype.hasOwnProperty(IronJS.FunctionObject,IronJS.CommonObject,System.String)">
+
+</member>
+<member name="M:IronJS.Native.Object.Prototype.valueOf(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="P:IronJS.Native.Object.Prototype.toLocaleString">
+
+</member>
+<member name="M:IronJS.Native.Object.Prototype.toString(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="T:IronJS.Native.Object.Prototype">
+
+</member>
+<member name="T:IronJS.Native.Object">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Native.RangeError">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Native.ReferenceError">
+
+</member>
+<member name="M:IronJS.Native.RegExp.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.RegExp.constructor'(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue,IronJS.BoxedValue)">
+<summary>
+ These steps are outlined in the ECMA-262, Section 15.10.4.1
+</summary>
+</member>
+<member name="M:IronJS.Native.RegExp.Prototype.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.RegExp.Prototype.create(IronJS.Environment,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.RegExp.Prototype.test(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+
+</member>
+<member name="M:IronJS.Native.RegExp.Prototype.exec(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+<summary>
+ These steps are outlined in the ECMA-262, Section 15.10.6.2
+</summary>
+</member>
+<member name="M:IronJS.Native.RegExp.Prototype.toString(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="T:IronJS.Native.RegExp.Prototype">
+
+</member>
+<member name="T:IronJS.Native.RegExp">
+
+</member>
+<member name="M:IronJS.Native.String.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.String.fromCharCode(IronJS.BoxedValue[])">
+
+</member>
+<member name="M:IronJS.Native.String.constructor'(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue[])">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.setup(IronJS.Environment)">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.create(IronJS.Environment,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.toLocaleUpperCase(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.toUpperCase(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.toLocaleLowerCase(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.toLowerCase(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.substring(IronJS.FunctionObject,IronJS.CommonObject,System.Double,IronJS.BoxedValue)">
+<summary>
+ These steps are outlined in the ECMA-262, Section 15.5.4.15
+</summary>
+</member>
+<member name="M:IronJS.Native.String.Prototype.split(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue,IronJS.BoxedValue)">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.slice(IronJS.FunctionObject,IronJS.CommonObject,System.Double,IronJS.BoxedValue)">
+<summary>
+ These steps are outlined in the ECMA-262, Section 15.5.4.13
+</summary>
+</member>
+<member name="M:IronJS.Native.String.Prototype.search(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue)">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.replace(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue,IronJS.BoxedValue)">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.localeCompare(IronJS.FunctionObject,IronJS.CommonObject,System.String)">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.lastIndexOf(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue,IronJS.BoxedValue)">
+<summary>
+ These steps are outlined in the ECMA-262, Section 15.5.4.8
+</summary>
+</member>
+<member name="M:IronJS.Native.String.Prototype.indexOf(IronJS.FunctionObject,IronJS.CommonObject,System.String,System.Double)">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.concat(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue[])">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.charCodeAt(IronJS.FunctionObject,IronJS.CommonObject,System.Double)">
+<summary>
+ These steps are outlined in the ECMA-262, Section 15.5.4.5
+</summary>
+</member>
+<member name="M:IronJS.Native.String.Prototype.charAt(IronJS.FunctionObject,IronJS.CommonObject,System.Double)">
+<summary>
+ These steps are outlined in the ECMA-262, Section 15.5.4.4
+</summary>
+</member>
+<member name="M:IronJS.Native.String.Prototype.valueOf(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="M:IronJS.Native.String.Prototype.toString(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="T:IronJS.Native.String.Prototype">
+
+</member>
+<member name="T:IronJS.Native.String">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Native.SyntaxError">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Native.TypeError">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Native.URIError">
+
+</member>
+<member name="M:IronJS.Native.Utils.trapSyntaxError``1(IronJS.Environment,Microsoft.FSharp.Core.FSharpFunc`2{Microsoft.FSharp.Core.Unit,``0})">
+
+</member>
+<member name="M:IronJS.Native.Utils.createVariadicFunc``1(IronJS.Environment,Microsoft.FSharp.Core.FSharpOption{System.Int32},Microsoft.FSharp.Core.FSharpFunc`2{IronJS.FunctionObject,Microsoft.FSharp.Core.FSharpFunc`2{IronJS.CommonObject,Microsoft.FSharp.Core.FSharpFunc`2{IronJS.BoxedValue[],``0}}})">
+
+</member>
+<member name="M:IronJS.Native.Utils.createFunc4``5(IronJS.Environment,Microsoft.FSharp.Core.FSharpOption{System.Int32},Microsoft.FSharp.Core.FSharpFunc`2{IronJS.FunctionObject,Microsoft.FSharp.Core.FSharpFunc`2{IronJS.CommonObject,Microsoft.FSharp.Core.FSharpFunc`2{``0,Microsoft.FSharp.Core.FSharpFunc`2{``1,Microsoft.FSharp.Core.FSharpFunc`2{``2,Microsoft.FSharp.Core.FSharpFunc`2{``3,``4}}}}}})">
+
+</member>
+<member name="M:IronJS.Native.Utils.createFunc3``4(IronJS.Environment,Microsoft.FSharp.Core.FSharpOption{System.Int32},Microsoft.FSharp.Core.FSharpFunc`2{IronJS.FunctionObject,Microsoft.FSharp.Core.FSharpFunc`2{IronJS.CommonObject,Microsoft.FSharp.Core.FSharpFunc`2{``0,Microsoft.FSharp.Core.FSharpFunc`2{``1,Microsoft.FSharp.Core.FSharpFunc`2{``2,``3}}}}})">
+
+</member>
+<member name="M:IronJS.Native.Utils.createFunc2``3(IronJS.Environment,Microsoft.FSharp.Core.FSharpOption{System.Int32},Microsoft.FSharp.Core.FSharpFunc`2{IronJS.FunctionObject,Microsoft.FSharp.Core.FSharpFunc`2{IronJS.CommonObject,Microsoft.FSharp.Core.FSharpFunc`2{``0,Microsoft.FSharp.Core.FSharpFunc`2{``1,``2}}}})">
+
+</member>
+<member name="M:IronJS.Native.Utils.createFunc1``2(IronJS.Environment,Microsoft.FSharp.Core.FSharpOption{System.Int32},Microsoft.FSharp.Core.FSharpFunc`2{IronJS.FunctionObject,Microsoft.FSharp.Core.FSharpFunc`2{IronJS.CommonObject,Microsoft.FSharp.Core.FSharpFunc`2{``0,``1}}})">
+
+</member>
+<member name="M:IronJS.Native.Utils.createFunc0``1(IronJS.Environment,Microsoft.FSharp.Core.FSharpOption{System.Int32},Microsoft.FSharp.Core.FSharpFunc`2{IronJS.FunctionObject,Microsoft.FSharp.Core.FSharpFunc`2{IronJS.CommonObject,``0}})">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Native.Utils.createConstructor``1(IronJS.Environment,Microsoft.FSharp.Core.FSharpOption{System.Int32},``0)">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Native.Utils.createFunction``1(IronJS.Environment,Microsoft.FSharp.Core.FSharpOption{System.Int32},``0)">
+
+</member>
+<member name="M:IronJS.Native.Utils.createHostFunctionObject``1(IronJS.Environment,Microsoft.FSharp.Core.FSharpOption{System.Int32},``0,IronJS.FunctionMetaData)">
+
+</member>
+<member name="M:IronJS.Native.Utils.createHostFunction``1(IronJS.Environment,``0)">
+<summary>
+ Deprecated
+</summary>
+</member>
+<member name="T:IronJS.Native.Utils">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.ParamsModes">
+
+</member>
+<member name="T:IronJS.ReflectionCache">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Runtime.Optimizations.InlineVariadicInvokeCache.Invoke(IronJS.FunctionObject,IronJS.CommonObject,IronJS.BoxedValue[])">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Runtime.Optimizations.InlineVariadicInvokeCache">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Runtime.Optimizations.InlineInvokeCache`4.Invoke(IronJS.FunctionObject,IronJS.CommonObject,`0,`1,`2,`3)">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Runtime.Optimizations.InlineInvokeCache`4">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Runtime.Optimizations.InlineInvokeCache`3.Invoke(IronJS.FunctionObject,IronJS.CommonObject,`0,`1,`2)">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Runtime.Optimizations.InlineInvokeCache`3">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Runtime.Optimizations.InlineInvokeCache`2.Invoke(IronJS.FunctionObject,IronJS.CommonObject,`0,`1)">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Runtime.Optimizations.InlineInvokeCache`2">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Runtime.Optimizations.InlineInvokeCache`1.Invoke(IronJS.FunctionObject,IronJS.CommonObject,`0)">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Runtime.Optimizations.InlineInvokeCache`1">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Runtime.Optimizations.InlineInvokeCache.Invoke(IronJS.FunctionObject,IronJS.CommonObject)">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Runtime.Optimizations.InlineInvokeCache">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Runtime.Optimizations.InlinePropertyPutCache">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="M:IronJS.Runtime.Optimizations.InlinePropertyGetCache.Get(IronJS.BoxedValue,System.String)">
+
+</member>
+<member name="M:IronJS.Runtime.Optimizations.InlinePropertyGetCache.Get(IronJS.CommonObject,System.String)">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Runtime.Optimizations.InlinePropertyGetCache">
+
+</member>
+<member name="M:IronJS.Runtime.Optimizations.Utils.getInvokeInlineCache(System.Type[])">
+
+</member>
+<member name="T:IronJS.Runtime.Optimizations.Utils">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.SplayTree">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Support.Debug">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Support.Aliases">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Support.CustomOperators">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.TaggedBools">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.TypeTags">
+
+</member>
+<member name="M:IronJS.TypeUtils.getType(System.Object)">
+
+</member>
+<member name="M:IronJS.TypeUtils.getTypeArray``1(``0[])">
+
+</member>
+<member name="T:IronJS.TypeUtils">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="">
+
+</member>
+<member name="T:IronJS.Version">
+
+</member>
+</members>
+</doc>

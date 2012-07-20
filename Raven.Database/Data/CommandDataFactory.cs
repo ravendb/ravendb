@@ -47,8 +47,16 @@ namespace Raven.Database.Data
 							.Select(PatchRequest.FromJson)
 							.ToArray()
 					};
+				case "ADVANCEDPATCH":
+					return new AdvancedPatchCommandData
+					{
+						Key = key,
+						Etag = GetEtagFromCommand(jsonCommand),
+						TransactionInformation = transactionInformation,
+						Patch = AdvancedPatchRequest.FromJson(jsonCommand.Value<RavenJObject>("Patch"))
+					};
 				default:
-					throw new ArgumentException("Batching only supports PUT, PATCH and DELETE.");
+					throw new ArgumentException("Batching only supports PUT, PATCH, ADVANCEDPATCH and DELETE.");
 			}
 		}
 
