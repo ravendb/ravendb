@@ -54,12 +54,17 @@
     </Compile>
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThisExtensions.cs" />
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
+    <Compile Include="Changes\IDatabaseChanges.cs" />
+    <Compile Include="Changes\LocalConnectionState.cs" />
+    <Compile Include="Changes\RemoteDatabaseChanges.cs" />
+    <Compile Include="Changes\TaskedObservable.cs" />
+    <Compile Include="Changes\TaskErrorExtensions.cs" />
     <Compile Include="Connection\Async\AsyncDatabaseCommandsExtensions.cs" />
     <Compile Include="Connection\Async\AsyncServerClient.cs" />
     <Compile Include="Connection\Async\IAsyncDatabaseCommands.cs" />
     <Compile Include="Connection\CachedRequest.cs" />
-    <Compile Include="Connection\CompletedTask.cs" />
     <Compile Include="Connection\CreateHttpJsonRequestParams.cs" />
+    <Compile Include="Connection\ObservableLineStream.cs" />
     <Compile Include="Connection\HttpExtensions.cs" />
     <Compile Include="Connection\HttpJsonRequest.cs" />
     <Compile Include="Connection\HttpJsonRequestFactory.cs" />
@@ -68,7 +73,6 @@
     <Compile Include="Connection\DocumentConventionJsonExtensions.cs" />
     <Compile Include="Connection\JsonLuceneDateTimeConverter.cs" />
     <Compile Include="Connection\MultiGetOperation.cs" />
-    <Compile Include="Connection\ChangesConnectionFactory.cs" />
     <Compile Include="Connection\Profiling\ConcurrentBoundedList.cs" />
     <Compile Include="Connection\Profiling\IHoldProfilingInformation.cs" />
     <Compile Include="Connection\Profiling\ProfilingContext.cs" />
@@ -186,6 +190,7 @@
     <Compile Include="Shard\AsyncShardedDocumentSession.cs" />
     <Compile Include="Shard\AsyncShardedHiloKeyGenerator.cs" />
     <Compile Include="Shard\IShardResolutionStrategy.cs" />
+    <Compile Include="Shard\ShardedDatabaseChanges.cs" />
     <Compile Include="Shard\ShardedDocumentSession.cs" />
     <Compile Include="Shard\ShardedDocumentStore.cs" />
     <Compile Include="Shard\ShardedHiloKeyGenerator.cs" />
@@ -194,11 +199,12 @@
     <Compile Include="Shard\ParallelShardAccessStrategy.cs" />
     <Compile Include="Shard\SequentialShardAccessStrategy.cs" />
     <Compile Include="Shard\DefaultShardResolutionStrategy.cs" />
+    <Compile Include="Shard\ShardedObservableWithTask.cs" />
     <Compile Include="Shard\ShardRequestData.cs" />
     <Compile Include="Shard\ShardStrategy.cs" />
     <Compile Include="StoredEntityEventArgs.cs" />
     <Compile Include="Util\ConcatObservable.cs" />
-    <Compile Include="Util\TaskObservable.cs" />
+    <Compile Include="Changes\TaskObservable.cs" />
     <Compile Include="Util\Inflector.cs" />
     <Compile Include="Util\ObjectReferenceEqualityComparerer.cs" />
     <Compile Include="Util\SimpleCache.cs" />
@@ -211,13 +217,13 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Imports\SignalR\SignalR.Client\SignalR.Client.csproj">
-      <Project>{EB46B9C6-EE37-48F9-835E-E49580E40E0A}</Project>
-      <Name>SignalR.Client</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
+      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
+      <Name>Raven.Database</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -639,6 +639,7 @@
     <Compile Include="MailingList\MattJohnson.cs" />
     <Compile Include="MailingList\Maverix.cs" />
     <Compile Include="MailingList\Maverix2.cs" />
+    <Compile Include="MailingList\MissingIncludes.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
     <Compile Include="MailingList\Nick.cs" />
     <Compile Include="MailingList\NoBuiltinDuplicates.cs" />
@@ -684,6 +685,7 @@
     <Compile Include="Notifications\MultiTenant.cs" />
     <Compile Include="Notifications\Security_Windows.cs" />
     <Compile Include="Notifications\WithIIS.cs" />
+    <Compile Include="Queries\CanQueryOnLargeXml.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />
     <Compile Include="MailingList\WallaceTurner.cs" />

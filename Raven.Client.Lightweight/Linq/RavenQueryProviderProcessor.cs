@@ -435,7 +435,7 @@ namespace Raven.Client.Linq
 		private void VisitEquals(MethodCallExpression expression)
 		{
 			var memberInfo = GetMember(expression.Object);
-			bool isAnalyzed;
+			bool isAnalyzed = true;
 
 			if (expression.Arguments.Count == 2 &&
 				expression.Arguments[1].NodeType == ExpressionType.Constant &&
@@ -456,10 +456,6 @@ namespace Raven.Client.Linq
 					default:
 						throw new ArgumentOutOfRangeException();
 				}
-			}
-			else
-			{
-				isAnalyzed = memberInfo.Type != typeof(string);
 			}
 			luceneQuery.WhereEquals(new WhereParams
 			{

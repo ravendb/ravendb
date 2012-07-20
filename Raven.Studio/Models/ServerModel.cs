@@ -1,8 +1,10 @@
 ﻿using System;
 using System.ComponentModel;
+using System.IO.IsolatedStorage;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Browser;
+using System.Windows.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Studio.Commands;
@@ -19,7 +21,7 @@ namespace Raven.Studio.Models
 		private string buildNumber;
 		private bool singleTenant;
 
-		
+
 		public DocumentConvention Conventions
 		{
 			get { return this.documentStore.Conventions; }
@@ -47,10 +49,10 @@ namespace Raven.Studio.Models
 
 		private void Initialize()
 		{
-            if (DesignerProperties.IsInDesignTool)
-            {
-                return;
-            }
+			if (DesignerProperties.IsInDesignTool)
+			{
+				return;
+			}
 
 			documentStore = new DocumentStore
 			{
@@ -70,7 +72,7 @@ namespace Raven.Studio.Models
 			documentStore.JsonRequestFactory.
 				EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
 				true;
-			
+
 			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
 			{
 				if (onWebRequest != null)
@@ -94,6 +96,8 @@ namespace Raven.Studio.Models
 			};
 		}
 
+		public bool CreateNewDatabase { get; set; }
+		private static bool firstTick = true;
 		public override Task TimerTickedAsync()
 		{
 			if (singleTenant)
@@ -101,10 +105,28 @@ namespace Raven.Studio.Models
 
 			return documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(1024)
 				.ContinueOnSuccess(names =>
-				{
-					var databaseModels = names.Select(db => new DatabaseModel(db, documentStore));
-					Databases.Match(defaultDatabase.Concat(databaseModels).ToArray());
-				})
+				                   	{
+				                   		var databaseModels = names.Select(db => new DatabaseModel(db, documentStore));
+				                   		Databases.Match(defaultDatabase.Concat(databaseModels).ToArray());
+				                   		if (firstTick == false)
+				                   			return;
+
+				                   		firstTick = false;
+				                   		if (names.Length == 0 || (names.Length == 1 && names[0] == "System"))
+				                   		{
+				                   			CreateNewDatabase = true;
+				                   		}
+
+				                   		if (string.IsNullOrEmpty(Settings.Instance.SelectedDatabase))
+				                   			return;
+				                   	
+										var databaseName = Settings.Instance.SelectedDatabase;
+				                   		
+				                   		var database = databaseModels.FirstOrDefault(model => model.Name == databaseName);
+				                   		if(database == null)
+				                   			return;
+										SelectedDatabase.Value = database;
+				                   	})
 				.Catch();
 		}
 
@@ -123,10 +145,10 @@ namespace Raven.Studio.Models
 
 		private static string DetermineUri()
 		{
-            if (DesignerProperties.IsInDesignTool)
-            {
-                return string.Empty;
-            }
+			if (DesignerProperties.IsInDesignTool)
+			{
+				return string.Empty;
+			}
 
 			if (HtmlPage.Document.DocumentUri.Scheme == "file")
 			{

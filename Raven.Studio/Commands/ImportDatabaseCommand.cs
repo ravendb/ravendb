@@ -36,7 +36,7 @@ namespace Raven.Studio.Commands
 		{
 			var openFile = new OpenFileDialog
 			               {
-			               	Filter = "Raven Dumps|*.raven.dump"
+							   Filter = "Raven Dumps|*.ravendump;*.raven.dump",
 			               };
 
 			if (openFile.ShowDialog() != true)

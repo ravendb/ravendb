@@ -25,12 +25,7 @@ namespace Raven.Tests.Silverlight
 		{
 			var dbname = GenerateNewDatabaseName();
 			
-			var tcs = new TaskCompletionSource<ChangeNotification>();
-			Task.Factory.StartNew(() =>
-			                      	{
-			                      		Thread.Sleep(5000);
-			                      		tcs.TrySetCanceled();
-			                      	});
+			var tcs = new TaskCompletionSource<DocumentChangeNotification>();
 			using (var documentStore = new DocumentStore
 			{
 				Url = Url + Port,
@@ -42,7 +37,11 @@ namespace Raven.Tests.Silverlight
 
 				yield return taskObservable.Task;
 
-				taskObservable
+				var observableWithTask = taskObservable.ForDocument("companies/1");
+
+				yield return observableWithTask.Task;
+
+				observableWithTask
 					.Subscribe(tcs.SetResult);
 
 				var entity1 = new Company { Name = "Async Company #1" };
@@ -52,10 +51,15 @@ namespace Raven.Tests.Silverlight
 					yield return session_for_storing.SaveChangesAsync();
 				}
 
-				var task = tcs.Task;
-				yield return task;
+				Task.Factory.StartNew(() =>
+				{
+					Thread.Sleep(5000);
+					tcs.TrySetCanceled();
+				});
 
-				Assert.AreEqual("companies/1", task.Result.Name);
+				yield return tcs.Task;
+
+				Assert.AreEqual("companies/1", tcs.Task.Result.Name);
 			}
 		}
 	}

@@ -16,6 +16,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Raven.Database.Server.Connections;
+using Raven.Database.Server.SignalR;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
@@ -49,6 +51,9 @@ namespace Raven.Database
 	public class DocumentDatabase : IUuidGenerator, IDisposable
 	{
 		[ImportMany]
+		public OrderedPartCollection<IStartupTask> StartupTasks { get; set; }
+
+		[ImportMany]
 		public OrderedPartCollection<AbstractAttachmentPutTrigger> AttachmentPutTriggers { get; set; }
 
 		[ImportMany]
@@ -75,7 +80,7 @@ namespace Raven.Database
 		[ImportMany]
 		public OrderedPartCollection<AbstractDynamicCompilationExtension> Extensions { get; set; }
 
-		private List<IDisposable> toDispose = new List<IDisposable>();
+		private readonly List<IDisposable> toDispose = new List<IDisposable>();
 
 		/// <summary>
 		/// The name of the database.
@@ -98,8 +103,6 @@ namespace Raven.Database
 		public ConcurrentDictionary<object, object> ExtensionsState { get; private set; }
 
 		public TaskScheduler BackgroundTaskScheduler { get { return backgroundTaskScheduler; } }
-
-		public event EventHandler<ChangeNotification> Notifications = delegate { }; 
 
 		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
 		private System.Threading.Tasks.Task indexingBackgroundTask;
@@ -143,7 +146,7 @@ namespace Raven.Database
 			{
 				IndexUpdateTriggers = IndexUpdateTriggers,
 				ReadTriggers = ReadTriggers,
-				RaiseChangeNotification = RaiseNotifications
+				RaiseIndexChangeNotification = RaiseNotifications
 			};
 
 			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
@@ -173,7 +176,7 @@ namespace Raven.Database
 			workContext.IndexStorage = IndexStorage;
 			workContext.TransactionaStorage = TransactionalStorage;
 			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
-
+			TransportState = new TransportState();
 
 			try
 			{
@@ -233,12 +236,12 @@ namespace Raven.Database
 
 		private void ExecuteStartupTasks()
 		{
-			foreach (var task in Configuration.Container.GetExportedValues<IStartupTask>())
+			foreach (var task in StartupTasks)
 			{
 				var disposable = task as IDisposable;
 				if(disposable != null)
 					toDispose.Add(disposable);
-				task.Execute(this);
+				task.Value.Execute(this);
 			}
 		}
 
@@ -403,13 +406,19 @@ namespace Raven.Database
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
-		public void RaiseNotifications(ChangeNotification obj)
+		public void RaiseNotifications(DocumentChangeNotification obj)
 		{
-			Notifications(this, obj);
+			TransportState.Send(obj);
+		}
+
+		public void RaiseNotifications(IndexChangeNotification obj)
+		{
+			TransportState.Send(obj);
 		}
 
 		public void RunIdleOperations()
 		{
+			TransportState.OnIdle();
 			workContext.IndexStorage.RunIdleOperations();
 		}
 
@@ -504,10 +513,10 @@ namespace Raven.Database
 				.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 				{
 					PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
-					Notifications(this, new ChangeNotification
+					RaiseNotifications(new DocumentChangeNotification
 					{
 						Name = key,
-						Type = ChangeTypes.Put,
+						Type = DocumentChangeTypes.Put,
 						Etag = newEtag
 					});
 				});
@@ -643,10 +652,10 @@ namespace Raven.Database
 				.ExecuteImmediatelyOrRegisterForSyncronization(() =>
 				{
 					DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
-					Notifications(this, new ChangeNotification
+					RaiseNotifications(new DocumentChangeNotification
 					{
 						Name = key,
-						Type = ChangeTypes.Delete,
+						Type = DocumentChangeTypes.Delete,
 					});
 				});
 
@@ -1471,6 +1480,8 @@ namespace Raven.Database
 		{
 			get { return disposed; }
 		}
+		
+		public TransportState TransportState { get; private set; }
 
 		/// <summary>
 		/// Get the total size taken by the database on the disk.

@@ -418,10 +418,10 @@ namespace Raven.Database.Indexing
 				return;
 			}
 			value.Remove(keys, context);
-			context.RaiseChangeNotification(new ChangeNotification
+			context.RaiseIndexChangeNotification(new IndexChangeNotification
 			{
 				Name = index,
-				Type = ChangeTypes.IndexUpdated
+				Type = IndexChangeTypes.RemoveFromIndex
 			});
 		}
 
@@ -442,10 +442,10 @@ namespace Raven.Database.Indexing
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
 				value.IndexDocuments(viewGenerator, docs, context, actions, minimumTimestamp);
-				context.RaiseChangeNotification(new ChangeNotification
+				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = index,
-					Type = ChangeTypes.IndexUpdated
+					Type = IndexChangeTypes.MapCompleted
 				});
 			}
 		}
@@ -468,10 +468,10 @@ namespace Raven.Database.Indexing
 			using (EnsureInvariantCulture())
 			{
 				mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
-				context.RaiseChangeNotification(new ChangeNotification
+				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = index,
-					Type = ChangeTypes.IndexUpdated
+					Type = IndexChangeTypes.ReduceCompleted
 				});
 			}
 		}

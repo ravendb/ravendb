@@ -5,10 +5,13 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.IO;
+using System.Net;
 using System.Reactive.Linq;
 using Raven.Abstractions.Data;
 using Raven.Tests.Bugs.Identifiers;
 using Xunit;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Tests.Notifications
 {
@@ -19,14 +22,17 @@ namespace Raven.Tests.Notifications
 		}
 
 		[IISExpressInstalledFact]
-		public void CanHandleCaseSensitivityInProperties()
+		public void CheckNotificationInIIS()
 		{
 			using (var store = NewDocumentStore())
 			{
-				var list = new BlockingCollection<ChangeNotification>();
+				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				taskObservable.Subscribe(list.Add);
+				var observableWithTask = taskObservable.ForDocument("items/1");
+				observableWithTask.Task.Wait();
+				
+				observableWithTask.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
 				{
@@ -34,11 +40,11 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				ChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(30)));
+				DocumentChangeNotification documentChangeNotification;
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(5)));
 
-				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
+				Assert.Equal("items/1", documentChangeNotification.Name);
+				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
 			}
 		}
 	}

@@ -32,7 +32,7 @@ namespace Raven.Client.Connection
 
 		//public static string Static(this string url, string key)
 		//{
-		//    return url + "/static/" + HttpUtility.HtmlEncode(key);
+		//    return url + "/static/" + HttpUtility.UrlEncode(key);
 		//}
 
 		public static string Databases(this string url, int pageSize, int start)
@@ -53,7 +53,7 @@ namespace Raven.Client.Connection
 
 		//public static string Docs(this string url, string key)
 		//{
-		//    return url + "/docs/" + HttpUtility.HtmlEncode(key);
+		//    return url + "/docs/" + HttpUtility.UrlEncode(key);
 		//}
 
 		public static string Docs(this string url, int start, int pageSize)
@@ -63,7 +63,7 @@ namespace Raven.Client.Connection
 
 		//public static string DocsStartingWith(this string url, string prefix, int start, int pageSize)
 		//{
-		//    return Docs(url, start, pageSize) + "&startsWith=" + HttpUtility.HtmlEncode(prefix);
+		//    return Docs(url, start, pageSize) + "&startsWith=" + HttpUtility.UrlEncode(prefix);
 		//}
 
 		public static string Queries(this string url)

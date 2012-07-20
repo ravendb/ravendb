@@ -765,6 +765,7 @@ namespace Raven.Tests.Document
 
 					tx.Complete();
 				}
+
 				Assert.NotNull(session.Load<Company>(id));
 			}
 		}

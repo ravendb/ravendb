@@ -124,10 +124,10 @@ namespace Raven.Bundles.Replication.Responders
 			}
 
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() =>
-				Database.RaiseNotifications(new ChangeNotification
+				Database.RaiseNotifications(new DocumentChangeNotification()
 				{
 					Name = id,
-					Type = ChangeTypes.ReplicationConflict
+					Type = DocumentChangeTypes.ReplicationConflict
 				}));
 
 			metadata[ReplicationConstants.RavenReplicationConflictDocument] = true;

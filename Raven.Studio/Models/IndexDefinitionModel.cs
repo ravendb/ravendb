@@ -63,10 +63,10 @@ namespace Raven.Studio.Models
 		{
 			index = indexDefinition;
 
-            if (index.Maps.Count == 0)
-            {
-                index.Maps.Add("");
-            }
+			if (index.Maps.Count == 0)
+			{
+				index.Maps.Add("");
+			}
 
 			Maps.Set(index.Maps.Select(x => new MapItem {Text = x}));
 
@@ -88,10 +88,10 @@ namespace Raven.Studio.Models
 			var urlParser = new UrlParser(parameters);
 			if (urlParser.GetQueryParam("mode") == "new")
 			{
-			    IsNewIndex = true;
+				IsNewIndex = true;
 				Header = "New Index";
 
-                UpdateFromIndex(new IndexDefinition());
+				UpdateFromIndex(new IndexDefinition());
 
 				return;
 			}
@@ -101,7 +101,7 @@ namespace Raven.Studio.Models
 				HandleIndexNotFound(null);
 
 			Header = name;
-            IsNewIndex = false;
+			IsNewIndex = false;
 
 		    DatabaseCommands.GetIndexAsync(name)
 		        .ContinueOnUIThread(task =>
@@ -400,6 +400,16 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
+				if (string.IsNullOrWhiteSpace(index.Name))
+				{
+					ApplicationModel.Current.AddNotification(new Notification("Index must have a name!", NotificationLevel.Error));
+					return;
+				}
+				if (index.Maps.All(item => string.IsNullOrWhiteSpace(item.Text)))
+				{
+					ApplicationModel.Current.AddNotification(new Notification("Index must have at least one map with data!", NotificationLevel.Error));
+					return;
+				}
 				index.UpdateIndex();
 				if (index.Reduce == "")
 					index.Reduce = null;
@@ -426,13 +436,13 @@ namespace Raven.Studio.Models
 					.Catch();
 			}
 
-		    private void PutIndexNameInUrl(string name)
-		    {
-		        if (index.IsNewIndex || index.Header != name)
-		        {
-		            UrlUtil.Navigate("/indexes/" + name, true);
-		        }
-		    }
+			private void PutIndexNameInUrl(string name)
+			{
+				if (index.IsNewIndex || index.Header != name)
+				{
+					UrlUtil.Navigate("/indexes/" + name, true);
+				}
+			}
 		}
 
 		private class ResetIndexCommand : Command
@@ -600,14 +610,14 @@ namespace Raven.Studio.Models
 			get { return "Edit Index"; }
 		}
 
-	    public bool IsNewIndex
-	    {
-	        get { return isNewIndex; }
-            set
-            {
-                isNewIndex = value;
-                OnPropertyChanged(() => IsNewIndex);
-            }
-	    }
+		public bool IsNewIndex
+		{
+			get { return isNewIndex; }
+			set
+			{
+				isNewIndex = value;
+				OnPropertyChanged(() => IsNewIndex);
+			}
+		}
 	}
 }

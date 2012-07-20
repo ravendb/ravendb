@@ -13,21 +13,36 @@ namespace Raven.Tests.Notifications
 		{
 		}
 
+		public override void Dispose()
+		{
+			base.Dispose();
+			GC.Collect(GC.MaxGeneration);
+			GC.WaitForPendingFinalizers();
+		}
+
 		[Fact]
 		public void CanGetNotificationAboutDocumentPut()
 		{
 			using(GetNewServer())
 			using (var store = new DocumentStore
 			{
-				Url = "http://localhost:8079"
+				Url = "http://localhost:8079",
+				Conventions =
+					{
+						FailoverBehavior = FailoverBehavior.FailImmediately
+					}
 			}.Initialize())
 			{
-				var list = new BlockingCollection<ChangeNotification>();
+				using (var session = store.OpenSession())
+				{
+					session.Load<object>("test-start");
+				}
+				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				taskObservable
-					.Where(x=>x.Type==ChangeTypes.Put)
-					.Subscribe(list.Add);
+				var observableWithTask = taskObservable.ForDocument("items/1");
+				observableWithTask.Task.Wait();
+				observableWithTask.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
 				{
@@ -35,11 +50,11 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				ChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
+				DocumentChangeNotification documentChangeNotification;
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(3)));
 
-				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
+				Assert.Equal("items/1", documentChangeNotification.Name);
+				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
 			}
 		}
 
@@ -52,11 +67,13 @@ namespace Raven.Tests.Notifications
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				var list = new BlockingCollection<ChangeNotification>();
+				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				taskObservable
-					.Where(x => x.Type == ChangeTypes.Delete)
+				var observableWithTask = taskObservable.ForDocument("items/1");
+				observableWithTask.Task.Wait();
+				observableWithTask
+					.Where(x => x.Type == DocumentChangeTypes.Delete)
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -67,11 +84,11 @@ namespace Raven.Tests.Notifications
 
 				store.DatabaseCommands.Delete("items/1", null);
 
-				ChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
+				DocumentChangeNotification DocumentChangeNotification;
+				Assert.True(list.TryTake(out DocumentChangeNotification, TimeSpan.FromSeconds(2)));
 
-				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.Delete);
+				Assert.Equal("items/1", DocumentChangeNotification.Name);
+				Assert.Equal(DocumentChangeNotification.Type, DocumentChangeTypes.Delete);
 			}
 		}
 
@@ -84,11 +101,12 @@ namespace Raven.Tests.Notifications
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				var list = new BlockingCollection<ChangeNotification>();
+				var list = new BlockingCollection<IndexChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				taskObservable
-					.Where(x => x.Type == ChangeTypes.IndexUpdated)
+				var observableWithTask = taskObservable.ForIndex("Raven/DocumentsByEntityName");
+				observableWithTask.Task.Wait();
+				observableWithTask
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -99,11 +117,11 @@ namespace Raven.Tests.Notifications
 
 				store.DatabaseCommands.Delete("items/1", null);
 
-				ChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
+				IndexChangeNotification indexChangeNotification;
+				Assert.True(list.TryTake(out indexChangeNotification, TimeSpan.FromSeconds(5)));
 
-				Assert.Equal("Raven/DocumentsByEntityName", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.IndexUpdated);
+				Assert.Equal("Raven/DocumentsByEntityName", indexChangeNotification.Name);
+				Assert.Equal(indexChangeNotification.Type, IndexChangeTypes.MapCompleted);
 			}
 		}
 	}

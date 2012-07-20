@@ -12,8 +12,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Authorization
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Authorization", "Bundles\Raven.Client.Authorization\Raven.Client.Authorization.csproj", "{3A852FD2-E0F9-449C-8F66-0C6A180D030A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Expiration", "Bundles\Raven.Bundles.Expiration\Raven.Bundles.Expiration.csproj", "{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Lightweight", "Raven.Client.Lightweight\Raven.Client.Lightweight.csproj", "{4E087ECB-E7CA-4891-AC3C-3C76702715B6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.IndexReplication", "Bundles\Raven.Bundles.IndexReplication\Raven.Bundles.IndexReplication.csproj", "{2728BBA7-5142-445E-BAA5-142A25E0666D}"
@@ -100,16 +98,6 @@ Global
 		{3A852FD2-E0F9-449C-8F66-0C6A180D030A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{3A852FD2-E0F9-449C-8F66-0C6A180D030A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{3A852FD2-E0F9-449C-8F66-0C6A180D030A}.Release|x86.ActiveCfg = Release|Any CPU
-		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}.Release|x86.ActiveCfg = Release|Any CPU
 		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E087ECB-E7CA-4891-AC3C-3C76702715B6}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU

@@ -137,13 +137,16 @@ namespace Raven.Database.Indexing
 			var itemsToIndex = value as IEnumerable;
 			if( itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
 			{
-				if (nestedArray	 == false && !Equals(storage, Field.Store.NO))
-				{
-					yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
-				}
+				var sentArrayField = false;
 				int count = 1;
 				foreach (var itemToIndex in itemsToIndex)
 				{
+					if (nestedArray == false && !Equals(storage, Field.Store.NO) && sentArrayField == false)
+					{
+						sentArrayField = true;
+						yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);
+					}
+				
 					multipleItemsSameFieldCount.Add(count++);
 					foreach (var field in CreateFields(name, itemToIndex, storage, nestedArray: true))
 					{

@@ -7,24 +7,50 @@ using System;
 
 namespace Raven.Abstractions.Data
 {
-	public class ChangeNotification : EventArgs
+	public class DocumentChangeNotification : EventArgs
 	{
-		public ChangeTypes Type { get; set; }
+		public DocumentChangeTypes Type { get; set; }
 		public string Name { get; set; }
 		public Guid? Etag { get; set; }
+
+		public override string ToString()
+		{
+			return string.Format("{0} on {1}", Type, Name);
+		}
 	}
 
 	[Flags]
-	public enum ChangeTypes
+	public enum DocumentChangeTypes
 	{
 		None = 0,
 
 		Put = 1,
 		Delete = 2,
-		IndexUpdated = 4,
-		ReplicationConflict = 8,
-		AttachmentReplicationConflict = 16,
+		ReplicationConflict = 4,
+		AttachmentReplicationConflict = 8,
 
-		Common = Put | Delete | IndexUpdated
+		Common = Put | Delete
+	}
+
+	[Flags]
+	public enum IndexChangeTypes
+	{
+		None = 0,
+
+		MapCompleted = 1,
+		ReduceCompleted = 2,
+		RemoveFromIndex = 3,
+	}
+
+	public class IndexChangeNotification : EventArgs
+	{
+		public IndexChangeTypes Type { get; set; }
+		public string Name { get; set; }
+		public Guid? Etag { get; set; }
+
+		public override string ToString()
+		{
+			return string.Format("{0} on {1}", Type, Name);
+		}
 	}
 }

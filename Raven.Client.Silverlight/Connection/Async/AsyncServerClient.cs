@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Text;
+using System.Windows.Browser;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
@@ -93,7 +94,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		public HttpJsonRequest CreateRequest(string method, string relativeUrl)
 		{
-			return jsonRequestFactory.CreateHttpJsonRequest(this, url + relativeUrl, method, credentials, convention);
+			return jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + relativeUrl, method, credentials, convention));
 		}
 
 		/// <summary>
@@ -280,8 +281,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			{
 				var postedData = JsonConvert.SerializeObject(requests);
 
-				var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/multi_get/", "POST",
-																			   credentials, convention);
+				var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/multi_get/", "POST", credentials, convention));
 
 				return httpJsonRequest.WriteAsync(postedData)
 					.ContinueWith(
@@ -301,7 +301,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			if (errorsOnly)
 				requestUri += "?type=error";
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri.NoCache(), "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseJsonAsync()
@@ -310,7 +310,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		public Task<LicensingStatus> GetLicenseStatus()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/license/status").NoCache(), "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/license/status").NoCache(), "GET", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseJsonAsync()
@@ -319,7 +319,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		public Task StartBackupAsync(string backupLocation)
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/admin/backup").NoCache(), "POST", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/backup").NoCache(), "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 			return request.WriteAsync(new RavenJObject
 				{
@@ -334,11 +334,36 @@ namespace Raven.Client.Silverlight.Connection.Async
 				}).Unwrap();
 		}
 
+		public Task StartIndexing()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/StartIndexing").NoCache(), "POST", credentials, convention));
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ExecuteRequest();
+		}
+
+		public Task StopIndexing()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/StopIndexing").NoCache(), "POST", credentials, convention));
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ExecuteRequest();
+		}
+
+		public Task<string> GetIndexingStatus()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/IndexingStatus").NoCache(), "GET", credentials, convention));
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => task.Result.Value<string>("IndexingStatus"));
+		}
+
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize)
 		{
 			var metadata = new RavenJObject();
 			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", metadata, credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseJsonAsync()
@@ -348,7 +373,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		public Task<BuildNumber> GetBuildNumber()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/build/version").NoCache(), "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/build/version").NoCache(), "GET", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseJsonAsync()
@@ -365,7 +390,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			Uri.EscapeDataString(facetSetupDoc),
 			Uri.EscapeDataString(query.Query));
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri.NoCache(), "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseJsonAsync()
@@ -394,11 +419,11 @@ namespace Raven.Client.Silverlight.Connection.Async
 				if (keys.Length < 128)
 				{
 					path += "&" + string.Join("&", keys.Select(x => "id=" + x).ToArray());
-					request = jsonRequestFactory.CreateHttpJsonRequest(this, path.NoCache(), "GET", credentials, convention);
+					request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention));
 					return request.ReadResponseJsonAsync()
 						.ContinueWith(task => CompleteMultiGet(task));
 				}
-				request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "POST", credentials, convention);
+				request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST", credentials, convention));
 				return request.WriteAsync(new JArray(keys).ToString(Formatting.None))
 					.ContinueWith(writeTask => request.ReadResponseJsonAsync())
 					.ContinueWith(task => CompleteMultiGet(task.Result));
@@ -495,7 +520,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				{
 					path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 				}
-				var request = jsonRequestFactory.CreateHttpJsonRequest(this, path.NoCache(), "GET", credentials, convention);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention));
 
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task => AttemptToProcessResponse(() => SerializationHelper.ToQueryResult((RavenJObject)task.Result, request.GetEtagHeader())));
@@ -507,7 +532,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return ExecuteWithReplication("DELETE", url =>
 			{
 				string path = queryToDelete.GetIndexQueryUrl(url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
-				var request = jsonRequestFactory.CreateHttpJsonRequest(this, path, "DELETE", credentials, convention);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "DELETE", credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 				return request.ExecuteRequest()
 					.ContinueWith(task =>
@@ -556,7 +581,8 @@ namespace Raven.Client.Silverlight.Connection.Async
 				var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
 				if (etag != null)
 					metadata["ETag"] = new RavenJValue(etag.Value.ToString());
-				var request = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/docs/" + key, method, metadata, credentials, convention);
+				key = HttpUtility.UrlEncode(key);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/docs/" + key, method, metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 
 				return request.WriteAsync(document.ToString())
@@ -644,7 +670,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 								throw;
 						}
 
-						var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri, "PUT", credentials, convention);
+						var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention));
 						request.AddOperationHeaders(OperationsHeaders);
 
 						var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
@@ -725,7 +751,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return ExecuteWithReplication("GET", url =>
 			{
 				var url2 = (url + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
-				var request = jsonRequestFactory.CreateHttpJsonRequest(this, url2, "GET", credentials, convention);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
 
 				return request.ReadResponseJsonAsync()
 					.ContinueWith(task =>
@@ -747,7 +773,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 			return ExecuteWithReplication("RESET", url =>
 			{
-				var httpJsonRequestAsync = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/indexes/" + name, "RESET", credentials, convention);
+				var httpJsonRequestAsync = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/indexes/" + name, "RESET", credentials, convention));
 				httpJsonRequestAsync.AddOperationHeaders(OperationsHeaders);
 				return httpJsonRequestAsync.ReadResponseJsonAsync();
 			});
@@ -773,7 +799,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 					Uri.EscapeDataString(suggestionQuery.Distance.ToString()),
 					Uri.EscapeDataString(suggestionQuery.Accuracy.ToString()));
 
-				var request = jsonRequestFactory.CreateHttpJsonRequest(this, requestUri.NoCache(), "GET", credentials, convention);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 
 				return request.ReadResponseJsonAsync()
@@ -799,7 +825,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return ExecuteWithReplication("POST", url =>
 			{
 				var metadata = new RavenJObject();
-				var req = jsonRequestFactory.CreateHttpJsonRequest(this, url + "/bulk_docs", "POST", metadata, credentials, convention);
+				var req = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/bulk_docs", "POST", metadata, credentials, convention));
 				var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 
 				return req.WriteAsync(jArray.ToString(Formatting.None))
@@ -940,7 +966,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				if (etag != null)
 					metadata["ETag"] = new RavenJValue(etag.Value.ToString());
 
-				var request = jsonRequestFactory.CreateHttpJsonRequest(this, url.Static(key), "PUT", metadata, credentials, convention);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url.Static(key), "PUT", metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 
 				return request
@@ -1011,7 +1037,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				if (etag != null)
 					metadata["ETag"] = new RavenJValue(etag.Value.ToString());
 
-				var request = jsonRequestFactory.CreateHttpJsonRequest(this, url.Static(key), "DELETE", metadata, credentials, convention);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url.Static(key), "DELETE", metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 
 				return request.ExecuteRequest();

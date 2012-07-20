@@ -38,8 +38,8 @@ namespace Raven.Studio.Commands
 			var saveFile = new SaveFileDialog
 						   {
 							   DefaultFileName = string.Format("Dump of {0}, {1}", ApplicationModel.Database.Value.Name, DateTimeOffset.Now.ToString("MMM dd yyyy HH-mm", CultureInfo.InvariantCulture)),
-							   DefaultExt = ".raven.dump",
-							   Filter = "Raven Dumps|*.raven.dump",
+							   DefaultExt = ".ravendump",
+							   Filter = "Raven Dumps|*.ravendump;*.raven.dump",
 						   };
 
 			if (saveFile.ShowDialog() != true)
