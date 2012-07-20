@@ -13,6 +13,7 @@ using IronJS.Hosting;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using IronJS;
+using Environment = System.Environment;
 
 namespace Raven.Database.Json
 {
@@ -35,12 +36,6 @@ namespace Raven.Database.Json
 			if (String.IsNullOrEmpty(patch.Script))
 				throw new InvalidOperationException("Patch script must be non-null and not empty");
 
-			ApplyImpl(patch.Script);
-			return document;
-		}
-
-		private void ApplyImpl(string script)
-		{
 			var ctx = new CSharp.Context();
 
 			ctx.Execute(GetFromResources("Raven.Database.Json.ToJson.js"));
@@ -49,14 +44,15 @@ namespace Raven.Database.Json
 
 			ctx.Execute(GetFromResources("Raven.Database.Json.Output.js"));
 			
-			var resultDocument = ApplySingleScript(ctx, document, script);
+			var resultDocument = ApplySingleScript(ctx, document, patch);
 			if (resultDocument != null)
 				document = resultDocument;
+			return document;
 		}
 
-		private RavenJObject ApplySingleScript(CSharp.Context ctx, RavenJObject doc, string script)
+		private RavenJObject ApplySingleScript(CSharp.Context ctx, RavenJObject doc, AdvancedPatchRequest patch)
 		{
-			AssertValidScript(script);
+			AssertValidScript(patch.Script);
 			var wrapperScript = String.Format(@"
 var doc = {0};
 
@@ -64,26 +60,41 @@ var doc = {0};
 	{1}{2}
 }}).apply(doc);
 
-json_data = JSON.stringify(doc);", doc, script, script.EndsWith(";") ? String.Empty : ";");
+json_data = JSON.stringify(doc);", doc, patch.Script, patch.Script.EndsWith(";") ? String.Empty : ";");
 			
 			try
 			{
-				ctx.Execute(wrapperScript);
-				var boxedValue = ctx.GetGlobal("debug_outputs");
-				for (int i = 0; i < boxedValue.Array.Length; i++)
+				foreach (var kvp in patch.Values)
 				{
-					var value = boxedValue.Array.Get(i);
-					Debug.Add(value.String);
+					ctx.SetGlobal(kvp.Key, kvp.Value);
 				}
+				ctx.Execute(wrapperScript);
+				OutputLog(ctx);
 				return RavenJObject.Parse(ctx.GetGlobalAs<string>("json_data"));
 			}
 			catch (UserError uEx)
 			{
-				throw new InvalidOperationException("Unable to parse JavaScript: " + script, uEx); 
+				throw new InvalidOperationException("Unable to parse JavaScript: " + patch.Script, uEx); 
 			}
 			catch (Error.Error errorEx)
 			{
-				throw new InvalidOperationException("Unable to parse JavaScript: " + script, errorEx);
+				OutputLog(ctx);
+				throw new InvalidOperationException("Unable to execute JavaScript: " +Environment.NewLine + patch.Script + 
+					Environment.NewLine + "Debug information: " + Environment.NewLine + string.Join(Environment.NewLine, Debug), errorEx);
+			}
+		}
+
+		private void OutputLog(CSharp.Context ctx)
+		{
+			var boxedValue = ctx.GetGlobal("debug_outputs");
+			if (boxedValue.IsNull)
+				return;
+			if (boxedValue.Array == null)
+				return;
+			for (int i = 0; i < boxedValue.Array.Length; i++)
+			{
+				var value = boxedValue.Array.Get(i);
+				Debug.Add(value.String);
 			}
 		}
 
@@ -95,8 +106,8 @@ json_data = JSON.stringify(doc);", doc, script, script.EndsWith(";") ? String.Em
 
 		private void AssertValidScript(string script)
 		{
-			if (script.Length > 8192)
-				throw new NotSupportedException("Script is too complex, please use scripts that are less than 8KB in size");
+			if (script.Length > 4096)
+				throw new NotSupportedException("Script is too complex, please use scripts that are less than 4KB in size");
 			if (ForbiddenKeywords.IsMatch(script))
 				throw new NotSupportedException("Keywords 'while' and 'for' are not supported");
 			if(ForbiddenFunction.IsMatch(script))

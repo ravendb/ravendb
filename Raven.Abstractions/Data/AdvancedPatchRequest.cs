@@ -18,6 +18,13 @@ namespace Raven.Abstractions.Data
 		/// <value>The type.</value>
 		public string Script { get; set; }
 
+		public Dictionary<string, object> Values { get; set; }
+
+		public AdvancedPatchRequest()
+		{
+			Values = new Dictionary<string, object>();
+		}
+
 		public static AdvancedPatchRequest FromJson(RavenJObject patchRequestJson)
 		{
 			return patchRequestJson.JsonDeserialization<AdvancedPatchRequest>();

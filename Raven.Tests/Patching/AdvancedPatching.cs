@@ -48,6 +48,17 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
+		public void CanPatchUsingVars()
+		{
+			var resultJson = new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest
+			                                                                              	{
+			                                                                              		Script = "this.TheName = Name",
+																								Values = {{"Name", "ayende"}}
+			                                                                              	});
+			Assert.Equal("ayende", resultJson.Value<string>("TheName"));
+		}
+
+		[Fact]
 		public void CanHandleNonsensePatching()
 		{
 			Assert.Throws<InvalidOperationException>(
