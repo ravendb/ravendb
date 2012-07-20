@@ -17,7 +17,15 @@ namespace Raven.Bundles.Tryouts
 	{
 		static void Main(string[] args)
 		{
-			
+			for (int i = 0; i < 150; i++)
+			{
+				Console.Clear();
+				Console.WriteLine(i);
+				using (var x = new AttachmentReplication())
+				{
+					x.Can_replicate_delete_between_two_instances();
+				}
+			}
 		}
 	}
 }

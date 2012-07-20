@@ -351,40 +351,47 @@ namespace Raven.Client.Silverlight.Connection
 
 		public Task<IObservable<string>> ServerPullAsync(int retries = 0)
 		{
-			return Task.Factory.FromAsync<WebResponse>(webRequest.BeginGetResponse, webRequest.EndGetResponse, null)
-				.ContinueWith(task =>
+			return WaitForTask.ContinueWith(__ =>
 				{
-					var stream = task.Result.GetResponseStream();
-					return (IObservable<string>)new ObservableLineStream(stream, () =>
-					                                                             	{
-					                                                             		webRequest.Abort();
-																						task.Result.Close();
-					                                                             	});
-				})
-				.ContinueWith(task =>
-				{
-					var webException = task.Exception.ExtractSingleInnerException() as WebException;
-					if (webException == null || retries >= 3)
-						return task;// effectively throw
-
-					var httpWebResponse = webException.Response as HttpWebResponse;
-					if (httpWebResponse == null ||
-						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
-						return task; // effectively throw
-
-					var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
-
-					if (authorizeResponse == null)
-						return task; // effectively throw
-
-					return authorizeResponse
-						.ContinueWith(_ =>
+			         webRequest.AllowReadStreamBuffering = false;
+					 return webRequest.GetResponseAsync()
+						.ContinueWith(task =>
 						{
-							_.Wait(); //throw on error
-							return ServerPullAsync(retries + 1);
+							var stream = task.Result.GetResponseStream();
+							var observableLineStream = new ObservableLineStream(stream, () =>
+							                                                            	{
+							                                                            		webRequest.Abort();
+							                                                            		task.Result.Close();
+							                                                            	});
+							observableLineStream.Start();
+							return (IObservable<string>)observableLineStream;
 						})
-						.Unwrap();
-				}).Unwrap();
+						.ContinueWith(task =>
+						{
+							var webException = task.Exception.ExtractSingleInnerException() as WebException;
+							if (webException == null || retries >= 3)
+								return task;// effectively throw
+
+							var httpWebResponse = webException.Response as HttpWebResponse;
+							if (httpWebResponse == null ||
+								httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+								return task; // effectively throw
+
+							var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
+
+							if (authorizeResponse == null)
+								return task; // effectively throw
+
+							return authorizeResponse
+								.ContinueWith(_ =>
+								{
+									_.Wait(); //throw on error
+									return ServerPullAsync(retries + 1);
+								})
+								.Unwrap();
+						}).Unwrap();
+					})
+				.Unwrap();
 		}
 
 		public Task ExecuteWriteAsync(string data)
