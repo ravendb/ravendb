@@ -38,6 +38,10 @@ namespace Raven.Database.Server.Responders
 			var connectionState = Database.TransportState.For(id);
 			switch (jsonData.Value<string>("Type"))
 			{
+				case "Disconnect":
+					Database.TransportState.Disconnect(id);
+					break;
+
 				case "WatchIndex":
 					connectionState.WatchIndex(name);
 					break;

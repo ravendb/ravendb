@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using Raven.Abstractions.Data;
+using Raven.Client.Changes;
 using Raven.Client.Document;
 using Xunit;
 
@@ -89,6 +90,8 @@ namespace Raven.Tests.Notifications
 
 				Assert.Equal("items/1", DocumentChangeNotification.Name);
 				Assert.Equal(DocumentChangeNotification.Type, DocumentChangeTypes.Delete);
+
+				((RemoteDatabaseChanges) taskObservable).DisposeAsync().Wait();
 			}
 		}
 

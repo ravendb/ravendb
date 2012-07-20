@@ -84,7 +84,8 @@ namespace Raven.Database.Server.Abstractions
 
 		public void FinalizeResonse()
 		{
-			
+			context.Response.Flush();
+			context.Response.Close();
 		}
 
 		public void SetResponseFilter(Func<Stream, Stream> responseFilter)

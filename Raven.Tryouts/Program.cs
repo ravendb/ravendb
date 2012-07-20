@@ -18,20 +18,20 @@ public class Program
 		{
 			Console.WriteLine(i);
 
-			using (var x = new WithIIS())
-			{
-				x.CheckNotificationInIIS();
-			}
-
-			GC.Collect(2);
-			GC.WaitForPendingFinalizers();
-
-			//using (var x = new ClientServer())
+			//using (var x = new WithIIS())
 			//{
-			//    x.CanGetNotificationAboutDocumentDelete();
+			//    x.CheckNotificationInIIS();
 			//}
+
 			//GC.Collect(2);
 			//GC.WaitForPendingFinalizers();
+
+			using (var x = new ClientServer())
+			{
+				x.CanGetNotificationAboutDocumentDelete();
+			}
+			GC.Collect(2);
+			GC.WaitForPendingFinalizers();
 
 
 			//using (var x = new NotificationOnWrongDatabase())

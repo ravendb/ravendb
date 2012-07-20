@@ -233,15 +233,40 @@ namespace Raven.Client.Changes
 
 		public void Dispose()
 		{
+			if (disposed)
+				return;
+ 
+			DisposeAsync();
+		}
+
+		private bool disposed;
+		public Task DisposeAsync()
+		{
+			if (disposed)
+				return new CompletedTask();
+			disposed = true;
 			reconnectAttemptsRemaining = 0;
 			foreach (var keyValuePair in counters)
 			{
 				keyValuePair.Value.Dispose();
 			}
-			if(connection != null)
+			if (connection == null)
 			{
-				connection.Dispose();
+				return new CompletedTask();
 			}
+			
+			return Send(new {Type = "Disconnect"}).
+				ContinueWith(_ =>
+				             	{
+				             		try
+				             		{
+				             			connection.Dispose();
+				             		}
+				             		catch (Exception e)
+				             		{
+				             			logger.WarnException("Error when disposing of connection", e);
+				             		}
+				             	});
 		}
 
 		public void OnNext(string dataFromConnection)

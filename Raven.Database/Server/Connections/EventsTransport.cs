@@ -81,5 +81,12 @@ namespace Raven.Database.Server.Connections
 			                  		}
 			                  	});
 		}
+
+		public void Disconnect()
+		{
+			Connected = false;
+			Disconnected();
+			context.FinalizeResonse();
+		}
 	}
 }
