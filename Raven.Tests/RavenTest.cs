@@ -200,7 +200,6 @@ namespace Raven.Tests
 
 		public RavenTest()
 		{
-			File.AppendAllText("tests.log", GetType().FullName + Environment.NewLine);
 			BoundedMemoryTarget boundedMemoryTarget = null;
 			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
 			{
