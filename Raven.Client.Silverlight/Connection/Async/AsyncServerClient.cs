@@ -336,7 +336,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		public Task StartIndexing()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/admin/StartIndexing").NoCache(), "POST", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/StartIndexing").NoCache(), "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ExecuteRequest();
@@ -344,7 +344,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		public Task StopIndexing()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/admin/StopIndexing").NoCache(), "POST", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/StopIndexing").NoCache(), "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ExecuteRequest();
@@ -352,7 +352,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		public Task<string> GetIndexingStatus()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/admin/IndexingStatus").NoCache(), "GET", credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/IndexingStatus").NoCache(), "GET", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
 			return request.ReadResponseJsonAsync()
