@@ -25,7 +25,13 @@ namespace Raven.Studio.Models
 	{
         private string error;
         private ICommand executeQuery;
+        private RavenQueryStatistics results;
+        private bool skipTransformResults;
+        private bool hasTransform;
+        private TimeSpan queryTime;
+        private bool internalUpdate;
 
+        private IEditorDocument queryDocument;
 		public QueryDocumentsCollectionSource CollectionSource { get; private set; }
 
 		private QueryIndexAutoComplete queryIndexAutoComplete;
@@ -321,6 +327,12 @@ namespace Raven.Studio.Models
 	    public QueryModel()
 		{
 			ModelUrl = "/query";
+
+            queryDocument = new EditorDocument()
+            {
+                Language = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("RavenQuery.langdef")
+            };
+
 			ExceptionLine = -1;
 			ExceptionColumn = -1;
 			
@@ -347,7 +359,6 @@ namespace Raven.Studio.Models
 									  DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index, IndexName, CollectionSource.TemplateQuery),
 								  };
 
-            Query = new Observable<string>();
             QueryErrorMessage = new Observable<string>();
             IsErrorVisible = new Observable<bool>();
 
@@ -424,62 +435,62 @@ namespace Raven.Studio.Models
 			Execute.Execute(null);
 		}
 
-		public override void LoadModelParameters(string parameters)
-		{
-			var urlParser = new UrlParser(parameters);
+        public override void LoadModelParameters(string parameters)
+        {
+            var urlParser = new UrlParser(parameters);
 
-	        ClearCurrentQuery();
+            ClearCurrentQuery();
 
-			if (urlParser.GetQueryParam("mode") == "dynamic")
-			{
-			    var collection = urlParser.GetQueryParam("collection");
+            if (urlParser.GetQueryParam("mode") == "dynamic")
+            {
+                var collection = urlParser.GetQueryParam("collection");
 
-				IsDynamicQuery = true;
-				DatabaseCommands.GetTermsAsync("Raven/DocumentsByEntityName", "Tag", "", 100)
-					.ContinueOnSuccessInTheUIThread(collections =>
-					                       {
-					                           DynamicOptions.Match(new[] {"AllDocs"}.Concat(collections).ToArray());
+                IsDynamicQuery = true;
+                DatabaseCommands.GetTermsAsync("Raven/DocumentsByEntityName", "Tag", "", 100)
+                    .ContinueOnSuccessInTheUIThread(collections =>
+                    {
+                        DynamicOptions.Match(new[] { "AllDocs" }.Concat(collections).ToArray());
 
-					                           string selectedOption = null;
-					                           if (!string.IsNullOrEmpty(collection))
-                                               {
-                                                   selectedOption = DynamicOptions.FirstOrDefault(s => s.Equals(collection));
-                                               }
+                        string selectedOption = null;
+                        if (!string.IsNullOrEmpty(collection))
+                        {
+                            selectedOption = DynamicOptions.FirstOrDefault(s => s.Equals(collection));
+                        }
 
-                                               if (selectedOption == null)
-                                               {
-                                                   selectedOption  = DynamicOptions[0];
-                                               }
+                        if (selectedOption == null)
+                        {
+                            selectedOption = DynamicOptions[0];
+                        }
 
-                                               DynamicSelectedOption = selectedOption;
-					                       });
-				return;
-			}
+                        DynamicSelectedOption = selectedOption;
+                    });
+                return;
+            }
 
-	        IsDynamicQuery = false;
-			IndexName = urlParser.Path.Trim('/');
+            IsDynamicQuery = false;
+            IndexName = urlParser.Path.Trim('/');
 
-			DatabaseCommands.GetIndexAsync(IndexName)
-				.ContinueOnUIThread(task =>
-				{
-					if (task.IsFaulted || task.Result  == null)
-					{
-						IndexDefinitionModel.HandleIndexNotFound(IndexName);
-						return;
-					}
+            DatabaseCommands.GetIndexAsync(IndexName)
+                .ContinueOnUIThread(task =>
+                {
+                    if (task.IsFaulted || task.Result == null)
+                    {
+                        IndexDefinitionModel.HandleIndexNotFound(IndexName);
+                        return;
+                    }
                     var fields = task.Result.Fields;
-					QueryIndexAutoComplete = new QueryIndexAutoComplete(IndexName, Query, fields);
-					
-					const string spatialindexGenerate = "SpatialIndex.Generate";
-					IsSpatialQuerySupported =
+                    QueryIndexAutoComplete = new QueryIndexAutoComplete(fields, IndexName, QueryDocument);
+
+                    const string spatialindexGenerate = "SpatialIndex.Generate";
+                    IsSpatialQuerySupported =
                         task.Result.Maps.Any(x => x.Contains(spatialindexGenerate)) ||
                         (task.Result.Reduce != null && task.Result.Reduce.Contains(spatialindexGenerate));
-				    HasTransform = !string.IsNullOrEmpty(task.Result.TransformResults);
+                    HasTransform = !string.IsNullOrEmpty(task.Result.TransformResults);
 
-					SetSortByOptions(fields);
+                    SetSortByOptions(fields);
                     RestoreHistory();
-				}).Catch();
-		}
+                }).Catch();
+        }
 
 	    private void ClearCurrentQuery()
 	    {
@@ -568,7 +579,6 @@ namespace Raven.Studio.Models
 
         public Observable<string> QueryErrorMessage { get; private set; }
         public Observable<bool> IsErrorVisible { get; private set; } 
-		public Observable<string> Query { get; private set; }
 
 	    public string Query
 	    {

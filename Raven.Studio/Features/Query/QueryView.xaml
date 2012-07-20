@@ -125,8 +125,24 @@
                         </StackPanel>
                     </Button.Content>
                 </Button>
-                
-                <ToggleButton IsChecked="{Binding ShowFields, Mode=TwoWay}"
+
+                <StackPanel Orientation="Horizontal"
+							Margin="0,4"
+							VerticalAlignment="Center"
+							Grid.Column="2">
+                    <TextBlock Text="Default Operator:" VerticalAlignment="Center"/>
+                    <ComboBox SelectedValuePath="Content"
+							  SelectedValue="{Binding DefualtOperator, Mode=TwoWay, Converter={StaticResource StringToDefaultOperator}}" 
+                              VerticalAlignment="Center"
+                              Margin="4,0,0,0"
+                              Width="60">
+                        <ComboBoxItem Content="AND"/>
+                        <ComboBoxItem Content="OR"/>
+                    </ComboBox>
+                </StackPanel>
+
+
+            <ToggleButton IsChecked="{Binding ShowFields, Mode=TwoWay}"
                               Style="{StaticResource Style_ToggleButton_MouseOverChrome}"
                               ToolTipService.ToolTip="Show fields from matching index entries instead of matching documents"
                               Margin="4,0,0,0">
@@ -154,18 +170,6 @@
                 <Controls:Separator Style="{StaticResource Style_Separator_Toolbar}"/>
                 
                 <Controls1:RecentQueriesButton/>
-
-<StackPanel Orientation="Horizontal"
-							Margin="0,4"
-							VerticalAlignment="Center"
-							Grid.Column="2">
-					<TextBlock Text="Default Operator:   "/>
-					<ComboBox SelectedValuePath="Content"
-							  SelectedValue="{Binding DefualtOperator, Mode=TwoWay, Converter={StaticResource StringToDefaultOperator}}">
-						<ComboBoxItem Content="AND"/>
-						<ComboBoxItem Content="OR"/>
-					</ComboBox>
-				</StackPanel>
             </StackPanel>
         </Border>
         
