@@ -170,6 +170,8 @@
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\StopIndexingCommand.cs" />
+    <Compile Include="Commands\StartIndexingCommand.cs" />
     <Compile Include="Commands\CopyDocumentsToClipboardCommand.cs" />
     <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Commands\ShowErrorListWindowCommand.cs" />
@@ -235,6 +237,7 @@
     <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Query\QueryDocumentsCollectionSource.cs" />
     <Compile Include="Features\Query\QueryIndexAutoComplete.cs" />
+    <Compile Include="Features\Tasks\IndexingTask.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
     <Compile Include="Features\Tasks\TaskView.xaml.cs">
       <DependentUpon>TaskView.xaml</DependentUpon>
@@ -253,6 +256,7 @@
     <Compile Include="Impl\WatermarkedTextBox\WatermarkedTextBox.cs" />
     <Compile Include="Infrastructure\ArrayContainer.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringToDefaultOperatorConverter.cs" />
     <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\NegatingBoolConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringValueToObjectConverter.cs" />

@@ -100,6 +100,8 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize)
 		{
+			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
+			
 			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, start, pageSize);
 			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
 		}
@@ -204,6 +206,8 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		public IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize)
 		{
+			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
+			
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database.GetStaticsStartingWith(idPrefix, start, pageSize)
 				.Select(x => new Attachment

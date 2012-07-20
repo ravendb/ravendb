@@ -130,6 +130,7 @@
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
     <Compile Include="Server\Connections\EventsTransport.cs" />
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
+    <Compile Include="Server\Responders\Admin\AdminIndexingStatus.cs" />
     <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
     <Compile Include="Server\Responders\ChangesConfig.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />

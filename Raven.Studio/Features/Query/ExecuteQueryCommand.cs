@@ -38,71 +38,73 @@ namespace Raven.Studio.Features.Query
 			ClearRecentQuery();
 			model.RememberHistory();
 
-		    Observable.FromEventPattern<VirtualCollectionSourceChangedEventArgs>(
-		        h => model.CollectionSource.CollectionChanged += h, h => model.CollectionSource.CollectionChanged -= h)
-		        .Where(p => p.EventArgs.ChangeType == ChangeType.Refresh)
-		        .Take(1)
-		        .ObserveOnDispatcher()
-		        .Subscribe(_ =>
-		                       {
-		                           if (model.CollectionSource.Count == 0)
-		                           {
-		                               SuggestResults();
-		                           }
-		                       });
+			Observable.FromEventPattern<VirtualCollectionSourceChangedEventArgs>(
+				h => model.CollectionSource.CollectionChanged += h, h => model.CollectionSource.CollectionChanged -= h)
+				.Where(p => p.EventArgs.ChangeType == ChangeType.Refresh)
+				.Take(1)
+				.ObserveOnDispatcher()
+				.Subscribe(_ =>
+							   {
+								   if (model.CollectionSource.Count == 0)
+								   {
+									   SuggestResults();
+								   }
+							   });
 
-            model.CollectionSource.UpdateQuery(model.IndexName, CreateTemplateQuery());  
+			model.CollectionSource.UpdateQuery(model.IndexName, CreateTemplateQuery());  
 		}
 
-	    private void ClearRecentQuery()
+		private void ClearRecentQuery()
 		{
 			model.ClearQueryError();
 			model.Suggestions.Clear();
 		}
 
-	    private IndexQuery CreateTemplateQuery()
-	    {
-	        var q = new IndexQuery
-	                    {
-	                        Query = query,
-	                    };
+		private IndexQuery CreateTemplateQuery()
+		{
+			var q = new IndexQuery
+						{
+							Query = query,
+							DefaultOperator = model.DefualtOperator
+						};
 
-	        if (model.SortBy != null && model.SortBy.Count > 0)
-	        {
-	            var sortedFields = new List<SortedField>();
-	            foreach (var sortByRef in model.SortBy)
-	            {
-	                var sortBy = sortByRef.Value;
-	                if (sortBy.EndsWith(QueryModel.SortByDescSuffix))
-	                {
-	                    var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length);
-	                    sortedFields.Add(new SortedField(field) {Descending = true});
-	                }
-	                else
-	                    sortedFields.Add(new SortedField(sortBy));
-	            }
-	            q.SortedFields = sortedFields.ToArray();
-	        }
+			if (model.SortBy != null && model.SortBy.Count > 0)
+			{
+				var sortedFields = new List<SortedField>();
+				foreach (var sortByRef in model.SortBy)
+				{
+					var sortBy = sortByRef.Value;
+					if (sortBy.EndsWith(QueryModel.SortByDescSuffix))
+					{
+						var field = sortBy.Remove(sortBy.Length - QueryModel.SortByDescSuffix.Length);
+						sortedFields.Add(new SortedField(field) {Descending = true});
+					}
+					else
+						sortedFields.Add(new SortedField(sortBy));
+				}
+				q.SortedFields = sortedFields.ToArray();
+			}
 
-            if (model.ShowFields)
-            {
-                q.FieldsToFetch = new[] { Constants.AllFields };
-            }
+			if (model.ShowFields)
+			{
+				q.FieldsToFetch = new[] { Constants.AllFields };
+			}
 
-	        if (model.IsSpatialQuerySupported &&
-	            model.Latitude.HasValue && model.Longitude.HasValue)
-	        {
-	            q = new SpatialIndexQuery(q)
-	                    {
-	                        Latitude = model.Latitude.Value,
-	                        Longitude = model.Longitude.Value,
-	                        Radius = model.Radius.HasValue ? model.Radius.Value : 1,
-	                    };
-	        }
-	        return q;
-	    }
+			if (model.IsSpatialQuerySupported &&
+				model.Latitude.HasValue && model.Longitude.HasValue)
+			{
+				q = new SpatialIndexQuery(q)
+						{
+							Latitude = model.Latitude.Value,
+							Longitude = model.Longitude.Value,
+							Radius = model.Radius.HasValue ? model.Radius.Value : 1,
+							DefaultOperator = model.DefualtOperator
+						};
+			}
+			return q;
+		}
 
-	    private void SuggestResults()
+		private void SuggestResults()
 		{
 			foreach (var fieldAndTerm in QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value))
 			{

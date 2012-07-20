@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Text;
+using System.Windows.Browser;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
@@ -333,6 +334,31 @@ namespace Raven.Client.Silverlight.Connection.Async
 				}).Unwrap();
 		}
 
+		public Task StartIndexing()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/admin/StartIndexing").NoCache(), "POST", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ExecuteRequest();
+		}
+
+		public Task StopIndexing()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/admin/StopIndexing").NoCache(), "POST", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ExecuteRequest();
+		}
+
+		public Task<string> GetIndexingStatus()
+		{
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/admin/IndexingStatus").NoCache(), "GET", credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => task.Result.Value<string>("IndexingStatus"));
+		}
+
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize)
 		{
 			var metadata = new RavenJObject();
@@ -555,6 +581,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
 				if (etag != null)
 					metadata["ETag"] = new RavenJValue(etag.Value.ToString());
+				key = HttpUtility.UrlEncode(key);
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/docs/" + key, method, metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 

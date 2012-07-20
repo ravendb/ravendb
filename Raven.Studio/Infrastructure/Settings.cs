@@ -12,61 +12,67 @@ using System.Windows.Shapes;
 
 namespace Raven.Studio.Infrastructure
 {
-    public class Settings
-    {
-        public static readonly Settings Instance = new Settings(); 
-        Dictionary<string, object> currentSettings = new Dictionary<string, object>();
+	public class Settings
+	{
+		public static readonly Settings Instance = new Settings(); 
+		Dictionary<string, object> currentSettings = new Dictionary<string, object>();
  
-        public void LoadSettings(IDictionary<string,object> settings)
-        {
-            foreach (var setting in settings)
-            {
-                currentSettings[setting.Key] = setting.Value;
-            }    
-        }
+		public void LoadSettings(IDictionary<string,object> settings)
+		{
+			foreach (var setting in settings)
+			{
+				currentSettings[setting.Key] = setting.Value;
+			}    
+		}
 
-        public void SaveSettings(IDictionary<string, object> settings)
-        {
-            foreach (var setting in currentSettings)
-            {
-                settings[setting.Key] = setting.Value;
-            }
-        }
+		public void SaveSettings(IDictionary<string, object> settings)
+		{
+			foreach (var setting in currentSettings)
+			{
+				settings[setting.Key] = setting.Value;
+			}
+		}
 
-        public int DocumentSize
-        {
-            get { return GetSettingAsInt("DocumentSize"); }
-            set { currentSettings["DocumentSize"] = value; }
-        }
+		public int DocumentSize
+		{
+			get { return GetSettingAsInt("DocumentSize"); }
+			set { currentSettings["DocumentSize"] = value; }
+		}
 
-        public string DocumentOutliningMode
-        {
-            get { return GetSettingAsString("DocumentOutliningMode"); }
-            set { currentSettings["DocumentOutliningMode"] = value; }
-        }
+		public string SelectedDatabase
+		{
+			get { return GetSettingAsString("SelectedDatabase"); }
+			set { currentSettings["SelectedDatabase"] = value; }
+		}
 
-        private string GetSettingAsString(string key)
-        {
-            if (currentSettings.ContainsKey(key))
-            {
-                return (string)currentSettings[key];
-            }
-            else
-            {
-                return "";
-            }
-        }
+		public string DocumentOutliningMode
+		{
+			get { return GetSettingAsString("DocumentOutliningMode"); }
+			set { currentSettings["DocumentOutliningMode"] = value; }
+		}
 
-        private int GetSettingAsInt(string key)
-        {
-            if (currentSettings.ContainsKey(key))
-            {
-                return Convert.ToInt32(currentSettings[key]);
-            }
-            else
-            {
-                return 0;
-            }
-        }
-    }
+		private string GetSettingAsString(string key)
+		{
+			if (currentSettings.ContainsKey(key))
+			{
+				return (string)currentSettings[key];
+			}
+			else
+			{
+				return "";
+			}
+		}
+
+		private int GetSettingAsInt(string key)
+		{
+			if (currentSettings.ContainsKey(key))
+			{
+				return Convert.ToInt32(currentSettings[key]);
+			}
+			else
+			{
+				return 0;
+			}
+		}
+	}
 }
