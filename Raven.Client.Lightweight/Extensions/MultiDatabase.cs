@@ -26,7 +26,7 @@ namespace Raven.Client.Extensions
 			return doc;
 		}
 
-		private static readonly string validDbNameChars = @"([A-Za-z0-9_-]+)";
+		private static readonly string validDbNameChars = @"([A-Za-z0-9_-\.]+)";
 
 		private static void AssertValidName(string name)
 		{
@@ -34,7 +34,7 @@ namespace Raven.Client.Extensions
 			var result = Regex.Matches(name, validDbNameChars);
 			if (result.Count == 0 || result[0].Value != name)
 			{
-				throw new InvalidOperationException("Database name can only contain only A-Z, a-z, \"_\" or \"-\" but was: " + name);
+				throw new InvalidOperationException("Database name can only contain only A-Z, a-z, \"_\", \".\" or \"-\" but was: " + name);
 			}
 		}
 
