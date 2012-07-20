@@ -21,18 +21,10 @@ namespace Raven.Database.Json
 	public class AdvancedJsonPatcher
 	{
 		private RavenJObject document;
-		private RavenJObject [] documents;
-		private bool batchApply = false;
 
 		public AdvancedJsonPatcher(RavenJObject document)
 		{
 			this.document = document;
-		}
-
-		public AdvancedJsonPatcher(RavenJObject [] documents)
-		{
-			this.documents = documents;
-			this.batchApply = true;
 		}
 
 		public RavenJObject Apply(AdvancedPatchRequest patch)
@@ -52,28 +44,16 @@ namespace Raven.Database.Json
 		{
 			var ctx = new CSharp.Context();
 			ctx.CreatePrintFunction();
-			
+
 			var toJsonScript = GetFromResources("Raven.Database.Json.ToJson.js");
 			ctx.Execute(toJsonScript);
 
 			var mapScript = GetFromResources("Raven.Database.Json.Map.js");
 			ctx.Execute(mapScript);
-
-			if (batchApply)
-			{
-				foreach (var doc in documents)
-				{
-					var resultDocument = ApplySingleScript(ctx, doc, script);
-					if (resultDocument != null)
-						document = resultDocument;
-				}
-			}
-			else
-			{
-				var resultDocument = ApplySingleScript(ctx, document, script);
-				if (resultDocument != null)
-					document = resultDocument;
-			}
+			
+			var resultDocument = ApplySingleScript(ctx, document, script);
+			if (resultDocument != null)
+				document = resultDocument;
 		}
 
 		private RavenJObject ApplySingleScript(CSharp.Context ctx, RavenJObject doc, string script)
