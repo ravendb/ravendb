@@ -26,7 +26,7 @@ namespace Raven.Client.Extensions
 			return doc;
 		}
 
-		private static readonly string validDbNameChars = @"([A-Za-z0-9_-\.]+)";
+		private static readonly string validDbNameChars = @"([A-Za-z0-9_\-\.]+)";
 
 		private static void AssertValidName(string name)
 		{
