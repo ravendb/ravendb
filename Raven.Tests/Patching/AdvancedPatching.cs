@@ -90,7 +90,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void CannotUseEval()
 		{
-			Assert.Throws<InvalidOperationException>(
+			Assert.Throws<NotSupportedException>(
 				() => new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest
 				                                                                   	{
 				                                                                   		Script = "eval('this.Value = 2')",
