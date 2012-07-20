@@ -37,7 +37,7 @@ namespace Raven.Tests.Silverlight
 
 				yield return taskObservable.Task;
 
-				var observableWithTask = taskObservable.DocumentSubscription("companies/1");
+				var observableWithTask = taskObservable.ForDocument("companies/1");
 
 				yield return observableWithTask.Task;
 
