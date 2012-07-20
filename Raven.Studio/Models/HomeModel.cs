@@ -32,12 +32,13 @@ namespace Raven.Studio.Models
 			{
 				if (recentDocuments == null)
 				{
-					recentDocuments = (new DocumentsModel(new DocumentsCollectionSource())
-																	  {
-																		  Header = "Recent Documents",
-																		  DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
-																		  Context = "AllDocuments",
-																	  });
+				    recentDocuments = (new DocumentsModel(new DocumentsCollectionSource())
+				                                                      {
+				                                                          Header = "Recent Documents",
+                                                                          DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
+                                                                          Context = "AllDocuments",
+				                                                      });
+                    recentDocuments.SetChangesObservable(d => d.Changes().ForAllDocuments().Select(s => Unit.Default));
 				}
 
 				return recentDocuments;
@@ -49,25 +50,10 @@ namespace Raven.Studio.Models
 			ModelUrl = "/home";
 		}
 
-		public override void LoadModelParameters(string parameters)
-		{
-			RecentDocuments.TimerTickedAsync();
-		}
-
-		public override Task TimerTickedAsync()
-		{
-			if (ApplicationModel.Current.Server.Value.CreateNewDatabase)
-			{
-				ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
-				Command.ExecuteCommand(new CreateDatabaseCommand());
-			}
-			return RecentDocuments.TimerTickedAsync();
-		}
-
-		protected override void OnViewLoaded()
-		{
-
-		}
+        protected override void OnViewLoaded()
+        {
+            RecentDocuments.Documents.Refresh();
+        }
 
 		private bool isGeneratingSampleData;
 		public bool IsGeneratingSampleData

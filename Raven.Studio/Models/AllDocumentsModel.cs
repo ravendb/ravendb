@@ -1,3 +1,5 @@
+using System.Reactive;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Studio.Features.Documents;
@@ -21,11 +23,7 @@ namespace Raven.Studio.Models
 				{
                     documents = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel>
                                                                                           {
-                                                                                              Value = new DocumentsModel(new DocumentsCollectionSource())
-                                                                                                          {
-                                                                                                              DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
-                                                                                                              Context = "AllDocuments",
-                                                                                                          }
+                                                                                              Value = CreateDocumentsModel()
                                                                                           });
 				}
 				var target = documents.Target ?? Documents;
@@ -33,13 +31,21 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		public override void LoadModelParameters(string parameters)
-		{
-		}
+	    private static DocumentsModel CreateDocumentsModel()
+	    {
+	        var documentsModel = new DocumentsModel(new DocumentsCollectionSource())
+	                                 {
+	                                     DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index), Context = "AllDocuments",
+	                                 };
 
-		public override Task TimerTickedAsync()
+            documentsModel.SetChangesObservable(d => d.Changes().ForAllDocuments().Select(s => Unit.Default));
+
+	        return documentsModel;
+	    }
+
+	    public override void LoadModelParameters(string parameters)
 		{
-			return Documents.Value.TimerTickedAsync();
+            Documents.Value.Documents.Refresh();
 		}
 	}
 }

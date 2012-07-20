@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Reactive;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -8,6 +10,7 @@ using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
+using Notification = Raven.Studio.Messages.Notification;
 
 namespace Raven.Studio.Models
 {
@@ -66,6 +69,8 @@ namespace Raven.Studio.Models
 
             Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
             SelectedCollection = new Observable<CollectionModel>();
+
+            DocumentsForSelectedCollection.SetChangesObservable(d => d.Changes().ForIndex("Raven/DocumentsByEntityName").Select(m => Unit.Default));
 
             SelectedCollection.PropertyChanged += (sender, args) =>
             {

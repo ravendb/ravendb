@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
+using System.Reactive;
 using System.Reactive.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
@@ -463,6 +464,8 @@ namespace Raven.Studio.Models
                         }
 
                         DynamicSelectedOption = selectedOption;
+
+			DocumentsResult.SetChangesObservable(null);
                     });
                 return;
             }
@@ -487,7 +490,8 @@ namespace Raven.Studio.Models
                         (task.Result.Reduce != null && task.Result.Reduce.Contains(spatialindexGenerate));
                     HasTransform = !string.IsNullOrEmpty(task.Result.TransformResults);
 
-                    SetSortByOptions(fields);
+			DocumentsResult.SetChangesObservable(d => d.Changes().ForIndex(IndexName).Select(m => Unit.Default));		
+			SetSortByOptions(fields);
                     RestoreHistory();
                 }).Catch();
         }
