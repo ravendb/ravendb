@@ -59,6 +59,16 @@ namespace Raven.Tests.Patching
 		}
 
 		[Fact]
+		public void CannotUseEval()
+		{
+			Assert.Throws<InvalidOperationException>(
+				() => new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest
+				                                                                   	{
+				                                                                   		Script = "eval('this.Value = 2')",
+				                                                                   	}));
+		}
+
+		[Fact]
 		public void CanHandleNonsensePatching()
 		{
 			Assert.Throws<InvalidOperationException>(

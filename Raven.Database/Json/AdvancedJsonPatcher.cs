@@ -11,10 +11,8 @@ using System.Reflection;
 using System.IO;
 using IronJS.Hosting;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using IronJS;
 using Environment = System.Environment;
-using System.Linq;
 
 namespace Raven.Database.Json
 {
@@ -116,7 +114,10 @@ json_data = JSON.stringify(doc);", doc, patch.Script, patch.Script.EndsWith(";")
 
 		private static readonly Regex ForbiddenKeywords = 
 			new Regex(@"(^ \s * (while|for) ) | ([};] \s* (while|for))", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
-		
+
+		private static readonly Regex ForbiddenEval=
+			new Regex(@"(^|\s) eval \s* \(", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+
 		private static readonly Regex ForbiddenFunction =
 			new Regex(@"(?<! \. \s* Map \s* \() function ((\s*\()| (\s+ \w+\())", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
 
@@ -126,7 +127,9 @@ json_data = JSON.stringify(doc);", doc, patch.Script, patch.Script.EndsWith(";")
 				throw new NotSupportedException("Script is too complex, please use scripts that are less than 4KB in size");
 			if (ForbiddenKeywords.IsMatch(script))
 				throw new NotSupportedException("Keywords 'while' and 'for' are not supported");
-			if(ForbiddenFunction.IsMatch(script))
+			if (ForbiddenEval.IsMatch(script))
+				throw new NotSupportedException("Function 'eval' is not supported");
+			if (ForbiddenFunction.IsMatch(script))
 				throw new NotSupportedException("Defining functions is not supported");
 		}
 
