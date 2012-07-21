@@ -5,6 +5,7 @@ using System.Transactions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Bundles.Tests.Versioning;
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Bundles.Tests.Compression
@@ -34,37 +35,25 @@ namespace Raven.Bundles.Tests.Compression
 		public void Transactional()
 		{
 			const string FirstCompany = "FirstCompany";
-			const string SecondCompany = "SecondCompany";
-			const string ThirdCompany = "ThirdCompany";
-			const string FourthCompany = "FourthCompany";
 
-			using (var session = documentStore.OpenSession())
-			using (var tx = new TransactionScope())
-			{
-				session.Store(new Company { Name = FirstCompany });
-				session.Store(new Company { Name = SecondCompany });
-				session.SaveChanges();
-				tx.Complete();
-			}
+			// write in transaction
+			documentStore.DatabaseCommands.Put("docs/1", null,
+			                                   new RavenJObject
+			                                   	{
+			                                   		{"Name", FirstCompany}
+			                                   	},
+			                                   new RavenJObject
+			                                   	{
+			                                   		{
+			                                   			"Raven-Transaction-Information", Guid.NewGuid() + ", " + TimeSpan.FromMinutes(1)
+			                                   		}
+			                                   	});
 
-			using (var session = documentStore.OpenSession())
-			using (new TransactionScope())
-			{
-				session.Store(new Company { Name = ThirdCompany });
-				session.Store(new Company { Name = FourthCompany });
-				session.SaveChanges();
-				// this transaction is not committed
-			}
+			var jsonDocument = documentStore.DatabaseCommands.Get("docs/1");
+			Assert.True(jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
 
-			using (var session = documentStore.OpenSession())
-			{
-				Assert.Equal(FirstCompany, session.Load<Company>(1).Name);
-				Assert.Equal(SecondCompany, session.Load<Company>(2).Name);
-				Assert.Equal(null, session.Load<Company>(3));
-				Assert.Equal(null, session.Load<Company>(4));
-			}
 
-			AssertPlainTextIsNotSavedInDatabase(FirstCompany, SecondCompany, ThirdCompany, FourthCompany);
+			AssertPlainTextIsNotSavedInDatabase(FirstCompany);
 		}
 	}
 }
