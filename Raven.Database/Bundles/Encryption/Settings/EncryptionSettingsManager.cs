@@ -100,7 +100,8 @@ namespace Raven.Bundles.Encryption.Settings
 
 			if (doc != null)
 			{
-				if (!doc.DataAsJson.SequenceEqual(Constants.InDatabaseKeyVerificationDocumentContents))
+				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
+				if (!ravenJTokenEqualityComparer.Equals(doc.DataAsJson,Constants.InDatabaseKeyVerificationDocumentContents))
 					throw new ConfigurationErrorsException("The database is encrypted with a different key and/or algorithm than the ones "
 						+ "currently in the configuration file.");
 			}
@@ -132,11 +133,8 @@ namespace Raven.Bundles.Encryption.Settings
 					index += array.Length;
 					continue;
 				}
-				else
-				{
-					// Found a document which is encrypted
-					return true;
-				}
+				// Found a document which is encrypted
+				return true;
 			}
 		}
 
