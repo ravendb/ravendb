@@ -48,9 +48,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Bundles.Encryption\Raven.Bundles.Encryption.csproj">
-      <Project>{38811282-5124-4ad2-b45a-fa6041980ee6}</Project>
-      <Name>Raven.Bundles.Encryption</Name>
+    <ProjectReference Include="..\..\Raven.Database\Raven.Database.csproj">
+      <Project>{14C33741-A0FB-48CA-A595-16A520146804}</Project>
+      <Name>Raven.Database</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

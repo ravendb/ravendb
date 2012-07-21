@@ -123,6 +123,19 @@
     </Compile>
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
+    <Compile Include="Bundles\Encryption\Codec.cs" />
+    <Compile Include="Bundles\Encryption\Constants.cs" />
+    <Compile Include="Bundles\Encryption\CryptoTransformExtensions.cs" />
+    <Compile Include="Bundles\Encryption\Plugin\DocumentEncryption.cs" />
+    <Compile Include="Bundles\Encryption\Plugin\EncryptionSettingsDeleteTrigger.cs" />
+    <Compile Include="Bundles\Encryption\Plugin\EncryptionSettingsPutTrigger.cs" />
+    <Compile Include="Bundles\Encryption\Plugin\IndexEncryption.cs" />
+    <Compile Include="Bundles\Encryption\Settings\EncryptionSettings.cs" />
+    <Compile Include="Bundles\Encryption\Settings\EncryptionSettingsManager.cs" />
+    <Compile Include="Bundles\Encryption\Streams\BlockReaderWriter.cs" />
+    <Compile Include="Bundles\Encryption\Streams\EncryptedFile.cs" />
+    <Compile Include="Bundles\Encryption\Streams\SeekableCryptoStream.cs" />
+    <Compile Include="Bundles\Encryption\Streams\StructConverter.cs" />
     <Compile Include="Bundles\Expiration\ExpirationReadTrigger.cs" />
     <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />

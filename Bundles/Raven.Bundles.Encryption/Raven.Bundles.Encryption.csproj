@@ -32,6 +32,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -50,21 +51,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Constants.cs" />
-    <Compile Include="Codec.cs" />
-    <Compile Include="CryptoTransformExtensions.cs" />
-    <Compile Include="Plugin\EncryptionSettingsPutTrigger.cs" />
-    <Compile Include="Streams\BlockReaderWriter.cs" />
-    <Compile Include="Streams\EncryptedFile.cs" />
-    <Compile Include="Streams\SeekableCryptoStream.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Streams\StructConverter.cs" />
-    <Compile Include="Plugin\IndexEncryption.cs" />
-    <Compile Include="Plugin\EncryptionSettingsDeleteTrigger.cs" />
-    <Compile Include="Plugin\DocumentEncryption.cs" />
-    <Compile Include="Settings\EncryptionSettings.cs" />
-    <Compile Include="Settings\EncryptionSettingsManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup />

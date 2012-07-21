@@ -8,17 +8,8 @@ using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
-using System.Threading;
-using Raven.Abstractions.Data;
-using Raven.Bundles.Encryption.Plugin;
-using Raven.Bundles.Expiration;
-using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Document;
-using Raven.Json.Linq;
 using Raven.Server;
-using Xunit;
-using System.Linq;
-using System.Text;
 
 namespace Raven.Bundles.Tests.Encryption
 {
@@ -44,7 +35,7 @@ namespace Raven.Bundles.Tests.Encryption
 						{
 							Catalogs =
 								{
-									new AssemblyCatalog(typeof (DocumentEncryption).Assembly)
+									new AssemblyCatalog(typeof (database::Raven.Bundles.Encryption.Plugin.DocumentEncryption).Assembly)
 								},
 						},
 					Settings =
