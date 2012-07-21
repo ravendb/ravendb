@@ -40,12 +40,10 @@ namespace Raven.Bundles.Tests.Replication
 		private IDocumentStore CreateStoreAtPort(int port, Action<DocumentStore> configureStore = null)
 		{
 			database::Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-			var assemblyCatalog = new AssemblyCatalog(typeof (database::Raven.Bundles.Replication.Triggers.AncestryPutTrigger).Assembly);
 			var serverConfiguration = new database::Raven.Database.Config.RavenConfiguration
 			                          {
 										Settings = {{"Raven/ActiveBundles", "replication"}},
 			                          	AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.All,
-			                          	Catalog = {Catalogs = {assemblyCatalog}},
 			                          	DataDirectory = "Data #" + servers.Count,
 			                          	RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 			                          	RunInMemory = true,
@@ -55,7 +53,6 @@ namespace Raven.Bundles.Tests.Replication
 			IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
 			serverConfiguration.PostInit();
 			var ravenDbServer = new RavenDbServer(serverConfiguration);
-			ravenDbServer.Server.SetupTenantDatabaseConfiguration += configuration => configuration.Catalog.Catalogs.Add(assemblyCatalog);
 			servers.Add(ravenDbServer);
 			
 			var documentStore = new DocumentStore {Url = ravenDbServer.Database.Configuration.ServerUrl};

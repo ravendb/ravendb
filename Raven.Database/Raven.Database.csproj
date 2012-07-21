@@ -123,6 +123,10 @@
     </Compile>
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
+    <Compile Include="Bundles\Compression\Plugin\DocumentCompression.cs" />
+    <Compile Include="Bundles\Compression\Streams\CompressStream.cs" />
+    <Compile Include="Bundles\Compression\Streams\DecompressStream.cs" />
+    <Compile Include="Bundles\Compression\Streams\StreamReaderWithUnread.cs" />
     <Compile Include="Bundles\Encryption\Codec.cs" />
     <Compile Include="Bundles\Encryption\Constants.cs" />
     <Compile Include="Bundles\Encryption\CryptoTransformExtensions.cs" />

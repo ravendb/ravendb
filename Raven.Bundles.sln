@@ -40,8 +40,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Expiration", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Encryption.IndexFileCodec", "Bundles\Raven.Bundles.Encryption.IndexFileCodec\Raven.Bundles.Encryption.IndexFileCodec.csproj", "{1BB3D982-9675-400D-A247-547C071FBE35}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.Compression", "Bundles\Raven.Bundles.Compression\Raven.Bundles.Compression.csproj", "{DA091139-CA30-4322-891E-96AE7CF238CA}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.IndexedProperties", "Bundles\Raven.Client.IndexedProperties\Raven.Client.IndexedProperties.csproj", "{F41C7F7E-A287-449A-A545-E7152937EF77}"
 EndProject
 Global
@@ -238,16 +236,6 @@ Global
 		{1BB3D982-9675-400D-A247-547C071FBE35}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{1BB3D982-9675-400D-A247-547C071FBE35}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{1BB3D982-9675-400D-A247-547C071FBE35}.Release|x86.ActiveCfg = Release|Any CPU
-		{DA091139-CA30-4322-891E-96AE7CF238CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DA091139-CA30-4322-891E-96AE7CF238CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DA091139-CA30-4322-891E-96AE7CF238CA}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{DA091139-CA30-4322-891E-96AE7CF238CA}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{DA091139-CA30-4322-891E-96AE7CF238CA}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{DA091139-CA30-4322-891E-96AE7CF238CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DA091139-CA30-4322-891E-96AE7CF238CA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DA091139-CA30-4322-891E-96AE7CF238CA}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{DA091139-CA30-4322-891E-96AE7CF238CA}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{DA091139-CA30-4322-891E-96AE7CF238CA}.Release|x86.ActiveCfg = Release|Any CPU
 		{F41C7F7E-A287-449A-A545-E7152937EF77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F41C7F7E-A287-449A-A545-E7152937EF77}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F41C7F7E-A287-449A-A545-E7152937EF77}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
