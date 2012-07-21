@@ -30,10 +30,13 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key_and_view_hashed"], viewAndReduceKeyHashed);
 
-				using (var stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
+				using (Stream stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
 				{
-					data.WriteTo(stream);
-					stream.Flush();
+					using (var dataStream = documentCodecs.Aggregate(stream, (ds, codec) => codec.Value.Encode(reduceKey, data, null, ds)))
+					{
+						data.WriteTo(dataStream);
+						dataStream.Flush();
+				}
 				}
 
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"], etag.TransformToValueForEsentSorting());
@@ -76,13 +79,7 @@ namespace Raven.Storage.Esent.StorageActions
 					
 					return currentView == item.View;
 				})
-				.Select(item =>
-				{
-					using (var stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
-					{
-						return stream.ToJObject();
-					}
-				});
+				.Select(item => LoadMappedResults(item.ReduceKey));
 		}
 
 		public IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view)
@@ -146,17 +143,17 @@ namespace Raven.Storage.Esent.StorageActions
 				results.Count < take && 
 				Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex) == indexName)
 	        {
+	        	var key = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
 	        	var mappedResultInfo = new MappedResultInfo
 	        	{
 	        		ReduceKey =
-	        			Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]),
+	        			key,
 	        		Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
 	        		Timestamp =
 	        			Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).
 	        			Value,
 	        		Data = loadData
-	        		       	? Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]).
-	        		       	  	ToJObject()
+	        		       	? LoadMappedResults(key)
 	        		       	: null,
 					Size = Api.RetrieveColumnSize(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]) ?? 0
 	        	};
@@ -171,5 +168,14 @@ namespace Raven.Storage.Esent.StorageActions
 
 	    	return results.Values;
 	    }
+
+		private RavenJObject LoadMappedResults(string key)
+		{
+			using (Stream stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
+			using (var dataStream = documentCodecs.ReverseAggregate(stream, (ds, codec) => codec.Decode(key, null, ds)))
+			{
+				return dataStream.ToJObject();
+			}
+		}
 	}
 }
