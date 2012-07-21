@@ -95,11 +95,11 @@ namespace Similarity.Net
 	/// 
 	/// Thus you:
 	/// <ol>
-	/// <li> do your normal, Lucene setup for searching,
-	/// <li> create a MoreLikeThis,
-	/// <li> get the text of the doc you want to find similaries to
-	/// <li> then call one of the Like() calls to generate a similarity query
-	/// <li> call the searcher to find the similar docs
+	/// <li> do your normal, Lucene setup for searching,</li>
+	/// <li> create a MoreLikeThis,</li>
+	/// <li> get the text of the doc you want to find similaries to</li>
+	/// <li> then call one of the Like() calls to generate a similarity query</li>
+	/// <li> call the searcher to find the similar docs</li>
 	/// </ol>
 	/// 
 	/// <h3>More Advanced Usage</h3>
@@ -112,16 +112,16 @@ namespace Similarity.Net
 	/// may want to call the other set methods to control how the similarity queries are
 	/// generated:
 	/// <ul>
-	/// <li> {@link #SetMinTermFreq SetMinTermFreq(...)}
-	/// <li> {@link #SetMinDocFreq SetMinDocFreq(...)}
-	/// <li> {@link #SetMinWordLen SetMinWordLen(...)}
-	/// <li> {@link #SetMaxWordLen SetMaxWordLen(...)}
-	/// <li> {@link #SetMaxQueryTerms SetMaxQueryTerms(...)}
-	/// <li> {@link #SetMaxNumTokensParsed SetMaxNumTokensParsed(...)}
-	/// <li> {@link #SetStopWords SetStopWord(...)} 
+	/// <li> {@link #SetMinTermFreq SetMinTermFreq(...)}</li>
+	/// <li> {@link #SetMinDocFreq SetMinDocFreq(...)}</li>
+	/// <li> {@link #SetMinWordLen SetMinWordLen(...)}</li>
+	/// <li> {@link #SetMaxWordLen SetMaxWordLen(...)}</li>
+	/// <li> {@link #SetMaxQueryTerms SetMaxQueryTerms(...)}</li>
+	/// <li> {@link #SetMaxNumTokensParsed SetMaxNumTokensParsed(...)}</li>
+	/// <li> {@link #SetStopWords SetStopWord(...)} </li>
 	/// </ul> 
 	/// 
-	/// <hr>
+	/// <hr/>
 	/// <pre>
 	/// Changes: Mark Harwood 29/02/04
 	/// Some bugfixing, some refactoring, some optimisation.

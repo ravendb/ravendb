@@ -47,7 +47,7 @@ If decryption fails, a message will be written to standard error.
 			{
 				password = Convert.FromBase64String(args[1]);
 			}
-			catch (Exception ex)
+			catch (Exception)
 			{
 				Console.Error.WriteLine("Invalid base64 encoding for encryption password.");
 				Environment.Exit((int)ExitCodes.InvalidArguments);

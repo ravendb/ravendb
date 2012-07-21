@@ -33,6 +33,8 @@ namespace Raven.Storage.Managed
 		private readonly Action onCommit;
 		private TableStorage tableStroage;
 
+		private OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
+
 		public TableStorage TableStroage
 		{
 			get { return tableStroage; }
@@ -50,9 +52,6 @@ namespace Raven.Storage.Managed
 		{
 			get { return persistenceSource; }
 		}
-
-		[ImportMany]
-		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
 		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
 		{
@@ -146,8 +145,9 @@ namespace Raven.Storage.Managed
 			current.Value.OnCommit += action;
 		}
 
-		public bool Initialize(IUuidGenerator generator)
+		public bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
 		{
+			DocumentCodecs = documentCodecs;
 			uuidGenerator = generator;
 			if (configuration.RunInMemory  == false && Directory.Exists(configuration.DataDirectory) == false)
 				Directory.CreateDirectory(configuration.DataDirectory);

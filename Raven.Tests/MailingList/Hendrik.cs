@@ -123,8 +123,6 @@ namespace Raven.Tests.MailingList
 					var locationView = session.Load<LocationView>(locationId);
 					return locationView != null;
 				}
-
-				tx.Complete();
 			}
 		}
 
