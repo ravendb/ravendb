@@ -38,7 +38,7 @@ namespace Raven.Bundles.Encryption.Settings
 		private static byte[] GetKeyFromBase64(string base64)
 		{
 			if (string.IsNullOrWhiteSpace(base64))
-				throw new ConfigurationException("The " + Constants.EncryptionKeySetting + " setting must be set to an encryption key. "
+				throw new ConfigurationErrorsException("The " + Constants.EncryptionKeySetting + " setting must be set to an encryption key. "
 					+ "The key should be in base 64, and should be at least " + Constants.MinimumAcceptableEncryptionKeyLength
 					+ " bytes long. You may use EncryptionSettings.GenerateRandomEncryptionKey() to generate a key.\n"
 					+ "If you'd like, here's a key that was randomly generated:\n"
@@ -50,14 +50,14 @@ namespace Raven.Bundles.Encryption.Settings
 			{
 				var result = Convert.FromBase64String(base64);
 				if (result.Length < Constants.MinimumAcceptableEncryptionKeyLength)
-					throw new ConfigurationException("The " + Constants.EncryptionKeySetting + " setting must be at least "
+					throw new ConfigurationErrorsException("The " + Constants.EncryptionKeySetting + " setting must be at least "
 						+ Constants.MinimumAcceptableEncryptionKeyLength + " bytes long.");
 
 				return result;
 			}
 			catch (FormatException e)
 			{
-				throw new ConfigurationException("The " + Constants.EncryptionKeySetting + " setting has an invalid base 64 value.", e);
+				throw new ConfigurationErrorsException("The " + Constants.EncryptionKeySetting + " setting has an invalid base 64 value.", e);
 			}
 		}
 
@@ -72,12 +72,12 @@ namespace Raven.Bundles.Encryption.Settings
 			var result = Type.GetType(typeName);
 
 			if (result == null)
-				throw new ConfigurationException("Unknown type for encryption: " + typeName);
+				throw new ConfigurationErrorsException("Unknown type for encryption: " + typeName);
 
 			if (!result.IsSubclassOf(typeof(System.Security.Cryptography.SymmetricAlgorithm)))
-				throw new ConfigurationException("The encryption algorithm type must be a subclass of System.Security.Cryptography.SymmetricAlgorithm.");
+				throw new ConfigurationErrorsException("The encryption algorithm type must be a subclass of System.Security.Cryptography.SymmetricAlgorithm.");
 			if (result.IsAbstract)
-				throw new ConfigurationException("Cannot use an abstract type for an encryption algorithm.");
+				throw new ConfigurationErrorsException("Cannot use an abstract type for an encryption algorithm.");
 
 			return result;
 		}
@@ -94,14 +94,14 @@ namespace Raven.Bundles.Encryption.Settings
 			}
 			catch (CryptographicException e)
 			{
-				throw new ConfigurationException("The database is encrypted with a different key and/or algorithm than the ones "
+				throw new ConfigurationErrorsException("The database is encrypted with a different key and/or algorithm than the ones "
 					+ "currently in the configuration file.", e);
 			}
 
 			if (doc != null)
 			{
 				if (!doc.DataAsJson.SequenceEqual(Constants.InDatabaseKeyVerificationDocumentContents))
-					throw new ConfigurationException("The database is encrypted with a different key and/or algorithm than the ones "
+					throw new ConfigurationErrorsException("The database is encrypted with a different key and/or algorithm than the ones "
 						+ "currently in the configuration file.");
 			}
 			else
@@ -151,7 +151,7 @@ namespace Raven.Bundles.Encryption.Settings
 			}
 			catch (Exception e)
 			{
-				throw new ConfigurationException("Invalid boolean value for setting EncryptIndexes: " + value, e);
+				throw new ConfigurationErrorsException("Invalid boolean value for setting EncryptIndexes: " + value, e);
 			}
 		}
 	}
