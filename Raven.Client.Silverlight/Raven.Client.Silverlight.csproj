@@ -749,6 +749,9 @@
     <Compile Include="..\Raven.Abstractions\Util\IncludesUtil.cs">
       <Link>Imports\Util\IncludesUtil.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Changes\Base62Util.cs">
+      <Link>Imports\Changes\Base62Util.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Changes\IDatabaseChanges.cs">
       <Link>Imports\Changes\IDatabaseChanges.cs</Link>
     </Compile>

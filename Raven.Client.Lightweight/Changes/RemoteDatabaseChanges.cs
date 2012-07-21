@@ -35,7 +35,8 @@ namespace Raven.Client.Changes
 
 		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions)
 		{
-			id = Interlocked.Increment(ref connectionCounter) + "/" + Guid.NewGuid();
+			id = Interlocked.Increment(ref connectionCounter) + "/" +
+			     Base62Util.Base62Random();
 			this.url = url;
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
@@ -86,12 +87,12 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("indexes/"+indexName, s =>
 			{
 				var indexSubscriptionTask = AfterConnection(() =>
-					Send(new { Type = "WatchIndex", Name = indexName }));
+					Send("watch-index", indexName));
 
 				return new LocalConnectionState(
 					() =>
 						{
-							Send(new { Type = "UnwatchIndex", Name = indexName });
+							Send("unwatch-index",indexName);
 							counters.Remove("indexes/" + indexName);
 						},
 					indexSubscriptionTask);
@@ -126,13 +127,17 @@ namespace Raven.Client.Changes
 
 		}
 
-		private Task Send(object msg)
+		private Task Send(string command, string value)
 		{
-			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/config?id="+id, "POST", credentials, conventions);
 			try
 			{
+				var sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
+				if (string.IsNullOrEmpty(value) == false)
+					sendUrl += "&value=" + Uri.EscapeUriString(value);
+
+				var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions);
 				var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
-				return httpJsonRequest.ExecuteWriteAsync(JsonConvert.SerializeObject(msg)).ObserveException();
+				return httpJsonRequest.ExecuteRequestAsync().ObserveException();
 			}
 			catch (Exception e)
 			{
@@ -145,11 +150,11 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("docs/" + docId, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						Send(new { Type = "WatchDocument", Name = docId }));
+						Send("watch-doc", docId ));
 				return new LocalConnectionState(
 					() =>
 						{
-							Send(new { Type = "UnwatchDocument", Name = docId });
+							Send("unwatch-doc", docId);
 							counters.Remove("docs/" + docId);
 						},
 					documentSubscriptionTask);
@@ -175,11 +180,11 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("all-docs", s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						Send(new { Type = "WatchAllDocuments" }));
+						Send("watch-docs", null));
 				return new LocalConnectionState(
 					() =>
 					{
-						Send(new { Type = "UnwatchAllDocuments" });
+						Send("unwatch-docs", null);
 						counters.Remove("all-docs");
 					},
 					documentSubscriptionTask);
@@ -205,11 +210,11 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						Send(new { Type = "WatchDocumentPrefix", Name = docIdPrefix }));
+						Send("watch-all-docs", docIdPrefix));
 				return new LocalConnectionState(
 					() =>
 					{
-						Send(new { Type = "UnwatchDocumentPrefix", Name = docIdPrefix });
+						Send("unwatch-all-docs", docIdPrefix );
 						counters.Remove("prefixes/" + docIdPrefix);
 					},
 					documentSubscriptionTask);
@@ -255,7 +260,7 @@ namespace Raven.Client.Changes
 				return new CompletedTask();
 			}
 			
-			return Send(new {Type = "Disconnect"}).
+			return Send("disconnect", null).
 				ContinueWith(_ =>
 				             	{
 				             		try

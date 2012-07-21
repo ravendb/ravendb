@@ -14,7 +14,7 @@ public class Program
 {
 	public static void Main()
 	{
-		for (int i = 0; i < 100; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			Console.WriteLine(i);
 
@@ -28,7 +28,7 @@ public class Program
 
 			using (var x = new ClientServer())
 			{
-				x.CanGetNotificationAboutDocumentDelete();
+				x.CanGetNotificationAboutDocumentPut();
 			}
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
@@ -44,7 +44,6 @@ public class Program
 			//{
 			//    x.CanGetNotificationAboutDocumentIndexUpdate();
 			//}
-
 
 
 			//GC.Collect(2);
