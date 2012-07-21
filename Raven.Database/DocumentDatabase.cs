@@ -157,9 +157,7 @@ namespace Raven.Database
 
 			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
 
-			// Index codecs must be initialized before we try to read an index
-			InitializeTriggers();
-
+			
 			try
 			{
 				TransactionalStorage.Initialize(this, DocumentCodecs);
@@ -174,6 +172,9 @@ namespace Raven.Database
 			{
 
 			TransactionalStorage.Batch(actions => currentEtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
+
+			// Index codecs must be initialized before we try to read an index
+			InitializeTriggers();
 
 			IndexDefinitionStorage = new IndexDefinitionStorage(
 				configuration,
