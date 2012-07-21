@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Raven.Bundles.Encryption.Settings;
 
 namespace Raven.Bundles.Encryption.Streams
@@ -27,7 +22,7 @@ namespace Raven.Bundles.Encryption.Streams
 	///				  the length is required, because the blocks are of an all identical size. If the file ends
 	///				  in the middle of a block, this length will be used to truncate that block after decryption.
 	/// </summary>
-	internal class SeekableCryptoStream : Stream
+	public class SeekableCryptoStream : Stream
 	{
 
 		private readonly BlockReaderWriter underlyingStream;

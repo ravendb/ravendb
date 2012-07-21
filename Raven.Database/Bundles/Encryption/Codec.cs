@@ -13,7 +13,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Encryption
 {
-	internal class Codec
+	public class Codec
 	{
 		private static readonly ThreadLocal<RNGCryptoServiceProvider> LocalRNG = new ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
 
