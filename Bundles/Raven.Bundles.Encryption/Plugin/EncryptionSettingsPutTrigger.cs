@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,6 +11,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Bundles.Encryption.Plugin
 {
+	[InheritedExport(typeof(AbstractPutTrigger))]
+	[ExportMetadata("Order", 10000)]
+	[ExportMetadata("Bundle", "Encryption")]
 	public class EncryptionSettingsPutTrigger : AbstractPutTrigger
 	{
 		private EncryptionSettings settings;

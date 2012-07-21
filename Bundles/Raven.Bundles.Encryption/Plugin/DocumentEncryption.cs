@@ -9,6 +9,7 @@ namespace Raven.Bundles.Encryption.Plugin
 {
 	[InheritedExport(typeof(AbstractDocumentCodec))]
 	[ExportMetadata("Order", 10000)]
+	[ExportMetadata("Bundle", "Encryption")]
 	public class DocumentEncryption : AbstractDocumentCodec
 	{
 		private EncryptionSettings settings;

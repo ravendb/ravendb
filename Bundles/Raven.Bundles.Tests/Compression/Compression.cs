@@ -8,17 +8,9 @@ using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
-using System.Threading;
-using Raven.Abstractions.Data;
 using Raven.Bundles.Compression.Plugin;
-using Raven.Bundles.Expiration;
-using Raven.Bundles.Tests.Versioning;
 using Raven.Client.Document;
-using Raven.Json.Linq;
 using Raven.Server;
-using Xunit;
-using System.Linq;
-using System.Text;
 
 namespace Raven.Bundles.Tests.Compression
 {

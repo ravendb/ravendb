@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -14,6 +15,9 @@ using Raven.Database;
 
 namespace Raven.Bundles.Encryption.Plugin
 {
+	[InheritedExport(typeof(AbstractIndexCodec))]
+	[ExportMetadata("Bundle", "Encryption")]
+	[ExportMetadata("Order", 10000)]
 	public class IndexEncryption : AbstractIndexCodec
 	{
 		EncryptionSettings settings;
