@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Encryption.Settings;
-using Raven.Database.Plugins;
-using Raven.Json.Linq;
 
 namespace Raven.Bundles.Encryption
 {
@@ -18,9 +14,9 @@ namespace Raven.Bundles.Encryption
 		private static readonly ThreadLocal<RNGCryptoServiceProvider> LocalRNG = new ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
 
 		public readonly EncryptionSettings EncryptionSettings;
-		private Tuple<byte[], byte[]> encryptionStartingKeyAndIV = null;
-		private int? encryptionKeySize = null;
-		private int? encryptionIVSize = null;
+		private Tuple<byte[], byte[]> encryptionStartingKeyAndIV;
+		private int? encryptionKeySize;
+		private int? encryptionIVSize;
 
 		public Codec(EncryptionSettings settings)
 		{
@@ -148,11 +144,9 @@ namespace Raven.Bundles.Encryption
 
 		private Tuple<byte[], byte[]> GetStartingKeyAndIVForEncryption(SymmetricAlgorithm algorithm)
 		{
-			int bits;
-			if (algorithm.ValidKeySize(Constants.DefaultKeySizeToUseInActualEncryptionInBits))
-				bits = Constants.DefaultKeySizeToUseInActualEncryptionInBits;
-			else
-				bits = algorithm.LegalKeySizes[0].MaxSize;
+			int bits = algorithm.ValidKeySize(Constants.DefaultKeySizeToUseInActualEncryptionInBits) ? 
+				Constants.DefaultKeySizeToUseInActualEncryptionInBits : 
+				algorithm.LegalKeySizes[0].MaxSize;
 
 			encryptionKeySize = bits / 8;
 			encryptionIVSize = algorithm.IV.Length;
@@ -170,8 +164,8 @@ namespace Raven.Bundles.Encryption
 		{
 			public EncodedBlock(byte[] iv, byte[] data)
 			{
-				this.IV = iv;
-				this.Data = data;
+				IV = iv;
+				Data = data;
 			}
 
 			public readonly byte[] IV;

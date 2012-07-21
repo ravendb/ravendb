@@ -16,18 +16,11 @@ namespace Raven.Bundles.Encryption.Plugin
 	[ExportMetadata("Bundle", "Encryption")]
 	public class EncryptionSettingsPutTrigger : AbstractPutTrigger
 	{
-		private EncryptionSettings settings;
-
-		public override void Initialize()
-		{
-			settings = EncryptionSettingsManager.GetEncryptionSettingsForDatabase(Database);
-		}
-
 		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			if (key == Constants.InDatabaseKeyVerificationDocumentName)
 			{
-				if (Database == null) // we haven't been called yet
+				if (Database == null) // we haven't been intialized yet
 					return VetoResult.Allowed;
 
 				if (Database.Get(key, null) != null)
