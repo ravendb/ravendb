@@ -1,4 +1,4 @@
- //-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Expiration.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -47,10 +47,11 @@ namespace Raven.Bundles.Tests.Compression
 			documentStore.Initialize();
 		}
 
-		protected void AssertPlainTextIsNotSavedInDatabase(params string[] plaintext)
+		protected void AssertPlainTextIsNotSavedInDatabase_ExceptIndexes(params string[] plaintext)
 		{
 			Close();
-			TestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path);
+			TestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, 
+				file => Path.GetExtension(file) != ".cfs");
 		}
 
 		protected void Close()

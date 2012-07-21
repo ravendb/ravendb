@@ -28,7 +28,7 @@ namespace Raven.Bundles.Tests.Compression
 				Assert.Equal(CompanyName, session.Load<Company>(1).Name);
 			}
 
-			AssertPlainTextIsNotSavedInDatabase(CompanyName);
+			AssertPlainTextIsNotSavedInDatabase_ExceptIndexes(CompanyName);
 		}
 
 		[Fact]
@@ -53,7 +53,7 @@ namespace Raven.Bundles.Tests.Compression
 			Assert.True(jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
 
 
-			AssertPlainTextIsNotSavedInDatabase(FirstCompany);
+			AssertPlainTextIsNotSavedInDatabase_ExceptIndexes(FirstCompany);
 		}
 	}
 }

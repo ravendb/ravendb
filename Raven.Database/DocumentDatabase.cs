@@ -171,24 +171,25 @@ namespace Raven.Database
 			try
 			{
 
-			TransactionalStorage.Batch(actions => currentEtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
+				TransactionalStorage.Batch(actions => currentEtagBase = actions.General.GetNextIdentityValue("Raven/Etag"));
 
-			// Index codecs must be initialized before we try to read an index
-			InitializeTriggers();
+				TransportState = new TransportState();
 
-			IndexDefinitionStorage = new IndexDefinitionStorage(
-				configuration,
-				TransactionalStorage,
-				configuration.DataDirectory,
-				configuration.Container.GetExportedValues<AbstractViewGenerator>(),
-				Extensions);
-			IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
+				// Index codecs must be initialized before we try to read an index
+				InitializeTriggers();
 
-			workContext.Configuration = configuration;
-			workContext.IndexStorage = IndexStorage;
-			workContext.TransactionaStorage = TransactionalStorage;
-			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
-			TransportState = new TransportState();
+				IndexDefinitionStorage = new IndexDefinitionStorage(
+					configuration,
+					TransactionalStorage,
+					configuration.DataDirectory,
+					configuration.Container.GetExportedValues<AbstractViewGenerator>(),
+					Extensions);
+				IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
+
+				workContext.Configuration = configuration;
+				workContext.IndexStorage = IndexStorage;
+				workContext.TransactionaStorage = TransactionalStorage;
+				workContext.IndexDefinitionStorage = IndexDefinitionStorage;
 				ExecuteStartupTasks();
 			}
 			catch (Exception)

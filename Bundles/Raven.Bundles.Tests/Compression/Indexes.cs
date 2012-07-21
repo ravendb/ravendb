@@ -50,6 +50,8 @@ namespace Raven.Bundles.Tests.Compression
 					.SelectFields<Company>("Name")
 					.ToList();
 			}
+
+			AssertPlainTextIsNotSavedInDatabase_ExceptIndexes(FirstCompany, SecondCompany);
 		}
 		
 		[Fact]
@@ -103,6 +105,8 @@ namespace Raven.Bundles.Tests.Compression
 					.SelectFields<CompanyCount>("Name", "Count")
 					.ToList();
 			}
+
+			AssertPlainTextIsNotSavedInDatabase_ExceptIndexes(FirstCompany, SecondCompany);
 		}
 	}
 

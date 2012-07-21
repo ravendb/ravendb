@@ -42,13 +42,15 @@ namespace Raven.Bundles.Tests
 			return false;
 		}
 
-		public static void AssertPlainTextIsNotSavedInAnyFileInPath(string[] plaintext, string path)
+		public static void AssertPlainTextIsNotSavedInAnyFileInPath(string[] plaintext, string path, Func<string, bool> filter)
 		{
 			// Asserts that the given string does not appear in any of the files in the database folder.
 			byte[][] offendingBytes = plaintext.Select(Encoding.UTF8.GetBytes).ToArray();
 
 			foreach (string file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
 			{
+				if(filter(file)==false)
+					continue;
 				byte[] contents = File.ReadAllBytes(file);
 
 				foreach (var bytes in offendingBytes)
