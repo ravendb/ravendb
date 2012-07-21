@@ -8,7 +8,6 @@ using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Reflection;
-using Raven.Bundles.Compression.Plugin;
 using Raven.Client.Document;
 using Raven.Server;
 
@@ -26,20 +25,15 @@ namespace Raven.Bundles.Tests.Compression
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			ravenDbServer = new RavenDbServer(
-				new database::Raven.Database.Config.RavenConfiguration
-				{
-					Port = 8079,
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					DataDirectory = path,
-					Catalog =
-						{
-							Catalogs =
-								{
-									new AssemblyCatalog(typeof (DocumentCompression).Assembly)
-								},
-						}
-				});
+			var config = new database::Raven.Database.Config.RavenConfiguration
+			             	{
+			             		Port = 8079,
+			             		RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+			             		DataDirectory = path,
+								Settings = {{"Raven/ActiveBundles", "Compression"}}
+			             	};
+			config.PostInit();
+			ravenDbServer = new RavenDbServer(config);
 			documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079"

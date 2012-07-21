@@ -15,6 +15,7 @@ namespace Raven.Bundles.Compression.Plugin
 {
 	[InheritedExport(typeof(AbstractDocumentCodec))]
 	[ExportMetadata("Order", 500)]
+	[ExportMetadata("Bundle", "Compression")]
 	public class DocumentCompression : AbstractDocumentCodec
 	{
 		public const uint CompressFileMagic = 0x72706D43; // "Cmpr"
