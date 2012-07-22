@@ -737,7 +737,7 @@ namespace Raven.Database.Server
 
 			if (match.Success == false)
 			{
-				currentTenantId.Value = Constants.DefaultDatabase;
+				currentTenantId.Value = Constants.SystemDatabase;
 				currentDatabase.Value = SystemDatabase;
 				currentConfiguration.Value = SystemConfiguration;
 				databaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.Now, (s, time) => SystemTime.Now);

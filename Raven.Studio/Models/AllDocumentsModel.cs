@@ -15,37 +15,38 @@ namespace Raven.Studio.Models
 		}
 
 		private static WeakReference<Observable<DocumentsModel>> documents;
-        public static Observable<DocumentsModel> Documents
+		public static Observable<DocumentsModel> Documents
 		{
 			get
 			{
 				if (documents == null || documents.IsAlive == false)
 				{
-                    documents = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel>
-                                                                                          {
-                                                                                              Value = CreateDocumentsModel()
-                                                                                          });
+					documents = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel>
+																						  {
+																							  Value = CreateDocumentsModel()
+																						  });
 				}
 				var target = documents.Target ?? Documents;
 				return target;
 			}
 		}
 
-	    private static DocumentsModel CreateDocumentsModel()
-	    {
-	        var documentsModel = new DocumentsModel(new DocumentsCollectionSource())
-	                                 {
-	                                     DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index), Context = "AllDocuments",
-	                                 };
-
-            documentsModel.SetChangesObservable(d => d.Changes().ForAllDocuments().Select(s => Unit.Default));
-
-	        return documentsModel;
-	    }
-
-	    public override void LoadModelParameters(string parameters)
+		private static DocumentsModel CreateDocumentsModel()
 		{
-            Documents.Value.Documents.Refresh();
+			var documentsModel = new DocumentsModel(new DocumentsCollectionSource())
+									 {
+										 DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
+										 Context = "AllDocuments",
+									 };
+
+			documentsModel.SetChangesObservable(d => d.Changes().ForAllDocuments().Select(s => Unit.Default));
+
+			return documentsModel;
+		}
+
+		public override void LoadModelParameters(string parameters)
+		{
+			Documents.Value.Documents.Refresh();
 		}
 	}
 }
