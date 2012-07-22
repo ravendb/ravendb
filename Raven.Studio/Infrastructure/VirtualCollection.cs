@@ -313,7 +313,7 @@ namespace Raven.Studio.Infrastructure
                         }
                         else
                         {
-                            InvalidatePage(request.Page, request.StateWhenRequested);
+                            MarkPageAsError(request.Page, request.StateWhenRequested);
                         }
 
                         // fire off any further requests
@@ -324,7 +324,7 @@ namespace Raven.Studio.Infrastructure
             }
         }
 
-        private void InvalidatePage(int page, uint stateWhenRequestInitiated)
+        private void MarkPageAsError(int page, uint stateWhenRequestInitiated)
         {
             if (stateWhenRequestInitiated != _state)
             {
@@ -345,7 +345,7 @@ namespace Raven.Studio.Infrastructure
                 var virtualItem = _virtualItems[index];
                 if (virtualItem != null)
                 {
-                    virtualItem.Item = null;
+                    virtualItem.ErrorFetchingValue();
                 }
             }
         }
@@ -379,7 +379,7 @@ namespace Raven.Studio.Infrastructure
                 var virtualItem = _virtualItems[index] ?? (_virtualItems[index] = new VirtualItem<T>(this, index));
                 if (virtualItem.Item == null || results[i] == null || !_equalityComparer.Equals(virtualItem.Item, results[i]))
                 {
-                    virtualItem.Item = results[i];
+                    virtualItem.SupplyValue(results[i]);
                 }
             }
 
@@ -453,7 +453,7 @@ namespace Raven.Studio.Infrastructure
                 {
                     if (_virtualItems[i] != null)
                     {
-                        _virtualItems[i].Item = null;
+                        _virtualItems[i].ClearValue();
                     }
                 }
             }
@@ -485,7 +485,7 @@ namespace Raven.Studio.Infrastructure
 
             OnPropertyChanged(new PropertyChangedEventArgs("Count"));
 
-            if (Math.Abs(delta) > IndividualItemNotificationLimit)
+            if (Math.Abs(delta) > IndividualItemNotificationLimit || _itemCount == 0)
             {
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
             }

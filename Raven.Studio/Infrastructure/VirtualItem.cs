@@ -8,6 +8,7 @@ namespace Raven.Studio.Infrastructure
         private readonly int _index;
         private T _item;
         private bool _isStale;
+        private bool dataFetchError;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -21,13 +22,13 @@ namespace Raven.Studio.Infrastructure
         {
             get
             {
-                if (!IsRealized)
+                if (!IsRealized && !DataFetchError)
                 {
                     _parent.RealizeItemRequested(Index);
                 }
                 return _item;
             }
-            set
+            private set
             {
                 _item = value;
                 OnPropertyChanged(new PropertyChangedEventArgs("Item"));
@@ -43,6 +44,34 @@ namespace Raven.Studio.Infrastructure
             {
                 _isStale = value;
                 OnPropertyChanged(new PropertyChangedEventArgs("IsStale"));
+            }
+        }
+
+        public void SupplyValue(T value)
+        {
+            DataFetchError = false;
+            Item = value;
+        }
+
+        public void ClearValue()
+        {
+            DataFetchError = false;
+            Item = null;
+        }
+
+        public void ErrorFetchingValue()
+        {
+            Item = null;
+            DataFetchError = true;
+        }
+
+        public bool DataFetchError
+        {
+            get { return dataFetchError; }
+            private set
+            {
+                dataFetchError = value;
+                OnPropertyChanged(new PropertyChangedEventArgs("DataFetchError"));
             }
         }
 

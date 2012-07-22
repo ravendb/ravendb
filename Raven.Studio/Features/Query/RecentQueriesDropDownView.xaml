@@ -1,0 +1,140 @@
+﻿<Infrastructure:View x:Class="Raven.Studio.Features.Query.RecentQueriesDropDownView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:Query="clr-namespace:Raven.Studio.Features.Query"
+          xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                     xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared"
+                     xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
+                     xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
+                     xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors" mc:Ignorable="d"
+    d:DesignHeight="300" d:DesignWidth="600" d:DataContext="{d:DesignInstance Query:RecentQueriesModel}">
+    
+    <Infrastructure:View.Resources>
+        <Style x:Key="QueryToolTipStyle" TargetType="ToolTip">
+            <Setter Property="ContentTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <Editors:QuerySyntaxTextBlock IsMultiLine="True" Text="{Binding}"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="QueryButtonStyle" TargetType="Button" BasedOn="{StaticResource Style_Button_MouseOverChrome}">
+            <Setter Property="Command" Value="{Binding Path=DataContext.GoToQuery, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+            <Setter Property="CommandParameter" Value="{Binding}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="2,4,4,4"/>
+            <Setter Property="Content" Value="{Binding}"/>
+            <Setter Property="ContentTemplate">
+              <Setter.Value>
+                    <DataTemplate DataType="Query:SavedQuery">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Image Source="{StaticResource Image_Query_Small}" VerticalAlignment="Top" Grid.Row="0" Grid.Column="0"
+                                       Margin="0,0,4,0"/>
+                            <TextBlock Text="{Binding IndexName}"
+                                           Behaviors:FadeTrimming.IsEnabled="True" 
+                                           Grid.Row="0" Grid.Column="1" VerticalAlignment="Top"/>
+                            <Editors:QuerySyntaxTextBlock Text="{Binding Query, Converter={StaticResource StringToSingleLine}}"  Grid.Row="1" Grid.Column="1" Margin="0,2,0,0" 
+                                                          Visibility="{Binding Query, Converter={StaticResource HiddenWhenStringEmptyOrNull}}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,2,0,0" 
+                                                          Visibility="{Binding IsSpatialQuery, Converter={StaticResource BooleanToVisibility}}"
+                                       FontStyle="Italic">
+                                Longitude: <Run Text="{Binding Longitude}"/>, Latitude: <Run Text="{Binding Latitude}"/>, Radius: <Run Text="{Binding Radius}"/>
+                            </TextBlock>
+                        </Grid>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Infrastructure:View.Resources>
+    
+    <Grid x:Name="LayoutRoot" Background="White" Width="700" TextOptions.TextHintingMode="Animated">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="{StaticResource Brush_ToolbarBackground}" Height="28" Visibility="{Binding PinnedQueries.Count, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}">
+                <TextBlock Text="Pinned Queries" Margin="3" FontWeight="Bold" VerticalAlignment="Center"/>
+        </Border>
+        <ItemsControl ItemsSource="{Binding PinnedQueries}"
+                      Grid.Row="1"
+                      Style="{StaticResource Style_ItemsControl_VerticallyScrollable}"
+                      MaxHeight="300"
+                      Visibility="{Binding PinnedQueries.Count, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="Query:SavedQuery">
+                    <toolkit:DockPanel>
+                        <Button Command="{Binding Path=DataContext.UnPinQuery, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Style="{StaticResource Style_Button_MouseOverChrome}"
+                            CommandParameter="{Binding}"
+                                ToolTipService.ToolTip="Un Pin Query"
+                                toolkit:DockPanel.Dock="Right"
+                                Margin="5,3"
+                                VerticalAlignment="Center">
+                            <Image Source="{StaticResource Image_UnPin_Tiny}" Stretch="None"/>
+                        </Button>
+                        <Button Style="{StaticResource QueryButtonStyle}" Padding="2,4,4,4">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Style="{StaticResource QueryToolTipStyle}" Content="{Binding Query}"/>
+                            </ToolTipService.ToolTip>
+                        </Button>
+                    </toolkit:DockPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Border Grid.Row="2" Background="{StaticResource Brush_ToolbarBackground}" Height="28">
+            <toolkit:DockPanel>
+                <Button Command="{Binding ClearHistory}" Style="{StaticResource Style_Button_MouseOverChrome}"
+                        ToolTipService.ToolTip="Clear History"
+                        toolkit:DockPanel.Dock="Right"
+                        Margin="5,3">
+                    <Image Source="{StaticResource Image_ClearHistory_Tiny}" Stretch="None" VerticalAlignment="Center"/>
+                </Button>
+                <TextBlock Text="Recent Queries" Margin="3" VerticalAlignment="Center" FontWeight="Bold"/>
+            </toolkit:DockPanel>
+        </Border>
+        <TextBlock Text="There are no recent queries" FontStyle="Italic" Foreground="Gray" Margin="0,5" 
+                   HorizontalAlignment="Center"
+                   Grid.Row="3"
+                   Visibility="{Binding RecentQueries.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"/>
+        <ItemsControl ItemsSource="{Binding RecentQueries}"
+                      Grid.Row="3"
+                      Style="{StaticResource Style_ItemsControl_VerticallyScrollable}"
+                      MaxHeight="300"
+                      Visibility="{Binding RecentQueries.Count, Converter={StaticResource HiddenWhenLessOrEqualTo}, ConverterParameter=0}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="Query:SavedQuery">
+                    <toolkit:DockPanel>
+                        <Button Command="{Binding Path=DataContext.PinQuery, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Style="{StaticResource Style_Button_MouseOverChrome}"
+                            CommandParameter="{Binding}"
+                                ToolTipService.ToolTip="Pin Query"
+                                toolkit:DockPanel.Dock="Right"
+                                Margin="5,3"
+                                VerticalAlignment="Center">
+                            <Image Source="{StaticResource Image_Pin_Tiny}" Stretch="None"/>
+                        </Button>
+                        <Button Style="{StaticResource QueryButtonStyle}" Padding="2,4,4,4">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Style="{StaticResource QueryToolTipStyle}" Content="{Binding Query}"/>
+                            </ToolTipService.ToolTip>
+                        </Button>
+                    </toolkit:DockPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+    </Grid>
+</Infrastructure:View>

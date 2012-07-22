@@ -28,10 +28,17 @@ namespace Raven.Studio.Models
 			set { name = value; OnPropertyChanged(() => Name); }
 		}
 
+	    public string IconResource
+	    {
+	        get { return iconResource; }
+            set { iconResource = value; OnPropertyChanged(() => IconResource); }
+	    }
+
 		public string Description { get; set; }
 
 		private TaskStatus taskStatus;
-		public TaskStatus TaskStatus
+	    private string iconResource;
+	    public TaskStatus TaskStatus
 		{
 			get { return taskStatus; }
 			set

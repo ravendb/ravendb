@@ -142,7 +142,7 @@ namespace Raven.Studio.Infrastructure
 
 											var ex = task.Exception.ExtractSingleInnerException() as TException;
 											if (ex == null)
-			                           			return task;
+                                                return Execute.EmptyResult<object>();
 
 											Execute.OnTheUI(() => action(ex));
 			                           		return Execute.EmptyResult<object>();
@@ -154,6 +154,11 @@ namespace Raven.Studio.Infrastructure
 		{
 			return parent.CatchIgnore<TException>(ex => action());
 		}
+
+        public static Task CatchIgnore(this Task parent)
+        {
+            return parent.CatchIgnore<Exception>(ex => { });
+        }
 
 		public static Task ProcessTasks(this IEnumerable<Task> tasks)
 		{

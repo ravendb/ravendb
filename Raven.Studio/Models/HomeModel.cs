@@ -98,26 +98,33 @@ namespace Raven.Studio.Models
 					.ObservePropertyChanged()
 					.Select(e => Unit.Default);
 
-				databaseChanged
-					.SubscribeWeakly(this, (target, d) => target.HandleDatabaseChanged(target.database.Value));
+			    databaseChanged
+			        .SubscribeWeakly(this, (target, d) => target.HandleDatabaseChanged(target.database.Value));
+
+                SubscribeToStatisticsChanged(database.Value);
 			}
 
 			private void HandleDatabaseChanged(DatabaseModel databaseModel)
 			{
 				RaiseCanExecuteChanged();
 
-				databaseModel.Statistics
-					.ObservePropertyChanged()
-					.TakeUntil(databaseChanged)
-					.SubscribeWeakly(this, (target, e) => target.RaiseCanExecuteChanged());
-			}
+                SubscribeToStatisticsChanged(databaseModel);
+            }
 
-			public override bool CanExecute(object parameter)
-			{
-				return database.Value != null
-					&& database.Value.Statistics.Value != null
-					   && database.Value.Statistics.Value.CountOfDocuments == 0;
-			}
+		    private void SubscribeToStatisticsChanged(DatabaseModel databaseModel)
+		    {
+		        databaseModel.Statistics
+		            .ObservePropertyChanged()
+		            .TakeUntil(databaseChanged)
+		            .SubscribeWeakly(this, (target, e) => target.RaiseCanExecuteChanged());
+		    }
+
+		    public override bool CanExecute(object parameter)
+            {
+                return database.Value != null
+                    && database.Value.Statistics.Value != null
+                       && database.Value.Statistics.Value.CountOfDocuments == 0;
+            }
 
 			public override void Execute(object parameter)
 			{

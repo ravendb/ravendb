@@ -19,6 +19,7 @@ using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 using Raven.Client.Extensions;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Query
 {
@@ -34,7 +35,7 @@ namespace Raven.Studio.Features.Query
 
 		public override void Execute(object parameter)
 		{
-			query = model.Query.Value;
+			query = model.Query;
 			ClearRecentQuery();
 			model.RememberHistory();
 
@@ -51,8 +52,23 @@ namespace Raven.Studio.Features.Query
 								   }
 							   });
 
-			model.CollectionSource.UpdateQuery(model.IndexName, CreateTemplateQuery());  
+            model.DocumentsResult.SetPriorityColumns(GetRelevantFields());
+		    var templateQuery = CreateTemplateQuery();
+		    model.QueryUrl = templateQuery.GetIndexQueryUrl(ApplicationModel.Current.Server.Value.Url + "databases/" + model.Database.Value.Name, model.IndexName, "indexes");
+		    model.CollectionSource.UpdateQuery(model.IndexName, templateQuery);  
 		}
+
+	    private IList<string> GetRelevantFields()
+	    {
+	        return model.QueryDocument.GetTextOfAllTokensMatchingType("Field").Select(t => t.TrimEnd(':').Trim())
+	            .Concat(
+	                model.SortBy
+                    .Where(s => !string.IsNullOrEmpty(s.Value))
+                    .Select(s => s.Value.EndsWith("DESC") ? s.Value.Substring(0, s.Value.Length - 5) : s.Value))
+	            .Distinct()
+                .SelectMany(f => f.Contains("_") ? new[] {f, f.Replace("_", ".")} : new[] { f}) // if the field name contains underscores, it is likely referring to a property 
+	            .ToList();
+	    }
 
 		private void ClearRecentQuery()
 		{
@@ -89,7 +105,8 @@ namespace Raven.Studio.Features.Query
 			{
 				q.FieldsToFetch = new[] { Constants.AllFields };
 			}
-
+			
+			q.SkipTransformResults = model.SkipTransformResults;
 			if (model.IsSpatialQuerySupported &&
 				model.Latitude.HasValue && model.Longitude.HasValue)
 			{
@@ -106,7 +123,7 @@ namespace Raven.Studio.Features.Query
 
 		private void SuggestResults()
 		{
-			foreach (var fieldAndTerm in QueryEditor.GetCurrentFieldsAndTerms(model.Query.Value))
+			foreach (var fieldAndTerm in model.GetCurrentFieldsAndTerms())
 			{
 				DatabaseCommands.SuggestAsync(model.IndexName, new SuggestionQuery {Field = fieldAndTerm.Field, Term = fieldAndTerm.Term, MaxSuggestions = 10})
 					.ContinueOnSuccessInTheUIThread(result => model.Suggestions.AddRange(

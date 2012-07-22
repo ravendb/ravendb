@@ -30,7 +30,7 @@ namespace Raven.Studio.Models
         private const string PriorityColumnsDocumentName = "Raven/Studio/PriorityColumns";
         private EditVirtualDocumentCommand editDocument;
         private Func<string, int, DocumentNavigator> documentNavigatorFactory;
-
+        private IList<string> contextPriorityProperties; 
         public VirtualCollection<ViewableDocument> Documents { get; private set; }
         
         /// <summary>
@@ -108,6 +108,17 @@ namespace Raven.Studio.Models
         private IList<ColumnDefinition> GetCurrentColumnsSuggestion()
         {
             var suggester = new ColumnSuggester();
+
+            var priorityColumns = this.priorityColumns;
+
+            if (contextPriorityProperties != null && contextPriorityProperties.Count > 0)
+            {
+                priorityColumns = contextPriorityProperties
+                    .Select(p => new PriorityColumn() { PropertyNamePattern = "^" + p.Replace(".", "\\.") + "$"})
+                    .Concat(priorityColumns.EmptyIfNull())
+                    .ToList();
+            }
+
             var newColumns = suggester.AutoSuggest(GetMostRecentDocuments(), Context, priorityColumns);
 
             return newColumns;
@@ -234,6 +245,12 @@ namespace Raven.Studio.Models
                                    BeginLoadPriorityProperties();
                                    UpdateColumnSet();
                                });
+        }
+
+        public void SetPriorityColumns(IList<string> priorityColumns)
+        {
+            contextPriorityProperties = priorityColumns;
+            UpdateColumnSet();
         }
 
         private void BeginLoadPriorityProperties()
