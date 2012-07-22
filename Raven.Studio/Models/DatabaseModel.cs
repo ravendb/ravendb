@@ -13,8 +13,6 @@ namespace Raven.Studio.Models
 {
 	public class DatabaseModel : Model
 	{
-		public const string SystemDatabaseName = "System";
-
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly string name;
 	    private readonly DocumentStore documentStore;
@@ -36,7 +34,7 @@ namespace Raven.Studio.Models
 			SelectedTask = new Observable<TaskModel> {Value = Tasks.FirstOrDefault()};
 			Statistics = new Observable<DatabaseStatistics>();
 
-			asyncDatabaseCommands = name.Equals(SystemDatabaseName, StringComparison.OrdinalIgnoreCase)
+			asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
 			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
 			                             	: documentStore.AsyncDatabaseCommands.ForDatabase(name);
 		}
@@ -45,7 +43,9 @@ namespace Raven.Studio.Models
 
         public IDatabaseChanges Changes()
         {
-            return documentStore.Changes(name);
+        	return name == Constants.SystemDatabase ? 
+				documentStore.Changes() : 
+				documentStore.Changes(name);
         }
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
