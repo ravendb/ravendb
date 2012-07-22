@@ -1,8 +1,10 @@
 using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Util;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using System.Linq;
@@ -15,14 +17,16 @@ namespace Raven.Studio.Models
 
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly string name;
+	    private readonly DocumentStore documentStore;
 
-		public Observable<TaskModel> SelectedTask { get; set; }
+	    public Observable<TaskModel> SelectedTask { get; set; }
 
 		public DatabaseModel(string name, DocumentStore documentStore)
 		{
 			this.name = name;
+		    this.documentStore = documentStore;
 
-			Tasks = new BindableCollection<TaskModel>(x => x.Name)
+		    Tasks = new BindableCollection<TaskModel>(x => x.Name)
 			{
 				new ImportTask(),
 				new ExportTask(),
@@ -38,6 +42,11 @@ namespace Raven.Studio.Models
 		}
 
 		public BindableCollection<TaskModel> Tasks { get; private set; }
+
+        public IDatabaseChanges Changes()
+        {
+            return documentStore.Changes(name);
+        }
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{

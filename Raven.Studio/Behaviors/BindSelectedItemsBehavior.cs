@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -41,7 +42,7 @@ namespace Raven.Studio.Behaviors
             {
                 return ((DataGrid)AssociatedObject).SelectedItems;
             }
-            else if (AssociatedObject is Selector)
+            else if (AssociatedObject is ListBox)
             {
                 return ((ListBox)AssociatedObject).SelectedItems;
             }
@@ -49,6 +50,41 @@ namespace Raven.Studio.Behaviors
             {
                 return null;
             }
+        }
+
+        private Action<IEnumerable> GetSelectedItemsListUpdater()
+        {
+            if (AssociatedObject is DataGrid)
+            {
+                return GetListUpdater(((DataGrid) AssociatedObject).SelectedItems);
+            }
+            else if (AssociatedObject is ListBox && ((ListBox)AssociatedObject).SelectionMode != SelectionMode.Single)
+            {
+                return GetListUpdater(((ListBox)AssociatedObject).SelectedItems);
+            }
+            else if (AssociatedObject is ListBox)
+            {
+                return
+                    (newSelection) =>
+                    (AssociatedObject as ListBox).SelectedItem = newSelection.Cast<object>().FirstOrDefault();
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        private Action<IEnumerable> GetListUpdater(IList selectedItems)
+        {
+            return newSelection =>
+                       {
+                           selectedItems.Clear();
+
+                           foreach (var item in newSelection)
+                           {
+                               selectedItems.Add(item);
+                           }
+                       };
         }
 
         protected override void OnAttached()
@@ -137,16 +173,11 @@ namespace Raven.Studio.Behaviors
 
         private void HandleDesiredSelectionChanged(object sender, DesiredSelectionChangedEventArgs e)
         {
-            var selectedItemsList = GetSelectedItemsList();
+            var selectedItemsListUpdater = GetSelectedItemsListUpdater();
 
-            if (selectedItemsList != null)
+            if (selectedItemsListUpdater != null)
             {
-                selectedItemsList.Clear();
-
-                foreach (var item in e.Items)
-                {
-                    selectedItemsList.Add(item);
-                }
+                selectedItemsListUpdater(e.Items);
             }
         }
     }

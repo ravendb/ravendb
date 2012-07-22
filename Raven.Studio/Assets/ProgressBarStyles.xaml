@@ -1,0 +1,102 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style TargetType="ProgressBar">
+        <Setter Property="Foreground">
+            <Setter.Value>
+                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                    <GradientStop Color="#E9E2E5" Offset="0"/>
+                    <GradientStop Color="#BBB6B8" Offset="0.2"/>
+                    <GradientStop Color="#BBB6B8" Offset="1"/>
+                </LinearGradientBrush>
+            </Setter.Value>
+        </Setter>
+      <Setter Property="Background" Value="White" />
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Maximum" Value="100" />
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="BorderBrush" Value="#BBB6B8" />
+      <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ProgressBar">
+                    <Grid x:Name="Root">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Determinate">
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetName="Glint"
+                                                   Storyboard.TargetProperty="(Shape.Fill).(LinearGradientBrush.RelativeTransform).(TranslateTransform.X)"
+                                                   Duration="00:00:6" From="-4" To="4" />
+                                    </Storyboard>
+                                </VisualState>
+                              <VisualState x:Name="Indeterminate">
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetName="IndeterminateGradientFill"
+                                                   Storyboard.TargetProperty="(Shape.Fill).(LinearGradientBrush.Transform).(TransformGroup.Children)[0].X"
+                                                   Duration="00:00:.5" From="0" To="20" />
+                                        <ObjectAnimationUsingKeyFrames Duration="00:00:00" Storyboard.TargetName="IndeterminateRoot" Storyboard.TargetProperty="(UIElement.Visibility)">
+                                            <DiscreteObjectKeyFrame KeyTime="00:00:00">
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <Visibility>Visible</Visibility>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <ObjectAnimationUsingKeyFrames Duration="00:00:00" Storyboard.TargetName="DeterminateRoot" Storyboard.TargetProperty="(UIElement.Visibility)">
+                                            <DiscreteObjectKeyFrame KeyTime="00:00:00">
+                                                <DiscreteObjectKeyFrame.Value>
+                                                    <Visibility>Collapsed</Visibility>
+                                                </DiscreteObjectKeyFrame.Value>
+                                            </DiscreteObjectKeyFrame>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <!--Default Root Visuals for either type of ProgressBar-->
+                        <Border Name="ProgressBarTrack" CornerRadius="0" Background="{TemplateBinding Background}" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}" />
+                        <Grid x:Name="ProgressBarRootGrid" >
+                            <!-- Beginning of Gradient over all visuals -->
+                            <Rectangle Canvas.ZIndex="1" x:Name="ProgressBarRootGradient" StrokeThickness="1" Margin="{TemplateBinding BorderThickness}" Stroke="#FFFFFFFF" RadiusX="1.5" RadiusY="1.5" />
+                          <!-- Beginning of Indeterminate Progress Bar Visuals-->
+                            <Grid x:Name="IndeterminateRoot" Visibility="Collapsed">
+                                <Rectangle x:Name="IndeterminateSolidFill" Stroke="#FF448DCA" RadiusX="0" RadiusY="2" StrokeThickness="0" Margin="{TemplateBinding BorderThickness}" Fill="{TemplateBinding Foreground}" Opacity="1" RenderTransformOrigin="0.5,0.5" />
+                                <Rectangle x:Name="IndeterminateGradientFill" RadiusX="0" RadiusY="0" StrokeThickness="1" Margin="{TemplateBinding BorderThickness}" Opacity="0.7" >
+                                    <Rectangle.Fill>
+                                        <LinearGradientBrush SpreadMethod="Repeat" MappingMode="Absolute" EndPoint="0,1" StartPoint="20,1">
+                                            <LinearGradientBrush.Transform >
+                                                <TransformGroup>
+                                                    <TranslateTransform X="0" />
+                                                    <SkewTransform AngleX="-30" />
+                                                </TransformGroup>
+                                            </LinearGradientBrush.Transform>
+                                            <GradientStop Color="#FFFFFFFF" Offset="0"/>
+                                            <GradientStop Color="#00FFFFFF" Offset=".25"/>
+                                            <GradientStop Color="#FFFFFFFF" Offset="0.85"/>
+                                        </LinearGradientBrush>
+                                    </Rectangle.Fill>
+                                </Rectangle>
+                            </Grid>
+                            <!-- Beginning of Determinate Progress Bar Visuals-->
+                            <Grid x:Name="DeterminateRoot" Margin="1" >
+                                <!--Background -->
+                                <Rectangle HorizontalAlignment="Left" x:Name="ProgressBarIndicator" Margin="{TemplateBinding BorderThickness}" StrokeThickness="0.5" RadiusX="1.5" RadiusY="1.5" Fill="{TemplateBinding Foreground}"/>
+                                <Rectangle x:Name="Glint" RadiusX="0" RadiusY="0" StrokeThickness="1" Margin="{TemplateBinding BorderThickness}" Opacity="0.7" >
+                                    <Rectangle.Fill>
+                                        <LinearGradientBrush SpreadMethod="Pad" MappingMode="RelativeToBoundingBox" EndPoint="0,1" StartPoint="1,1">
+                                          <LinearGradientBrush.RelativeTransform>
+                                                <TranslateTransform X="0" />
+                                            </LinearGradientBrush.RelativeTransform>
+                                            <GradientStop Color="#00FFFFFF" Offset="0.3"/>
+                                            <GradientStop Color="#B0FFFFFF" Offset=".5"/>
+                                            <GradientStop Color="#00FFFFFF" Offset="0.7"/>
+                                        </LinearGradientBrush>
+                                    </Rectangle.Fill>
+                                </Rectangle>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

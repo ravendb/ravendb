@@ -6,7 +6,7 @@
 			 xmlns:Models="clr-namespace:Raven.Studio.Models"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 			 xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
-			 mc:Ignorable="d"
+             xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" mc:Ignorable="d"
 			 x:Class="Raven.Studio.NotificationView"
 			 d:DesignWidth="640"
 			 d:DesignHeight="480"
@@ -143,13 +143,19 @@
 				</Grid>
 				<TextBlock 
                            x:Name="TextBlock"
-                           TextWrapping="Wrap"
-						   Text="{Binding Message}"
+                           TextWrapping="NoWrap"
+						   Text="{Binding Message, Converter={StaticResource FirstLineOnly}}"
 						   VerticalAlignment="Center"
 						   Foreground="White"
 						   HorizontalAlignment="Center"
-						   Margin="5,10,20,10" />
-			</StackPanel>
+						   Margin="5,0,10,0"
+                           MaxWidth="650"
+                           Behaviors:FadeTrimming.IsEnabled="True"/>
+                <HyperlinkButton Content="Details" Command="{StaticResource ShowErrorListWindowCommand}" CommandParameter="{Binding}" 
+                               Margin="10,0"
+                               Visibility="{Binding Level, Converter={StaticResource VisibleWhenNotificationLevelIsError}}" 
+                                 VerticalAlignment="Center"/>
+            </StackPanel>
 		</Border>
 	</Grid>
 </UserControl>

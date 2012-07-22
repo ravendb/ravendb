@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Reactive;
 using System.Reactive.Linq;
@@ -31,6 +32,25 @@ namespace Raven.Studio.Extensions
                 == OutliningState.HasExpandedNodeStart)
             {
                 outliningManager.ToggleAllOutliningExpansion();
+            }
+        }
+
+        public static IEnumerable<string> GetTextOfAllTokensMatchingType(this IEditorDocument document, string tokenType)
+        {
+            var reader = document.CurrentSnapshot.GetReader(0);
+
+            while (!reader.IsAtSnapshotEnd)
+            {
+                var token = reader.PeekToken();
+
+                if (token.Key == tokenType)
+                {
+                    yield return reader.ReadText(token.Length);
+                }
+                else
+                {
+                    reader.ReadToken();
+                }
             }
         }
     }

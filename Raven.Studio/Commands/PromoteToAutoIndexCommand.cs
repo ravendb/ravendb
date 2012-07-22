@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -6,24 +7,33 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Commands
 {
-	public class PromoteToAutoIndexCommand : ListBoxCommand<IndexItem>
+    public class PromoteToAutoIndexCommand : ItemSelectionCommand<IndexItem>
 	{
-		public override bool CanExecute(object parameter)
-		{
-			if (base.CanExecute(parameter) == false)
-				return false;
+        private readonly IndexesModel model;
 
-			var index = SelectedItems
-				.Select(x => x.IndexName)
-				.First();
+        public PromoteToAutoIndexCommand(IndexesModel model) : base(model.ItemSelection)
+        {
+            this.model = model;
+        }
+
+        protected override bool CanExecuteOverride(IEnumerable<IndexItem> items)
+        {
+			var index = items
+				.Select(x => x.Name)
+				.FirstOrDefault();
+
+            if (index == null)
+            {
+                return false;
+            }
 
 			return index.StartsWith("Temp/", StringComparison.InvariantCultureIgnoreCase);
 		}
 
-		public override void Execute(object parameter)
-		{
-			var index = SelectedItems
-				.Select(x => x.IndexName)
+        protected override void ExecuteOverride(IEnumerable<IndexItem> items)
+        {
+            var index = items
+				.Select(x => x.Name)
 				.First();
 
 			ChangeIndexName(index, index.Replace("Temp/", "Auto/"));
@@ -31,15 +41,13 @@ namespace Raven.Studio.Commands
 
 		private void ChangeIndexName(string oldIndexName, string newIndexName)
 		{
-			var model = ((IndexesModel) Context);
-
 			// Check if there is already an index with that name
-			var alreadyExists = IndexesModel.GroupedIndexes
+			var alreadyExists = model.GroupedIndexes
 				.OfType<IndexItem>()
-				.Any(x => x.IndexName == newIndexName);
+				.Any(x => x.Name == newIndexName);
 			if (alreadyExists)
 			{
-				ApplicationModel.Current.AddNotification(new Notification("Auto index " + newIndexName + " already exists"));
+				ApplicationModel.Current.AddWarningNotification("Auto index " + newIndexName + " already exists");
 				model.ForceTimerTicked();
 				return;
 			}
@@ -53,7 +61,7 @@ namespace Raven.Studio.Commands
 				                   			.ContinueOnSuccess(() => DatabaseCommands.DeleteIndexAsync(oldIndexName))
 				                   			.ContinueOnSuccessInTheUIThread(() =>
 				                   			                                	{
-				                   			                                		ApplicationModel.Current.AddNotification(new Notification("Temp index " + oldIndexName + " successfully promoted"));
+				                   			                                		ApplicationModel.Current.AddInfoNotification("Temp index " + oldIndexName + " successfully promoted");
 				                   			                                		model.ForceTimerTicked();
 				                   			                                	})
 				                   			.Catch();

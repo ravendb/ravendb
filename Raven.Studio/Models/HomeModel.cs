@@ -32,12 +32,13 @@ namespace Raven.Studio.Models
 			{
 				if (recentDocuments == null)
 				{
-					recentDocuments = (new DocumentsModel(new DocumentsCollectionSource())
-																	  {
-																		  Header = "Recent Documents",
-																		  DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
-																		  Context = "AllDocuments",
-																	  });
+				    recentDocuments = (new DocumentsModel(new DocumentsCollectionSource())
+				                                                      {
+				                                                          Header = "Recent Documents",
+                                                                          DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
+                                                                          Context = "AllDocuments",
+				                                                      });
+                    recentDocuments.SetChangesObservable(d => d.Changes().ForAllDocuments().Select(s => Unit.Default));
 				}
 
 				return recentDocuments;
@@ -49,25 +50,10 @@ namespace Raven.Studio.Models
 			ModelUrl = "/home";
 		}
 
-		public override void LoadModelParameters(string parameters)
-		{
-			RecentDocuments.TimerTickedAsync();
-		}
-
-		public override Task TimerTickedAsync()
-		{
-			if (ApplicationModel.Current.Server.Value.CreateNewDatabase)
-			{
-				ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
-				Command.ExecuteCommand(new CreateDatabaseCommand());
-			}
-			return RecentDocuments.TimerTickedAsync();
-		}
-
-		protected override void OnViewLoaded()
-		{
-
-		}
+        protected override void OnViewLoaded()
+        {
+            RecentDocuments.Documents.Refresh();
+        }
 
 		private bool isGeneratingSampleData;
 		public bool IsGeneratingSampleData
@@ -98,26 +84,33 @@ namespace Raven.Studio.Models
 					.ObservePropertyChanged()
 					.Select(e => Unit.Default);
 
-				databaseChanged
-					.SubscribeWeakly(this, (target, d) => target.HandleDatabaseChanged(target.database.Value));
+			    databaseChanged
+			        .SubscribeWeakly(this, (target, d) => target.HandleDatabaseChanged(target.database.Value));
+
+                SubscribeToStatisticsChanged(database.Value);
 			}
 
 			private void HandleDatabaseChanged(DatabaseModel databaseModel)
 			{
 				RaiseCanExecuteChanged();
 
-				databaseModel.Statistics
-					.ObservePropertyChanged()
-					.TakeUntil(databaseChanged)
-					.SubscribeWeakly(this, (target, e) => target.RaiseCanExecuteChanged());
-			}
+                SubscribeToStatisticsChanged(databaseModel);
+            }
 
-			public override bool CanExecute(object parameter)
-			{
-				return database.Value != null
-					&& database.Value.Statistics.Value != null
-					   && database.Value.Statistics.Value.CountOfDocuments == 0;
-			}
+		    private void SubscribeToStatisticsChanged(DatabaseModel databaseModel)
+		    {
+		        databaseModel.Statistics
+		            .ObservePropertyChanged()
+		            .TakeUntil(databaseChanged)
+		            .SubscribeWeakly(this, (target, e) => target.RaiseCanExecuteChanged());
+		    }
+
+		    public override bool CanExecute(object parameter)
+            {
+                return database.Value != null
+                    && database.Value.Statistics.Value != null
+                       && database.Value.Statistics.Value.CountOfDocuments == 0;
+            }
 
 			public override void Execute(object parameter)
 			{

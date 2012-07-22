@@ -173,6 +173,11 @@ namespace Raven.Abstractions.Data
 			if (DefaultOperator != QueryOperator.Or)
 				path.Append("&operator=AND");
 			
+            if (SkipTransformResults)
+            {
+                path.Append("&skipTransformResults=true");
+            }
+
 			if (Cutoff != null)
 			{
 				var cutOffAsString =

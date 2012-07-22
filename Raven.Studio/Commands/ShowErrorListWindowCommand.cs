@@ -10,6 +10,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using Raven.Studio.Features.Util;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 
 namespace Raven.Studio.Commands
 {
@@ -17,7 +18,7 @@ namespace Raven.Studio.Commands
     {
         public override void Execute(object parameter)
         {
-            ErrorListWindow.ShowNew();
+            ErrorListWindow.ShowErrors(parameter as Notification);
         }
     }
 }

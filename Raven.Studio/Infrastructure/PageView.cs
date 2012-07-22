@@ -97,6 +97,16 @@ namespace Raven.Studio.Infrastructure
             }
         }
 
+        protected override void OnNavigatingFrom(System.Windows.Navigation.NavigatingCancelEventArgs e)
+        {
+            base.OnNavigatingFrom(e);
+
+            if (DataContext is IObservable && (DataContext as IObservable).Value is PageViewModel)
+            {
+                e.Cancel = !(((DataContext as IObservable).Value) as PageViewModel).CanLeavePage();
+            }
+        }
+
         private void HandleDataContectChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             if (isLoaded)

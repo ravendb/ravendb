@@ -37,21 +37,22 @@ namespace Raven.Studio.Models
 		private int totalItems;
 		public string DocumentKey { get; private set; }
 		private readonly string currentDatabase;
-		private DocumentNavigator navigator;
-		private ICommand navigateNext;
-		private ICommand navigatePrevious;
-		private string urlForFirst;
-		private string urlForPrevious;
-		private string urlForNext;
-		private string urlForLast;
-		private DocumentSection dataSection;
-		private DocumentSection metaDataSection;
-		private ICommand deleteCommand;
-		private ICommand navigateFirst;
-		private ICommand navigateLast;
-		private string documentSize;
-		private static JsonSyntaxLanguageExtended JsonLanguage;
-		private bool isShowingErrors;
+        private DocumentNavigator navigator;
+        private ICommand navigateNext;
+        private ICommand navigatePrevious;
+        private string urlForFirst;
+        private string urlForPrevious;
+        private string urlForNext;
+        private string urlForLast;
+        private DocumentSection dataSection;
+        private DocumentSection metaDataSection;
+        private ICommand deleteCommand;
+        private ICommand navigateFirst;
+        private ICommand navigateLast;
+        private string documentSize;
+        private static JsonSyntaxLanguageExtended JsonLanguage;
+        private bool isShowingErrors;
+        private bool hasUnsavedChanges;
 
 		static EditableDocumentModel()
 		{
@@ -105,11 +106,12 @@ namespace Raven.Studio.Models
 
 			currentDatabase = Database.Value.Name;
 
-			dataSection.Document.ObserveTextChanged()
-				.Merge(metaDataSection.Document.ObserveTextChanged())
-				.Throttle(TimeSpan.FromSeconds(1))
-				.ObserveOnDispatcher()
-				.Subscribe(_ => HandleDocumentChanged());
+		    dataSection.Document.ObserveTextChanged()
+                .Merge(metaDataSection.Document.ObserveTextChanged())
+                .Do(_ => HasUnsavedChanges = true)
+		        .Throttle(TimeSpan.FromSeconds(1))
+		        .ObserveOnDispatcher()
+		        .Subscribe(_ => HandleDocumentChanged());
 		}
 
 		private void HandleDocumentChanged()
@@ -422,6 +424,7 @@ namespace Raven.Studio.Models
 
 			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
 
+            HasUnsavedChanges = false;
 			UpdateRelated();
 			OnEverythingChanged();
 		}
@@ -695,17 +698,20 @@ namespace Raven.Studio.Models
 		{
 			ParserDispatcherManager.EnsureParserDispatcherIsCreated();
 
-			if (!string.IsNullOrEmpty(Settings.Instance.DocumentOutliningMode))
-			{
-				var mode = OutliningModes.FirstOrDefault(m => m.Name == Settings.Instance.DocumentOutliningMode);
-				if (mode == null)
-				{
-					mode = OutliningModes.FirstOrDefault(m => m.Name == "Enabled");
-				}
+            DocumentOutliningMode mode = null;
 
-				SelectedOutliningMode = mode;
-			}
-		}
+            if (!string.IsNullOrEmpty(Settings.Instance.DocumentOutliningMode))
+            {
+                mode = OutliningModes.FirstOrDefault(m => m.Name == Settings.Instance.DocumentOutliningMode);
+            }
+
+            if (mode == null)
+            {
+                mode = OutliningModes.FirstOrDefault(m => m.Name == "Enabled");
+            }
+
+            SelectedOutliningMode = mode;
+        }
 
 		public string Key
 		{
@@ -804,6 +810,19 @@ namespace Raven.Studio.Models
 			return tcs.Task;
 		}
 
+        public override bool CanLeavePage()
+        {
+            if (HasUnsavedChanges)
+            {
+                return AskUser.Confirmation("Edit Document",
+                                            "There are unsaved changes to this document. Are you sure you want to continue?");
+            }
+            else
+            {
+                return true;
+            }
+        }
+
 		public ICommand Save
 		{
 			get { return new SaveDocumentCommand(this); }
@@ -839,7 +858,13 @@ namespace Raven.Studio.Models
 			get { return new ChangeFieldValueCommand<EditableDocumentModel>(this, x => x.SearchEnabled = !x.searchEnabled); }
 		}
 
-		private class RefreshDocumentCommand : Command
+        protected bool HasUnsavedChanges
+        {
+            get { return hasUnsavedChanges; }
+            set { hasUnsavedChanges = value; }
+        }
+
+        private class RefreshDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel parent;
 
@@ -855,19 +880,33 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object _)
 			{
-				parent.DatabaseCommands.GetAsync(parent.DocumentKey)
-					.ContinueOnSuccess(doc =>
-										{
-											if (doc == null)
-											{
-												parent.HandleDocumentNotFound();
-												return;
-											}
-
-											parent.document.Value = doc;
-										})
-					.Catch();
+                if (parent.HasUnsavedChanges)
+                {
+                    AskUser.ConfirmationAsync("Edit Document",
+                                              "There are unsaved changes to this document. Are you sure you want to refresh?")
+                        .ContinueWhenTrueInTheUIThread(DoRefresh);
+                }
+                else
+                {
+                    DoRefresh();
+                }
 			}
+
+            private void DoRefresh()
+            {
+                parent.DatabaseCommands.GetAsync(parent.DocumentKey)
+                    .ContinueOnSuccess(doc =>
+                                           {
+                                               if (doc == null)
+                                               {
+                                                   parent.HandleDocumentNotFound();
+                                                   return;
+                                               }
+
+                                               parent.document.Value = doc;
+                                           })
+                    .Catch();
+            }
 		}
 
 		private class SaveDocumentCommand : Command
@@ -944,7 +983,7 @@ namespace Raven.Studio.Models
 				}
 
 				parentModel.UpdateMetadata(metadata);
-				ApplicationModel.Current.AddNotification(new Notification("Saving document " + parentModel.Key + " ..."));
+				ApplicationModel.Current.AddInfoNotification("Saving document " + parentModel.Key + " ...");
 
 				Guid? etag = string.Equals(parentModel.DocumentKey, parentModel.Key, StringComparison.InvariantCultureIgnoreCase) ?
 					parentModel.Etag : Guid.Empty;
@@ -952,13 +991,14 @@ namespace Raven.Studio.Models
 				DatabaseCommands.PutAsync(parentModel.Key, etag, doc, metadata)
 					.ContinueOnSuccess(result =>
 					{
-						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
-						parentModel.Etag = result.ETag;
-						parentModel.PutDocumentKeyInUrl(result.Key, dontOpenNewTab: true);
-						parentModel.SetCurrentDocumentKey(result.Key);
+                        ApplicationModel.Current.AddInfoNotification("Document " + result.Key + " saved");
+					    parentModel.HasUnsavedChanges = false;
+                        parentModel.Etag = result.ETag;
+					    parentModel.PutDocumentKeyInUrl(result.Key, dontOpenNewTab:true);
+					    parentModel.SetCurrentDocumentKey(result.Key);
 					})
 					.ContinueOnSuccess(() => new RefreshDocumentCommand(parentModel).Execute(null))
-					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
+					.Catch(exception => ApplicationModel.Current.AddErrorNotification(exception, "Could not save document."));
 			}
 		}
 
