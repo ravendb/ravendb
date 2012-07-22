@@ -54,7 +54,13 @@ namespace Raven.Studio.Features.Query
 
             model.DocumentsResult.SetPriorityColumns(GetRelevantFields());
 		    var templateQuery = CreateTemplateQuery();
-		    model.QueryUrl = templateQuery.GetIndexQueryUrl(ApplicationModel.Current.Server.Value.Url + "databases/" + model.Database.Value.Name, model.IndexName, "indexes");
+		    model.QueryUrl = templateQuery.GetIndexQueryUrl("", model.IndexName, "indexes");
+			var url = ApplicationModel.Current.Server.Value.Url;
+			if (url.EndsWith("/") == false)
+				url += "/";
+			if (model.Database.Value.Name != Constants.DefaultDatabase)
+				url += "databases/" + model.Database.Value.Name;
+			model.FullQueryUrl = templateQuery.GetIndexQueryUrl(url, model.IndexName, "indexes");
 		    model.CollectionSource.UpdateQuery(model.IndexName, templateQuery);  
 		}
 
