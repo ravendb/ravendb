@@ -210,11 +210,11 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						Send("watch-all-docs", docIdPrefix));
+						Send("watch-prefix", docIdPrefix));
 				return new LocalConnectionState(
 					() =>
 					{
-						Send("unwatch-all-docs", docIdPrefix );
+						Send("unwatch-prefix", docIdPrefix );
 						counters.Remove("prefixes/" + docIdPrefix);
 					},
 					documentSubscriptionTask);
