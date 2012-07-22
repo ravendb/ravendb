@@ -849,6 +849,8 @@
     <Resource Include="Assets\Images\navigate_first_tiny.png" />
     <Resource Include="Assets\Images\navigate_last_tiny.png" />
     <Resource Include="Assets\Images\Collapse_tiny.png" />
+    <Resource Include="Assets\Images\offline.png" />
+    <Resource Include="Assets\Images\online.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

@@ -4,7 +4,8 @@
     <BitmapImage x:Key="Image_BackgroundTextureBottom" UriSource="BackgroundTextureBottom.png"/>
     <BitmapImage x:Key="Image_RavenDBLogo" UriSource="RavenDBLogo.png"/>
     <BitmapImage x:Key="Image_FooterTexture" UriSource="FooterTexture.png"/>
-
+	<BitmapImage x:Key="Image_Online" UriSource="online.png"/>
+	<BitmapImage x:Key="Image_Offline" UriSource="offline.png"/>
     <BitmapImage x:Key="Image_DocumentIndex_Tiny" UriSource="index_tiny.png"/>
     <BitmapImage x:Key="Image_DocumentIndex_Small" UriSource="index_small.png"/>
     <BitmapImage x:Key="Image_Document_Tiny" UriSource="document_tiny.png"/>

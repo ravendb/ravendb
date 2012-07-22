@@ -7,6 +7,8 @@ document_page_next.png
 document_page_previous.png
 database.png
 database_add.png
+online.png
+offline.png
 
 The following icons from Marco Martin (http://www.notmart.org/) via iconfinder.com (http://www.iconfinder.com/search/?q=iconset%3Aglaze). License: LGPL
 
