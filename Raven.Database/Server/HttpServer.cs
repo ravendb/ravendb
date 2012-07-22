@@ -361,6 +361,7 @@ namespace Raven.Database.Server
 
 		public Task HandleChangesRequest(IHttpContext context, Action onDisconnect)
 		{
+			var sw = Stopwatch.StartNew();
 			try
 			{
 				SetupRequestToProperDatabase(context);
@@ -399,7 +400,21 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
+				try
+				{
+					LogHttpRequestStats(new LogHttpRequestStatsParams(
+					                    	sw,
+					                    	context.Request.Headers,
+					                    	context.Request.HttpMethod,
+					                    	context.Response.StatusCode,
+					                    	context.Request.Url.PathAndQuery));
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Could not gather information to log request stats", e);
+				}
 				ResetThreadLocalState();
+
 			}
 		}
 
