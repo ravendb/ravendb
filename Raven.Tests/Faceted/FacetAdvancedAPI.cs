@@ -138,7 +138,7 @@ namespace Raven.Tests.Faceted
 			var facet = TriggerConversion(edgeCaseFacet);
 			Assert.Equal(2, facet.Ranges.Count);
 			Assert.False(String.IsNullOrWhiteSpace(facet.Ranges[0]));
-			Assert.Equal(@"Date_Range:[2010\-12\-05T00\:00\:00.0000000 TO 2001\-12\-05T00\:00\:00.0000000]", facet.Ranges[1]);
+			Assert.Equal(@"[2010\-12\-05T00\:00\:00.0000000 TO 2001\-12\-05T00\:00\:00.0000000]", facet.Ranges[1]);
 		}
 
 		private bool AreFacetsEqual(Facet left, Facet right)
