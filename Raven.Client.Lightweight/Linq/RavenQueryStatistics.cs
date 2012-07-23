@@ -57,6 +57,11 @@ namespace Raven.Client.Linq
 		public bool NonAuthoritativeInformation { get; set; }
 
 		/// <summary>
+		/// The timestamp of the last time the index was queried
+		/// </summary>
+		public bool LastQueryTime { get; set; }
+
+		/// <summary>
 		/// Update the query stats from the query results
 		/// </summary>
 		internal void UpdateQueryStats(QueryResult qr)
@@ -69,6 +74,7 @@ namespace Raven.Client.Linq
 			IndexName = qr.IndexName;
 			IndexTimestamp = qr.IndexTimestamp;
 			IndexEtag = qr.IndexEtag;
+			//LastQueryTime = qr.LastQueryTime;
 		}
 
 		

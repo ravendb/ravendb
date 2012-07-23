@@ -73,6 +73,11 @@ namespace Raven.Abstractions.Data
 		public bool NonAuthoritativeInformation { get; set; }
 
 		/// <summary>
+		/// The timestamp of the last time the index was queried
+		/// </summary>
+		public bool LastQueryTime { get; set; }
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="QueryResult"/> class.
 		/// </summary>
 		public QueryResult()

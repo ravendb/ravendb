@@ -56,6 +56,7 @@ namespace Raven.Database.Indexing
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
+		public DateTime? LastQueryTimestamp { get; set; }
 
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)

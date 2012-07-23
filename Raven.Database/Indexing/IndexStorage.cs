@@ -542,5 +542,18 @@ namespace Raven.Database.Indexing
 				.Select(x => x.Value)
 				.FirstOrDefault();
 		}
+
+		public void UpdateLastQueryTime(string indexName)
+		{
+			var index = GetIndexInstance(indexName);
+			if(index != null)
+				index.LastQueryTimestamp = DateTime.UtcNow;
+		}
+
+		public DateTime? GetIndexLastQueryTime(string indexName)
+		{
+			var index = GetIndexInstance(indexName);
+			return index != null ? index.LastQueryTimestamp : null;
+		}
 	}
 }
