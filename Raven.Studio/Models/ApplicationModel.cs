@@ -1,6 +1,9 @@
 ﻿using System;
+using System.ComponentModel;
+using System.IO;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Media.Imaging;
 using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -20,9 +23,16 @@ namespace Raven.Studio.Models
 		private ApplicationModel()
 		{
 			Notifications = new BindableCollection<Notification>(x=>x.Message);
-		    Notifications.CollectionChanged += delegate { OnPropertyChanged(() => ErrorCount); };
+		    Notifications.CollectionChanged += delegate
+		    {
+		    	OnPropertyChanged(() => ErrorCount);
+		    };
 			LastNotification = new Observable<string>();
 			Server = new Observable<ServerModel> {Value = new ServerModel()};
+			Server.Value.SelectedDatabase.Value.Status.PropertyChanged += delegate
+			{
+				OnPropertyChanged(() => StatusImage);
+			};
 		    State = new ApplicationState();
 		}
 
@@ -74,6 +84,14 @@ namespace Raven.Studio.Models
 
 		public BindableCollection<Notification> Notifications { get; set; }
 
+    	public BitmapImage StatusImage
+    	{
+    		get
+    		{
+				var url = new Uri("../Assets/Images/" + Server.Value.SelectedDatabase.Value.Status.Value + ".png", UriKind.Relative);
+				return new BitmapImage(url);
+    		}
+    	}
 
         public int ErrorCount {get { return Notifications.Count(n => n.Level == NotificationLevel.Error); }}
 
