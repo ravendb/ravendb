@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Studio.Extensions;
 using Raven.Studio.Models;
@@ -167,6 +168,8 @@ namespace Raven.Studio.Features.Query
 
         private string GetFolderPath()
         {
+			if (databaseName == Constants.SystemDatabase)
+				return "QueryHistory/System";
             return "QueryHistory/" + databaseName;
         }
 

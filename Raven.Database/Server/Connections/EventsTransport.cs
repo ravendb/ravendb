@@ -33,17 +33,25 @@ namespace Raven.Database.Server.Connections
 				throw new ArgumentException("Id is mandatory");
 		}
 
+		private static readonly string DataAtSufficentSizeToBeOverTheFourKbLimitRequiredToMakeSilverlightStreamResponseData =
+			new string('*', 4*1024);
+
 		public Task ProcessAsync()
 		{
 			context.Response.ContentType = "text/event-stream";
 
-			return context.Response.WriteAsync("{'Type': 'InitializingConnetion'}\r\n")
-				.ContinueWith(DisconnectOnError);
+			return SendAsync(new
+			{
+				Type ="InitializingConnetion",
+				DataAtSufficentSizeToBeOverTheFourKbLimitRequiredToMakeSilverlightStreamResponseData
+			});
 		}
 
 		public Task SendAsync(object data)
 		{
-			return context.Response.WriteAsync(JsonConvert.SerializeObject(data,Formatting.None) + "\r\n")
+			var serializeObject = JsonConvert.SerializeObject(data, Formatting.None);
+			log.Debug("Notifying {1}: {0}", serializeObject, Id);
+			return context.Response.WriteAsync(serializeObject + "\r\n")
 				.ContinueWith(DisconnectOnError);
 		}
 
@@ -57,7 +65,9 @@ namespace Raven.Database.Server.Connections
 					.Append("\r\n");
 			}
 
-			return context.Response.WriteAsync(sb.ToString())
+			var s = sb.ToString();
+			log.Debug("Notifying {1}: {0}", s, Id);
+			return context.Response.WriteAsync(s)
 				.ContinueWith(DisconnectOnError);
 		}
 

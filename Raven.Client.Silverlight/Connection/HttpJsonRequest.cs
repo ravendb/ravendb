@@ -81,12 +81,12 @@ namespace Raven.Client.Silverlight.Connection
 			WaitForTask = tcs.Task;
 
 			webRequest.Headers["Raven-Client-Version"] = ClientVersion;
-			
+
 			WriteMetadata(metadata);
 			webRequest.Method = method;
 			if (method != "GET")
 				webRequest.ContentType = "application/json; charset=utf-8";
-			if( (method == "POST" || method == "PUT") && 
+			if ((method == "POST" || method == "PUT") &&
 				factory.DisableRequestCompression == false)
 				webRequest.Headers["Content-Encoding"] = "gzip";
 		}
@@ -108,12 +108,12 @@ namespace Raven.Client.Silverlight.Connection
 		private Task<string> ReadResponseStringAsync()
 		{
 			return WaitForTask.ContinueWith(_ => webRequest
-			                                     	.GetResponseAsync()
+													.GetResponseAsync()
 													.ConvertSecurityExceptionToServerNotFound()
 													.AddUrlIfFaulting(webRequest.RequestUri)
-			                                     	.ContinueWith(t => ReadStringInternal(() => t.Result))
-			                                     	.ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
-			                                     	.Unwrap())
+													.ContinueWith(t => ReadStringInternal(() => t.Result))
+													.ContinueWith(task => RetryIfNeedTo(task, ReadResponseStringAsync))
+													.Unwrap())
 													.Unwrap();
 		}
 
@@ -132,7 +132,7 @@ namespace Raven.Client.Silverlight.Connection
 			if (authorizeResponse == null)
 				return task; // effectively throw
 
-			
+
 			return authorizeResponse
 				.ContinueWith(task1 =>
 				{
@@ -158,12 +158,12 @@ namespace Raven.Client.Silverlight.Connection
 		public Task<byte[]> ReadResponseBytesAsync()
 		{
 			return WaitForTask.ContinueWith(_ => webRequest
-			                                     	.GetResponseAsync()
+													.GetResponseAsync()
 													.ConvertSecurityExceptionToServerNotFound()
 													.AddUrlIfFaulting(webRequest.RequestUri)
-			                                     	.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes))
-			                                     	.ContinueWith(task => RetryIfNeedTo(task, ReadResponseBytesAsync))
-			                                     	.Unwrap())
+													.ContinueWith(t => ReadResponse(() => t.Result, ConvertStreamToBytes))
+													.ContinueWith(task => RetryIfNeedTo(task, ReadResponseBytesAsync))
+													.Unwrap())
 													.Unwrap();
 		}
 
@@ -268,7 +268,7 @@ namespace Raven.Client.Silverlight.Connection
 				var headerName = prop.Key;
 				if (headerName == "ETag")
 					headerName = "If-None-Match";
-				if(headerName.StartsWith("@") ||
+				if (headerName.StartsWith("@") ||
 					headerName == Constants.LastModified)
 					continue;
 				switch (headerName)
@@ -291,22 +291,22 @@ namespace Raven.Client.Silverlight.Connection
 		public Task WriteAsync(string data)
 		{
 			return WaitForTask.ContinueWith(_ =>
-			                                webRequest.GetRequestStreamAsync()
-			                                	.ContinueWith(task =>
-			                                	{
-			                                		Stream dataStream = factory.DisableRequestCompression == false ? 
+											webRequest.GetRequestStreamAsync()
+												.ContinueWith(task =>
+												{
+													Stream dataStream = factory.DisableRequestCompression == false ?
 														new GZipStream(task.Result, CompressionMode.Compress) :
 														task.Result;
-			                                		var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
-			                                		return streamWriter.WriteAsync(data)
-			                                			.ContinueWith(writeTask =>
-			                                			{
-			                                				streamWriter.Dispose();
-			                                				dataStream.Dispose();
+													var streamWriter = new StreamWriter(dataStream, Encoding.UTF8);
+													return streamWriter.WriteAsync(data)
+														.ContinueWith(writeTask =>
+														{
+															streamWriter.Dispose();
+															dataStream.Dispose();
 															task.Result.Dispose();
-			                                				return writeTask;
-			                                			}).Unwrap();
-			                                	}).Unwrap())
+															return writeTask;
+														}).Unwrap();
+												}).Unwrap())
 				.Unwrap();
 		}
 
@@ -318,7 +318,7 @@ namespace Raven.Client.Silverlight.Connection
 			postedData = byteArray;
 			return WaitForTask.ContinueWith(_ => webRequest.GetRequestStreamAsync().ContinueWith(t =>
 			{
-				var dataStream =new GZipStream(t.Result,CompressionMode.Compress);
+				var dataStream = new GZipStream(t.Result, CompressionMode.Compress);
 				using (dataStream)
 				{
 					dataStream.Write(byteArray, 0, byteArray.Length);
@@ -352,45 +352,46 @@ namespace Raven.Client.Silverlight.Connection
 		public Task<IObservable<string>> ServerPullAsync(int retries = 0)
 		{
 			return WaitForTask.ContinueWith(__ =>
-				{
-			         webRequest.AllowReadStreamBuffering = false;
-					 return webRequest.GetResponseAsync()
-						.ContinueWith(task =>
-						{
-							var stream = task.Result.GetResponseStream();
-							var observableLineStream = new ObservableLineStream(stream, () =>
-							                                                            	{
-							                                                            		webRequest.Abort();
-							                                                            		task.Result.Close();
-							                                                            	});
-							observableLineStream.Start();
-							return (IObservable<string>)observableLineStream;
-						})
-						.ContinueWith(task =>
-						{
-							var webException = task.Exception.ExtractSingleInnerException() as WebException;
-							if (webException == null || retries >= 3)
-								return task;// effectively throw
+			{
+				webRequest.AllowReadStreamBuffering = false;
+				webRequest.AllowWriteStreamBuffering = false;
+				return webRequest.GetResponseAsync()
+				   .ContinueWith(task =>
+				   {
+					   var stream = task.Result.GetResponseStream();
+					   var observableLineStream = new ObservableLineStream(stream, () =>
+																					   {
+																						   webRequest.Abort();
+																						   task.Result.Close();
+																					   });
+					   observableLineStream.Start();
+					   return (IObservable<string>)observableLineStream;
+				   })
+				   .ContinueWith(task =>
+				   {
+					   var webException = task.Exception.ExtractSingleInnerException() as WebException;
+					   if (webException == null || retries >= 3)
+						   return task;// effectively throw
 
-							var httpWebResponse = webException.Response as HttpWebResponse;
-							if (httpWebResponse == null ||
-								httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
-								return task; // effectively throw
+					   var httpWebResponse = webException.Response as HttpWebResponse;
+					   if (httpWebResponse == null ||
+						   httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+						   return task; // effectively throw
 
-							var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
+					   var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
 
-							if (authorizeResponse == null)
-								return task; // effectively throw
+					   if (authorizeResponse == null)
+						   return task; // effectively throw
 
-							return authorizeResponse
-								.ContinueWith(_ =>
-								{
-									_.Wait(); //throw on error
-									return ServerPullAsync(retries + 1);
-								})
-								.Unwrap();
-						}).Unwrap();
-					})
+					   return authorizeResponse
+						   .ContinueWith(_ =>
+						   {
+							   _.Wait(); //throw on error
+							   return ServerPullAsync(retries + 1);
+						   })
+						   .Unwrap();
+				   }).Unwrap();
+			})
 				.Unwrap();
 		}
 
@@ -398,11 +399,11 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			return WriteAsync(data)
 				.ContinueWith(task =>
-				              	{
-				              		if (task.IsFaulted)
-				              			return task;
-				              		return ExecuteRequestAsync();
-				              	})
+								{
+									if (task.IsFaulted)
+										return task;
+									return ExecuteRequestAsync();
+								})
 				.Unwrap();
 		}
 	}

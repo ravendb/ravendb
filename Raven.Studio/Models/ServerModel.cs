@@ -79,7 +79,7 @@ namespace Raven.Studio.Models
 					onWebRequest(eventArgs.Request);
 			};
 
-			defaultDatabase = new[] { new DatabaseModel(DatabaseModel.SystemDatabaseName, documentStore) };
+			defaultDatabase = new[] { new DatabaseModel(Constants.SystemDatabase, documentStore) };
 			Databases.Set(defaultDatabase);
 			SetCurrentDatabase(new UrlParser(UrlUtil.Url));
 

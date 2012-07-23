@@ -1,3 +1,5 @@
+using System.Reactive;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Studio.Features.Documents;
@@ -13,33 +15,38 @@ namespace Raven.Studio.Models
 		}
 
 		private static WeakReference<Observable<DocumentsModel>> documents;
-        public static Observable<DocumentsModel> Documents
+		public static Observable<DocumentsModel> Documents
 		{
 			get
 			{
 				if (documents == null || documents.IsAlive == false)
 				{
-                    documents = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel>
-                                                                                          {
-                                                                                              Value = new DocumentsModel(new DocumentsCollectionSource())
-                                                                                                          {
-                                                                                                              DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
-                                                                                                              Context = "AllDocuments",
-                                                                                                          }
-                                                                                          });
+					documents = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel>
+																						  {
+																							  Value = CreateDocumentsModel()
+																						  });
 				}
 				var target = documents.Target ?? Documents;
 				return target;
 			}
 		}
 
-		public override void LoadModelParameters(string parameters)
+		private static DocumentsModel CreateDocumentsModel()
 		{
+			var documentsModel = new DocumentsModel(new DocumentsCollectionSource())
+									 {
+										 DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
+										 Context = "AllDocuments",
+									 };
+
+			documentsModel.SetChangesObservable(d => d.Changes().ForAllDocuments().Select(s => Unit.Default));
+
+			return documentsModel;
 		}
 
-		public override Task TimerTickedAsync()
+		public override void LoadModelParameters(string parameters)
 		{
-			return Documents.Value.TimerTickedAsync();
+			Documents.Value.Documents.Refresh();
 		}
 	}
 }
