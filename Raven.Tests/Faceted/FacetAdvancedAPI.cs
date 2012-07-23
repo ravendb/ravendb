@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Raven.Abstractions.Data;
 using Xunit;
 
@@ -31,11 +30,11 @@ namespace Raven.Tests.Faceted
 					Mode = FacetMode.Ranges,
 					Ranges =
 					{
-						"[NULL TO Dx200.0]",
-						"[Dx200.0 TO Dx400.0]",
-						"[Dx400.0 TO Dx600.0]",
-						"[Dx600.0 TO Dx800.0]",
-						"[Dx800.0 TO NULL]",
+						"[NULL TO Dx200]",
+						"[Dx200 TO Dx400]",
+						"[Dx400 TO Dx600]",
+						"[Dx600 TO Dx800]",
+						"[Dx800 TO NULL]",
 					}
 				},
 				new Facet
@@ -147,7 +146,7 @@ namespace Raven.Tests.Faceted
 			return left.Name == right.Name &&
 				left.Mode == right.Mode &&
 				left.Ranges.Count == right.Ranges.Count &&
-				left.Ranges.All(x => left.Ranges.Contains(x));
+				left.Ranges.All(x => right.Ranges.Contains(x));
 		}
 
 		private Facet TriggerConversion(Facet<Test> facet)
