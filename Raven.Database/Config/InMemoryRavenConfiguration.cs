@@ -761,7 +761,6 @@ namespace Raven.Database.Config
 			if (type == null)
 				throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);
 
-			Catalog.Catalogs.Add(new AssemblyCatalog(type.Assembly));
 
 			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
 		}
