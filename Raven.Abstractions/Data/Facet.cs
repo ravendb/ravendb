@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Reflection;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Util;
 
 namespace Raven.Abstractions.Data
 {
@@ -36,7 +37,7 @@ namespace Raven.Abstractions.Data
 			if (other.Name == null)
 				throw new InvalidOperationException();
 
-			var ranges = other.Ranges.Select(x => Facet<T>.Parse(x)).ToList();
+			var ranges = other.Ranges.Select(Parse).ToList();
 			
 			var shouldUseRanges = other.Ranges != null &&
 								other.Ranges.Count > 0 &&
@@ -69,14 +70,14 @@ namespace Raven.Abstractions.Data
 		{
 			Expression body = expr.Body;
 
-			var param = (ParameterExpression)expr.Parameters[0];
 			var operation = (BinaryExpression)expr.Body;
 
 			if (operation.Left is MemberExpression)
 			{
 				var subExpressionValue = ParseSubExpression(operation);
 				var left = (MemberExpression)operation.Left;
-				var expression = GetStringRepresentation(left.Member.Name, operation.NodeType, subExpressionValue);                
+				var fieldName = GetFieldName(left);
+				var expression = GetStringRepresentation(fieldName, operation.NodeType, subExpressionValue);                
 				return expression;
 			}
 
@@ -93,14 +94,21 @@ namespace Raven.Abstractions.Data
 				var validOperators = (left.NodeType == ExpressionType.LessThan && right.NodeType == ExpressionType.GreaterThan) ||
 									(left.NodeType == ExpressionType.GreaterThan && right.NodeType == ExpressionType.LessThan);
 				var validMemberNames = leftMember != null && rightMember != null && 
-										leftMember.Member.Name == rightMember.Member.Name;
+										GetFieldName(leftMember) == GetFieldName(rightMember);
 				if (validOperators && validMemberNames)
 				{
-					return GetStringRepresentation(leftMember.Member.Name, right.NodeType, 
+					return GetStringRepresentation(GetFieldName(leftMember), right.NodeType, 
 													ParseSubExpression(left), ParseSubExpression(right));
 				}
 			}
 			throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected \"<\" and \">\")");
+		}
+
+		private static string GetFieldName(MemberExpression left)
+		{
+			if (Nullable.GetUnderlyingType(left.Member.DeclaringType) != null)
+				return GetFieldName(((MemberExpression) left.Expression));
+			return left.Member.Name;
 		}
 
 		private static object ParseSubExpression(BinaryExpression operation)
@@ -174,37 +182,28 @@ namespace Raven.Abstractions.Data
 			throw new InvalidOperationException("Unable to parse the given operation " + op + ", into a facet range!!! ");
 		}
 
-		private static string GetStringValue<U>(U value)
+		private static string GetStringValue(object value)
 		{
-			var valueAsStr = String.Empty;
 			switch (value.GetType().FullName)
 			{
 				//The nullable stuff here it a bit wierd, but it helps with trying to cast Value types
 				case "System.DateTime":
-					valueAsStr = DateTools.DateToString((value as DateTime?).Value, DateTools.Resolution.MILLISECOND);
-					break;
+					return RavenQuery.Escape(((DateTime)value).ToString(Default.DateTimeFormatsToWrite));
 				case "System.Int32":
-					valueAsStr = NumberUtil.NumberToString((value as Int32?).Value);
-					break;
+					return NumberUtil.NumberToString(((int)value));
 				case "System.Int64":
-					valueAsStr = NumberUtil.NumberToString((value as Int64?).Value);
-					break;
+					return NumberUtil.NumberToString((long)value);
 				case "System.Single":
-					valueAsStr = NumberUtil.NumberToString((value as Single?).Value);
-					break;
+					return NumberUtil.NumberToString((float)value);
 				case "System.Double":
-					valueAsStr = NumberUtil.NumberToString((value as Double?).Value);
-					break;
+					return NumberUtil.NumberToString((double)value);
 				case "System.Decimal":
-					valueAsStr = NumberUtil.NumberToString((double)((value as Decimal?).Value));
-					break;
+					return NumberUtil.NumberToString((double)(decimal) value);
 				case "System.String":
-					valueAsStr = value.ToString();
-					break;
+					return RavenQuery.Escape(value.ToString());
 				default:
 					throw new InvalidOperationException("Unable to parse the given type " + value.GetType().Name + ", into a facet range!!! ");
 			}
-			return valueAsStr;
 		}
 	}
 }

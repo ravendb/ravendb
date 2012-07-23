@@ -242,7 +242,8 @@ namespace Raven.Storage.Esent.StorageActions
 					Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions,
 													 tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
 				{
-					using (var data = documentCodecs.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadataAsJson, dataStream)))
+					using (var data = documentCodecs
+						.ReverseAggregate(stream, (dataStream, codec) => codec.Decode(key, metadataAsJson, dataStream)))
 						dataAsJson = data.ToJObject();
 				}
 

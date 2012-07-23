@@ -26,11 +26,8 @@ namespace Raven.Tests.ManagedStorage
 			var newTransactionalStorage = new TransactionalStorage(new RavenConfiguration
 			{
 				DataDirectory = "test",
-			}, () => { })
-			{
-				DocumentCodecs = new OrderedPartCollection<AbstractDocumentCodec>()
-			};
-			newTransactionalStorage.Initialize(new DummyUuidGenerator());
+			}, () => { });
+			newTransactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
 			return newTransactionalStorage;
 		}
 	}

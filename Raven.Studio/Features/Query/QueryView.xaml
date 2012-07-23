@@ -415,7 +415,7 @@
                             <TextBlock Text="Url:" toolkit:DockPanel.Dock="Left" VerticalAlignment="Center"/>
                             <toolkit:DockPanel LastChildFill="False" HorizontalAlignment="Left">
                                 <Button Style="{StaticResource Style_Button_MouseOverChrome}" Command="{StaticResource NavigateToExternalUrlCommand}"
-                                        CommandParameter="{Binding QueryUrl}" toolkit:DockPanel.Dock="Right"
+                                        CommandParameter="{Binding FullQueryUrl}" toolkit:DockPanel.Dock="Right"
                                         ToolTipService.ToolTip="Open Url in Browser">
                                     <Image Source="{StaticResource Image_VisitLink_Tiny}" Stretch="None"/>
                                 </Button>

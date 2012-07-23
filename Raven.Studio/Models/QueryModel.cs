@@ -171,15 +171,6 @@ namespace Raven.Studio.Models
             set
             {
                 showFields = value;
-                if (!SkipTransformResults)
-                {
-                    SkipTransformResults = true;
-                }
-                else
-                {
-                    // no need to do a requery if we've set SkipTransformResults, because that forces one too.
-                    Requery();
-                }
                 OnPropertyChanged(() => ShowFields);
             }
 	    }
@@ -274,7 +265,7 @@ namespace Raven.Studio.Models
 		public BindableCollection<string> DynamicOptions { get; set; }
 
 		private string dynamicSelectedOption;
-	    private string queryUrl;
+	    private string queryUrl, fullQueryUrl;
 	    public string DynamicSelectedOption
 		{
 			get { return dynamicSelectedOption; }
@@ -609,6 +600,16 @@ namespace Raven.Studio.Models
                 OnPropertyChanged(() => QueryUrl);
             }
 	    }
+
+		public string FullQueryUrl
+		{
+			get { return fullQueryUrl; }
+			set
+			{
+				fullQueryUrl = value;
+				OnPropertyChanged(() => FullQueryUrl);
+			}
+		}
 
 	    public RavenQueryStatistics Results
 		{

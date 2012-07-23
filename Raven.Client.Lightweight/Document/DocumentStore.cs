@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Connection;
@@ -58,7 +59,7 @@ namespace Raven.Client.Document
 		private readonly ConcurrentDictionary<string, ReplicationInformer> replicationInformers = new ConcurrentDictionary<string, ReplicationInformer>(StringComparer.InvariantCultureIgnoreCase);
 #endif
 
-		private AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
 
 		private HttpJsonRequestFactory jsonRequestFactory;
 
@@ -248,15 +249,19 @@ namespace Raven.Client.Document
 #if DEBUG
 			GC.SuppressFinalize(this);
 #endif
-			
-			if (jsonRequestFactory != null)
-				jsonRequestFactory.Dispose();
 
+
+			var tasks = new List<Task>();
 			foreach (var databaseChange in databaseChanges)
 			{
-				using(databaseChange.Value as IDisposable)
+				var remoteDatabaseChanges = databaseChange.Value as RemoteDatabaseChanges;
+				if(remoteDatabaseChanges != null)
 				{
-					
+					tasks.Add(remoteDatabaseChanges.DisposeAsync());
+				}
+				else
+				{
+					using(databaseChange.Value as IDisposable){}
 				}
 			}
 
@@ -264,6 +269,14 @@ namespace Raven.Client.Document
 			{
 				replicationInformer.Value.Dispose();
 			}
+
+			// try to wait until all the async disposables are completed
+			Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
+
+			// if this is still going, we continue with disposal, it is for grace only, anyway
+
+			if (jsonRequestFactory != null)
+				jsonRequestFactory.Dispose();
 
 			WasDisposed = true;
 			var afterDispose = AfterDispose;
@@ -571,7 +584,7 @@ namespace Raven.Client.Document
 #if SILVERLIGHT
 			// required to ensure just a single auth dialog
 			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions))
-				.ExecuteRequest();
+				.ExecuteRequestAsync();
 #endif
 			asyncDatabaseCommandsGenerator = () =>
 			{

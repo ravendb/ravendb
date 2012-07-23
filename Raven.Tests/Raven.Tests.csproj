@@ -665,6 +665,7 @@
     <Compile Include="MailingList\Samina2.cs" />
     <Compile Include="MailingList\Samina3.cs" />
     <Compile Include="MailingList\Scott.cs" />
+    <Compile Include="MailingList\Sean.cs" />
     <Compile Include="MailingList\SearchByMapReduceExample.cs" />
     <Compile Include="MailingList\SpecialChars.cs" />
     <Compile Include="MailingList\Stacey\Image.cs" />
@@ -673,6 +674,7 @@
     <Compile Include="MailingList\StartsWith.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
     <Compile Include="MailingList\Stockholm.cs" />
+    <Compile Include="Patching\AdvancedPatching.cs" />
     <Compile Include="MailingList\Tony.cs" />
     <Compile Include="MailingList\Troy.cs" />
     <Compile Include="MailingList\TwoLocations.cs" />

@@ -97,7 +97,7 @@ namespace Raven.Client.Silverlight.Connection
 				.ContinueWith(task => RavenJToken.Parse(task.Result));
 		}
 
-		public Task ExecuteRequest()
+		public Task ExecuteRequestAsync()
 		{
 			return ReadResponseStringAsync();
 		}
@@ -401,7 +401,7 @@ namespace Raven.Client.Silverlight.Connection
 				              	{
 				              		if (task.IsFaulted)
 				              			return task;
-				              		return ExecuteRequest();
+				              		return ExecuteRequestAsync();
 				              	})
 				.Unwrap();
 		}

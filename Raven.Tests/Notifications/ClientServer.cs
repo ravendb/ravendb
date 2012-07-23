@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Reactive.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Client.Changes;
 using Raven.Client.Document;
 using Xunit;
 
@@ -24,7 +26,7 @@ namespace Raven.Tests.Notifications
 		public void CanGetNotificationAboutDocumentPut()
 		{
 			using(GetNewServer())
-			using (var store = new DocumentStore
+			{using (var store = new DocumentStore
 			{
 				Url = "http://localhost:8079",
 				Conventions =
@@ -33,10 +35,6 @@ namespace Raven.Tests.Notifications
 					}
 			}.Initialize())
 			{
-				using (var session = store.OpenSession())
-				{
-					session.Load<object>("test-start");
-				}
 				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
@@ -55,6 +53,8 @@ namespace Raven.Tests.Notifications
 
 				Assert.Equal("items/1", documentChangeNotification.Name);
 				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
+			}
+				Thread.Sleep(1000);
 			}
 		}
 
@@ -89,6 +89,8 @@ namespace Raven.Tests.Notifications
 
 				Assert.Equal("items/1", DocumentChangeNotification.Name);
 				Assert.Equal(DocumentChangeNotification.Type, DocumentChangeTypes.Delete);
+
+				((RemoteDatabaseChanges) taskObservable).DisposeAsync().Wait();
 			}
 		}
 

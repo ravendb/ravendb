@@ -330,7 +330,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 					if (task.Exception != null)
 						return task;
 
-					return request.ExecuteRequest();
+					return request.ExecuteRequestAsync();
 				}).Unwrap();
 		}
 
@@ -339,7 +339,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/StartIndexing").NoCache(), "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ExecuteRequest();
+			return request.ExecuteRequestAsync();
 		}
 
 		public Task StopIndexing()
@@ -347,7 +347,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/StopIndexing").NoCache(), "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ExecuteRequest();
+			return request.ExecuteRequestAsync();
 		}
 
 		public Task<string> GetIndexingStatus()
@@ -534,7 +534,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				string path = queryToDelete.GetIndexQueryUrl(url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "DELETE", credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
-				return request.ExecuteRequest()
+				return request.ExecuteRequestAsync()
 					.ContinueWith(task =>
 					{
 						var aggregateException = task.Exception;
@@ -561,7 +561,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			{
 				return url.Docs(id)
 					.ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
-					.ExecuteRequest();
+					.ExecuteRequestAsync();
 			});
 		}
 
@@ -654,7 +654,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				var webRequest = requestUri
 					.ToJsonRequest(this, credentials, convention, OperationsHeaders, "GET");
 
-				return webRequest.ExecuteRequest()
+				return webRequest.ExecuteRequestAsync()
 					.ContinueWith(task =>
 					{
 						try
@@ -707,7 +707,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			{
 				return url.Indexes(name)
 					.ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
-					.ExecuteRequest();
+					.ExecuteRequestAsync();
 			});
 		}
 
@@ -976,7 +976,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 						if (write.Exception != null)
 							throw new InvalidOperationException("Unable to write to server");
 
-						return request.ExecuteRequest();
+						return request.ExecuteRequestAsync();
 					}).Unwrap();
 			});
 		}
@@ -1040,7 +1040,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url.Static(key), "DELETE", metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 
-				return request.ExecuteRequest();
+				return request.ExecuteRequestAsync();
 			});
 		}
 

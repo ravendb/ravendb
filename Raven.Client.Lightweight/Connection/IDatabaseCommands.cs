@@ -86,7 +86,7 @@ namespace Raven.Client.Connection
 		/// Gets the attachments starting with the specified prefix
 		/// </summary>
 		IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize);
-		
+
 		/// <summary>
 		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
 		/// </summary>
@@ -252,6 +252,15 @@ namespace Raven.Client.Connection
 		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests);
 
 		/// <summary>
+		/// Perform a set based update using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, AdvancedPatchRequest patch);
+
+		/// <summary>
 		/// Perform a set based update using the specified index
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
@@ -259,6 +268,15 @@ namespace Raven.Client.Connection
 		/// <param name="patchRequests">The patch requests.</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale);
+
+		/// <summary>
+		/// Perform a set based update using the specified index
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+        /// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, AdvancedPatchRequest patch, bool allowStale);
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
@@ -300,12 +318,27 @@ namespace Raven.Client.Connection
 		void Patch(string key, PatchRequest[] patches);
 
 		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		void Patch(string key, AdvancedPatchRequest patch);
+
+		/// <summary>
 		/// Sends a patch request for a specific document
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		void Patch(string key, PatchRequest[] patches, Guid? etag);
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+        /// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		void Patch(string key, AdvancedPatchRequest patch, Guid? etag);
 
 		/// <summary>
 		/// Disable all caching within the given scope

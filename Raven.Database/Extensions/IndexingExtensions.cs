@@ -88,8 +88,6 @@ namespace Raven.Database.Extensions
 					return Field.Store.YES;
 				case FieldStorage.No:
 					return Field.Store.NO;
-				case FieldStorage.Compress:
-					return Field.Store.COMPRESS;
 				default:
 					throw new ArgumentOutOfRangeException();
 			}

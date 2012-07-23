@@ -75,6 +75,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
     </Reference>
+    <Reference Include="IronJS">
+      <HintPath>..\SharedLibs\IronJS.dll</HintPath>
+    </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
@@ -120,6 +123,23 @@
     </Compile>
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
+    <Compile Include="Bundles\Compression\Plugin\DocumentCompression.cs" />
+    <Compile Include="Bundles\Compression\Streams\CompressStream.cs" />
+    <Compile Include="Bundles\Compression\Streams\DecompressStream.cs" />
+    <Compile Include="Bundles\Compression\Streams\StreamReaderWithUnread.cs" />
+    <Compile Include="Bundles\Encryption\Codec.cs" />
+    <Compile Include="Bundles\Encryption\Constants.cs" />
+    <Compile Include="Bundles\Encryption\CryptoTransformExtensions.cs" />
+    <Compile Include="Bundles\Encryption\Plugin\DocumentEncryption.cs" />
+    <Compile Include="Bundles\Encryption\Plugin\EncryptionSettingsDeleteTrigger.cs" />
+    <Compile Include="Bundles\Encryption\Plugin\EncryptionSettingsPutTrigger.cs" />
+    <Compile Include="Bundles\Encryption\Plugin\IndexEncryption.cs" />
+    <Compile Include="Bundles\Encryption\Settings\EncryptionSettings.cs" />
+    <Compile Include="Bundles\Encryption\Settings\EncryptionSettingsManager.cs" />
+    <Compile Include="Bundles\Encryption\Streams\BlockReaderWriter.cs" />
+    <Compile Include="Bundles\Encryption\Streams\EncryptedFile.cs" />
+    <Compile Include="Bundles\Encryption\Streams\SeekableCryptoStream.cs" />
+    <Compile Include="Bundles\Encryption\Streams\StructConverter.cs" />
     <Compile Include="Bundles\Expiration\ExpirationReadTrigger.cs" />
     <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
@@ -128,6 +148,7 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Server\Connections\ConnectionState.cs" />
     <Compile Include="Server\Connections\EventsTransport.cs" />
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
     <Compile Include="Server\Responders\Admin\AdminIndexingStatus.cs" />
@@ -167,6 +188,7 @@
     <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Config\MemoryStatistics.cs" />
+    <Compile Include="Extensions\DateTimeExtensions.cs" />
     <Compile Include="Data\QueryResultWithIncludes.cs" />
     <Compile Include="Impl\Clustering\ClusterInspecter.cs" />
     <Compile Include="Impl\Clustering\ClusterResourceState.cs" />
@@ -175,6 +197,7 @@
     <Compile Include="Impl\Clustering\RegSam.cs" />
     <Compile Include="Impl\ExceptionAggregator.cs" />
     <Compile Include="Indexing\BaseBatchSizeAutoTuner.cs" />
+    <Compile Include="Indexing\LuceneCodecDirectory.cs" />
     <Compile Include="Indexing\ReduceBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IBackgroundTaskExecuter.cs" />
@@ -192,12 +215,14 @@
     <Compile Include="Indexing\Sorting\SpatialDistanceSortField.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Json\AdvancedJsonPatcher.cs" />
     <Compile Include="Linq\Ast\TransformDynamicLambdaExpressions.cs" />
     <Compile Include="Linq\RecursiveFunction.cs" />
     <Compile Include="Plugins\Builtins\InvalidDocumentNames.cs" />
     <Compile Include="Plugins\Builtins\Tenants\ModifiedTenantDatabase.cs" />
     <Compile Include="Plugins\Builtins\Tenants\TenantDatabaseModified.cs" />
     <Compile Include="Plugins\Catalogs\BuiltinFilteringCatalog.cs" />
+    <Compile Include="Plugins\AbstractIndexCodec.cs" />
     <Compile Include="Plugins\Catalogs\BundlesFilteredCatalog.cs" />
     <Compile Include="Plugins\Catalogs\FilteredCatalog.cs" />
     <Compile Include="Rhino.Licensing\AbstractLicenseValidator.cs" />
@@ -626,6 +651,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Json\Map.js" />
+    <EmbeddedResource Include="Json\ToJson.js" />
+    <EmbeddedResource Include="Json\RavenDB.js" />
     <Content Include="Server\WebUI\css\smoothness\images\ui-anim_basic_16x16.gif" />
     <Content Include="Server\WebUI\studio_not_found.html" />
     <Content Include="Server\WebUI\studio.html" />

@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
 
@@ -17,7 +18,7 @@ namespace Raven.Database.Server.Responders
 		
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"POST"}; }
+			get { return new[] {"GET"}; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -33,39 +34,58 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
-			var jsonData = context.ReadJson();
-			var name = jsonData.Value<string>("Name");
+			var name = context.Request.QueryString["value"];
 			var connectionState = Database.TransportState.For(id);
-			switch (jsonData.Value<string>("Type"))
+			var cmd = context.Request.QueryString["command"];
+			if (Match(cmd, "disconnect"))
 			{
-				case "WatchIndex":
-					connectionState.WatchIndex(name);
-					break;
-				case "UnwatchIndex":
-					connectionState.UnwatchIndex(name);
-					break;
-
-				case "WatchDocument":
-					connectionState.WatchDocument(name);
-					break;
-				case "UnwatchDocument":
-					connectionState.UnwatchDocument(name);
-					break;
-
-				case "WatchAllDocuments":
-					connectionState.WatchAllDocuments();
-					break;
-				case "UnwatchAllDocuments":
-					connectionState.UnwatchAllDocuments();
-					break;
-
-				case "WatchDocumentPrefix":
-					connectionState.WatchDocumentPrefix(name);
-					break;
-				case "UnwatchDocumentPrefix":
-					connectionState.UnwatchDocumentPrefix(name);
-					break;
+				Database.TransportState.Disconnect(id);
 			}
+			else if (Match(cmd, "watch-index"))
+			{
+				connectionState.WatchIndex(name);
+			}
+			else if (Match(cmd, "unwatch-index"))
+			{
+				connectionState.UnwatchIndex(name);
+			}
+			else if (Match(cmd, "watch-doc"))
+			{
+				connectionState.WatchDocument(name);
+			}
+			else if (Match(cmd, "unwatch-doc"))
+			{
+				connectionState.UnwatchDocument(name);
+			}
+			else if (Match(cmd, "watch-docs"))
+			{
+				connectionState.WatchAllDocuments();
+			}
+			else if (Match(cmd, "unwatch-docs"))
+			{
+				connectionState.UnwatchAllDocuments();
+			}
+			else if (Match(cmd, "watch-prefix"))
+			{
+				connectionState.WatchDocumentPrefix(name);
+			}
+			else if (Equals(cmd, "unwatch-prefix"))
+			{
+				connectionState.UnwatchDocumentPrefix(name);
+			}
+			else
+			{
+				context.SetStatusToBadRequest();
+				context.WriteJson(new
+				{
+					Error = "command argument is mandatory"
+				});
+			}
+		}
+
+		private bool Match(string x, string y)
+		{
+			return string.Equals(x, y, StringComparison.InvariantCultureIgnoreCase);
 		}
 	}
 }

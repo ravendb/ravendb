@@ -39,7 +39,7 @@ namespace Raven.Database.Queries
 				return null;
 
 			if (string.IsNullOrEmpty(indexQuery.Query) && // we optimize for empty queries to use Raven/DocumentsByEntityName
-				(indexQuery.SortedFields == null || indexQuery.SortedFields.Length == 0) && // and no sorting was requested
+			    (indexQuery.SortedFields == null || indexQuery.SortedFields.Length == 0) && // and no sorting was requested
 				database.IndexDefinitionStorage.Contains("Raven/DocumentsByEntityName")) // and Raven/DocumentsByEntityName exists
 			{
 				if (string.IsNullOrEmpty(entityName) == false)
@@ -107,7 +107,7 @@ namespace Raven.Database.Queries
 							if (abstractViewGenerator.ForEntityNames.Contains(entityName) == false) // for the specified entity name
 							{
 								explain(indexName, () => string.Format("Index does not apply to entity name: {0}", entityName));
-								return false;
+							return false;
 							}
 						}
 
@@ -139,12 +139,12 @@ namespace Raven.Database.Queries
 						if (normalizedFieldsQueriedUpon.All(abstractViewGenerator.ContainsFieldOnMap) == false)
 						{
 							explain(indexName, () =>
-												{
+						{
 													var missingFields =
 														normalizedFieldsQueriedUpon.Where(s => abstractViewGenerator.ContainsFieldOnMap(s) == false);
 													return "The following fields are missing: " + string.Join(", ", missingFields);
 												});
-							return false;
+								return false;
 						}
 
 						var indexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
@@ -196,14 +196,14 @@ namespace Raven.Database.Queries
 											"The specified sort type (" + dynamicSortInfo.FieldType + ") is different than the one specified for field '" +
 											sortedField.Field + "' (" + value + ")");
 									return false; // different sort order, there is a problem here
-								}
 							}
+						}
 						}
 
 						if (indexDefinition.Analyzers != null && indexDefinition.Analyzers.Count > 0)
 						{
 							// none of the fields have custom analyzers
-							if (normalizedFieldsQueriedUpon.Any(indexDefinition.Analyzers.ContainsKey))
+							if (normalizedFieldsQueriedUpon.Any(indexDefinition.Analyzers.ContainsKey)) 
 							{
 								explain(indexName, () =>
 													{
@@ -211,7 +211,7 @@ namespace Raven.Database.Queries
 														return "The following field have a custom analyzer: " + string.Join(", ", fields);
 													});
 								return false;
-							}
+						}
 						}
 
 						if (indexDefinition.Indexes != null && indexDefinition.Indexes.Count > 0)
@@ -236,7 +236,7 @@ namespace Raven.Database.Queries
 									return "The following field have aren't using default indexing: " + string.Join(", ", fields);
 								});
 								return false;
-							}
+						}
 						}
 						return true;
 					})

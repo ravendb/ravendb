@@ -41,6 +41,9 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="NLog">
+      <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
@@ -56,6 +59,7 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Commands\AdvancedPatchCommandData.cs" />
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\BsonBinaryType.cs">
       <Link>Imports\Newtonsoft.Json\Bson\BsonBinaryType.cs</Link>
     </Compile>
@@ -553,6 +557,7 @@
     <Compile Include="Connection\HttpRavenRequestFactory.cs" />
     <Compile Include="Connection\HttpRequestHelper.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
+    <Compile Include="Data\AdvancedPatchRequest.cs" />
     <Compile Include="Data\AggregationOperation.cs" />
     <Compile Include="Data\AggregationOperationExtensions.cs" />
     <Compile Include="Data\Attachment.cs" />
@@ -668,6 +673,7 @@
     <Compile Include="Util\CompletedTask.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
+    <Compile Include="Util\RavenQuery.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Raven.Database\RavenDB.snk">

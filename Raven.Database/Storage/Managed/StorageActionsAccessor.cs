@@ -30,7 +30,7 @@ namespace Raven.Storage.Managed
 			Transactions = new TransactionStorageActions(storage, generator, documentCodecs);
 			Documents = new DocumentsStorageActions(storage, Transactions, generator, documentCodecs, documentCacher);
 			Indexing = new IndexingStorageActions(storage);
-			MappedResults = new MappedResultsStorageAction(storage, generator);
+			MappedResults = new MappedResultsStorageAction(storage, generator, documentCodecs);
 			Queue = new QueueStorageActions(storage, generator);
 			Tasks = new TasksStorageActions(storage, generator);
 			Staleness = new StalenessStorageActions(storage);

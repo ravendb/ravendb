@@ -14,24 +14,24 @@ public class Program
 {
 	public static void Main()
 	{
-		for (int i = 0; i < 100; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			Console.WriteLine(i);
 
-			using (var x = new WithIIS())
-			{
-				x.CheckNotificationInIIS();
-			}
-
-			GC.Collect(2);
-			GC.WaitForPendingFinalizers();
-
-			//using (var x = new ClientServer())
+			//using (var x = new WithIIS())
 			//{
-			//    x.CanGetNotificationAboutDocumentDelete();
+			//    x.CheckNotificationInIIS();
 			//}
+
 			//GC.Collect(2);
 			//GC.WaitForPendingFinalizers();
+
+			using (var x = new ClientServer())
+			{
+				x.CanGetNotificationAboutDocumentPut();
+			}
+			GC.Collect(2);
+			GC.WaitForPendingFinalizers();
 
 
 			//using (var x = new NotificationOnWrongDatabase())
@@ -44,7 +44,6 @@ public class Program
 			//{
 			//    x.CanGetNotificationAboutDocumentIndexUpdate();
 			//}
-
 
 
 			//GC.Collect(2);
