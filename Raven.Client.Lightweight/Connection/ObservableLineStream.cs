@@ -35,6 +35,8 @@ namespace Raven.Client.Connection
 				.ContinueWith(task =>
 				              	{
 				              		var read = task.Result;
+									if(read == 0)
+										throw new EndOfStreamException();
 
 				              		// find \r\n in newly read range
 

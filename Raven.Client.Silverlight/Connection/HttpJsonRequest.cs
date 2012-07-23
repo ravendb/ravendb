@@ -355,6 +355,7 @@ namespace Raven.Client.Silverlight.Connection
 			{
 				webRequest.AllowReadStreamBuffering = false;
 				webRequest.AllowWriteStreamBuffering = false;
+				webRequest.Headers["Requires-Big-Initial-Download"] = "True";
 				return webRequest.GetResponseAsync()
 				   .ContinueWith(task =>
 				   {

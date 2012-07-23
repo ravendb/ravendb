@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using NLog;
+using Raven.Abstractions.Util;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -33,18 +34,41 @@ namespace Raven.Database.Server.Connections
 				throw new ArgumentException("Id is mandatory");
 		}
 
-		private static readonly string DataAtSufficentSizeToBeOverTheFourKbLimitRequiredToMakeSilverlightStreamResponseData =
-			new string('*', 4*1024);
-
+		
 		public Task ProcessAsync()
 		{
 			context.Response.ContentType = "text/event-stream";
 
-			return SendAsync(new
+			var value = new
 			{
-				Type ="InitializingConnetion",
-				DataAtSufficentSizeToBeOverTheFourKbLimitRequiredToMakeSilverlightStreamResponseData
-			});
+				Type = "InitializingConnetion",
+			};
+			if ("true".Equals(context.Request.Headers["Requires-Big-Initial-Download"], StringComparison.InvariantCultureIgnoreCase))
+			{
+				// in silverlight, we need to send an initial buffer of about 4 - 8 Kb just to get the connection start pumping
+				// bytes to the client
+
+
+				return SendAsyncInLoop(value, 128);
+			}
+
+			
+			return SendAsync(value);
+		}
+
+		private Task SendAsyncInLoop(object value, int remaining)
+		{
+			if (remaining == 0)
+				return new CompletedTask();
+
+			return SendAsync(value)
+				.ContinueWith(task =>
+				{
+					if (task.IsFaulted)
+						return task;
+
+					return SendAsyncInLoop(value, remaining - 1);
+				}).Unwrap();
 		}
 
 		public Task SendAsync(object data)
