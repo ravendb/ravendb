@@ -90,6 +90,7 @@
     <Compile Include="Encryption\Encryption.cs" />
     <Compile Include="Encryption\Crud.cs" />
     <Compile Include="Encryption\Indexes.cs" />
+    <Compile Include="Encryption\WithoutEncryption.cs" />
     <Compile Include="Expiration\Expiration.cs" />
     <Compile Include="Expiration\WithCascade.cs" />
     <Compile Include="IndexedProperties\IndexedProperties.cs" />
