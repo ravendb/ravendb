@@ -33,11 +33,18 @@ namespace Raven.Database.Server.Connections
 				throw new ArgumentException("Id is mandatory");
 		}
 
+		private static readonly string DataAtSufficentSizeToBeOverTheFourKbLimitRequiredToMakeSilverlightStreamResponseData =
+			new string('*', 4*1024);
+
 		public Task ProcessAsync()
 		{
 			context.Response.ContentType = "text/event-stream";
 
-			return SendAsync(new {Type ="InitializingConnetion"});
+			return SendAsync(new
+			{
+				Type ="InitializingConnetion",
+				DataAtSufficentSizeToBeOverTheFourKbLimitRequiredToMakeSilverlightStreamResponseData
+			});
 		}
 
 		public Task SendAsync(object data)
