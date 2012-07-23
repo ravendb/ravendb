@@ -47,7 +47,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
 			EnsureIsNotNullOrEmpty(index, "index");
 
 			inMemoryDocumentSessionOperations.IncrementRequestCount();
-			var multiLoadOperation = new MultiLoadOperation(inMemoryDocumentSessionOperations, cmd.DisableAllCaching);
+			var multiLoadOperation = new MultiLoadOperation(inMemoryDocumentSessionOperations, cmd.DisableAllCaching, null ,null);
 			MultiLoadResult multiLoadResult;
 			do
 			{

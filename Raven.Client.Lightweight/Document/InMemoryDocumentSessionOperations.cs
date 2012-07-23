@@ -8,9 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 #if !SILVERLIGHT
+using System.Text.RegularExpressions;
 using System.Transactions;
 #endif
 using System.Text;
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Serialization;
@@ -29,6 +31,7 @@ using Raven.Json.Linq;
 using System.Dynamic;
 using Microsoft.CSharp.RuntimeBinder;
 using System.Threading.Tasks;
+using Raven.Abstractions.Json;
 
 #endif
 
@@ -53,6 +56,11 @@ namespace Raven.Client.Document
 		/// The entities waiting to be deleted
 		/// </summary>
 		protected readonly HashSet<object> deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparerer<object>.Default);
+
+		/// <summary>
+		/// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
+		/// </summary>
+		protected readonly HashSet<string> knownMissingIds = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
 #if !SILVERLIGHT
 		private bool hasEnlisted;
@@ -238,6 +246,16 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Returns whatever a document with the specified id is deleted 
+		/// or known to be missing
+		/// </summary>
+		public bool IsDeleted(string id)
+		{
+			return knownMissingIds.Contains(id);
+		}
+
+
+		/// <summary>
 		/// Gets the document id.
 		/// </summary>
 		/// <param name="instance">The instance.</param>
@@ -396,6 +414,7 @@ more responsive application.
 			if (value.OriginalMetadata.ContainsKey(Constants.RavenReadOnly) && value.OriginalMetadata.Value<bool>(Constants.RavenReadOnly))
 				throw new InvalidOperationException(entity + " is marked as read only and cannot be deleted");
 			deletedEntities.Add(entity);
+			knownMissingIds.Add(value.Key);
 		}
 
 
@@ -584,6 +603,8 @@ more responsive application.
 			var metadata = new RavenJObject();
 			if (tag != null)
 				metadata.Add(Constants.RavenEntityName, tag);
+			if (id != null)
+				knownMissingIds.Remove(id);
 			StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
 		}
 
@@ -596,13 +617,11 @@ more responsive application.
 				if (TryGetIdFromDynamic(entity, out id) == false)
 				{
 					id = GenerateKey(entity);
+					// If we generated a new id, store it back into the Id field so the client has access to to it                    
 					if (id != null)
-					{
-						// Store it back into the Id field so the client has access to to it                    
 						TrySetIdOnynamic(entity, id);
-					}
-					return id;
 				}
+				return id;
 			}
 #endif
 
@@ -624,19 +643,17 @@ more responsive application.
 			if (entity is IDynamicMetaObjectProvider)
 			{
 				string id;
-				if (TryGetIdFromDynamic(entity, out id) == false)
-				{
+				if (TryGetIdFromDynamic(entity, out id))
+					return CompletedTask.With(id);
+				else
 					return GenerateKeyAsync(entity)
 						.ContinueWith(task =>
 						{
+							// If we generated a new id, store it back into the Id field so the client has access to to it                    
 							if (task.Result != null)
-							{
-								// Store it back into the Id field so the client has access to to it                    
 								TrySetIdOnynamic(entity, task.Result);
-							}
 							return task.Result;
 						});
-				}
 			}
 			
 			return GetOrGenerateDocumentKeyAsync(entity)
@@ -1307,6 +1324,29 @@ more responsive application.
 				}
 				return sb.ToString();
 			});
+		}
+
+		public void RegisterMissing(string id)
+		{
+			knownMissingIds.Add(id);
+		}
+
+		public void RegisterMissingIncludes(IEnumerable<RavenJObject> results, IEnumerable<string> includes)
+		{
+			if (includes == null || includes.Count() == 0)
+				return;
+
+			foreach (var result in results)
+			{
+				foreach (var include in includes)
+				{
+					IncludesUtil.Include(result, include, id =>
+					{
+						if (IsLoaded(id) == false)
+							RegisterMissing(id);
+					});
+				}
+			}
 		}
 	}
 }

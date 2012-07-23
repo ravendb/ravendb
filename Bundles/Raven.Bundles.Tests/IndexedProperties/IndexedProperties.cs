@@ -1,4 +1,5 @@
-﻿using System;
+﻿extern alias client;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
@@ -6,7 +7,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Bundles.IndexedProperties;
 using Raven.Client;
 using Raven.Client.Embedded;
-using Raven.Client.IndexedProperties;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
@@ -22,7 +22,7 @@ namespace Raven.Bundles.Tests.IndexedProperties
 			{
 				store.Configuration.RunInMemory = true;
 				//This lets us wire up the Trigger (only works in embedded mode though)
-				store.Configuration.Container = new CompositionContainer(new TypeCatalog(typeof(IndexedPropertiesTrigger)));
+				store.Configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(IndexedPropertiesTrigger)));
 				store.Initialize();
 				new Orders_ByCustomer_Count().Execute(store);	
 				//Create another index, so we can check we use the index specified in the SetupDoc
@@ -75,7 +75,7 @@ namespace Raven.Bundles.Tests.IndexedProperties
 				session.SaveChanges();
 			}
 
-			var setupDoc = new SetupDoc
+			var setupDoc = new client::Raven.Client.IndexedProperties.SetupDoc
 			{
 				//This is the name of the field in the Map/Reduce results that holds to Id of 
 				//the documents that we need to write the values back into
@@ -92,7 +92,7 @@ namespace Raven.Bundles.Tests.IndexedProperties
 			var indexName = new Orders_ByCustomer_Count().IndexName;
 			using (var session = store.OpenSession())
 			{
-				session.Store(setupDoc, SetupDoc.IdPrefix + indexName);
+				session.Store(setupDoc, client::Raven.Client.IndexedProperties.SetupDoc.IdPrefix + indexName);
 				session.SaveChanges();
 			}
 			WaitForIndexToUpdate(store, indexName);

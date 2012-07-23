@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
 
@@ -18,22 +19,22 @@ namespace Raven.Client.Extensions
 			                                          	{
 			                                          		Settings =
 			                                          			{
-			                                          				{"Raven/DataDir", Path.Combine("~", Path.Combine("Tenants", name))}
+			                                          				{"Raven/DataDir", Path.Combine("~", Path.Combine("Databases", name))}
 			                                          			}
 			                                          	});
 			doc.Remove("Id");
 			return doc;
 		}
 
-		private static readonly string[] invalidDbNameChars = new[] {"/", "\\", "\"", "'", "<", ">"};
+		private static readonly string validDbNameChars = @"([A-Za-z0-9_\-\.]+)";
 
 		private static void AssertValidName(string name)
 		{
 			if (name == null) throw new ArgumentNullException("name");
-			if (invalidDbNameChars.Any(name.Contains))
+			var result = Regex.Matches(name, validDbNameChars);
+			if (result.Count == 0 || result[0].Value != name)
 			{
-				throw new ArgumentException("Database name cannot contain any of [" +
-				                            string.Join(", ", invalidDbNameChars) + "] but was: " + name);
+				throw new InvalidOperationException("Database name can only contain only A-Z, a-z, \"_\", \".\" or \"-\" but was: " + name);
 			}
 		}
 

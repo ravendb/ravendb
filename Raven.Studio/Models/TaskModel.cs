@@ -17,6 +17,7 @@ namespace Raven.Studio.Models
 		{
 			Output = new BindableCollection<string>(x => x);
 			TaskInputs = new BindableCollection<TaskInput>(x => x.Name);
+			TaskDatas = new BindableCollection<TaskData>(x => x.Name);
 			TaskStatus = TaskStatus.DidNotStart;
 		}
 
@@ -27,10 +28,17 @@ namespace Raven.Studio.Models
 			set { name = value; OnPropertyChanged(() => Name); }
 		}
 
+	    public string IconResource
+	    {
+	        get { return iconResource; }
+            set { iconResource = value; OnPropertyChanged(() => IconResource); }
+	    }
+
 		public string Description { get; set; }
 
 		private TaskStatus taskStatus;
-		public TaskStatus TaskStatus
+	    private string iconResource;
+	    public TaskStatus TaskStatus
 		{
 			get { return taskStatus; }
 			set
@@ -42,6 +50,7 @@ namespace Raven.Studio.Models
 
 		public BindableCollection<string> Output { get; set; }
 		public BindableCollection<TaskInput> TaskInputs { get; set; }
+		public BindableCollection<TaskData> TaskDatas { get; set; }
 
 		public abstract ICommand Action { get; }
 	}
@@ -66,6 +75,34 @@ namespace Raven.Studio.Models
 		}
 
 		private string value;
+		public string Value
+		{
+			get { return value; }
+			set { this.value = value; OnPropertyChanged(() => Value); }
+		}
+	}
+
+	public class TaskData : NotifyPropertyChangedBase
+	{
+		public TaskData(string name, string value)
+		{
+			Name = name;
+			Value = value;
+		}
+
+		private string name;
+		public string Name
+		{
+			get { return name; }
+			set
+			{
+				name = value;
+				OnPropertyChanged(() => Name);
+			}
+		}
+
+		private string value;
+
 		public string Value
 		{
 			get { return value; }

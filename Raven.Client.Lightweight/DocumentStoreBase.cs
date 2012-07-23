@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Extensions;
@@ -44,9 +45,11 @@ namespace Raven.Client
 		/// <summary>
 		/// Subscribe to change notifications from the server
 		/// </summary>
-		public abstract TaskObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null);
 
 		public abstract IDisposable AggressivelyCacheFor(TimeSpan cahceDuration);
+
+		public abstract IDatabaseChanges Changes(string database = null);
+
 		public abstract IDisposable DisableAggressiveCaching();
 		
 #if !SILVERLIGHT

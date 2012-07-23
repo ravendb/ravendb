@@ -515,6 +515,21 @@ namespace Raven.Client.Connection.Async
 			throw new NotImplementedException();
 		}
 
+		public Task StartIndexing()
+		{
+			throw new NotImplementedException();
+		}
+
+		public Task StopIndexing()
+		{
+			throw new NotImplementedException();
+		}
+
+		public Task<string> GetIndexingStatus()
+		{
+			throw new NotImplementedException();
+		}
+
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize)
 		{
 			var metadata = new RavenJObject();

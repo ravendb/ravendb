@@ -13,6 +13,11 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		string path;
 		RavenDbServer ravenDbServer;
 
+		public TestWithInMemoryDatabase() : this(configuration => { })
+		{
+			
+		}
+
 		protected TestWithInMemoryDatabase(Action<database::Raven.Database.Config.RavenConfiguration> configModifier)
 		{
 			var ravenConfiguration = new database::Raven.Database.Config.RavenConfiguration

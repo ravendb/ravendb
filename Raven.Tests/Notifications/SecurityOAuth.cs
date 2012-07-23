@@ -61,11 +61,12 @@ namespace Raven.Tests.Notifications
 				store.JsonRequestFactory.
 					EnableBasicAuthenticationOverUnsecureHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers =
 					true;
-				var list = new BlockingCollection<ChangeNotification>();
+				var list = new BlockingCollection<DocumentChangeNotification>();
 				var taskObservable = store.Changes();
 				taskObservable.Task.Wait();
-				taskObservable
-					.Where(x => x.Type == ChangeTypes.Put)
+				var documentSubscription = taskObservable.ForDocument("items/1");
+				documentSubscription.Task.Wait();
+				documentSubscription
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -74,11 +75,11 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				ChangeNotification changeNotification;
+				DocumentChangeNotification changeNotification;
 				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
 
 				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
+				Assert.Equal(changeNotification.Type, DocumentChangeTypes.Put);
 			}
 		}
 	}

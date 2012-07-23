@@ -186,7 +186,7 @@ namespace Raven.Client.Shard
 					Keys = currentShardIds.ToList()
 				}, (dbCmd, i) =>
 				{
-					var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds);
+					var multiLoadOperation = new MultiLoadOperation(this, dbCmd.DisableAllCaching, currentShardIds, includes);
 					MultiLoadResult multiLoadResult;
 					do
 					{
@@ -370,7 +370,7 @@ namespace Raven.Client.Shard
 			{
 				var list = cmds.Select(cmd => cmd.DisableAllCaching()).ToList();
 				return new DisposableAction(() => list.ForEach(disposable => disposable.Dispose()));
-			}, ids);
+			}, ids, includes);
 			var lazyOp = new LazyMultiLoadOperation<T>(multiLoadOperation, ids, includes);
 			return AddLazyOperation(lazyOp, onEval, cmds);
 		}

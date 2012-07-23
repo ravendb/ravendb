@@ -14,6 +14,7 @@ using System.Threading;
 #if !NET35
 using System.Threading.Tasks;
 #endif
+using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
@@ -67,7 +68,8 @@ namespace Raven.Client.Connection
 			webRequest.Credentials = requestParams.Credentials;
 			webRequest.Method = requestParams.Method;
 			if (factory.DisableRequestCompression == false &&
-				(requestParams.Method == "POST" || requestParams.Method == "PUT" || requestParams.Method == "PATCH"))
+				(requestParams.Method == "POST" || requestParams.Method == "PUT" || 
+				 requestParams.Method == "PATCH" || requestParams.Method == "EVAL"))
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
 			webRequest.Headers.Add("Raven-Client-Version", ClientVersion);
@@ -624,6 +626,59 @@ namespace Raven.Client.Connection
 
 				commpressedData.Flush();
 				stream.Flush();
+			}
+		}
+
+		public Task<IObservable<string>>  ServerPullAsync(int retries = 0)
+		{
+			return Task.Factory.FromAsync<WebResponse>(webRequest.BeginGetResponse, webRequest.EndGetResponse, null)
+				.ContinueWith(task =>
+				              	{
+				              		var stream = task.Result.GetResponseStreamWithHttpDecompression();
+				              		var observableLineStream = new ObservableLineStream(stream, () =>
+				              		                                                            	{
+				              		                                                            		webRequest.Abort();
+																										task.Result.Close();
+				              		                                                            	});
+									observableLineStream.Start();
+				              		return (IObservable<string>)observableLineStream;
+				              	})
+				.ContinueWith(task =>
+				{
+					var webException = task.Exception.ExtractSingleInnerException() as WebException;
+					if (webException == null || retries >= 3)
+						return task;// effectively throw
+
+					var httpWebResponse = webException.Response as HttpWebResponse;
+					if (httpWebResponse == null ||
+						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
+						return task; // effectively throw
+
+					var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
+
+					if (authorizeResponse == null)
+						return task; // effectively throw
+
+					return authorizeResponse
+						.ContinueWith(_ =>
+						{
+							_.Wait(); //throw on error
+							return ServerPullAsync(retries + 1);
+						})
+						.Unwrap();
+				}).Unwrap();
+		}
+
+		public Task ExecuteWriteAsync(string data)
+		{
+			try
+			{
+				Write(data);
+				return ExecuteRequestAsync();
+			}
+			catch (Exception e)
+			{
+				return new CompletedTask(e);
 			}
 		}
 	}

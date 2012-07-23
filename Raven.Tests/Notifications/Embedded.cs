@@ -22,8 +22,10 @@ namespace Raven.Tests.Notifications
 		{
 			using(var store = NewDocumentStore())
 			{
-				var list = new BlockingCollection<ChangeNotification>();
-				store.Changes().Subscribe(list.Add);
+				var list = new BlockingCollection<DocumentChangeNotification>();
+				store.Changes()
+					.ForDocument("items/1")
+					.Subscribe(list.Add);
 
 				using(var session = store.OpenSession())
 				{
@@ -31,10 +33,11 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				var changeNotification = list.Take();
+				DocumentChangeNotification documentChangeNotification;
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
 
-				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.Put);
+				Assert.Equal("items/1", documentChangeNotification.Name);
+				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
 			}
 		}
 
@@ -43,9 +46,10 @@ namespace Raven.Tests.Notifications
 		{
 			using (var store = NewDocumentStore())
 			{
-				var list = new BlockingCollection<ChangeNotification>();
+				var list = new BlockingCollection<DocumentChangeNotification>();
 				store.Changes()
-					.Where(x=>x.Type == ChangeTypes.Delete)
+					.ForDocument("items/1")
+					.Where(x=>x.Type == DocumentChangeTypes.Delete)
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -56,10 +60,11 @@ namespace Raven.Tests.Notifications
 
 				store.DatabaseCommands.Delete("items/1", null);
 
-				var changeNotification = list.Take();
+				DocumentChangeNotification documentChangeNotification;
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
 
-				Assert.Equal("items/1", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.Delete);
+				Assert.Equal("items/1", documentChangeNotification.Name);
+				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Delete);
 			}
 		}
 
@@ -68,9 +73,13 @@ namespace Raven.Tests.Notifications
 		{
 			using (var store = NewDocumentStore())
 			{
-				var list = new BlockingCollection<ChangeNotification>();
-				store.Changes()
-					.Where(x => x.Type == ChangeTypes.IndexUpdated)
+				var list = new BlockingCollection<IndexChangeNotification>();
+				var databaseChanges = store.Changes();
+				databaseChanges.Task.Wait();
+				var indexSubscription = databaseChanges.ForIndex("Raven/DocumentsByEntityName");
+				indexSubscription.Task.Wait();
+				indexSubscription
+					.Where(x=>x.Type==IndexChangeTypes.MapCompleted)
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -81,10 +90,11 @@ namespace Raven.Tests.Notifications
 
 				store.DatabaseCommands.Delete("items/1", null);
 
-				var changeNotification = list.Take();
+				IndexChangeNotification changeNotification;
+				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
 
 				Assert.Equal("Raven/DocumentsByEntityName", changeNotification.Name);
-				Assert.Equal(changeNotification.Type, ChangeTypes.IndexUpdated);
+				Assert.Equal(changeNotification.Type, IndexChangeTypes.MapCompleted);
 			}
 		}
 	}

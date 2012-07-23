@@ -1,6 +1,5 @@
 using System;
 using System.Net;
-using System.Threading.Tasks;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
@@ -43,19 +42,6 @@ namespace Raven.Client.Silverlight.Connection
 				handler(sender, e);
 		}
 
-		/// <summary>
-		/// Creates the HTTP json request.
-		/// </summary>
-		/// <param name="self">The self.</param>
-		/// <param name="url">The URL.</param>
-		/// <param name="method">The method.</param>
-		/// <param name="credentials">The credentials.</param>
-		/// <param name="convention">The document conventions governing this request</param>
-		/// <returns></returns>
-		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
-		{
-			return CreateHttpJsonRequest(self, url, method, new RavenJObject(), credentials, convention);
-		}
 
 		/// <summary>
 		/// Creates the HTTP json request.
@@ -67,10 +53,10 @@ namespace Raven.Client.Silverlight.Connection
 		/// <param name="credentials">The credentials.</param>
 		/// <param name="convention">The document conventions governing this request</param>
 		/// <returns></returns>
-		public HttpJsonRequest CreateHttpJsonRequest(object self, string url, string method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention)
+		public HttpJsonRequest CreateHttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams)
 		{
-			var request = new HttpJsonRequest(url, method, metadata, convention, this);
-			ConfigureRequest(self, new WebRequestEventArgs { Request = request.webRequest, JsonRequest = request });
+			var request = new HttpJsonRequest(createHttpJsonRequestParams.Url, createHttpJsonRequestParams.Method, createHttpJsonRequestParams.Metadata, createHttpJsonRequestParams.Convention, this);
+			ConfigureRequest(createHttpJsonRequestParams.Self, new WebRequestEventArgs { Request = request.webRequest, JsonRequest = request });
 			return request;
 		}
 
@@ -83,4 +69,35 @@ namespace Raven.Client.Silverlight.Connection
 		{
 		}
 	}
+
+	public class CreateHttpJsonRequestParams
+	{
+		public CreateHttpJsonRequestParams(object self, string url, string method, ICredentials credentials, DocumentConvention convention)
+		{
+			Self = self;
+			Url = url;
+			Method = method;
+			Credentials = credentials;
+			Convention = convention;
+		}
+
+		public CreateHttpJsonRequestParams(object self, string url, string method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention)
+		{
+			Self = self;
+			Url = url;
+			Method = method;
+			Metadata = metadata;
+			Credentials = credentials;
+			Convention = convention;
+		}
+
+		public object Self { get; private set; }
+		public string Url { get; private set; }
+		public string Method { get; private set; }
+		public RavenJObject Metadata { get; private set; }
+		public ICredentials Credentials { get; private set; }
+		public DocumentConvention Convention { get; private set; }
+		public bool AvoidCachingRequest { get; set; }
+	}
+
 }

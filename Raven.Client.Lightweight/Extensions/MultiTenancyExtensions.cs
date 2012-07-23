@@ -94,7 +94,7 @@ namespace Raven.Client.Extensions
 						return get;
 
 
-					return (Task)self.PutAsync(docId, null, doc, new RavenJObject());
+					return (Task)serverClient.PutAsync(docId, null, doc, new RavenJObject());
 				})
 				.Unwrap()
 				.ContinueWith(x=>

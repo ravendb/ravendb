@@ -18,6 +18,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Linq;
+using System.Threading.Tasks;
+using Raven.Abstractions.Util;
+using Raven.Database.Server.Connections;
 using Raven.Database.Server.Responders;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -36,9 +39,6 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
-using Raven.Database.Util;
-using Raven.Imports.SignalR;
-using Raven.Imports.SignalR.Hosting.Self;
 
 namespace Raven.Database.Server
 {
@@ -85,9 +85,8 @@ namespace Raven.Database.Server
 		}
 
 		private static readonly Regex databaseQuery = new Regex("^/databases/([^/]+)(?=/?)", RegexOptions.IgnoreCase);
-		public static readonly Regex SiganlRQuery = new Regex("^(/databases/([^/]+))?/signalr/", RegexOptions.IgnoreCase);
+		public static readonly Regex ChangesQuery = new Regex("^(/databases/([^/]+))?/changes/events", RegexOptions.IgnoreCase);
 
-		private ExternalHttpListenerServer signalrServer;
 		private HttpListener listener;
 
 		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
@@ -98,11 +97,8 @@ namespace Raven.Database.Server
 		// concurrent requests
 		// we set 1/4 aside for handling background tasks
 		private readonly SemaphoreSlim concurretRequestSemaphore = new SemaphoreSlim(MaxConcurrentRequests);
-		private Timer databasesCleanupTimer;
+		private Timer serverTimer;
 		private int physicalRequestsCount;
-
-		private ConcurrentDictionary<DocumentDatabase, ConcurrentSet<NotificationsConnection>> connectionsByDatabase =
-			new ConcurrentDictionary<DocumentDatabase, ConcurrentSet<NotificationsConnection>>();
 
 		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
 		private readonly TimeSpan frequnecyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
@@ -120,7 +116,6 @@ namespace Raven.Database.Server
 			SystemDatabase = resourceStore;
 			SystemConfiguration = configuration;
 
-			SystemDatabase.Notifications += OnDatabaseNotifications;
 			int val;
 			if (int.TryParse(configuration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
 				val = 900;
@@ -150,29 +145,6 @@ namespace Raven.Database.Server
 			}
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
-		}
-
-		private void OnDatabaseNotifications(object sender, ChangeNotification changeNotification)
-		{
-			var db = sender as DocumentDatabase;
-			if (db == null)
-				return;
-
-			ConcurrentSet<NotificationsConnection> set;
-			if (connectionsByDatabase.TryGetValue(db, out set) == false)
-				return;
-
-			foreach (var notification in set)
-			{
-				notification.Send(changeNotification);
-			}
-		}
-
-		public void RegisterConnection(DocumentDatabase db, NotificationsConnection notifications)
-		{
-			var set = connectionsByDatabase.GetOrAdd(db, _ => new ConcurrentSet<NotificationsConnection>());
-			notifications.Disposed += (sender, args) => set.TryRemove(notifications);
-			set.Add(notifications);
 		}
 
 		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
@@ -221,8 +193,8 @@ namespace Raven.Database.Server
 				var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
 				exceptionAggregator.Execute(() =>
 				{
-					if (databasesCleanupTimer != null)
-						databasesCleanupTimer.Dispose();
+					if (serverTimer != null)
+						serverTimer.Dispose();
 				});
 				exceptionAggregator.Execute(() =>
 				{
@@ -235,11 +207,8 @@ namespace Raven.Database.Server
 				{
 					lock (ResourcesStoresCache)
 					{
-						foreach (var documentDatabase in ResourcesStoresCache)
-						{
-							var database = documentDatabase.Value;
-							exceptionAggregator.Execute(database.Dispose);
-						}
+						// shut down all databases in parallel, avoid having to wait for each one
+						Parallel.ForEach(ResourcesStoresCache, val => val.Value.Dispose());
 						ResourcesStoresCache.Clear();
 					}
 				});
@@ -265,8 +234,6 @@ namespace Raven.Database.Server
 			var uri = "http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
 			listener.Prefixes.Add(uri);
 
-			SetupSignalR(uri);
-
 			foreach (var configureHttpListener in ConfigureHttpListeners)
 			{
 				configureHttpListener.Value.Configure(listener, SystemConfiguration);
@@ -279,32 +246,35 @@ namespace Raven.Database.Server
 			listener.BeginGetContext(GetContext, null);
 		}
 
-		private void SetupSignalR(string uri)
-		{
-			var depResolver = CreateDependencyResolver();
-			signalrServer = new ExternalHttpListenerServer(uri, depResolver, listener);
-			signalrServer.MapConnection<NotificationsConnection>("/signalr/notifications");
-		}
-
-		public DefaultDependencyResolver CreateDependencyResolver()
-		{
-			var depResolver = new DefaultDependencyResolver();
-			depResolver.Register(typeof(HttpServer), () => this);
-			var jsonSerializerSettings = new JsonSerializerSettings();
-			jsonSerializerSettings.Converters.AddRange(Default.Converters);
-			var serializer = new JsonNetSerializer(jsonSerializerSettings);
-			depResolver.Register(typeof(IJsonSerializer), () => serializer);
-			return depResolver;
-		}
-
 		public void Init()
 		{
 			TenantDatabaseModified.Occured += TenantDatabaseRemoved;
-			databasesCleanupTimer = new Timer(CleanupDatabases, null, frequnecyToCheckForIdleDatabases, frequnecyToCheckForIdleDatabases);
+			serverTimer = new Timer(IdleOperations, null, frequnecyToCheckForIdleDatabases, frequnecyToCheckForIdleDatabases);
 		}
 
-		private void CleanupDatabases(object state)
+		private void IdleOperations(object state)
 		{
+			try
+			{
+				SystemDatabase.RunIdleOperations();
+			}
+			catch (Exception e)
+			{
+				logger.ErrorException("Error during idle operation run for system database", e);
+			}
+
+			foreach (var documentDatabase in ResourcesStoresCache)
+			{
+				try
+				{
+					documentDatabase.Value.RunIdleOperations();
+				}
+				catch (Exception e)
+				{
+					logger.WarnException("Error during idle operation run for " + documentDatabase.Key, e);
+				}
+			}
+
 			var databasesToCleanup = databaseLastRecentlyUsed
 				.Where(x => (SystemTime.Now - x.Value) > maxTimeDatabaseCanBeIdle)
 				.Select(x => x.Key)
@@ -355,10 +325,9 @@ namespace Raven.Database.Server
 		private void GetContext(IAsyncResult ar)
 		{
 			IHttpContext ctx;
-			HttpListenerContext httpListenerContext;
 			try
 			{
-				httpListenerContext = listener.EndGetContext(ar);
+				HttpListenerContext httpListenerContext = listener.EndGetContext(ar);
 				ctx = new HttpListenerContextAdpater(httpListenerContext, SystemConfiguration);
 				//setup waiting for the next request
 				listener.BeginGetContext(GetContext, null);
@@ -378,8 +347,8 @@ namespace Raven.Database.Server
 			try
 			{
 				Interlocked.Increment(ref physicalRequestsCount);
-				if (SiganlRQuery.IsMatch(ctx.GetRequestUrl()))
-					HandleSignalRequest(ctx, prefix => signalrServer.ProcessRequestSafe(httpListenerContext, prefix));
+				if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
+					HandleChangesRequest(ctx, () => { });
 				else
 					HandleActualRequest(ctx);
 			}
@@ -390,18 +359,21 @@ namespace Raven.Database.Server
 		}
 
 
-		public T HandleSignalRequest<T>(IHttpContext context, Func<string, T> action)
+		public Task HandleChangesRequest(IHttpContext context, Action onDisconnect)
 		{
 			try
 			{
-				var prefix = SetupRequestToProperDatabase(context);
+				SetupRequestToProperDatabase(context);
 				if (!SetThreadLocalState(context))
 				{
 					context.FinalizeResonse();
-					return default(T);
+					onDisconnect();
+					return new CompletedTask();
 				}
-
-				return action(prefix);
+				var eventsTransport = new EventsTransport(context);
+				eventsTransport.Disconnected += onDisconnect;
+				CurrentDatabase.TransportState.Register(eventsTransport);
+				return eventsTransport.ProcessAsync();
 			}
 			catch (Exception e)
 			{
@@ -422,7 +394,8 @@ namespace Raven.Database.Server
 						logger.ErrorException("Could not finalize request properly", e2);
 					}
 				}
-				return default(T);
+				onDisconnect();
+				return new CompletedTask();
 			}
 			finally
 			{
@@ -839,7 +812,6 @@ namespace Raven.Database.Server
 			database = ResourcesStoresCache.GetOrAddAtomically(tenantId, s =>
 			{
 				var documentDatabase = new DocumentDatabase(config);
-				documentDatabase.Notifications += OnDatabaseNotifications;
 				documentDatabase.SpinBackgroundWorkers();
 				return documentDatabase;
 			});

@@ -17,7 +17,7 @@
     <BitmapImage x:Key="Image_Undo_Small" UriSource="undo_tiny.png"/>
     <BitmapImage x:Key="Image_Query_Small" UriSource="index_query_tiny.png"/>
     <BitmapImage x:Key="Image_Edit_Small" UriSource="edit_tiny.png"/>
-    <BitmapImage x:Key="Image_OpenDocument_Small" UriSource="edit_pencil_write_icon.png"/>
+    <BitmapImage x:Key="Image_OpenDocument_Small" UriSource="edit_tiny.png"/>
     <BitmapImage x:Key="Image_Reformat_Small" UriSource="reformatjson_tiny.png"/>
     <BitmapImage x:Key="Image_Delete_Tiny" UriSource="remove_tiny.png"/>
     <BitmapImage x:Key="Image_Refresh_Small" UriSource="refresh_tiny.png"/>
@@ -44,5 +44,15 @@
     <BitmapImage x:Key="Image_Logs_Small" UriSource="logs_small.png"/>
     <BitmapImage x:Key="Image_Tasks_Small" UriSource="tasks_small.png"/>
     <BitmapImage x:Key="Image_ToggleExpansion_Tiny" UriSource="Collapse_tiny.png"/>
+    <BitmapImage x:Key="Image_IndexFields_Tiny" UriSource="index_showfields.png"/>
+    <BitmapImage x:Key="Image_SkipTransform_Tiny" UriSource="index_skiptransform.png"/>
+    <BitmapImage x:Key="Image_VisitLink_Tiny" UriSource="VisitLink_Tiny.png"/>
+    <BitmapImage x:Key="Image_RecentQueries_Tiny" UriSource="recent_queries_tiny.png"/>
+    <BitmapImage x:Key="Image_ClearHistory_Tiny" UriSource="clear_history_tiny.png"/>
+    <BitmapImage x:Key="Image_Pin_Tiny" UriSource="pin_tiny.png"/>
+    <BitmapImage x:Key="Image_UnPin_Tiny" UriSource="un_pin_tiny.png"/>
+    <BitmapImage x:Key="Image_Import_Tiny" UriSource="import_data_tiny.png"/>
+    <BitmapImage x:Key="Image_Export_Tiny" UriSource="export_data_tiny.png"/>
+    <BitmapImage x:Key="Image_Backup_Tiny" UriSource="backup_tiny.png"/>
     
 </ResourceDictionary>

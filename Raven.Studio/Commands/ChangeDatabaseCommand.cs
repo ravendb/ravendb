@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO.IsolatedStorage;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Studio.Infrastructure;
@@ -45,8 +46,9 @@ namespace Raven.Studio.Commands
 				.Except(updateAllFromServer.Select(x=>x.GetType()))
 				.Select(model => (Model) Activator.CreateInstance(model))
 				.ForEach(model => model.ForceTimerTicked());
-			
-			
+
+			Settings.Instance.SelectedDatabase = databaseName;
+
 			if (shouldRedirect)
 			{
 				UrlUtil.Navigate(urlParser.BuildUrl());

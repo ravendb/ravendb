@@ -175,6 +175,6 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public Action<ChangeNotification> RaiseChangeNotification { get; set; }
+		public Action<IndexChangeNotification> RaiseIndexChangeNotification { get; set; }
 	}
 }

@@ -46,9 +46,6 @@ namespace Raven.Storage.Esent
 		[ImportMany]
 		public OrderedPartCollection<ISchemaUpdate> Updaters { get; set; }
 
-		[ImportMany]
-		public OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
-
 		static TransactionalStorage()
 		{
 			try
@@ -137,7 +134,7 @@ namespace Raven.Storage.Esent
 
 		public long GetDatabaseSizeInBytes()
 		{
-			long sizeInBytes = -1;
+			long sizeInBytes;
 
 			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
 			{
@@ -226,10 +223,11 @@ namespace Raven.Storage.Esent
 
 		}
 
-		public bool Initialize(IUuidGenerator uuidGenerator)
+		public bool Initialize(IUuidGenerator uuidGenerator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
 		{
 			try
 			{
+				DocumentCodecs = documentCodecs;
 				generator = uuidGenerator;
 				var instanceParameters = new TransactionalStorageConfigurator(configuration).ConfigureInstance(instance, path);
 
@@ -277,6 +275,8 @@ namespace Raven.Storage.Esent
 				throw new InvalidOperationException("Could not open transactional storage: " + database, e);
 			}
 		}
+
+		protected OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
 
 		private void SetIdFromDb()
 		{

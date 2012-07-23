@@ -2,10 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Net;
 using System.Reactive.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Input;
+using ActiproSoftware.Text;
+using ActiproSoftware.Text.Implementation;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
+using Raven.Abstractions.Data;
 using Raven.Client.Linq;
 using Raven.Studio.Commands;
+using Raven.Studio.Controls.Editors;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Features.Query;
 using Raven.Studio.Infrastructure;
@@ -18,17 +25,24 @@ namespace Raven.Studio.Models
 	{
         private string error;
         private ICommand executeQuery;
+        private RavenQueryStatistics results;
+        private bool skipTransformResults;
+        private bool hasTransform;
+        private TimeSpan queryTime;
+        private bool internalUpdate;
 
-        public QueryDocumentsCollectionSource CollectionSource { get; private set; }
+        private IEditorDocument queryDocument;
+		public QueryDocumentsCollectionSource CollectionSource { get; private set; }
 
 		private QueryIndexAutoComplete queryIndexAutoComplete;
-		public QueryIndexAutoComplete QueryIndexAutoComplete
+		protected QueryIndexAutoComplete QueryIndexAutoComplete
 		{
-			get { return queryIndexAutoComplete; }
+            get { return queryIndexAutoComplete; }
 			set
 			{
-				queryIndexAutoComplete = value;
-				OnPropertyChanged(() => QueryIndexAutoComplete);
+			    queryIndexAutoComplete = value;
+                queryDocument.Language.UnregisterService<ICompletionProvider>();
+				queryDocument.Language.RegisterService<ICompletionProvider>(value.CompletionProvider);
 			}
 		}
 
@@ -41,6 +55,11 @@ namespace Raven.Studio.Models
 			set
 			{
 				isSpatialQuerySupported = value;
+                if (!isSpatialQuerySupported)
+                {
+                    IsSpatialQuery = false;
+                }
+
 				OnPropertyChanged(() => IsSpatialQuerySupported);
 			}
 		}
@@ -52,6 +71,13 @@ namespace Raven.Studio.Models
 			set
 			{
 				isSpatialQuery = value;
+                if (!isSpatialQuery)
+                {
+                    Latitude = null;
+                    Longitude = null;
+                    Radius = null;
+                }
+
 				OnPropertyChanged(() => IsSpatialQuery);
 			}
 		}
@@ -91,6 +117,19 @@ namespace Raven.Studio.Models
 
 		#endregion
 
+		private int exceptionLine;
+		public int ExceptionLine
+		{
+			get { return exceptionLine; }
+			set { exceptionLine = value; }
+		}
+		private int exceptionColumn;
+		public int ExceptionColumn
+		{
+			get { return exceptionColumn; }
+			set { exceptionColumn = value; }
+		}
+
 		private string indexName;
 		public string IndexName
 		{
@@ -106,13 +145,24 @@ namespace Raven.Studio.Models
 				}
 
 				indexName = value;
-                DocumentsResult.Context = "Index/" + indexName;
+				DocumentsResult.Context = "Index/" + indexName;
 				OnPropertyChanged(() => IndexName);
-				RestoreHistory();
 			}
 		}
 
-	    private bool showFields;
+		
+		private QueryOperator defualtOperator;
+		public QueryOperator DefualtOperator
+		{
+			get { return defualtOperator; }
+			set
+			{
+				defualtOperator = value;
+				OnPropertyChanged(() => DefualtOperator);
+			}
+		}
+
+		private bool showFields;
 
 	    public bool ShowFields
 	    {
@@ -121,10 +171,19 @@ namespace Raven.Studio.Models
             {
                 showFields = value;
                 OnPropertyChanged(() => ShowFields);
-                Requery();
             }
 	    }
 
+	    public bool SkipTransformResults
+	    {
+	        get { return skipTransformResults; }
+            set
+            {
+                skipTransformResults = value;
+                OnPropertyChanged(() => SkipTransformResults);
+                Requery();
+            }
+	    }
 	    #region Sorting
 
 		public const string SortByDescSuffix = " DESC";
@@ -144,7 +203,7 @@ namespace Raven.Studio.Models
 
 		public ICommand AddSortBy
 		{
-			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy.Add(new StringRef { Value = SortByOptions.First() })); }
+			get { return new ChangeFieldValueCommand<QueryModel>(this, x => x.SortBy.Add(new StringRef { Value = "" })); }
 		}
 
 		public ICommand RemoveSortBy
@@ -180,7 +239,7 @@ namespace Raven.Studio.Models
 
 		private void SetSortByOptions(ICollection<string> items)
 		{
-            SortByOptions.Clear();
+			SortByOptions.Clear();
 
 			foreach (var item in items)
 			{
@@ -205,7 +264,8 @@ namespace Raven.Studio.Models
 		public BindableCollection<string> DynamicOptions { get; set; }
 
 		private string dynamicSelectedOption;
-		public string DynamicSelectedOption
+	    private string queryUrl, fullQueryUrl;
+	    public string DynamicSelectedOption
 		{
 			get { return dynamicSelectedOption; }
 			set
@@ -220,16 +280,52 @@ namespace Raven.Studio.Models
 						IndexName = "dynamic/" + dynamicSelectedOption;
 						break;
 				}
-				OnPropertyChanged(() => DynamicSelectedOption);
+
+			    if (dynamicSelectedOption != "AllDocs")
+			    {
+			        BeginUpdateFieldsAndSortOptions(dynamicSelectedOption);
+			    }
+			    else
+                {
+                    SortBy.Clear();
+                    SortByOptions.Clear();
+                    QueryIndexAutoComplete = new QueryIndexAutoComplete(new string[0]);
+                    RestoreHistory();
+                }
+
+			    OnPropertyChanged(() => DynamicSelectedOption);
 			}
 		}
 
-		private static string lastQuery;
-		private static string lastIndex;
+	    private void BeginUpdateFieldsAndSortOptions(string collection)
+	    {
+	        DatabaseCommands.QueryAsync("Raven/DocumentsByEntityName",
+	                                    new IndexQuery() {Query = "Tag:" + collection, Start = 0, PageSize = 1}, null)
+	            .ContinueOnSuccessInTheUIThread(result =>
+	                                                {
+                                                        if (result.Results.Count > 0)
+                                                        {
+                                                            var fields = DocumentHelpers.GetPropertiesFromJObjects(result.Results, includeNestedProperties:true, includeMetadata:false, excludeParentPropertyNames:true)
+                                                                .ToList();
 
-		public QueryModel()
+                                                            SetSortByOptions(fields);
+                                                            QueryIndexAutoComplete = new QueryIndexAutoComplete(fields);
+                                                            RestoreHistory();
+                                                        }
+	                                                });
+	    }
+
+	    public QueryModel()
 		{
 			ModelUrl = "/query";
+
+            queryDocument = new EditorDocument()
+            {
+                Language = SyntaxEditorHelper.LoadLanguageDefinitionFromResourceStream("RavenQuery.langdef")
+            };
+
+			ExceptionLine = -1;
+			ExceptionColumn = -1;
 			
             CollectionSource = new QueryDocumentsCollectionSource();
 		    Observable.FromEventPattern<QueryStatisticsUpdatedEventArgs>(h => CollectionSource.QueryStatisticsUpdated += h,
@@ -247,41 +343,73 @@ namespace Raven.Studio.Models
 		        .ObserveOnDispatcher()
 		        .Subscribe(e => HandleQueryError(e.EventArgs.Exception));
 
-		    DocumentsResult = new DocumentsModel(CollectionSource)
-		                          {
-                                      Header = "Results",
-                                      SkipAutoRefresh = true,
-                                      DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index, IndexName, CollectionSource.TemplateQuery),
-		                          };
+			DocumentsResult = new DocumentsModel(CollectionSource)
+								  {
+									  Header = "Results",
+									  SkipAutoRefresh = true,
+									  DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index, IndexName, CollectionSource.TemplateQuery),
+								  };
 
-            Query = new Observable<string>();
             QueryErrorMessage = new Observable<string>();
             IsErrorVisible = new Observable<bool>();
 
 			SortBy = new BindableCollection<StringRef>(x => x.Value);
-		    SortBy.CollectionChanged += HandleSortByChanged;
+			SortBy.CollectionChanged += HandleSortByChanged;
 			SortByOptions = new BindableCollection<string>(x => x);
 			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
-			DynamicSelectedOption = DynamicOptions[0];
 		}
 
-	    private void HandleQueryError(Exception exception)
-	    {
-	        if (exception is AggregateException)
-	        {
-	            exception = ((AggregateException) exception).ExtractSingleInnerException();
-	        }
+		Regex errorLocation = new Regex(@"at line (\d+), column (\d+)");
 
-	        QueryErrorMessage.Value = exception.Message;
-	        IsErrorVisible.Value = true;
-	    }
+		private void HandleQueryError(Exception exception)
+		{
+			if (exception is AggregateException)
+			{
+				exception = ((AggregateException) exception).ExtractSingleInnerException();
+			}
 
-	    public void ClearQueryError()
-	    {
-	        QueryErrorMessage.Value = string.Empty;
-	        IsErrorVisible.Value = false;
-	    }
+			var indexRaven = exception.Message.IndexOf("at Raven.", System.StringComparison.Ordinal);
+			var indexLucene = exception.Message.IndexOf("at Lucene.", System.StringComparison.Ordinal);
+			var index = Math.Min(indexLucene, indexRaven);
+			if (index != -1)
+			{
+				var trimmedMessage = exception.Message.Remove(index);
+				QueryErrorMessage.Value = trimmedMessage;
+			}
+			else
+			{
+				QueryErrorMessage.Value = exception.Message;
+			}
+
+
+			var match = errorLocation.Match(QueryErrorMessage.Value);
+
+			if (match.Success)
+			{
+				var success = int.TryParse(match.Groups[1].Value, out exceptionLine);
+				if (success)
+				{
+					success = int.TryParse(match.Groups[2].Value, out exceptionColumn);
+				}
+
+				if (!success)
+				{
+					ExceptionLine = -1;
+					ExceptionColumn = -1;
+				}
+					
+			}
+
+
+			IsErrorVisible.Value = true;
+		}
+
+		public void ClearQueryError()
+		{
+			QueryErrorMessage.Value = string.Empty;
+			IsErrorVisible.Value = false;
+		}
 
 	    private void HandleSortByChanged(object sender, NotifyCollectionChangedEventArgs e)
 	    {
@@ -293,69 +421,163 @@ namespace Raven.Studio.Models
             Requery();
 	    }
 
-	    private void Requery()
-	    {
-	        Execute.Execute(null);
-	    }
-
-	    public override void LoadModelParameters(string parameters)
+		private void Requery()
 		{
-			var urlParser = new UrlParser(parameters);
-
-			if (urlParser.GetQueryParam("mode") == "dynamic")
-			{
-				IsDynamicQuery = true;
-				DatabaseCommands.GetTermsAsync("Raven/DocumentsByEntityName", "Tag", "", 100)
-					.ContinueOnSuccess(collections => DynamicOptions.Match(new[] { "AllDocs" }.Concat(collections).ToArray()));
-				return;
-			}
-
-			IndexName = urlParser.Path.Trim('/');
-
-			DatabaseCommands.GetIndexAsync(IndexName)
-				.ContinueOnUIThread(task =>
-				{
-					if (task.IsFaulted || task.Result  == null)
-					{
-						IndexDefinitionModel.HandleIndexNotFound(IndexName);
-						return;
-					}
-                    var fields = task.Result.Fields;
-					QueryIndexAutoComplete = new QueryIndexAutoComplete(IndexName, Query, fields);
-					
-					const string spatialindexGenerate = "SpatialIndex.Generate";
-					IsSpatialQuerySupported =
-                        task.Result.Maps.Any(x => x.Contains(spatialindexGenerate)) ||
-                        (task.Result.Reduce != null && task.Result.Reduce.Contains(spatialindexGenerate));
-
-					SetSortByOptions(fields);
-					Execute.Execute(string.Empty);
-				}).Catch();
+			Execute.Execute(null);
 		}
 
-		public void RememberHistory()
-		{
-			lastIndex = IndexName;
-			lastQuery = Query.Value;
+        public override void LoadModelParameters(string parameters)
+        {
+            var urlParser = new UrlParser(parameters);
+
+            ClearCurrentQuery();
+
+            if (urlParser.GetQueryParam("mode") == "dynamic")
+            {
+                var collection = urlParser.GetQueryParam("collection");
+
+                IsDynamicQuery = true;
+                DatabaseCommands.GetTermsAsync("Raven/DocumentsByEntityName", "Tag", "", 100)
+                    .ContinueOnSuccessInTheUIThread(collections =>
+                    {
+                        DynamicOptions.Match(new[] { "AllDocs" }.Concat(collections).ToArray());
+
+                        string selectedOption = null;
+                        if (!string.IsNullOrEmpty(collection))
+                        {
+                            selectedOption = DynamicOptions.FirstOrDefault(s => s.Equals(collection));
+                        }
+
+                        if (selectedOption == null)
+                        {
+                            selectedOption = DynamicOptions[0];
+                        }
+
+                        DynamicSelectedOption = selectedOption;
+                    });
+                return;
+            }
+
+            IsDynamicQuery = false;
+            IndexName = urlParser.Path.Trim('/');
+
+            DatabaseCommands.GetIndexAsync(IndexName)
+                .ContinueOnUIThread(task =>
+                {
+                    if (task.IsFaulted || task.Result == null)
+                    {
+                        IndexDefinitionModel.HandleIndexNotFound(IndexName);
+                        return;
+                    }
+                    var fields = task.Result.Fields;
+                    QueryIndexAutoComplete = new QueryIndexAutoComplete(fields, IndexName, QueryDocument);
+
+                    const string spatialindexGenerate = "SpatialIndex.Generate";
+                    IsSpatialQuerySupported =
+                        task.Result.Maps.Any(x => x.Contains(spatialindexGenerate)) ||
+                        (task.Result.Reduce != null && task.Result.Reduce.Contains(spatialindexGenerate));
+                    HasTransform = !string.IsNullOrEmpty(task.Result.TransformResults);
+
+                    SetSortByOptions(fields);
+                    RestoreHistory();
+                }).Catch();
+        }
+
+	    private void ClearCurrentQuery()
+	    {
+	        Query = string.Empty;
+            SortBy.Clear();
+	        IsSpatialQuery = false;
+	        Latitude = null;
+	        Longitude = null;
+	        Radius = null;
+	    }
+
+	    public bool HasTransform
+	    {
+            get { return hasTransform; }
+            private set
+            {
+                hasTransform = value;
+                OnPropertyChanged(() => HasTransform);
+            }
+	    }
+
+	    public void RememberHistory()
+	    {
+            var state = new QueryState(IndexName, Query, SortBy.Select(r => r.Value), IsSpatialQuery, Latitude, Longitude, Radius);
+
+            PerDatabaseState.QueryHistoryManager.StoreQuery(state);
 		}
 
 		public void RestoreHistory()
 		{
-			if (IndexName == null || lastIndex != IndexName || string.IsNullOrWhiteSpace(lastQuery))
-				return;
+		    var url = new UrlParser(UrlUtil.Url);
+		    var recentQueryHashCode = url.GetQueryParam("recentQuery");
 
-			Query.Value = lastQuery;
-			Execute.Execute(null);
+            if (PerDatabaseState.QueryHistoryManager.IsHistoryLoaded)
+            {
+                ApplyQueryState(recentQueryHashCode);
+            }
+            else
+            {
+                PerDatabaseState.QueryHistoryManager.WaitForHistoryAsync()
+                    .ContinueOnUIThread(_ => ApplyQueryState(recentQueryHashCode));
+            }
+		    
 		}
 
-		public ICommand Execute { get { return executeQuery ?? (executeQuery = new ExecuteQueryCommand(this)); } }
+        private void ApplyQueryState(string recentQueryHashCode)
+	    {
+            var state = string.IsNullOrEmpty(recentQueryHashCode)
+                           ? PerDatabaseState.QueryHistoryManager.GetMostRecentStateForIndex(IndexName)
+                           : PerDatabaseState.QueryHistoryManager.GetStateByHashCode(recentQueryHashCode);
+
+	        if (state == null)
+	        {
+	            return;
+	        }
+
+	        internalUpdate = true;
+
+	        try
+	        {
+	            Query = state.Query;
+	            IsSpatialQuery = state.IsSpatialQuery;
+	            Latitude = state.Latitude;
+	            Longitude = state.Longitude;
+	            Radius = state.Radius;
+
+	            SortBy.Clear();
+
+	            foreach (var sortOption in state.SortOptions)
+	            {
+	                if (SortByOptions.Contains(sortOption))
+	                {
+	                    SortBy.Add(new StringRef() {Value = sortOption});
+	                }
+	            }
+	        }
+	        finally
+	        {
+	            internalUpdate = false;
+	        }
+
+	        Requery();
+	    }
+
+	    public ICommand Execute { get { return executeQuery ?? (executeQuery = new ExecuteQueryCommand(this)); } }
 
         public Observable<string> QueryErrorMessage { get; private set; }
         public Observable<bool> IsErrorVisible { get; private set; } 
-		public Observable<string> Query { get; private set; }
 
-		private TimeSpan queryTime;
-		public TimeSpan QueryTime
+	    public string Query
+	    {
+	        get { return queryDocument.CurrentSnapshot.Text; }
+	        set { queryDocument.SetText(value); }
+	    }
+
+	    public TimeSpan QueryTime
 		{
 			get { return queryTime; }
 			set
@@ -364,8 +586,28 @@ namespace Raven.Studio.Models
 				OnPropertyChanged(() => QueryTime);
 			}
 		}
-		private RavenQueryStatistics results;
-		public RavenQueryStatistics Results
+
+	    public string QueryUrl
+	    {
+	        get { return queryUrl; }
+            set
+            {
+                queryUrl = value;
+                OnPropertyChanged(() => QueryUrl);
+            }
+	    }
+
+		public string FullQueryUrl
+		{
+			get { return fullQueryUrl; }
+			set
+			{
+				fullQueryUrl = value;
+				OnPropertyChanged(() => FullQueryUrl);
+			}
+		}
+
+	    public RavenQueryStatistics Results
 		{
 			get { return results; }
 			set
@@ -375,6 +617,38 @@ namespace Raven.Studio.Models
 			}
 		}
 
+        public IEnumerable<FieldAndTerm> GetCurrentFieldsAndTerms()
+        {
+            var textSnapshotReader = queryDocument.CurrentSnapshot.GetReader(TextPosition.Zero);
+            string currentField = null;
+            while (!textSnapshotReader.IsAtSnapshotEnd)
+            {
+                var token = textSnapshotReader.ReadToken();
+                if (token == null)
+                    break;
+
+                var txt = textSnapshotReader.ReadTextReverse(token.Length);
+                textSnapshotReader.ReadToken();
+
+                if (string.IsNullOrWhiteSpace(txt))
+                    continue;
+
+                string currentVal = null;
+                if (token.Key == "Field")
+                {
+                    currentField = txt.Substring(0, txt.Length - 1);
+                }
+                else
+                {
+                    currentVal = txt;
+                }
+                if (currentField == null || currentVal == null)
+                    continue;
+
+                yield return new FieldAndTerm(currentField, currentVal);
+                currentField = null;
+            }
+        }
 
 		public DocumentsModel DocumentsResult { get; private set; }
 
@@ -402,7 +676,7 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-				model.Query.Value = model.Query.Value.Replace(fieldAndTerm.Term, fieldAndTerm.SuggestedTerm);
+				model.Query = model.Query.Replace(fieldAndTerm.Term, fieldAndTerm.SuggestedTerm);
 				model.Requery();
 			}
 		}
@@ -411,5 +685,9 @@ namespace Raven.Studio.Models
 		{
 			get { return "Query Index"; }
 		}
+	    public IEditorDocument QueryDocument
+	    {
+	        get { return queryDocument; }
+	    }
 	}
 }

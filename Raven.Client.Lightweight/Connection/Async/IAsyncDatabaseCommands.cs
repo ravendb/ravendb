@@ -238,6 +238,12 @@ namespace Raven.Client.Connection.Async
 
 		Task StartBackupAsync(string backupLocation);
 
+		Task StartIndexing();
+
+		Task StopIndexing();
+
+		Task<string> GetIndexingStatus();
+
 		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize);
 
 		/// <summary>

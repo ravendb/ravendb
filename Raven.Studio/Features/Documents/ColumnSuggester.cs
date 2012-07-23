@@ -42,55 +42,10 @@ namespace Raven.Studio.Features.Documents
             return CreateSuggestedBindingsFromDocuments(sampleDocuments.Select(v => v.Document).ToArray());
         }
 
-        private IEnumerable<string> GetPropertiesFromDocuments(JsonDocument[] jsonDocuments, bool includeNestedPropeties)
-        {
-            return
-                jsonDocuments.SelectMany(
-                    doc =>
-                    GetPropertiesFromJObject(doc.DataAsJson, parentPropertyPath: "",
-                                             includeNestedProperties: includeNestedPropeties));
-
-        }
-
-        private IEnumerable<string> GetMetadataFromDocuments(JsonDocument[] jsonDocuments, bool includeNestedPropeties)
-        {
-            return
-                jsonDocuments.SelectMany(
-                    doc =>
-                    GetPropertiesFromJObject(doc.Metadata, parentPropertyPath: "",
-                                             includeNestedProperties: includeNestedPropeties));
-
-        }
-
-        private IEnumerable<string> GetPropertiesFromJObject(RavenJObject jObject, string parentPropertyPath, bool includeNestedProperties)
-        {
-            var properties = from property in jObject
-                             select
-                                 new
-                                     {
-                                         Path = parentPropertyPath + (string.IsNullOrEmpty(parentPropertyPath) ? "" : ".") +
-                                         property.Key,
-                                         property.Value
-                                     };
-
-            foreach (var property in properties)
-            {
-                yield return property.Path;
-
-                if (includeNestedProperties && property.Value is RavenJObject)
-                {
-                    foreach (var childProperty in GetPropertiesFromJObject(property.Value as RavenJObject, property.Path, true))
-                    {
-                        yield return childProperty;
-                    }
-                }
-            }
-        }
-
         private IList<string> CreateSuggestedBindingsFromDocuments(JsonDocument[] jsonDocuments)
         {
-            var bindings = GetPropertiesFromDocuments(jsonDocuments, true).Distinct()
-                .Concat(GetMetadataFromDocuments(jsonDocuments, true).Distinct().Select(b => "$Meta:" + b))
+            var bindings = DocumentHelpers.GetPropertiesFromDocuments(jsonDocuments, true).Distinct()
+                .Concat(DocumentHelpers.GetMetadataFromDocuments(jsonDocuments, true).Distinct().Select(b => "$Meta:" + b))
                 .Concat(new[] {"$JsonDocument:ETag", "$JsonDocument:LastModified"})
                 .ToArray();
             
@@ -104,7 +59,10 @@ namespace Raven.Studio.Features.Documents
                 priorityColumns = DefaultPriorityColumns;
             }
 
-            var columns= GetPropertiesFromDocuments(sampleDocuments, includeNestedPropeties: false)
+            // only consider nested properties if any of the priority columns refers to a nested property
+            var includeNestedProperties = priorityColumns.Any(c => c.PropertyNamePattern.Contains("\\."));
+
+            var columns = DocumentHelpers.GetPropertiesFromDocuments(sampleDocuments, includeNestedProperties)
                 .GroupBy(p => p)
                 .Select(g => new {Property = g.Key, Occurence = g.Count()/(double) sampleDocuments.Length})
                 .Select(p => new { p.Property, Importance = p.Occurence + ImportanceBoost(p.Property, context, priorityColumns) })
@@ -139,9 +97,18 @@ namespace Raven.Studio.Features.Documents
             {
                 return 1;
             }
+            else if (priorityColumns.Any(column => Regex.IsMatch(property, column.PropertyNamePattern, RegexOptions.IgnoreCase)))
+            {
+                return 0.75;
+            } 
+            else if (property.Contains("."))
+            {
+                // if the property is a nested property, and it isn't a priority column, demote it
+                return -0.5;
+            }
             else
             {
-                return priorityColumns.Any(column => Regex.IsMatch(property, column.PropertyNamePattern, RegexOptions.IgnoreCase)) ? 0.75 : 0;
+                return 0;
             }
         }
 

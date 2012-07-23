@@ -11,8 +11,6 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Abstractions;
-using Raven.Imports.SignalR;
-using Raven.Imports.SignalR.Hosting.AspNet;
 
 namespace Raven.Web
 {
@@ -23,7 +21,6 @@ namespace Raven.Web
 		private static readonly object locker = new object();
 
 		private static Logger log = LogManager.GetCurrentClassLogger();
-		private static DefaultDependencyResolver defaultDependencyResolver;
 
 		public class ReleaseRavenDBWhenAppDomainIsTornDown : IRegisteredObject
 		{
@@ -43,10 +40,9 @@ namespace Raven.Web
 
 			var reqUrl = UrlExtension.GetRequestUrlFromRawUrl(context.Request.RawUrl, database.Configuration);
 
-			if (HttpServer.SiganlRQuery.IsMatch(reqUrl))
+			if (HttpServer.ChangesQuery.IsMatch(reqUrl))
 			{
-				var aspNetHandler = new AspNetHandler(defaultDependencyResolver, new NotificationsConnection());
-				return new SiganlRCurrentDatabaseForwardingHandler(server, aspNetHandler);
+				return new ChangesCurrentDatabaseForwardingHandler(server);
 			}
 
 
@@ -61,7 +57,7 @@ namespace Raven.Web
 		{
 			if (database != null)
 				return;
-
+			
 			lock (locker)
 			{
 				if (database != null)
@@ -76,8 +72,6 @@ namespace Raven.Web
 					database.SpinBackgroundWorkers();
 					server = new HttpServer(ravenConfiguration, database);
 					server.Init();
-
-					defaultDependencyResolver = server.CreateDependencyResolver();
 				}
 				catch
 				{
@@ -102,8 +96,6 @@ namespace Raven.Web
 		{
 			lock (locker)
 			{
-				AspNetHandler.AppDomainTokenSource.Cancel();
-
 				log.Info("Disposing of RavenDB Http Integration to the ASP.Net Pipeline");
 				if (server != null)
 					server.Dispose();

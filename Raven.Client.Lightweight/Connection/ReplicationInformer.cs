@@ -21,6 +21,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using System.Net;
 using System.Net.Sockets;
@@ -47,7 +48,7 @@ namespace Raven.Client.Connection
 		private readonly object replicationLock = new object();
 		private List<string> replicationDestinations = new List<string>();
 		private static readonly List<string> Empty = new List<string>();
-		protected int readStripingBase;
+		protected static int readStripingBase;
 
 		/// <summary>
 		/// Notify when the failover status changed
@@ -501,7 +502,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public int GetReadStripingBase()
+		public virtual int GetReadStripingBase()
 		{
 			return Interlocked.Increment(ref readStripingBase);
 		}

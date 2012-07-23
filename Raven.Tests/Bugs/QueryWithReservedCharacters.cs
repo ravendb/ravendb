@@ -6,6 +6,7 @@
 using System;
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Indexing;

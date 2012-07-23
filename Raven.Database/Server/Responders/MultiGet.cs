@@ -312,6 +312,11 @@ namespace Raven.Database.Server.Responders
 			{
 				throw new NotSupportedException();
 			}
+
+			public Task WriteAsync(string data)
+			{
+				throw new NotSupportedException();
+			}
 		}
 	}
 

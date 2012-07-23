@@ -17,7 +17,10 @@ namespace Raven.Studio.Infrastructure
 
 		private static void Navigate(Uri source)
 		{
-			Application.Current.Host.NavigationState = source.ToString();
+            // don't use Application.Current.Host.NavigationState because setting that prevents
+            // navigation cancellation working correctly (in that case Cancel prevents the new page from being shown, but
+            // the url still changes)
+		    (Application.Current.RootVisual as MainPage).ContentFrame.Navigate(source);
 		}
 
         private static void Refresh()

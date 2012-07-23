@@ -58,7 +58,9 @@ namespace Raven.Client.Connection
 				throw new ObjectDisposedException(typeof(HttpJsonRequestFactory).FullName);
 			var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
 			{
-				ShouldCacheRequest = createHttpJsonRequestParams.Convention.ShouldCacheRequest(createHttpJsonRequestParams.Url)
+				ShouldCacheRequest =
+					createHttpJsonRequestParams.AvoidCachingRequest == false && 
+					createHttpJsonRequestParams.Convention.ShouldCacheRequest(createHttpJsonRequestParams.Url)
 			};
 
 			if (request.ShouldCacheRequest && createHttpJsonRequestParams.Method == "GET" && !DisableHttpCaching)

@@ -16,6 +16,8 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 #if !NET35
+using Raven.Abstractions.Util;
+using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 #endif
 using Raven.Client.Connection;
@@ -145,18 +147,12 @@ namespace Raven.Client.Shard
 
 #endif
 
-		/// <summary>
-		/// Subscribe to change notifications from the server
-		/// </summary>
-		public override TaskObservable<ChangeNotification> Changes(string database = null, ChangeTypes changes = ChangeTypes.Common, string idPrefix = null)
+		private readonly AtomicDictionary<IDatabaseChanges> changes =
+			new AtomicDictionary<IDatabaseChanges>(StringComparer.InvariantCultureIgnoreCase);
+		public override IDatabaseChanges Changes(string database = null)
 		{
-			var observables = ShardStrategy.Shards.Values.Select(x => x.Changes(database, changes, idPrefix)).ToArray();
-			return new TaskObservable<ChangeNotification>(Task.Factory.StartNew(() =>
-			{
-				Task.WaitAll(observables.Select(x => (Task)x.Task).ToArray());
-
-				return (IObservable<ChangeNotification>) new ConcatObservable<ChangeNotification>(observables);
-			}));
+			return changes.GetOrAdd(database, 
+				_ => new ShardedDatabaseChanges(ShardStrategy.Shards.Values.Select(x => x.Changes(database)).ToArray()));
 		}
 
 		/// <summary>

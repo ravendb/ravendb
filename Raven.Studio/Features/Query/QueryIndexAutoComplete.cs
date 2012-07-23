@@ -3,29 +3,34 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
+using System.Reactive;
+using System.Reactive.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using ActiproSoftware.Text;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Query
 {
 	public class QueryIndexAutoComplete : NotifyPropertyChangedBase
 	{
 		private readonly string indexName;
-		private readonly Observable<string> query;
-		private static readonly Regex FieldsFinderRegex = new Regex(@"(^|\s)?([^\s:]+):",
-		                                                            RegexOptions.IgnoreCase | RegexOptions.Singleline);
+		private readonly IEditorDocument queryDocument;
 
 		private readonly BindableCollection<string> fields = new BindableCollection<string>(x => x);
 		private readonly Dictionary<string, Dictionary<string, List<string>>> fieldsTermsDictionary =
 			new Dictionary<string, Dictionary<string, List<string>>>();
 
 		private ICompletionProvider completionProvider;
-		public ICompletionProvider CompletionProvider
+
+	    public ICompletionProvider CompletionProvider
 		{
 			get { return completionProvider; }
 			set
@@ -35,39 +40,57 @@ namespace Raven.Studio.Features.Query
 			}
 		}
 
-		public QueryIndexAutoComplete(string indexName, Observable<string> query, IList<string> fields)
+        public QueryIndexAutoComplete(IList<string> fields) : this(fields, null, null)
+        {
+            
+        }
+
+		public QueryIndexAutoComplete(IList<string> fields, string indexName, IEditorDocument queryDocument)
 		{
-			this.indexName = indexName;
-			this.query = query;
+            if (indexName != null && queryDocument != null)
+            {
+                this.indexName = indexName;
+                this.queryDocument = queryDocument;
+                queryDocument.ObserveTextChanged()
+                    .Throttle(TimeSpan.FromSeconds(0.2))
+                    .ObserveOnDispatcher<EventPattern<TextSnapshotChangedEventArgs>>()
+                    .SubscribeWeakly(this, (target, _) => target.GetTermsForUsedFields());
 
-			this.fields.Match(fields);
+                CompletionProvider = new QueryIntelliPromptProvider(fields, indexName, fieldsTermsDictionary);
+            }
+            else
+            {
+                CompletionProvider = new QueryIntelliPromptProvider(fields, null, null);
+            }
 
-			this.query.PropertyChanged += GetTermsForUsedFields;
-			CompletionProvider = new QueryIntelliPromptProvider(indexName, fields, fieldsTermsDictionary);
+		    this.fields.Match(fields);
 		}
 
-		private void GetTermsForUsedFields(object sender, PropertyChangedEventArgs e)
+		private void GetTermsForUsedFields()
 		{
-			var text = ((Observable<string>) sender).Value;
-			if (string.IsNullOrEmpty(text))
-				return;
+		    var fields = queryDocument.GetTextOfAllTokensMatchingType("Field")
+		        .Select(t => t.TrimEnd(':').Trim())
+                .Except(fieldsTermsDictionary.Keys)
+		        .ToList();
 
-			var matches = FieldsFinderRegex.Matches(text);
-			foreach (Match match in matches)
+            foreach (var field in fields)
 			{
-				var field = match.Groups[2].Value;
-				if (fieldsTermsDictionary.ContainsKey(field))
-					continue;
 				var termsDictionary = fieldsTermsDictionary[field] = new Dictionary<string, List<string>>();
 				var terms = termsDictionary[string.Empty] = new List<string>();
+
 				GetTermsForFieldAsync(indexName, field, terms);
 			}
 		}
 
 		public static Task GetTermsForFieldAsync(string indexName, string field, List<string> terms, string termPrefix = "")
 		{
-			return ApplicationModel.DatabaseCommands.GetTermsAsync(indexName, field, termPrefix, 1024)
-				.ContinueOnSuccess(terms.AddRange);
+		    return ApplicationModel.DatabaseCommands.GetTermsAsync(indexName, field, termPrefix, 1024)
+		        .ContinueOnSuccessInTheUIThread(
+		            results =>
+		                {
+		                    terms.Clear();
+		                    terms.AddRange(results);
+		                });
 		}
 	}
 }

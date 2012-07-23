@@ -1,34 +1,53 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Net;
+using System.Collections.Concurrent;
+using System.ComponentModel.Composition.Hosting;
+using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Client.Indexes;
+using Raven.Json.Linq;
+using Raven.Tests.Bugs;
+using Raven.Tests.Notifications;
+using Xunit;
 
-namespace Raven.Tryouts
+public class Program
 {
-	class Program
+	public static void Main()
 	{
-		static void Main(string[] args)
+		for (int i = 0; i < 1; i++)
 		{
-			var list = new HttpListener
-			           	{
-							AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication,
-			           		Prefixes = {"http://+:8080/"},
-			           		ExtendedProtectionSelectorDelegate = request =>
-			           		                                     	{
-			           		                                     		Console.WriteLine("request");
-			           		                                     		return null;
-			           		                                     	}
-			           	};
+			Console.WriteLine(i);
 
-			list.Start();
+			//using (var x = new WithIIS())
+			//{
+			//    x.CheckNotificationInIIS();
+			//}
 
-			while (true)
+			//GC.Collect(2);
+			//GC.WaitForPendingFinalizers();
+
+			using (var x = new ClientServer())
 			{
-				var r = list.GetContext();
-				r.Response.Close();
+				x.CanGetNotificationAboutDocumentPut();
 			}
+			GC.Collect(2);
+			GC.WaitForPendingFinalizers();
+
+
+			//using (var x = new NotificationOnWrongDatabase())
+			//{
+			//    x.ShouldNotCrashServer();
+			//}
+			//GC.Collect(2);
+			//GC.WaitForPendingFinalizers();
+			//using (var x = new ClientServer())
+			//{
+			//    x.CanGetNotificationAboutDocumentIndexUpdate();
+			//}
+
+
+			//GC.Collect(2);
+			//GC.WaitForPendingFinalizers();
 		}
 	}
 }

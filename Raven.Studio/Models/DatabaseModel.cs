@@ -27,6 +27,7 @@ namespace Raven.Studio.Models
 				new ImportTask(),
 				new ExportTask(),
 				new StartBackupTask(),
+				new IndexingTask()
 			};
 			SelectedTask = new Observable<TaskModel> {Value = Tasks.FirstOrDefault()};
 			Statistics = new Observable<DatabaseStatistics>();
