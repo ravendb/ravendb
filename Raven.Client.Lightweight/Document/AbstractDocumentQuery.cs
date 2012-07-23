@@ -1477,6 +1477,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
 		{
+			searchTerms = searchTerms.Replace("<<", "").Replace(">>", "");
 			lastEquality = new KeyValuePair<string, string>(fieldName, "<<"+searchTerms+">>");
 			theQueryText.Append(' ');
 			

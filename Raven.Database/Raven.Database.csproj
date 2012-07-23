@@ -632,6 +632,7 @@
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Util\BoundedMemoryTarget.cs" />
     <Compile Include="Util\PortUtil.cs" />
+    <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">

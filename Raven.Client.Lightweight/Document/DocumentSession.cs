@@ -687,9 +687,9 @@ namespace Raven.Client.Document
 		}
 
 #endif
-		public IEnumerable<T> LoadStartingWith<T>(string keyPrefix, int start = 0, int pageSize = 25)
+		public IEnumerable<T> LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25)
 		{
-			return DatabaseCommands.StartsWith(keyPrefix, start, pageSize).Select(TrackEntity<T>).ToList();
+			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize).Select(TrackEntity<T>).ToList();
 		}
 	}
 #endif

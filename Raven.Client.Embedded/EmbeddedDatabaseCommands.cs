@@ -98,11 +98,11 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize)
+		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize)
 		{
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 			
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, start, pageSize);
+			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix,matches, start, pageSize);
 			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
 		}
 
