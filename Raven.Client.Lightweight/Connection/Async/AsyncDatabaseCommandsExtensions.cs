@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async

@@ -749,6 +749,9 @@
     <Compile Include="..\Raven.Abstractions\Util\IncludesUtil.cs">
       <Link>Imports\Util\IncludesUtil.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Util\RavenQuery.cs">
+      <Link>Imports\Util\RavenQuery.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Changes\Base62Util.cs">
       <Link>Imports\Changes\Base62Util.cs</Link>
     </Compile>
@@ -1128,9 +1131,6 @@
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\JsonLuceneDateTimeConverter.cs">
       <Link>Imports\Connection\JsonLuceneDateTimeConverter.cs</Link>
-    </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\RavenQuery.cs">
-      <Link>Imports\Connection\RavenQuery.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\RavenTransactionAccessor.cs">
       <Link>Imports\Connection\RavenTransactionAccessor.cs</Link>
