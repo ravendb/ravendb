@@ -11,13 +11,6 @@ namespace Raven.Studio.Commands
 	public class ChangeDatabaseCommand : Command
 	{
 		private string databaseName;
-		private readonly IList<Type> refreshStaticModels = new List<Type>
-		                                                   	{
-		                                                   		typeof (HomeModel),
-		                                                   		typeof (CollectionsModel),
-		                                                   		typeof (IndexesModel),
-		                                                   		typeof (AllDocumentsModel),
-		                                                   	};
 
 		public override bool CanExecute(object parameter)
 		{
@@ -27,6 +20,12 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
+            var server = ApplicationModel.Current.Server.Value;
+            if (server.SelectedDatabase.Value != null && server.SelectedDatabase.Value.Name == databaseName)
+            {
+                return;
+            }
+
 			bool shouldRedirect = true;
 
 			var urlParser = new UrlParser(UrlUtil.Url);
@@ -35,17 +34,11 @@ namespace Raven.Studio.Commands
 
 			urlParser.SetQueryParam("database", databaseName);
 
-			var server = ApplicationModel.Current.Server.Value;
+			
 			server.SetCurrentDatabase(urlParser);
 			server.SelectedDatabase.Value.AsyncDatabaseCommands
 				.EnsureSilverlightStartUpAsync()
 				.Catch();
-
-			var updateAllFromServer = PageView.UpdateAllFromServer();
-			refreshStaticModels
-				.Except(updateAllFromServer.Select(x=>x.GetType()))
-				.Select(model => (Model) Activator.CreateInstance(model))
-				.ForEach(model => model.ForceTimerTicked());
 
 			Settings.Instance.SelectedDatabase = databaseName;
 

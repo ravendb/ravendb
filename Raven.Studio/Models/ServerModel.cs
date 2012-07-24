@@ -123,7 +123,7 @@ namespace Raven.Studio.Models
 										var databaseName = Settings.Instance.SelectedDatabase;
 				                   		
 				                   		var database = databaseModels.FirstOrDefault(model => model.Name == databaseName);
-				                   		if(database == null)
+				                   		if(database == null || SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
 				                   			return;
 										SelectedDatabase.Value = database;
 				                   	})

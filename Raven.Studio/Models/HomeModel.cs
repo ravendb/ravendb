@@ -38,7 +38,7 @@ namespace Raven.Studio.Models
                                                                           DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
                                                                           Context = "AllDocuments",
 				                                                      });
-                    recentDocuments.SetChangesObservable(d => d.Changes().ForAllDocuments().Select(s => Unit.Default));
+                    recentDocuments.SetChangesObservable(d => d.DocumentChanges.Select(s => Unit.Default));
 				}
 
 				return recentDocuments;
@@ -49,11 +49,6 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/home";
 		}
-
-        protected override void OnViewLoaded()
-        {
-            RecentDocuments.Documents.Refresh();
-        }
 
 		private bool isGeneratingSampleData;
 		public bool IsGeneratingSampleData

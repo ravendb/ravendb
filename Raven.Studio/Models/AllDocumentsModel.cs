@@ -9,25 +9,22 @@ namespace Raven.Studio.Models
 {
 	public class AllDocumentsModel : PageViewModel
 	{
-		public AllDocumentsModel()
+	    private DocumentsModel documents;
+
+	    public AllDocumentsModel()
 		{
 			ModelUrl = "/documents";
 		}
 
-		private static WeakReference<Observable<DocumentsModel>> documents;
-		public static Observable<DocumentsModel> Documents
+		public DocumentsModel Documents
 		{
 			get
 			{
-				if (documents == null || documents.IsAlive == false)
+				if (documents == null )
 				{
-					documents = new WeakReference<Observable<DocumentsModel>>(new Observable<DocumentsModel>
-																						  {
-																							  Value = CreateDocumentsModel()
-																						  });
+				    documents = CreateDocumentsModel();
 				}
-				var target = documents.Target ?? Documents;
-				return target;
+				return documents;
 			}
 		}
 
@@ -39,14 +36,9 @@ namespace Raven.Studio.Models
 										 Context = "AllDocuments",
 									 };
 
-			documentsModel.SetChangesObservable(d => d.Changes().ForAllDocuments().Select(s => Unit.Default));
+			documentsModel.SetChangesObservable(d => d.DocumentChanges.Select(s => Unit.Default));
 
 			return documentsModel;
-		}
-
-		public override void LoadModelParameters(string parameters)
-		{
-			Documents.Value.Documents.Refresh();
 		}
 	}
 }

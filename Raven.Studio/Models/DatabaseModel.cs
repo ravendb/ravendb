@@ -8,6 +8,8 @@ using Raven.Client.Util;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using System.Linq;
+using System.Reactive.Linq;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Models
 {
@@ -16,6 +18,8 @@ namespace Raven.Studio.Models
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly string name;
 	    private readonly DocumentStore documentStore;
+
+	    private IObservable<DocumentChangeNotification> documentChanges;
 
 	    public Observable<TaskModel> SelectedTask { get; set; }
 
@@ -41,7 +45,18 @@ namespace Raven.Studio.Models
 
 		public BindableCollection<TaskModel> Tasks { get; private set; }
 
-        public IDatabaseChanges Changes()
+	    public IObservable<DocumentChangeNotification> DocumentChanges
+	    {
+	        get
+	        {
+	            return documentChanges ?? (documentChanges = Changes()
+	                                                             .ForAllDocuments()
+	                                                             .Publish() // use a single underlying subscription
+	                                                             .DelayedCleanupRefCount(TimeSpan.FromSeconds(1))); // only subscribe when people subscribe to us, and unsubscribe when we have no subscribers
+	        }
+	    }
+
+	    public IDatabaseChanges Changes()
         {
         	return name == Constants.SystemDatabase ? 
 				documentStore.Changes() : 

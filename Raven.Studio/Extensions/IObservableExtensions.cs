@@ -2,6 +2,8 @@
 using System.ComponentModel;
 using System.Net;
 using System.Reactive;
+using System.Reactive.Concurrency;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Windows;
@@ -93,6 +95,61 @@ namespace Raven.Studio.Extensions
                     .Do(t => { l = t.x.Item2; r = t.y.Item2; }) // record the index of the last item yielded from each sequence
                     .Select(t => selector(t.x.Item1, t.y.Item1));
             });
+        }
+
+        /// <summary>
+        /// Only connects to source when subscribed to, and disconnects when there are no subscribers, allowing a delay to ensure
+        /// no one else subscribes in the meantime
+        /// </summary>
+        /// <typeparam name="TSource"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="cleanupDelay"></param>
+        /// <returns></returns>
+        public static IObservable<TSource> DelayedCleanupRefCount<TSource>(this IConnectableObservable<TSource> source, TimeSpan cleanupDelay)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+            object gate = new object();
+            int count = 0;
+            IDisposable connectableSubscription = null;
+            return Observable.Create(((Func<IObserver<TSource>, IDisposable>)(observer =>
+            {
+                bool isFirst = false;
+                lock (gate)
+                {
+                    ++count;
+                    isFirst = count == 1;
+                }
+                IDisposable subscription = source.Subscribe(observer);
+                if (isFirst)
+                    connectableSubscription = source.Connect();
+
+                return Disposable.Create((Action)(() =>
+                {
+                    bool isLast = false;
+                    subscription.Dispose();
+                    lock (gate)
+                    {
+                        --count;
+                        isLast = count == 0;
+                    }
+
+                    if (isLast)
+                    {
+                        Scheduler.ThreadPool.Schedule(cleanupDelay, () =>
+                        {
+                            lock (gate)
+                            {
+                                // only dispose the connectable subscription if no one else has subscribed in the meantime
+                                if (count == 0)
+                                {
+                                    connectableSubscription.Dispose();
+                                }
+                            }
+                        });
+                    }
+                }));
+            })));
         }
     }
 }

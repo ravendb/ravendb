@@ -20,20 +20,26 @@ namespace Raven.Studio.Infrastructure
 
         public void NotifyViewLoaded()
         {
-            IsLoaded = true;
-            OnViewLoaded();
+            if (!IsLoaded)
+            {
+                IsLoaded = true;
+                OnViewLoaded();
+            }
         }
 
         public void NotifyViewUnloaded()
         {
-            if (unloadedSubject != null)
+            if (IsLoaded)
             {
-                unloadedSubject.OnNext(Unit.Default);
+                if (unloadedSubject != null)
+                {
+                    unloadedSubject.OnNext(Unit.Default);
+                }
+
+                OnViewUnloaded();
+
+                IsLoaded = false;
             }
-
-            OnViewUnloaded();
-
-            IsLoaded = false;
         }
 
         protected virtual void OnViewUnloaded()

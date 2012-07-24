@@ -43,8 +43,6 @@ namespace Raven.Studio.Models
  
         private ColumnsModel columns;
 
-        public bool SkipAutoRefresh { get; set; }
-
         private string header;
         private string context;
 
@@ -248,10 +246,12 @@ namespace Raven.Studio.Models
                                {
                                    BeginLoadPriorityProperties();
                                    UpdateColumnSet();
-                                   //ObserveSourceChanges();
+                                   ObserveSourceChanges();
                                });
 
             ObserveSourceChanges();
+
+            Documents.Refresh();
         }
 
         protected override void OnViewUnloaded()
@@ -269,6 +269,11 @@ namespace Raven.Studio.Models
 
         private void ObserveSourceChanges()
         {
+            if (!IsLoaded)
+            {
+                return;
+            }
+
             StopListeningForChanges();
 
             var databaseModel = ApplicationModel.Database.Value;
@@ -278,7 +283,7 @@ namespace Raven.Studio.Models
                 var observable = observableGenerator(databaseModel);
                 changesSubscription = 
                     observable
-                    .Throttle(TimeSpan.FromSeconds(1))
+                    .SampleResponsive(TimeSpan.FromSeconds(1))
                     .ObserveOnDispatcher()
                     .Subscribe(_ => Documents.Refresh(RefreshMode.PermitStaleDataWhilstRefreshing));
             }
@@ -286,10 +291,10 @@ namespace Raven.Studio.Models
 
         private void StopListeningForChanges()
         {
-			//if (changesSubscription != null)
-			//{
-			//    changesSubscription.Dispose();
-			//}
+            if (changesSubscription != null)
+            {
+                changesSubscription.Dispose();
+            }
         }
 
         public void SetPriorityColumns(IList<string> priorityColumns)

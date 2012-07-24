@@ -347,7 +347,6 @@ namespace Raven.Studio.Models
 			DocumentsResult = new DocumentsModel(CollectionSource)
 								  {
 									  Header = "Results",
-									  SkipAutoRefresh = true,
 									  DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index, IndexName, CollectionSource.TemplateQuery),
 								  };
 
