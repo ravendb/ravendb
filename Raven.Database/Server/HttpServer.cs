@@ -743,30 +743,27 @@ namespace Raven.Database.Server
 				databaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.Now, (s, time) => SystemTime.Now);
 				return;
 			}
-			else
+			var tenantId = match.Groups[1].Value;
+			DocumentDatabase resourceStore;
+			if (TryGetOrCreateResourceStore(tenantId, out resourceStore))
 			{
-				var tenantId = match.Groups[1].Value;
-				DocumentDatabase resourceStore;
-				if (TryGetOrCreateResourceStore(tenantId, out resourceStore))
-				{
-					databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now, (s, time) => SystemTime.Now);
+				databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now, (s, time) => SystemTime.Now);
 
-					if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
-					{
-						ctx.AdjustUrl(Configuration.VirtualDirectory + match.Value);
-					}
-					else
-					{
-						ctx.AdjustUrl(match.Value);
-					}
-					currentTenantId.Value = tenantId;
-					currentDatabase.Value = resourceStore;
-					currentConfiguration.Value = resourceStore.Configuration;
+				if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
+				{
+					ctx.AdjustUrl(Configuration.VirtualDirectory + match.Value);
 				}
 				else
 				{
-					throw new BadRequestException("Could not find a database named: " + tenantId);
+					ctx.AdjustUrl(match.Value);
 				}
+				currentTenantId.Value = tenantId;
+				currentDatabase.Value = resourceStore;
+				currentConfiguration.Value = resourceStore.Configuration;
+			}
+			else
+			{
+				throw new BadRequestException("Could not find a database named: " + tenantId);
 			}
 		}
 
