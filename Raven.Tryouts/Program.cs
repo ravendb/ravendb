@@ -14,7 +14,7 @@ public class Program
 {
 	public static void Main()
 	{
-		for (int i = 0; i < 1; i++)
+		for (int i = 0; i < 1000; i++)
 		{
 			Console.WriteLine(i);
 
@@ -26,9 +26,9 @@ public class Program
 			//GC.Collect(2);
 			//GC.WaitForPendingFinalizers();
 
-			using (var x = new ClientServer())
+			using (var x = new DtcBluesRemoteAndTouchingTheDisk())
 			{
-				x.CanGetNotificationAboutDocumentPut();
+				x.CanQueryDtcForUncommittedItem();
 			}
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();

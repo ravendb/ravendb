@@ -79,6 +79,7 @@ json_data = JSON.stringify(doc);", doc, patch.Script, patch.Script.EndsWith(";")
 							var loadedDoc = loadDocument(value.String);
 							if(loadedDoc == null)
 								return null;
+							loadedDoc[Constants.DocumentIdFieldName] = value.String;
 							return loadedDoc.ToString();
 						}));
 				ctx.Execute(wrapperScript);
