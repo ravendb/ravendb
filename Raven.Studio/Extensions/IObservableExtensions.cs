@@ -51,6 +51,14 @@ namespace Raven.Studio.Extensions
                 h => source.PropertyChanged -= h);
         } 
 
+        /// <summary>
+        /// Samples an event stream such that the very first event is reported, but then no further events
+        /// are reported until a Timespan of delay has elapsed, at which point the most recent event will be reported. And so on.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="delay"></param>
+        /// <returns></returns>
         public static IObservable<T> SampleResponsive<T>(this IObservable<T> source, TimeSpan delay)
         {
             // code from http://stackoverflow.com/questions/3211134/how-to-throttle-event-stream-using-rx/3224723#3224723
