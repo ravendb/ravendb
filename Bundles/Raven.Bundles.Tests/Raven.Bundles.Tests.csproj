@@ -199,6 +199,7 @@
     <ProjectReference Include="..\Raven.Client.IndexedProperties\Raven.Client.IndexedProperties.csproj">
       <Project>{F41C7F7E-A287-449A-A545-E7152937EF77}</Project>
       <Name>Raven.Client.IndexedProperties</Name>
+      <Aliases>client</Aliases>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.UniqueConstraints\Raven.Client.UniqueConstraints.csproj">
       <Project>{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}</Project>

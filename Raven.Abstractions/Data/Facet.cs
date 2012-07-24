@@ -75,9 +75,7 @@ namespace Raven.Abstractions.Data
 			if (operation.Left is MemberExpression)
 			{
 				var subExpressionValue = ParseSubExpression(operation);
-				var left = (MemberExpression)operation.Left;
-				var fieldName = GetFieldName(left);
-				var expression = GetStringRepresentation(fieldName, operation.NodeType, subExpressionValue);                
+				var expression = GetStringRepresentation(operation.NodeType, subExpressionValue);                
 				return expression;
 			}
 
@@ -86,7 +84,7 @@ namespace Raven.Abstractions.Data
 				var method = body as BinaryExpression;
 				var left = method.Left as BinaryExpression;
 				var right = method.Right as BinaryExpression;
-				if ((left == null && right == null) || method.NodeType != ExpressionType.AndAlso)
+				if ((left == null || right == null) || method.NodeType != ExpressionType.AndAlso)
 					throw new InvalidOperationException("Expression doesn't have the correct sub-expression(s) (expected \"&&\")");
 
 				var leftMember = left.Left as MemberExpression;
@@ -97,8 +95,7 @@ namespace Raven.Abstractions.Data
 										GetFieldName(leftMember) == GetFieldName(rightMember);
 				if (validOperators && validMemberNames)
 				{
-					return GetStringRepresentation(GetFieldName(leftMember), right.NodeType, 
-													ParseSubExpression(left), ParseSubExpression(right));
+					return GetStringRepresentation(right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
 				}
 			}
 			throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected \"<\" and \">\")");
@@ -129,7 +126,7 @@ namespace Raven.Abstractions.Data
 				{
 					//This handles x < somefield
 					var obj = right.Expression as ConstantExpression;
-					if (field != null && obj != null)
+					if (obj != null)
 					{
 						var value = field.GetValue(obj.Value);
 						return value;
@@ -161,24 +158,22 @@ namespace Raven.Abstractions.Data
 									operation.Left.GetType().Name, operation.NodeType, operation.Right.GetType().Name));
 		}
 
-		private static string GetStringRepresentation<U>(string fieldName, ExpressionType op, U value)
+		private static string GetStringRepresentation(ExpressionType op, object value)
 		{
 			var valueAsStr = GetStringValue(value);
-			var fullFieldName = value.GetType().FullName == "System.String" ? fieldName : fieldName + "_Range";
 			if (op == ExpressionType.LessThan)
-				return String.Format("{0}:[NULL TO {1}]", fullFieldName, valueAsStr);
+				return String.Format("[NULL TO {0}]", valueAsStr);
 			if (op == ExpressionType.GreaterThan)
-				return String.Format("{0}:[{1} TO NULL]", fullFieldName, valueAsStr);
+				return String.Format("[{0} TO NULL]", valueAsStr);
 			throw new InvalidOperationException("Unable to parse the given operation " + op + ", into a facet range!!! ");
 		}
 
-		private static string GetStringRepresentation<U, V>(string fieldName, ExpressionType op, U lValue, V rValue)
+		private static string GetStringRepresentation(ExpressionType op, object lValue, object rValue)
 		{
 			var lValueAsStr = GetStringValue(lValue);
 			var rValueAsStr = GetStringValue(rValue);
-			var fullFieldName = lValue.GetType().FullName == "System.String" ? fieldName : fieldName + "_Range";
 			if (lValueAsStr != null && rValueAsStr != null)
-				return String.Format("{0}:[{1} TO {2}]", fullFieldName, lValueAsStr, rValueAsStr);            
+				return String.Format("[{0} TO {1}]",lValueAsStr, rValueAsStr);            
 			throw new InvalidOperationException("Unable to parse the given operation " + op + ", into a facet range!!! ");
 		}
 
