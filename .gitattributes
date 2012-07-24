@@ -2,6 +2,7 @@
 * text=auto
 
 *.cs     text eol=crlf
+*.config     text eol=crlf
 *.sln    text eol=crlf
 *.csproj text eol=crlf
 *.vbproj text eol=crlf
