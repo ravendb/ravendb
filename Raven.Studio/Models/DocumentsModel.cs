@@ -248,7 +248,7 @@ namespace Raven.Studio.Models
                                {
                                    BeginLoadPriorityProperties();
                                    UpdateColumnSet();
-                                   ObserveSourceChanges();
+                                   //ObserveSourceChanges();
                                });
 
             ObserveSourceChanges();
@@ -286,10 +286,10 @@ namespace Raven.Studio.Models
 
         private void StopListeningForChanges()
         {
-            if (changesSubscription != null)
-            {
-                changesSubscription.Dispose();
-            }
+			//if (changesSubscription != null)
+			//{
+			//    changesSubscription.Dispose();
+			//}
         }
 
         public void SetPriorityColumns(IList<string> priorityColumns)

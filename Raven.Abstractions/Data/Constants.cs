@@ -5,7 +5,7 @@ namespace Raven.Abstractions.Data
 		public const string RavenShardId = "Raven-Shard-Id";
 		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
 		public const string LastModified = "Last-Modified";
-		public const string DefaultDatabase = "<default>";
+		public const string SystemDatabase = "<system>";
 		public const string TemporaryScoreValue = "Temp-Index-Score";
 		public const string SpatialFieldName = "__spatial";
 		public const string SpatialShapeFieldName = "__spatialShape";

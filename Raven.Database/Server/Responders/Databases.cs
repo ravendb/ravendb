@@ -36,7 +36,7 @@ namespace Raven.Database.Server.Responders
 					{
 						context.WriteHeaders(new RavenJObject(), lastDocEtag);
 
-						context.WriteJson(Database.GetDocumentsWithIdStartingWith("Raven/Databases/", context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize)));
+						context.WriteJson(Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize)));
 					}
 					break;
 			}

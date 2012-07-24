@@ -54,7 +54,7 @@ namespace Raven.Abstractions.Smuggler
 		/// </summary>
 		public int BatchSize { get; set; }
 
-		public bool MatchFilters(RavenJToken item)
+		public virtual bool MatchFilters(RavenJToken item)
 		{
 			foreach (var filter in Filters)
 			{
