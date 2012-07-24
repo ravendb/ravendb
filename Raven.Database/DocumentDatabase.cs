@@ -311,6 +311,12 @@ namespace Raven.Database
 						.Where(s => actions.Staleness.IsIndexStale(s, null, null)).ToArray();
 					result.Indexes = actions.Indexing.GetIndexesStats().ToArray();
 				});
+
+				foreach (var index in result.Indexes)
+				{
+					index.LastQueryTimestamp = IndexStorage.GetLastQueryTime(index.Name);
+				}
+
 				return result;
 			}
 		}

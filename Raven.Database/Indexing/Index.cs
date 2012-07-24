@@ -43,6 +43,18 @@ namespace Raven.Database.Indexing
 		private readonly List<Document> currentlyIndexDocuments = new List<Document>();
 		private Directory directory;
 		protected readonly IndexDefinition indexDefinition;
+
+		/// <summary>
+		/// Note, this might be written to be multiple threads at the same time
+		/// We don't actually care for exact timing, it is more about general feeling
+		/// </summary>
+		private DateTime? lastQueryTime;
+
+		public void MarkQueried()
+		{
+			lastQueryTime = DateTime.UtcNow;
+		}
+
 		private int docCountSinceLastOptimization;
 
 		private readonly ConcurrentDictionary<string, IIndexExtension> indexExtensions =
@@ -83,7 +95,14 @@ namespace Raven.Database.Indexing
 		/// </summary>
 		public abstract bool IsMapReduce { get; }
 
-		
+		public DateTime? LastQueryTime
+		{
+			get
+			{
+				return lastQueryTime;
+			}
+		}
+
 
 		public void Dispose()
 		{
@@ -140,7 +159,7 @@ namespace Raven.Database.Indexing
 			{
 				if (disposed)
 					return;
-				if (indexWriter == null) 
+				if (indexWriter == null)
 					return;
 
 				indexWriter.Commit();
@@ -342,7 +361,7 @@ namespace Raven.Database.Indexing
 			toDispose.Add(defaultAnalyzer.Close);
 
 			string value;
-			if(indexDefinition.Analyzers.TryGetValue(Constants.AllFields, out value))
+			if (indexDefinition.Analyzers.TryGetValue(Constants.AllFields, out value))
 			{
 				defaultAnalyzer = IndexingExtensions.CreateAnalyzerInstance(Constants.AllFields, value);
 				toDispose.Add(defaultAnalyzer.Close);
@@ -640,6 +659,7 @@ namespace Raven.Database.Indexing
 
 			public IEnumerable<IndexQueryResult> Query()
 			{
+				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
 				{
 					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
@@ -666,7 +686,7 @@ namespace Raven.Database.Indexing
 							indexQuery.TotalSize.Value = search.TotalHits;
 
 							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
-							
+
 							for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
 							{
 								Document document = indexSearcher.Doc(search.ScoreDocs[i].doc);
@@ -691,8 +711,8 @@ namespace Raven.Database.Indexing
 			private Query ApplyIndexTriggers(Query luceneQuery)
 			{
 				luceneQuery = indexQueryTriggers.Aggregate(luceneQuery,
-				                                           (current, indexQueryTrigger) =>
-				                                           indexQueryTrigger.Value.ProcessQuery(parent.name, current, indexQuery));
+														   (current, indexQueryTrigger) =>
+														   indexQueryTrigger.Value.ProcessQuery(parent.name, current, indexQuery));
 				return luceneQuery;
 			}
 
@@ -864,7 +884,7 @@ namespace Raven.Database.Indexing
 			}
 
 			private Query GetLuceneQuery(string query, IndexQuery indexQuery)
-			{				
+			{
 				Query luceneQuery;
 				if (String.IsNullOrEmpty(query))
 				{
