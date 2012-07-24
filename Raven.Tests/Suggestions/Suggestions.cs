@@ -164,6 +164,8 @@ namespace Raven.Tests.Suggestions
 				var query = s.Query<User>()
 					.Where(user => user.Name == "Oren")
 					.Customize(x => x.WaitForNonStaleResults());
+
+				GC.KeepAlive(query.FirstOrDefault());
 				var suggestionQueryResult = query.Suggest();
 
 				Assert.Equal(1, suggestionQueryResult.Suggestions.Length);

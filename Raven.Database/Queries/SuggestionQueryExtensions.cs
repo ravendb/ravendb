@@ -20,6 +20,8 @@ namespace Raven.Database.Queries
 				{
 					Query = suggestionQuery.Field + ":" + QouteIfNeeded(suggestionQuery.Term)
 				});
+				if(string.IsNullOrEmpty(index))
+					throw new InvalidOperationException("Could find no index for the specified query, suggestions will not create a dynamic index, and cannot suggest without an index. Did you forget to query before calling Suggest?");
 			}
 
 			return new SuggestionQueryRunner(self).ExecuteSuggestionQuery(index, suggestionQuery);
