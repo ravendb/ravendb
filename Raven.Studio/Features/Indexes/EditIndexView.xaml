@@ -270,7 +270,27 @@
                         </Button.Content>
                     </Button>
 
-                    <Button x:Name="Query"
+					<Button x:Name="Stats"
+                                Style="{StaticResource Style_Button_MouseOverChrome}"
+                                Command="{StaticResource NavigateToCommand}"
+                                CommandParameter="{Binding Name, StringFormat=/indexstats/\{0\}}"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Left"
+                                Margin="0"
+                            IsEnabled="{Binding IsNewIndex, Converter={StaticResource NegatingBool}}">
+						<Button.Content>
+							<StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+								<Image Source="{StaticResource Image_ChangeView_Tiny}"
+                                           Stretch="None"
+                                           VerticalAlignment="Center" />
+								<TextBlock Text="Stats"
+                                               VerticalAlignment="Center"
+                                               Margin="2,0,0,0" />
+							</StackPanel>
+						</Button.Content>
+					</Button>
+					<Button x:Name="Query"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 HorizontalAlignment="Left"
                                 Margin="4 0 0 0"

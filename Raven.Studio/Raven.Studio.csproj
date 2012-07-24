@@ -222,6 +222,9 @@
     <Compile Include="Features\Documents\IndexDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\PriorityColumn.cs" />
     <Compile Include="Features\Documents\SingleDocumentNavigator.cs" />
+    <Compile Include="Features\IndexStats\StatsView.xaml.cs">
+      <DependentUpon>StatsView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\JsonEditor\IJsonClassificationTypeProvider.g.cs" />
     <Compile Include="Features\JsonEditor\JsonArrayNode.g.cs" />
     <Compile Include="Features\JsonEditor\JsonAstNodeId.g.cs" />
@@ -328,6 +331,7 @@
     <Compile Include="Models\ApplicationState.cs" />
     <Compile Include="Models\DocumentSize.cs" />
     <Compile Include="Models\DocumentViewStateStore.cs" />
+    <Compile Include="Models\IndexStatsModel.cs" />
     <Compile Include="Models\QueryStateStore.cs" />
     <Compile Include="Models\StudioErrorListModel.cs" />
     <Compile Include="Models\GoToDocumentModel.cs" />
@@ -336,6 +340,9 @@
     <Compile Include="Models\PerDatabaseState.cs" />
     <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
+    <Compile Include="Views\IndexStats.xaml.cs">
+      <DependentUpon>IndexStats.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Terms.xaml.cs">
       <DependentUpon>Terms.xaml</DependentUpon>
     </Compile>
@@ -644,6 +651,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Features\IndexStats\StatsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Features\Query\RecentQueriesDropDownView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -663,6 +674,10 @@
     <Page Include="Impl\SplitButton\Themes\generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\IndexStats.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Terms.xaml">
       <SubType>Designer</SubType>
@@ -900,6 +915,8 @@
     <Resource Include="Assets\Images\backup_tiny.png" />
     <Resource Include="Assets\Images\export_data_tiny.png" />
     <Resource Include="Assets\Images\import_data_tiny.png" />
+    <Resource Include="Assets\Images\offline.png" />
+    <Resource Include="Assets\Images\online.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

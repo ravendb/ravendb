@@ -304,6 +304,7 @@ task CopyRootFiles -depends CreateDocs {
 	cp $base_dir\readme.txt $build_dir\Output\readme.txt
 	cp $base_dir\Help\Documentation.chm $build_dir\Output\Documentation.chm  -ErrorAction SilentlyContinue
 	cp $base_dir\acknowledgments.txt $build_dir\Output\acknowledgments.txt
+	cp $base_dir\CommonAssemblyInfo.cs $build_dir\Output\CommonAssemblyInfo.cs
 }
 
 task ZipOutput {

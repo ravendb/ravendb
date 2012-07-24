@@ -542,5 +542,15 @@ namespace Raven.Database.Indexing
 				.Select(x => x.Value)
 				.FirstOrDefault();
 		}
+
+		public void MarkCachedQuery(string indexName)
+		{
+			GetIndexByName(indexName).MarkQueried();
+		}
+
+		public DateTime? GetLastQueryTime(string index)
+		{
+			return GetIndexByName(index).LastQueryTime;
+		}
 	}
 }
