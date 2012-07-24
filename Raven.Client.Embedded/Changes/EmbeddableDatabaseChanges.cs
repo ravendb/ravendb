@@ -36,7 +36,13 @@ namespace Raven.Client.Embedded.Changes
 				notification => true);
 		}
 
-		public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
+        public IObservableWithTask<IndexChangeNotification> ForAllIndexes()
+	    {
+            return new FilteringObservableWithTask<IndexChangeNotification>(indexesObservable,
+                notification => true);
+	    }
+
+	    public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
 		{
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable, 
 				notification => string.Equals(docId, notification.Name, StringComparison.InvariantCultureIgnoreCase));

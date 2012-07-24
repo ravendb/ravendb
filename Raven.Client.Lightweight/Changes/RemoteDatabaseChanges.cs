@@ -205,7 +205,37 @@ namespace Raven.Client.Changes
 			return taskedObservable;
 		}
 
-		public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
+        public IObservableWithTask<IndexChangeNotification> ForAllIndexes()
+	    {
+            var counter = counters.GetOrAdd("all-indexes", s =>
+            {
+                var indexSubscriptionTask = AfterConnection(() =>
+                        Send("watch-indexes", null));
+                return new LocalConnectionState(
+                    () =>
+                    {
+                        Send("unwatch-indexes", null);
+                        counters.Remove("all-indexes");
+                    },
+                    indexSubscriptionTask);
+            });
+            var taskedObservable = new TaskedObservable<IndexChangeNotification>(
+                counter,
+                notification => true);
+
+            counter.OnIndexChangeNotification += taskedObservable.Send;
+
+            var disposableTask = counter.Task.ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                    return null;
+                return (IDisposable)new DisposableAction(() => connection.Dispose());
+            });
+            counter.Add(disposableTask);
+            return taskedObservable;
+	    }
+
+	    public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
 		{
 			var counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
 			{

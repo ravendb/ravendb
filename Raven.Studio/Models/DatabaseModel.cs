@@ -20,6 +20,7 @@ namespace Raven.Studio.Models
 	    private readonly DocumentStore documentStore;
 
 	    private IObservable<DocumentChangeNotification> documentChanges;
+	    private IObservable<IndexChangeNotification> indexChanges;
 
 	    public Observable<TaskModel> SelectedTask { get; set; }
 
@@ -35,6 +36,7 @@ namespace Raven.Studio.Models
 				new StartBackupTask(),
 				new IndexingTask()
 			};
+
 			SelectedTask = new Observable<TaskModel> {Value = Tasks.FirstOrDefault()};
 			Statistics = new Observable<DatabaseStatistics>();
 
@@ -54,6 +56,17 @@ namespace Raven.Studio.Models
 	                                                             .Publish() // use a single underlying subscription
 	                                                             .DelayedCleanupRefCount(TimeSpan.FromSeconds(1))); // only subscribe when people subscribe to us, and unsubscribe when we have no subscribers
 	        }
+	    }
+
+	    public IObservable<IndexChangeNotification> IndexChanges
+	    {
+            get
+            {
+                return indexChanges ?? (indexChanges = Changes()
+                                                                 .ForAllIndexes()
+                                                                 .Publish() // use a single underlying subscription
+                                                                 .DelayedCleanupRefCount(TimeSpan.FromSeconds(1))); // only subscribe when people subscribe to us, and unsubscribe when we have no subscribers
+            }  
 	    }
 
 	    public IDatabaseChanges Changes()

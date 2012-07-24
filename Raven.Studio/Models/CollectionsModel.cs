@@ -70,7 +70,9 @@ namespace Raven.Studio.Models
             Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
             SelectedCollection = new Observable<CollectionModel>();
 
-            DocumentsForSelectedCollection.SetChangesObservable(d => d.Changes().ForIndex("Raven/DocumentsByEntityName").Select(m => Unit.Default));
+            DocumentsForSelectedCollection.SetChangesObservable(d =>  d.IndexChanges
+                                 .Where(n =>n.Name.Equals("Raven/DocumentsByEntityName",StringComparison.InvariantCulture))
+                                 .Select(m => Unit.Default));
 
             SelectedCollection.PropertyChanged += (sender, args) =>
             {

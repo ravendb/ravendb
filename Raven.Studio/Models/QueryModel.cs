@@ -480,7 +480,11 @@ namespace Raven.Studio.Models
                         (task.Result.Reduce != null && task.Result.Reduce.Contains(spatialindexGenerate));
                     HasTransform = !string.IsNullOrEmpty(task.Result.TransformResults);
 
-			DocumentsResult.SetChangesObservable(d => d.Changes().ForIndex(IndexName).Select(m => Unit.Default));		
+                    DocumentsResult.SetChangesObservable(
+                        d => d.IndexChanges
+                                 .Where(n =>n.Name.Equals(indexName,StringComparison.InvariantCulture))
+                                 .Select(m => Unit.Default));
+		
 			SetSortByOptions(fields);
                     RestoreHistory();
                 }).Catch();
