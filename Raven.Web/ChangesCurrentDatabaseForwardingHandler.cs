@@ -24,13 +24,13 @@ namespace Raven.Web
 		public Task ProcessRequestAsync(HttpContext context)
 		{
 			var tcs = new TaskCompletionSource<object>();
-			server.HandleChangesRequest(new HttpContextAdapter(HttpContext.Current, server.Configuration), ()=> tcs.SetResult(null))
+			server.HandleChangesRequest(new HttpContextAdapter(HttpContext.Current, server.Configuration), ()=> tcs.TrySetResult(null))
 				.ContinueWith(task =>
 				              	{
 				              		if(task.IsFaulted)
-				              			tcs.SetException(task.Exception);
+				              			tcs.TrySetException(task.Exception);
 									else if (task.IsCanceled)
-										tcs.SetCanceled();
+										tcs.TrySetCanceled();
 				              	});
 			return tcs.Task;
 		}
