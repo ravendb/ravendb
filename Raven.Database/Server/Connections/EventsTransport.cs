@@ -6,9 +6,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using NLog;
-using Raven.Abstractions.Util;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -16,6 +16,22 @@ namespace Raven.Database.Server.Connections
 {
 	public class EventsTransport
 	{
+		private static readonly Timer heartbeat;
+
+		static EventsTransport()
+		{
+			heartbeat = new Timer(RaiseHeartbeat);
+			heartbeat.Change(TimeSpan.Zero, TimeSpan.FromSeconds(5));
+		}
+
+		private static event Action OnHeartbeat;
+		private static void RaiseHeartbeat(object state)
+		{
+			var onOnHeartbeat = OnHeartbeat;
+			if (onOnHeartbeat != null)
+				onOnHeartbeat();
+		}
+
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		private readonly IHttpContext context;
@@ -34,41 +50,19 @@ namespace Raven.Database.Server.Connections
 				throw new ArgumentException("Id is mandatory");
 		}
 
-		
 		public Task ProcessAsync()
 		{
 			context.Response.ContentType = "text/event-stream";
 
-			var value = new
-			{
-				Type = "InitializingConnetion",
-			};
-			if ("true".Equals(context.Request.Headers["Requires-Big-Initial-Download"], StringComparison.InvariantCultureIgnoreCase))
-			{
-				// in silverlight, we need to send an initial buffer of about 4 - 8 Kb just to get the connection start pumping
-				// bytes to the client
+			OnHeartbeat += Heartbeat;
 
-
-				return SendAsyncInLoop(value, 128);
-			}
-
+			return SendAsync(new {Type = "Initialized"});
 			
-			return SendAsync(value);
 		}
 
-		private Task SendAsyncInLoop(object value, int remaining)
+		private void Heartbeat()
 		{
-			if (remaining == 0)
-				return new CompletedTask();
-
-			return SendAsync(value)
-				.ContinueWith(task =>
-				{
-					if (task.IsFaulted)
-						return task;
-
-					return SendAsyncInLoop(value, remaining - 1);
-				}).Unwrap();
+			SendAsync(new { Type = "Heartbeat" });
 		}
 
 		public Task SendAsync(object data)
@@ -101,10 +95,10 @@ namespace Raven.Database.Server.Connections
 			                  	{
 			                  		if (task.IsFaulted == false) 
 										return;
-			                  		Connected = false;
+									log.DebugException("Error when using events transport", task.Exception);
+									
+									Connected = false;
 			                  		Disconnected();
-			                  		log.DebugException("Error when using events transport", task.Exception);
-
 			                  		try
 			                  		{
 										context.FinalizeResonse();
@@ -118,6 +112,7 @@ namespace Raven.Database.Server.Connections
 
 		public void Disconnect()
 		{
+			OnHeartbeat -= Heartbeat;
 			Connected = false;
 			Disconnected();
 			context.FinalizeResonse();

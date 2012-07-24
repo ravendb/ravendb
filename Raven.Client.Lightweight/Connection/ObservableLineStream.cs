@@ -35,9 +35,8 @@ namespace Raven.Client.Connection
 				.ContinueWith(task =>
 				              	{
 				              		var read = task.Result;
-									if(read == 0)
+									if(read == 0)// will force reopening of the connection
 										throw new EndOfStreamException();
-
 				              		// find \r\n in newly read range
 
 				              		var startPos = 0;
@@ -49,8 +48,8 @@ namespace Raven.Client.Connection
 				              			{
 				              				foundLines = true;
 											// yeah, we found a line, let us give it to the users
-											var data = Encoding.UTF8.GetString(buffer, startPos, i-1);
-				              				startPos = i;
+											var data = Encoding.UTF8.GetString(buffer, startPos, i - 1 - startPos);
+				              				startPos = i + 1;
 				              				foreach (var subscriber in subscribers)
 				              				{
 				              					subscriber.OnNext(data);
@@ -59,7 +58,7 @@ namespace Raven.Client.Connection
 				              			prev = buffer[i];
 				              		}
 				              		posInBuffer += read;
-									if(startPos == posInBuffer) // read to end
+									if(startPos >= posInBuffer) // read to end
 									{
 										posInBuffer = 0;
 										return;
