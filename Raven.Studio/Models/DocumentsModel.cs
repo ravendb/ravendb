@@ -247,6 +247,7 @@ namespace Raven.Studio.Models
                                    BeginLoadPriorityProperties();
                                    UpdateColumnSet();
                                    ObserveSourceChanges();
+                                   Documents.Refresh();
                                });
 
             ObserveSourceChanges();

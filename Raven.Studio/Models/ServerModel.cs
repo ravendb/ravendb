@@ -85,15 +85,6 @@ namespace Raven.Studio.Models
 
 			DisplayBuildNumber();
 			DisplyaLicenseStatus();
-
-			var changeDatabaseCommand = new ChangeDatabaseCommand();
-			SelectedDatabase.PropertyChanged += (sender, args) =>
-			{
-				if (SelectedDatabase.Value == null)
-					return;
-				var databaseName = SelectedDatabase.Value.Name;
-				Command.ExecuteCommand(changeDatabaseCommand, databaseName);
-			};
 		}
 
 		public bool CreateNewDatabase { get; set; }
@@ -123,7 +114,7 @@ namespace Raven.Studio.Models
 										var databaseName = Settings.Instance.SelectedDatabase;
 				                   		
 				                   		var database = databaseModels.FirstOrDefault(model => model.Name == databaseName);
-				                   		if(database == null || SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
+				                   		if(database == null)
 				                   			return;
 										SelectedDatabase.Value = database;
 				                   	})
@@ -175,18 +166,27 @@ namespace Raven.Studio.Models
 				SelectedDatabase.Value = defaultDatabase[0];
 				return;
 			}
+
 			if (SelectedDatabase.Value != null && SelectedDatabase.Value.Name == databaseName)
 				return;
+
 			var database = Databases.FirstOrDefault(x => x.Name == databaseName);
 			if (database != null)
 			{
 				SelectedDatabase.Value = database;
 				return;
 			}
+
 			singleTenant = urlParser.GetQueryParam("api-key") != null;
 			var databaseModel = new DatabaseModel(databaseName, documentStore);
 			Databases.Add(databaseModel);
 			SelectedDatabase.Value = databaseModel;
+
+            SelectedDatabase.Value.AsyncDatabaseCommands
+                .EnsureSilverlightStartUpAsync()
+                .Catch();
+
+            Settings.Instance.SelectedDatabase = databaseName;
 		}
 
 		private void DisplayBuildNumber()

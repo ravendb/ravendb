@@ -21,15 +21,18 @@ namespace Raven.Studio
 	       ContentFrame.Refresh();
 	    }
 
-		// After the Frame navigates, ensure the HyperlinkButton representing the current page is selected
+
 		private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
 		{
 			HighlightCurrentPage(e.Uri);
+
+            // update the current database here so that back button navigation works correctly with database changes
             ApplicationModel.Current.Server.Value.SetCurrentDatabase(new UrlParser(e.Uri.OriginalString));
 
 			GC.Collect();
 		}
 
+        // After the Frame navigates, ensure the HyperlinkButton representing the current page is selected
 		private void HighlightCurrentPage(Uri currentUri)
 		{
 			foreach (var hyperlink in MainLinks.Children.OfType<HyperlinkButton>())

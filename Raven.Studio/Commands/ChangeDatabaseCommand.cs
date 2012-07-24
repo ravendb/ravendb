@@ -20,32 +20,16 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-            var server = ApplicationModel.Current.Server.Value;
-            if (server.SelectedDatabase.Value != null && server.SelectedDatabase.Value.Name == databaseName)
-            {
-                return;
-            }
-
-			bool shouldRedirect = true;
-
 			var urlParser = new UrlParser(UrlUtil.Url);
 			if (urlParser.GetQueryParam("database") == databaseName)
-				shouldRedirect = false;
+			{
+			    return;
+			}
 
 			urlParser.SetQueryParam("database", databaseName);
 
-			
-			server.SetCurrentDatabase(urlParser);
-			server.SelectedDatabase.Value.AsyncDatabaseCommands
-				.EnsureSilverlightStartUpAsync()
-				.Catch();
-
-			Settings.Instance.SelectedDatabase = databaseName;
-
-			if (shouldRedirect)
-			{
-				UrlUtil.Navigate(urlParser.BuildUrl());
-			}
+            // MainPage.ContentFrame_Navigated takes care of actually responding to the db name change
+		    UrlUtil.Navigate(urlParser.BuildUrl());
 		}
 	}
 }
