@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows.Browser;
 using System.Windows.Threading;
 using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Client.Document;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
@@ -125,6 +126,11 @@ namespace Raven.Studio.Models
 		{
 			get { return singleTenant; }
 		}
+
+	    public IDocumentStore DocumentStore
+	    {
+	        get { return documentStore; }
+	    }
 
 		public Observable<DatabaseModel> SelectedDatabase { get; private set; }
 		public BindableCollection<DatabaseModel> Databases { get; private set; }

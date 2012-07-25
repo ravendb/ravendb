@@ -326,6 +326,7 @@
     <Compile Include="Infrastructure\WeakReference.cs" />
     <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
     <Compile Include="Models\ApplicationState.cs" />
+    <Compile Include="Models\DatabaseListItemModel.cs" />
     <Compile Include="Models\DocumentSize.cs" />
     <Compile Include="Models\DocumentViewStateStore.cs" />
     <Compile Include="Models\QueryStateStore.cs" />
