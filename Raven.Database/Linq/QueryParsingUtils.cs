@@ -12,6 +12,8 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Security;
 using System.Text;
 using System.Threading;
 using ICSharpCode.NRefactory;
@@ -19,12 +21,14 @@ using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Lucene.Net.Documents;
 using Microsoft.CSharp;
-using Microsoft.CSharp.RuntimeBinder;
+using Mono.Cecil;
+using Mono.Cecil.Cil;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
+using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace Raven.Database.Linq
 {
@@ -259,7 +263,7 @@ namespace Raven.Database.Linq
 			var compilerParameters = new CompilerParameters
 			{
 				GenerateExecutable = false,
-				GenerateInMemory = true,
+				GenerateInMemory = false, // we have to have the physical file on disk to read it for cecil 
 				IncludeDebugInformation = false
 			};
 			if (basePath != null)
@@ -284,6 +288,9 @@ namespace Raven.Database.Linq
 				}
 				throw new InvalidOperationException(sb.ToString());
 			}
+
+			AssertNoSecurityCriticalCalls(results.CompiledAssembly);
+
 			Type result = results.CompiledAssembly.GetType(name);
 
 			cacheEntries.TryAdd(source, new CacheEntry
@@ -304,6 +311,69 @@ namespace Raven.Database.Linq
 			}
 
 			return result;
+		}
+
+		private static void AssertNoSecurityCriticalCalls(Assembly asm)
+		{
+			var assemblyDefinition = AssemblyDefinition.ReadAssembly(asm.Location);
+			foreach (var method in from typeDefinition in assemblyDefinition.MainModule.Types 
+										   from methodDefinition in typeDefinition.Methods
+										   select methodDefinition)
+			{
+				foreach (var instruction in method.Body.Instructions)
+				{
+					if (instruction.OpCode != OpCodes.Call && instruction.OpCode != OpCodes.Call &&
+					    instruction.OpCode != OpCodes.Callvirt && instruction.OpCode != OpCodes.Newobj)
+						continue;
+
+					var methodReference = instruction.Operand as MethodReference;
+					if(methodReference == null)
+						continue;
+
+					var methodDefinition = methodReference.Resolve();
+					if (methodDefinition.SecurityDeclarations.Count == 0 && 
+						methodDefinition.DeclaringType.SecurityDeclarations.Count == 0)
+						continue;
+
+					var sb = new StringBuilder();
+					sb.Append("Cannot use an index which calls method '")
+						.Append(methodDefinition.FullName)
+						.AppendLine(" because it or its declaring type has security declartions.");
+
+
+					foreach (var securityDeclaration in methodDefinition.SecurityDeclarations)
+					{
+						AppendSecurityDeclaration(sb, securityDeclaration);
+					}
+
+					foreach (var securityDeclaration in methodDefinition.DeclaringType.SecurityDeclarations)
+					{
+						AppendSecurityDeclaration(sb, securityDeclaration);
+					}
+					throw new SecurityException(sb.ToString());
+				}
+			}
+		}
+
+		private static void AppendSecurityDeclaration(StringBuilder sb, SecurityDeclaration securityDeclaration)
+		{
+			sb.Append("Security Declaration Action: ").Append(securityDeclaration.Action).AppendLine();
+			foreach (var securityAttribute in securityDeclaration.SecurityAttributes)
+			{
+				sb.Append("[")
+					.Append(securityAttribute.AttributeType.FullName)
+					.Append("(");
+
+				bool removeLast = false;
+				foreach (var field in securityAttribute.Fields.Concat(securityAttribute.Properties))
+				{
+					removeLast = true;
+					sb.Append(field.Name).Append(" = ").Append(field.Argument.Value).Append(", ");
+				}
+				if (removeLast)
+					sb.Remove(sb.Length - 2, 2);
+				sb.AppendLine("]");
+			}
 		}
 	}
 }
