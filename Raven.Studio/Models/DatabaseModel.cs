@@ -1,4 +1,6 @@
 using System;
+using System.Reactive.Disposables;
+using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
@@ -10,6 +12,7 @@ using Raven.Studio.Infrastructure;
 using System.Linq;
 using System.Reactive.Linq;
 using Raven.Studio.Extensions;
+using VirtualCollection.VirtualCollection;
 
 namespace Raven.Studio.Models
 {
@@ -21,6 +24,8 @@ namespace Raven.Studio.Models
 
 	    private IObservable<DocumentChangeNotification> documentChanges;
 	    private IObservable<IndexChangeNotification> indexChanges;
+
+        private CompositeDisposable disposable = new CompositeDisposable();
 
 	    public Observable<TaskModel> SelectedTask { get; set; }
 
@@ -49,24 +54,40 @@ namespace Raven.Studio.Models
 
 	    public IObservable<DocumentChangeNotification> DocumentChanges
 	    {
-	        get
-	        {
-	            return documentChanges ?? (documentChanges = Changes()
-	                                                             .ForAllDocuments()
-	                                                             .Publish() // use a single underlying subscription
-	                                                             .DelayedCleanupRefCount(TimeSpan.FromSeconds(1))); // only subscribe when people subscribe to us, and unsubscribe when we have no subscribers
-	        }
+            get
+            {
+                if (documentChanges == null)
+                {
+                    documentChanges = Changes()
+                        .ForAllDocuments()
+                        .Publish(); // use a single underlying subscription
+
+                    var documentChangesSubscription =
+                        ((IConnectableObservable<DocumentChangeNotification>) documentChanges).Connect();
+
+                    disposable.Add(documentChangesSubscription);
+                }
+
+                return documentChanges;
+            }
 	    }
 
 	    public IObservable<IndexChangeNotification> IndexChanges
 	    {
             get
             {
-                return indexChanges ?? (indexChanges = Changes()
-                                                                 .ForAllIndexes()
-                                                                 .Publish() // use a single underlying subscription
-                                                                 .DelayedCleanupRefCount(TimeSpan.FromSeconds(1))); // only subscribe when people subscribe to us, and unsubscribe when we have no subscribers
-            }  
+                if (indexChanges == null)
+                {
+                    indexChanges = Changes()
+                        .ForAllIndexes()
+                        .Publish(); // use a single underlying subscription
+
+                    var indexChangesSubscription = ((IConnectableObservable<IndexChangeNotification>)indexChanges).Connect();
+                    disposable.Add(indexChangesSubscription);
+                }
+             
+                return indexChanges;
+            }
 	    }
 
 	    public IDatabaseChanges Changes()
@@ -117,7 +138,7 @@ namespace Raven.Studio.Models
 
 	    public void Dispose()
 	    {
-	        
+	        disposable.Dispose();
 	    }
 	}
 }
