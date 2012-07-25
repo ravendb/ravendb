@@ -53,6 +53,13 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
+		public void CannotUseIO()
+		{
+			Assert.Throws<SecurityException>(() => Compile(
+				"from doc in docs  select new { doc.Now , die = ((Func<int>)(()=>{ File.Delete(\"test\"); return 1; }))()}"));
+		}
+
+		[Fact]
 		public void CannotCreateTask()
 		{
 			Assert.Throws<SecurityException>(() => Compile(

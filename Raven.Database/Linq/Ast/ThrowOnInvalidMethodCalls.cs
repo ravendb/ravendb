@@ -48,14 +48,24 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 
 		public override object VisitQueryExpressionLetClause(QueryExpressionLetClause queryExpressionLetClause, object data)
 		{
-			var lambdaSearcherVisitor = new LambdaSearcherVisitor();
-			queryExpressionLetClause.AcceptVisitor(lambdaSearcherVisitor, data);
-			if(lambdaSearcherVisitor.HasLambda)
+			if (SimplifyLetExpression(queryExpressionLetClause.Expression) is LambdaExpression)
 			{
 				var text = QueryParsingUtils.ToText(queryExpressionLetClause);
 				throw new SecurityException("Let expression cannot contain labmda expressions (prevent recursion), but got: " + text);
 			}
+
 			return base.VisitQueryExpressionLetClause(queryExpressionLetClause, data);
+		}
+
+		private Expression SimplifyLetExpression(Expression expression)
+		{
+			var castExpression = expression as CastExpression;
+			if (castExpression != null)
+				return SimplifyLetExpression(castExpression.Expression);
+			var parenthesizedExpression = expression as ParenthesizedExpression;
+			if (parenthesizedExpression != null)
+				return SimplifyLetExpression(parenthesizedExpression.Expression);
+			return expression;
 		}
 
 		public override object VisitMemberReferenceExpression(MemberReferenceExpression memberReferenceExpression, object data)

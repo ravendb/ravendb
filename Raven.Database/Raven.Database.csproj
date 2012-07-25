@@ -156,7 +156,6 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
-    <Compile Include="Linq\Ast\LambdaSearcherVisitor.cs" />
     <Compile Include="Server\Connections\ConnectionState.cs" />
     <Compile Include="Server\Connections\EventsTransport.cs" />
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
