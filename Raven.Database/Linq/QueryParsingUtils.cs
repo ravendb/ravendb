@@ -331,8 +331,8 @@ namespace Raven.Database.Linq
 						continue;
 
 					var methodDefinition = methodReference.Resolve();
-					if (methodDefinition.SecurityDeclarations.Count == 0 && 
-						methodDefinition.DeclaringType.SecurityDeclarations.Count == 0)
+					if (methodDefinition.SecurityDeclarations.Any(HasSecurityIssue) == false &&
+						methodDefinition.DeclaringType.SecurityDeclarations.Any(HasSecurityIssue) == false)
 						continue;
 
 					var sb = new StringBuilder();
@@ -353,6 +353,23 @@ namespace Raven.Database.Linq
 					throw new SecurityException(sb.ToString());
 				}
 			}
+		}
+
+		private static bool HasSecurityIssue(SecurityDeclaration arg)
+		{
+			if (arg.HasSecurityAttributes == false)
+				return true; // no idea how to deal with that, might be dangeroups, it is an issue
+
+			var hasSomethingOtherThanLeakOnAbort = false; // MayLeakOnAbort exists on HashSet, and we won't deal with abort, anyway
+			foreach (var securityAttribute in arg.SecurityAttributes)
+			{
+				if (securityAttribute.Fields.Concat(securityAttribute.Properties).Any(field => field.Name != "MayLeakOnAbort"))
+				{
+					hasSomethingOtherThanLeakOnAbort = true;
+				}
+					break;
+			}
+			return hasSomethingOtherThanLeakOnAbort;
 		}
 
 		private static void AppendSecurityDeclaration(StringBuilder sb, SecurityDeclaration securityDeclaration)
