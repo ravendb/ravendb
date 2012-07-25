@@ -69,7 +69,7 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/collections";
 
-            Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
+            Collections = new BindableCollection<CollectionModel>(model => model.Name);
             SelectedCollection = new Observable<CollectionModel>();
 
             DocumentsForSelectedCollection.SetChangesObservable(d =>  d.IndexChanges
