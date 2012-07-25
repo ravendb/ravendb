@@ -11,12 +11,14 @@ using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Notification = Raven.Studio.Messages.Notification;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Models
 {
 	public class CollectionsModel : PageViewModel, IHasPageTitle
 	{
-		private string initialSelectedDatabaseName;
+	    private const string CollectionsIndex = "Raven/DocumentsByEntityName";
+	    private string initialSelectedDatabaseName;
 		public BindableCollection<CollectionModel> Collections { get; set; }
 		public Observable<CollectionModel> SelectedCollection { get; set; }
 
@@ -71,17 +73,19 @@ namespace Raven.Studio.Models
             SelectedCollection = new Observable<CollectionModel>();
 
             DocumentsForSelectedCollection.SetChangesObservable(d =>  d.IndexChanges
-                                 .Where(n =>n.Name.Equals("Raven/DocumentsByEntityName",StringComparison.InvariantCulture))
+                                 .Where(n =>n.Name.Equals(CollectionsIndex,StringComparison.InvariantCulture))
                                  .Select(m => Unit.Default));
+
+		    DocumentsForSelectedCollection.DocumentNavigatorFactory =
+		        (id, index) =>
+		        DocumentNavigator.Create(id, index, CollectionsIndex,
+		                                 new IndexQuery() {Query = "Tag:" + GetSelectedCollectionName()});
 
             SelectedCollection.PropertyChanged += (sender, args) =>
             {
                 PutCollectionNameInTheUrl();
                 CollectionSource.CollectionName = GetSelectedCollectionName();
-                DocumentsForSelectedCollection.DocumentNavigatorFactory =
-                    (id, index) =>
-                    DocumentNavigator.Create(id, index, "Raven/DocumentsByEntityName",
-                                             new IndexQuery() { Query = "Tag:" + GetSelectedCollectionName() });
+
                 DocumentsForSelectedCollection.Context = "Collection/" + GetSelectedCollectionName();
             };
 		}
@@ -93,9 +97,9 @@ namespace Raven.Studio.Models
 			initialSelectedDatabaseName = name;
 		}
 
-		public override Task TimerTickedAsync()
+		private void RefreshCollectionsList()
 		{
-			return DatabaseCommands.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 100)
+			DatabaseCommands.GetTermsCount(CollectionsIndex, "Tag", "", 100)
 				.ContinueOnSuccess(collections =>
 				                   	{
 										var collectionModels = collections.OrderByDescending(x => x.Count)
@@ -105,12 +109,12 @@ namespace Raven.Studio.Models
 
 				                   		Collections.Match(collectionModels, AfterUpdate);
 				                   	})
-				.CatchIgnore<WebException>(() =>
+				.Catch(ex =>
 				                           	{
 				                           		var urlParser = new UrlParser(UrlUtil.Url);
 				                           		if (urlParser.RemoveQueryParam("name"))
 				                           			UrlUtil.Navigate(urlParser.BuildUrl());
-				                           		ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error));
+				                           		ApplicationModel.Current.AddErrorNotification(ex, "Unable to retrieve collections from server.");
 				                           	});
 		}
 
@@ -135,5 +139,29 @@ namespace Raven.Studio.Models
 				return "Collection: " + SelectedCollection.Value.Name;
 			}
 		}
+
+        protected override void OnViewLoaded()
+        {
+            var databaseChanged = Database.ObservePropertyChanged()
+                .Select(_ => Unit.Default)
+                .TakeUntil(Unloaded);
+
+            databaseChanged
+                .Do(_ => RefreshCollectionsList())
+                .Subscribe(_ =>
+                {
+                    if (Database.Value != null)
+                    {
+                        Database.Value.IndexChanges
+                            .Where(n => n.Name.Equals(CollectionsIndex, StringComparison.InvariantCulture))
+                            .SampleResponsive(TimeSpan.FromSeconds(2))
+                            .TakeUntil(Unloaded.Merge(databaseChanged))
+                            .ObserveOnDispatcher()
+                            .Subscribe(__ => RefreshCollectionsList());
+                    }
+                });
+
+            RefreshCollectionsList();
+        }
 	}
 }
