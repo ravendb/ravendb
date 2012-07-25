@@ -554,35 +554,6 @@ namespace Raven.Studio.Models
 		private bool notifiedOnDelete;
 		private bool notifiedOnChange;
 
-		protected override Task LoadedTimerTickedAsync()
-		{
-			if (isLoaded == false ||
-				Mode != DocumentMode.DocumentWithId ||
-				currentDatabase != Database.Value.Name)
-				return null;
-
-			return DatabaseCommands.GetAsync(DocumentKey)
-				.ContinueOnSuccess(docOnServer =>
-				{
-					if (docOnServer == null)
-					{
-						if (notifiedOnDelete)
-							return;
-						notifiedOnDelete = true;
-						ApplicationModel.Current.AddNotification(
-							new Notification("Document " + Key + " was deleted on the server"));
-					}
-					else if (docOnServer.Etag != Etag)
-					{
-						if (notifiedOnChange)
-							return;
-						notifiedOnChange = true;
-						ApplicationModel.Current.AddNotification(
-							new Notification("Document " + Key + " was changed on the server"));
-					}
-				});
-		}
-
 		private void UpdateReferences()
 		{
 			if (Seperator == null)
@@ -711,9 +682,33 @@ namespace Raven.Studio.Models
             }
 
             SelectedOutliningMode = mode;
+
+            if (Database.Value != null)
+            {
+                Database.Value.DocumentChanges.TakeUntil(Unloaded)
+                    .ObserveOnDispatcher()
+                    .Subscribe(n => HandleChangeNotification(n));
+            }
         }
 
-		public string Key
+	    private void HandleChangeNotification(DocumentChangeNotification notification)
+	    {
+            if (notification.Name.Equals(DocumentKey, StringComparison.InvariantCulture))
+            {
+                if (notification.Type == DocumentChangeTypes.Put && notification.Etag != Etag)
+                {
+                    ApplicationModel.Current.AddNotification(
+                            new Notification("Document " + Key + " was changed on the server"));
+                }
+                else if (notification.Type == DocumentChangeTypes.Delete)
+                {
+                    ApplicationModel.Current.AddNotification(
+                            new Notification("Document " + Key + " was deleted on the server"));
+                }
+            }
+	    }
+
+	    public string Key
 		{
 			get { return document.Value.Key; }
 			set
