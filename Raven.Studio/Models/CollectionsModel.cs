@@ -107,7 +107,7 @@ namespace Raven.Studio.Models
 											.Select(col => new CollectionModel { Name = col.Name, Count = col.Count })
 											.ToArray();
 
-				                   		Collections.Match(collectionModels, AfterUpdate);
+				                   		Collections.Match(collectionModels, () => AfterUpdate(collections));
 				                   	})
 				.Catch(ex =>
 				                           	{
@@ -118,8 +118,15 @@ namespace Raven.Studio.Models
 				                           	});
 		}
 
-		private void AfterUpdate()
+		private void AfterUpdate(NameAndCount[] collectionDocumentsCount)
 		{
+            // update documents count
+		    var nameToCount = collectionDocumentsCount.ToDictionary(i => i.Name, i => i.Count);
+		    foreach (var collectionModel in Collections)
+		    {
+		        collectionModel.Count = nameToCount[collectionModel.Name];
+		    }
+
 			if (initialSelectedDatabaseName != null &&
 				(SelectedCollection.Value == null || SelectedCollection.Value.Name != initialSelectedDatabaseName || Collections.Contains(SelectedCollection.Value) == false))
 			{
@@ -148,20 +155,23 @@ namespace Raven.Studio.Models
 
             databaseChanged
                 .Do(_ => RefreshCollectionsList())
-                .Subscribe(_ =>
-                {
-                    if (Database.Value != null)
-                    {
-                        Database.Value.IndexChanges
-                            .Where(n => n.Name.Equals(CollectionsIndex, StringComparison.InvariantCulture))
-                            .SampleResponsive(TimeSpan.FromSeconds(2))
-                            .TakeUntil(Unloaded.Merge(databaseChanged))
-                            .ObserveOnDispatcher()
-                            .Subscribe(__ => RefreshCollectionsList());
-                    }
-                });
+                .Subscribe(_ => ObserveIndexChanges(databaseChanged));
 
+            ObserveIndexChanges(databaseChanged);
             RefreshCollectionsList();
         }
+
+	    private void ObserveIndexChanges(IObservable<Unit> databaseChanged)
+	    {
+            if (Database.Value != null)
+            {
+                Database.Value.IndexChanges
+                    .Where(n => n.Name.Equals(CollectionsIndex, StringComparison.InvariantCulture))
+                    .SampleResponsive(TimeSpan.FromSeconds(2))
+                    .TakeUntil(Unloaded.Merge(databaseChanged))
+                    .ObserveOnDispatcher()
+                    .Subscribe(__ => RefreshCollectionsList());
+            }
+	    }
 	}
 }
