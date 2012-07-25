@@ -8,6 +8,8 @@ namespace Raven.Abstractions.Connection
 	{
 		public int? RequestTimeoutInMs { get; set; }
 
+		public bool DisableCompression { get; set; }
+
 		private bool RefreshOauthToken(RavenConnectionStringOptions options, WebResponse response)
 		{
 			var oauthSource = response.Headers["OAuth-Source"];
@@ -52,7 +54,7 @@ namespace Raven.Abstractions.Connection
 
 		public HttpRavenRequest Create(string url, string method, RavenConnectionStringOptions connectionStringOptions)
 		{
-			return new HttpRavenRequest(url, method, ConfigureRequest, RefreshOauthToken, connectionStringOptions);
+			return new HttpRavenRequest(url, method, ConfigureRequest, RefreshOauthToken, connectionStringOptions, DisableCompression);
 		}
 	}
 }
