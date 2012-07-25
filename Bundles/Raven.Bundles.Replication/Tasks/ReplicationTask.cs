@@ -49,7 +49,11 @@ namespace Raven.Bundles.Replication.Tasks
 				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ??
 				60*1000;
 
-			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
+			httpRavenRequestFactory = new HttpRavenRequestFactory
+			{
+				RequestTimeoutInMs = replicationRequestTimeoutInMs,
+				DisableCompression = docDb.Configuration.GetConfigurationValue<bool>("Raven/Replication/DisableCompression") ?? false
+			};
 
 			var thread = new Thread(Execute)
 			{

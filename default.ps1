@@ -492,6 +492,10 @@ task CreateNugetPackageFineGrained {
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.IndexReplication.nuspec $nuget_dir\RavenDB.Bundles.IndexReplication\RavenDB.Bundles.IndexReplication.nuspec
 	@("Raven.Bundles.IndexReplication.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.IndexReplication\lib\net40 }
 	
+	New-Item $nuget_dir\RavenDB.Bundles.IndexedProperties\lib\net40 -Type directory | Out-Null
+	Copy-Item $base_dir\NuGet\RavenDB.Bundles.IndexedProperties.nuspec $nuget_dir\RavenDB.Bundles.IndexedProperties\RavenDB.Bundles.IndexedProperties.nuspec
+	@("Raven.Bundles.IndexedProperties.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.IndexedProperties\lib\net40 }
+	
 	New-Item $nuget_dir\RavenDB.Bundles.Quotas\lib\net40 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.Quotas.nuspec $nuget_dir\RavenDB.Bundles.Quotas\RavenDB.Bundles.Quotas.nuspec
 	@("Raven.Bundles.Quotas.???") |% { Copy-Item "$build_dir\$_" $nuget_dir\RavenDB.Bundles.Quotas\lib\net40 }
