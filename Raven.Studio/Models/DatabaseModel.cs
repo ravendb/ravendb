@@ -1,4 +1,5 @@
 using System;
+using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
@@ -25,7 +26,7 @@ namespace Raven.Studio.Models
 	    private IObservable<DocumentChangeNotification> documentChanges;
 	    private IObservable<IndexChangeNotification> indexChanges;
 
-        private CompositeDisposable disposable = new CompositeDisposable();
+        private readonly CompositeDisposable disposable = new CompositeDisposable();
 
 	    public Observable<TaskModel> SelectedTask { get; set; }
 
@@ -48,6 +49,12 @@ namespace Raven.Studio.Models
 			asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
 			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
 			                             	: documentStore.AsyncDatabaseCommands.ForDatabase(name);
+
+		    DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
+		        .SampleResponsive(TimeSpan.FromSeconds(2))
+		        .Subscribe(_ => RefreshStatistics());
+
+            RefreshStatistics();
 		}
 
 		public BindableCollection<TaskModel> Tasks { get; private set; }
@@ -109,31 +116,11 @@ namespace Raven.Studio.Models
 
 		public Observable<DatabaseStatistics> Statistics { get; set; }
 
-		public override Task TimerTickedAsync()
+		private void RefreshStatistics()
 		{
-			return asyncDatabaseCommands
+			asyncDatabaseCommands
 				.GetStatisticsAsync()
 				.ContinueOnSuccess(stats => Statistics.Value = stats);
-		}
-
-		private bool Equals(DatabaseModel other)
-		{
-			if (ReferenceEquals(null, other)) return false;
-			if (ReferenceEquals(this, other)) return true;
-			return Equals(other.name, name);
-		}
-
-		public override bool Equals(object obj)
-		{
-			if (ReferenceEquals(null, obj)) return false;
-			if (ReferenceEquals(this, obj)) return true;
-			if (obj.GetType() != typeof (DatabaseModel)) return false;
-			return Equals((DatabaseModel) obj);
-		}
-
-		public override int GetHashCode()
-		{
-			return (name != null ? name.GetHashCode() : 0);
 		}
 
 	    public void Dispose()
