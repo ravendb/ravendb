@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="AdvancedJsonPatcher.cs" company="Hibernating Rhinos LTD">
+// <copyright file="ScriptedJsonPatcher.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -16,14 +16,14 @@ using Environment = System.Environment;
 
 namespace Raven.Database.Json
 {
-	public class AdvancedJsonPatcher
+	public class ScriptedJsonPatcher
 	{
 		private RavenJObject document;
 		private readonly Func<string, RavenJObject> loadDocument;
 
 		public List<string> Debug = new List<string>();
 
-		public AdvancedJsonPatcher(RavenJObject document, Func<string, RavenJObject> loadDocument = null)
+		public ScriptedJsonPatcher(RavenJObject document, Func<string, RavenJObject> loadDocument = null)
 		{
 			this.document = document;
 			this.loadDocument = loadDocument ?? (s =>
@@ -33,7 +33,7 @@ namespace Raven.Database.Json
 			                                     	});
 		}
 
-		public RavenJObject Apply(AdvancedPatchRequest patch)
+		public RavenJObject Apply(ScriptedPatchRequest patch)
 		{
 			if (document == null)
 				return document;
@@ -55,7 +55,7 @@ namespace Raven.Database.Json
 			return document;
 		}
 
-		private RavenJObject ApplySingleScript(CSharp.Context ctx, RavenJObject doc, AdvancedPatchRequest patch)
+		private RavenJObject ApplySingleScript(CSharp.Context ctx, RavenJObject doc, ScriptedPatchRequest patch)
 		{
 			AssertValidScript(patch.Script);
 			var wrapperScript = String.Format(@"

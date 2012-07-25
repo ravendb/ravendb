@@ -12,15 +12,15 @@ using Raven.Abstractions.Extensions;
 namespace Raven.Abstractions.Commands
 {
 	///<summary>
-	/// A single batch operation for a document PATCH (using a Javascript)
+	/// A single batch operation for a document EVAL (using a Javascript)
 	///</summary>
-	public class AdvancedPatchCommandData : ICommandData
+	public class ScriptedPatchCommandData : ICommandData
 	{
 		/// <summary>
-		/// Gets or sets the AdvancedPatchRequest (using JavaScript) that is used to patch the document
+		/// Gets or sets the ScriptedPatchRequest (using JavaScript) that is used to patch the document
 		/// </summary>
 		/// <value>The Script.</value>
-		public AdvancedPatchRequest Patch 
+		public ScriptedPatchRequest Patch 
 		{ 
 			get; set; 
 		}

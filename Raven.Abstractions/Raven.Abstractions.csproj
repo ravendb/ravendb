@@ -59,7 +59,7 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="Commands\AdvancedPatchCommandData.cs" />
+    <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\BsonBinaryType.cs">
       <Link>Imports\Newtonsoft.Json\Bson\BsonBinaryType.cs</Link>
     </Compile>
@@ -557,7 +557,7 @@
     <Compile Include="Connection\HttpRavenRequestFactory.cs" />
     <Compile Include="Connection\HttpRequestHelper.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
-    <Compile Include="Data\AdvancedPatchRequest.cs" />
+    <Compile Include="Data\ScriptedPatchRequest.cs" />
     <Compile Include="Data\AggregationOperation.cs" />
     <Compile Include="Data\AggregationOperationExtensions.cs" />
     <Compile Include="Data\Attachment.cs" />

@@ -56,7 +56,7 @@ namespace Raven.Database.Server.Responders
 					break;
 				case "EVAL":
 					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
-					var advPatch = AdvancedPatchRequest.FromJson(advPatchRequestJson);
+					var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
 					var advPatchResult = Database.ApplyPatch(docId, context.GetEtag(), advPatch, GetRequestTransaction(context));
 					ProcessPatchResult(context, docId, advPatchResult.Item1, advPatchResult.Item2);
 					break;

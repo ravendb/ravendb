@@ -215,7 +215,7 @@
     <Compile Include="Indexing\Sorting\SpatialDistanceSortField.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Json\AdvancedJsonPatcher.cs" />
+    <Compile Include="Json\ScriptedJsonPatcher.cs" />
     <Compile Include="Linq\Ast\TransformDynamicLambdaExpressions.cs" />
     <Compile Include="Linq\RecursiveFunction.cs" />
     <Compile Include="Plugins\Builtins\InvalidDocumentNames.cs" />
