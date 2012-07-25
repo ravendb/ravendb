@@ -13,7 +13,7 @@ using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Models
 {
-	public class DatabaseModel : Model
+	public class DatabaseModel : Model, IDisposable
 	{
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly string name;
@@ -114,5 +114,10 @@ namespace Raven.Studio.Models
 		{
 			return (name != null ? name.GetHashCode() : 0);
 		}
+
+	    public void Dispose()
+	    {
+	        
+	    }
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Net;
 using System.Reactive;
@@ -51,6 +52,14 @@ namespace Raven.Studio.Extensions
                 h => (sender, e) => h(sender, e),
                 h => source.PropertyChanged += h,
                 h => source.PropertyChanged -= h);
+        }
+
+        public static IObservable<EventPattern<NotifyCollectionChangedEventArgs>> ObserveCollectionChanged(this INotifyCollectionChanged source)
+        {
+            return Observable.FromEventPattern<NotifyCollectionChangedEventHandler, NotifyCollectionChangedEventArgs>(
+                h => (sender, e) => h(sender, e),
+                h => source.CollectionChanged += h,
+                h => source.CollectionChanged -= h);
         } 
 
         /// <summary>

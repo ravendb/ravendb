@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection.Async;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
@@ -17,11 +18,18 @@ namespace Raven.Studio.Models
     public class DatabaseListItemModel : Model
     {
         private readonly string name;
+        private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 
         public DatabaseListItemModel(string name)
         {
             this.name = name;
             Statistics = new Observable<DatabaseStatistics>();
+
+            var documentStore = ApplicationModel.Current.Server.Value.DocumentStore;
+
+            asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
+                                ? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
+                                : documentStore.AsyncDatabaseCommands.ForDatabase(name);
         }
 
         public Observable<DatabaseStatistics> Statistics { get; set; }
@@ -38,12 +46,7 @@ namespace Raven.Studio.Models
 
         private Task RefreshStatistics()
         {
-            var asyncDatabaseCommands = ApplicationModel.Current.Server.Value.DocumentStore.AsyncDatabaseCommands;
-            var databaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
-                                       ? asyncDatabaseCommands.ForDefaultDatabase()
-                                       : asyncDatabaseCommands.ForDatabase(name);
-
-            return databaseCommands
+            return asyncDatabaseCommands
                 .GetStatisticsAsync()
                 .ContinueOnSuccessInTheUIThread(s => Statistics.Value = s);
         }

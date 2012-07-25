@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Raven.Studio.Commands;
+using Raven.Studio.Extensions;
 using Raven.Studio.Infrastructure;
 using System.Linq;
 
@@ -20,23 +23,23 @@ namespace Raven.Studio.Models
 
         public BindableCollection<DatabaseListItemModel> Databases { get; private set; }
 
-        private DatabaseListItemModel selectedDatabase;
-
         public DatabaseListItemModel SelectedDatabase
 		{
-			get { return selectedDatabase ?? (selectedDatabase = ApplicationModel.Database.Value != null ? Databases.FirstOrDefault(m => m.Name.Equals(ApplicationModel.Database.Value.Name, StringComparison.InvariantCulture)) : null); }
+			get { return  ApplicationModel.Database.Value != null ? Databases.FirstOrDefault(m => m.Name.Equals(ApplicationModel.Database.Value.Name, StringComparison.InvariantCulture)) : null; }
 			set
 			{
-				selectedDatabase = value;
-				OnPropertyChanged(() => SelectedDatabase);
-				if (changeDatabase.CanExecute(selectedDatabase.Name))
-					changeDatabase.Execute(selectedDatabase);
+				if (value == null)
+				{
+				    return;
+				}
+
+				if (changeDatabase.CanExecute(value.Name))
+					changeDatabase.Execute(value.Name);
 			}
 		}
 
 		public override Task TimerTickedAsync()
 		{
-			
 		    return TaskEx.WhenAll(
                 new[] { ApplicationModel.Current.Server.Value.TimerTickedAsync() } // Fetch databases names from the server
 		            .Concat(Databases.Select(m => m.TimerTickedAsync()))); // Refresh statistics
@@ -44,23 +47,24 @@ namespace Raven.Studio.Models
 
         protected override void OnViewLoaded()
         {
-            ApplicationModel.Current.Server.Value.Databases.CollectionChanged += HandleDatabaseListChanged;
+            ApplicationModel.Current.Server.Value.SelectedDatabase
+                .ObservePropertyChanged()
+                .TakeUntil(Unloaded)
+                .Subscribe(_ => OnPropertyChanged(() => SelectedDatabase));
+
+            ApplicationModel.Current.Server.Value.Databases.ObserveCollectionChanged()
+                .Throttle(TimeSpan.FromMilliseconds(10))
+                .ObserveOnDispatcher()
+                .TakeUntil(Unloaded)
+                .Subscribe(_ => RefreshDatabaseList());
+
             RefreshDatabaseList();
         }
 
 	    private void RefreshDatabaseList()
 	    {
-            Databases.Match(ApplicationModel.Current.Server.Value.Databases.Select(m => new DatabaseListItemModel(m.Name)).ToArray());
-	    }
-
-	    protected override void OnViewUnloaded()
-        {
-            ApplicationModel.Current.Server.Value.Databases.CollectionChanged -= HandleDatabaseListChanged;
-        }
-
-	    private void HandleDatabaseListChanged(object sender, NotifyCollectionChangedEventArgs e)
-	    {
-	        RefreshDatabaseList();
+            Databases.Match(ApplicationModel.Current.Server.Value.Databases.Select(name => new DatabaseListItemModel(name)).ToArray());
+            OnPropertyChanged(() => SelectedDatabase);
 	    }
 	}
 }
