@@ -333,7 +333,10 @@ namespace Raven.Database.Linq
 					var methodDefinition = methodReference.Resolve();
 					if (methodDefinition.SecurityDeclarations.Any(HasSecurityIssue) == false &&
 						methodDefinition.DeclaringType.SecurityDeclarations.Any(HasSecurityIssue) == false)
+					{
+						AssertNotSecurityCriticalMethod(methodDefinition);
 						continue;
+					}
 
 					var sb = new StringBuilder();
 					sb.Append("Cannot use an index which calls method '")
@@ -351,6 +354,28 @@ namespace Raven.Database.Linq
 						AppendSecurityDeclaration(sb, securityDeclaration);
 					}
 					throw new SecurityException(sb.ToString());
+				}
+			}
+		}
+
+		private static void AssertNotSecurityCriticalMethod(MethodDefinition methodDefinition)
+		{
+			var customAttributes = methodDefinition.CustomAttributes.Concat(methodDefinition.DeclaringType.CustomAttributes);
+			foreach (var customAttribute in customAttributes)
+			{
+				switch (customAttribute.AttributeType.Name)
+				{
+					case "SecurityCriticalAttribute":
+					case "SecuritySafeCriticalAttribute":
+						var sb = new StringBuilder();
+						sb.Append("Cannot use an index which calls method '")
+							.Append(methodDefinition.FullName)
+							.AppendLine(" because it or its declaring type is  marked with")
+							.Append(customAttribute.AttributeType.FullName);
+
+						throw new SecurityException(sb.ToString());
+
+						break;
 				}
 			}
 		}

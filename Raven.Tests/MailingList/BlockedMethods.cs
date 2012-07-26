@@ -56,7 +56,7 @@ namespace Raven.Tests.MailingList
 		public void CannotUseIO()
 		{
 			Assert.Throws<SecurityException>(() => Compile(
-				"from doc in docs  select new { doc.Now , die = ((Func<int>)(()=>{ File.Delete(\"test\"); return 1; }))()}"));
+				"from doc in docs  select new { doc.Now , die = ((Func<int>)(()=>{ System.IO.File.Delete(\"test\"); return 1; }))()}"));
 		}
 
 		[Fact]
