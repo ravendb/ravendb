@@ -12,10 +12,6 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Reflection;
-using System.Security;
-using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using ICSharpCode.NRefactory;
@@ -23,10 +19,8 @@ using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Lucene.Net.Documents;
 using Microsoft.CSharp;
-using Microsoft.Win32;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using Mono.Reflection;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Linq.Ast;
@@ -294,7 +288,7 @@ namespace Raven.Database.Linq
 				throw new InvalidOperationException(sb.ToString());
 			}
 
-			AssertNoSecurityCriticalCalls(results.CompiledAssembly);
+			CodeVerifier.AssertNoSecurityCriticalCalls(results.CompiledAssembly);
 
 			Type result = results.CompiledAssembly.GetType(name);
 
@@ -316,168 +310,6 @@ namespace Raven.Database.Linq
 			}
 
 			return result;
-		}
-
-
-		private static readonly ConcurrentDictionary<MethodInfo, string> cache = new ConcurrentDictionary<MethodInfo, string>();
-		private static readonly string[] forbiddenNamespaces = new[]
-		{
-			typeof(File).Namespace,
-			typeof(Thread).Namespace,
-			typeof(Registry).Namespace,
-			typeof(WebRequest).Namespace
-		};
-		private static Type[] forbiddenTypes = new[]
-		{
-			typeof (Environment)
-		};
-
-		private static void AssertNoSecurityCriticalCalls(Assembly asm)
-		{
-			foreach (var type in asm.GetTypes())
-			{
-				foreach (var methodInfo in type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
-				{
-					string value;
-					if (cache.TryGetValue(methodInfo, out value))
-					{
-						if(value == null)
-							continue;
-						throw new SecurityException(value);
-					}
-					foreach (var instruction in methodInfo.GetInstructions())
-					{
-						if (instruction.OpCode != System.Reflection.Emit.OpCodes.Call && instruction.OpCode != System.Reflection.Emit.OpCodes.Call &&
-							instruction.OpCode != System.Reflection.Emit.OpCodes.Callvirt && instruction.OpCode != System.Reflection.Emit.OpCodes.Newobj)
-							continue;
-
-						var memberInfo = instruction.Operand as MemberInfo;
-						if (memberInfo != null)
-						{
-							var msg = PrepareSecurityMessage(memberInfo);
-
-							cache.TryAdd(methodInfo, msg);
-
-							if (msg == null)
-								continue;
-
-							throw new SecurityException(msg);
-						}
-					}
-				}
-			}
-		}
-
-		private static IEnumerable<object> GetAttributesForMethodAndType(MemberInfo memberInfo, Type type)
-		{
-			var declaringType = memberInfo.DeclaringType;
-			if (declaringType == null)
-				return memberInfo.GetCustomAttributes(type, true);
-			return memberInfo.GetCustomAttributes(type, true)
-				.Concat(declaringType.GetCustomAttributes(type, true));
-		}
-
-		private static string PrepareSecurityMessage(MemberInfo memberInfo)
-		{
-			var attributes = GetAttributesForMethodAndType(memberInfo, typeof(SecurityCriticalAttribute))
-					.Concat(GetAttributesForMethodAndType(memberInfo, typeof(HostProtectionAttribute)))
-					.Where(HasSecurityIssue)
-					.ToArray();
-
-			var forbiddenNamespace =
-				forbiddenNamespaces.FirstOrDefault(
-					x =>
-					memberInfo.DeclaringType != null && memberInfo.DeclaringType.Namespace != null &&
-					memberInfo.DeclaringType.Namespace.StartsWith(x));
-
-			var forbiddenType = forbiddenTypes.FirstOrDefault(x => x == memberInfo.DeclaringType);
-
-
-
-			if (attributes.Length == 0 && forbiddenNamespace == null && forbiddenType == null)
-			{
-				return null;
-
-			}
-			var sb = new StringBuilder();
-			sb.Append("Cannot use an index which calls method '")
-				.Append(memberInfo.DeclaringType == null ? "" : memberInfo.DeclaringType.FullName)
-				.Append(".")
-				.Append(memberInfo.Name)
-				.AppendLine(" because it or its declaring type has been marked as not safe for indexing.");
-
-			if (forbiddenNamespace != null && memberInfo.DeclaringType != null)
-				sb.Append("\tCannot use methods on namespace: ").Append(memberInfo.DeclaringType.Namespace).AppendLine();
-
-			if (forbiddenType != null)
-				sb.Append("\tCannot use methods from type: ").Append(forbiddenType.FullName).AppendLine();
-
-			foreach (var attribute in attributes)
-			{
-				if (attribute is SecurityCriticalAttribute)
-					sb.AppendLine("\tMarked with [SecurityCritical] attribute");
-
-				if (attribute is SecuritySafeCriticalAttribute)
-					sb.AppendLine("\tMarked with [SecuritySafeCritical] attribute");
-
-				var hostProtectionAttribute = attribute as HostProtectionAttribute;
-				if (hostProtectionAttribute == null)
-					continue;
-
-				sb.Append("\t[HostProtection(Action = ")
-					.Append(hostProtectionAttribute.Action)
-					.Append(", ExternalProcessMgmt = ")
-					.Append(hostProtectionAttribute.ExternalProcessMgmt)
-					.Append(", ExternalThreading = ")
-					.Append(hostProtectionAttribute.ExternalThreading)
-					.Append(", Resources = ")
-					.Append(hostProtectionAttribute.Resources)
-					.Append(", SecurityInfrastructure = ")
-					.Append(hostProtectionAttribute.SecurityInfrastructure)
-					.Append(", SelfAffectingProcessMgmt = ")
-					.Append(hostProtectionAttribute.SelfAffectingProcessMgmt)
-					.Append(", SelfAffectingThreading = ")
-					.Append(hostProtectionAttribute.SelfAffectingThreading)
-					.Append(", SharedState = ")
-					.Append(hostProtectionAttribute.SharedState)
-					.Append(", Synchronization = ")
-					.Append(hostProtectionAttribute.Synchronization)
-					.Append(", MayLeakOnAbort = ")
-					.Append(hostProtectionAttribute.MayLeakOnAbort)
-					.Append(", Unrestricted = ")
-					.Append(hostProtectionAttribute.Unrestricted)
-					.Append(", UI =")
-					.Append(hostProtectionAttribute.UI)
-					.AppendLine("]");
-			}
-
-			return sb.ToString();
-		}
-
-		private static bool HasSecurityIssue(object arg)
-		{
-			var hostProtectionAttribute = arg as HostProtectionAttribute;
-			if (hostProtectionAttribute == null)
-				return true;
-
-			if (hostProtectionAttribute.ExternalProcessMgmt ||
-				hostProtectionAttribute.ExternalThreading ||
-				(hostProtectionAttribute.Resources != HostProtectionResource.None && hostProtectionAttribute.Resources != HostProtectionResource.MayLeakOnAbort) ||
-				hostProtectionAttribute.SecurityInfrastructure ||
-				hostProtectionAttribute.SelfAffectingProcessMgmt ||
-				hostProtectionAttribute.SelfAffectingThreading ||
-				hostProtectionAttribute.SharedState ||
-				hostProtectionAttribute.Synchronization ||
-				hostProtectionAttribute.UI ||
-				hostProtectionAttribute.Unrestricted)
-				return true;
-
-			// we can live with this one
-			if (hostProtectionAttribute.MayLeakOnAbort)
-				return false;
-
-			//maybe something else happened?
-			return true;
 		}
 	}
 }
