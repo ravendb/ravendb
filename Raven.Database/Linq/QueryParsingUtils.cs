@@ -12,8 +12,10 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Security;
+using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using ICSharpCode.NRefactory;
@@ -21,14 +23,17 @@ using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Lucene.Net.Documents;
 using Microsoft.CSharp;
+using Microsoft.Win32;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Reflection;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
+using Instruction = Mono.Reflection.Instruction;
 
 namespace Raven.Database.Linq
 {
@@ -50,7 +55,7 @@ namespace Raven.Database.Linq
 				typeof(Field).Namespace,
 				typeof(CultureInfo).Namespace,
 			};
-			
+
 			foreach (var extension in extensions)
 			{
 				foreach (var ns in extension.Value.GetNamespacesToImport())
@@ -184,7 +189,7 @@ namespace Raven.Database.Linq
 		public static Expression GetAnonymousCreateExpression(Expression expression)
 		{
 			var invocationExpression = expression as InvocationExpression;
-			
+
 			if (invocationExpression == null)
 				return expression;
 			var memberReferenceExpression = invocationExpression.TargetObject as MemberReferenceExpression;
@@ -237,7 +242,7 @@ namespace Raven.Database.Linq
 		public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath)
 		{
 			CacheEntry entry;
-			if(cacheEntries.TryGetValue(source, out entry))
+			if (cacheEntries.TryGetValue(source, out entry))
 			{
 				Interlocked.Increment(ref entry.Usages);
 				return entry.Type;
@@ -300,10 +305,10 @@ namespace Raven.Database.Linq
 				Usages = 1
 			});
 
-			if(cacheEntries.Count > 256)
+			if (cacheEntries.Count > 256)
 			{
-				var kvp = cacheEntries.OrderBy(x=>x.Value.Usages).FirstOrDefault();
-				if(kvp.Key != null)
+				var kvp = cacheEntries.OrderBy(x => x.Value.Usages).FirstOrDefault();
+				if (kvp.Key != null)
 				{
 					CacheEntry _;
 					cacheEntries.TryRemove(kvp.Key, out _);
@@ -313,109 +318,166 @@ namespace Raven.Database.Linq
 			return result;
 		}
 
+
+		private static readonly ConcurrentDictionary<MethodInfo, string> cache = new ConcurrentDictionary<MethodInfo, string>();
+		private static readonly string[] forbiddenNamespaces = new[]
+		{
+			typeof(File).Namespace,
+			typeof(Thread).Namespace,
+			typeof(Registry).Namespace,
+			typeof(WebRequest).Namespace
+		};
+		private static Type[] forbiddenTypes = new[]
+		{
+			typeof (Environment)
+		};
+
 		private static void AssertNoSecurityCriticalCalls(Assembly asm)
 		{
-			var assemblyDefinition = AssemblyDefinition.ReadAssembly(asm.Location);
-			foreach (var method in from typeDefinition in assemblyDefinition.MainModule.Types 
-										   from methodDefinition in typeDefinition.Methods
-										   select methodDefinition)
+			foreach (var type in asm.GetTypes())
 			{
-				foreach (var instruction in method.Body.Instructions)
+				foreach (var methodInfo in type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
 				{
-					if (instruction.OpCode != OpCodes.Call && instruction.OpCode != OpCodes.Call &&
-					    instruction.OpCode != OpCodes.Callvirt && instruction.OpCode != OpCodes.Newobj)
-						continue;
-
-					var methodReference = instruction.Operand as MethodReference;
-					if(methodReference == null)
-						continue;
-
-					var methodDefinition = methodReference.Resolve();
-					if (methodDefinition.SecurityDeclarations.Any(HasSecurityIssue) == false &&
-						methodDefinition.DeclaringType.SecurityDeclarations.Any(HasSecurityIssue) == false)
+					string value;
+					if (cache.TryGetValue(methodInfo, out value))
 					{
-						AssertNotSecurityCriticalMethod(methodDefinition);
-						continue;
+						if(value == null)
+							continue;
+						throw new SecurityException(value);
 					}
-
-					var sb = new StringBuilder();
-					sb.Append("Cannot use an index which calls method '")
-						.Append(methodDefinition.FullName)
-						.AppendLine(" because it or its declaring type has security declartions.");
-
-
-					foreach (var securityDeclaration in methodDefinition.SecurityDeclarations)
+					foreach (var instruction in methodInfo.GetInstructions())
 					{
-						AppendSecurityDeclaration(sb, securityDeclaration);
-					}
+						if (instruction.OpCode != System.Reflection.Emit.OpCodes.Call && instruction.OpCode != System.Reflection.Emit.OpCodes.Call &&
+							instruction.OpCode != System.Reflection.Emit.OpCodes.Callvirt && instruction.OpCode != System.Reflection.Emit.OpCodes.Newobj)
+							continue;
 
-					foreach (var securityDeclaration in methodDefinition.DeclaringType.SecurityDeclarations)
-					{
-						AppendSecurityDeclaration(sb, securityDeclaration);
+						var memberInfo = instruction.Operand as MemberInfo;
+						if (memberInfo != null)
+						{
+							var msg = PrepareSecurityMessage(memberInfo);
+
+							cache.TryAdd(methodInfo, msg);
+
+							if (msg == null)
+								continue;
+
+							throw new SecurityException(msg);
+						}
 					}
-					throw new SecurityException(sb.ToString());
 				}
 			}
 		}
 
-		private static void AssertNotSecurityCriticalMethod(MethodDefinition methodDefinition)
+		private static IEnumerable<object> GetAttributesForMethodAndType(MemberInfo memberInfo, Type type)
 		{
-			var customAttributes = methodDefinition.CustomAttributes.Concat(methodDefinition.DeclaringType.CustomAttributes);
-			foreach (var customAttribute in customAttributes)
-			{
-				switch (customAttribute.AttributeType.Name)
-				{
-					case "SecurityCriticalAttribute":
-					case "SecuritySafeCriticalAttribute":
-						var sb = new StringBuilder();
-						sb.Append("Cannot use an index which calls method '")
-							.Append(methodDefinition.FullName)
-							.AppendLine(" because it or its declaring type is  marked with")
-							.Append(customAttribute.AttributeType.FullName);
-
-						throw new SecurityException(sb.ToString());
-
-						break;
-				}
-			}
+			var declaringType = memberInfo.DeclaringType;
+			if (declaringType == null)
+				return memberInfo.GetCustomAttributes(type, true);
+			return memberInfo.GetCustomAttributes(type, true)
+				.Concat(declaringType.GetCustomAttributes(type, true));
 		}
 
-		private static bool HasSecurityIssue(SecurityDeclaration arg)
+		private static string PrepareSecurityMessage(MemberInfo memberInfo)
 		{
-			if (arg.HasSecurityAttributes == false)
-				return true; // no idea how to deal with that, might be dangeroups, it is an issue
+			var attributes = GetAttributesForMethodAndType(memberInfo, typeof(SecurityCriticalAttribute))
+					.Concat(GetAttributesForMethodAndType(memberInfo, typeof(HostProtectionAttribute)))
+					.Where(HasSecurityIssue)
+					.ToArray();
 
-			var hasSomethingOtherThanLeakOnAbort = false; // MayLeakOnAbort exists on HashSet, and we won't deal with abort, anyway
-			foreach (var securityAttribute in arg.SecurityAttributes)
+			var forbiddenNamespace =
+				forbiddenNamespaces.FirstOrDefault(
+					x =>
+					memberInfo.DeclaringType != null && memberInfo.DeclaringType.Namespace != null &&
+					memberInfo.DeclaringType.Namespace.StartsWith(x));
+
+			var forbiddenType = forbiddenTypes.FirstOrDefault(x => x == memberInfo.DeclaringType);
+
+
+
+			if (attributes.Length == 0 && forbiddenNamespace == null && forbiddenType == null)
 			{
-				if (securityAttribute.Fields.Concat(securityAttribute.Properties).Any(field => field.Name != "MayLeakOnAbort"))
-				{
-					hasSomethingOtherThanLeakOnAbort = true;
-				}
-					break;
+				return null;
+
 			}
-			return hasSomethingOtherThanLeakOnAbort;
+			var sb = new StringBuilder();
+			sb.Append("Cannot use an index which calls method '")
+				.Append(memberInfo.DeclaringType == null ? "" : memberInfo.DeclaringType.FullName)
+				.Append(".")
+				.Append(memberInfo.Name)
+				.AppendLine(" because it or its declaring type has been marked as not safe for indexing.");
+
+			if (forbiddenNamespace != null && memberInfo.DeclaringType != null)
+				sb.Append("\tCannot use methods on namespace: ").Append(memberInfo.DeclaringType.Namespace).AppendLine();
+
+			if (forbiddenType != null)
+				sb.Append("\tCannot use methods from type: ").Append(forbiddenType.FullName).AppendLine();
+
+			foreach (var attribute in attributes)
+			{
+				if (attribute is SecurityCriticalAttribute)
+					sb.AppendLine("\tMarked with [SecurityCritical] attribute");
+
+				if (attribute is SecuritySafeCriticalAttribute)
+					sb.AppendLine("\tMarked with [SecuritySafeCritical] attribute");
+
+				var hostProtectionAttribute = attribute as HostProtectionAttribute;
+				if (hostProtectionAttribute == null)
+					continue;
+
+				sb.Append("\t[HostProtection(Action = ")
+					.Append(hostProtectionAttribute.Action)
+					.Append(", ExternalProcessMgmt = ")
+					.Append(hostProtectionAttribute.ExternalProcessMgmt)
+					.Append(", ExternalThreading = ")
+					.Append(hostProtectionAttribute.ExternalThreading)
+					.Append(", Resources = ")
+					.Append(hostProtectionAttribute.Resources)
+					.Append(", SecurityInfrastructure = ")
+					.Append(hostProtectionAttribute.SecurityInfrastructure)
+					.Append(", SelfAffectingProcessMgmt = ")
+					.Append(hostProtectionAttribute.SelfAffectingProcessMgmt)
+					.Append(", SelfAffectingThreading = ")
+					.Append(hostProtectionAttribute.SelfAffectingThreading)
+					.Append(", SharedState = ")
+					.Append(hostProtectionAttribute.SharedState)
+					.Append(", Synchronization = ")
+					.Append(hostProtectionAttribute.Synchronization)
+					.Append(", MayLeakOnAbort = ")
+					.Append(hostProtectionAttribute.MayLeakOnAbort)
+					.Append(", Unrestricted = ")
+					.Append(hostProtectionAttribute.Unrestricted)
+					.Append(", UI =")
+					.Append(hostProtectionAttribute.UI)
+					.AppendLine("]");
+			}
+
+			return sb.ToString();
 		}
 
-		private static void AppendSecurityDeclaration(StringBuilder sb, SecurityDeclaration securityDeclaration)
+		private static bool HasSecurityIssue(object arg)
 		{
-			sb.Append("Security Declaration Action: ").Append(securityDeclaration.Action).AppendLine();
-			foreach (var securityAttribute in securityDeclaration.SecurityAttributes)
-			{
-				sb.Append("[")
-					.Append(securityAttribute.AttributeType.FullName)
-					.Append("(");
+			var hostProtectionAttribute = arg as HostProtectionAttribute;
+			if (hostProtectionAttribute == null)
+				return true;
 
-				bool removeLast = false;
-				foreach (var field in securityAttribute.Fields.Concat(securityAttribute.Properties))
-				{
-					removeLast = true;
-					sb.Append(field.Name).Append(" = ").Append(field.Argument.Value).Append(", ");
-				}
-				if (removeLast)
-					sb.Remove(sb.Length - 2, 2);
-				sb.AppendLine("]");
-			}
+			if (hostProtectionAttribute.ExternalProcessMgmt ||
+				hostProtectionAttribute.ExternalThreading ||
+				(hostProtectionAttribute.Resources != HostProtectionResource.None && hostProtectionAttribute.Resources != HostProtectionResource.MayLeakOnAbort) ||
+				hostProtectionAttribute.SecurityInfrastructure ||
+				hostProtectionAttribute.SelfAffectingProcessMgmt ||
+				hostProtectionAttribute.SelfAffectingThreading ||
+				hostProtectionAttribute.SharedState ||
+				hostProtectionAttribute.Synchronization ||
+				hostProtectionAttribute.UI ||
+				hostProtectionAttribute.Unrestricted)
+				return true;
+
+			// we can live with this one
+			if (hostProtectionAttribute.MayLeakOnAbort)
+				return false;
+
+			//maybe something else happened?
+			return true;
 		}
 	}
 }
