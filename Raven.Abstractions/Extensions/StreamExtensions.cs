@@ -7,10 +7,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NLog;
 
 namespace Raven.Abstractions.Extensions
 {
+	using Raven.Abstractions.Logging;
+
 	/// <summary>
 	/// Extensions for working with streams
 	/// </summary>
@@ -167,7 +168,7 @@ namespace Raven.Abstractions.Extensions
 						}
 						catch (Exception ex)
 						{
-							LogManager.GetCurrentClassLogger().Error("Error when disposing a DisposingStream: " + ex.Message, ex);
+							LogProvider.GetCurrentClassLogger().ErrorException("Error when disposing a DisposingStream: " + ex.Message, ex);
 						}
 					}
 				}
