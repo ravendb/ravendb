@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{433E971F-D140-45CC-8E62-91F04E9EA0A1}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Raven.Bundles.IndexReplicationToRedis</RootNamespace>
+    <AssemblyName>Raven.Bundles.IndexReplicationToRedis</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>..\..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Lucene.Net, Version=2.9.2.1, Culture=neutral, PublicKeyToken=02f879aa45933051, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\SharedLibs\Lucene.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Common, Version=3.7.8.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\SharedLibs\ServiceStack.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Interfaces, Version=3.7.8.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\SharedLibs\ServiceStack.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Redis">
+      <HintPath>..\..\SharedLibs\ServiceStack.Redis.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Text, Version=3.7.8.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\SharedLibs\ServiceStack.Text.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Data\IndexReplicationToRedisDestination.cs" />
+    <Compile Include="Data\IndexReplicationToRedisMode.cs" />
+    <Compile Include="IndexReplicationToRedisIndexUpdateTrigger.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
+      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
+      <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Raven.Database\Raven.Database.csproj">
+      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
+      <Name>Raven.Database</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
+      <Project>{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}</Project>
+      <Name>Raven.Storage.Esent</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

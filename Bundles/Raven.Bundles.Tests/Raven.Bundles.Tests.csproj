@@ -39,6 +39,18 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\Packages\Newtonsoft.Json.4.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="ServiceStack.Common">
+      <HintPath>..\..\SharedLibs\ServiceStack.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Interfaces">
+      <HintPath>..\..\SharedLibs\ServiceStack.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Redis">
+      <HintPath>..\..\SharedLibs\ServiceStack.Redis.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Text">
+      <HintPath>..\..\SharedLibs\ServiceStack.Text.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
@@ -82,6 +94,8 @@
     <Compile Include="Expiration\Expiration.cs" />
     <Compile Include="Expiration\WithCascade.cs" />
     <Compile Include="IndexedProperties\IndexedProperties.cs" />
+    <Compile Include="IndexReplicationToRedis\FactIfRedisDefaultIsAvailable.cs" />
+    <Compile Include="IndexReplicationToRedis\ReplicateToRedis.cs" />
     <Compile Include="IndexReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="IndexReplication\ReplicateToSql.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisQueryParametersTests.cs" />
@@ -167,6 +181,10 @@
     <ProjectReference Include="..\Raven.Bundles.IndexedProperties\Raven.Bundles.IndexedProperties.csproj">
       <Project>{012F5E7B-DDC3-4B8C-BA39-1394536D58BE}</Project>
       <Name>Raven.Bundles.IndexedProperties</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Bundles.IndexReplicationToRedis\Raven.Bundles.IndexReplicationToRedis.csproj">
+      <Project>{433E971F-D140-45CC-8E62-91F04E9EA0A1}</Project>
+      <Name>Raven.Bundles.IndexReplicationToRedis</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.IndexReplication\Raven.Bundles.IndexReplication.csproj">
       <Project>{2728BBA7-5142-445E-BAA5-142A25E0666D}</Project>

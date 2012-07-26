@@ -7,9 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Raven.Bundles.Tests.Expiration;
-using Raven.Bundles.Tests.Replication;
-using Raven.Bundles.Tests.Replication.Bugs;
+using Raven.Bundles.Tests.IndexReplicationToRedis;
 
 namespace Raven.Bundles.Tryouts
 {
@@ -17,10 +15,16 @@ namespace Raven.Bundles.Tryouts
 	{
 		static void Main(string[] args)
 		{
+			
 			Console.WriteLine("starting...");
-			using (var x = new David())
+
+			using (var x = new ReplicateToRedis())
 			{
-				x.Can_replicate_between_two_instances_create_delete_create_quickly();
+				x.Can_replicate_to_redis_using_pocoTypeMode();
+				x.Can_replicate_to_redis_when_document_is_updated_using_pocoTypeMode();
+
+				x.Can_replicate_to_redis_using_hashMode();
+				x.Can_replicate_to_redis_when_document_is_updated_using_hashMode();
 			}
 		}
 	}

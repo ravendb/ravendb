@@ -5,11 +5,11 @@
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{BE11F85B-4E0D-482A-9293-9E7D37FF72FE}</ProjectGuid>
+    <ProjectGuid>{E8F3803B-3462-4BF4-93B5-9F5F4F1C39B6}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Raven.Bundles.Tryouts</RootNamespace>
-    <AssemblyName>Raven.Bundles.Tryouts</AssemblyName>
+    <RootNamespace>Raven.Samples.IndexReplicationToRedis</RootNamespace>
+    <AssemblyName>Raven.Samples.IndexReplicationToRedis</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
@@ -36,7 +36,23 @@
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\..\Packages\Newtonsoft.Json.4.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Common, Version=3.7.8.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\SharedLibs\ServiceStack.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Interfaces, Version=3.7.8.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\SharedLibs\ServiceStack.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Redis, Version=3.7.8.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\SharedLibs\ServiceStack.Redis.dll</HintPath>
+    </Reference>
+    <Reference Include="ServiceStack.Text, Version=3.7.8.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\SharedLibs\ServiceStack.Text.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -51,24 +67,31 @@
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Raven.Storage.Esent\Raven.Storage.Esent.csproj">
-      <Project>{9DEE8674-D0CD-430D-BD9B-6CD95F3CAB22}</Project>
-      <Name>Raven.Storage.Esent</Name>
+    <ProjectReference Include="..\..\Bundles\Raven.Bundles.IndexReplicationToRedis\Raven.Bundles.IndexReplicationToRedis.csproj">
+      <Project>{433E971F-D140-45CC-8E62-91F04E9EA0A1}</Project>
+      <Name>Raven.Bundles.IndexReplicationToRedis</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Raven.Storage.Managed\Raven.Storage.Managed.csproj">
-      <Project>{DA99A419-E137-40DB-9495-0C363B479D4B}</Project>
-      <Name>Raven.Storage.Managed</Name>
+    <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
+      <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
+      <Name>Raven.Abstractions</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Bundles.Tests\Raven.Bundles.Tests.csproj">
-      <Project>{35CFAB1C-7934-4481-AC0D-7102F7DEE7F8}</Project>
-      <Name>Raven.Bundles.Tests</Name>
+    <ProjectReference Include="..\..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
+      <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
+      <Name>Raven.Client.Lightweight</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Samples.IndexReplicationToRedis.PocoTypes\Raven.Samples.IndexReplicationToRedis.PocoTypes.csproj">
+      <Project>{7E3DE508-4442-4DA9-B198-CB735FFBD9D8}</Project>
+      <Name>Raven.Samples.IndexReplicationToRedis.PocoTypes</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(MSBuildProjectDirectory)\..\..\Tools\StyleCop\StyleCop.Targets" />
+  <Import Project="$(MSBuildProjectDirectory)\..\..\Tools\StyleCop\StyleCop.Targets" Condition="Exists('$(MSBuildProjectDirectory)\..\..\Tools\StyleCop\StyleCop.Targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
