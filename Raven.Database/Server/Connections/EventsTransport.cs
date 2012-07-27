@@ -37,7 +37,7 @@ namespace Raven.Database.Server.Connections
 		{
 			context.Response.ContentType = "text/event-stream";
 
-			return context.Response.WriteAsync("{'Type': 'InitializingConnetion'}\r\n")
+			return context.Response.WriteAsync("{'Type': 'InitializingConnection'}\r\n")
 				.ContinueWith(DisconnectOnError);
 		}
 
