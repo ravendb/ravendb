@@ -37,7 +37,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes);
+		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
 		/// Begins an async get operation for documents

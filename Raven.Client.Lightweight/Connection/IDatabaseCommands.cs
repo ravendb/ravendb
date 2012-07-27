@@ -46,8 +46,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <param name="includes">The includes.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		MultiLoadResult Get(string[] ids, string[] includes);
+		MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
 		/// Puts the document in the database with the specified key

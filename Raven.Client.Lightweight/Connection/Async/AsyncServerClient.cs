@@ -372,11 +372,11 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes)
+		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, bool metadataOnly = false)
 		{
 			return ExecuteWithReplication("GET", url =>
 			{
-				var path = url + "/queries/?";
+				var path = url + "/queries/?metadata-only=" + metadataOnly;
 				if (includes != null && includes.Length > 0)
 				{
 					path += string.Join("&", includes.Select(x => "include=" + x).ToArray());

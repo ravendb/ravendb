@@ -796,10 +796,11 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <param name="includes">The includes.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		public MultiLoadResult Get(string[] ids, string[] includes)
+		public MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes));
+			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes, metadataOnly));
 		}
 
 		/// <summary>
@@ -809,9 +810,9 @@ namespace Raven.Client.Connection
 		/// <param name="operationUrl">The operation URL.</param>
 		/// <param name="includes">The includes.</param>
 		/// <returns></returns>
-		public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes)
+		public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, bool metadataOnly)
 		{
-			var path = operationUrl + "/queries/?";
+			var path = operationUrl + "/queries/?metadata-only=" + metadataOnly;
 			if (includes != null && includes.Length > 0)
 			{
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());

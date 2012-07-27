@@ -428,10 +428,13 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <param name="includes">The includes.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		public MultiLoadResult Get(string[] ids, string[] includes)
+		public MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
+
+			// metadata only is not supported for embedded
 
 			var multiLoadResult = new MultiLoadResult
 			{
