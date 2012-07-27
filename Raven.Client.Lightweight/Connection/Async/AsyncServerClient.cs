@@ -376,7 +376,9 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("GET", url =>
 			{
-				var path = url + "/queries/?metadata-only=" + metadataOnly + "&";
+				var path = url + "/queries/?";
+				if(metadataOnly)
+					path += "metadata-only=true&";
 				if (includes != null && includes.Length > 0)
 				{
 					path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
@@ -437,7 +439,9 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("GET", url =>
 			{
 
-				var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize + "&metadata-only=" + metadataOnly;
+				var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+				if (metadataOnly)
+					requestUri += "&metadata-only=true";
 				return jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 							.ReadResponseJsonAsync()
@@ -534,7 +538,9 @@ namespace Raven.Client.Connection.Async
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}&metadata-only={4}", url, Uri.EscapeDataString(keyPrefix), start, pageSize, metadataOnly);
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			if (metadataOnly)
+				actualUrl += "&metadata-only=true";
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
@@ -596,7 +602,9 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("GET", url =>
 			{
 				EnsureIsNotNullOrEmpty(index, "index");
-				var path = query.GetIndexQueryUrl(url, index, "indexes") + "&metadata-only=" + metadataOnly;
+				var path = query.GetIndexQueryUrl(url, index, "indexes");
+				if (metadataOnly)
+					path += "&metadata-only=true";
 				if (includes != null && includes.Length > 0)
 				{
 					path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());

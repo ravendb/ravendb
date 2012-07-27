@@ -60,7 +60,10 @@ namespace Raven.Client.Silverlight.Connection
 
 		public static string Docs(this string url, int start, int pageSize, bool metadataOnly)
 		{
-			return url + "/docs/?start=" + start + "&pageSize=" + pageSize + "&metadata-only=" + metadataOnly;
+			var docs = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+			if (metadataOnly)
+				docs += "&metadata-only=true";
+			return docs;
 		}
 
 		public static string DocsStartingWith(this string url, string prefix, int start, int pageSize, bool metadataOnly)

@@ -257,7 +257,10 @@ namespace Raven.Client.Connection
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}&metadata-only={4}", operationUrl, Uri.EscapeDataString(keyPrefix), start, pageSize, metadataOnly);
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", operationUrl, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			if (metadataOnly)
+				actualUrl += "&metadata-only=true";
+			
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
@@ -737,7 +740,9 @@ namespace Raven.Client.Connection
 
 		private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes, bool metadataOnly)
 		{
-			string path = query.GetIndexQueryUrl(operationUrl, index, "indexes") + "&metadata-only=" + metadataOnly;
+			string path = query.GetIndexQueryUrl(operationUrl, index, "indexes");
+			if (metadataOnly)
+				path += "&metadata-only=true";
 			if (includes != null && includes.Length > 0)
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
@@ -812,7 +817,9 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, bool metadataOnly)
 		{
-			var path = operationUrl + "/queries/?metadata-only=" + metadataOnly +"&";
+			var path = operationUrl + "/queries/?";
+			if (metadataOnly)
+				path += "&metadata-only=true";
 			if (includes != null && includes.Length > 0)
 			{
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());

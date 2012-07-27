@@ -362,7 +362,9 @@ namespace Raven.Client.Silverlight.Connection.Async
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false)
 		{
 			var metadata = new RavenJObject();
-			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}&metadata-only={4}", url, Uri.EscapeDataString(keyPrefix), start, pageSize, metadataOnly);
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			if (metadataOnly)
+				actualUrl += "&metadata-only=true";
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
@@ -408,7 +410,9 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 			return ExecuteWithReplication("GET", url =>
 			{
-				var path = url + "/queries/?metadata-only=" + metadataOnly;
+				var path = url + "/queries/?";
+				if (metadataOnly)
+					path += "&metadata-only=true";
 				if (includes != null && includes.Length > 0)
 				{
 					path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
@@ -493,7 +497,9 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return ExecuteWithReplication("GET", url =>
 			{
 				EnsureIsNotNullOrEmpty(index, "index");
-				var path = query.GetIndexQueryUrl(url, index, "indexes") + "&metadata-only=" + metadataOnly;
+				var path = query.GetIndexQueryUrl(url, index, "indexes");
+				if (metadataOnly)
+					path += "&metadata-only=true";
 				if (includes != null && includes.Length > 0)
 				{
 					path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
