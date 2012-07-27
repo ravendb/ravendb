@@ -62,6 +62,8 @@ namespace Raven.Database.Server.Responders
 			yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\Raven.Studio\bin\debug", fileName);
 			//local path
 			yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
+			//local path, bin folder
+			yield return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bin", fileName);
 			// web ui path
 			yield return Path.Combine(webDir, fileName);
 
