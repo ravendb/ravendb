@@ -37,7 +37,8 @@ namespace Raven.Database.Linq
 			typeof(System.Security.IPermission).Namespace,
 			typeof(System.Transactions.Transaction).Namespace,
 			typeof(System.Reflection.Assembly).Namespace,
-			typeof(System.Configuration.ConfigurationManager).Namespace
+			typeof(System.Configuration.ConfigurationManager).Namespace,
+			typeof(Microsoft.Isam.Esent.EsentException).Namespace,
 		};
 		
 		private static readonly Type[] forbiddenTypes = new[]
@@ -45,7 +46,7 @@ namespace Raven.Database.Linq
 			typeof (Environment),
 			typeof(AppDomain),
 			typeof(AppDomainManager),
-			typeof(CodeVerifier)
+			typeof(CodeVerifier),
 		};
 
 		public static void AssertNoSecurityCriticalCalls(Assembly asm)
