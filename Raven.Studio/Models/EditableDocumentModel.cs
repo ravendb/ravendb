@@ -560,31 +560,6 @@ namespace Raven.Studio.Models
 				return;
 
 			References.Clear();
-			var parentids = new List<string>();
-			var id = LocalId;
-			var lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
-
-			while (!string.IsNullOrWhiteSpace(id) && lastindex != -1)
-			{
-				id = id.Remove(lastindex);
-				parentids.Add(id);
-				lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
-			}
-
-			ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(parentids.ToArray(), null)
-				.ContinueOnSuccessInTheUIThread(x =>
-													{
-														foreach (var parentid in x.Results
-															.Where(result=>result!=null)
-															.Select(result => result["@metadata"].SelectToken("@id").ToString()))
-														{
-															References.Insert(0, new LinkModel
-																					{
-																						Title = parentid,
-																						HRef = "/Edit?id=" + parentid
-																					});
-														}
-													});
 
 			var pattern = @"(\w+(" + Seperator + @"\w+)+)";
 			var referencesIds = Regex.Matches(JsonData, pattern);
@@ -606,21 +581,43 @@ namespace Raven.Studio.Models
 
 		private void UpdateRelated()
 		{
-			if (string.IsNullOrEmpty(Key))
+			if (string.IsNullOrEmpty(Key) || string.IsNullOrEmpty(Seperator))
 				return;
-			DatabaseCommands.GetDocumentsStartingWithAsync(Key + Seperator, 0, 15)
-				.ContinueOnSuccess(items =>
-								   {
-									   if (items == null)
-										   return;
 
-									   var linkModels = items.Select(doc => new LinkModel
-																			{
-																				Title = doc.Key,
-																				HRef = "/Edit?id=" + doc.Key
-																			}).ToArray();
-									   Related.Set(linkModels);
-								   });
+			var childrenTask = DatabaseCommands.GetDocumentsStartingWithAsync(Key + Seperator, 0, 15)
+                .ContinueOnSuccess(items => items == null ?  new string[0] : items.Select(i => i.Key));
+
+            // find parent Ids
+            var parentids = new List<string>();
+            var id = LocalId;
+            var lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
+
+            while (!string.IsNullOrWhiteSpace(id) && lastindex != -1)
+            {
+                id = id.Remove(lastindex);
+                parentids.Add(id);
+                lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
+            }
+
+            var parentsTask = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(parentids.ToArray(), null)
+                .ContinueOnSuccess(results => results.Results.Where(r => r != null).Select(r => r["@metadata"].SelectToken("@id").ToString()));
+
+
+		    TaskEx.WhenAll(childrenTask, parentsTask).ContinueOnSuccessInTheUIThread(t =>
+		    {
+		        var linkModels =
+		            childrenTask.Result
+                    .Concat(parentsTask.Result)
+		                .OrderBy(key => key.Length)
+		                .Select(key => new LinkModel
+		                {
+		                    Title = key,
+		                    HRef = "/Edit?id=" + key
+		                })
+                        .ToArray();
+
+		        Related.Set(linkModels);
+		    });
 		}
 
 		private void HandleDeleteDocument()
