@@ -485,14 +485,15 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="prefix">Prefix that the ids begin with.</param>
 		/// <param name="start">Paging start.</param>
 		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <remarks>
 		/// This is primarily useful for administration of a database
 		/// </remarks>
-		public Task<JsonDocument[]> GetDocumentsStartingWithAsync(string prefix, int start, int pageSize)
+		public Task<JsonDocument[]> GetDocumentsStartingWithAsync(string prefix, int start, int pageSize, bool metadataOnly = false)
 		{
 			return ExecuteWithReplication("GET", url =>
 			{
-				return url.DocsStartingWith(prefix, start, pageSize)
+				return url.DocsStartingWith(prefix, start, pageSize, metadataOnly)
 					.NoCache()
 					.ToJsonRequest(this, credentials, convention)
 					.ReadResponseJsonAsync()
@@ -509,13 +510,14 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The include paths</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes)
+		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
 		{
 			return ExecuteWithReplication("GET", url =>
 			{
 				EnsureIsNotNullOrEmpty(index, "index");
-				var path = query.GetIndexQueryUrl(url, index, "indexes");
+				var path = query.GetIndexQueryUrl(url, index, "indexes") + "&metadata-only=" + metadataOnly;
 				if (includes != null && includes.Length > 0)
 				{
 					path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());

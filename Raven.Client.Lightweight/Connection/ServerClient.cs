@@ -729,15 +729,15 @@ namespace Raven.Client.Connection
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
 		/// <returns></returns>
-		public QueryResult Query(string index, IndexQuery query, string[] includes)
+		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
-			return ExecuteWithReplication("GET", u => DirectQuery(index, query, u, includes));
+			return ExecuteWithReplication("GET", u => DirectQuery(index, query, u, includes, metadataOnly));
 		}
 
-		private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes)
+		private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes, bool metadataOnly)
 		{
-			string path = query.GetIndexQueryUrl(operationUrl, index, "indexes");
+			string path = query.GetIndexQueryUrl(operationUrl, index, "indexes") + "&metadata-only=" + metadataOnly;
 			if (includes != null && includes.Length > 0)
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());

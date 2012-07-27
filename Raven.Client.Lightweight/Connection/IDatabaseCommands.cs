@@ -171,7 +171,7 @@ namespace Raven.Client.Connection
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
-		QueryResult Query(string index, IndexQuery query, string[] includes);
+		QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
 		/// Deletes the specified index
