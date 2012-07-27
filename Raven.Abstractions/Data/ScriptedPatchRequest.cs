@@ -10,7 +10,7 @@ namespace Raven.Abstractions.Data
 	/// <summary>
 	/// A Advanced patch request for a specified document (using JavaScript)
 	/// </summary>
-	public class AdvancedPatchRequest
+	public class ScriptedPatchRequest
 	{
 		/// <summary>
 		/// The JavaScript function to use the patch a document
@@ -20,14 +20,14 @@ namespace Raven.Abstractions.Data
 
 		public Dictionary<string, object> Values { get; set; }
 
-		public AdvancedPatchRequest()
+		public ScriptedPatchRequest()
 		{
 			Values = new Dictionary<string, object>();
 		}
 
-		public static AdvancedPatchRequest FromJson(RavenJObject patchRequestJson)
+		public static ScriptedPatchRequest FromJson(RavenJObject patchRequestJson)
 		{
-			return patchRequestJson.JsonDeserialization<AdvancedPatchRequest>();
+			return patchRequestJson.JsonDeserialization<ScriptedPatchRequest>();
 		}
 	}
 }

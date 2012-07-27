@@ -543,17 +543,14 @@ namespace Raven.Database.Indexing
 				.FirstOrDefault();
 		}
 
-		public void UpdateLastQueryTime(string indexName)
+		public void MarkCachedQuery(string indexName)
 		{
-			var index = GetIndexInstance(indexName);
-			if(index != null)
-				index.LastQueryTimestamp = DateTime.UtcNow;
+			GetIndexByName(indexName).MarkQueried();
 		}
 
-		public DateTime? GetIndexLastQueryTime(string indexName)
+		public DateTime? GetLastQueryTime(string index)
 		{
-			var index = GetIndexInstance(indexName);
-			return index != null ? index.LastQueryTimestamp : null;
+			return GetIndexByName(index).LastQueryTime;
 		}
 	}
 }

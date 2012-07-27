@@ -43,7 +43,7 @@ namespace Raven.Database.Extensions
 				return;
 			}
 
-			var advPatchCommandData = self as AdvancedPatchCommandData;
+			var advPatchCommandData = self as ScriptedPatchCommandData;
 			if (advPatchCommandData != null)
 			{
 				database.ApplyPatch(advPatchCommandData.Key, advPatchCommandData.Etag,

@@ -283,6 +283,8 @@
 											  MappedUri="/Views/Logs.xaml" />
 						<sdk:UriMapping Uri="/terms/{indexName}"
 											  MappedUri="/Views/Terms.xaml" />
+						<sdk:UriMapping Uri="/indexstats/{indexName}"
+											  MappedUri="/Views/IndexStats.xaml" />
 						<sdk:UriMapping Uri="/{pageName}"
 											  MappedUri="/Views/{pageName}.xaml" />
 						

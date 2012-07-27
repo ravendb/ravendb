@@ -36,7 +36,7 @@ namespace Raven.Tests.Patching
 		[Fact]
 		public void CanApplyBasicScriptAsPatch()
 		{
-			var resultJson = new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest { Script = sampleScript });
+			var resultJson = new ScriptedJsonPatcher(RavenJObject.FromObject(test)).Apply(new ScriptedPatchRequest { Script = sampleScript });
 			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
 			Assert.Equal("Something new", result.Id);
@@ -50,7 +50,7 @@ namespace Raven.Tests.Patching
 		[Fact]
 		public void CanRemoveFromCollectionByValue()
 		{
-			var resultJson = new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest
+			var resultJson = new ScriptedJsonPatcher(RavenJObject.FromObject(test)).Apply(new ScriptedPatchRequest
 			                                                                              	{
 			                                                                              		Script = @"
 this.Comments.Remove('two');
@@ -64,8 +64,8 @@ this.Comments.Remove('two');
 		[Fact]
 		public void CanRemoveFromCollectionByCondition()
 		{
-			var advancedJsonPatcher = new AdvancedJsonPatcher(RavenJObject.FromObject(test));
-			var resultJson = advancedJsonPatcher.Apply(new AdvancedPatchRequest
+			var advancedJsonPatcher = new ScriptedJsonPatcher(RavenJObject.FromObject(test));
+			var resultJson = advancedJsonPatcher.Apply(new ScriptedPatchRequest
 			{
 				Script = @"
 this.Comments.RemoveWhere(function(el) {return el == 'seven';});
@@ -79,7 +79,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void CanPatchUsingVars()
 		{
-			var resultJson = new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest
+			var resultJson = new ScriptedJsonPatcher(RavenJObject.FromObject(test)).Apply(new ScriptedPatchRequest
 			                                                                              	{
 			                                                                              		Script = "this.TheName = Name",
 																								Values = {{"Name", "ayende"}}
@@ -91,7 +91,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		public void CannotUseEval()
 		{
 			Assert.Throws<NotSupportedException>(
-				() => new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest
+				() => new ScriptedJsonPatcher(RavenJObject.FromObject(test)).Apply(new ScriptedPatchRequest
 				                                                                   	{
 				                                                                   		Script = "eval('this.Value = 2')",
 				                                                                   	}));
@@ -102,14 +102,14 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		{
 			Assert.Throws<InvalidOperationException>(
 				() =>
-				new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest { Script = "this.Id = 'Somethi" }));
+				new ScriptedJsonPatcher(RavenJObject.FromObject(test)).Apply(new ScriptedPatchRequest { Script = "this.Id = 'Somethi" }));
 		}
 
 		[Fact]
 		public void CanThrowIfValueIsWrong()
 		{
 			var invalidOperationException = Assert.Throws<InvalidOperationException>(
-				() => new AdvancedJsonPatcher(RavenJObject.FromObject(test)).Apply(new AdvancedPatchRequest {Script = "raise 'problem'"}));
+				() => new ScriptedJsonPatcher(RavenJObject.FromObject(test)).Apply(new ScriptedPatchRequest {Script = "raise 'problem'"}));
 
 			Assert.Contains("problem", invalidOperationException.Message);
 		}
@@ -117,8 +117,8 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void CanOutputDebugInformation()
 		{
-			var advancedJsonPatcher = new AdvancedJsonPatcher(RavenJObject.FromObject(test));
-			advancedJsonPatcher.Apply(new AdvancedPatchRequest
+			var advancedJsonPatcher = new ScriptedJsonPatcher(RavenJObject.FromObject(test));
+			advancedJsonPatcher.Apply(new ScriptedPatchRequest
 			                                                             	{
 																				Script = "output(this.Id)"
 			                                                             	});
@@ -129,8 +129,8 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void CannotUseWhile()
 		{
-			var advancedJsonPatcher = new AdvancedJsonPatcher(RavenJObject.FromObject(test));
-			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(new AdvancedPatchRequest
+			var advancedJsonPatcher = new ScriptedJsonPatcher(RavenJObject.FromObject(test));
+			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(new ScriptedPatchRequest
 			                                                                         	{
 			                                                                         		Script = "while(true) {}"
 			                                                                         	}));
@@ -139,8 +139,8 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void DefiningFunctionForbidden()
 		{
-			var advancedJsonPatcher = new AdvancedJsonPatcher(RavenJObject.FromObject(test));
-			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(new AdvancedPatchRequest
+			var advancedJsonPatcher = new ScriptedJsonPatcher(RavenJObject.FromObject(test));
+			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(new ScriptedPatchRequest
 			{
 				Script = "function a() { a(); }"
 			}));
@@ -149,8 +149,8 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		[Fact]
 		public void LongStringRejected()
 		{
-			var advancedJsonPatcher = new AdvancedJsonPatcher(RavenJObject.FromObject(test));
-			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(new AdvancedPatchRequest
+			var advancedJsonPatcher = new ScriptedJsonPatcher(RavenJObject.FromObject(test));
+			Assert.Throws<NotSupportedException>(() => advancedJsonPatcher.Apply(new ScriptedPatchRequest
 			{
 				Script = new string('a', 8193)
 			}));
@@ -213,7 +213,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 					s.SaveChanges();
 				}
 
-				store.DatabaseCommands.Patch("CustomTypes/1", new AdvancedPatchRequest
+				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
 				                                              	{
 				                                              		Script = @"
 var another = LoadDocument(anotherId);
@@ -238,7 +238,7 @@ this.Value = another.Value;
 				s.SaveChanges();
 			}
 
-			store.DatabaseCommands.Patch(test.Id, new AdvancedPatchRequest { Script = sampleScript });
+			store.DatabaseCommands.Patch(test.Id, new ScriptedPatchRequest { Script = sampleScript });
 
 			var resultDoc = store.DatabaseCommands.Get(test.Id);
 			var resultJson = resultDoc.DataAsJson;
@@ -288,7 +288,7 @@ this.Value = another.Value;
 
 			store.DatabaseCommands.UpdateByIndex("TestIndex",
 											new IndexQuery { Query = "Owner:Bob" },
-											new AdvancedPatchRequest { Script = sampleScript });
+											new ScriptedPatchRequest { Script = sampleScript });
 
 			var item1ResultJson = store.DatabaseCommands.Get(item1.Id).DataAsJson;
 			var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());			
