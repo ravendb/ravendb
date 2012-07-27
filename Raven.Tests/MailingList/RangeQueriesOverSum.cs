@@ -54,7 +54,6 @@ namespace Raven.Tests.MailingList
 				}
 
 				new TheIndex().Execute(documentStore);
-				WaitForUserToContinueTheTest(documentStore);
 
 				using (var session = documentStore.OpenSession())
 				{

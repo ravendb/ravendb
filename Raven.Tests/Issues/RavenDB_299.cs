@@ -45,7 +45,6 @@ namespace Raven.Tests.Issues
 				}
 				new Index().Execute(store);
 
-				WaitForUserToContinueTheTest(store);
 				using (var session = store.OpenSession())
 				{
 					Assert.NotEmpty(session.Query<Item, Index>()

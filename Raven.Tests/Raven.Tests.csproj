@@ -576,6 +576,7 @@
     <Compile Include="Issues\ReplicationBehavior.cs" />
     <Compile Include="Linq\LongCount.cs" />
     <Compile Include="MailingList\AccesscControlHeaders.cs" />
+    <Compile Include="MailingList\Algirdas.cs" />
     <Compile Include="MailingList\Arun.cs" />
     <Compile Include="MailingList\Ben.cs" />
     <Compile Include="MailingList\Brett.cs" />

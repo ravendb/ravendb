@@ -14,8 +14,13 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class BlockedMethods
+	public class BlockedMethods : IDisposable
 	{
+		public BlockedMethods()
+		{
+			CodeVerifier.Active = true;
+		}
+
 		[Fact]
 		public void CanUseNowProp()
 		{
@@ -28,7 +33,17 @@ namespace Raven.Tests.MailingList
 			Assert.Throws<SecurityException>(
 				() =>
 				Compile(
-					"from doc in docs let _ = (Func<int>)(()=>{ return 1; }) select new { doc.Now , die = _()}"));
+					"from doc in docs let _ = (Func<int>)(()=>1) select new { doc.Now , die = _()}"));
+		}
+
+
+		[Fact]
+		public void CannotDefineLambdaWithExpression()
+		{
+			Assert.Throws<SecurityException>(
+				() =>
+				Compile(
+					"from doc in docs select new { doc.Now , die = ((Func<int>)(()=>{ return 1;}))()}"));
 		}
 
 		[Fact]
@@ -92,6 +107,11 @@ namespace Raven.Tests.MailingList
 				Map = code
 			}, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), ".", new InMemoryRavenConfiguration());
 			dynamicViewCompiler.GenerateInstance();
+		}
+
+		public void Dispose()
+		{
+			CodeVerifier.Active = false;
 		}
 	}
 }

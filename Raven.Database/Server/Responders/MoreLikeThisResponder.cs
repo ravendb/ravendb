@@ -105,8 +105,17 @@ namespace Raven.Database.Bundles.MoreLikeThis
 							});
 						return;
 					}
-					var stopWords = stopWordsDoc.DataAsJson.JsonDeserialization<StopWordsSetup>().StopWords;
-					mlt.SetStopWords(new Hashtable(stopWords.ToDictionary(x => x.ToLower())));
+					var stopWordsSetup = stopWordsDoc.DataAsJson.JsonDeserialization<StopWordsSetup>();
+					if(stopWordsSetup.StopWords != null)
+					{
+						var stopWords = stopWordsSetup.StopWords;
+						var ht = new Hashtable(StringComparer.InvariantCultureIgnoreCase);
+						foreach (var stopWord in stopWords)
+						{
+							ht[stopWord] = stopWord;
+						}
+						mlt.SetStopWords(ht);	
+					}
 				}
 
 				var fieldNames = parameters.Fields ?? GetFieldNames(ir);
