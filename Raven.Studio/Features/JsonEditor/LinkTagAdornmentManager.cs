@@ -41,7 +41,7 @@ namespace Raven.Studio.Features.JsonEditor
             // Create a rectangle
             Rectangle rect = new Rectangle
             {
-                Width = width, Height = 1, Fill = new SolidColorBrush(Colors.Blue)
+                Width = width, Height = 1, Fill = new SolidColorBrush(Color.FromArgb(198, 144, 35, 35))
             };
 
             return rect;
