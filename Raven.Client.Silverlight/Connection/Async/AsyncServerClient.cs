@@ -359,10 +359,10 @@ namespace Raven.Client.Silverlight.Connection.Async
 				.ContinueWith(task => task.Result.Value<string>("IndexingStatus"));
 		}
 
-		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize)
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false)
 		{
 			var metadata = new RavenJObject();
-			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}&metadata-only={4}", url, Uri.EscapeDataString(keyPrefix), start, pageSize, metadataOnly);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 

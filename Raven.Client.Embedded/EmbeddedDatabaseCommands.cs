@@ -98,10 +98,13 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize)
+		public JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize, bool metadataOnly = false)
 		{
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 			
+			// metadata only is NOT supported for embedded, nothing to save on the data transfers, so not supporting 
+			// this
+
 			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, start, pageSize);
 			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
 		}
