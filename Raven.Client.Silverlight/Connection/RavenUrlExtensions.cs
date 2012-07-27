@@ -58,14 +58,14 @@ namespace Raven.Client.Silverlight.Connection
 			return url + "/docs/" + HttpUtility.UrlEncode(key);
 		}
 
-		public static string Docs(this string url, int start, int pageSize)
+		public static string Docs(this string url, int start, int pageSize, bool metadataOnly)
 		{
-			return url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+			return url + "/docs/?start=" + start + "&pageSize=" + pageSize + "&metadata-only=" + metadataOnly;
 		}
 
 		public static string DocsStartingWith(this string url, string prefix, int start, int pageSize, bool metadataOnly)
 		{
-			return Docs(url, start, pageSize) + "&startsWith=" + HttpUtility.UrlEncode(prefix) + "&metadata-only=" + metadataOnly;
+			return Docs(url, start, pageSize, metadataOnly) + "&startsWith=" + HttpUtility.UrlEncode(prefix);
 		}
 
 		public static string Queries(this string url)

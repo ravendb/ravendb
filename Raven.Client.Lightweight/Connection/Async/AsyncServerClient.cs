@@ -36,7 +36,7 @@ namespace Raven.Client.Connection.Async
 	/// <summary>
 	/// Access the database commands in async fashion
 	/// </summary>
-	public class AsyncServerClient : IAsyncDatabaseCommands
+	public class AsyncServerClient: IAsyncDatabaseCommands
 	{
 		private ProfilingInformation profilingInformation;
 		private readonly string url;
@@ -432,12 +432,12 @@ namespace Raven.Client.Connection.Async
 		/// <remarks>
 		/// This is primarily useful for administration of a database
 		/// </remarks>
-		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize)
+		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)
 		{
 			return ExecuteWithReplication("GET", url =>
 			{
 
-				var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+				var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize + "&metadata-only=" + metadataOnly;
 				return jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 							.ReadResponseJsonAsync()

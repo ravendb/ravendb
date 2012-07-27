@@ -44,10 +44,11 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <remarks>
 		/// This is primarily useful for administration of a database
 		/// </remarks>
-		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize);
+		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false);
 
 		/// <summary>
 		/// Begins the async query.

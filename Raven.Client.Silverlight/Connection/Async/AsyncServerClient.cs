@@ -461,14 +461,15 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// </summary>
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <remarks>
 		/// This is primarily useful for administration of a database
 		/// </remarks>
-		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize)
+		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)
 		{
 			return ExecuteWithReplication("GET", url =>
 			{
-				return url.Docs(start, pageSize)
+				return url.Docs(start, pageSize, metadataOnly)
 					.NoCache()
 					.ToJsonRequest(this, credentials, convention)
 					.ReadResponseJsonAsync()
