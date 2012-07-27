@@ -530,11 +530,11 @@ namespace Raven.Client.Connection.Async
 			throw new NotImplementedException();
 		}
 
-		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize)
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}&metadata-only={4}", url, Uri.EscapeDataString(keyPrefix), start, pageSize, metadataOnly);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
@@ -585,31 +585,18 @@ namespace Raven.Client.Connection.Async
 		}
 
 		/// <summary>
-		/// Begins an async get operation for documents whose id starts with the specified prefix
-		/// </summary>
-		/// <param name="prefix">Prefix that the ids begin with.</param>
-		/// <param name="start">Paging start.</param>
-		/// <param name="pageSize">Size of the page.</param>
-		/// <remarks>
-		/// This is primarily useful for administration of a database
-		/// </remarks>
-		public Task<JsonDocument[]> GetDocumentsStartingWithAsync(string prefix, int start, int pageSize)
-		{
-			throw new NotImplementedException();
-		}
-
-		/// <summary>
 		/// Begins the async query.
 		/// </summary>
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The include paths</param>
-		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes)
+		/// <param name="metadataOnly">Load just the document metadata</param>
+		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
 		{
 			return ExecuteWithReplication("GET", url =>
 			{
 				EnsureIsNotNullOrEmpty(index, "index");
-				var path = query.GetIndexQueryUrl(url, index, "indexes");
+				var path = query.GetIndexQueryUrl(url, index, "indexes") + "&metadata-only=" + metadataOnly;
 				if (includes != null && includes.Length > 0)
 				{
 					path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
