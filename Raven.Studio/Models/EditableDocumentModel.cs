@@ -637,7 +637,7 @@ namespace Raven.Studio.Models
 		{
 			if (string.IsNullOrEmpty(Key))
 				return;
-			DatabaseCommands.GetDocumentsStartingWithAsync(Key + Seperator, 0, 15)
+			DatabaseCommands.StartsWithAsync(Key + Seperator, 0, 15, metadataOnly: true)
 				.ContinueOnSuccess(items =>
 								   {
 									   if (items == null)
