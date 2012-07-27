@@ -225,8 +225,10 @@
     <Compile Include="Features\IndexStats\StatsView.xaml.cs">
       <DependentUpon>StatsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Features\JsonEditor\DocumentReferencedIdManager.cs" />
     <Compile Include="Features\JsonEditor\IJsonClassificationTypeProvider.g.cs" />
     <Compile Include="Features\JsonEditor\JsonArrayNode.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonAstHelpers.cs" />
     <Compile Include="Features\JsonEditor\JsonAstNodeId.g.cs" />
     <Compile Include="Features\JsonEditor\JsonClassificationTypeProvider.g.cs" />
     <Compile Include="Features\JsonEditor\JsonExampleTextProvider.g.cs" />
@@ -246,6 +248,11 @@
     <Compile Include="Features\JsonEditor\JsonTokenReader.cs" />
     <Compile Include="Features\JsonEditor\JsonTokenTagger.g.cs" />
     <Compile Include="Features\JsonEditor\JsonTokenTaggerProvider.g.cs" />
+    <Compile Include="Features\JsonEditor\LinkTag.cs" />
+    <Compile Include="Features\JsonEditor\LinkTagAdornmentManager.cs" />
+    <Compile Include="Features\JsonEditor\LinkTagClickHandler.cs" />
+    <Compile Include="Features\JsonEditor\LinkTagQuickInfoProvider.cs" />
+    <Compile Include="Features\JsonEditor\PropertyValueLinkTagger.cs" />
     <Compile Include="Features\Query\IndexQueryHelpers.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Query\QueryDocumentsCollectionSource.cs" />

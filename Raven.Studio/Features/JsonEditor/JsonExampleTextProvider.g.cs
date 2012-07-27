@@ -18,8 +18,8 @@ namespace Raven.Studio.Features.JsonEditor {
         /// <value>The example text, a code snippet of the related language.</value>
         public String ExampleText {
             get {
-                return "{\r\n  \"Property\": \"StringValue\",\r\n  \"Another Property\": [],\r\n  \"Third Property\": [" +
-                    "\r\n  \t{ \"Nested\" : 0 },\r\n\t{ \"2nd Nested\" : true\r\n  ],\r\n  \"Fourth\" : false\r\n}";
+                return "{\n  \"Property\": \"StringValue\",\n  \"Another Property\": [],\n  \"Third Property\": [\n  " +
+                    "\t{ \"Nested\" : 0 },\n\t{ \"2nd Nested\" : true\n  ],\n  \"Fourth\" : false\n}";
             }
         }
     }
