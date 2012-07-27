@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.IO.IsolatedStorage;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
@@ -10,12 +8,9 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
-using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Extensions;
@@ -79,33 +74,33 @@ namespace Raven.Studio.Models
 					.ObservePropertyChanged()
 					.Select(e => Unit.Default);
 
-			    databaseChanged
-			        .SubscribeWeakly(this, (target, d) => target.HandleDatabaseChanged(target.database.Value));
+				databaseChanged
+					.SubscribeWeakly(this, (target, d) => target.HandleDatabaseChanged(target.database.Value));
 
-                SubscribeToStatisticsChanged(database.Value);
+				SubscribeToStatisticsChanged(database.Value);
 			}
 
 			private void HandleDatabaseChanged(DatabaseModel databaseModel)
 			{
 				RaiseCanExecuteChanged();
 
-                SubscribeToStatisticsChanged(databaseModel);
-            }
+				SubscribeToStatisticsChanged(databaseModel);
+			}
 
-		    private void SubscribeToStatisticsChanged(DatabaseModel databaseModel)
-		    {
-		        databaseModel.Statistics
-		            .ObservePropertyChanged()
-		            .TakeUntil(databaseChanged)
-		            .SubscribeWeakly(this, (target, e) => target.RaiseCanExecuteChanged());
-		    }
+			private void SubscribeToStatisticsChanged(DatabaseModel databaseModel)
+			{
+				databaseModel.Statistics
+					.ObservePropertyChanged()
+					.TakeUntil(databaseChanged)
+					.SubscribeWeakly(this, (target, e) => target.RaiseCanExecuteChanged());
+			}
 
-		    public override bool CanExecute(object parameter)
-            {
-                return database.Value != null
-                    && database.Value.Statistics.Value != null
-                       && database.Value.Statistics.Value.CountOfDocuments == 0;
-            }
+			public override bool CanExecute(object parameter)
+			{
+				return database.Value != null
+					&& database.Value.Statistics.Value != null
+					   && database.Value.Statistics.Value.CountOfDocuments == 0;
+			}
 
 			public override void Execute(object parameter)
 			{
