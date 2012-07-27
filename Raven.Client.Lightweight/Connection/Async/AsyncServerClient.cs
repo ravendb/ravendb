@@ -376,7 +376,7 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("GET", url =>
 			{
-				var path = url + "/queries/?metadata-only=" + metadataOnly;
+				var path = url + "/queries/?metadata-only=" + metadataOnly + "&";
 				if (includes != null && includes.Length > 0)
 				{
 					path += string.Join("&", includes.Select(x => "include=" + x).ToArray());

@@ -812,7 +812,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, bool metadataOnly)
 		{
-			var path = operationUrl + "/queries/?metadata-only=" + metadataOnly;
+			var path = operationUrl + "/queries/?metadata-only=" + metadataOnly +"&";
 			if (includes != null && includes.Length > 0)
 			{
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
