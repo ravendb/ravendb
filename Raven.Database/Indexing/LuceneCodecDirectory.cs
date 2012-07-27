@@ -165,28 +165,38 @@ namespace Raven.Database.Indexing
 
 			public override byte ReadByte()
 			{
-				stream.Position = position;
+				// The lock must be on the stream, because it is this object which is shared between the different clones.
+				lock (stream)
+				{
+					stream.Position = position;
 
-				int value = stream.ReadByte();
-				if (value == -1)
-					throw new EndOfStreamException();
+					int value = stream.ReadByte();
+					if (value == -1)
+						throw new EndOfStreamException();
 
-				position = stream.Position;
-				return (byte)value;
+					position = stream.Position;
+					return (byte)value;
+				}
 			}
 
 			public override void ReadBytes(byte[] b, int offset, int len)
 			{
-				stream.Position = position;
+				lock (stream)
+				{
+					stream.Position = position;
 
-				stream.ReadEntireBlock(b, offset, len);
+					stream.ReadEntireBlock(b, offset, len);
 
-				position = stream.Position;
+					position = stream.Position;
+				}
 			}
 
 			public override void Seek(long newPosition)
 			{
-				stream.Position = this.position = newPosition;
+				lock (stream)
+				{
+					stream.Position = this.position = newPosition;
+				}
 			}
 
 			public override object Clone()

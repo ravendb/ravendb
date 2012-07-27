@@ -556,7 +556,7 @@ namespace Raven.Client.Embedded
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, AdvancedPatchRequest patch)
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
 		{
 			UpdateByIndex(indexName, queryToUpdate, patch, false);
 		}
@@ -582,7 +582,7 @@ namespace Raven.Client.Embedded
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, AdvancedPatchRequest patch, bool allowStale)
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
@@ -683,7 +683,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		public void Patch(string key, AdvancedPatchRequest patch)
+		public void Patch(string key, ScriptedPatchRequest patch)
 		{
 			Patch(key, patch, null);
 		}
@@ -713,11 +713,11 @@ namespace Raven.Client.Embedded
 		/// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		public void Patch(string key, AdvancedPatchRequest patch, Guid? etag)
+		public void Patch(string key, ScriptedPatchRequest patch, Guid? etag)
 		{
 			Batch(new[]
 					{
-						new AdvancedPatchCommandData 
+						new ScriptedPatchCommandData 
 								{ 
 									Key = key,  
 									Patch = patch,

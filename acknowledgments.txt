@@ -15,3 +15,4 @@ The Raven Datbase is making use of the following OSS projects:
 * BouncyCastle.Crypto ( http://www.bouncycastle.org/csharp/) under the MIT X11 license http://www.bouncycastle.org/csharp/licence.html
 * FsLinqFixed (https://github.com/robertpi/FsLinqFixed) under the Apache license (https://raw.github.com/robertpi/FsLinqFixed/master/License.html)
 * IronJS - (https://github.com/fholm/IronJS/) under the Apache license (https://github.com/fholm/IronJS/blob/master/LICENSE.txt)
+* Mono.Cecil - (https://github.com/jbevain/cecil/) under the MIT license: http://www.mono-project.com/Licensing

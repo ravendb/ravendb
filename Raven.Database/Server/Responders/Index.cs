@@ -268,6 +268,7 @@ namespace Raven.Database.Server.Responders
 			indexEtag = Database.GetIndexEtag(index, null);
 			if (context.MatchEtag(indexEtag))
 			{
+				Database.IndexStorage.MarkCachedQuery(index);
 				context.SetStatusToNotModified();
 				return null;
 			}
@@ -290,6 +291,7 @@ namespace Raven.Database.Server.Responders
 				indexEtag = Database.GetIndexEtag(dynamicIndexName, null);
 				if (context.MatchEtag(indexEtag))
 				{
+					Database.IndexStorage.MarkCachedQuery(dynamicIndexName);
 					context.SetStatusToNotModified();
 					return null;
 				}

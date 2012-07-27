@@ -745,7 +745,7 @@ namespace Raven.Database.Server
 			get { return currentDatabase.Value ?? SystemDatabase; }
 		}
 
-		private string SetupRequestToProperDatabase(IHttpContext ctx)
+		private void SetupRequestToProperDatabase(IHttpContext ctx)
 		{
 			var requestUrl = ctx.GetRequestUrlForTenantSelection();
 			var match = databaseQuery.Match(requestUrl);
@@ -756,34 +756,29 @@ namespace Raven.Database.Server
 				currentDatabase.Value = SystemDatabase;
 				currentConfiguration.Value = SystemConfiguration;
 				databaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.Now, (s, time) => SystemTime.Now);
-				return null;
+				return;
 			}
-			else
+			var tenantId = match.Groups[1].Value;
+			DocumentDatabase resourceStore;
+			if (TryGetOrCreateResourceStore(tenantId, out resourceStore))
 			{
-				var tenantId = match.Groups[1].Value;
-				DocumentDatabase resourceStore;
-				if (TryGetOrCreateResourceStore(tenantId, out resourceStore))
+				databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now, (s, time) => SystemTime.Now);
+
+				if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
 				{
-					databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now, (s, time) => SystemTime.Now);
-
-					if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
-					{
-						ctx.AdjustUrl(Configuration.VirtualDirectory + match.Value);
-					}
-					else
-					{
-						ctx.AdjustUrl(match.Value);
-					}
-					currentTenantId.Value = tenantId;
-					currentDatabase.Value = resourceStore;
-					currentConfiguration.Value = resourceStore.Configuration;
-
-					return requestUrl.Substring(1, match.Groups[1].Index + match.Groups[1].Length);
+					ctx.AdjustUrl(Configuration.VirtualDirectory + match.Value);
 				}
 				else
 				{
-					throw new BadRequestException("Could not find a database named: " + tenantId);
+					ctx.AdjustUrl(match.Value);
 				}
+				currentTenantId.Value = tenantId;
+				currentDatabase.Value = resourceStore;
+				currentConfiguration.Value = resourceStore.Configuration;
+			}
+			else
+			{
+				throw new BadRequestException("Could not find a database named: " + tenantId);
 			}
 		}
 

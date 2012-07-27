@@ -45,6 +45,10 @@ namespace Raven.Studio.Models
 
 			SelectedTask = new Observable<TaskModel> {Value = Tasks.FirstOrDefault()};
 			Statistics = new Observable<DatabaseStatistics>();
+			Status = new Observable<string>
+			{
+				Value = "Offline"
+			};
 
 			asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
 			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
@@ -116,11 +120,18 @@ namespace Raven.Studio.Models
 
 		public Observable<DatabaseStatistics> Statistics { get; set; }
 
-		private void RefreshStatistics()
+		public Observable<string> Status { get; set; } 
+
+                private void RefreshStatistics()
 		{
 			asyncDatabaseCommands
 				.GetStatisticsAsync()
-				.ContinueOnSuccess(stats => Statistics.Value = stats);
+				.ContinueOnSuccess(stats =>
+				{
+					Statistics.Value = stats;
+					Status.Value = "Online";
+				})
+				.Catch(exception => Status.Value = "Offline");
 		}
 
 	    public void Dispose()

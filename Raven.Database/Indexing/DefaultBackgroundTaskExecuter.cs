@@ -13,7 +13,7 @@ namespace Raven.Database.Indexing
 {
 	public class DefaultBackgroundTaskExecuter : IBackgroundTaskExecuter
 	{
-		private static Logger logger = LogManager.GetCurrentClassLogger();
+		private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
 		public IList<TResult> Apply<T, TResult>(IEnumerable<T> source, Func<T, TResult> func)
 			where TResult : class

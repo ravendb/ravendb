@@ -258,7 +258,7 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, AdvancedPatchRequest patch);
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch);
 
 		/// <summary>
 		/// Perform a set based update using the specified index
@@ -276,7 +276,7 @@ namespace Raven.Client.Connection
 		/// <param name="queryToUpdate">The query to update.</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, AdvancedPatchRequest patch, bool allowStale);
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
@@ -322,7 +322,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		void Patch(string key, AdvancedPatchRequest patch);
+		void Patch(string key, ScriptedPatchRequest patch);
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -338,7 +338,7 @@ namespace Raven.Client.Connection
 		/// <param name="key">Id of the document to patch</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
-		void Patch(string key, AdvancedPatchRequest patch, Guid? etag);
+		void Patch(string key, ScriptedPatchRequest patch, Guid? etag);
 
 		/// <summary>
 		/// Disable all caching within the given scope

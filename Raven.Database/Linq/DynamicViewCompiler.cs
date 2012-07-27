@@ -17,6 +17,7 @@ using Raven.Database.Extensions;
 using System.Linq;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Plugins;
+using Raven.Database.Util;
 
 namespace Raven.Database.Linq
 {
@@ -49,10 +50,37 @@ namespace Raven.Database.Linq
 			{
 				this.basePath = Path.Combine(basePath, "TemporaryIndexDefinitionsAsSource");
 				if (Directory.Exists(this.basePath) == false)
+				{
 					Directory.CreateDirectory(this.basePath);
+				}
+				else
+				{
+					MaybeCleanupDirectory(this.basePath);
+				}
 			}
 			this.name = MonoHttpUtility.UrlEncode(name);
 		    RequiresSelectNewAnonymousType = true;
+		}
+
+		private static readonly ConcurrentSet<string> paths = new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
+		private static void MaybeCleanupDirectory(string path)
+		{
+			if (paths.TryAdd(path) == false)
+				return;
+
+			foreach (var file in Directory.GetFiles(path, "*.dll"))
+			{
+				try
+				{
+					File.Delete(file);
+				}
+				catch (Exception)
+				{
+					// failure here is expected, this is probably another index that is currently
+					// live that is locking the file, we will get it next restart
+				}
+			}
 		}
 
 		public string CompiledQueryText { get; set; }
