@@ -264,7 +264,6 @@ namespace Raven.Database.Server.Responders
 		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Guid indexEtag)
 		{
 			indexEtag = Database.GetIndexEtag(index, null);
-			Database.IndexStorage.UpdateLastQueryTime(index);
 			if (context.MatchEtag(indexEtag))
 			{
 				Database.IndexStorage.MarkCachedQuery(index);
@@ -284,8 +283,6 @@ namespace Raven.Database.Server.Responders
 				entityName = index.Substring("dynamic/".Length);
 
 			var dynamicIndexName = Database.FindDynamicIndexName(entityName, indexQuery);
-
-			Database.IndexStorage.UpdateLastQueryTime(dynamicIndexName);
 
 			if (dynamicIndexName != null && Database.IndexStorage.HasIndex(dynamicIndexName))
 			{
