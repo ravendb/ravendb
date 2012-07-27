@@ -11,6 +11,7 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
+using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Extensions;
@@ -45,7 +46,18 @@ namespace Raven.Studio.Models
 			ModelUrl = "/home";
 		}
 
-		private bool isGeneratingSampleData;
+        public override Task TimerTickedAsync()
+        {
+            if (ApplicationModel.Current.Server.Value.CreateNewDatabase)
+            {
+                ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
+                Command.ExecuteCommand(new CreateDatabaseCommand());
+            }
+            return base.TimerTickedAsync();
+        }
+
+
+	    private bool isGeneratingSampleData;
 		public bool IsGeneratingSampleData
 		{
 			get { return isGeneratingSampleData; }
