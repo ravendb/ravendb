@@ -961,10 +961,29 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t => null));
 		}
 
+		private volatile bool currentlyExecuting;
+
 		private Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
-			return replicationInformer.ExecuteWithReplicationAsync(method, url, currentRequest, readStripingBase, operation);
+			if(currentlyExecuting)
+				throw new InvalidOperationException("Only a single concurrent async request is allowed per async client instance.");
+
+			currentlyExecuting = true;
+			try
+			{
+				return replicationInformer.ExecuteWithReplicationAsync(method, url, currentRequest, readStripingBase, operation)
+					.ContinueWith(task =>
+					{
+						currentlyExecuting = false;
+						return task;
+					}).Unwrap();
+			}
+			catch (Exception)
+			{
+				currentlyExecuting = false;
+				throw;
+			}
 		}
 	}
 }
