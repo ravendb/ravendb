@@ -61,7 +61,6 @@ namespace Raven.Tests.Issues
 
 				using (var session = store.OpenSession())
 				{
-					WaitForUserToContinueTheTest(store);
 					Assert.NotEmpty(session.Query<Item>("test")
 					                	.Customize(x => x.WaitForNonStaleResults())
 										.Where(x => x.Text == "Seek")

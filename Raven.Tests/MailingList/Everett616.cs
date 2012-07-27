@@ -74,7 +74,6 @@ namespace Raven.Tests.MailingList
 				                                });
 
 				WaitForIndexing(store);
-				WaitForUserToContinueTheTest(store);
 				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
 			}
 		}

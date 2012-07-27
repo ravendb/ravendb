@@ -180,7 +180,6 @@ namespace Raven.Tests.Bugs
 						.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
 						.ToArray();
 
-					WaitForUserToContinueTheTest(store);
 
 					Assert.Equal(2, items.Length);
 				}
