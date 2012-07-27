@@ -1,39 +1,58 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Security;
 using System.Security.Permissions;
 using System.Text;
-using System.Threading;
-using Microsoft.Win32;
 using Mono.Reflection;
 
 namespace Raven.Database.Linq
 {
 	public static class CodeVerifier
 	{
-		private static readonly ConcurrentDictionary<MemberInfo, string> cache = new ConcurrentDictionary<MemberInfo, string>();
+		public static bool Active { get; set; }
+
+		static CodeVerifier()
+		{
+			var limitIndexesCapabilities =
+				System.Configuration.ConfigurationManager.AppSettings["Raven/LimitIndexesCapabilities"];
+
+			if (string.IsNullOrEmpty(limitIndexesCapabilities))
+				return;
+
+			Active = bool.Parse(limitIndexesCapabilities);
+		}
 
 		private static readonly string[] forbiddenNamespaces = new[]
 		{
-			typeof(File).Namespace,
-			typeof(Thread).Namespace,
-			typeof(Registry).Namespace,
-			typeof(WebRequest).Namespace
+			typeof(System.IO.File).Namespace,
+			typeof(System.Threading.Thread).Namespace,
+			typeof(Microsoft.Win32.Registry).Namespace,
+			typeof(System.Net.WebRequest).Namespace,
+			typeof(System.Data.IDbConnection).Namespace,
+			typeof(System.ServiceModel.ChannelFactory).Namespace,
+			typeof(System.Security.IPermission).Namespace,
+			typeof(System.Transactions.Transaction).Namespace,
+			typeof(System.Reflection.Assembly).Namespace,
+			typeof(System.Configuration.ConfigurationManager).Namespace
 		};
 		
 		private static readonly Type[] forbiddenTypes = new[]
 		{
-			typeof (Environment)
+			typeof (Environment),
+			typeof(AppDomain),
+			typeof(AppDomainManager),
+			typeof(CodeVerifier)
 		};
 
 		public static void AssertNoSecurityCriticalCalls(Assembly asm)
 		{
+			if (Active == false)
+				return;
+
 			foreach (var type in asm.GetTypes())
 			{
 				foreach (var methodInfo in type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
@@ -49,19 +68,7 @@ namespace Raven.Database.Linq
 						{
 							continue;
 						}
-
-						string value;
-						if (cache.TryGetValue(memberInfo, out value))
-						{
-							if (value == null)
-								continue;
-							throw new SecurityException(value);
-						}
-
 						var msg = PrepareSecurityMessage(memberInfo);
-
-						cache.TryAdd(methodInfo, msg);
-
 						if (msg == null)
 							continue;
 
