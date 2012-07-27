@@ -72,6 +72,8 @@ namespace Raven.Database.Server.Responders
 			              	};
 			foreach (var option in options)
 			{
+				if (Directory.Exists(option) == false)
+					continue;
 				foreach (var dir in Directory.GetDirectories(option, "RavenDB.Embedded*").OrderByDescending(x => x))
 				{
 					var contentDir = Path.Combine(dir, "content");
