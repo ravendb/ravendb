@@ -80,7 +80,8 @@ namespace Raven.Tests.MailingList.spokeypokey
 
 					// Query using BarnIndex
 					var result2 = from b in session.Query<Barn, BarnIndex>()
-					              	.Statistics(out statistics)
+									.Customize(x => x.WaitForNonStaleResults())
+									.Statistics(out statistics)
 					              where b.Name == "Barn1"
 					              select b;
 					var result2List = result2.ToList();
