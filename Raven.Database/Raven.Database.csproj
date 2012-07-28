@@ -156,6 +156,7 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Indexing\FilteredDocument.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />
     <Compile Include="Linq\Mono.Reflection\BackingFieldResolver.cs" />
     <Compile Include="Linq\Mono.Reflection\ByteBuffer.cs" />

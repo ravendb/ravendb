@@ -65,7 +65,8 @@ namespace Raven.Database.Indexing
 						trigger => trigger.OnIndexEntryDeleted(documentId));
 					indexWriter.DeleteDocuments(new Term(Constants.DocumentIdFieldName, documentId.ToLowerInvariant()));
 					return doc;
-				});
+				})
+				.Where(x=>x is FilteredDocument == false);
 				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
 				var luceneDoc = new Document();
 				var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS);

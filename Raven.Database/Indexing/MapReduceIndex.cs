@@ -63,7 +63,8 @@ namespace Raven.Database.Indexing
 					reduceKeysToDelete.Add(reduceKey);
 				}
 				return doc;
-			});
+			})
+			.Where(x=>x is FilteredDocument == false);
 			var stats = new IndexingWorkStats();
 			foreach (var mappedResultFromDocument in GroupByDocumentId(context,RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context,stats)))
 			{

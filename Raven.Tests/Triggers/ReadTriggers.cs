@@ -31,6 +31,7 @@ namespace Raven.Tests.Triggers
 				Container = new CompositionContainer(new TypeCatalog(
 					typeof(VetoReadsOnCapitalNamesTrigger),
 					typeof(HiddenDocumentsTrigger),
+					typeof(HideVirtuallyDeletedDocument),
 					typeof(UpperCaseNamesTrigger)))
 			});
 			db.PutIndex("ByName",
@@ -86,6 +87,40 @@ namespace Raven.Tests.Triggers
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
 				queryResult.Results[0].Value<RavenJObject>("@metadata").Value<RavenJObject>("Raven-Read-Veto").Value<string>("Reason"));
+		}
+
+		[Fact]
+		public void CanRemoveFitleredDocumentsFromIndexes()
+		{
+			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
+			db.SpinBackgroundWorkers();
+
+			QueryResult queryResult;
+			do
+			{
+				queryResult = db.Query("ByName", new IndexQuery
+				{
+					Query = "name:abc",
+					PageSize = 10,
+					FieldsToFetch = new[]{"__document_id"}
+				});
+			} while (queryResult.IsStale);
+
+			Assert.Equal(1, queryResult.Results.Count);
+
+			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject{{"Deleted", true}}, null);
+
+			do
+			{
+				queryResult = db.Query("ByName", new IndexQuery
+				{
+					Query = "name:abC",
+					PageSize = 10,
+					FieldsToFetch = new[] { "__document_id" }
+				});
+			} while (queryResult.IsStale);
+
+			Assert.Equal(0, queryResult.Results.Count);
 		}
 
 		[Fact]
@@ -271,6 +306,18 @@ namespace Raven.Tests.Triggers
 					return ReadVetoResult.Deny("Upper case characters in the 'name' property means the document is a secret!");
 				}
 				return ReadVetoResult.Allowed;
+			}
+		}
+
+		public class HideVirtuallyDeletedDocument : AbstractReadTrigger
+		{
+			public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
+			{
+				if (operation != ReadOperation.Index)
+					return ReadVetoResult.Allowed;
+				if(metadata.ContainsKey("Deleted") == false)
+					return ReadVetoResult.Allowed;
+				return ReadVetoResult.Ignore;
 			}
 		}
 
