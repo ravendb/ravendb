@@ -14,6 +14,7 @@
 		<tags>nosql ravendb raven document database embedded</tags>
 		<dependencies>
 			<dependency id="RavenDB.Database" version=""/>
+			<dependency id="Microsoft.Web.Infrastructure" version="1.0.0.0"/>
 		</dependencies>
 		<iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
 	</metadata>
