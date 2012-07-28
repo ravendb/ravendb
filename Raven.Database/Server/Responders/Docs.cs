@@ -53,7 +53,7 @@ namespace Raven.Database.Server.Responders
 					break;
 				case "POST":
 					var json = context.ReadJson();
-					var id = Database.Put(null, Guid.NewGuid(), json,
+					var id = Database.Put(null, Guid.Empty, json,
 										  context.Request.Headers.FilterHeaders(),
 										  GetRequestTransaction(context));
 					context.SetStatusToCreated("/docs/" + id);
