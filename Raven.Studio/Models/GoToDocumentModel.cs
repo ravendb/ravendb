@@ -53,7 +53,7 @@ namespace Raven.Studio.Models
 
         public Task<IList<object>> ProvideSuggestions(string enteredText)
         {
-            return ApplicationModel.Database.Value.AsyncDatabaseCommands.GetDocumentsStartingWithAsync(DocumentId, 0, 50)
+            return ApplicationModel.Database.Value.AsyncDatabaseCommands.StartsWithAsync(DocumentId, 0, 50, metadataOnly: true)
                 .ContinueWith(t => (IList<object>)t.Result.Select(d => d.Key).Cast<object>().ToList());
         }
     }

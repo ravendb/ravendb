@@ -51,10 +51,18 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 			if (SimplifyLetExpression(queryExpressionLetClause.Expression) is LambdaExpression)
 			{
 				var text = QueryParsingUtils.ToText(queryExpressionLetClause);
-				throw new SecurityException("Let expression cannot contain labmda expressions (prevent recursion), but got: " + text);
+				throw new SecurityException("Let expression cannot contain labmda expressions, but got: " + text);
 			}
 
 			return base.VisitQueryExpressionLetClause(queryExpressionLetClause, data);
+		}
+
+		public override object VisitLambdaExpression(LambdaExpression lambdaExpression, object data)
+		{
+			if (lambdaExpression.StatementBody == null || lambdaExpression.StatementBody.IsNull)
+				return base.VisitLambdaExpression(lambdaExpression, data);
+			var text = QueryParsingUtils.ToText(lambdaExpression);
+			throw new SecurityException("Lambda expression can only consist of a single expression, not a statement, but got: " + text);
 		}
 
 		private Expression SimplifyLetExpression(Expression expression)

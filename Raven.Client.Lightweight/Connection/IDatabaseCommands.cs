@@ -32,7 +32,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Retrieves documents for the specified key prefix
 		/// </summary>
-		JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize);
+		JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize,  bool metadataOnly = false);
 
 		/// <summary>
 		/// Retrieves the document for the specified key
@@ -46,8 +46,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <param name="includes">The includes.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		MultiLoadResult Get(string[] ids, string[] includes);
+		MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
 		/// Puts the document in the database with the specified key
@@ -171,7 +172,7 @@ namespace Raven.Client.Connection
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
-		QueryResult Query(string index, IndexQuery query, string[] includes);
+		QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
 		/// Deletes the specified index

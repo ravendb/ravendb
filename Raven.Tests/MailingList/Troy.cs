@@ -64,7 +64,6 @@ namespace Raven.Tests.MailingList
 				  .Statistics(out stats);
 				Assert.True(results.Count<Product>() == 1);
 
-				WaitForUserToContinueTheTest(store);
 				// *****************************************************************************************************************************************
 				// We SHOULD find 1 Product - Note Phrase is not a match, it SHOULD match on the word "Vertical" in the Attributes
 				// *****************************************************************************************************************************************

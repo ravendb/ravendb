@@ -44,9 +44,28 @@ namespace Raven.Client.Connection
 				              		{
 				              			if (prev == '\r' && buffer[i] == '\n')
 				              			{
-											// yeah, we found a line, let us give it to the users
-											var data = Encoding.UTF8.GetString(buffer, startPos, i-1);
-				              				startPos = i;
+				              				// yeah, we found a line, let us give it to the users
+				              				var oldStartPos = startPos;
+				              				startPos = i + 1;
+
+				              				// is it an empty line?
+											if (oldStartPos == i - 2)
+				              				{
+				              					continue; // ignore and continue
+				              				}
+
+				              				// first 5 bytes should be: 'd','a','t','a',':'
+											// if it isn't, ignore and continue
+											if (buffer.Length - oldStartPos < 5 ||
+												buffer[oldStartPos] != 'd' ||
+												buffer[oldStartPos + 1] != 'a' ||
+												buffer[oldStartPos + 2] != 't' ||
+												buffer[oldStartPos + 3] != 'a' ||
+												buffer[oldStartPos + 4] != ':')
+				              				{
+												continue;
+				              				}
+											var data = Encoding.UTF8.GetString(buffer, oldStartPos + 5, i - 6);
 				              				foreach (var subscriber in subscribers)
 				              				{
 				              					subscriber.OnNext(data);
@@ -55,9 +74,10 @@ namespace Raven.Client.Connection
 				              			prev = buffer[i];
 				              		}
 				              		posInBuffer += read;
-									if(startPos == posInBuffer) // read to end
+									if(startPos >= posInBuffer) // read to end
 									{
 										posInBuffer = 0;
+										return;
 									}
 									// move remaining to the start of buffer, then reset
 				              		Array.Copy(buffer, startPos, buffer, 0, posInBuffer - startPos);

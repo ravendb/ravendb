@@ -105,7 +105,6 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 				}
 
-				WaitForUserToContinueTheTest(store);
 				using (var session = store.OpenSession())
 				{
 					var items = session.Query<Company, CompanyContactIndex>()

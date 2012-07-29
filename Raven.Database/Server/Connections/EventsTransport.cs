@@ -37,13 +37,13 @@ namespace Raven.Database.Server.Connections
 		{
 			context.Response.ContentType = "text/event-stream";
 
-			return context.Response.WriteAsync("{'Type': 'InitializingConnetion'}\r\n")
+			return context.Response.WriteAsync("data: {'Type': 'InitializingConnection'}\r\n\r\n")
 				.ContinueWith(DisconnectOnError);
 		}
 
 		public Task SendAsync(object data)
 		{
-			return context.Response.WriteAsync(JsonConvert.SerializeObject(data,Formatting.None) + "\r\n")
+			return context.Response.WriteAsync("data: " + JsonConvert.SerializeObject(data,Formatting.None) + "\r\n\r\n")
 				.ContinueWith(DisconnectOnError);
 		}
 

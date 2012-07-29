@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -20,6 +21,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Database.Exceptions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Database.Extensions
 {
@@ -94,6 +96,9 @@ namespace Raven.Database.Extensions
 
 		public static void WriteJson(this IHttpContext context, RavenJToken obj)
 		{
+			bool minimal;
+			bool.TryParse(context.Request.QueryString["metadata-only"], out minimal);
+
 			var streamWriter = new StreamWriter(context.Response.OutputStream, defaultEncoding);
 			var jsonp = context.Request.QueryString["jsonp"];
 			if (string.IsNullOrEmpty(jsonp) == false)
@@ -108,6 +113,11 @@ namespace Raven.Database.Extensions
 
 			}
 
+			if(minimal)
+			{
+				obj = MinimizeToken(obj);
+			}
+
 			var jsonTextWriter = new JsonTextWriter(streamWriter)
 			{
 				Formatting = Formatting.None
@@ -118,8 +128,30 @@ namespace Raven.Database.Extensions
 			{
 				streamWriter.Write(");");
 			}
-
 			streamWriter.Flush();
+		}
+
+		private static RavenJToken MinimizeToken(RavenJToken obj)
+		{
+			switch (obj.Type)
+			{
+				case JTokenType.Array:
+					var array = new RavenJArray();
+					foreach (var item in ((RavenJArray)obj))
+					{
+						array.Add(MinimizeToken(item));
+					}
+					return array;
+				case JTokenType.Object:
+					var ravenJObject = ((RavenJObject) obj);
+					if (ravenJObject.ContainsKey(Constants.Metadata) == false)
+						return obj;
+					var newObj = new RavenJObject();
+					newObj[Constants.Metadata] = ravenJObject[Constants.Metadata];
+					return newObj;
+				default:
+					return obj;
+			}
 		}
 
 		public static void WriteData(this IHttpContext context, RavenJObject data, RavenJObject headers, Guid etag)

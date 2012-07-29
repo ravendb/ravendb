@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Security.Cryptography;
+using Expression = System.Linq.Expressions.Expression;
 
 namespace Raven.Bundles.Encryption.Settings
 {
 	public class EncryptionSettings
 	{
 		private byte[] encryptionKey;
-		private Type algorithmType;
-		private Func<SymmetricAlgorithm> algorithmGenerator;
+		private readonly Type algorithmType;
+		private readonly Func<SymmetricAlgorithm> algorithmGenerator;
 		private readonly bool encryptIndexes;
 
 		public readonly Codec Codec;
@@ -29,15 +30,16 @@ namespace Raven.Bundles.Encryption.Settings
 
 		public EncryptionSettings(byte[] encryptionKey, Type symmetricAlgorithmType, bool encryptIndexes)
 		{
-			this.EncryptionKey = encryptionKey;
+			EncryptionKey = encryptionKey;
 			this.encryptIndexes = encryptIndexes;
 
-			this.Codec = new Codec(this);
+			Codec = new Codec(this);
 
-			typeof(EncryptionSettings)
-				.GetMethod("SetSymmetricAlgorithmType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-				.MakeGenericMethod(symmetricAlgorithmType)
-				.Invoke(this, new object[0]);
+			algorithmType = symmetricAlgorithmType;
+
+			algorithmGenerator = Expression.Lambda<Func<SymmetricAlgorithm>>(
+				Expression.New(symmetricAlgorithmType)
+				).Compile();
 		}
 
 		public static bool DontEncrypt(string key)
@@ -52,7 +54,7 @@ namespace Raven.Bundles.Encryption.Settings
 			private set
 			{
 				if (value == null)
-					throw new ArgumentNullException("EncryptionKey");
+					throw new ArgumentNullException("value");
 
 				if (value.Length < Constants.MinimumAcceptableEncryptionKeyLength)
 					throw new ArgumentException("The EncryptionKey provided is too short. The minimum length is " + Constants.MinimumAcceptableEncryptionKeyLength + ".");
@@ -60,11 +62,6 @@ namespace Raven.Bundles.Encryption.Settings
 			}
 		}
 
-		private void SetSymmetricAlgorithmType<T>() where T : SymmetricAlgorithm, new()
-		{
-			algorithmGenerator = () => new T();
-			algorithmType = typeof(T);
-		}
 
 		public Type SymmetricAlgorithmType
 		{
@@ -88,8 +85,8 @@ namespace Raven.Bundles.Encryption.Settings
 
 		public static byte[] GenerateRandomEncryptionKey(int length)
 		{
-			byte[] result = new byte[length];
-			RNGCryptoServiceProvider.Create().GetBytes(result);
+			var result = new byte[length];
+			RandomNumberGenerator.Create().GetBytes(result);
 			return result;
 		}
 	}

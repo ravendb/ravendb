@@ -119,11 +119,11 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize)
+		public JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize, bool metadataOnly = false)
 		{
 			EnsureIsNotNullOrEmpty(keyPrefix, "keyPrefix");
 
-			return ExecuteWithReplication("GET", u => DirectStartsWith(u, keyPrefix, start, pageSize));
+			return ExecuteWithReplication("GET", u => DirectStartsWith(u, keyPrefix, start, pageSize, metadataOnly));
 
 		}
 
@@ -253,11 +253,14 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("PUT", u => DirectPut(metadata, key, etag, document, u));
 		}
 
-		private JsonDocument[] DirectStartsWith(string operationUrl, string keyPrefix, int start, int pageSize)
+		private JsonDocument[] DirectStartsWith(string operationUrl, string keyPrefix, int start, int pageSize, bool metadataOnly)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", operationUrl, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			if (metadataOnly)
+				actualUrl += "&metadata-only=true";
+			
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
@@ -729,15 +732,17 @@ namespace Raven.Client.Connection
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
 		/// <returns></returns>
-		public QueryResult Query(string index, IndexQuery query, string[] includes)
+		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
-			return ExecuteWithReplication("GET", u => DirectQuery(index, query, u, includes));
+			return ExecuteWithReplication("GET", u => DirectQuery(index, query, u, includes, metadataOnly));
 		}
 
-		private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes)
+		private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes, bool metadataOnly)
 		{
 			string path = query.GetIndexQueryUrl(operationUrl, index, "indexes");
+			if (metadataOnly)
+				path += "&metadata-only=true";
 			if (includes != null && includes.Length > 0)
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
@@ -796,10 +801,11 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <param name="includes">The includes.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		public MultiLoadResult Get(string[] ids, string[] includes)
+		public MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes));
+			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes, metadataOnly));
 		}
 
 		/// <summary>
@@ -809,9 +815,11 @@ namespace Raven.Client.Connection
 		/// <param name="operationUrl">The operation URL.</param>
 		/// <param name="includes">The includes.</param>
 		/// <returns></returns>
-		public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes)
+		public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, bool metadataOnly)
 		{
 			var path = operationUrl + "/queries/?";
+			if (metadataOnly)
+				path += "&metadata-only=true";
 			if (includes != null && includes.Length > 0)
 			{
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());

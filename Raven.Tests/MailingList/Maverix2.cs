@@ -75,7 +75,6 @@ namespace Raven.Tests.MailingList
 
 			using (var store = Store())
 			{
-				RavenTest.WaitForUserToContinueTheTest(store);
 				using (var session = store.OpenSession())
 				{
 					Assert.Equal(1, session.Query<TemplateTests_Search.ReduceResult, TemplateTests_Search>().Count());

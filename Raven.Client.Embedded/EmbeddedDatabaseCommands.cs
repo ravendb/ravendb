@@ -98,10 +98,13 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize)
+		public JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize, bool metadataOnly = false)
 		{
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 			
+			// metadata only is NOT supported for embedded, nothing to save on the data transfers, so not supporting 
+			// this
+
 			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, start, pageSize);
 			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
 		}
@@ -352,10 +355,13 @@ namespace Raven.Client.Embedded
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes are ignored for this implementation.</param>
-		public QueryResult Query(string index, IndexQuery query, string[] includes)
+		/// <param name="metadataOnly">Load just the document metadata</param>
+		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
 		{
 			query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
+
+			// metadataOnly is not supported for embedded
 
 			if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) || index.Equals("dynamic", StringComparison.InvariantCultureIgnoreCase))
 			{
@@ -422,10 +428,13 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <param name="includes">The includes.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		public MultiLoadResult Get(string[] ids, string[] includes)
+		public MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
+
+			// metadata only is not supported for embedded
 
 			var multiLoadResult = new MultiLoadResult
 			{

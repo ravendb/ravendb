@@ -22,8 +22,6 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 				}
 
-				WaitForUserToContinueTheTest(documentStore);
-
 				// Act
 				object evt;
 				using (var session = documentStore.OpenSession())

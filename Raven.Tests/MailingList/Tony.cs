@@ -36,7 +36,6 @@ namespace Raven.Tests.MailingList
 						.OrderBy(b => b.Posts.Count).ToList();
 					for (int i = 0; i < values.Length; i++)
 					{
-						WaitForUserToContinueTheTest(store);
 						Assert.Equal(values[i], blogsInWeightingOrder[i].Weighting); // pass: in numeric order 3, 20, 100
 						Assert.Equal(values[i], blogsInPostsCountOrder[i].Posts.Count); // fail: in lexicographic order 100, 20, 3
 					}
