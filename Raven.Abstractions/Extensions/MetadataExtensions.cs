@@ -133,7 +133,7 @@ namespace Raven.Abstractions.Extensions
 		public static RavenJObject FilterHeadersAttachment(this IDictionary<string, IList<string>> self)
 		{
 			var filterHeaders = self.FilterHeaders();
-			if (self.ContainsKey("Content-Type") != null)
+			if (self.ContainsKey("Content-Type"))
 				filterHeaders["Content-Type"] = self["Content-Type"].FirstOrDefault();
 			return filterHeaders;
 		}
