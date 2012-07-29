@@ -88,6 +88,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\Testing\Microsoft.VisualStudio.QualityTools.UnitTesting.Silverlight.dll</HintPath>
     </Reference>
+    <Reference Include="Raven.Tests.Silverlight.UnitTestProvider, Version=1.2.0.0, Culture=neutral, PublicKeyToken=321535b674325ef3, processorArchitecture=MSIL" />
     <Reference Include="System.ComponentModel.Composition, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\System.ComponentModel.Composition.dll</HintPath>
@@ -147,10 +148,6 @@
     <ProjectReference Include="..\Raven.Client.Silverlight\Raven.Client.Silverlight.csproj">
       <Project>{8A1DB308-D56B-49BC-A421-A2AB32617215}</Project>
       <Name>Raven.Client.Silverlight</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Tests.Silverlight.UnitTestProvider\Raven.Tests.Silverlight.UnitTestProvider.csproj">
-      <Project>{54415ADE-AFD4-40FB-9A5A-A3B7D8408E18}</Project>
-      <Name>Raven.Tests.Silverlight.UnitTestProvider</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
