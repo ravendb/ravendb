@@ -192,8 +192,7 @@ namespace Raven.Client.Document
 		/// Whatever to allow queries on document id.
 		/// By default, queries on id are disabled, because it is far more efficent
 		/// to do a Load() than a Query() if you alred know the id.
-		/// You might want to do this if you have a TransformResults in place or you 
-		/// need to fetch just part of the document from the server.
+		/// This is NOT recommended and provided for backward compatability purposes only.
 		/// </summary>
 		public bool AllowQueriesOnId { get; set; }
 

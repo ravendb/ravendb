@@ -79,5 +79,15 @@ namespace Raven.Database.Linq.PrivateExtensions
 		{
 			return Select(source).SelectMany<object, object>(selector);
 		}
+
+		public static dynamic FirstOrDefault(this IGrouping<dynamic, dynamic> source, Func<dynamic, bool> predicate)
+		{
+			return Enumerable.FirstOrDefault(source, predicate) ?? new DynamicNullObject();
+		}
+
+		public static dynamic SingleOrDefault(this IGrouping<dynamic, dynamic> source, Func<dynamic, bool> predicate)
+		{
+			return Enumerable.SingleOrDefault(source, predicate) ?? new DynamicNullObject();
+		}
 	}
 }
