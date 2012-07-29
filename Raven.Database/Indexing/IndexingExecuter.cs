@@ -86,6 +86,7 @@ namespace Raven.Database.Indexing
 				
 				if (jsonDocs.Length > 0)
 				{
+					context.IndexedPerSecCounter.IncrementBy(jsonDocs.Length);
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 					indexesToWorkOn = result.Select(x => x.Item1).ToList();
 					var sw = Stopwatch.StartNew();

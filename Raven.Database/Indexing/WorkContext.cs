@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using NLog;
 using Raven.Abstractions;
@@ -176,5 +177,76 @@ namespace Raven.Database.Indexing
 		}
 
 		public Action<IndexChangeNotification> RaiseIndexChangeNotification { get; set; }
+
+		public PerformanceCounter DocsPerSecCounter { get; set; }
+		public PerformanceCounter IndexedPerSecCounter { get; set; }
+		public PerformanceCounter ReducedPerSecCounter { get; set; }
+
+		public void InitPreformanceCounters(string name)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+				name = "System";
+			DocsPerSecCounter = new PerformanceCounter
+			{
+				CategoryName = "RavenDB-" + name,
+				CounterName = "# docs / sec",
+				MachineName = ".",
+				ReadOnly = false
+			};
+
+			IndexedPerSecCounter = new PerformanceCounter
+			{
+				CategoryName = "RavenDB-" + name,
+				CounterName = "# docs indexed / sec",
+				MachineName = ".",
+				ReadOnly = false
+			};
+
+			ReducedPerSecCounter = new PerformanceCounter
+			{
+				CategoryName = "RavenDB-" + name,
+				CounterName = "# docs reduced / sec",
+				MachineName = ".",
+				ReadOnly = false
+			};
+		}
+
+		public void SetupPreformanceCounter(string name)
+		{
+			if (string.IsNullOrWhiteSpace(name))
+				name = "System";
+			if (PerformanceCounterCategory.Exists("RavenDB-" + name))
+				return;
+
+			var counters = new CounterCreationDataCollection();
+
+			// 1. counter for counting operations per second:
+			//        PerformanceCounterType.RateOfCountsPerSecond32
+			var docsPerSecond = new CounterCreationData();
+			docsPerSecond.CounterName = "# docs / sec";
+			docsPerSecond.CounterHelp = "Number of documents added per second";
+			docsPerSecond.CounterType = PerformanceCounterType.RateOfCountsPerSecond32;
+			counters.Add(docsPerSecond);
+
+			// 2. counter for counting operations per second:
+			//        PerformanceCounterType.RateOfCountsPerSecond32
+			var indexedPerSecond = new CounterCreationData();
+			indexedPerSecond.CounterName = "# docs indexed / sec";
+			indexedPerSecond.CounterHelp = "Number of documents indexed per second";
+			indexedPerSecond.CounterType = PerformanceCounterType.RateOfCountsPerSecond32;
+			counters.Add(indexedPerSecond);
+
+			// 3. counter for counting operations per second:
+			//        PerformanceCounterType.RateOfCountsPerSecond32
+			var reducesPerSecond = new CounterCreationData();
+			reducesPerSecond.CounterName = "# docs reduced / sec";
+			reducesPerSecond.CounterHelp = "Number of documents reduced per second";
+			reducesPerSecond.CounterType = PerformanceCounterType.RateOfCountsPerSecond32;
+			counters.Add(reducesPerSecond);
+
+			// create new category with the counters above
+			PerformanceCounterCategory.Create("RavenDB-" + name,
+											  "RevenDB category",PerformanceCounterCategoryType.Unknown, counters);
+		}
 	}
 }
