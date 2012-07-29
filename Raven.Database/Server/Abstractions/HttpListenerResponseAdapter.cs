@@ -9,6 +9,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Util;
 
 namespace Raven.Database.Server.Abstractions
 {
@@ -87,19 +88,26 @@ namespace Raven.Database.Server.Abstractions
 
 		public Task WriteAsync(string data)
 		{
-			var bytes = Encoding.UTF8.GetBytes(data);
-			return Task.Factory.FromAsync(
-				(callback, state) => response.OutputStream.BeginWrite(bytes, 0, bytes.Length, callback, state),
-				response.OutputStream.EndWrite,
-				null)
+			try
+			{
+				var bytes = Encoding.UTF8.GetBytes(data);
+				return Task.Factory.FromAsync(
+					(callback, state) => response.OutputStream.BeginWrite(bytes, 0, bytes.Length, callback, state),
+					response.OutputStream.EndWrite,
+					null)
 					.ContinueWith(task =>
-				              		{
-										if (task.IsFaulted)
-											return task;
-										response.OutputStream.Flush();
-				              			return task;
-				              		})
+					{
+						if (task.IsFaulted)
+							return task;
+						response.OutputStream.Flush();
+						return task;
+					})
 					.Unwrap();
+			}
+			catch (Exception e)
+			{
+				return new CompletedTask(e);
+			}
 		}
 
 		public void SetPublicCachability()

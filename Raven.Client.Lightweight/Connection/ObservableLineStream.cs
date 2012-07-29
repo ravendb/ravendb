@@ -19,7 +19,7 @@ namespace Raven.Client.Connection
 		private readonly Stream stream;
 		private readonly byte[] buffer = new byte[8192];
 		private int posInBuffer;
-		private Action onDispose;
+		private readonly Action onDispose;
 
 		private readonly ConcurrentSet<IObserver<string>> subscribers = new ConcurrentSet<IObserver<string>>();
 
@@ -35,18 +35,20 @@ namespace Raven.Client.Connection
 				.ContinueWith(task =>
 				              	{
 				              		var read = task.Result;
-
+									if(read == 0)// will force reopening of the connection
+										throw new EndOfStreamException();
 				              		// find \r\n in newly read range
 
 				              		var startPos = 0;
 				              		byte prev = 0;
+				              		bool foundLines = false;
 				              		for (int i = posInBuffer; i < posInBuffer + read; i++)
 				              		{
 				              			if (prev == '\r' && buffer[i] == '\n')
 				              			{
-				              				// yeah, we found a line, let us give it to the users
-				              				var oldStartPos = startPos;
-				              				startPos = i + 1;
+				              				foundLines = true;
+											// yeah, we found a line, let us give it to the users
+											startPos = i + 1;
 
 				              				// is it an empty line?
 											if (oldStartPos == i - 2)
@@ -79,6 +81,9 @@ namespace Raven.Client.Connection
 										posInBuffer = 0;
 										return;
 									}
+									if (foundLines == false)
+										return;
+
 									// move remaining to the start of buffer, then reset
 				              		Array.Copy(buffer, startPos, buffer, 0, posInBuffer - startPos);
 				              		posInBuffer -= startPos;
@@ -109,6 +114,20 @@ namespace Raven.Client.Connection
 								});
 		}
 
+
+#if SILVERLIGHT
+		private Task<int> ReadAsync()
+		{
+			try
+			{
+				return stream.ReadAsync(buffer, posInBuffer, buffer.Length - posInBuffer);
+			}
+			catch (Exception e)
+			{
+				return new CompletedTask<int>(e);
+			}
+		}
+#else
 		private Task<int> ReadAsync()
 		{
 			try
@@ -123,6 +142,7 @@ namespace Raven.Client.Connection
 				return new CompletedTask<int>(e);
 			}
 		}
+#endif
 
 		public IDisposable Subscribe(IObserver<string> observer)
 		{

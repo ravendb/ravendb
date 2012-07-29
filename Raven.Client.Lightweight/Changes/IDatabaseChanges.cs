@@ -10,6 +10,7 @@ namespace Raven.Client.Changes
 		IObservableWithTask<IndexChangeNotification> ForIndex(string indexName);
 		IObservableWithTask<DocumentChangeNotification> ForDocument(string docId);
 		IObservableWithTask<DocumentChangeNotification> ForAllDocuments();
+        IObservableWithTask<IndexChangeNotification> ForAllIndexes();
 		IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix);
 	}
 }

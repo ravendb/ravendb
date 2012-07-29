@@ -88,7 +88,7 @@ namespace Raven.Studio.Models
 			DocumentSections = new List<DocumentSection>() { dataSection, metaDataSection };
 			CurrentSection = dataSection;
 
-			References = new ObservableCollection<LinkModel>();
+            References = new BindableCollection<LinkModel>(model => model.Title);
 			Related = new BindableCollection<LinkModel>(model => model.Title);
 			DocumentErrors = new ObservableCollection<DocumentError>();
 
@@ -96,6 +96,7 @@ namespace Raven.Studio.Models
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
+		    documentIdManager = JsonDataDocument.Properties.GetOrCreateSingleton(() => new DocumentReferencedIdManager());
 
 			InitialiseDocument();
 
@@ -111,7 +112,7 @@ namespace Raven.Studio.Models
                 .Do(_ => HasUnsavedChanges = true)
 		        .Throttle(TimeSpan.FromSeconds(1))
 		        .ObserveOnDispatcher()
-		        .Subscribe(_ => HandleDocumentChanged());
+		        .Subscribe(e => HandleDocumentChanged());
 		}
 
 		private void HandleDocumentChanged()
@@ -255,8 +256,9 @@ namespace Raven.Studio.Models
 		public override void LoadModelParameters(string parameters)
 		{
 			var url = new UrlParser(UrlUtil.Url);
+		    documentIdManager.Clear();
 
-			if (url.GetQueryParam("mode") == "new")
+            if (url.GetQueryParam("mode") == "new")
 			{
 				Mode = DocumentMode.New;
 				InitialiseDocument();
@@ -307,6 +309,8 @@ namespace Raven.Studio.Models
 
 					WhenParsingComplete(dataSection.Document)
 						.ContinueOnUIThread(t => ApplyOutliningMode());
+
+                    HandleDocumentChanged();
 				})
 				.Catch();
 		}
@@ -449,7 +453,7 @@ namespace Raven.Studio.Models
 
 
 
-		public ObservableCollection<LinkModel> References { get; private set; }
+        public BindableCollection<LinkModel> References { get; private set; }
 		public BindableCollection<LinkModel> Related { get; private set; }
 
 		private bool searchEnabled;
@@ -551,105 +555,109 @@ namespace Raven.Studio.Models
 			DocumentSize = string.Format("Content-Length: {0:#,#.##;;0} {1}", byteCount, sizeTerm);
 		}
 
-		private bool notifiedOnDelete;
-		private bool notifiedOnChange;
-
-		protected override Task LoadedTimerTickedAsync()
-		{
-			if (isLoaded == false ||
-				Mode != DocumentMode.DocumentWithId ||
-				currentDatabase != Database.Value.Name)
-				return null;
-
-			return DatabaseCommands.GetAsync(DocumentKey)
-				.ContinueOnSuccess(docOnServer =>
-				{
-					if (docOnServer == null)
-					{
-						if (notifiedOnDelete)
-							return;
-						notifiedOnDelete = true;
-						ApplicationModel.Current.AddNotification(
-							new Notification("Document " + Key + " was deleted on the server"));
-					}
-					else if (docOnServer.Etag != Etag)
-					{
-						if (notifiedOnChange)
-							return;
-						notifiedOnChange = true;
-						ApplicationModel.Current.AddNotification(
-							new Notification("Document " + Key + " was changed on the server"));
-					}
-				});
-		}
-
 		private void UpdateReferences()
 		{
 			if (Seperator == null)
 				return;
 
-			References.Clear();
-			var parentids = new List<string>();
-			var id = LocalId;
-			var lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
+            // Note: if this proves to be too slow with large documents, we can potential optimise the finding 
+            // of references by only considering the parts of the AST which occur after the Offset at which the text change began
+            // (we can find this by getting hold of the TextSnapshotChangedEventArgs)
+		    var potentialReferences = FindPotentialReferences(JsonDataDocument).ToList();
+		    var newReferences = potentialReferences.Where(id => documentIdManager.NeedsChecking(id)).ToArray();
 
-			while (!string.IsNullOrWhiteSpace(id) && lastindex != -1)
-			{
-				id = id.Remove(lastindex);
-				parentids.Add(id);
-				lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
-			}
+            if (newReferences.Any())
+            {
+                ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(
+                    newReferences, null)
+                    .ContinueOnSuccessInTheUIThread(results =>
+                    {
+                        var ids =
+                            results.Results.Where(r => r != null).Select(
+                                r => r["@metadata"].SelectToken("@id").ToString()).ToList();
 
-			ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(parentids.ToArray(), null)
-				.ContinueOnSuccessInTheUIThread(x =>
-													{
-														foreach (var parentid in x.Results
-															.Where(result=>result!=null)
-															.Select(result => result["@metadata"].SelectToken("@id").ToString()))
-														{
-															References.Insert(0, new LinkModel
-																					{
-																						Title = parentid,
-																						HRef = "/Edit?id=" + parentid
-																					});
-														}
-													});
+                        documentIdManager.AddKnownIds(ids);
+                        documentIdManager.AddKnownInvalidIds(newReferences.Except(ids));
 
-			var pattern = @"(\w+(" + Seperator + @"\w+)+)";
-			var referencesIds = Regex.Matches(JsonData, pattern);
+                        UpdateListWithKnownIds(potentialReferences);
+                    });
+            }
+            else
+            {
+                UpdateListWithKnownIds(potentialReferences);
+            }
 
-			var enumerable = referencesIds.Cast<Match>().Select(x => x.Groups[1].Value).Distinct();
-			foreach (var source in enumerable.Where(source => !string.IsNullOrWhiteSpace(source)))
-			{
-				DateTime time;
-				if (DateTime.TryParse(source, out time))
-					continue;
-
-				References.Add(new LinkModel
-				{
-					Title = source,
-					HRef = "/Edit?id=" + source
-				});
-			}
 		}
+
+	    private void UpdateListWithKnownIds(IEnumerable<string> potentialReferences)
+	    {
+	        var referenceModels = potentialReferences.Where(id => documentIdManager.IsId(id))
+	            .Select(key => new LinkModel
+	            {
+	                Title = key,
+	                HRef = "/Edit?id=" + key
+	            })
+	            .ToArray();
+
+	        References.Match(referenceModels);
+	    }
+
+	    private IEnumerable<string> FindPotentialReferences(ICodeDocument document)
+        {
+            var stringValueNodes = document.FindAllStringValueNodes();
+            return stringValueNodes.Select(n => n.Text).Distinct().Where(IsPotentialReference);
+        } 
+
+        private bool IsPotentialReference(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            var pattern = "\\w" + Seperator + "\\w";
+            return Regex.IsMatch(value, pattern);
+        }
 
 		private void UpdateRelated()
 		{
-			if (string.IsNullOrEmpty(Key))
+			if (string.IsNullOrEmpty(Key) || string.IsNullOrEmpty(Seperator))
 				return;
-			DatabaseCommands.StartsWithAsync(Key + Seperator, 0, 15, metadataOnly: true)
-				.ContinueOnSuccess(items =>
-								   {
-									   if (items == null)
-										   return;
 
-									   var linkModels = items.Select(doc => new LinkModel
-																			{
-																				Title = doc.Key,
-																				HRef = "/Edit?id=" + doc.Key
-																			}).ToArray();
-									   Related.Set(linkModels);
-								   });
+			var childrenTask = DatabaseCommands.GetDocumentsStartingWithAsync(Key + Seperator, 0, 15)
+                .ContinueOnSuccess(items => items == null ?  new string[0] : items.Select(i => i.Key));
+
+            // find parent Ids
+            var parentids = new List<string>();
+            var id = LocalId;
+            var lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
+
+            while (!string.IsNullOrWhiteSpace(id) && lastindex != -1)
+            {
+                id = id.Remove(lastindex);
+                parentids.Add(id);
+                lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
+            }
+
+            var parentsTask = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(parentids.ToArray(), null)
+                .ContinueOnSuccess(results => results.Results.Where(r => r != null).Select(r => r["@metadata"].SelectToken("@id").ToString()));
+
+
+		    TaskEx.WhenAll(childrenTask, parentsTask).ContinueOnSuccessInTheUIThread(t =>
+		    {
+		        var linkModels =
+		            childrenTask.Result
+                    .Concat(parentsTask.Result)
+		                .OrderBy(key => key.Length)
+		                .Select(key => new LinkModel
+		                {
+		                    Title = key,
+		                    HRef = "/Edit?id=" + key
+		                })
+                        .ToArray();
+
+		        Related.Set(linkModels);
+		    });
 		}
 
 		private void HandleDeleteDocument()
@@ -711,9 +719,33 @@ namespace Raven.Studio.Models
             }
 
             SelectedOutliningMode = mode;
+
+            if (Database.Value != null)
+            {
+                Database.Value.DocumentChanges.TakeUntil(Unloaded)
+                    .ObserveOnDispatcher()
+                    .Subscribe(n => HandleChangeNotification(n));
+            }
         }
 
-		public string Key
+	    private void HandleChangeNotification(DocumentChangeNotification notification)
+	    {
+            if (notification.Name.Equals(DocumentKey, StringComparison.InvariantCulture))
+            {
+                if (notification.Type == DocumentChangeTypes.Put && notification.Etag != Etag)
+                {
+                    ApplicationModel.Current.AddNotification(
+                            new Notification("Document " + Key + " was changed on the server"));
+                }
+                else if (notification.Type == DocumentChangeTypes.Delete)
+                {
+                    ApplicationModel.Current.AddNotification(
+                            new Notification("Document " + Key + " was deleted on the server"));
+                }
+            }
+	    }
+
+	    public string Key
 		{
 			get { return document.Value.Key; }
 			set
@@ -760,7 +792,8 @@ namespace Raven.Studio.Models
 		private IDictionary<string, string> metadata;
 		private ICommand toggleExpansion;
 		private DocumentOutliningMode outliningMode;
-		public static IList<DocumentOutliningMode> OutliningModes { get; private set; }
+	    private DocumentReferencedIdManager documentIdManager;
+	    public static IList<DocumentOutliningMode> OutliningModes { get; private set; }
 
 
 		public IEnumerable<KeyValuePair<string, string>> Metadata

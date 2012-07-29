@@ -23,6 +23,7 @@ namespace Raven.Database.Server.Connections
 		private EventsTransport eventsTransport;
 
 		private int watchAllDocuments;
+		private int watchAllIndexes;
 
 		public ConnectionState(EventsTransport eventsTransport)
 		{
@@ -38,6 +39,16 @@ namespace Raven.Database.Server.Connections
 		{
 			matchingIndexes.TryRemove(name);
 		}
+
+        public void WatchAllIndexes()
+        {
+            Interlocked.Increment(ref watchAllIndexes);
+        }
+
+        public void UnwatchAllIndexes()
+        {
+            Interlocked.Decrement(ref watchAllIndexes);
+        }
 
 		public void Send(DocumentChangeNotification documentChangeNotification)
 		{
@@ -63,11 +74,18 @@ namespace Raven.Database.Server.Connections
 
 		public void Send(IndexChangeNotification indexChangeNotification)
 		{
+            var value = new { Value = indexChangeNotification, Type = "IndexChangeNotification" };
+
+            if (watchAllIndexes > 0)
+            {
+                Enqueue(value);
+                return;
+            }
+
 			if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
 				return;
 
-
-			Enqueue(new { Value = indexChangeNotification, Type = "IndexChangeNotification" });
+		    Enqueue(value);
 		}
 
 		private void Enqueue(object msg)

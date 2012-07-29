@@ -2126,6 +2126,7 @@
 		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 		<Setter Property="Padding" Value="15,6,60,6"/>
 		<Setter Property="Width" Value="200"/>
+		<Setter Property="MinHeight" Value="60"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ListBoxItem">

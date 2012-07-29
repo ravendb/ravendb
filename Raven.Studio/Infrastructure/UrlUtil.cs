@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Browser;
 using System.Windows.Input;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -37,7 +38,7 @@ namespace Raven.Studio.Infrastructure
 
 			Execute.OnTheUI(() =>
 			                	{
-									if (Keyboard.Modifiers == ModifierKeys.Control && dontOpenNewTab == false)
+									if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && dontOpenNewTab == false)
 			                		{
 			                			OpenUrlOnANewTab(url);
 										return;
@@ -62,5 +63,15 @@ namespace Raven.Studio.Infrastructure
 
 			HtmlPage.Window.Navigate(new Uri(host + "#" + url, UriKind.Absolute), "_blank");
 		}
+
+	    public static void NavigateToExternal(string uriString)
+	    {
+	        if (uriString.StartsWith("http://") == false)
+	        {
+	            var ravendbUrl = ApplicationModel.Current.Server.Value.Url;
+	            uriString = ravendbUrl + "/" + uriString;
+	        }
+	        HtmlPage.Window.Navigate(new Uri(uriString, UriKind.Absolute), "_blank");
+	    }
 	}
 }

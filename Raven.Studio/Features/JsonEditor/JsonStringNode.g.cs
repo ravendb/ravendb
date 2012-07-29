@@ -14,9 +14,9 @@ namespace Raven.Studio.Features.JsonEditor {
     public partial class JsonStringNode : AstNodeBase {
         
         /// <summary>
-        /// Gets the value.
+        /// Gets the text.
         /// </summary>
-        private String valueValue;
+        private String textValue;
         
         /// <summary>
         /// Gets the An integer value that identifies the type of AST node.
@@ -29,15 +29,15 @@ namespace Raven.Studio.Features.JsonEditor {
         }
         
         /// <summary>
-        /// Gets or sets the value.
+        /// Gets or sets the text.
         /// </summary>
-        /// <value>The value.</value>
-        public new String Value {
+        /// <value>The text.</value>
+        public String Text {
             get {
-                return this.valueValue;
+                return this.textValue;
             }
             set {
-                this.valueValue = value;
+                this.textValue = value;
             }
         }
     }

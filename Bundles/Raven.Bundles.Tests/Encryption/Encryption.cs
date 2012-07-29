@@ -17,27 +17,29 @@ namespace Raven.Bundles.Tests.Encryption
 	{
 		protected readonly string path;
 		protected readonly DocumentStore documentStore;
-		private readonly RavenDbServer ravenDbServer;
+		private RavenDbServer ravenDbServer;
 		private bool closed = false;
+		private database::Raven.Database.Config.RavenConfiguration settings;
 
 		public Encryption()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			var config = new database::Raven.Database.Config.RavenConfiguration
-			             	{
-			             		Port = 8079,
-			             		RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-			             		DataDirectory = path,
-			             		Settings =
-			             			{
-			             				{"Raven/Encryption/Key", "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8="},
-			             				{"Raven/ActiveBundles", "Encryption"}
-			             			}
-			             	};
-			config.PostInit();
-			ravenDbServer = new RavenDbServer(config);
+			settings = new database::Raven.Database.Config.RavenConfiguration
+			{
+				Port = 8079,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				DataDirectory = path,
+				Settings =
+					{
+						{"Raven/Encryption/Key", "3w17MIVIBLSWZpzH0YarqRlR2+yHiv1Zq3TCWXLEMI8="},
+						{"Raven/ActiveBundles", "Encryption"}
+					}
+			};
+			ConfigureServer(settings);
+			settings.PostInit();
+			ravenDbServer = new RavenDbServer(settings);
 			documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079"
@@ -45,10 +47,20 @@ namespace Raven.Bundles.Tests.Encryption
 			documentStore.Initialize();
 		}
 
+		protected virtual void ConfigureServer(database::Raven.Database.Config.RavenConfiguration ravenConfiguration)
+		{
+		}
+
 		protected void AssertPlainTextIsNotSavedInDatabase(params string[] plaintext)
 		{
 			Close();
 			TestUtil.AssertPlainTextIsNotSavedInAnyFileInPath(plaintext, path, s => true);
+		}
+
+		protected void RecylceServer()
+		{
+			ravenDbServer.Dispose();
+			ravenDbServer =  new RavenDbServer(settings);
 		}
 
 		protected void Close()

@@ -58,7 +58,7 @@ namespace Raven.Studio.Features.Query
 			var url = ApplicationModel.Current.Server.Value.Url;
 			if (url.EndsWith("/") == false)
 				url += "/";
-			if (model.Database.Value.Name != Constants.DefaultDatabase)
+			if (model.Database.Value.Name != Constants.SystemDatabase)
 				url += "databases/" + model.Database.Value.Name;
 			model.FullQueryUrl = templateQuery.GetIndexQueryUrl(url, model.IndexName, "indexes");
 		    model.CollectionSource.UpdateQuery(model.IndexName, templateQuery);  

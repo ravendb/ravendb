@@ -147,7 +147,6 @@ namespace Raven.Database.Server.Responders
 		private void GetIndexQueryRessult(IHttpContext context, string index)
 		{
 			Guid indexEtag;
-
 			var queryResult = ExecuteQuery(context, index, out indexEtag);
 
 			if (queryResult == null)
@@ -206,7 +205,6 @@ namespace Raven.Database.Server.Responders
 		private QueryResultWithIncludes ExecuteQuery(IHttpContext context, string index, out Guid indexEtag)
 		{
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
-
 			RewriteDateQueriesFromOldClients(context,indexQuery);
 
 			var sp = Stopwatch.StartNew();

@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Net;
 using System.Reactive;
+using System.Reactive.Concurrency;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Windows;
@@ -49,8 +52,24 @@ namespace Raven.Studio.Extensions
                 h => (sender, e) => h(sender, e),
                 h => source.PropertyChanged += h,
                 h => source.PropertyChanged -= h);
+        }
+
+        public static IObservable<EventPattern<NotifyCollectionChangedEventArgs>> ObserveCollectionChanged(this INotifyCollectionChanged source)
+        {
+            return Observable.FromEventPattern<NotifyCollectionChangedEventHandler, NotifyCollectionChangedEventArgs>(
+                h => (sender, e) => h(sender, e),
+                h => source.CollectionChanged += h,
+                h => source.CollectionChanged -= h);
         } 
 
+        /// <summary>
+        /// Samples an event stream such that the very first event is reported, but then no further events
+        /// are reported until a Timespan of delay has elapsed, at which point the most recent event will be reported. And so on.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="delay"></param>
+        /// <returns></returns>
         public static IObservable<T> SampleResponsive<T>(this IObservable<T> source, TimeSpan delay)
         {
             // code from http://stackoverflow.com/questions/3211134/how-to-throttle-event-stream-using-rx/3224723#3224723
@@ -85,6 +104,61 @@ namespace Raven.Studio.Extensions
                     .Do(t => { l = t.x.Item2; r = t.y.Item2; }) // record the index of the last item yielded from each sequence
                     .Select(t => selector(t.x.Item1, t.y.Item1));
             });
+        }
+
+        /// <summary>
+        /// Only connects to source when subscribed to, and disconnects when there are no subscribers, allowing a delay to ensure
+        /// no one else subscribes in the meantime
+        /// </summary>
+        /// <typeparam name="TSource"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="cleanupDelay"></param>
+        /// <returns></returns>
+        public static IObservable<TSource> DelayedCleanupRefCount<TSource>(this IConnectableObservable<TSource> source, TimeSpan cleanupDelay)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+            object gate = new object();
+            int count = 0;
+            IDisposable connectableSubscription = null;
+            return Observable.Create(((Func<IObserver<TSource>, IDisposable>)(observer =>
+            {
+                bool isFirst = false;
+                lock (gate)
+                {
+                    ++count;
+                    isFirst = count == 1;
+                }
+                IDisposable subscription = source.Subscribe(observer);
+                if (isFirst)
+                    connectableSubscription = source.Connect();
+
+                return Disposable.Create((Action)(() =>
+                {
+                    bool isLast = false;
+                    subscription.Dispose();
+                    lock (gate)
+                    {
+                        --count;
+                        isLast = count == 0;
+                    }
+
+                    if (isLast)
+                    {
+                        Scheduler.ThreadPool.Schedule(cleanupDelay, () =>
+                        {
+                            lock (gate)
+                            {
+                                // only dispose the connectable subscription if no one else has subscribed in the meantime
+                                if (count == 0)
+                                {
+                                    connectableSubscription.Dispose();
+                                }
+                            }
+                        });
+                    }
+                }));
+            })));
         }
     }
 }

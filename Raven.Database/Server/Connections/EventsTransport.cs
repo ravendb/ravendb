@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 using Raven.Database.Server.Abstractions;
@@ -15,6 +16,22 @@ namespace Raven.Database.Server.Connections
 {
 	public class EventsTransport
 	{
+		private static readonly Timer heartbeat;
+
+		static EventsTransport()
+		{
+			heartbeat = new Timer(RaiseHeartbeat);
+			heartbeat.Change(TimeSpan.Zero, TimeSpan.FromSeconds(5));
+		}
+
+		private static event Action OnHeartbeat;
+		private static void RaiseHeartbeat(object state)
+		{
+			var onOnHeartbeat = OnHeartbeat;
+			if (onOnHeartbeat != null)
+				onOnHeartbeat();
+		}
+
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		private readonly IHttpContext context;
@@ -37,8 +54,15 @@ namespace Raven.Database.Server.Connections
 		{
 			context.Response.ContentType = "text/event-stream";
 
-			return context.Response.WriteAsync("data: {'Type': 'InitializingConnection'}\r\n\r\n")
-				.ContinueWith(DisconnectOnError);
+			OnHeartbeat += Heartbeat;
+
+			return SendAsync(new {Type = "Initialized"});
+			
+		}
+
+		private void Heartbeat()
+		{
+			SendAsync(new { Type = "Heartbeat" });
 		}
 
 		public Task SendAsync(object data)
@@ -57,7 +81,7 @@ namespace Raven.Database.Server.Connections
 					.Append("\r\n");
 			}
 
-			return context.Response.WriteAsync(sb.ToString())
+			return context.Response.WriteAsync(s)
 				.ContinueWith(DisconnectOnError);
 		}
 
@@ -67,10 +91,10 @@ namespace Raven.Database.Server.Connections
 			                  	{
 			                  		if (task.IsFaulted == false) 
 										return;
+									log.DebugException("Error when using events transport", task.Exception);
+									
 			                  		Connected = false;
 			                  		Disconnected();
-			                  		log.DebugException("Error when using events transport", task.Exception);
-
 			                  		try
 			                  		{
 										context.FinalizeResonse();
@@ -84,6 +108,7 @@ namespace Raven.Database.Server.Connections
 
 		public void Disconnect()
 		{
+			OnHeartbeat -= Heartbeat;
 			Connected = false;
 			Disconnected();
 			context.FinalizeResonse();

@@ -12,21 +12,11 @@ namespace Raven.Studio.Features.Documents
     {
         public DocumentsCollectionSource()
         {
-            ApplicationModel.Database.ObservePropertyChanged()
-                .SubscribeWeakly(this, (source, args) => source.Refresh(RefreshMode.ClearStaleData));
         }
 
         protected override Task<int> GetCount()
         {
-            if (ApplicationModel.Database.Value != null
-                && ApplicationModel.Database.Value.Statistics.Value != null)
-            {
-                return TaskEx.FromResult((int) ApplicationModel.Database.Value.Statistics.Value.CountOfDocuments);
-            }
-            else
-            {
-                return TaskEx.FromResult(0);
-            }
+            return ApplicationModel.DatabaseCommands.GetStatisticsAsync().ContinueWith(t => (int)t.Result.CountOfDocuments);
         }
 
         protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)

@@ -49,6 +49,14 @@ namespace Raven.Database.Server.Responders
 			{
 				connectionState.UnwatchIndex(name);
 			}
+            else if (Match(cmd, "watch-indexes"))
+            {
+                connectionState.WatchAllIndexes();
+            }
+            else if (Match(cmd, "unwatch-indexes"))
+            {
+                connectionState.UnwatchAllIndexes();
+            }
 			else if (Match(cmd, "watch-doc"))
 			{
 				connectionState.WatchDocument(name);

@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.SignalR;
+using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
@@ -1176,7 +1177,7 @@ namespace Raven.Database
 
 		}
 
-		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, int start, int pageSize)
+		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, int start, int pageSize)
 		{
 			if (idPrefix == null)
 				throw new ArgumentNullException("idPrefix");
@@ -1188,6 +1189,8 @@ namespace Raven.Database
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 				foreach (var doc in documents)
 				{
+					if(WildcardMatcher.Matches(matches, doc.Key.Substring(idPrefix.Length)) == false)
+						continue;
 					DocumentRetriever.EnsureIdInMetadata(doc);
 					var document = documentRetriever
 						.ExecuteReadTriggers(doc, null, ReadOperation.Load);

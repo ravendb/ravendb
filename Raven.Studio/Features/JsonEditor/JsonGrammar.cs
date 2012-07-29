@@ -70,8 +70,8 @@ namespace Raven.Studio.Features.JsonEditor
                                      .AddToCollectionProperty(a => a.Values, AstFrom("value1"),
                                                               AstChildrenFrom("values"));
 
-            stringValue.Production = @startString + (@stringCharacters | @escapedCharacter | @escapedUnicode).ZeroOrMore().SetLabel("characters") + @endString.OnErrorContinue()
-                > Ast<JsonStringNode>().SetProperty(a => a.Value, AstChildrenFrom("characters"));
+            stringValue.Production = @startString + (@stringCharacters["value"] > AstFrom("value") | @escapedCharacter["value"] > AstFrom("value") | @escapedUnicode["value"] > AstFrom("value")).ZeroOrMore().SetLabel("characters") + @endString.OnErrorContinue()
+                > Ast<JsonStringNode>().SetProperty(a => a.Text, AstChildrenFrom("characters"));
 
             this.Root = jsonObject;
         }

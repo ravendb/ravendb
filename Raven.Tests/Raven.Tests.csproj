@@ -676,6 +676,7 @@
     <Compile Include="MailingList\StartsWith.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
     <Compile Include="MailingList\Stockholm.cs" />
+    <Compile Include="MailingList\Vicente.cs" />
     <Compile Include="Patching\AdvancedPatching.cs" />
     <Compile Include="MailingList\Tony.cs" />
     <Compile Include="MailingList\Troy.cs" />
@@ -923,6 +924,7 @@
     <Compile Include="Util\RavenDBDriver.cs" />
     <Compile Include="Util\ReflectionUtilTest.cs" />
     <Compile Include="Util\RunExternalProcess.cs" />
+    <Compile Include="Util\WildcardMatching.cs" />
     <Compile Include="Views\MapReduce.cs" />
     <Compile Include="Views\MapReduce_IndependentSteps.cs" />
     <Compile Include="Views\ViewCompilation.cs" />
