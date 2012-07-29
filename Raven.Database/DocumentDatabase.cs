@@ -1190,7 +1190,7 @@ namespace Raven.Database
 				var documentRetriever = new DocumentRetriever(actions, ReadTriggers);
 				foreach (var doc in documents)
 				{
-					if(WildcardMatcher.Matches(matches, doc.Key.Substring(idPrefix.Length)) == false)
+					if (WildcardMatcher.Matches(matches, doc.Key.Substring(idPrefix.Length)) == false)
 						continue;
 					DocumentRetriever.EnsureIdInMetadata(doc);
 					var document = documentRetriever
