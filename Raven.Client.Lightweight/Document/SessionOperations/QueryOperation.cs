@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -58,8 +59,20 @@ namespace Raven.Client.Document.SessionOperations
 			this.sessionOperations = sessionOperations;
 			this.indexName = indexName;
 
-
+			AssertNotQueryById();
 			AddOperationHeaders();
+		}
+
+		private static readonly Regex idOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $", 
+			RegexOptions.Compiled|RegexOptions.IgnorePatternWhitespace);
+		private void AssertNotQueryById()
+		{
+			var match = idOnly.Match(IndexQuery.Query);
+			if (match.Success == false)
+				return;
+			var value = match.Groups[1].Value;
+			throw new InvalidOperationException(
+				"Attempt to query by id only is blocked, you should use call session.Load(\"" + value + "\"); instead of session.Query().Where(x=>x.Id == \"" + value + "\");");
 		}
 
 		private void StartTiming()
