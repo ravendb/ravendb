@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security;
 using System.Threading;
 using NLog;
 using Raven.Abstractions;
@@ -178,9 +179,32 @@ namespace Raven.Database.Indexing
 
 		public Action<IndexChangeNotification> RaiseIndexChangeNotification { get; set; }
 
-		public PerformanceCounter DocsPerSecCounter { get; set; }
-		public PerformanceCounter IndexedPerSecCounter { get; set; }
-		public PerformanceCounter ReducedPerSecCounter { get; set; }
+		private PerformanceCounter DocsPerSecCounter { get; set; }
+		private PerformanceCounter IndexedPerSecCounter { get; set; }
+		private PerformanceCounter ReducedPerSecCounter { get; set; }
+	    private bool useCounters = true;
+
+        public void DocsPerSecIncreaseBy(int numOfDocs)
+        {
+            if(useCounters)
+            {
+                DocsPerSecCounter.IncrementBy(numOfDocs);
+            }
+        }
+        public void IndexedPerSecIncreaseBy(int numOfDocs)
+        {
+            if (useCounters)
+            {
+                IndexedPerSecCounter.IncrementBy(numOfDocs);
+            }
+        }
+        public void ReducedPerSecIncreaseBy(int numOfDocs)
+        {
+            if (useCounters)
+            {
+                ReducedPerSecCounter.IncrementBy(numOfDocs);
+            }
+        }
 
 		public void InitPreformanceCounters(string name)
 		{
@@ -215,10 +239,11 @@ namespace Raven.Database.Indexing
 		{
 			if (string.IsNullOrWhiteSpace(name))
 				name = "System";
-			if (PerformanceCounterCategory.Exists("RavenDB-" + name))
-				return;
 
-			var counters = new CounterCreationDataCollection();
+                if (PerformanceCounterCategory.Exists("RavenDB-" + name))
+                    return;
+
+		    var counters = new CounterCreationDataCollection();
 
 			// 1. counter for counting operations per second:
 			//        PerformanceCounterType.RateOfCountsPerSecond32
@@ -245,8 +270,15 @@ namespace Raven.Database.Indexing
 			counters.Add(reducesPerSecond);
 
 			// create new category with the counters above
-			PerformanceCounterCategory.Create("RavenDB-" + name,
-											  "RevenDB category",PerformanceCounterCategoryType.Unknown, counters);
+            try
+            {
+                PerformanceCounterCategory.Create("RavenDB-" + name,
+                                                  "RevenDB category", PerformanceCounterCategoryType.Unknown, counters);
+            }
+            catch(SecurityException e)
+            {
+                useCounters = false;
+            }
 		}
 	}
 }

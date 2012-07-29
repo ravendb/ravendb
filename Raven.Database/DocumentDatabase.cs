@@ -500,7 +500,7 @@ namespace Raven.Database
 
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			workContext.DocsPerSecCounter.Increment();
+			workContext.DocsPerSecIncreaseBy(1);
 			if (string.IsNullOrWhiteSpace(key))
 			{
 				// we no longer sort by the key, so it doesn't matter
