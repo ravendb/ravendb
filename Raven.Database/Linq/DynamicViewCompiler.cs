@@ -232,6 +232,8 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 				translatorDeclaration = QueryParsingUtils.GetVariableDeclarationForLinqMethods(indexDefinition.TransformResults,requiresSelectNewAnonymousType: false);
 			}
 
+			translatorDeclaration.AcceptVisitor(new ThrowOnInvalidMethodCallsForTransformResults(), null);
+
 
 			// this.Translator = (Database,results) => from doc in results ...;
 			ctor.Body.AddChild(new ExpressionStatement(
