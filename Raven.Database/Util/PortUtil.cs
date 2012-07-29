@@ -19,40 +19,14 @@ namespace Raven.Database.Util
 		{
 			if (portStr == "*" || string.IsNullOrWhiteSpace(portStr))
 			{
-				if (File.Exists(AppDomain.CurrentDomain.BaseDirectory + "local.config"))
-				{
-					var doc = new XmlDocument();
-					doc.Load(AppDomain.CurrentDomain.BaseDirectory + "local.config");
-					if (doc.DocumentElement != null)
-					{
-						var stringPort = doc.DocumentElement.GetAttribute("Port");
-						int localPort;
+				int autoPort;
 
-						if (int.TryParse(stringPort, out localPort))
-						{
-							return localPort;
-						}
-					}
-				}
-				var autoPort = FindPort();
-				try
-				{
-					var localConfig = File.OpenWrite(AppDomain.CurrentDomain.BaseDirectory + "local.config");
-					var writer = XmlWriter.Create(localConfig, new XmlWriterSettings
-					{
-						Indent = true,
-						Encoding = Encoding.UTF8
-					});
-					writer.WriteStartElement("LocalConfig");
-					writer.WriteAttributeString("Port", autoPort.ToString(CultureInfo.InvariantCulture));
-					writer.WriteEndElement();
-					writer.Close();
-					localConfig.Dispose();
-				}
-				catch
-				{
-					logger.Info("Could not store selected port, next time the port could change");
-				}
+				if (TryReadPreviouslySelectAutoPort(out autoPort))
+					return autoPort;
+
+				autoPort = FindPort();
+				TrySaveAutoPortForNextTime(autoPort);
+
 				if (autoPort != DefaultPort)
 				{
 					logger.Info("Default port {0} was not available, so using available port {1}", DefaultPort, autoPort);
@@ -65,6 +39,51 @@ namespace Raven.Database.Util
 				return DefaultPort;
 
 			return port;
+		}
+
+		private static void TrySaveAutoPortForNextTime(int autoPort)
+		{
+			try
+			{
+				using (var localConfig = File.Create(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "local.config")))
+				using (var writer = XmlWriter.Create(localConfig, new XmlWriterSettings
+				{
+					Indent = true,
+					Encoding = Encoding.UTF8
+				}))
+				{
+					writer.WriteStartElement("LocalConfig");
+					writer.WriteAttributeString("Port", autoPort.ToString(CultureInfo.InvariantCulture));
+					writer.WriteEndElement();
+				}
+			}
+			catch (Exception e)
+			{
+				logger.InfoException("Could not store selected port to local config, next time the port could change", e);
+			}
+		}
+
+		private static bool TryReadPreviouslySelectAutoPort(out int i)
+		{
+			i = 0;
+			string localConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "local.config");
+			if (File.Exists(localConfigPath) == false)
+			{
+				return false;
+			}
+			var doc = new XmlDocument();
+			doc.Load(localConfigPath);
+			if (doc.DocumentElement == null)
+				return false;
+
+			var stringPort = doc.DocumentElement.GetAttribute("Port");
+			int localPort;
+
+			if (!int.TryParse(stringPort, out localPort))
+				return false;
+			
+			i = localPort;
+			return true;
 		}
 
 		private static int FindPort()
