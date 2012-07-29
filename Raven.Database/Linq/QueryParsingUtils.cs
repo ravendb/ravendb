@@ -262,7 +262,7 @@ namespace Raven.Database.Linq
 			var compilerParameters = new CompilerParameters
 			{
 				GenerateExecutable = false,
-				GenerateInMemory = false, // we have to have the physical file on disk to read it for cecil 
+				GenerateInMemory = true, 
 				IncludeDebugInformation = false
 			};
 			if (basePath != null)

@@ -138,6 +138,7 @@
     <Compile Include="UniqueConstraints\UniqueConstraintsTest.cs" />
     <Compile Include="UniqueConstraints\UpdateTests.cs" />
     <Compile Include="Versioning\Bugs\MultipleVersions.cs" />
+    <Compile Include="Versioning\Bugs\RavenDB_438.cs" />
     <Compile Include="Versioning\Bugs\VersioningWithGuidIds.cs" />
     <Compile Include="Versioning\Versioning.cs" />
     <Compile Include="Versioning\VersioningTest.cs" />
