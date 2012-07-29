@@ -112,7 +112,11 @@ namespace Raven.Database.Indexing
 			lock (waitForWork)
 			{
 				if (doWork == false)
+				{
+					// need to clear this anyway
+					shouldNotifyOnWork.Value.Clear();
 					return;
+				}
 				var increment = Interlocked.Increment(ref workCounter);
 				if (log.IsDebugEnabled)
 				{
