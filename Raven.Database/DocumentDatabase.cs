@@ -177,8 +177,8 @@ namespace Raven.Database
 				TransportState = new TransportState();
 
 				// Index codecs must be initialized before we try to read an index
-				InitializeTriggers();
-
+				InitializeIndexCodecTriggers();
+				
 				IndexDefinitionStorage = new IndexDefinitionStorage(
 					configuration,
 					TransactionalStorage,
@@ -187,12 +187,9 @@ namespace Raven.Database
 					Extensions);
 				IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
 
-				workContext.Configuration = configuration;
-				workContext.IndexStorage = IndexStorage;
-				workContext.TransactionaStorage = TransactionalStorage;
-				workContext.IndexDefinitionStorage = IndexDefinitionStorage;
+				CompleteWorkContextSetup(configuration);
 
-				workContext.Init(Name);
+				InitializeTriggersExceptIndexCodecs();
 
 				ExecuteStartupTasks();
 			}
@@ -203,17 +200,23 @@ namespace Raven.Database
 			}
 		}
 
+		private void CompleteWorkContextSetup(InMemoryRavenConfiguration configuration)
+		{
+			workContext.Configuration = configuration;
+			workContext.IndexStorage = IndexStorage;
+			workContext.TransactionaStorage = TransactionalStorage;
+			workContext.IndexDefinitionStorage = IndexDefinitionStorage;
+
+			workContext.Init(Name);
+		}
+
 		private void DomainUnloadOrProcessExit(object sender, EventArgs eventArgs)
 		{
 			Dispose();
 		}
 
-		private void InitializeTriggers()
+		private void InitializeTriggersExceptIndexCodecs()
 		{
-			IndexCodecs
-				.Init(disableAllTriggers)
-				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
-
 			DocumentCodecs
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
@@ -247,6 +250,13 @@ namespace Raven.Database
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 
 			IndexUpdateTriggers
+				.Init(disableAllTriggers)
+				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
+		}
+
+		private void InitializeIndexCodecTriggers()
+		{
+			IndexCodecs
 				.Init(disableAllTriggers)
 				.OfType<IRequiresDocumentDatabaseInitialization>().Apply(initialization => initialization.Initialize(this));
 		}
