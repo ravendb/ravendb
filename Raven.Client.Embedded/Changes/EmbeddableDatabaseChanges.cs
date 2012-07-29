@@ -26,7 +26,7 @@ namespace Raven.Client.Embedded.Changes
 
 		public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
 		{
-			return new FilteringObservableWithTask<IndexChangeNotification>(indexesObservable, 
+			return new FilteringObservableWithTask<IndexChangeNotification>(indexesObservable,
 				notification => string.Equals(indexName, notification.Name, StringComparison.InvariantCultureIgnoreCase));
 		}
 
@@ -36,15 +36,15 @@ namespace Raven.Client.Embedded.Changes
 				notification => true);
 		}
 
-        public IObservableWithTask<IndexChangeNotification> ForAllIndexes()
-	    {
-            return new FilteringObservableWithTask<IndexChangeNotification>(indexesObservable,
-                notification => true);
-	    }
-
-	    public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
+		public IObservableWithTask<IndexChangeNotification> ForAllIndexes()
 		{
-			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable, 
+			return new FilteringObservableWithTask<IndexChangeNotification>(indexesObservable,
+				notification => true);
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocument(string docId)
+		{
+			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
 				notification => string.Equals(docId, notification.Name, StringComparison.InvariantCultureIgnoreCase));
 		}
 

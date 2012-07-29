@@ -29,7 +29,7 @@ namespace Raven.Database.Server.Connections
 		{
 			this.eventsTransport = eventsTransport;
 		}
-		
+
 		public void WatchIndex(string name)
 		{
 			matchingIndexes.TryAdd(name);
@@ -40,15 +40,15 @@ namespace Raven.Database.Server.Connections
 			matchingIndexes.TryRemove(name);
 		}
 
-        public void WatchAllIndexes()
-        {
-            Interlocked.Increment(ref watchAllIndexes);
-        }
+		public void WatchAllIndexes()
+		{
+			Interlocked.Increment(ref watchAllIndexes);
+		}
 
-        public void UnwatchAllIndexes()
-        {
-            Interlocked.Decrement(ref watchAllIndexes);
-        }
+		public void UnwatchAllIndexes()
+		{
+			Interlocked.Decrement(ref watchAllIndexes);
+		}
 
 		public void Send(DocumentChangeNotification documentChangeNotification)
 		{
@@ -59,7 +59,7 @@ namespace Raven.Database.Server.Connections
 				return;
 			}
 
-			if(matchingDocuments.Contains(documentChangeNotification.Name))
+			if (matchingDocuments.Contains(documentChangeNotification.Name))
 			{
 				Enqueue(value);
 				return;
@@ -74,18 +74,18 @@ namespace Raven.Database.Server.Connections
 
 		public void Send(IndexChangeNotification indexChangeNotification)
 		{
-            var value = new { Value = indexChangeNotification, Type = "IndexChangeNotification" };
+			var value = new { Value = indexChangeNotification, Type = "IndexChangeNotification" };
 
-            if (watchAllIndexes > 0)
-            {
-                Enqueue(value);
-                return;
-            }
+			if (watchAllIndexes > 0)
+			{
+				Enqueue(value);
+				return;
+			}
 
 			if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
 				return;
 
-		    Enqueue(value);
+			Enqueue(value);
 		}
 
 		private void Enqueue(object msg)
@@ -98,11 +98,11 @@ namespace Raven.Database.Server.Connections
 
 			eventsTransport.SendAsync(msg)
 				.ContinueWith(task =>
-				              	{
-				              		if (task.IsFaulted == false)
-				              			return;
-				              		pendingMessages.Enqueue(msg);
-				              	});
+								{
+									if (task.IsFaulted == false)
+										return;
+									pendingMessages.Enqueue(msg);
+								});
 		}
 
 		public void WatchAllDocuments()
@@ -147,14 +147,14 @@ namespace Raven.Database.Server.Connections
 
 			eventsTransport.SendManyAsync(items)
 				.ContinueWith(task =>
-				              	{
-				              		if (task.IsFaulted == false)
-				              			return;
-				              		foreach (var item in items)
-				              		{
-				              			pendingMessages.Enqueue(item);
-				              		}
-				              	});
+								{
+									if (task.IsFaulted == false)
+										return;
+									foreach (var item in items)
+									{
+										pendingMessages.Enqueue(item);
+									}
+								});
 		}
 
 		public void Disconnect()

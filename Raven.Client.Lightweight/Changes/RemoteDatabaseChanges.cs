@@ -36,7 +36,7 @@ namespace Raven.Client.Changes
 		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions)
 		{
 			id = Interlocked.Increment(ref connectionCounter) + "/" +
-			     Base62Util.Base62Random();
+				 Base62Util.Base62Random();
 			this.url = url;
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
@@ -47,26 +47,26 @@ namespace Raven.Client.Changes
 
 		private Task EstablishConnection()
 		{
-			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id="+id, "GET", credentials, conventions)
-			                    	{
-			                    		AvoidCachingRequest = true
-			                    	};
+			var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
+									{
+										AvoidCachingRequest = true
+									};
 			return jsonRequestFactory.CreateHttpJsonRequest(requestParams)
 				.ServerPullAsync()
 				.ContinueWith(task =>
-				              	{
-				              		if (task.IsFaulted && reconnectAttemptsRemaining > 0)
-				              		{
-				              			logger.WarnException("Could not connect to server, will retry", task.Exception);
+								{
+									if (task.IsFaulted && reconnectAttemptsRemaining > 0)
+									{
+										logger.WarnException("Could not connect to server, will retry", task.Exception);
 
-				              			reconnectAttemptsRemaining--;
-				              			return EstablishConnection();
-				              		}
-				              		reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
-				              		connection = (IDisposable)task.Result;
-				              		task.Result.Subscribe(this);
-				              		return task;
-				              	})
+										reconnectAttemptsRemaining--;
+										return EstablishConnection();
+									}
+									reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
+									connection = (IDisposable)task.Result;
+									task.Result.Subscribe(this);
+									return task;
+								})
 				.Unwrap();
 		}
 
@@ -84,22 +84,22 @@ namespace Raven.Client.Changes
 
 		public IObservableWithTask<IndexChangeNotification> ForIndex(string indexName)
 		{
-			var counter = counters.GetOrAdd("indexes/"+indexName, s =>
+			var counter = counters.GetOrAdd("indexes/" + indexName, s =>
 			{
 				var indexSubscriptionTask = AfterConnection(() =>
 					Send("watch-index", indexName));
 
 				return new LocalConnectionState(
 					() =>
-						{
-							Send("unwatch-index",indexName);
-							counters.Remove("indexes/" + indexName);
-						},
+					{
+						Send("unwatch-index", indexName);
+						counters.Remove("indexes/" + indexName);
+					},
 					indexSubscriptionTask);
 			});
 			counter.Inc();
 			var taskedObservable = new TaskedObservable<IndexChangeNotification>(
-				counter, 
+				counter,
 				notification => string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase));
 
 			counter.OnIndexChangeNotification += taskedObservable.Send;
@@ -109,17 +109,17 @@ namespace Raven.Client.Changes
 			{
 				if (task.IsFaulted)
 					return null;
-				return (IDisposable) new DisposableAction(() =>
-				                                          	{
-				                                          		try
-				                                          		{
-				                                          			connection.Dispose();
-				                                          		}
-				                                          		catch (Exception)
-				                                          		{
-				                                          			// nothing to do here
-				                                          		}
-				                                          	});
+				return (IDisposable)new DisposableAction(() =>
+															{
+																try
+																{
+																	connection.Dispose();
+																}
+																catch (Exception)
+																{
+																	// nothing to do here
+																}
+															});
 			});
 
 			counter.Add(disposableTask);
@@ -150,21 +150,21 @@ namespace Raven.Client.Changes
 			var counter = counters.GetOrAdd("docs/" + docId, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
-						Send("watch-doc", docId ));
+						Send("watch-doc", docId));
 				return new LocalConnectionState(
 					() =>
-						{
-							Send("unwatch-doc", docId);
-							counters.Remove("docs/" + docId);
-						},
+					{
+						Send("unwatch-doc", docId);
+						counters.Remove("docs/" + docId);
+					},
 					documentSubscriptionTask);
 			});
 			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
-				counter, 
+				counter,
 				notification => string.Equals(notification.Name, docId, StringComparison.InvariantCultureIgnoreCase));
 
 			counter.OnDocumentChangeNotification += taskedObservable.Send;
-			
+
 			var disposableTask = counter.Task.ContinueWith(task =>
 			{
 				if (task.IsFaulted)
@@ -205,37 +205,37 @@ namespace Raven.Client.Changes
 			return taskedObservable;
 		}
 
-        public IObservableWithTask<IndexChangeNotification> ForAllIndexes()
-	    {
-            var counter = counters.GetOrAdd("all-indexes", s =>
-            {
-                var indexSubscriptionTask = AfterConnection(() =>
-                        Send("watch-indexes", null));
-                return new LocalConnectionState(
-                    () =>
-                    {
-                        Send("unwatch-indexes", null);
-                        counters.Remove("all-indexes");
-                    },
-                    indexSubscriptionTask);
-            });
-            var taskedObservable = new TaskedObservable<IndexChangeNotification>(
-                counter,
-                notification => true);
+		public IObservableWithTask<IndexChangeNotification> ForAllIndexes()
+		{
+			var counter = counters.GetOrAdd("all-indexes", s =>
+			{
+				var indexSubscriptionTask = AfterConnection(() =>
+						Send("watch-indexes", null));
+				return new LocalConnectionState(
+					() =>
+					{
+						Send("unwatch-indexes", null);
+						counters.Remove("all-indexes");
+					},
+					indexSubscriptionTask);
+			});
+			var taskedObservable = new TaskedObservable<IndexChangeNotification>(
+				counter,
+				notification => true);
 
-            counter.OnIndexChangeNotification += taskedObservable.Send;
+			counter.OnIndexChangeNotification += taskedObservable.Send;
 
-            var disposableTask = counter.Task.ContinueWith(task =>
-            {
-                if (task.IsFaulted)
-                    return null;
-                return (IDisposable)new DisposableAction(() => connection.Dispose());
-            });
-            counter.Add(disposableTask);
-            return taskedObservable;
-	    }
+			var disposableTask = counter.Task.ContinueWith(task =>
+			{
+				if (task.IsFaulted)
+					return null;
+				return (IDisposable)new DisposableAction(() => connection.Dispose());
+			});
+			counter.Add(disposableTask);
+			return taskedObservable;
+		}
 
-	    public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix)
 		{
 			var counter = counters.GetOrAdd("prefixes/" + docIdPrefix, s =>
 			{
@@ -244,7 +244,7 @@ namespace Raven.Client.Changes
 				return new LocalConnectionState(
 					() =>
 					{
-						Send("unwatch-prefix", docIdPrefix );
+						Send("unwatch-prefix", docIdPrefix);
 						counters.Remove("prefixes/" + docIdPrefix);
 					},
 					documentSubscriptionTask);
@@ -289,19 +289,19 @@ namespace Raven.Client.Changes
 			{
 				return new CompletedTask();
 			}
-			
+
 			return Send("disconnect", null).
 				ContinueWith(_ =>
-				             	{
-				             		try
-				             		{
-				             			connection.Dispose();
-				             		}
-				             		catch (Exception e)
-				             		{
-				             			logger.WarnException("Error when disposing of connection", e);
-				             		}
-				             	});
+								{
+									try
+									{
+										connection.Dispose();
+									}
+									catch (Exception e)
+									{
+										logger.WarnException("Error when disposing of connection", e);
+									}
+								});
 		}
 
 		public void OnNext(string dataFromConnection)
@@ -337,16 +337,16 @@ namespace Raven.Client.Changes
 			EstablishConnection()
 				.ObserveException()
 				.ContinueWith(task =>
-				              	{
+								{
 									if (task.IsFaulted == false)
 										return;
 
-				              		foreach (var keyValuePair in counters)
-				              		{
-				              			keyValuePair.Value.Error(task.Exception);
-				              		}
-				              		counters.Clear();
-				              	});
+									foreach (var keyValuePair in counters)
+									{
+										keyValuePair.Value.Error(task.Exception);
+									}
+									counters.Clear();
+								});
 		}
 
 		public void OnCompleted()

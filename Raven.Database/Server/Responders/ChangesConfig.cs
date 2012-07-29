@@ -15,22 +15,22 @@ namespace Raven.Database.Server.Responders
 		{
 			get { return "^/changes/config$"; }
 		}
-		
+
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET"}; }
+			get { return new[] { "GET" }; }
 		}
 
 		public override void Respond(IHttpContext context)
 		{
 			var id = context.Request.QueryString["id"];
-			if(string.IsNullOrEmpty(id))
+			if (string.IsNullOrEmpty(id))
 			{
 				context.SetStatusToBadRequest();
 				context.WriteJson(new
-				                  	{
-				                  		Error = "id query string parameter is mandatory when using changes/config endpoint"
-				                  	});
+									{
+										Error = "id query string parameter is mandatory when using changes/config endpoint"
+									});
 				return;
 			}
 
@@ -49,14 +49,14 @@ namespace Raven.Database.Server.Responders
 			{
 				connectionState.UnwatchIndex(name);
 			}
-            else if (Match(cmd, "watch-indexes"))
-            {
-                connectionState.WatchAllIndexes();
-            }
-            else if (Match(cmd, "unwatch-indexes"))
-            {
-                connectionState.UnwatchAllIndexes();
-            }
+			else if (Match(cmd, "watch-indexes"))
+			{
+				connectionState.WatchAllIndexes();
+			}
+			else if (Match(cmd, "unwatch-indexes"))
+			{
+				connectionState.UnwatchAllIndexes();
+			}
 			else if (Match(cmd, "watch-doc"))
 			{
 				connectionState.WatchDocument(name);
