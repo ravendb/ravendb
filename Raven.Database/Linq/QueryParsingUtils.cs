@@ -19,15 +19,12 @@ using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Lucene.Net.Documents;
 using Microsoft.CSharp;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
-using Instruction = Mono.Reflection.Instruction;
 
 namespace Raven.Database.Linq
 {
