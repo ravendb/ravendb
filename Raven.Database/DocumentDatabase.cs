@@ -59,7 +59,7 @@ namespace Raven.Database
 
 		[ImportMany]
 		public OrderedPartCollection<AbstractIndexQueryTrigger> IndexQueryTriggers { get; set; }
-		
+
 		[ImportMany]
 		public OrderedPartCollection<AbstractAttachmentDeleteTrigger> AttachmentDeleteTriggers { get; set; }
 
@@ -144,7 +144,7 @@ namespace Raven.Database
 
 			ExtensionsState = new ConcurrentDictionary<object, object>();
 			Configuration = configuration;
-			
+
 			ExecuteAlterConfiguration();
 
 			configuration.Container.SatisfyImportsOnce(this);
@@ -158,7 +158,7 @@ namespace Raven.Database
 
 			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
 
-			
+
 			try
 			{
 				TransactionalStorage.Initialize(this, DocumentCodecs);
@@ -321,7 +321,7 @@ namespace Raven.Database
 				return result;
 			}
 		}
-		
+
 		public InMemoryRavenConfiguration Configuration
 		{
 			get;
@@ -335,8 +335,6 @@ namespace Raven.Database
 		public IndexStorage IndexStorage { get; private set; }
 
 		public event EventHandler Disposing;
-
-		
 
 		public void Dispose()
 		{
@@ -356,9 +354,9 @@ namespace Raven.Database
 				disposed = true;
 
 				if (workContext != null)
-				workContext.StopWork();
+					workContext.StopWork();
 			});
-			
+
 			exceptionAggregator.Execute(() =>
 			{
 				if (ExtensionsState == null)
@@ -369,7 +367,7 @@ namespace Raven.Database
 					exceptionAggregator.Execute(value.Dispose);
 				}
 			});
-			
+
 			exceptionAggregator.Execute(() =>
 			{
 				foreach (var shouldDispose in toDispose)
@@ -433,6 +431,8 @@ namespace Raven.Database
 			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+			workContext.SetupPreformanceCounter(Name);
+			workContext.InitPreformanceCounters(Name);
 		}
 
 		public void RaiseNotifications(DocumentChangeNotification obj)
@@ -501,6 +501,7 @@ namespace Raven.Database
 
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
+			workContext.DocsPerSecIncreaseBy(1);
 			if (string.IsNullOrWhiteSpace(key))
 			{
 				// we no longer sort by the key, so it doesn't matter
@@ -525,11 +526,11 @@ namespace Raven.Database
 					if (transactionInformation == null)
 					{
 						AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
-						
+
 						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, transactionInformation));
-						
+
 						newEtag = actions.Documents.AddDocument(key, etag, document, metadata);
-						
+
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, transactionInformation));
 					}
 					else
@@ -634,7 +635,7 @@ namespace Raven.Database
 			if (key == null)
 				throw new ArgumentNullException("key");
 			key = key.Trim();
-			
+
 			var deleted = false;
 			log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
 			RavenJObject metadataVar = null;
@@ -741,7 +742,7 @@ namespace Raven.Database
 		private void TryCompletePromotedTransaction(Guid txId)
 		{
 			CommittableTransaction transaction;
-			if (!promotedTransactions.TryRemove(txId, out transaction)) 
+			if (!promotedTransactions.TryRemove(txId, out transaction))
 				return;
 			System.Threading.Tasks.Task.Factory.FromAsync(transaction.BeginCommit, transaction.EndCommit, null)
 				.ContinueWith(task =>
@@ -798,7 +799,7 @@ namespace Raven.Database
 			if (name == null)
 				throw new ArgumentNullException("name");
 			name = name.Trim();
-			
+
 			switch (FindIndexCreationOptions(definition, ref name))
 			{
 				case IndexCreationOptions.Noop:
@@ -814,7 +815,7 @@ namespace Raven.Database
 			// before the rest of the world is notified about this.
 			IndexDefinitionStorage.CreateAndPersistIndex(definition);
 			IndexStorage.CreateIndexImplementation(definition);
-			
+
 			TransactionalStorage.Batch(actions =>
 			{
 				actions.Indexing.AddIndex(name, definition.IsMapReduce);
@@ -825,7 +826,7 @@ namespace Raven.Database
 			// we have to do it in this way so first we prepare all the elements of the 
 			// index, then we add it to the storage in a way that make it public
 			IndexDefinitionStorage.AddIndex(name, definition);
-			
+
 			workContext.ClearErrorsFor(name);
 			return name;
 		}
@@ -871,18 +872,18 @@ namespace Raven.Database
 														  viewGenerator.ReduceDefinition == null
 															? Constants.DocumentIdFieldName
 															: Constants.ReduceKeyFieldName);
-					Func<IndexQueryResult, bool> shouldIncludeInResults = 
+					Func<IndexQueryResult, bool> shouldIncludeInResults =
 						result => docRetriever.ShouldIncludeResultInQuery(result, indexDefinition, fieldsToFetch);
 					var collection = from queryResult in IndexStorage.Query(index, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers)
 									 select docRetriever.RetrieveDocumentForQuery(queryResult, indexDefinition, fieldsToFetch)
 										 into doc
 										 where doc != null
-										 let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation  ?? false)
+										 let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
 										 select doc;
 
 					var transformerErrors = new List<string>();
 					IEnumerable<RavenJObject> results;
-					if (query.SkipTransformResults == false && 
+					if (query.SkipTransformResults == false &&
 						query.PageSize > 0 && // maybe they just want the stats?
 						viewGenerator.TransformResultsDefinition != null)
 					{
@@ -1130,7 +1131,7 @@ namespace Raven.Database
 			if (name == null)
 				throw new ArgumentNullException("name");
 			name = name.Trim();
-			
+
 			if (Encoding.Unicode.GetByteCount(name) >= 2048)
 				throw new ArgumentException("The key must be a maximum of 2,048 bytes in Unicode, 1,024 characters", "name");
 
@@ -1157,7 +1158,7 @@ namespace Raven.Database
 		{
 			if (name == null)
 				throw new ArgumentNullException("name");
-			name = name.Trim(); 
+			name = name.Trim();
 			TransactionalStorage.Batch(actions =>
 			{
 				AssertAttachmentDeleteOperationNotVetoed(name);
@@ -1181,7 +1182,7 @@ namespace Raven.Database
 		{
 			if (idPrefix == null)
 				throw new ArgumentNullException("idPrefix");
-			idPrefix = idPrefix.Trim(); 
+			idPrefix = idPrefix.Trim();
 			var list = new RavenJArray();
 			TransactionalStorage.Batch(actions =>
 			{
@@ -1268,23 +1269,23 @@ namespace Raven.Database
 		public Tuple<PatchResult, List<string>> ApplyPatch(string docId, Guid? etag, ScriptedPatchRequest patch, TransactionInformation transactionInformation)
 		{
 			ScriptedJsonPatcher scriptedJsonPatcher = null;
-			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation, 
+			var applyPatchInternal = ApplyPatchInternal(docId, etag, transactionInformation,
 				jsonDoc =>
-			    {
-			        scriptedJsonPatcher = new ScriptedJsonPatcher(jsonDoc, 
+				{
+					scriptedJsonPatcher = new ScriptedJsonPatcher(jsonDoc,
 						s =>
-			            {
-			                var jsonDocument = Get(s,transactionInformation);
+						{
+							var jsonDocument = Get(s, transactionInformation);
 							return jsonDocument == null ? null : jsonDocument.ToJson();
-			            });
-			        return scriptedJsonPatcher.Apply(patch);
-			    });
+						});
+					return scriptedJsonPatcher.Apply(patch);
+				});
 			return Tuple.Create(applyPatchInternal, scriptedJsonPatcher.Debug);
 		}
 
 		public PatchResult ApplyPatch(string docId, Guid? etag, PatchRequest[] patchDoc, TransactionInformation transactionInformation)
 		{
-			
+
 			if (docId == null)
 				throw new ArgumentNullException("docId");
 			return ApplyPatchInternal(docId, etag, transactionInformation, jsonDoc =>
@@ -1583,7 +1584,7 @@ namespace Raven.Database
 				lastReducedEtag = accessor.Staleness.GetMostRecentReducedEtag(indexName);
 				touchCount = accessor.Staleness.GetIndexTouchCount(indexName);
 			});
-			
+
 
 			var indexDefinition = GetIndexDefinition(indexName);
 			if (indexDefinition == null)
