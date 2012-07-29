@@ -56,7 +56,7 @@ namespace Raven.Storage.Esent.StorageActions
 			where T : class
 		{
 			bool existsInTx = IsDocumentModifiedInsideTransaction(key);
-			
+
 			if (transactionInformation != null && existsInTx)
 			{
 				var txId = Api.RetrieveColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]);
@@ -88,14 +88,14 @@ namespace Raven.Storage.Esent.StorageActions
 			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ) == false)
 			{
-				if(existsInTx)
+				if (existsInTx)
 				{
 					logger.Debug("Committed document with key '{0}' was not found, but exists in a separate transaction", key);
 					return createResult(new JsonDocumentMetadata
 					{
 						Etag = Guid.Empty,
 						Key = key,
-						Metadata = new RavenJObject{{Constants.RavenDocumentDoesNotExists, true}},
+						Metadata = new RavenJObject { { Constants.RavenDocumentDoesNotExists, true } },
 						NonAuthoritativeInformation = true,
 						LastModified = DateTime.MinValue,
 					}, (docKey, etag, metadata) => new RavenJObject());
@@ -138,10 +138,10 @@ namespace Raven.Storage.Esent.StorageActions
 			using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
 			{
 				var size = stream.Length;
-				using(var aggregate = documentCodecs.ReverseAggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
+				using (var aggregate = documentCodecs.ReverseAggregate(stream, (bytes, codec) => codec.Decode(key, metadata, bytes)))
 				{
 					var data = aggregate.ToJObject();
-					cacher.SetCachedDocument(key, etag, data, metadata, (int) size);
+					cacher.SetCachedDocument(key, etag, data, metadata, (int)size);
 					return data;
 				}
 			}
@@ -181,10 +181,18 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MoveAfterLast(session, Documents);
-			for (int i = 0; i < start; i++)
+			if (start > 0)
 			{
-				if (Api.TryMovePrevious(session, Documents) == false)
-					return Enumerable.Empty<JsonDocument>();
+				try
+				{
+					Api.JetMove(session, Documents, -1 * start /* need to move backward*/, MoveGrbit.None);
+				}
+				catch (EsentErrorException e)
+				{
+					if (e.Error == JET_err.NoCurrentRecord)
+						return Enumerable.Empty<JsonDocument>();
+					throw;
+				}
 			}
 			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
@@ -197,7 +205,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private JsonDocument ReadCurrentDocument()
 		{
-			var metadataSize = Api.RetrieveColumnSize(session, Documents,tableColumnsCache.DocumentsColumns["metadata"]) ?? 0;
+			var metadataSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]) ?? 0;
 			var docSize = Api.RetrieveColumnSize(session, Documents, tableColumnsCache.DocumentsColumns["data"]) ?? 0;
 
 			var metadata = Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]).ToJObject();
@@ -238,7 +246,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				var readCurrentDocument = ReadCurrentDocument();
 				totalSize += readCurrentDocument.SerializedSizeOnDisk;
-				if(maxSize != null && totalSize > maxSize.Value)
+				if (maxSize != null && totalSize > maxSize.Value)
 				{
 					yield return readCurrentDocument;
 					yield break;
@@ -295,7 +303,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				if (etag != null && etag != Guid.Empty) // expected something to be there.
 					throw new ConcurrencyException("PUT attempted on document '" + key +
-					                               "' using a non current etag (document deleted)")
+												   "' using a non current etag (document deleted)")
 					{
 						ExpectedETag = etag.Value
 					};
@@ -310,7 +318,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["key"], key, Encoding.Unicode);
 				using (Stream stream = new BufferedStream(new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["data"])))
-				using(var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
+				using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
 				{
 					data.WriteTo(finalStream);
 					stream.Flush();
@@ -366,7 +374,7 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				Api.SetColumn(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"], key, Encoding.Unicode);
 
-				using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions,tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
+				using (Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions, tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
 				using (var finalStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Encode(key, data, metadata, current)))
 				{
 					data.WriteTo(finalStream);
