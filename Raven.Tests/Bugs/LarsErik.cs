@@ -43,7 +43,7 @@ namespace Raven.Tests.Bugs
 						}
 						finally
 						{
-							ComplexEntity readEntity = session.Query<ComplexEntity>().First(c => c.Id == id);
+							ComplexEntity readEntity = session.Load<ComplexEntity>(id);
 							session.Delete(readEntity);
 							session.SaveChanges();
 						}

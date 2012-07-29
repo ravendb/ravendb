@@ -32,7 +32,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var test1 = s.Query<UserInt32>().Customize(d => d.WaitForNonStaleResults()).Where(x => x.Id == 1).ToList();
+					var test1 = s.Query<UserInt32>().Customize(d => d.WaitForNonStaleResults()).Where(x => x.Id == 1 && x.Name == "Ayende").ToList();
 					var test2 = s.Query<UserInt32>().Customize(d => d.WaitForNonStaleResults()).Where(x => x.Id >= 1).ToList();
 
 					Assert.Equal(1, test1.Count);
