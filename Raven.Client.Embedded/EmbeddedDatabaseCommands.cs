@@ -102,11 +102,10 @@ namespace Raven.Client.Embedded
 		{
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 			
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix,matches, start, pageSize);
 			// metadata only is NOT supported for embedded, nothing to save on the data transfers, so not supporting 
 			// this
 
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, start, pageSize);
+			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, start, pageSize);
 			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
 		}
 

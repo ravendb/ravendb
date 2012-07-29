@@ -47,6 +47,7 @@ namespace Raven.Client.Connection
 				              			if (prev == '\r' && buffer[i] == '\n')
 				              			{
 				              				foundLines = true;
+				              				var oldStartPos = startPos;
 											// yeah, we found a line, let us give it to the users
 											startPos = i + 1;
 

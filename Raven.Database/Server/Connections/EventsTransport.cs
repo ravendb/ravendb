@@ -77,11 +77,12 @@ namespace Raven.Database.Server.Connections
 
 			foreach (var o in data)
 			{
-				sb.Append(JsonConvert.SerializeObject(o))
-					.Append("\r\n");
+				sb.Append("data: ")
+					.Append(JsonConvert.SerializeObject(o))
+					.Append("\r\n\r\n");
 			}
 
-			return context.Response.WriteAsync(s)
+			return context.Response.WriteAsync(sb.ToString())
 				.ContinueWith(DisconnectOnError);
 		}
 
