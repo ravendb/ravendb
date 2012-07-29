@@ -68,8 +68,14 @@ namespace Raven.Client.Document.SessionOperations
 			RegexOptions.Compiled|
 #endif
 			RegexOptions.IgnorePatternWhitespace);
+
 		private void AssertNotQueryById()
 		{
+			// this applies to dynamic indexes only
+			if (!indexName.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) &&
+			    !string.Equals(indexName, "dynamic", StringComparison.InvariantCultureIgnoreCase))
+				return;
+
 			var match = idOnly.Match(IndexQuery.Query);
 			if (match.Success == false)
 				return;
