@@ -158,6 +158,12 @@ namespace Raven.Database.Indexing
 		public void Dispose()
 		{
 			shouldNotifyOnWork.Dispose();
+			if (DocsPerSecCounter != null)
+				DocsPerSecCounter.Dispose();
+			if (ReducedPerSecCounter != null)
+				ReducedPerSecCounter.Dispose();
+			if (IndexedPerSecCounter != null)
+				IndexedPerSecCounter.Dispose();
 		}
 
 		public void ClearErrorsFor(string name)
@@ -273,7 +279,7 @@ namespace Raven.Database.Indexing
 			// create new category with the counters above
 
 			PerformanceCounterCategory.Create("RavenDB-" + name,
-			                                  "RevenDB category", PerformanceCounterCategoryType.Unknown, counters);
+											  "RevenDB category", PerformanceCounterCategoryType.Unknown, counters);
 		}
 
 		public void Init(string name)

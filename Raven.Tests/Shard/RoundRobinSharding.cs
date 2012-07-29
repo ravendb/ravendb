@@ -109,6 +109,7 @@ namespace Raven.Tests.Shard
 		[Fact]
 		public void WhenQueryingWillGoToTheRightServer_UsingQueryById()
 		{
+			store.Conventions.AllowQueriesOnId = true;
 			using (var session = store.OpenSession())
 			{
 				var p1 = new Post();

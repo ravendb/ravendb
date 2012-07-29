@@ -111,6 +111,7 @@ namespace Raven.Tests.Shard.Async
 		[Fact]
 		public void WhenQueryingWillGoToTheRightServer_UsingQueryById()
 		{
+			store.Conventions.AllowQueriesOnId = true;
 			using (var session = store.OpenAsyncSession())
 			{
 				var p1 = new Post();

@@ -155,7 +155,6 @@ namespace Raven.Database
 				ReadTriggers = ReadTriggers,
 				RaiseIndexChangeNotification = RaiseNotifications
 			};
-			workContext.Init(Name);
 
 			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
 
@@ -192,6 +191,9 @@ namespace Raven.Database
 				workContext.IndexStorage = IndexStorage;
 				workContext.TransactionaStorage = TransactionalStorage;
 				workContext.IndexDefinitionStorage = IndexDefinitionStorage;
+
+				workContext.Init(Name);
+
 				ExecuteStartupTasks();
 			}
 			catch (Exception)

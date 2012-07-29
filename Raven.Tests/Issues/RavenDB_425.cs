@@ -22,7 +22,7 @@ namespace Raven.Tests.Issues
 					var invalidOperationException = Assert.Throws<InvalidOperationException>(() => 
 						session.Query<CannotChangeId.Item>().Where(x => x.Id == "items/1").ToList());
 
-					Assert.Equal("Attempt to query by id only is blocked, you should use call session.Load(\"items/1\"); instead of session.Query().Where(x=>x.Id == \"items/1\");", invalidOperationException.Message);
+					Assert.Contains("Attempt to query by id only is blocked, you should use call session.Load(\"items/1\"); instead of session.Query().Where(x=>x.Id == \"items/1\");", invalidOperationException.Message);
 				}
 			}
 		}
