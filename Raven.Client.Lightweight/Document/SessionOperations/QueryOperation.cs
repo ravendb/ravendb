@@ -73,6 +73,10 @@ namespace Raven.Client.Document.SessionOperations
 			var match = idOnly.Match(IndexQuery.Query);
 			if (match.Success == false)
 				return;
+
+			if (sessionOperations.Conventions.AllowQueriesOnId)
+				return;
+
 			var value = match.Groups[1].Value;
 			throw new InvalidOperationException(
 				"Attempt to query by id only is blocked, you should use call session.Load(\"" + value + "\"); instead of session.Query().Where(x=>x.Id == \"" + value + "\");");

@@ -189,6 +189,15 @@ namespace Raven.Client.Document
 		public int MaxNumberOfRequestsPerSession { get; set; }
 
 		/// <summary>
+		/// Whatever to allow queries on document id.
+		/// By default, queries on id are disabled, because it is far more efficent
+		/// to do a Load() than a Query() if you alred know the id.
+		/// You might want to do this if you have a TransformResults in place or you 
+		/// need to fetch just part of the document from the server.
+		/// </summary>
+		public bool AllowQueriesOnId { get; set; }
+
+		/// <summary>
 		/// The consistency options used when querying the database by default
 		/// Note that this option impact only queries, since we have Strong Consistency model for the documents
 		/// </summary>
