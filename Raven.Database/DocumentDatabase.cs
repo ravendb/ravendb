@@ -155,6 +155,7 @@ namespace Raven.Database
 				ReadTriggers = ReadTriggers,
 				RaiseIndexChangeNotification = RaiseNotifications
 			};
+			workContext.Init(Name);
 
 			TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
 
@@ -431,8 +432,6 @@ namespace Raven.Database
 			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
 				new ReducingExecuter(TransactionalStorage, workContext, backgroundTaskScheduler).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-			workContext.SetupPreformanceCounter(Name);
-			workContext.InitPreformanceCounters(Name);
 		}
 
 		public void RaiseNotifications(DocumentChangeNotification obj)
