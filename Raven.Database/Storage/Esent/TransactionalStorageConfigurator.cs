@@ -58,7 +58,7 @@ namespace Raven.Storage.Esent
 
 		public void LimitSystemCache()
 		{
-			var defaultCacheSize = Environment.Is64BitProcess ? 1024 : 256;
+			var defaultCacheSize = Environment.Is64BitProcess ? Math.Min(1024, (MemoryStatistics.TotalPhysicalMemory / 4)) : 256;
 			int cacheSizeMaxInMegabytes = GetValueFromConfiguration("Raven/Esent/CacheSizeMax", defaultCacheSize);
 			int cacheSizeMax = TranslateToSizeInDatabasePages(cacheSizeMaxInMegabytes, 1024 * 1024);
 			if (SystemParameters.CacheSizeMax > cacheSizeMax)
