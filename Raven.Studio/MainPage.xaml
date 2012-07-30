@@ -270,7 +270,7 @@
 				<sdk:Frame.UriMapper>
 					<sdk:UriMapper>
 						<sdk:UriMapping Uri=""
-											  MappedUri="/Views/Home.xaml" />
+											  MappedUri="/Views/Databases.xaml" />
 						<sdk:UriMapping Uri="/indexes-errors/{indexName}"
 											  MappedUri="/Views/IndexesErrors.xaml" />
 						<sdk:UriMapping Uri="/indexes-errors"
