@@ -39,7 +39,7 @@ namespace Raven.Tests.Bugs
 			{
 				Map = @"
 from post in docs.Posts
-from comment in Hierarchy(post, ""Comments"") 
+from comment in Recurse(post, ((Func<dynamic,dynamic>)(x=>x.Comments)))
 select new { comment.Text }"
 			});
 
