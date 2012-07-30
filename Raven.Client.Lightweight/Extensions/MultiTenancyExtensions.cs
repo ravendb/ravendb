@@ -106,6 +106,38 @@ namespace Raven.Client.Extensions
 					GC.KeepAlive(observedException);
 				});
 		}
+
+		public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument, bool ignoreFailures = false)
+		{
+			var serverClient = self.ForDefaultDatabase() as AsyncServerClient;
+			if (serverClient == null)
+				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
+
+			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
+				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
+
+			var doc = RavenJObject.FromObject(databaseDocument);
+			doc.Remove("Id");
+		var docId = "Raven/Databases/" + databaseDocument.Id;
+
+			return self.GetAsync(docId)
+				.ContinueWith(get =>
+				{
+					if (get.Result != null)
+						return get;
+
+					return (Task)serverClient.PutAsync(docId, null, doc, new RavenJObject());
+				})
+				.Unwrap()
+				.ContinueWith(x =>
+				{
+					if (ignoreFailures == false)
+						x.Wait(); // will throw on error
+
+					var observedException = x.Exception;
+					GC.KeepAlive(observedException);
+				});
+		}
 #else
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
@@ -131,6 +163,39 @@ namespace Raven.Client.Extensions
 				})
 				.Unwrap()
 				.ContinueWith(x=>
+				{
+					if (ignoreFailures == false)
+						x.Wait(); // will throw on error
+
+					var observedException = x.Exception;
+					GC.KeepAlive(observedException);
+				});
+		}
+
+		public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument, bool ignoreFailures = false)
+		{
+			var serverClient = self.ForDefaultDatabase() as AsyncServerClient;
+			if (serverClient == null)
+				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
+
+			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
+				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
+
+			var doc = RavenJObject.FromObject(databaseDocument);
+			doc.Remove("Id");
+			var docId = "Raven/Databases/" + databaseDocument.Id;
+
+			return self.GetAsync(docId)
+				.ContinueWith(get =>
+				{
+					if (get.Result != null)
+						return get;
+					var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id));
+					req.Write(doc.ToString(Formatting.Indented));
+					return req.ExecuteRequestAsync();
+				})
+				.Unwrap()
+				.ContinueWith(x =>
 				{
 					if (ignoreFailures == false)
 						x.Wait(); // will throw on error

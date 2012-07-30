@@ -179,6 +179,9 @@
     <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Commands\ShowErrorListWindowCommand.cs" />
     <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
+    <Compile Include="Controls\BundlesSelect.xaml.cs">
+      <DependentUpon>BundlesSelect.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\BusynessIndicator.xaml.cs">
       <DependentUpon>BusynessIndicator.xaml</DependentUpon>
     </Compile>
@@ -187,6 +190,9 @@
     </Compile>
     <Compile Include="Controls\GoToDocumentControl.xaml.cs">
       <DependentUpon>GoToDocumentControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\NewDatabase.xaml.cs">
+      <DependentUpon>NewDatabase.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\RecentQueriesButton.xaml.cs">
       <DependentUpon>RecentQueriesButton.xaml</DependentUpon>
@@ -633,6 +639,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Controls\BundlesSelect.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\BusynessIndicator.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -642,6 +652,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\GoToDocumentControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\NewDatabase.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
