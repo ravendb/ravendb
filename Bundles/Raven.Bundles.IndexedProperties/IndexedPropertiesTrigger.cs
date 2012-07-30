@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using Lucene.Net.Documents;
 using NLog;
@@ -12,9 +14,11 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Bundles.IndexedProperties
 {
+	[InheritedExport]
+	[ExportMetadata("Bundle", "IndexedProperties")]
 	public class IndexedPropertiesTrigger : AbstractIndexUpdateTrigger
 	{
-		private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
 		public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
 		{
@@ -29,15 +33,16 @@ namespace Raven.Bundles.IndexedProperties
 
 		public class IndexPropertyBatcher : AbstractIndexUpdateTriggerBatcher
 		{
-			private readonly DocumentDatabase _database;
-			private readonly SetupDoc _setupDoc;
+			private readonly DocumentDatabase database;
+			private readonly SetupDoc setupDoc;
 			private readonly string index;
 			private readonly AbstractViewGenerator viewGenerator;
+			private readonly HashSet<string> itemsToRemove = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
 			public IndexPropertyBatcher(DocumentDatabase database, SetupDoc setupDoc, string index, AbstractViewGenerator viewGenerator)
 			{
-				_database = database;
-				_setupDoc = setupDoc;
+				this.database = database;
+				this.setupDoc = setupDoc;
 				this.index = index;
 				this.viewGenerator = viewGenerator;
 			}
@@ -57,69 +62,59 @@ namespace Raven.Bundles.IndexedProperties
 				}
 				catch (Exception e)
 				{
-					Log.WarnException("Could not properly parse entry key for index: " + index,e);
+					log.WarnException("Could not properly parse entry key for index: " + index,e);
 					return;
 
 				}
-				var documentId = entry.Value<string>(_setupDoc.DocumentKey);
+				var documentId = entry.Value<string>(setupDoc.DocumentKey);
 				if(documentId == null)
 				{
-					Log.Warn("Could not find document id property '{0}' in '{1}' for index '{2}'", _setupDoc.DocumentKey, entryKey, index);
+					log.Warn("Could not find document id property '{0}' in '{1}' for index '{2}'", setupDoc.DocumentKey, entryKey, index);
 					return;
 				}
 
-				var resultDoc = _database.Get(documentId, null);
-				if (resultDoc == null)
-				{
-					Log.Warn("Could not find a document with the id '{0}' for index '{1}", documentId, index);
-					return;
-				}
-				var changesMade = false;
-				foreach (var mapping in from mapping in _setupDoc.FieldNameMappings
-										where resultDoc.DataAsJson.ContainsKey(mapping.Value)
-										select mapping)
-				{
-					resultDoc.DataAsJson.Remove(mapping.Value);
-					changesMade = true;
-				}
-				if (changesMade)
-					_database.Put(documentId, resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
+				itemsToRemove.Add(documentId);
+
 			}
 
 			public override void OnIndexEntryCreated(string entryKey, Document document)
 			{
-				var resultDocId = document.GetField(_setupDoc.DocumentKey);
+				var resultDocId = document.GetField(setupDoc.DocumentKey);
 				if (resultDocId == null)
 				{
-					Log.Warn("Could not find document id property '{0}' in '{1}' for index '{2}'", _setupDoc.DocumentKey, entryKey, index);
+					log.Warn("Could not find document id property '{0}' in '{1}' for index '{2}'", setupDoc.DocumentKey, entryKey, index);
 					return;
 				}
+
 				var documentId = resultDocId.StringValue();
-				var resultDoc = _database.Get(documentId, null);
+
+				itemsToRemove.Remove(documentId);
+
+				var resultDoc = database.Get(documentId, null);
 				if (resultDoc == null)
 				{
-					Log.Warn("Could not find a document with the id '{0}' for index '{1}'", documentId, index);
+					log.Warn("Could not find a document with the id '{0}' for index '{1}'", documentId, index);
 					return;
 				}
 
 				var entityName = resultDoc.Metadata.Value<string>(Constants.RavenEntityName);
 				if(entityName != null && viewGenerator.ForEntityNames.Contains(entityName))
 				{
-					Log.Warn(
+					log.Warn(
 						"Rejected update for a potentially recursive update on document '{0}' because the index '{1}' includes documents with entity name of '{2}'",
 						documentId, index, entityName);
 					return;
 				}
 				if(viewGenerator.ForEntityNames.Count == 0)
 				{
-					Log.Warn(
+					log.Warn(
 						"Rejected update for a potentially recursive update on document '{0}' because the index '{1}' includes all documents",
 						documentId, index);
 					return;
 				}
 
 				var changesMade = false;
-				foreach (var mapping in _setupDoc.FieldNameMappings)
+				foreach (var mapping in setupDoc.FieldNameMappings)
 				{
 					var field = 
 						document.GetFieldable(mapping.Key + "_Range") ??
@@ -138,7 +133,33 @@ namespace Raven.Bundles.IndexedProperties
 					changesMade = true;
 				}
 				if (changesMade)
-					_database.Put(documentId, resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
+					database.Put(documentId, resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
+			}
+
+			public override void Dispose()
+			{
+				foreach (var documentId in itemsToRemove)
+				{
+					var resultDoc = database.Get(documentId, null);
+					if (resultDoc == null)
+					{
+						log.Warn("Could not find a document with the id '{0}' for index '{1}", documentId, index);
+						return;
+					}
+					var changesMade = false;
+					foreach (var mapping in from mapping in setupDoc.FieldNameMappings
+											where resultDoc.DataAsJson.ContainsKey(mapping.Value)
+											select mapping)
+					{
+						resultDoc.DataAsJson.Remove(mapping.Value);
+						changesMade = true;
+					}
+					if (changesMade)
+						database.Put(documentId, resultDoc.Etag, resultDoc.DataAsJson, resultDoc.Metadata, null);
+		
+				}
+
+				base.Dispose();
 			}
 		}
 	}

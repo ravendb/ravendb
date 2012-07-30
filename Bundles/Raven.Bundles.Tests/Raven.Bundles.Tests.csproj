@@ -177,10 +177,6 @@
       <Project>{D9CCC62F-0B4E-4B37-BE7E-203D34B4EC4F}</Project>
       <Name>Raven.Bundles.CascadeDelete</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Bundles.Expiration\Raven.Bundles.Expiration.csproj">
-      <Project>{5E2C2AAA-31E4-4F2B-A3E3-E1332D2D338A}</Project>
-      <Name>Raven.Bundles.Expiration</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.IndexedProperties\Raven.Bundles.IndexedProperties.csproj">
       <Project>{012F5E7B-DDC3-4B8C-BA39-1394536D58BE}</Project>
       <Name>Raven.Bundles.IndexedProperties</Name>
