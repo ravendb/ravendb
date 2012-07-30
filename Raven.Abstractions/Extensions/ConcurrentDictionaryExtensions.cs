@@ -24,6 +24,7 @@ namespace Raven.Abstractions.Extensions
 
 			lock(self)
 			{
+				Thread.MemoryBarrier();
 				if (self.TryGetValue(key, out val))
 					return val;
 
