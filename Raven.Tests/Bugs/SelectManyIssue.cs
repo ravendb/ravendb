@@ -67,6 +67,8 @@ namespace Raven.Tests.Bugs
 						.Customize(x => x.WaitForNonStaleResults())
 						.ToArray();
 
+					WaitForUserToContinueTheTest(store);
+
 					Assert.Equal(1, results.Length);
 					Assert.Equal("9000", results[0].ClassificationId);
 					Assert.Equal("30", results[0].Count);
@@ -82,7 +84,7 @@ namespace Raven.Tests.Bugs
 				return new IndexDefinition
 				{
 					Map = @"from request in docs.AdvertisementRequests
-						from imp in Hierarchy(request, \""Impressions\"")
+						from imp in request.Impressions
 						select new {ClassificationId = imp.ClassificationId,Count = 1,ClickCount = imp.Click == null?0:1}",
 
 					Reduce = @"from result in results group result by new {ClassificationId= result.ClassificationId} into g

@@ -105,19 +105,6 @@ namespace Raven.Database.Linq
 			return anonymousObjectToLuceneDocumentConverter.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO);
 		}
 
-		protected IEnumerable<dynamic> Hierarchy(object source, string name)
-		{
-			var djo = (DynamicJsonObject)source;
-			foreach (var item in ((IEnumerable)djo.GetValue(name)))
-			{
-				yield return item;
-				foreach (var subItem in Hierarchy(item, name))
-				{
-					yield return subItem;
-				}
-			}
-		}
-		
 		public void AddQueryParameterForMap(string field)
 		{
 			mapFields.Add(field);

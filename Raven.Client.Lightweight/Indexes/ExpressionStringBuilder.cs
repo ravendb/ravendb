@@ -1205,9 +1205,6 @@ namespace Raven.Client.Indexes
 					case "AsDocument":
 						Visit(node.Arguments[0]);
 						return node;
-					case "Hierarchy":
-						VisitHierarchy(node, expression);
-						return node;
 				}
 				if (expression.Type == typeof(IClientSideDatabase))
 				{
@@ -1307,26 +1304,6 @@ namespace Raven.Client.Indexes
 				return false;
 			}
 			return true;
-		}
-
-		private void VisitHierarchy(MethodCallExpression node, Expression expression)
-		{
-			Out("Hierarchy(");
-			Visit(expression);
-			Out(", ");
-			var path = node.Arguments.Last();
-			if (path.NodeType == ExpressionType.Lambda)
-			{
-				var body = ((LambdaExpression)path).Body;
-				Out("\"");
-				Out(((MemberExpression)body).Member.Name);
-				Out("\"");
-			}
-			else
-			{
-				Visit(path);
-			}
-			Out(")");
 		}
 
 		/// <summary>

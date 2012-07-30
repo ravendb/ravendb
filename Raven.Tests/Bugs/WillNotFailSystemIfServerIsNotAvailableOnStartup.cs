@@ -41,8 +41,7 @@ namespace Raven.Tests.Bugs
 				{
 					using (var session = store.OpenSession())
 					{
-						var person = session.Load<HierarchyFromClient.Person>("people/1");
-						Assert.Null(person);
+						Assert.Null(session.Load<Item>("items/1"));
 					}
 				}
 			}

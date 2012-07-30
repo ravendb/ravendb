@@ -316,7 +316,6 @@
     <Compile Include="Bugs\FindPropertyNameForIndex.cs" />
     <Compile Include="Bugs\GetDocumentUrlOnTransient.cs" />
     <Compile Include="Bugs\HierarchicalData.cs" />
-    <Compile Include="Bugs\HierarchyFromClient.cs" />
     <Compile Include="Bugs\HiLoServerKeysNotExported.cs" />
     <Compile Include="Bugs\Identifiers\LongId.cs" />
     <Compile Include="Bugs\IndexDefinitionEquality.cs" />
