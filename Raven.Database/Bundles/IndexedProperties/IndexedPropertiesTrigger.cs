@@ -27,19 +27,19 @@ namespace Raven.Bundles.IndexedProperties
 			if (jsonSetupDoc == null)
 				return null;
 			var abstractViewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(indexName);
-			var setupDoc = jsonSetupDoc.DataAsJson.JsonDeserialization<SetupDoc>();
+			var setupDoc = jsonSetupDoc.DataAsJson.JsonDeserialization<IndexedPropertiesSetupDoc>();
 			return new IndexPropertyBatcher(Database, setupDoc, indexName, abstractViewGenerator);
 		}
 
 		public class IndexPropertyBatcher : AbstractIndexUpdateTriggerBatcher
 		{
 			private readonly DocumentDatabase database;
-			private readonly SetupDoc setupDoc;
+			private readonly IndexedPropertiesSetupDoc setupDoc;
 			private readonly string index;
 			private readonly AbstractViewGenerator viewGenerator;
 			private readonly HashSet<string> itemsToRemove = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-			public IndexPropertyBatcher(DocumentDatabase database, SetupDoc setupDoc, string index, AbstractViewGenerator viewGenerator)
+			public IndexPropertyBatcher(DocumentDatabase database, IndexedPropertiesSetupDoc setupDoc, string index, AbstractViewGenerator viewGenerator)
 			{
 				this.database = database;
 				this.setupDoc = setupDoc;

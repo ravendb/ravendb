@@ -177,10 +177,6 @@
       <Project>{D9CCC62F-0B4E-4B37-BE7E-203D34B4EC4F}</Project>
       <Name>Raven.Bundles.CascadeDelete</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Bundles.IndexedProperties\Raven.Bundles.IndexedProperties.csproj">
-      <Project>{012F5E7B-DDC3-4B8C-BA39-1394536D58BE}</Project>
-      <Name>Raven.Bundles.IndexedProperties</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Bundles.IndexReplication\Raven.Bundles.IndexReplication.csproj">
       <Project>{2728BBA7-5142-445E-BAA5-142A25E0666D}</Project>
       <Name>Raven.Bundles.IndexReplication</Name>
@@ -192,11 +188,6 @@
     <ProjectReference Include="..\Raven.Client.Authorization\Raven.Client.Authorization.csproj">
       <Project>{3A852FD2-E0F9-449C-8F66-0C6A180D030A}</Project>
       <Name>Raven.Client.Authorization</Name>
-      <Aliases>client</Aliases>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Client.IndexedProperties\Raven.Client.IndexedProperties.csproj">
-      <Project>{F41C7F7E-A287-449A-A545-E7152937EF77}</Project>
-      <Name>Raven.Client.IndexedProperties</Name>
       <Aliases>client</Aliases>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.UniqueConstraints\Raven.Client.UniqueConstraints.csproj">

@@ -43,9 +43,6 @@
     <Compile Include="..\..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Bundles.IndexedProperties\SetupDoc.cs">
-      <Link>SetupDoc.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Bundles.UniqueConstraints\Constants.cs">
       <Link>Constants.cs</Link>
     </Compile>
