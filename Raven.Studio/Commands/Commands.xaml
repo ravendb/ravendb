@@ -14,5 +14,6 @@
 	<Commands:NavigateToDocumentByIdCommand x:Name="NavigateToDocumentByIdCommand" />
 	<Commands:ShowLicensingStatusCommand x:Name="ShowLicensingStatusCommand" />
 	<Commands:CreateDatabaseCommand x:Name="CreateDatabaseCommand" />
+	<Commands:SelectSystemDatabaseCommand x:Name="SelectSystemDatabaseCommand"/>
 	<Commands:ShowErrorListWindowCommand x:Name="ShowErrorListWindowCommand" />
 </ResourceDictionary>

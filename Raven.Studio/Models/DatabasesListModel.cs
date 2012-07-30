@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Studio.Commands;
 using Raven.Studio.Extensions;
 using Raven.Studio.Infrastructure;
@@ -18,19 +19,20 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/databases";
 			changeDatabase = new ChangeDatabaseCommand();
-            Databases = new BindableCollection<DatabaseListItemModel>(m => m.Name);
+			Databases = new BindableCollection<DatabaseListItemModel>(m => m.Name);
+			ApplicationModel.Current.Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => OnPropertyChanged(() => SelectedDatabase);
 		}
 
-        public BindableCollection<DatabaseListItemModel> Databases { get; private set; }
+		public BindableCollection<DatabaseListItemModel> Databases { get; private set; }
 
-        public DatabaseListItemModel SelectedDatabase
+		public DatabaseListItemModel SelectedDatabase
 		{
 			get { return  ApplicationModel.Database.Value != null ? Databases.FirstOrDefault(m => m.Name.Equals(ApplicationModel.Database.Value.Name, StringComparison.InvariantCulture)) : null; }
 			set
 			{
 				if (value == null)
 				{
-				    return;
+					return;
 				}
 
 				if (changeDatabase.CanExecute(value.Name))
@@ -40,31 +42,31 @@ namespace Raven.Studio.Models
 
 		public override Task TimerTickedAsync()
 		{
-		    return TaskEx.WhenAll(
-                new[] { ApplicationModel.Current.Server.Value.TimerTickedAsync() } // Fetch databases names from the server
-		            .Concat(Databases.Select(m => m.TimerTickedAsync()))); // Refresh statistics
+			return TaskEx.WhenAll(
+				new[] { ApplicationModel.Current.Server.Value.TimerTickedAsync() } // Fetch databases names from the server
+					.Concat(Databases.Select(m => m.TimerTickedAsync()))); // Refresh statistics
 		}
 
-        protected override void OnViewLoaded()
-        {
-            ApplicationModel.Current.Server.Value.SelectedDatabase
-                .ObservePropertyChanged()
-                .TakeUntil(Unloaded)
-                .Subscribe(_ => OnPropertyChanged(() => SelectedDatabase));
+		protected override void OnViewLoaded()
+		{
+			ApplicationModel.Current.Server.Value.SelectedDatabase
+				.ObservePropertyChanged()
+				.TakeUntil(Unloaded)
+				.Subscribe(_ => OnPropertyChanged(() => SelectedDatabase));
 
-            ApplicationModel.Current.Server.Value.Databases.ObserveCollectionChanged()
-                .Throttle(TimeSpan.FromMilliseconds(10))
-                .ObserveOnDispatcher()
-                .TakeUntil(Unloaded)
-                .Subscribe(_ => RefreshDatabaseList());
+			ApplicationModel.Current.Server.Value.Databases.ObserveCollectionChanged()
+				.Throttle(TimeSpan.FromMilliseconds(10))
+				.ObserveOnDispatcher()
+				.TakeUntil(Unloaded)
+				.Subscribe(_ => RefreshDatabaseList());
 
-            RefreshDatabaseList();
-        }
+			RefreshDatabaseList();
+		}
 
-	    private void RefreshDatabaseList()
-	    {
-            Databases.Match(ApplicationModel.Current.Server.Value.Databases.Select(name => new DatabaseListItemModel(name)).ToArray());
-            OnPropertyChanged(() => SelectedDatabase);
-	    }
+		private void RefreshDatabaseList()
+		{
+			Databases.Match(ApplicationModel.Current.Server.Value.Databases.Where(s => s != Constants.SystemDatabase).Select(name => new DatabaseListItemModel(name)).ToArray());
+			OnPropertyChanged(() => SelectedDatabase);
+		}
 	}
 }

@@ -16,7 +16,12 @@
 					<Behaviors:DoubleClickBehavior Command="{StaticResource NavigateToCommand}"
 												   CommandParameter="/home" />
 				</i:Interaction.Behaviors>
-				
+				<i:Interaction.Triggers>
+					<i:EventTrigger EventName="MouseLeftButtonDown">
+						<i:InvokeCommandAction Command="{StaticResource ChangeDatabaseCommand}" CommandParameter="{Binding Name}"/>
+					</i:EventTrigger>
+				</i:Interaction.Triggers>
+
 				<Grid Margin="4">
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto" />
@@ -53,34 +58,47 @@
 		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl}" Margin="0,0,0,15">
 			<toolkit:HeaderedContentControl.Header>
 				<Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
 					<StackPanel Orientation="Horizontal" Grid.Row="0" VerticalAlignment="Center" >
-                        <Image Source="{StaticResource Image_Database_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="6"/>
+						<Image Source="{StaticResource Image_Database_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="6"/>
 						<TextBlock Text="Databases"
 							   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6"/>
 					</StackPanel>
-                    <Border Background="{StaticResource Brush_ToolbarBackground}" Grid.Row="1">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,4,4,4">
-						<HyperlinkButton Command="{StaticResource CreateDatabaseCommand}" 
+					<Border Background="{StaticResource Brush_ToolbarBackground}" Grid.Row="1">
+						<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,4,4,4">
+							<HyperlinkButton Command="{StaticResource CreateDatabaseCommand}" 
 										 CommandParameter="{Binding}"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
 										 VerticalAlignment="Center">
-						  <HyperlinkButton.Content>
-								<StackPanel Orientation="Horizontal">
-									<Image Source="{StaticResource Image_AddDatabase_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
-									<TextBlock Text="New Database" VerticalAlignment="Center"/>
-								</StackPanel></HyperlinkButton.Content>
-						</HyperlinkButton>
-					</StackPanel>
-                    </Border>
-                </Grid>
+								<HyperlinkButton.Content>
+									<StackPanel Orientation="Horizontal">
+										<Image Source="{StaticResource Image_AddDatabase_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+										<TextBlock Text="New Database" VerticalAlignment="Center"/>
+									</StackPanel>
+								</HyperlinkButton.Content>
+							</HyperlinkButton>
+
+							<HyperlinkButton Command="{StaticResource SelectSystemDatabaseCommand}" 
+										 CommandParameter="{Binding}"
+										 Style="{StaticResource Style_Button_MouseOverChrome}"
+										 VerticalAlignment="Center">
+								<HyperlinkButton.Content>
+									<StackPanel Orientation="Horizontal">
+										<Image Source="{StaticResource Image_Reformat_Small}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+										<TextBlock Text="System Database" VerticalAlignment="Center"/>
+									</StackPanel>
+								</HyperlinkButton.Content>
+							</HyperlinkButton>
+						</StackPanel>
+					</Border>
+				</Grid>
 			</toolkit:HeaderedContentControl.Header>
 			<ListBox Style="{StaticResource Databases_FluidList}"
 					 ItemsSource="{Binding Databases}"
-					 SelectedItem="{Binding SelectedDatabase, Mode=TwoWay}"
+					 SelectedItem="{Binding SelectedDatabase}"
 					 ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
 					 ItemTemplate="{StaticResource DatabaseItemTemplate}"
 					 Margin="10">

@@ -4,8 +4,8 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" xmlns:Models="clr-namespace:Raven.Studio.Models">
 
   <Infrastructure:View.DataContext>
-        <Models:DatabaseSelectionModel/>
-    </Infrastructure:View.DataContext>
+		<Models:DatabaseSelectionModel/>
+	</Infrastructure:View.DataContext>
   <ContentControl FontSize="12"
 					Visibility="{Binding Path=SingleTenant, Converter={StaticResource BooleanToOppositeVisibility}}"
 					FontFamily="Tahoma">
