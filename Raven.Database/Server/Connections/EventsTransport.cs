@@ -16,21 +16,7 @@ namespace Raven.Database.Server.Connections
 {
 	public class EventsTransport
 	{
-		private static readonly Timer heartbeat;
-
-		static EventsTransport()
-		{
-			heartbeat = new Timer(RaiseHeartbeat);
-			heartbeat.Change(TimeSpan.Zero, TimeSpan.FromSeconds(5));
-		}
-
-		private static event Action OnHeartbeat;
-		private static void RaiseHeartbeat(object state)
-		{
-			var onOnHeartbeat = OnHeartbeat;
-			if (onOnHeartbeat != null)
-				onOnHeartbeat();
-		}
+		private readonly Timer heartbeat;
 
 		private readonly Logger log = LogManager.GetCurrentClassLogger();
 
@@ -48,19 +34,22 @@ namespace Raven.Database.Server.Connections
 			Id = context.Request.QueryString["id"];
 			if (string.IsNullOrEmpty(Id))
 				throw new ArgumentException("Id is mandatory");
+
+			heartbeat = new Timer(Heartbeat);
+			heartbeat.Change(TimeSpan.Zero, TimeSpan.FromSeconds(5));
+	
 		}
 
 		public Task ProcessAsync()
 		{
 			context.Response.ContentType = "text/event-stream";
 
-			OnHeartbeat += Heartbeat;
 
 			return SendAsync(new {Type = "Initialized"});
 			
 		}
 
-		private void Heartbeat()
+		private void Heartbeat(object _)
 		{
 			SendAsync(new { Type = "Heartbeat" });
 		}
@@ -109,7 +98,9 @@ namespace Raven.Database.Server.Connections
 
 		public void Disconnect()
 		{
-			OnHeartbeat -= Heartbeat;
+			if (heartbeat != null)
+				heartbeat.Dispose();
+			
 			Connected = false;
 			Disconnected();
 			context.FinalizeResonse();
