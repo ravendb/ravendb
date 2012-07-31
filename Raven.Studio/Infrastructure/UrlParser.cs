@@ -80,7 +80,7 @@ namespace Raven.Studio.Infrastructure
 
 			var uri = Path;
 			if (string.IsNullOrWhiteSpace(uri))
-				uri = "/home";
+				uri = "/databases";
 			var query = string.Join("&", QueryParams.Select(x => string.Format("{0}={1}", x.Key, x.Value)));
 			if (string.IsNullOrEmpty(query) == false)
 			{
