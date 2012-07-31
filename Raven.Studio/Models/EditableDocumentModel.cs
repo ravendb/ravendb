@@ -629,7 +629,7 @@ namespace Raven.Studio.Models
 
             // find parent Ids
             var parentids = new List<string>();
-            var id = LocalId;
+            var id = Key;
             var lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
 
             while (!string.IsNullOrWhiteSpace(id) && lastindex != -1)
