@@ -62,19 +62,33 @@
 							   Margin="5,0,5,23"
 							   Grid.Column="1"/>
 
-                        <Button Content="Small Card"
+                        <Button Content="Id Only"
 							   VerticalAlignment="Bottom"
                             HorizontalContentAlignment="Left"
 							   Margin="5,0,5,26"
+							   Grid.Column="1" 
+                               Style="{StaticResource Style_Button_MouseOverChrome}"
+                               Command="{Binding Path=SetViewSize}"
+                               CommandParameter="IdOnly"/>
+
+                        <Controls:Separator HorizontalAlignment="Stretch"
+							   VerticalAlignment="Bottom"
+							   Margin="5,0,5,49"
+							   Grid.Column="1"/>
+                        
+                        <Button Content="Small Card"
+							   VerticalAlignment="Top"
+                            HorizontalContentAlignment="Left"
+							   Margin="5,78,5,0"
 							   Grid.Column="1"
                                Style="{StaticResource Style_Button_MouseOverChrome}"
                                Command="{Binding Path=SetViewSize}"
                                CommandParameter="SmallCard"/>
 
                         <Button Content="Medium Card"
-							   VerticalAlignment="Bottom"
+							   VerticalAlignment="Top"
                             HorizontalContentAlignment="Left"
-							   Margin="5,3,5,57"
+							   Margin="5,52,5,0"
 							   Grid.Column="1"
                                Style="{StaticResource Style_Button_MouseOverChrome}"
                                Command="{Binding Path=SetViewSize}"
@@ -83,7 +97,7 @@
                         <Button Content="Large Card"
 							   VerticalAlignment="Top"
                             HorizontalContentAlignment="Left"
-							   Margin="5,33,5,0"
+							   Margin="5,26,5,0"
 							   Grid.Column="1"
                                Style="{StaticResource Style_Button_MouseOverChrome}"
                                Command="{Binding Path=SetViewSize}"

@@ -24,14 +24,16 @@ namespace Raven.Studio.Controls
         static ViewSizeControl()
         {
             DetailsViewSize = new PresetViewSize() {Key = "Details", Size = 0};
-            MediumCardViewSize = new PresetViewSize() {Key = "MediumCard", Size = 45};
+            IdOnlyViewSize = new PresetViewSize() {Key = "IdOnly", Size = 20};
+            MediumCardViewSize = new PresetViewSize() {Key = "MediumCard", Size = 60};
 
             ViewSizes = new List<PresetViewSize>()
                             {
                                 DetailsViewSize,
-                                new PresetViewSize() {Key = "SmallCard", Size = 10},
+                                IdOnlyViewSize,
+                                new PresetViewSize() {Key = "SmallCard", Size = 40},
                                 MediumCardViewSize,
-                                new PresetViewSize() {Key = "LargeCard", Size = 75},
+                                new PresetViewSize() {Key = "LargeCard", Size = 80},
                                 new PresetViewSize() {Key = "ExtraLargeCard", Size = 100},
                             };
         }
@@ -49,6 +51,7 @@ namespace Raven.Studio.Controls
         private ICommand toggleViewSize;
         private static PresetViewSize DetailsViewSize;
         private static PresetViewSize MediumCardViewSize;
+        private static PresetViewSize IdOnlyViewSize;
 
         public ICommand SetViewSize
         {
@@ -62,13 +65,17 @@ namespace Raven.Studio.Controls
 
         private void HandleToggleViewSize()
         {
-              if (ViewSize > DetailsViewSize.Size)
+              if (ViewSize > IdOnlyViewSize.Size)
               {
-                  SetViewSize.Execute(DetailsViewSize.Key);
+                  SetViewSizeFromPreset(DetailsViewSize);
+              }
+              else if (ViewSize > DetailsViewSize.Size || ViewSize.IsCloseTo(IdOnlyViewSize.Size))
+              {
+                  SetViewSizeFromPreset(MediumCardViewSize);
               }
               else
               {
-                  SetViewSize.Execute(MediumCardViewSize.Key);
+                  SetViewSizeFromPreset(IdOnlyViewSize);
               }
         }
 
@@ -81,6 +88,11 @@ namespace Raven.Studio.Controls
             }
 
             var size = ViewSizes.FirstOrDefault(s => s.Key == sizeKey);
+            SetViewSizeFromPreset(size);
+        }
+
+        private void SetViewSizeFromPreset(PresetViewSize size)
+        {
             if (size != null)
             {
                 ViewSize = size.Size;

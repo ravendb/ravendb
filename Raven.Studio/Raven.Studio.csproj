@@ -298,6 +298,7 @@
     <Compile Include="Infrastructure\Converters\TrimmedStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\UtcToLocalConverter.cs" />
     <Compile Include="Infrastructure\Disposer.cs" />
+    <Compile Include="Infrastructure\DocumentsVirtualCollectionSourceBase.cs" />
     <Compile Include="Infrastructure\FlexibleTemplateItemsControl.cs" />
     <Compile Include="Infrastructure\INotifyBusyness.cs" />
     <Compile Include="Infrastructure\ItemsRealizedEventArgs.cs" />

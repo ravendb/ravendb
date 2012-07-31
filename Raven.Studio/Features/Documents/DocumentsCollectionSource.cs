@@ -8,7 +8,7 @@ using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Documents
 {
-    public class DocumentsCollectionSource : VirtualCollectionSource<ViewableDocument>
+    public class DocumentsCollectionSource : DocumentsVirtualCollectionSourceBase
     {
         public DocumentsCollectionSource()
         {
@@ -21,7 +21,7 @@ namespace Raven.Studio.Features.Documents
 
         protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)
         {
-            return ApplicationModel.DatabaseCommands.GetDocumentsAsync(start, pageSize)
+            return ApplicationModel.DatabaseCommands.GetDocumentsAsync(start, pageSize, MetadataOnly)
                 .ContinueWith(t =>
                 {
                     var docs = (IList<ViewableDocument>)t.Result.Select(x => new ViewableDocument(x)).ToArray();

@@ -21,7 +21,7 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Query
 {
-    public class QueryDocumentsCollectionSource : VirtualCollectionSource<ViewableDocument>
+    public class QueryDocumentsCollectionSource : DocumentsVirtualCollectionSourceBase
     {
         private IndexQuery _templateQuery;
         private string _indexName;
@@ -101,7 +101,7 @@ namespace Raven.Studio.Features.Query
             return ApplicationModel.DatabaseCommands
                 .QueryAsync(indexName,
                             query,
-                            new string[] { })
+                            new string[] { }, MetadataOnly)
                             .ContinueWith(task =>
                                               {
                                                   queryEndtime = DateTime.Now.Ticks;

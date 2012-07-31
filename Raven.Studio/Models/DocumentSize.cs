@@ -8,14 +8,13 @@ namespace Raven.Studio.Models
     public enum DocumentDisplayStyle
     {
         Details,
-        Card
+        Card,
+        IdOnly
     }
 
 	public class DocumentSize : NotifyPropertyChangedBase
 	{
-		public const double DefaultDocumentHeight = 130;
-		public const double ExpandedDocumentHeight = 130;
-		public const double CardMinimumHeight = 90;
+		public const double CardMinimumHeight = 130;
 	    public const double CardMaximumHeight = 700;
 
 	    private double indicatorPosition;
@@ -36,7 +35,8 @@ namespace Raven.Studio.Models
 
 	    public readonly double MinimumIndicatorPosition = 0;
 	    public readonly double MaximumIndicatorPosition = 100;
-	    private const double DetailsToCardSwitchover = 20;
+	    private const double DetailsToIdSwitchover = 20;
+	    private const double IdToCardSwitchover = 40;
 	    private const string IndicatorPostitionSettingsKey = "DocumentSize.IndicatorPosition";
 
 	    public DocumentSize()
@@ -55,13 +55,17 @@ namespace Raven.Studio.Models
 
                 indicatorPosition = value;
 
-                if (indicatorPosition < DetailsToCardSwitchover/2)
+                if (indicatorPosition < DetailsToIdSwitchover / 2)
                 {
                     indicatorPosition = 0;
                 }
-                else if (indicatorPosition < DetailsToCardSwitchover)
+                else if (indicatorPosition < (IdToCardSwitchover - (IdToCardSwitchover - DetailsToIdSwitchover) / 2))
                 {
-                    indicatorPosition = DetailsToCardSwitchover;
+                    indicatorPosition = DetailsToIdSwitchover;
+                }
+                else if (indicatorPosition < IdToCardSwitchover)
+                {
+                    indicatorPosition = IdToCardSwitchover;
                 }
 
                 Settings.Instance.DocumentSize = (int)IndicatorPosition;
@@ -73,18 +77,20 @@ namespace Raven.Studio.Models
 
 	    private void UpdateHeightWidthAndDisplayStyle()
 	    {
-            if (indicatorPosition < DetailsToCardSwitchover)
+            if (indicatorPosition < DetailsToIdSwitchover)
 	        {
 	            DisplayStyle = DocumentDisplayStyle.Details;
 	        }
-            else
+            else if (indicatorPosition < IdToCardSwitchover)
 	        {
-	            DisplayStyle = DocumentDisplayStyle.Card;
+	            DisplayStyle = DocumentDisplayStyle.IdOnly;
+	            Height = 85;
+	            Width = 204;
 	        }
-
-            if (DisplayStyle == DocumentDisplayStyle.Card)
+            else
             {
-                var cardScale = (indicatorPosition - DetailsToCardSwitchover) / (MaximumIndicatorPosition - DetailsToCardSwitchover);
+                DisplayStyle = DocumentDisplayStyle.Card;
+                var cardScale = (indicatorPosition - IdToCardSwitchover) / (MaximumIndicatorPosition - IdToCardSwitchover);
                 Height = CardMinimumHeight + (CardMaximumHeight - CardMinimumHeight)*cardScale;
             }
 	    }
@@ -117,8 +123,11 @@ namespace Raven.Studio.Models
             get { return displayStyle; }
             private set
             {
-                displayStyle = value;
-                OnPropertyChanged(() => DisplayStyle);
+                if (displayStyle != value)
+                {
+                    displayStyle = value;
+                    OnPropertyChanged(() => DisplayStyle);
+                }
             }
         }
 
