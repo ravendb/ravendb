@@ -28,8 +28,8 @@
 			<TextBox x:Name="DbName"
 					 Grid.Column="1"
 					 Margin="5"/>
-			<CheckBox Grid.Row="1" HorizontalAlignment="Right" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" x:Name="ShowAdvande"/>
-			<TextBlock Text="Advance Settings"
+			<CheckBox Grid.Row="1" HorizontalAlignment="Right" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" x:Name="ShowAdvanded"/>
+			<TextBlock Text="Advanced Settings"
 					   Grid.Column="1"
 					   Grid.Row="1"/>	
 		</Grid>

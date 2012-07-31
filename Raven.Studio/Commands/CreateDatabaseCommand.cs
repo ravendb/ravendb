@@ -16,9 +16,8 @@ namespace Raven.Studio.Commands
 	{
 		public override void Execute(object parameter)
 		{
-			var newDatabase = new NewDatabase();
-			newDatabase.ShowAsync()
-				.ContinueOnSuccess(() =>
+			new NewDatabase().ShowAsync()
+				.ContinueOnSuccessInTheUIThread(newDatabase =>
 				{
 					var databaseName = newDatabase.DbName.Text;
 					if (string.IsNullOrEmpty(databaseName))
@@ -26,26 +25,14 @@ namespace Raven.Studio.Commands
 
 					if (Path.GetInvalidPathChars().Any(databaseName.Contains))
 						throw new ArgumentException("Cannot create a database with invalid path characters: " + databaseName);
+					if(ApplicationModel.Current.Server.Value.Databases.Count(s => s == databaseName) != 0)
+						throw new ArgumentException("A database with the name " + databaseName + " already exists");
 
-					var bundles = new BundlesSelect();
-					bundles.ShowAsync()
-						.ContinueOnSuccess(() =>
+					new BundlesSelect().ShowAsync()
+						.ContinueOnSuccessInTheUIThread(bundles =>
 						{
 							ApplicationModel.Current.AddNotification(new Notification("Creating database: " + databaseName));
-							var settings = new Dictionary<string, string>
-							{
-								{
-									"Raven/DataDir", newDatabase.ShowAdvande.IsChecked == true
-									                 	? newDatabase.DbPath.Text
-									                 	: Path.Combine("~", Path.Combine("Databases", databaseName))
-									},
-								{"Raven/ActiveBundles", string.Join(";", bundles.Bundles)}
-							};
-
-							if (!string.IsNullOrWhiteSpace(newDatabase.LogsPath.Text))
-								settings.Add("Raven/Esent/LogsPath", newDatabase.LogsPath.Text);
-							if (!string.IsNullOrWhiteSpace(newDatabase.IndexPath.Text))
-								settings.Add("Raven/IndexStoragePath", newDatabase.IndexPath.Text);
+							var settings = UpdateSettings(newDatabase, bundles);
 
 							var databaseDocuemnt = new DatabaseDocument
 							{
@@ -68,6 +55,25 @@ namespace Raven.Studio.Commands
 						});
 				})
 				.Catch();
+		}
+
+		private static Dictionary<string, string> UpdateSettings(NewDatabase newDatabase, BundlesSelect bundles)
+		{
+			var settings = new Dictionary<string, string>
+			{
+				{
+					"Raven/DataDir", newDatabase.ShowAdvanded.IsChecked == true
+					                 	? newDatabase.DbPath.Text
+					                 	: Path.Combine("~", Path.Combine("Databases", newDatabase.DbName.Text))
+					},
+				{"Raven/ActiveBundles", string.Join(";", bundles.Bundles)}
+			};
+
+			if (!string.IsNullOrWhiteSpace(newDatabase.LogsPath.Text))
+				settings.Add("Raven/Esent/LogsPath", newDatabase.LogsPath.Text);
+			if (!string.IsNullOrWhiteSpace(newDatabase.IndexPath.Text))
+				settings.Add("Raven/IndexStoragePath", newDatabase.IndexPath.Text);
+			return settings;
 		}
 	}
 }
