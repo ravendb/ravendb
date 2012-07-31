@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Studio.Commands;
 using Raven.Studio.Extensions;
@@ -38,6 +39,11 @@ namespace Raven.Studio.Models
 				if (changeDatabase.CanExecute(value.Name))
 					changeDatabase.Execute(value.Name);
 			}
+		}
+
+		public ICommand DeleteSelectedDatabase
+		{
+			get { return new DeleteDatabaseCommand(this); }
 		}
 
 		public override Task TimerTickedAsync()

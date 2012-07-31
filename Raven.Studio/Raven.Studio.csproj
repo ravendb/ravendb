@@ -171,6 +171,7 @@
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\DeleteDatabaseCommand.cs" />
     <Compile Include="Commands\SelectSystemDatabaseCommand.cs" />
     <Compile Include="Commands\ItemSelectionCommand.cs" />
     <Compile Include="Commands\StopIndexingCommand.cs" />
@@ -184,6 +185,9 @@
     </Compile>
     <Compile Include="Controls\BusynessIndicator.xaml.cs">
       <DependentUpon>BusynessIndicator.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\DeleteDatabase.xaml.cs">
+      <DependentUpon>DeleteDatabase.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\Editors\QuerySyntaxTextBlock.xaml.cs">
       <DependentUpon>QuerySyntaxTextBlock.xaml</DependentUpon>
@@ -647,6 +651,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Controls\DeleteDatabase.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\Editors\QuerySyntaxTextBlock.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -974,5 +982,4 @@
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
 </Project>

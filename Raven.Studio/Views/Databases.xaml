@@ -12,11 +12,12 @@
 	<UserControl.Resources>
 		<DataTemplate x:Key="DatabaseItemTemplate">
 			<Grid Background="Transparent">
+
 				<i:Interaction.Behaviors>
 					<Behaviors:DoubleClickBehavior Command="{StaticResource NavigateToCommand}"
 												   CommandParameter="/home" />
 				</i:Interaction.Behaviors>
-				<i:Interaction.Triggers>
+				<i:Interaction.Triggers>					
 					<i:EventTrigger EventName="MouseLeftButtonDown">
 						<i:InvokeCommandAction Command="{StaticResource ChangeDatabaseCommand}" CommandParameter="{Binding Name}"/>
 					</i:EventTrigger>
@@ -102,6 +103,12 @@
 					 ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
 					 ItemTemplate="{StaticResource DatabaseItemTemplate}"
 					 Margin="10">
+
+				<i:Interaction.Triggers>
+					<Behaviors:StudioKeyTrigger Key="Delete">
+						<i:InvokeCommandAction Command="{Binding DeleteSelectedDatabase}" />
+					</Behaviors:StudioKeyTrigger>
+				</i:Interaction.Triggers>
 
 				<i:Interaction.Behaviors>
 					<Behaviors:SelectItemOnRightClick />
