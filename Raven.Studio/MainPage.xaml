@@ -287,6 +287,8 @@
 											  MappedUri="/Views/IndexStats.xaml" />
 						<sdk:UriMapping Uri="/{pageName}"
 											  MappedUri="/Views/{pageName}.xaml" />
+						<sdk:UriMapping Uri="/bundles"
+											  MappedUri="/Views/bundles.xaml" />
 						
 					</sdk:UriMapper>
 				</sdk:Frame.UriMapper>

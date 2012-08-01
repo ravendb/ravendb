@@ -2,7 +2,7 @@
 		   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
 		   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
 		   xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
-                      xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" Width="400" Height="Auto" 
+					  xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" Width="400" Height="Auto" 
 		   Title="BundlesSelect">
 	<Grid x:Name="LayoutRoot" Margin="2">
 		<Grid.RowDefinitions>
@@ -16,10 +16,6 @@
 				<ColumnDefinition Width="*" />
 			</Grid.ColumnDefinitions>
 			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
-				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="Auto" />
@@ -44,109 +40,46 @@
 			<TextBlock Grid.Column="1"
 					   Grid.Row="1"
 					   Text="Encryption Bundle"
-					   Margin="5"/>
-			<Grid x:Name="EncryptionSettings" Grid.Row="2" Grid.ColumnSpan="2" Visibility="Collapsed" Margin="5">
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto" />
-					<ColumnDefinition Width="*" />
-				</Grid.ColumnDefinitions>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="10" />
-				</Grid.RowDefinitions>
-
-				<TextBlock Text="Select Key:" Margin="5" VerticalAlignment="Center"/>
-				<TextBox x:Name="EncryptionKey" Margin="5" Grid.Column="1"/>
-				<TextBlock Text="Leave field empty to auto genarate" Margin="5" Grid.Row="1" Grid.ColumnSpan="2"/>
-			</Grid>
+					   Margin="5"/>			
 
 			<CheckBox x:Name="Expiration"
 					  Checked="Checked"
 					  Unchecked="UnChecked"
-					  Grid.Row="3"
+					  Grid.Row="2"
 					  Margin="5"/>
 			<TextBlock Grid.Column="1"
-					   Grid.Row="3"
+					   Grid.Row="2"
 					   Text="Expiration Bundle"
 					   Margin="5"/>
 
 			<CheckBox x:Name="Quotas"
 					  Checked="Checked"
 					  Unchecked="UnChecked"
-					  Grid.Row="4"
+					  Grid.Row="3"
 					  Margin="5"/>
 			<TextBlock Grid.Column="1"
-					   Grid.Row="4"
+					   Grid.Row="3"
 					   Text="Quotas Bundle"
 					   Margin="5"/>
-
-			<Grid x:Name="QuotasSettings" Grid.Row="5" Grid.ColumnSpan="2" Visibility="Collapsed" Margin="5">
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto" />
-					<ColumnDefinition Width="*" />
-				</Grid.ColumnDefinitions>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="10" />
-				</Grid.RowDefinitions>
-
-				<TextBlock Text="Select max size:" Margin="5" VerticalAlignment="Center"/>
-				<TextBox x:Name="MaxSize" Margin="5" Grid.Column="1"/>
-				<TextBlock Text="Select warning size:" Margin="5" VerticalAlignment="Center" Grid.Row="1"/>
-				<TextBox x:Name="WarnSize" Margin="5" Grid.Column="1" Grid.Row="1"/>
-
-				<TextBlock Text="Select max number of docs:" Margin="5" VerticalAlignment="Center" Grid.Row="2"/>
-				<TextBox x:Name="MaxDocs" Margin="5" Grid.Column="1" Grid.Row="2"/>
-				<TextBlock Text="Select warning for docs:" Margin="5" VerticalAlignment="Center" Grid.Row="3"/>
-				<TextBox x:Name="WarnDocs" Margin="5" Grid.Column="1" Grid.Row="3"/>
-
-			</Grid>
 
 			<CheckBox x:Name="Replication"
 					  Checked="Checked"
 					  Unchecked="UnChecked"
-					  Grid.Row="6"
+					  Grid.Row="4"
 					  Margin="5"/>
 			<TextBlock Grid.Column="1"
-					   Grid.Row="6"
+					   Grid.Row="4"
 					   Text="Replication Bundle"
 					   Margin="5"/>
-
-			<Grid x:Name="ReplicationSettings" Grid.Row="7" Grid.ColumnSpan="2" Visibility="Collapsed" Margin="5">
-				<TextBlock Text="Replication settings"/>
-			</Grid>
-
 			<CheckBox x:Name="Versioning"
 					  Checked="Checked"
 					  Unchecked="UnChecked"
-					  Grid.Row="8"
+					  Grid.Row="5"
 					  Margin="5"/>
 			<TextBlock Grid.Column="1"
-					   Grid.Row="8"
+					   Grid.Row="5"
 					   Text="Versioning Bundle"
 					   Margin="5"/>
-			<Grid x:Name="VersioningSettings" Grid.Row="9" Grid.ColumnSpan="2" Visibility="Visible" Margin="5">
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto" />
-					<ColumnDefinition Width="*" />
-				</Grid.ColumnDefinitions>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="Auto" />
-					<RowDefinition Height="10" />
-				</Grid.RowDefinitions>
-
-				<CheckBox Margin="5" VerticalAlignment="Center"/>
-				<TextBlock x:Name="defaultVersioning" Text="Add default versioning" Margin="5" Grid.Column="1"/>
-				
-				<sdk:DataGrid Grid.Row="1" Grid.ColumnSpan="2"
-							  ItemsSource="{Binding Path=VersioningData}">
-				</sdk:DataGrid>
-			</Grid>
 
 		</Grid>
 		<Button x:Name="CancelButton" Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,0,0" Grid.Row="1" />

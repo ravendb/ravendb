@@ -17,7 +17,7 @@
 					<Behaviors:DoubleClickBehavior Command="{StaticResource NavigateToCommand}"
 												   CommandParameter="/home" />
 				</i:Interaction.Behaviors>
-				<i:Interaction.Triggers>					
+				<i:Interaction.Triggers>
 					<i:EventTrigger EventName="MouseLeftButtonDown">
 						<i:InvokeCommandAction Command="{StaticResource ChangeDatabaseCommand}" CommandParameter="{Binding Name}"/>
 					</i:EventTrigger>
@@ -69,11 +69,18 @@
 							   Style="{StaticResource Style_Text_Header}" VerticalAlignment="Center" Margin="6"/>
 					</StackPanel>
 					<Border Background="{StaticResource Brush_ToolbarBackground}" Grid.Row="1">
-						<StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,4,4,4">
+						<Grid VerticalAlignment="Center" Margin="0,4,4,4">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="*"/>
+								<ColumnDefinition Width="Auto"/>
+							</Grid.ColumnDefinitions>
 							<HyperlinkButton Command="{StaticResource CreateDatabaseCommand}" 
 										 CommandParameter="{Binding}"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
-										 VerticalAlignment="Center">
+										 VerticalAlignment="Center"
+											 Grid.Column="0">
 								<HyperlinkButton.Content>
 									<StackPanel Orientation="Horizontal">
 										<Image Source="{StaticResource Image_AddDatabase_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
@@ -82,10 +89,24 @@
 								</HyperlinkButton.Content>
 							</HyperlinkButton>
 
+							<HyperlinkButton Command="{StaticResource NavigateToCommand}" 
+										 CommandParameter="/bundles"
+										 Style="{StaticResource Style_Button_MouseOverChrome}"
+										 VerticalAlignment="Center"
+											 Grid.Column="1">
+								<HyperlinkButton.Content>
+									<StackPanel Orientation="Horizontal">
+										<Image Source="{StaticResource Image_AddDatabase_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+										<TextBlock Text="Edit Bundles" VerticalAlignment="Center"/>
+									</StackPanel>
+								</HyperlinkButton.Content>
+							</HyperlinkButton>
+
 							<HyperlinkButton Command="{StaticResource SelectSystemDatabaseCommand}" 
 										 CommandParameter="{Binding}"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
-										 VerticalAlignment="Center">
+										 VerticalAlignment="Center"
+											 Grid.Column="3">
 								<HyperlinkButton.Content>
 									<StackPanel Orientation="Horizontal">
 										<Image Source="{StaticResource Image_Reformat_Small}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
@@ -93,7 +114,7 @@
 									</StackPanel>
 								</HyperlinkButton.Content>
 							</HyperlinkButton>
-						</StackPanel>
+						</Grid>
 					</Border>
 				</Grid>
 			</toolkit:HeaderedContentControl.Header>
