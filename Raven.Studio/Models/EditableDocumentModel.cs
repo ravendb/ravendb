@@ -569,7 +569,7 @@ namespace Raven.Studio.Models
             if (newReferences.Any())
             {
                 ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(
-                    newReferences, null)
+                    newReferences, null, metadataOnly:true)
                     .ContinueOnSuccessInTheUIThread(results =>
                     {
                         var ids =
@@ -629,7 +629,7 @@ namespace Raven.Studio.Models
 
             // find parent Ids
             var parentids = new List<string>();
-            var id = LocalId;
+            var id = Key;
             var lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
 
             while (!string.IsNullOrWhiteSpace(id) && lastindex != -1)
@@ -639,7 +639,7 @@ namespace Raven.Studio.Models
                 lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
             }
 
-            var parentsTask = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(parentids.ToArray(), null)
+            var parentsTask = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(parentids.ToArray(), null, metadataOnly:true)
                 .ContinueOnSuccess(results => results.Results.Where(r => r != null).Select(r => r["@metadata"].SelectToken("@id").ToString()));
 
 

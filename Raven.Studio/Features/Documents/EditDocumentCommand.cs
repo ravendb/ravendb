@@ -31,10 +31,6 @@ namespace Raven.Studio.Features.Documents
 			{
 				urlParser.SetQueryParam("id", viewableDocument.Id);
 			}
-			if (viewableDocument.NeighborsIds != null)
-			{
-				urlParser.SetQueryParam("neighbors", string.Join(",", viewableDocument.NeighborsIds));
-			}
 
 			UrlUtil.Navigate(urlParser.BuildUrl());
 		}

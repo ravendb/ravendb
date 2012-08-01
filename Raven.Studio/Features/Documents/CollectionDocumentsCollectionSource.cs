@@ -9,7 +9,7 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Documents
 {
-    public class CollectionDocumentsCollectionSource : VirtualCollectionSource<ViewableDocument>
+    public class CollectionDocumentsCollectionSource : DocumentsVirtualCollectionSourceBase
     {
         private string _collectionName;
         private readonly object _lockObject = new object();
@@ -78,7 +78,8 @@ namespace Raven.Studio.Features.Documents
             return ApplicationModel.DatabaseCommands
                 .QueryAsync("Raven/DocumentsByEntityName",
                             new IndexQuery {Start = start, PageSize = pageSize, Query = "Tag:" + collectionName},
-                            new string[] {})
+                            new string[] {}, 
+                            MetadataOnly)
                 .Catch();
         }
     }

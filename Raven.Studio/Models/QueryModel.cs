@@ -512,6 +512,11 @@ namespace Raven.Studio.Models
 
 	    public void RememberHistory()
 	    {
+            if (string.IsNullOrEmpty(IndexName))
+            {
+                return;
+            } 
+
             var state = new QueryState(IndexName, Query, SortBy.Select(r => r.Value), IsSpatialQuery, Latitude, Longitude, Radius);
 
             PerDatabaseState.QueryHistoryManager.StoreQuery(state);

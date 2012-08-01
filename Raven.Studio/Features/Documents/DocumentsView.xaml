@@ -178,6 +178,7 @@
                 <Converters:StringValueToObjectConverter.Conversions>
                     <Converters:StringValueConversion When="Card" Then="{StaticResource DataTemplate_List_CardView}"/>
                     <Converters:StringValueConversion When="Details" Then="{StaticResource DataTemplate_List_DetailsView}"/>
+                    <Converters:StringValueConversion When="IdOnly" Then="{StaticResource DataTemplate_List_CardView}"/>
                 </Converters:StringValueToObjectConverter.Conversions>
             </Converters:StringValueToObjectConverter>
         </Grid.Resources>

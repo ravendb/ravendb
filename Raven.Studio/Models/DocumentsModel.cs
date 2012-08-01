@@ -56,9 +56,9 @@ namespace Raven.Studio.Models
         private Func<DatabaseModel, IObservable<Unit>> observableGenerator;
         private IDisposable changesSubscription;
 
-        public DocumentsModel(VirtualCollectionSource<ViewableDocument> collectionSource)
+        public DocumentsModel(DocumentsVirtualCollectionSourceBase collectionSource)
         {
-            Documents = new VirtualCollection<ViewableDocument>(collectionSource, 30, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified));
+            Documents = new VirtualCollection<ViewableDocument>(collectionSource, 30, 30, new KeysComparer<ViewableDocument>(v => v.Id ?? v.DisplayId, v => v.LastModified, v => v.MetadataOnly));
             Documents.PropertyChanged += HandleDocumentsPropertyChanged;
 
             Observable.FromEventPattern<ItemsRealizedEventArgs>(h => Documents.ItemsRealized += h,
@@ -239,6 +239,11 @@ namespace Raven.Studio.Models
 
             BeginLoadPriorityProperties();
 
+            DocumentSize.Current.ObservePropertyChanged()
+                .TakeUntil(Unloaded)
+                .Where(c => c.EventArgs.PropertyName == "DisplayStyle")
+                .Subscribe(_ => HandleDisplayStyleChanged());
+
             ApplicationModel.Database
                 .ObservePropertyChanged()
                 .TakeUntil(Unloaded)
@@ -253,6 +258,13 @@ namespace Raven.Studio.Models
             ObserveSourceChanges();
 
             Documents.Refresh();
+            HandleDisplayStyleChanged();
+        }
+
+        private void HandleDisplayStyleChanged()
+        {
+            (Documents.Source as DocumentsVirtualCollectionSourceBase).MetadataOnly =
+                DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.IdOnly;
         }
 
         protected override void OnViewUnloaded()

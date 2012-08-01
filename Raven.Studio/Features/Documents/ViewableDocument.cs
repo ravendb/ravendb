@@ -58,7 +58,8 @@ namespace Raven.Studio.Features.Documents
 		private string toolTipText;
 		public string ToolTipText
 		{
-            get { return toolTipText ?? (toolTipText = ShortViewOfJson.GetContentTrimmedToDimensions(inner.DataAsJson, 60, 70)); }
+            get { return DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.IdOnly ? null : 
+                    toolTipText ?? (toolTipText = ShortViewOfJson.GetContentTrimmedToDimensions(inner.DataAsJson, 60, 70)); }
 		}
 
 		private string trimmedDocumentView;
@@ -71,7 +72,8 @@ namespace Raven.Studio.Features.Documents
                     trimmedDocumentViewNeedsRecalculation = false;
                     ProduceTrimmedDocumentView();
                 }
-			    return trimmedDocumentView;
+
+			    return DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.IdOnly ? null : trimmedDocumentView;
 			}
 			private set
 			{
@@ -82,6 +84,11 @@ namespace Raven.Studio.Features.Documents
 
 	    private void ProduceTrimmedDocumentView()
 	    {
+            if (DocumentSize.Current.DisplayStyle == DocumentDisplayStyle.IdOnly)
+            {
+                return;
+            }
+
 	        var widthInCharacters = (int)(DocumentSize.Current.Width/CharacterWidth);
 	        var heightInLines = (int)(DocumentSize.Current.Height/LineHeight);
 
@@ -207,7 +214,10 @@ namespace Raven.Studio.Features.Documents
 			get { return inner; }
 		}
 
-		public List<string> NeighborsIds { get; set; }
+	    public bool MetadataOnly
+	    {
+	        get { return Document.DataAsJson.Count == 0; }
+	    }
 
 		public override string ToString()
 		{
