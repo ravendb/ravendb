@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Changes;
@@ -118,8 +119,9 @@ namespace Raven.Client.Embedded
 			{
 				lock(this)
 				{
+					Thread.MemoryBarrier();
 					if(databaseChanges == null)
-						databaseChanges = new EmbeddableDatabaseChanges(this);
+						databaseChanges = new EmbeddableDatabaseChanges(this, () => databaseChanges = null);
 				}
 			}
 			return databaseChanges;

@@ -7,13 +7,15 @@ using Raven.Client.Connection;
 
 namespace Raven.Client.Embedded.Changes
 {
-	internal class EmbeddableDatabaseChanges : IDatabaseChanges
+	internal class EmbeddableDatabaseChanges : IDatabaseChanges, IDisposable
 	{
+		private readonly Action onDispose;
 		private readonly EmbeddableObserableWithTask<IndexChangeNotification> indexesObservable;
 		private readonly EmbeddableObserableWithTask<DocumentChangeNotification> documentsObservable;
 
-		public EmbeddableDatabaseChanges(EmbeddableDocumentStore embeddableDocumentStore)
+		public EmbeddableDatabaseChanges(EmbeddableDocumentStore embeddableDocumentStore, Action onDispose)
 		{
+			this.onDispose = onDispose;
 			Task = new CompletedTask();
 			indexesObservable = new EmbeddableObserableWithTask<IndexChangeNotification>();
 			documentsObservable = new EmbeddableObserableWithTask<DocumentChangeNotification>();
@@ -54,6 +56,11 @@ namespace Raven.Client.Embedded.Changes
 
 			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
 				notification => notification.Name.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
+		}
+
+		public void Dispose()
+		{
+			onDispose();
 		}
 	}
 }

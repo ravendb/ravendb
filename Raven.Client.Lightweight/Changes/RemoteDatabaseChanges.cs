@@ -26,6 +26,7 @@ namespace Raven.Client.Changes
 		private readonly ICredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly DocumentConvention conventions;
+		private readonly Action onDispose;
 		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.InvariantCultureIgnoreCase);
 		private int reconnectAttemptsRemaining;
 		private IDisposable connection;
@@ -33,7 +34,7 @@ namespace Raven.Client.Changes
 		private static int connectionCounter;
 		private readonly string id;
 
-		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions)
+		public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions, Action onDispose)
 		{
 			id = Interlocked.Increment(ref connectionCounter) + "/" +
 				 Base62Util.Base62Random();
@@ -41,6 +42,7 @@ namespace Raven.Client.Changes
 			this.credentials = credentials;
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.conventions = conventions;
+			this.onDispose = onDispose;
 			Task = EstablishConnection()
 				.ObserveException();
 		}
@@ -280,6 +282,7 @@ namespace Raven.Client.Changes
 			if (disposed)
 				return new CompletedTask();
 			disposed = true;
+			onDispose();
 			reconnectAttemptsRemaining = 0;
 			foreach (var keyValuePair in counters)
 			{

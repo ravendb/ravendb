@@ -669,7 +669,7 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(database) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
-			return new RemoteDatabaseChanges(dbUrl, credentials, jsonRequestFactory, Conventions);
+			return new RemoteDatabaseChanges(dbUrl, credentials, jsonRequestFactory, Conventions, () => databaseChanges.Remove(database));
 		}
 
 		/// <summary>
