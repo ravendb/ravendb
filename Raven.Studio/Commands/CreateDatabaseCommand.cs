@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Windows.Controls;
 using Raven.Abstractions.Data;
@@ -63,7 +64,13 @@ namespace Raven.Studio.Commands
 												model.ForceTimerTicked();
 											ApplicationModel.Current.AddNotification(
 												new Notification("Database " + databaseName + " created"));
-											Command.ExecuteCommand(new ChangeDatabaseCommand(), databaseName);
+											if (bundles.Encryption.IsChecked == true)
+											{
+												var encryotionSettings = bundlesData.FirstOrDefault(window => window is EncryotionSettings) as EncryotionSettings;
+												if (encryotionSettings != null)
+													new ShowEncryptionMessage(encryotionSettings.EncryptionKey.Text).Show();
+											}
+											ExecuteCommand(new ChangeDatabaseCommand(), databaseName);
 										})
 										.Catch();
 								});
@@ -77,24 +84,24 @@ namespace Raven.Studio.Commands
 			var settings = new Dictionary<string, string>
 			{
 				{
-					"Raven/DataDir", newDatabase.ShowAdvanded.IsChecked == true
+					Constants.RavenDataDir, newDatabase.ShowAdvanded.IsChecked == true
 					                 	? newDatabase.DbPath.Text
 					                 	: Path.Combine("~", Path.Combine("Databases", newDatabase.DbName.Text))
 					},
-				{"Raven/ActiveBundles", string.Join(";", bundles.Bundles)}
+				{Constants.ActiveBundles, string.Join(";", bundles.Bundles)}
 			};
 
 			if (!string.IsNullOrWhiteSpace(newDatabase.LogsPath.Text))
-				settings.Add("Raven/Esent/LogsPath", newDatabase.LogsPath.Text);
+				settings.Add(Constants.RavenLogsPath, newDatabase.LogsPath.Text);
 			if (!string.IsNullOrWhiteSpace(newDatabase.IndexPath.Text))
-				settings.Add("Raven/IndexStoragePath", newDatabase.IndexPath.Text);
+				settings.Add(Constants.RavenIndexPath, newDatabase.IndexPath.Text);
 
 			if(bundles.Bundles.Contains("Encryption"))
 			{
 				var encryptionData = bundlesData.FirstOrDefault(window => window is EncryotionSettings) as EncryotionSettings;
 				if(encryptionData != null)
 				{
-					//TODO: update settings
+					settings[Constants.EncryptionKeySetting] = encryptionData.EncryptionKey.Text;
 				}
 			}
 
@@ -103,7 +110,10 @@ namespace Raven.Studio.Commands
 				var quatasData = bundlesData.FirstOrDefault(window => window is QuotasSettings) as QuotasSettings;
 				if (quatasData != null)
 				{
-					//TODO: update settings
+					settings[Constants.DocsHardLimit] = (quatasData.MaxDocs.Value).ToString(CultureInfo.InvariantCulture);
+					settings[Constants.DocsSoftLimit] = (quatasData.WarnDocs.Value).ToString(CultureInfo.InvariantCulture);
+					settings[Constants.SizeHardLimitInKB] = (quatasData.MaxSize.Value * 1024).ToString(CultureInfo.InvariantCulture);
+					settings[Constants.SizeSoftLimitInKB] = (quatasData.WarnSize.Value * 1024).ToString(CultureInfo.InvariantCulture);
 				}
 			}
 

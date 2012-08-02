@@ -211,6 +211,9 @@
     <Compile Include="Controls\ReplicationSettings.xaml.cs">
       <DependentUpon>ReplicationSettings.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\ShowEncryptionMessage.xaml.cs">
+      <DependentUpon>ShowEncryptionMessage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
     <Compile Include="Controls\VersioningSettings.xaml.cs">
       <DependentUpon>VersioningSettings.xaml</DependentUpon>
@@ -701,6 +704,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\ReplicationSettings.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ShowEncryptionMessage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
