@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Diagnostics;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Tests.Versioning;
 using Raven.Client;
@@ -158,7 +159,7 @@ namespace Raven.Bundles.Tests.Replication
 		protected void SetupReplication(IDatabaseCommands source, params string[] urls)
 		{
 			Assert.NotEmpty(urls);
-			source.Put(Raven.Bundles.Replication.ReplicationConstants.RavenReplicationDestinations,
+			source.Put(Constants.RavenReplicationDestinations,
 			           null, new RavenJObject
 			           {
 			           	{

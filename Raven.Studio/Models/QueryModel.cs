@@ -417,8 +417,6 @@ namespace Raven.Studio.Models
 	        {
 	            (e.NewItems[0] as StringRef).PropertyChanged += delegate { Requery(); };
 	        }
-
-            Requery();
 	    }
 
 		private void Requery()
