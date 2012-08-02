@@ -361,16 +361,18 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false)
 		{
-			var metadata = new RavenJObject();
-			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
-			if (metadataOnly)
-				actualUrl += "&metadata-only=true";
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
+			return ExecuteWithReplication("GET", operationUrl =>
+			{
+				var metadata = new RavenJObject();
+				var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", operationUrl, Uri.EscapeDataString(keyPrefix), start, pageSize);
+				if (metadataOnly)
+					actualUrl += "&metadata-only=true";
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task => SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result).OfType<RavenJObject>()).ToArray());
-	
+				return request.ReadResponseJsonAsync()
+					.ContinueWith(task => SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result).OfType<RavenJObject>()).ToArray());
+			});
 		}
 
 		public Task<BuildNumber> GetBuildNumber()
