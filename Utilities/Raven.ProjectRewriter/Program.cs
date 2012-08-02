@@ -62,6 +62,12 @@ namespace Raven.ProjectRewriter
 				}
 				if (element.Attribute("Include").Value.Contains("Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"))
 					element.Attribute("Include").Value = element.Attribute("Include").Value.Replace("5.0.5.0", "2.0.5.0");
+
+				if (element.Attribute("Include").Value.Contains("System.Reactive, "))
+				{
+					var hintPath = element.Descendants(xmlns + "HintPath").FirstOrDefault();
+						hintPath.Value = hintPath.Value.Replace(@"\SL5\", @"\SL4\");
+				}
 			}
 
 			foreach (var element in database.Root.Descendants(xmlns + "TargetFrameworkVersion"))
