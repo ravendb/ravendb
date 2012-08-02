@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
 using NLog;
@@ -124,11 +125,10 @@ namespace Raven.Database.Backup
 					continue; // skip the Lucene lock file
 			   
 				var destFileName = Path.Combine(tempPath, Path.GetFileName(sourceFile));
-				CreateHardLink(
-					destFileName,
-					sourceFile,
-					IntPtr.Zero
-					);
+				var success = CreateHardLink(destFileName, sourceFile, IntPtr.Zero);
+
+				if (success == false)
+					throw new Win32Exception();
 
 				var fileInfo = new FileInfo(destFileName);
 				fileToSize[fileInfo.FullName] = fileInfo.Length;
