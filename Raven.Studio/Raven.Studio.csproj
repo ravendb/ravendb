@@ -149,6 +149,9 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Bundles\Versioning\Data\VersioningConfiguration.cs">
+      <Link>Features\Bundles\VersioningConfiguration.cs</Link>
+    </Compile>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
