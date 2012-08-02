@@ -19,6 +19,29 @@ namespace Raven.Bundles.Tests
 			}
 		}
 
+		public static bool ContainsSequence<T>(this IList<T> haystack, IList<T> needle)
+		{
+			int lastIndexToCheck = haystack.Count - needle.Count;
+			for (int i = 0; i <= lastIndexToCheck; i++)
+			{
+				bool found = true;
+				for (int j = 0; j < needle.Count; j++)
+				{
+					if (!haystack[i + j].Equals(needle[j]))
+					{
+						found = false;
+						break;
+					}
+				}
+
+				if (found)
+					return true;
+			}
+
+			// not found at any index
+			return false;
+		}
+
 		public static void AssertPlainTextIsNotSavedInAnyFileInPath(string[] plaintext, string path, Func<string, bool> filter)
 		{
 			// Asserts that the given string does not appear in any of the files in the database folder.

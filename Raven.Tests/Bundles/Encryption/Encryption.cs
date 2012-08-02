@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-extern alias database;
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
@@ -19,14 +18,14 @@ namespace Raven.Bundles.Tests.Encryption
 		protected readonly DocumentStore documentStore;
 		private RavenDbServer ravenDbServer;
 		private bool closed = false;
-		private database::Raven.Database.Config.RavenConfiguration settings;
+		private Raven.Database.Config.RavenConfiguration settings;
 
 		public Encryption()
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			settings = new database::Raven.Database.Config.RavenConfiguration
+			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			settings = new Raven.Database.Config.RavenConfiguration
 			{
 				Port = 8079,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
@@ -47,7 +46,7 @@ namespace Raven.Bundles.Tests.Encryption
 			documentStore.Initialize();
 		}
 
-		protected virtual void ConfigureServer(database::Raven.Database.Config.RavenConfiguration ravenConfiguration)
+		protected virtual void ConfigureServer(Raven.Database.Config.RavenConfiguration ravenConfiguration)
 		{
 		}
 
@@ -76,7 +75,7 @@ namespace Raven.Bundles.Tests.Encryption
 		public void Dispose()
 		{
 			Close();
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 		}
 	}
 }

@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-extern alias database;
 using System.Threading;
 using Raven.Bundles.Tests.Versioning;
 using Raven.Client;

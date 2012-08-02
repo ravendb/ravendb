@@ -1,5 +1,4 @@
-﻿extern alias database;
-
+﻿
 using System;
 using System.IO;
 using System.Reflection;
@@ -18,8 +17,8 @@ namespace Raven.Bundles.Tests.Versioning
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			var cfg = new database::Raven.Database.Config.RavenConfiguration
+			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			var cfg = new Raven.Database.Config.RavenConfiguration
 			          	{
 			          		Port = 8079,
 			          		DataDirectory = path,
@@ -38,17 +37,17 @@ namespace Raven.Bundles.Tests.Versioning
 			documentStore.Initialize();
 			using(var s = documentStore.OpenSession())
 			{
-				s.Store(new database::Raven.Bundles.Versioning.Data.VersioningConfiguration
+				s.Store(new Raven.Bundles.Versioning.Data.VersioningConfiguration
 				{
 					Exclude = true,
 					Id = "Raven/Versioning/Users",
 				});
-				s.Store(new database::Raven.Bundles.Versioning.Data.VersioningConfiguration
+				s.Store(new Raven.Bundles.Versioning.Data.VersioningConfiguration
 				{
 					Exclude = true,
 					Id = "Raven/Versioning/Comments",
 				});
-				s.Store(new database::Raven.Bundles.Versioning.Data.VersioningConfiguration
+				s.Store(new Raven.Bundles.Versioning.Data.VersioningConfiguration
 				{
 					Exclude = false,
 					Id = "Raven/Versioning/DefaultConfiguration",
@@ -62,7 +61,7 @@ namespace Raven.Bundles.Tests.Versioning
 		{
 			documentStore.Dispose();
 			ravenDbServer.Dispose();
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 		}
 	}
 }

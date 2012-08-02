@@ -1,4 +1,3 @@
-extern alias database;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Bundles.Tests.Versioning;
@@ -8,7 +7,7 @@ namespace Raven.Bundles.Tests.Encryption
 {
 	public class WithoutEncryption : Encryption
 	{
-		protected override void ConfigureServer(database::Raven.Database.Config.RavenConfiguration ravenConfiguration)
+		protected override void ConfigureServer(Raven.Database.Config.RavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.Settings["Raven/ActiveBundles"] = "none";
 		}

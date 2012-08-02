@@ -4,12 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Raven.Bundles.Tests.Expiration;
-using Raven.Bundles.Tests.Replication;
-using Raven.Bundles.Tests.Replication.Bugs;
 
 namespace Raven.Bundles.Tryouts
 {
@@ -21,10 +15,7 @@ namespace Raven.Bundles.Tryouts
 			{
 				Console.Clear();
 				Console.WriteLine(i);
-				using (var x = new AttachmentReplication())
-				{
-					x.Can_replicate_delete_between_two_instances();
-				}
+				
 			}
 		}
 	}

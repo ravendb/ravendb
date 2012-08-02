@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-extern alias database;
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
@@ -29,8 +28,8 @@ namespace Raven.Bundles.Tests.Expiration
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning.Versioning)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
-			var ravenConfiguration = new database::Raven.Database.Config.RavenConfiguration
+			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			var ravenConfiguration = new Raven.Database.Config.RavenConfiguration
 			{
 				Port = 8079,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
@@ -44,7 +43,7 @@ namespace Raven.Bundles.Tests.Expiration
 			ravenConfiguration.PostInit();
 			ravenDbServer = new RavenDbServer(
 				ravenConfiguration);
-			database::Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
+			Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
 			documentStore = new DocumentStore
 			{
 				Url = "http://localhost:8079"
@@ -56,7 +55,7 @@ namespace Raven.Bundles.Tests.Expiration
 		{
 			documentStore.Dispose();
 			ravenDbServer.Dispose();
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 		}
 
 		[Fact]
@@ -93,7 +92,7 @@ namespace Raven.Bundles.Tests.Expiration
 				session.Advanced.GetMetadataFor(company)["Raven-Expiration-Date"] = new RavenJValue(expiry);
 				session.SaveChanges();
 			}
-			database::Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
+			Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
 		   
 			using (var session = documentStore.OpenSession())
 			{
@@ -121,7 +120,7 @@ namespace Raven.Bundles.Tests.Expiration
 					.WaitForNonStaleResults()
 					.ToList();
 			}
-			database::Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
+			Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow.AddMinutes(10);
 
 			using (var session = documentStore.OpenSession())
 			{

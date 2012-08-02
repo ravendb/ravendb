@@ -1,4 +1,3 @@
-extern alias database;
 using System;
 using System.IO;
 using System.Reflection;
@@ -18,9 +17,9 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 			
 		}
 
-		protected TestWithInMemoryDatabase(Action<database::Raven.Database.Config.RavenConfiguration> configModifier)
+		protected TestWithInMemoryDatabase(Action<Raven.Database.Config.RavenConfiguration> configModifier)
 		{
-			var ravenConfiguration = new database::Raven.Database.Config.RavenConfiguration
+			var ravenConfiguration = new Raven.Database.Config.RavenConfiguration
 			{
 				Port = 8079,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
@@ -33,7 +32,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 
 			ravenConfiguration.DataDirectory = path;
 
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 
 			ravenDbServer = new RavenDbServer(ravenConfiguration);
 
@@ -48,7 +47,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		{
 			documentStore.Dispose();
 			ravenDbServer.Dispose();
-			database::Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
 		}
 	}
 }

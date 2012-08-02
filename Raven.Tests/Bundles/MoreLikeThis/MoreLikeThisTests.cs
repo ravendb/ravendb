@@ -1,5 +1,4 @@
-﻿extern alias database;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;

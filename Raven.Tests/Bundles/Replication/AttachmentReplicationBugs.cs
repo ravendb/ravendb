@@ -1,5 +1,4 @@
-﻿extern alias database;
-
+﻿
 using System.IO;
 using System.Threading;
 using Raven.Json.Linq;
@@ -9,7 +8,7 @@ namespace Raven.Bundles.Tests.Replication
 {
 	public class AttachmentReplicationBugs : ReplicationBase
 	{
-		protected override void ConfigureServer(database::Raven.Database.Config.RavenConfiguration serverConfiguration)
+		protected override void ConfigureServer(Raven.Database.Config.RavenConfiguration serverConfiguration)
 		{
 			serverConfiguration.RunInMemory = false;
 			serverConfiguration.DefaultStorageTypeName = "esent";

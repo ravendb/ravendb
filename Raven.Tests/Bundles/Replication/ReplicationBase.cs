@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-extern alias database;
 
 using System;
 using System.Collections.Generic;
@@ -18,7 +17,7 @@ using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
-using IOExtensions = database::Raven.Database.Extensions.IOExtensions;
+using IOExtensions = Raven.Database.Extensions.IOExtensions;
 using System.Linq;
 
 namespace Raven.Bundles.Tests.Replication
@@ -39,11 +38,11 @@ namespace Raven.Bundles.Tests.Replication
 
 		private IDocumentStore CreateStoreAtPort(int port, Action<DocumentStore> configureStore = null)
 		{
-			database::Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-			var serverConfiguration = new database::Raven.Database.Config.RavenConfiguration
+			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
+			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
 			                          {
 										Settings = {{"Raven/ActiveBundles", "replication"}},
-			                          	AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.All,
+			                          	AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.All,
 			                          	DataDirectory = "Data #" + servers.Count,
 			                          	RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 			                          	RunInMemory = true,
@@ -66,7 +65,7 @@ namespace Raven.Bundles.Tests.Replication
 			return documentStore;
 		}
 
-		protected virtual void ConfigureServer(database::Raven.Database.Config.RavenConfiguration serverConfiguration)
+		protected virtual void ConfigureServer(Raven.Database.Config.RavenConfiguration serverConfiguration)
 		{
 		}
 
@@ -159,7 +158,7 @@ namespace Raven.Bundles.Tests.Replication
 		protected void SetupReplication(IDatabaseCommands source, params string[] urls)
 		{
 			Assert.NotEmpty(urls);
-			source.Put(database::Raven.Bundles.Replication.ReplicationConstants.RavenReplicationDestinations,
+			source.Put(Raven.Bundles.Replication.ReplicationConstants.RavenReplicationDestinations,
 			           null, new RavenJObject
 			           {
 			           	{

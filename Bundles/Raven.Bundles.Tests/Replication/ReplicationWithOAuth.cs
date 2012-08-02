@@ -8,7 +8,7 @@ using Raven.Bundles.Authentication;
 using Raven.Json.Linq;
 using Xunit;
 
-namespace Raven.Bundles.Tests.Replication
+namespace Raven.Bundles.Tests.Replication.Async
 {
 	public class ReplicationWithOAuth : ReplicationBase
 	{
@@ -19,6 +19,7 @@ namespace Raven.Bundles.Tests.Replication
 
 			serverConfiguration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(AuthenticationUser).Assembly));
 		}
+
 
 		protected override void ConfigureStore(Client.Document.DocumentStore documentStore)
 		{
@@ -53,10 +54,10 @@ namespace Raven.Bundles.Tests.Replication
 
 			TellFirstInstanceToReplicateToSecondInstance();
 
-			using (var session = store1.OpenSession())
+			using (var session = store1.OpenAsyncSession())
 			{
 				session.Store(new Item());
-				session.SaveChanges();
+				session.SaveChangesAsync().Wait();
 			}
 
 			JsonDocument item = null;

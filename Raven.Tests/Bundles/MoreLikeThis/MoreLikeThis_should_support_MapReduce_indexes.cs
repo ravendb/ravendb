@@ -1,5 +1,4 @@
-﻿extern alias database;
-using System.Collections.Specialized;
+﻿using System.Collections.Specialized;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using Raven.Abstractions.Indexing;
