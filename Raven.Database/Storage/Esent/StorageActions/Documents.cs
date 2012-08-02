@@ -181,19 +181,8 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			Api.JetSetCurrentIndex(session, Documents, "by_etag");
 			Api.MoveAfterLast(session, Documents);
-			if (start > 0)
-			{
-				try
-				{
-					Api.JetMove(session, Documents, -1 * start /* need to move backward*/, MoveGrbit.None);
-				}
-				catch (EsentErrorException e)
-				{
-					if (e.Error == JET_err.NoCurrentRecord)
-						return Enumerable.Empty<JsonDocument>();
-					throw;
-				}
-			}
+			if (TryMoveDocumentRecords(start, backward: true)) 
+				return Enumerable.Empty<JsonDocument>();
 			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			while (Api.TryMovePrevious(session, Documents) && optimizer.Count < take)
 			{
@@ -201,6 +190,27 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			return optimizer.Select(ReadCurrentDocument);
+		}
+
+		private bool TryMoveDocumentRecords(int start, bool backward)
+		{
+			if (start <= 0) 
+				return false;
+			if (backward)
+				start *= -1;
+			try
+			{
+				Api.JetMove(session, Documents, start, MoveGrbit.None);
+			}
+			catch (EsentErrorException e)
+			{
+				if (e.Error == JET_err.NoCurrentRecord)
+				{
+					return true;
+				}
+				throw;
+			}
+			return false;
 		}
 
 		private JsonDocument ReadCurrentDocument()
@@ -271,12 +281,8 @@ namespace Raven.Storage.Esent.StorageActions
 				if (Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
 					return Enumerable.Empty<JsonDocument>();
 
-				while (start > 0)
-				{
-					if (Api.TryMoveNext(session, Documents) == false)
-						return Enumerable.Empty<JsonDocument>();
-					start--;
-				}
+				if (TryMoveDocumentRecords(start, backward: false))
+					return Enumerable.Empty<JsonDocument>();
 
 				optimizer.Add();
 
