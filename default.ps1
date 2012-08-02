@@ -391,7 +391,7 @@ task UploadStable -depends Stable, DoRelease, Upload
 
 task UploadUnstable -depends Unstable, DoRelease, Upload
 
-task CreateNugetPackages {
+task CreateNugetPackages -depends Compile {
 
 	Remove-Item $base_dir\RavenDB*.nupkg
 	
