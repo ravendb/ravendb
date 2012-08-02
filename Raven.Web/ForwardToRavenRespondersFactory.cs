@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Web;
 using System.Web.Hosting;
 using NLog;
@@ -23,10 +25,35 @@ namespace Raven.Web
 
 		public class ReleaseRavenDBWhenAppDomainIsTornDown : IRegisteredObject
 		{
+			private Task shutdownTask;
+
 			public void Stop(bool immediate)
 			{
-				Shutdown();
-				HostingEnvironment.UnregisterObject(this);
+				if (shutdownTask == null)
+				{
+					lock (this)
+					{
+						Thread.MemoryBarrier();
+						if (shutdownTask == null)
+						{
+							shutdownTask = Task.Factory.StartNew(Shutdown)
+								.ContinueWith(_ =>
+								              	{
+								              		GC.KeepAlive(_.Exception); // ensure no unobserved exception
+								              		HostingEnvironment.UnregisterObject(this);
+								              	});
+						}
+					}
+				}
+				
+				if (immediate)
+				{
+					shutdownTask.Wait();
+					// we already called this from the task's continue with, but
+					// let us make sure that this is called _before_ we return 
+					// from this method when immediate = true.
+					HostingEnvironment.UnregisterObject(this);
+				}
 			}
 		}
 
