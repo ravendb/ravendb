@@ -4,8 +4,8 @@
 					 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
 					 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 					 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors"
-					 Title="Databases"
+					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors" xmlns:Controls="clr-namespace:System.Windows.Controls"
+						 Title="Databases"
 					 Style="{StaticResource PageStyle}"
 					 Infrastructure:ModelAttacher.AttachObservableModel="DatabasesListModel">
 
@@ -89,19 +89,6 @@
 								</HyperlinkButton.Content>
 							</HyperlinkButton>
 
-							<HyperlinkButton Command="{StaticResource NavigateToCommand}" 
-										 CommandParameter="/bundles"
-										 Style="{StaticResource Style_Button_MouseOverChrome}"
-										 VerticalAlignment="Center"
-											 Grid.Column="1">
-								<HyperlinkButton.Content>
-									<StackPanel Orientation="Horizontal">
-										<Image Source="{StaticResource Image_AddDatabase_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
-										<TextBlock Text="Edit Bundles" VerticalAlignment="Center"/>
-									</StackPanel>
-								</HyperlinkButton.Content>
-							</HyperlinkButton>
-
 							<HyperlinkButton Command="{StaticResource SelectSystemDatabaseCommand}" 
 										 CommandParameter="{Binding}"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
@@ -120,7 +107,7 @@
 			</toolkit:HeaderedContentControl.Header>
 			<ListBox Style="{StaticResource Databases_FluidList}"
 					 ItemsSource="{Binding Databases}"
-					 SelectedItem="{Binding SelectedDatabase}"
+					 SelectedItem="{Binding SelectedDatabase, Mode=TwoWay}"
 					 ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
 					 ItemTemplate="{StaticResource DatabaseItemTemplate}"
 					 Margin="10">
@@ -134,6 +121,20 @@
 				<i:Interaction.Behaviors>
 					<Behaviors:SelectItemOnRightClick />
 				</i:Interaction.Behaviors>
+
+				<Controls:ContextMenuService.ContextMenu>
+					<Controls:ContextMenu>
+						<Controls:MenuItem Header="Edit Bundles"
+											Command="{StaticResource NavigateToCommand}" 
+										 CommandParameter="/bundles"/>
+						<Controls:MenuItem Header="Delete"
+											Command="{Binding DeleteSelectedDatabase}">
+							<Controls:MenuItem.Icon>
+								<Image Source="{StaticResource Image_Delete_Tiny}"/>
+							</Controls:MenuItem.Icon>
+						</Controls:MenuItem>
+					</Controls:ContextMenu>
+				</Controls:ContextMenuService.ContextMenu>
 			</ListBox>
 		</toolkit:HeaderedContentControl>
 	</Grid>
