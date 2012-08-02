@@ -11,7 +11,35 @@
 						 d:DesignWidth="640" d:DesignHeight="480"
 		   Title="BundlesView Page">
 	<Grid x:Name="LayoutRoot">
-		<sdk:TabControl Width="Auto" Height="Auto">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
+			<Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
+			<HyperlinkButton Content="Databases"
+									 Style="{StaticResource Style_Link_Breadcrumb_Header}"
+									 Command="{StaticResource NavigateToCommand}"
+									 CommandParameter="/Databases"
+									 VerticalAlignment="Center" />
+			<TextBlock Text=">"
+							   VerticalAlignment="Center"
+							   Margin="4,0" />
+
+			<TextBlock Text="{Binding CurrentDatabase}"
+					   Margin="0,0,0,0"
+					   VerticalAlignment="Center"
+					   Style="{StaticResource Style_TextBlock_Breadcrumb_Initial}" />
+
+			<TextBlock Text=">"
+							   VerticalAlignment="Center"
+							   Margin="4,0" />
+			<TextBlock Text="Bundles"
+							   Style="{StaticResource Style_TextBlock_Breadcrumb}"
+							   VerticalAlignment="Center" />
+		</StackPanel>
+		<sdk:TabControl Width="Auto" Height="Auto" Grid.Row="1">
 			<sdk:TabItem Header="Quotas" Visibility="{Binding HasQuotas, Converter={StaticResource BooleanToVisibility}}">
 				<Grid Margin="2">
 					<Grid.RowDefinitions>

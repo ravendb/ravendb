@@ -43,6 +43,7 @@ namespace Raven.Studio.Models
 		}
 
 		public ReplicationDocument ReplicationData { get; set; }
+		public string CurrentDatabase { get { return ApplicationModel.Database.Value.Name; } }
 
 		public bool HasQuotas
 		{
