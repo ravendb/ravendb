@@ -55,9 +55,7 @@ namespace Raven.Tests.Bugs
 			var backToPatch = PatchRequest.FromJson(jsonPatch);
 			Assert.Equal(patch.Name, backToPatch.Name);
 			Assert.Equal(patch.Nested.Length, backToPatch.Nested.Length);
-
-		}
-		
+		}		
 		
 		[Fact]
 		public void CanConvertToAndFromJsonWithoutNestedPatchRequests()
@@ -151,12 +149,12 @@ namespace Raven.Tests.Bugs
 				using (var s = store.OpenSession())
 				{
 					s.Store(new Post
-					        	{
-					        		Comments = new List<Comment>
-					        		           	{
-					        		           		new Comment {AuthorId = "authors/123"}
-					        		           	}
-					        	});
+								{
+									Comments = new List<Comment>
+												{
+													new Comment {AuthorId = "authors/123"}
+												}
+								});
 					s.SaveChanges();
 				}
 
@@ -167,14 +165,14 @@ namespace Raven.Tests.Bugs
 								{
 									Key = "posts/1",
 									Patches = new[]
-									          	{
-									          		new PatchRequest
-									          			{
-									          				Type = PatchCommandType.Add,
-									          				Name = "Comments",
-									          				Value = RavenJObject.FromObject(new Comment {AuthorId = "authors/456"})
-									          			},
-									          	}
+												{
+													new PatchRequest
+														{
+															Type = PatchCommandType.Add,
+															Name = "Comments",
+															Value = RavenJObject.FromObject(new Comment {AuthorId = "authors/456"})
+														},
+												}
 								}
 						});
 
@@ -197,9 +195,9 @@ namespace Raven.Tests.Bugs
 					s.Store(new Post
 					{
 						Comments = new List<Comment>
-					        		           	{
-					        		           		new Comment {AuthorId = "authors/123"}
-					        		           	}
+												{
+													new Comment {AuthorId = "authors/123"}
+												}
 					});
 					s.SaveChanges();
 				}
@@ -211,14 +209,14 @@ namespace Raven.Tests.Bugs
 								{
 									Key = "posts/1",
 									Patches = new[]
-									          	{
-									          		new PatchRequest
-									          			{
-									          				Type = PatchCommandType.Remove,
-									          				Name = "Comments",
+												{
+													new PatchRequest
+														{
+															Type = PatchCommandType.Remove,
+															Name = "Comments",
 															Position = 0
-									          			},
-									          	}
+														},
+												}
 								}
 						});
 

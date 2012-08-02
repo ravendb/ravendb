@@ -15,7 +15,7 @@ namespace Raven.Studio.Features.Tasks
 		{
 			Name = "Backup Database";
 			Description = "Backup your database.";
-
+		    IconResource = "Image_Backup_Tiny";
 			TaskInputs.Add(new TaskInput("Location", @"C:\path-to-your-backup-folder"));
 		}
 

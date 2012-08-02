@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Linq;
+using Raven.Abstractions.MEF;
+using Raven.Database.Plugins;
 using Raven.Json.Linq;
 using Raven.Database.Config;
 using Raven.Database.Impl;
@@ -26,7 +28,7 @@ namespace Raven.Tests.Views
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
 			}, () => { });
-			transactionalStorage.Initialize(new DummyUuidGenerator());
+			transactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
 		}
 
 		public override void Dispose()

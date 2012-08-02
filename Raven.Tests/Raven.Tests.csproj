@@ -397,7 +397,6 @@
     <Compile Include="Bugs\Queries\Includes.cs" />
     <Compile Include="Bugs\Queries\LuceneQueryCustomMetadata.cs" />
     <Compile Include="Bugs\Queries\Projections.cs" />
-    <Compile Include="Bugs\Queries\QueryById.cs" />
     <Compile Include="Bugs\Queries\RangeQueries.cs" />
     <Compile Include="Bugs\Queries\StatsOnDynamicQueries.cs" />
     <Compile Include="Bugs\Queries\TermsLocal.cs" />
@@ -572,16 +571,21 @@
     <Compile Include="Issues\RavenDB_367.cs" />
     <Compile Include="Issues\RavenDB_381.cs" />
     <Compile Include="Issues\RavenDB_384.cs" />
+    <Compile Include="Issues\RavenDB_421.cs" />
+    <Compile Include="Issues\RavenDB_423.cs" />
+    <Compile Include="Issues\RavenDB_425.cs" />
     <Compile Include="Issues\Raven_410.cs" />
     <Compile Include="Issues\ReplicationBehavior.cs" />
     <Compile Include="Linq\LongCount.cs" />
     <Compile Include="MailingList\AccesscControlHeaders.cs" />
+    <Compile Include="MailingList\Algirdas.cs" />
     <Compile Include="MailingList\Arun.cs" />
     <Compile Include="MailingList\Ben.cs" />
     <Compile Include="MailingList\Brett.cs" />
     <Compile Include="MailingList\BrianVallelunga.cs" />
     <Compile Include="MailingList\Bruno.cs" />
     <Compile Include="MailingList\BrunoLopes.cs" />
+    <Compile Include="MailingList\BlockedMethods.cs" />
     <Compile Include="MailingList\ChrisH.cs" />
     <Compile Include="MailingList\Hendrik.cs" />
     <Compile Include="MailingList\HiloWithMultiTenancy.cs" />
@@ -639,6 +643,7 @@
     <Compile Include="MailingList\MattJohnson.cs" />
     <Compile Include="MailingList\Maverix.cs" />
     <Compile Include="MailingList\Maverix2.cs" />
+    <Compile Include="MailingList\MissingIncludes.cs" />
     <Compile Include="MailingList\NestedIndexDynamic.cs" />
     <Compile Include="MailingList\Nick.cs" />
     <Compile Include="MailingList\NoBuiltinDuplicates.cs" />
@@ -664,6 +669,7 @@
     <Compile Include="MailingList\Samina2.cs" />
     <Compile Include="MailingList\Samina3.cs" />
     <Compile Include="MailingList\Scott.cs" />
+    <Compile Include="MailingList\Sean.cs" />
     <Compile Include="MailingList\SearchByMapReduceExample.cs" />
     <Compile Include="MailingList\SpecialChars.cs" />
     <Compile Include="MailingList\Stacey\Image.cs" />
@@ -672,6 +678,8 @@
     <Compile Include="MailingList\StartsWith.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
     <Compile Include="MailingList\Stockholm.cs" />
+    <Compile Include="MailingList\Vicente.cs" />
+    <Compile Include="Patching\AdvancedPatching.cs" />
     <Compile Include="MailingList\Tony.cs" />
     <Compile Include="MailingList\Troy.cs" />
     <Compile Include="MailingList\TwoLocations.cs" />
@@ -684,6 +692,7 @@
     <Compile Include="Notifications\MultiTenant.cs" />
     <Compile Include="Notifications\Security_Windows.cs" />
     <Compile Include="Notifications\WithIIS.cs" />
+    <Compile Include="Queries\CanQueryOnLargeXml.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />
     <Compile Include="MailingList\WallaceTurner.cs" />
@@ -917,6 +926,7 @@
     <Compile Include="Util\RavenDBDriver.cs" />
     <Compile Include="Util\ReflectionUtilTest.cs" />
     <Compile Include="Util\RunExternalProcess.cs" />
+    <Compile Include="Util\WildcardMatching.cs" />
     <Compile Include="Views\MapReduce.cs" />
     <Compile Include="Views\MapReduce_IndependentSteps.cs" />
     <Compile Include="Views\ViewCompilation.cs" />

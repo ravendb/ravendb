@@ -71,9 +71,17 @@
     <Reference Include="Esent.Interop">
       <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
+    <Reference Include="FSharp.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\SharedLibs\FSharp.Core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="ICSharpCode.NRefactory, Version=3.0.0.3800, Culture=neutral, PublicKeyToken=efe927acf176eea2, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\ICSharpCode.NRefactory.dll</HintPath>
+    </Reference>
+    <Reference Include="IronJS">
+      <HintPath>..\SharedLibs\IronJS.dll</HintPath>
     </Reference>
     <Reference Include="Lucene.Net, Version=2.3.2.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -87,6 +95,9 @@
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="Mono.Cecil">
+      <HintPath>..\packages\Mono.Cecil.0.9.5.3\lib\net40\Mono.Cecil.dll</HintPath>
+    </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
     </Reference>
@@ -120,14 +131,47 @@
     </Compile>
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Backup\RemoveBackupDocumentStartupTask.cs" />
+    <Compile Include="Bundles\Compression\Plugin\DocumentCompression.cs" />
+    <Compile Include="Bundles\Compression\Streams\CompressStream.cs" />
+    <Compile Include="Bundles\Compression\Streams\DecompressStream.cs" />
+    <Compile Include="Bundles\Compression\Streams\StreamReaderWithUnread.cs" />
+    <Compile Include="Bundles\Encryption\Codec.cs" />
+    <Compile Include="Bundles\Encryption\Constants.cs" />
+    <Compile Include="Bundles\Encryption\CryptoTransformExtensions.cs" />
+    <Compile Include="Bundles\Encryption\Plugin\DocumentEncryption.cs" />
+    <Compile Include="Bundles\Encryption\Plugin\EncryptionSettingsDeleteTrigger.cs" />
+    <Compile Include="Bundles\Encryption\Plugin\EncryptionSettingsPutTrigger.cs" />
+    <Compile Include="Bundles\Encryption\Plugin\IndexEncryption.cs" />
+    <Compile Include="Bundles\Encryption\Settings\EncryptionSettings.cs" />
+    <Compile Include="Bundles\Encryption\Settings\EncryptionSettingsManager.cs" />
+    <Compile Include="Bundles\Encryption\Streams\BlockReaderWriter.cs" />
+    <Compile Include="Bundles\Encryption\Streams\EncryptedFile.cs" />
+    <Compile Include="Bundles\Encryption\Streams\SeekableCryptoStream.cs" />
+    <Compile Include="Bundles\Encryption\Streams\StructConverter.cs" />
+    <Compile Include="Bundles\Expiration\ExpirationReadTrigger.cs" />
+    <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
     <Compile Include="Bundles\Versioning\Data\VersioningConfiguration.cs" />
     <Compile Include="Bundles\Versioning\Triggers\HideVersionedDocumentsFromIndexingTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
+    <Compile Include="Indexing\FilteredDocument.cs" />
+    <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
+    <Compile Include="Linq\CodeVerifier.cs" />
+    <Compile Include="Linq\Mono.Reflection\BackingFieldResolver.cs" />
+    <Compile Include="Linq\Mono.Reflection\ByteBuffer.cs" />
+    <Compile Include="Linq\Mono.Reflection\Disassembler.cs" />
+    <Compile Include="Linq\Mono.Reflection\ILPattern.cs" />
+    <Compile Include="Linq\Mono.Reflection\Image.cs" />
+    <Compile Include="Linq\Mono.Reflection\Instruction.cs" />
+    <Compile Include="Linq\Mono.Reflection\MethodBodyReader.cs" />
+    <Compile Include="Server\Connections\ConnectionState.cs" />
+    <Compile Include="Server\Connections\EventsTransport.cs" />
     <Compile Include="Server\Responders\Admin\AdminDatabases.cs" />
+    <Compile Include="Server\Responders\Admin\AdminIndexingStatus.cs" />
     <Compile Include="Server\Responders\Admin\AdminResponder.cs" />
+    <Compile Include="Server\Responders\ChangesConfig.cs" />
     <Compile Include="Server\Responders\MoreLikeThisResponder.cs" />
     <Compile Include="Bundles\MoreLikeThis\RavenMoreLikeThis.cs" />
     <Compile Include="Bundles\Quotas\Documents\DocQuotaConfiguration.cs" />
@@ -162,6 +206,7 @@
     <Compile Include="Config\CertGenerator.cs" />
     <Compile Include="Config\ConfigOptionDocs.cs" />
     <Compile Include="Config\MemoryStatistics.cs" />
+    <Compile Include="Extensions\DateTimeExtensions.cs" />
     <Compile Include="Data\QueryResultWithIncludes.cs" />
     <Compile Include="Impl\Clustering\ClusterInspecter.cs" />
     <Compile Include="Impl\Clustering\ClusterResourceState.cs" />
@@ -170,6 +215,7 @@
     <Compile Include="Impl\Clustering\RegSam.cs" />
     <Compile Include="Impl\ExceptionAggregator.cs" />
     <Compile Include="Indexing\BaseBatchSizeAutoTuner.cs" />
+    <Compile Include="Indexing\LuceneCodecDirectory.cs" />
     <Compile Include="Indexing\ReduceBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\DefaultBackgroundTaskExecuter.cs" />
     <Compile Include="Indexing\IBackgroundTaskExecuter.cs" />
@@ -187,12 +233,14 @@
     <Compile Include="Indexing\Sorting\SpatialDistanceSortField.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Json\ScriptedJsonPatcher.cs" />
     <Compile Include="Linq\Ast\TransformDynamicLambdaExpressions.cs" />
     <Compile Include="Linq\RecursiveFunction.cs" />
     <Compile Include="Plugins\Builtins\InvalidDocumentNames.cs" />
     <Compile Include="Plugins\Builtins\Tenants\ModifiedTenantDatabase.cs" />
     <Compile Include="Plugins\Builtins\Tenants\TenantDatabaseModified.cs" />
     <Compile Include="Plugins\Catalogs\BuiltinFilteringCatalog.cs" />
+    <Compile Include="Plugins\AbstractIndexCodec.cs" />
     <Compile Include="Plugins\Catalogs\BundlesFilteredCatalog.cs" />
     <Compile Include="Plugins\Catalogs\FilteredCatalog.cs" />
     <Compile Include="Rhino.Licensing\AbstractLicenseValidator.cs" />
@@ -237,9 +285,7 @@
     <Compile Include="Server\LogHttpRequestStatsParams.cs" />
     <Compile Include="Server\NonAdminHttp.cs" />
     <Compile Include="Plugins\ISilverlightRequestedAware.cs" />
-    <Compile Include="Server\NotificationsConnection.cs" />
     <Compile Include="Server\Responders\Admin\AdminCompact.cs" />
-    <Compile Include="Server\Responders\Admin\AdminRunIdleOperations.cs" />
     <Compile Include="Server\Responders\Admin\AdminStats.cs" />
     <Compile Include="Server\Responders\DatabaseSize.cs" />
     <Compile Include="Server\Responders\Favicon.cs" />
@@ -516,6 +562,8 @@
     <Compile Include="Server\Responders\TransactionPromote.cs" />
     <Compile Include="Server\Responders\TransactionRollback.cs" />
     <Compile Include="Server\Responders\TransactionStatus.cs" />
+    <Compile Include="Server\Connections\TransportState.cs" />
+    <Compile Include="Server\Connections\TimeSensitiveStore.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />
@@ -601,8 +649,8 @@
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Util\BoundedMemoryTarget.cs" />
-    <Compile Include="Util\ConcurrentSet.cs" />
     <Compile Include="Util\PortUtil.cs" />
+    <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
@@ -622,6 +670,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Json\Map.js" />
+    <EmbeddedResource Include="Json\ToJson.js" />
+    <EmbeddedResource Include="Json\RavenDB.js" />
     <Content Include="Server\WebUI\css\smoothness\images\ui-anim_basic_16x16.gif" />
     <Content Include="Server\WebUI\studio_not_found.html" />
     <Content Include="Server\WebUI\studio.html" />
@@ -717,18 +768,6 @@
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Imports\SignalR\SignalR.Hosting.Common\SignalR.Hosting.Common.csproj">
-      <Project>{3B71F0AE-D4B6-4F47-BF62-333D45615673}</Project>
-      <Name>SignalR.Hosting.Common</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Imports\SignalR\SignalR.Hosting.Self\SignalR.Hosting.Self.csproj">
-      <Project>{A2BD866D-906A-4742-AB3B-DB8740830400}</Project>
-      <Name>SignalR.Hosting.Self</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Imports\SignalR\SignalR\SignalR.csproj">
-      <Project>{1B9A82C4-BCA1-4834-A33E-226F17BE070B}</Project>
-      <Name>SignalR %28SignalR\SignalR%29</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>

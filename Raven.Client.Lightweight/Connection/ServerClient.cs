@@ -119,11 +119,11 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize)
+		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false)
 		{
 			EnsureIsNotNullOrEmpty(keyPrefix, "keyPrefix");
 
-			return ExecuteWithReplication("GET", u => DirectStartsWith(u, keyPrefix, start, pageSize));
+			return ExecuteWithReplication("GET", u => DirectStartsWith(u, keyPrefix, matches, start, pageSize, metadataOnly));
 
 		}
 
@@ -195,7 +195,7 @@ namespace Raven.Client.Connection
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 			try
 			{
 				var responseJson = request.ReadResponseJson();
@@ -227,7 +227,7 @@ namespace Raven.Client.Connection
 			var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 			return new ConflictException("Conflict detected on " + key +
-										", conflict must be resolved before the document will be accessible")
+			                            ", conflict must be resolved before the document will be accessible")
 			{
 				ConflictedVersionIds = conflictIds,
 				Etag = etag
@@ -253,15 +253,19 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("PUT", u => DirectPut(metadata, key, etag, document, u));
 		}
 
-		private JsonDocument[] DirectStartsWith(string operationUrl, string keyPrefix, int start, int pageSize)
+		private JsonDocument[] DirectStartsWith(string operationUrl, string keyPrefix, string matches, int start, int pageSize, bool metadataOnly)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", operationUrl, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={4}&start={2}&pageSize={3}", operationUrl,
+			                              Uri.EscapeDataString(keyPrefix), start, pageSize, Uri.EscapeDataString(matches ?? ""));
+			if (metadataOnly)
+				actualUrl += "&metadata-only=true";
+			
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 
 			RavenJToken responseJson;
 			try
@@ -541,7 +545,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + name, "RESET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 			httpJsonRequest.ReadResponseJson();
 			return null;
 		}
@@ -551,7 +555,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 			var responseJson = httpJsonRequest.ReadResponseJson();
 			return ((RavenJArray)responseJson).Select(x => x.Value<string>()).ToArray();
 		}
@@ -572,7 +576,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + indexName + "?definition=yes", "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 			RavenJToken indexDef;
 			try
 			{
@@ -601,7 +605,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 			try
 			{
 				httpJsonRequest.ExecuteRequest();
@@ -668,7 +672,7 @@ namespace Raven.Client.Connection
 			var checkIndexExists = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 			try
 			{
 				// If the index doesn't exist this will throw a NotFound exception and continue with a PUT request
@@ -686,7 +690,7 @@ namespace Raven.Client.Connection
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
 
 
@@ -729,15 +733,17 @@ namespace Raven.Client.Connection
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
 		/// <returns></returns>
-		public QueryResult Query(string index, IndexQuery query, string[] includes)
+		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
 		{
 			EnsureIsNotNullOrEmpty(index, "index");
-			return ExecuteWithReplication("GET", u => DirectQuery(index, query, u, includes));
+			return ExecuteWithReplication("GET", u => DirectQuery(index, query, u, includes, metadataOnly));
 		}
 
-		private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes)
+		private QueryResult DirectQuery(string index, IndexQuery query, string operationUrl, string[] includes, bool metadataOnly)
 		{
 			string path = query.GetIndexQueryUrl(operationUrl, index, "indexes");
+			if (metadataOnly)
+				path += "&metadata-only=true";
 			if (includes != null && includes.Length > 0)
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
@@ -745,7 +751,7 @@ namespace Raven.Client.Connection
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 
 			RavenJObject json;
 			try
@@ -787,7 +793,7 @@ namespace Raven.Client.Connection
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + name, "DELETE", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 			request.ExecuteRequest();
 		}
 
@@ -796,10 +802,11 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <param name="includes">The includes.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		public MultiLoadResult Get(string[] ids, string[] includes)
+		public MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes));
+			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes, metadataOnly));
 		}
 
 		/// <summary>
@@ -809,9 +816,11 @@ namespace Raven.Client.Connection
 		/// <param name="operationUrl">The operation URL.</param>
 		/// <param name="includes">The includes.</param>
 		/// <returns></returns>
-		public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes)
+		public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, bool metadataOnly)
 		{
 			var path = operationUrl + "/queries/?";
+			if (metadataOnly)
+				path += "&metadata-only=true";
 			if (includes != null && includes.Length > 0)
 			{
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
@@ -835,7 +844,7 @@ namespace Raven.Client.Connection
 				request.Write(new RavenJArray(uniqueIds).ToString(Formatting.None));
 			}
 
-
+			
 			var result = (RavenJObject)request.ReadResponseJson();
 
 			var results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList();
@@ -846,7 +855,7 @@ namespace Raven.Client.Connection
 			};
 			foreach (var docResult in multiLoadResult.Results.Concat(multiLoadResult.Includes))
 			{
-
+				
 				AssertNonConflictedDocument(docResult);
 			}
 			return multiLoadResult;
@@ -881,7 +890,7 @@ namespace Raven.Client.Connection
 			var req = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/bulk_docs", "POST", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 			req.Write(jArray.ToString(Formatting.None));
 
@@ -919,7 +928,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/commit?tx=" + txId, "POST", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 			httpJsonRequest.ReadResponseJson();
 		}
 
@@ -986,7 +995,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 			httpJsonRequest.ReadResponseJson();
 		}
 
@@ -1102,14 +1111,15 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
-		/// Perform a set based deletes using the specified index, not allowing the operation
+		/// Perform a set based update using the specified index, not allowing the operation
 		/// if the index is stale
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToDelete">The query to delete.</param>
-		public void DeleteByIndex(string indexName, IndexQuery queryToDelete)
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
 		{
-			DeleteByIndex(indexName, queryToDelete, false);
+			UpdateByIndex(indexName, queryToUpdate, patch, false);
 		}
 
 		/// <summary>
@@ -1121,14 +1131,33 @@ namespace Raven.Client.Connection
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
-			ExecuteWithReplication<object>("PATCH", operationUrl =>
+			var requestData = new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented);
+			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "PATCH");
+		}
+
+		/// <summary>
+		/// Perform a set based update using the specified index
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+        /// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		public void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+			{
+			var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
+			UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");
+		}
+
+		private void UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
+		{
+			ExecuteWithReplication<object>(method, operationUrl =>
 			{
 				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, path, "PATCH", credentials, convention)
+					new CreateHttpJsonRequestParams(this, path, method, credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
-
-				request.Write(new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented));
+				
+				request.Write(requestData);
 				try
 				{
 					request.ReadResponseJson();
@@ -1144,6 +1173,16 @@ namespace Raven.Client.Connection
 			});
 		}
 
+		/// <summary>
+		/// Perform a set based deletes using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToDelete">The query to delete.</param>
+		public void DeleteByIndex(string indexName, IndexQuery queryToDelete)
+		{
+			DeleteByIndex(indexName, queryToDelete, false);
+		}
 
 		/// <summary>
 		/// Returns a list of suggestions based on the specified suggestion query.
@@ -1168,7 +1207,7 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
-
+				
 
 				RavenJObject json = (RavenJObject)request.ReadResponseJson();
 
@@ -1219,7 +1258,7 @@ namespace Raven.Client.Connection
 			HttpJsonRequest request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders));
-
+			
 			try
 			{
 				request.ExecuteRequest();
@@ -1264,7 +1303,7 @@ namespace Raven.Client.Connection
 											  var multiGetOperation = new MultiGetOperation(this, convention, operationUrl, requests);
 
 											  var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.
-																																					RequestUri, "POST", credentials, convention));
+											                                                                                                       	RequestUri, "POST", credentials, convention));
 
 											  var requestsForServer =
 												  multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
@@ -1314,7 +1353,7 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
-
+				
 
 				return request.ReadResponseJson().Values<string>();
 			});
@@ -1339,7 +1378,7 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
-
+				
 				var json = (RavenJObject)request.ReadResponseJson();
 				return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
 			});
@@ -1353,6 +1392,16 @@ namespace Raven.Client.Connection
 		public void Patch(string key, PatchRequest[] patches)
 		{
 			Patch(key, patches, null);
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		public void Patch(string key, ScriptedPatchRequest patch)
+		{
+			Patch(key, patch, null);
 		}
 
 		/// <summary>
@@ -1375,14 +1424,31 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		public void Patch(string key, ScriptedPatchRequest patch, Guid? etag)
+		{
+			Batch(new[]
+					{
+						new ScriptedPatchCommandData
+							{
+								Key = key,
+								Patch = patch,
+								Etag = etag
+							}
+					});
+		}
+
+		/// <summary>
 		/// Disable all caching within the given scope
 		/// </summary>
 		public IDisposable DisableAllCaching()
 		{
 			return jsonRequestFactory.DisableAllCaching();
 		}
-
-
 
 		#endregion
 

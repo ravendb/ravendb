@@ -89,7 +89,7 @@ namespace Raven.Smuggler
 					if (retries-- == 0)
 						throw;
 					LastRequestErrored = true;
-					ShowProgress("Error reading from datbase, remaining attempts {0}, will retry. Error: {1}", retries, e, retriesCount);
+					ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e, retriesCount);
 				}
 			}
 		}
@@ -202,7 +202,7 @@ namespace Raven.Smuggler
 					if (--retries == 0 || request == null)
 						throw;
 					LastRequestErrored = true;
-					ShowProgress("Error flushing to datbase, remaining atempts {0} - time {2:#,#} ms, will retry [{3:#,#.##;;0} kb compressed to {4:#,#.##;;0} kb]. Error: {1}",
+					ShowProgress("Error flushing to database, remaining attempts {0} - time {2:#,#} ms, will retry [{3:#,#.##;;0} kb compressed to {4:#,#.##;;0} kb]. Error: {1}",
 					             retriesCount - retries, e, sw.ElapsedMilliseconds,
 					             (double) request.NumberOfBytesWrittenUncompressed/1024,
 					             (double) request.NumberOfBytesWrittenCompressed/1024);

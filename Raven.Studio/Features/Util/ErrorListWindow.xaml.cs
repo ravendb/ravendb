@@ -10,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Messages;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Util
@@ -19,12 +20,22 @@ namespace Raven.Studio.Features.Util
         public ErrorListWindow()
         {
             InitializeComponent();
+
+            KeyUp += HandleKeyUp;
         }
 
-        public static void ShowNew()
+        private void HandleKeyUp(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                Close();
+            }
+        }
+
+        public static void ShowErrors(Notification selectedNotification = null)
         {
             var window = new ErrorListWindow();
-            window.DataContext = new StudioErrorListModel();
+            window.DataContext = new StudioErrorListModel() { SelectedItem = selectedNotification};
 
             window.Show();
         }

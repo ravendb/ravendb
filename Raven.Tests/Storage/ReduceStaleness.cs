@@ -1,8 +1,10 @@
 using System;
+using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using EsentTransactionalStorage = Raven.Storage.Esent.TransactionalStorage;
@@ -51,7 +53,7 @@ namespace Raven.Tests.Storage
 
 		private static void when_there_are_multiple_map_results_for_multiple_indexes(ITransactionalStorage transactionalStorage)
 		{
-			transactionalStorage.Initialize(new DummyUuidGenerator());
+			transactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
 
 			transactionalStorage.Batch(accessor =>
 			{
@@ -103,7 +105,7 @@ namespace Raven.Tests.Storage
 
 		private static void when_there_are_multiple_map_results_and_we_ask_for_results_will_get_latest(ITransactionalStorage transactionalStorage)
 		{
-			transactionalStorage.Initialize(new DummyUuidGenerator());
+			transactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
 
 			transactionalStorage.Batch(accessor =>
 			{
@@ -157,7 +159,7 @@ namespace Raven.Tests.Storage
 		private static void when_there_are_updates_to_map_reduce_results(ITransactionalStorage transactionalStorage)
 		{
 			var dummyUuidGenerator = new DummyUuidGenerator();
-			transactionalStorage.Initialize(dummyUuidGenerator);
+			transactionalStorage.Initialize(dummyUuidGenerator, new OrderedPartCollection<AbstractDocumentCodec>());
 			Guid a = Guid.Empty;
 			Guid b = Guid.Empty;
 			Guid c = Guid.Empty;

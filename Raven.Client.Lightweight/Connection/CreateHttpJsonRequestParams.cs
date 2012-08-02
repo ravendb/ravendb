@@ -102,6 +102,7 @@ namespace Raven.Client.Connection
 		public IHoldProfilingInformation Owner { get; set; }
 		private string url;
 		private string urlCached;
+		public bool AvoidCachingRequest { get; set; }
 
 		public string Url
 		{

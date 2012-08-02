@@ -21,8 +21,10 @@
 		<ResourceDictionary Source="TreeViewStyles.xaml" />
 		<ResourceDictionary Source="SplitButton.xaml" />
 		<ResourceDictionary Source="SplitButtonPopup.xaml" />
+		<ResourceDictionary Source="PopupButton.xaml" />
 		<ResourceDictionary Source="WatermarkedTextBox.xaml" />
 		<ResourceDictionary Source="ComboBoxStyles.xaml" />
+		<ResourceDictionary Source="ProgressBarStyles.xaml" />
 	</ResourceDictionary.MergedDictionaries>
 
 	<Style TargetType="ScrollBar">
@@ -735,7 +737,8 @@
   <!-- LayoutRoot Grid Style -->
   <Style x:Key="LayoutRootGridStyle" TargetType="Grid">
 	<Setter Property="Background" Value="#FFFFFFFF"/>
-  </Style>
+        <Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
+    </Style>
 
   <!-- Content Border Style -->
   <Style x:Key="ContentBorderStyle" TargetType="Border">
@@ -1076,7 +1079,30 @@
 		</toolkit:WrapPanel>
 	</ItemsPanelTemplate>
 
-	<Style x:Name="Style_ItemsControl_Fluid"
+    <Style x:Name="Style_ItemsControl_VerticallyScrollable"
+		   TargetType="ItemsControl">
+        <Setter Property="BorderThickness"
+				Value="0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ItemsControl">
+                    <ScrollViewer BorderThickness="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  >
+                        <ItemsPresenter/>
+                    </ScrollViewer>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style x:Name="Style_ItemsControl_Fluid"
 		   TargetType="ItemsControl">
 		<Setter Property="ItemsPanel"
 				Value="{StaticResource FluidWrapPanel}" />
@@ -1496,7 +1522,7 @@
 	<Style x:Key="Style_Text_HeaderLink" TargetType="HyperlinkButton">
 		<Setter Property="FontFamily" Value="Arial"/>
 		<Setter Property="FontWeight" Value="Bold"/>
-		<Setter Property="FontSize" Value="12"/>
+		<Setter Property="FontSize" Value="13"/>
 		<Setter Property="Foreground" Value="#FF666666"/>
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
 		<Setter Property="Padding" Value="14,6"/>
@@ -1995,7 +2021,7 @@
 		<Setter Property="Foreground" Value="#FF666666"/>
 		<Setter Property="FontFamily" Value="Arial"/>
 		<Setter Property="FontWeight" Value="Bold"/>
-		<Setter Property="FontSize" Value="14.667"/>
+		<Setter Property="FontSize" Value="16"/>
 		
 	</Style>
 		
@@ -2100,6 +2126,7 @@
 		<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
 		<Setter Property="Padding" Value="15,6,60,6"/>
 		<Setter Property="Width" Value="200"/>
+		<Setter Property="MinHeight" Value="60"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ListBoxItem">

@@ -36,7 +36,7 @@ namespace Raven.Studio.Commands
 		{
 			var openFile = new OpenFileDialog
 			               {
-			               	Filter = "Raven Dumps|*.raven.dump"
+							   Filter = "Raven Dumps|*.ravendump;*.raven.dump",
 			               };
 
 			if (openFile.ShowDialog() != true)
@@ -88,7 +88,7 @@ namespace Raven.Studio.Commands
 				WriteIndexes(jsonReader)
 					.ContinueOnSuccess(() =>
 					{
-						output(String.Format("Imported {0:#,#;;0} indexes", totalIndexes));
+						output(String.Format("Done with reading indexes, total: {0}", totalIndexes));
 
 						output(String.Format("Begin reading documents"));
 
@@ -171,10 +171,16 @@ namespace Raven.Studio.Commands
 			return FlushBatch(batch);
 		}
 
+		private Stopwatch StopWatch = Stopwatch.StartNew();
 		Task FlushBatch(List<RavenJObject> batch)
 		{
+			if (totalCount == 0)
+			{
+				StopWatch = Stopwatch.StartNew();
+			}
+
 			totalCount += batch.Count;
-			var sw = Stopwatch.StartNew();
+
 			var commands = (from doc in batch
 			                let metadata = doc.Value<RavenJObject>("@metadata")
 			                let removal = doc.Remove("@metadata")
@@ -187,7 +193,8 @@ namespace Raven.Studio.Commands
 
 
 			output(String.Format("Wrote {0} documents  in {1:#,#;;0} ms",
-			                     batch.Count, sw.ElapsedMilliseconds));
+			                     batch.Count, StopWatch.ElapsedMilliseconds));
+			StopWatch = Stopwatch.StartNew();
 
 			return DatabaseCommands
 				.BatchAsync(commands);

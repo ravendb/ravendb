@@ -27,7 +27,6 @@ namespace Raven.Tests.Bugs.PoisonIndexes
 
 					Assert.NotEmpty(session.Query<User>()
 						.Customize(x=>x.WaitForNonStaleResults())
-						.Where(x => x.Id == "users/1")
 						.ToList());
 				}
 			}

@@ -11,6 +11,7 @@ using System.Text;
 using Raven.Abstractions.Data;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Listeners;

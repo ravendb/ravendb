@@ -17,11 +17,7 @@ namespace Raven.Bundles.Tests.MoreLikeThis
 		public string PhpBookId;
 		public string EclipseBookId;
 
-		public MoreLikeThis_should_support_MapReduce_indexes() :
-			base(config =>
-		{
-			config.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(database::Raven.Database.Bundles.MoreLikeThis.MoreLikeThisResponder).Assembly));
-		})
+		public MoreLikeThis_should_support_MapReduce_indexes()
 		{
 			using (var session = documentStore.OpenSession())
 			{

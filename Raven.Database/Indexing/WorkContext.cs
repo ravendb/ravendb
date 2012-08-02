@@ -6,6 +6,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Security;
 using System.Threading;
 using NLog;
 using Raven.Abstractions;
@@ -110,7 +112,11 @@ namespace Raven.Database.Indexing
 			lock (waitForWork)
 			{
 				if (doWork == false)
+				{
+					// need to clear this anyway
+					shouldNotifyOnWork.Value.Clear();
 					return;
+				}
 				var increment = Interlocked.Increment(ref workCounter);
 				if (log.IsDebugEnabled)
 				{
@@ -156,6 +162,12 @@ namespace Raven.Database.Indexing
 		public void Dispose()
 		{
 			shouldNotifyOnWork.Dispose();
+			if (DocsPerSecCounter != null)
+				DocsPerSecCounter.Dispose();
+			if (ReducedPerSecCounter != null)
+				ReducedPerSecCounter.Dispose();
+			if (IndexedPerSecCounter != null)
+				IndexedPerSecCounter.Dispose();
 		}
 
 		public void ClearErrorsFor(string name)
@@ -175,6 +187,126 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public Action<ChangeNotification> RaiseChangeNotification { get; set; }
+		public Action<IndexChangeNotification> RaiseIndexChangeNotification { get; set; }
+
+		private PerformanceCounter DocsPerSecCounter { get; set; }
+		private PerformanceCounter IndexedPerSecCounter { get; set; }
+		private PerformanceCounter ReducedPerSecCounter { get; set; }
+		private bool useCounters = true;
+
+		public void DocsPerSecIncreaseBy(int numOfDocs)
+		{
+			if (useCounters)
+			{
+				DocsPerSecCounter.IncrementBy(numOfDocs);
+			}
+		}
+		public void IndexedPerSecIncreaseBy(int numOfDocs)
+		{
+			if (useCounters)
+			{
+				IndexedPerSecCounter.IncrementBy(numOfDocs);
+			}
+		}
+		public void ReducedPerSecIncreaseBy(int numOfDocs)
+		{
+			if (useCounters)
+			{
+				ReducedPerSecCounter.IncrementBy(numOfDocs);
+			}
+		}
+
+		private void CreatePreformanceCounters(string name)
+		{
+			DocsPerSecCounter = new PerformanceCounter
+			{
+				CategoryName = "RavenDB-" + name,
+				CounterName = "# docs / sec",
+				MachineName = ".",
+				ReadOnly = false
+			};
+
+			IndexedPerSecCounter = new PerformanceCounter
+			{
+				CategoryName = "RavenDB-" + name,
+				CounterName = "# docs indexed / sec",
+				MachineName = ".",
+				ReadOnly = false
+			};
+
+			ReducedPerSecCounter = new PerformanceCounter
+			{
+				CategoryName = "RavenDB-" + name,
+				CounterName = "# docs reduced / sec",
+				MachineName = ".",
+				ReadOnly = false
+			};
+		}
+
+		private void SetupPreformanceCounter(string name)
+		{
+			if (PerformanceCounterCategory.Exists("RavenDB-" + name))
+				return;
+
+			var counters = new CounterCreationDataCollection();
+
+			// 1. counter for counting operations per second:
+			//        PerformanceCounterType.RateOfCountsPerSecond32
+			var docsPerSecond = new CounterCreationData
+			{
+				CounterName = "# docs / sec",
+				CounterHelp = "Number of documents added per second",
+				CounterType = PerformanceCounterType.RateOfCountsPerSecond32
+			};
+			counters.Add(docsPerSecond);
+
+			// 2. counter for counting operations per second:
+			//        PerformanceCounterType.RateOfCountsPerSecond32
+			var indexedPerSecond = new CounterCreationData
+			{
+				CounterName = "# docs indexed / sec",
+				CounterHelp = "Number of documents indexed per second",
+				CounterType = PerformanceCounterType.RateOfCountsPerSecond32
+			};
+			counters.Add(indexedPerSecond);
+
+			// 3. counter for counting operations per second:
+			//        PerformanceCounterType.RateOfCountsPerSecond32
+			var reducesPerSecond = new CounterCreationData
+			{
+				CounterName = "# docs reduced / sec",
+				CounterHelp = "Number of documents reduced per second",
+				CounterType = PerformanceCounterType.RateOfCountsPerSecond32
+			};
+			counters.Add(reducesPerSecond);
+
+			// create new category with the counters above
+
+			PerformanceCounterCategory.Create("RavenDB-" + name,
+											  "RevenDB category", PerformanceCounterCategoryType.Unknown, counters);
+		}
+
+		public void Init(string name)
+		{
+			if (Configuration.RunInMemory)
+			{
+				useCounters = false;
+				return;
+			}
+
+
+			name = name ?? Constants.SystemDatabase;
+			try
+			{
+				SetupPreformanceCounter(name);
+				CreatePreformanceCounters(name);
+			}
+			catch (SecurityException e)
+			{
+				log.WarnException(
+					"Could not setup performance counters properly because of access permissions, perf counters will not be used", e);
+				useCounters = false;
+			}
+		}
 	}
 }

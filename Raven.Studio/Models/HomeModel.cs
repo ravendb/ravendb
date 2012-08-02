@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reactive;
@@ -9,11 +8,10 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
+using Raven.Studio.Commands;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Extensions;
@@ -36,33 +34,30 @@ namespace Raven.Studio.Models
                                                                           DocumentNavigatorFactory = (id, index) => DocumentNavigator.Create(id, index),
                                                                           Context = "AllDocuments",
 				                                                      });
+                    recentDocuments.SetChangesObservable(d => d.DocumentChanges.Select(s => Unit.Default));
 				}
 
-			    return recentDocuments;
+				return recentDocuments;
 			}
 		}
 
-	    public HomeModel()
+		public HomeModel()
 		{
 			ModelUrl = "/home";
 		}
 
-		public override void LoadModelParameters(string parameters)
-		{
-            RecentDocuments.TimerTickedAsync();
-		}
-
-		public override Task TimerTickedAsync()
-		{
-			return RecentDocuments.TimerTickedAsync();
-		}
-
-        protected override void OnViewLoaded()
+        public override Task TimerTickedAsync()
         {
-
+            if (ApplicationModel.Current.Server.Value.CreateNewDatabase)
+            {
+                ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
+                Command.ExecuteCommand(new CreateDatabaseCommand());
+            }
+            return base.TimerTickedAsync();
         }
 
-		private bool isGeneratingSampleData;
+
+	    private bool isGeneratingSampleData;
 		public bool IsGeneratingSampleData
 		{
 			get { return isGeneratingSampleData; }
@@ -79,38 +74,45 @@ namespace Raven.Studio.Models
 		public class CreateSampleDataCommand : Command
 		{
 			private readonly HomeModel model;
-            private readonly Observable<DatabaseModel> database;
-		    private IObservable<Unit> databaseChanged;
+			private readonly Observable<DatabaseModel> database;
+			private IObservable<Unit> databaseChanged;
 
-		    public CreateSampleDataCommand(HomeModel model, Observable<DatabaseModel> database)
+			public CreateSampleDataCommand(HomeModel model, Observable<DatabaseModel> database)
 			{
 				this.model = model;
-                this.database = database;
+				this.database = database;
 
-			    databaseChanged = database
-                    .ObservePropertyChanged()
-                    .Select(e => Unit.Default);
+				databaseChanged = database
+					.ObservePropertyChanged()
+					.Select(e => Unit.Default);
 
-			    databaseChanged
-			        .SubscribeWeakly(this, (target, d) => target.HandleDatabaseChanged(target.database.Value));
+				databaseChanged
+					.SubscribeWeakly(this, (target, d) => target.HandleDatabaseChanged(target.database.Value));
+
+				SubscribeToStatisticsChanged(database.Value);
 			}
 
-            private void HandleDatabaseChanged(DatabaseModel databaseModel)
-            {
-                RaiseCanExecuteChanged();
+			private void HandleDatabaseChanged(DatabaseModel databaseModel)
+			{
+				RaiseCanExecuteChanged();
 
-                databaseModel.Statistics
-                    .ObservePropertyChanged()
-                    .TakeUntil(databaseChanged)
-                    .SubscribeWeakly(this, (target, e) => target.RaiseCanExecuteChanged());
-            }
+				SubscribeToStatisticsChanged(databaseModel);
+			}
 
-            public override bool CanExecute(object parameter)
-            {
-                return database.Value != null
-                    && database.Value.Statistics.Value != null
-                       && database.Value.Statistics.Value.CountOfDocuments == 0;
-            }
+			private void SubscribeToStatisticsChanged(DatabaseModel databaseModel)
+			{
+				databaseModel.Statistics
+					.ObservePropertyChanged()
+					.TakeUntil(databaseChanged)
+					.SubscribeWeakly(this, (target, e) => target.RaiseCanExecuteChanged());
+			}
+
+			public override bool CanExecute(object parameter)
+			{
+				return database.Value != null
+					&& database.Value.Statistics.Value != null
+					   && database.Value.Statistics.Value.CountOfDocuments == 0;
+			}
 
 			public override void Execute(object parameter)
 			{
@@ -121,7 +123,7 @@ namespace Raven.Studio.Models
 
 			private IEnumerable<Task> CreateSampleData()
 			{
-			    var commands = database.Value.AsyncDatabaseCommands;
+				var commands = database.Value.AsyncDatabaseCommands;
 
 				// this code assumes a small enough dataset, and doesn't do any sort
 				// of paging or batching whatsoever.
@@ -136,14 +138,14 @@ namespace Raven.Studio.Models
 					{
 						var indexName = index.Value<string>("name");
 						var ravenJObject = index.Value<RavenJObject>("definition");
-                        var putDoc = commands
+						var putDoc = commands
 							.PutIndexAsync(indexName,
 										   ravenJObject.JsonDeserialization<IndexDefinition>(),
 										   true);
 						yield return putDoc;
 					}
 
-                    var batch = commands.BatchAsync(
+					var batch = commands.BatchAsync(
 						musicStoreData.Value<RavenJArray>("Docs").OfType<RavenJObject>().Select(
 							doc =>
 							{

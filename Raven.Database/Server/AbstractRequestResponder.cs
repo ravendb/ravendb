@@ -26,7 +26,7 @@ namespace Raven.Database.Server
 
 		protected AbstractRequestResponder()
 		{
-			urlMatcher = new Regex(UrlPattern);
+			urlMatcher = new Regex(UrlPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
 			supportedVerbsCached = SupportedVerbs;
 		}
 

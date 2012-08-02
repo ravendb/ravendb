@@ -17,12 +17,7 @@ namespace Raven.Studio.Commands
 
 		public override void Execute(object parameter)
 		{
-			if (href.StartsWith("http://") == false)
-			{
-				var ravendbUrl = ApplicationModel.Current.Server.Value.Url;
-				href = ravendbUrl + "/" + href;
-			}
-			HtmlPage.Window.Navigate(new Uri(href, UriKind.Absolute), "_blank");
+		    UrlUtil.NavigateToExternal(href);
 		}
 	}
 }

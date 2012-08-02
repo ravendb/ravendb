@@ -29,12 +29,12 @@ using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Models
 {
-    public class EditableDocumentModel : PageViewModel
+	public class EditableDocumentModel : PageViewModel
 	{
 		private readonly Observable<JsonDocument> document;
 		private bool isLoaded;
-        private int currentIndex;
-        private int totalItems;
+		private int currentIndex;
+		private int totalItems;
 		public string DocumentKey { get; private set; }
 		private readonly string currentDatabase;
         private DocumentNavigator navigator;
@@ -52,385 +52,392 @@ namespace Raven.Studio.Models
         private string documentSize;
         private static JsonSyntaxLanguageExtended JsonLanguage;
         private bool isShowingErrors;
+        private bool hasUnsavedChanges;
 
-        static EditableDocumentModel()
-        {
-            InitialiseOutliningModes();
-            JsonLanguage = new JsonSyntaxLanguageExtended();
-        }
+		static EditableDocumentModel()
+		{
+			InitialiseOutliningModes();
+			JsonLanguage = new JsonSyntaxLanguageExtended();
+		}
 
-        private static void InitialiseOutliningModes()
-        {
-            OutliningModes = (new List<DocumentOutliningMode>()
-                                  {
-                                      new DocumentOutliningMode("Disabled")
-                                          {Applicator = document => document.OutliningMode = OutliningMode.None},
-                                      new DocumentOutliningMode("Enabled")
-                                          {Applicator = document => document.OutliningMode = OutliningMode.Automatic},
-                                      new DocumentOutliningMode("Auto-Collapse Collections")
-                                          {
-                                              Applicator = document =>
-                                                               {
-                                                                   document.OutliningMode = OutliningMode.Automatic;
-                                                                   document.OutliningManager.EnsureCollapsed();
-                                                               }
-                                          },
-                                  }).AsReadOnly();
-        }
+		private static void InitialiseOutliningModes()
+		{
+			OutliningModes = (new List<DocumentOutliningMode>()
+								  {
+									  new DocumentOutliningMode("Disabled")
+										  {Applicator = document => document.OutliningMode = OutliningMode.None},
+									  new DocumentOutliningMode("Enabled")
+										  {Applicator = document => document.OutliningMode = OutliningMode.Automatic},
+									  new DocumentOutliningMode("Auto-Collapse Collections")
+										  {
+											  Applicator = document =>
+															   {
+																   document.OutliningMode = OutliningMode.Automatic;
+																   document.OutliningManager.EnsureCollapsed();
+															   }
+										  },
+								  }).AsReadOnly();
+		}
 
-        public EditableDocumentModel()
+		public EditableDocumentModel()
 		{
 			ModelUrl = "/edit";
 
-		    dataSection = new DocumentSection() {Name = "Data", Document = new EditorDocument() {Language = JsonLanguage, TabSize = 2}};
-            metaDataSection = new DocumentSection() { Name = "Metadata", Document = new EditorDocument() { Language = JsonLanguage, TabSize = 2 } };
-            DocumentSections = new List<DocumentSection>() { dataSection, metaDataSection};
-		    CurrentSection = dataSection;
+			dataSection = new DocumentSection() { Name = "Data", Document = new EditorDocument() { Language = JsonLanguage, TabSize = 2 } };
+			metaDataSection = new DocumentSection() { Name = "Metadata", Document = new EditorDocument() { Language = JsonLanguage, TabSize = 2 } };
+			DocumentSections = new List<DocumentSection>() { dataSection, metaDataSection };
+			CurrentSection = dataSection;
 
-			References = new ObservableCollection<LinkModel>();
+            References = new BindableCollection<LinkModel>(model => model.Title);
 			Related = new BindableCollection<LinkModel>(model => model.Title);
-            DocumentErrors = new ObservableCollection<DocumentError>();
+			DocumentErrors = new ObservableCollection<DocumentError>();
 
 			SearchEnabled = false;
 
 			document = new Observable<JsonDocument>();
 			document.PropertyChanged += (sender, args) => UpdateFromDocument();
+		    documentIdManager = JsonDataDocument.Properties.GetOrCreateSingleton(() => new DocumentReferencedIdManager());
 
-            InitialiseDocument();
+			InitialiseDocument();
 
-            ParentPathSegments = new ObservableCollection<PathSegment>()
-                                     {
-                                         new PathSegment() { Name="Documents", Url = "/documents"}
-                                     };
+			ParentPathSegments = new ObservableCollection<PathSegment>()
+									 {
+										 new PathSegment() { Name="Documents", Url = "/documents"}
+									 };
 
-            currentDatabase = Database.Value.Name;
+			currentDatabase = Database.Value.Name;
 
 		    dataSection.Document.ObserveTextChanged()
                 .Merge(metaDataSection.Document.ObserveTextChanged())
+                .Do(_ => HasUnsavedChanges = true)
 		        .Throttle(TimeSpan.FromSeconds(1))
 		        .ObserveOnDispatcher()
-		        .Subscribe(_ => HandleDocumentChanged());
+		        .Subscribe(e => HandleDocumentChanged());
 		}
 
-        private void HandleDocumentChanged()
-        {
-            UpdateErrors();
-            UpdateDocumentSize();
-            UpdateReferences();
-        }
+		private void HandleDocumentChanged()
+		{
+			UpdateErrors();
+			UpdateDocumentSize();
+			UpdateReferences();
+		}
 
-        private void UpdateErrors()
-        {
-            DocumentErrors.Clear();
+		private void UpdateErrors()
+		{
+			DocumentErrors.Clear();
 
-            AddErrors(dataSection);
-            AddErrors(metaDataSection);
-        }
+			AddErrors(dataSection);
+			AddErrors(metaDataSection);
+		}
 
-        private void AddErrors(DocumentSection section)
-        {
-            var parseData = section.Document.ParseData as ILLParseData;
-            if (parseData == null)
-            {
-                return;
-            }
+		private void AddErrors(DocumentSection section)
+		{
+			var parseData = section.Document.ParseData as ILLParseData;
+			if (parseData == null)
+			{
+				return;
+			}
 
-            foreach (var parseError in parseData.Errors)
-            {
-                DocumentErrors.Add(new DocumentError() {Section = section, ParseError = parseError});
-            }
-        }
+			foreach (var parseError in parseData.Errors)
+			{
+				DocumentErrors.Add(new DocumentError() { Section = section, ParseError = parseError });
+			}
+		}
 
-        private void InitialiseDocument()
-        {
+		private void InitialiseDocument()
+		{
 			document.Value = new JsonDocument
 								{
-                                     DataAsJson = {{"Name", "..."}},
+									DataAsJson = { { "Name", "..." } },
 									Etag = Guid.Empty
 								};
-        }
-
-        private DocumentNavigator Navigator
-        {
-            get { return navigator; }
-            set
-            {
-                navigator = value;
-                OnPropertyChanged(() => Navigator);
-                OnPropertyChanged(() => CanNavigate);
-            }
-        }
-
-        public ICommand NavigateToNext
-        {
-            get
-            {
-                return navigateNext ??
-                       (navigateNext = new ActionCommand(() => HandleNavigation(urlForNext)));
-            }
-        }
-
-        public ICommand NavigateToPrevious
-        {
-            get
-            {
-                return navigatePrevious ??
-                       (navigatePrevious = new ActionCommand(() => HandleNavigation(urlForPrevious)));
-            }
 		}
 
-        public ICommand NavigateToFirst
-        {
-            get
-            {
-                return navigateFirst ??
-                       (navigateFirst = new ActionCommand(() => HandleNavigation(urlForFirst)));
-            }
-        }
-
-        public ICommand NavigateToLast
-        {
-            get
-            {
-                return navigateLast ??
-                       (navigateLast = new ActionCommand(() => HandleNavigation(urlForLast)));
-            }
-        }
-
-        public ICommand ToggleExpansion
-        {
-            get { return toggleExpansion ?? (toggleExpansion = new ActionCommand(HandleToggleExpansion)); }
-        }
-
-        public DocumentOutliningMode SelectedOutliningMode
-        {
-            get { return outliningMode; }
-            set
-            {
-                outliningMode = value;
-                OnPropertyChanged(() => SelectedOutliningMode);
-
-                StoreOutliningMode();
-                ApplyOutliningMode();
-            }
-        }
-
-        private void StoreOutliningMode()
-        {
-            Settings.Instance.DocumentOutliningMode = SelectedOutliningMode.Name;
-        }
-
-        private void ApplyOutliningMode()
-        {
-            if (outliningMode != null)
-            {
-                foreach (var document in DocumentSections.Select(s => s.Document))
-                {
-                    outliningMode.Applicator(document);
-                }
-            }
-        }
-
-        private void HandleToggleExpansion()
-        {
-            if (CurrentSection.Document == null)
-            {
-                return;
-            }
-
-            CurrentSection.Document.OutliningMode = OutliningMode.Automatic;
-            CurrentSection.Document.OutliningManager.ToggleAllOutliningExpansion();
-        }
-
-        private void HandleNavigation(string url)
-        {
-            if (!string.IsNullOrEmpty(url))
-            {
-                UrlUtil.Navigate(url);
-            }
+		private DocumentNavigator Navigator
+		{
+			get { return navigator; }
+			set
+			{
+				navigator = value;
+				OnPropertyChanged(() => Navigator);
+				OnPropertyChanged(() => CanNavigate);
+			}
 		}
 
-        public override void LoadModelParameters(string parameters)
-        {
-            var url = new UrlParser(UrlUtil.Url);
+		public ICommand NavigateToNext
+		{
+			get
+			{
+				return navigateNext ??
+					   (navigateNext = new ActionCommand(() => HandleNavigation(urlForNext)));
+			}
+		}
+
+		public ICommand NavigateToPrevious
+		{
+			get
+			{
+				return navigatePrevious ??
+					   (navigatePrevious = new ActionCommand(() => HandleNavigation(urlForPrevious)));
+			}
+		}
+
+		public ICommand NavigateToFirst
+		{
+			get
+			{
+				return navigateFirst ??
+					   (navigateFirst = new ActionCommand(() => HandleNavigation(urlForFirst)));
+			}
+		}
+
+		public ICommand NavigateToLast
+		{
+			get
+			{
+				return navigateLast ??
+					   (navigateLast = new ActionCommand(() => HandleNavigation(urlForLast)));
+			}
+		}
+
+		public ICommand ToggleExpansion
+		{
+			get { return toggleExpansion ?? (toggleExpansion = new ActionCommand(HandleToggleExpansion)); }
+		}
+
+		public DocumentOutliningMode SelectedOutliningMode
+		{
+			get { return outliningMode; }
+			set
+			{
+				outliningMode = value;
+				OnPropertyChanged(() => SelectedOutliningMode);
+
+				StoreOutliningMode();
+				ApplyOutliningMode();
+			}
+		}
+
+		private void StoreOutliningMode()
+		{
+			Settings.Instance.DocumentOutliningMode = SelectedOutliningMode.Name;
+		}
+
+		private void ApplyOutliningMode()
+		{
+			if (outliningMode != null)
+			{
+				foreach (var document in DocumentSections.Select(s => s.Document))
+				{
+					outliningMode.Applicator(document);
+				}
+			}
+		}
+
+		private void HandleToggleExpansion()
+		{
+			if (CurrentSection.Document == null)
+			{
+				return;
+			}
+
+			CurrentSection.Document.OutliningMode = OutliningMode.Automatic;
+			CurrentSection.Document.OutliningManager.ToggleAllOutliningExpansion();
+		}
+
+		private void HandleNavigation(string url)
+		{
+			if (!string.IsNullOrEmpty(url))
+			{
+				UrlUtil.Navigate(url);
+			}
+		}
+
+		public override void LoadModelParameters(string parameters)
+		{
+			var url = new UrlParser(UrlUtil.Url);
+		    documentIdManager.Clear();
 
             if (url.GetQueryParam("mode") == "new")
-            {
-                Mode = DocumentMode.New;
-                InitialiseDocument();
-                Navigator = null;
-                CurrentIndex = 0;
-                TotalItems = 0;
-                SetCurrentDocumentKey(null);
-                ParentPathSegments.Clear();
-                ParentPathSegments.Add(new PathSegment() { Name = "Documents", Url = "/documents"});
-                return;
-            }
+			{
+				Mode = DocumentMode.New;
+				InitialiseDocument();
+				Navigator = null;
+				CurrentIndex = 0;
+				TotalItems = 0;
+				SetCurrentDocumentKey(null);
+				ParentPathSegments.Clear();
+				ParentPathSegments.Add(new PathSegment() { Name = "Documents", Url = "/documents" });
+				return;
+			}
 
-            Navigator = DocumentNavigator.FromUrl(url);
+			Navigator = DocumentNavigator.FromUrl(url);
 
-            Navigator.GetDocument().ContinueOnSuccessInTheUIThread(
-                result =>
-                    {
-                        if (result.Document == null)
-                        {
-                            HandleDocumentNotFound();
-                            return;
-                        }
+			Navigator.GetDocument().ContinueOnSuccessInTheUIThread(
+				result =>
+				{
+					if (result.Document == null)
+					{
+						HandleDocumentNotFound();
+						return;
+					}
 
-                        if (string.IsNullOrEmpty(result.Document.Key))
-                        {
-                            Mode = DocumentMode.Projection;
-                            LocalId = Guid.NewGuid().ToString();
-                        }
-                        else
-                        {
-                            Mode = DocumentMode.DocumentWithId;
-                            LocalId = result.Document.Key;
-                            SetCurrentDocumentKey(result.Document.Key);
-                        }
+					if (string.IsNullOrEmpty(result.Document.Key))
+					{
+						Mode = DocumentMode.Projection;
+						LocalId = Guid.NewGuid().ToString();
+					}
+					else
+					{
+						Mode = DocumentMode.DocumentWithId;
+						LocalId = result.Document.Key;
+						SetCurrentDocumentKey(result.Document.Key);
+					}
 
-                        urlForFirst = result.UrlForFirst;
-                        urlForPrevious = result.UrlForPrevious;
-                        urlForLast = result.UrlForLast;
-                        urlForNext = result.UrlForNext;
+					urlForFirst = result.UrlForFirst;
+					urlForPrevious = result.UrlForPrevious;
+					urlForLast = result.UrlForLast;
+					urlForNext = result.UrlForNext;
 
-                        isLoaded = true;
-                        document.Value = result.Document;
-                        CurrentIndex = (int) result.Index;
-                        TotalItems = (int) result.TotalDocuments;
+					isLoaded = true;
+					document.Value = result.Document;
+					CurrentIndex = (int)result.Index;
+					TotalItems = (int)result.TotalDocuments;
 
-                        ParentPathSegments.Clear();
-                        ParentPathSegments.AddRange(result.ParentPath);
+					ParentPathSegments.Clear();
+					ParentPathSegments.AddRange(result.ParentPath);
 
-                        WhenParsingComplete(dataSection.Document)
-                            .ContinueOnUIThread(t => ApplyOutliningMode());
-                    })
-                .Catch();
-        }
+					WhenParsingComplete(dataSection.Document)
+						.ContinueOnUIThread(t => ApplyOutliningMode());
 
-        private void HandleDocumentNotFound()
+                    HandleDocumentChanged();
+				})
+				.Catch();
+		}
+
+		private void HandleDocumentNotFound()
 		{
 			Notification notification;
 			if (Mode == DocumentMode.Projection)
 				notification = new Notification("Could not parse projection correctly", NotificationLevel.Error);
 			else
-                notification = new Notification(string.Format("Could not find '{0}' document", Key),
-                                                NotificationLevel.Warning);
+				notification = new Notification(string.Format("Could not find '{0}' document", Key),
+												NotificationLevel.Warning);
 			ApplicationModel.Current.AddNotification(notification);
 			UrlUtil.Navigate("/documents");
 		}
 
-        public int CurrentItemNumber
+		public int CurrentItemNumber
 		{
-            get { return CurrentIndex + 1; }
-        }
+			get { return CurrentIndex + 1; }
+		}
 
-        private int CurrentIndex
+		private int CurrentIndex
+		{
+			get { return currentIndex; }
+			set
 			{
-            get { return currentIndex; }
-            set
-				{
-                currentIndex = value;
-                OnPropertyChanged(() => CurrentItemNumber);
-                OnPropertyChanged(() => HasPrevious);
-                OnPropertyChanged(() => HasNext);
-                OnPropertyChanged(() => CanNavigate);
+				currentIndex = value;
+				OnPropertyChanged(() => CurrentItemNumber);
+				OnPropertyChanged(() => HasPrevious);
+				OnPropertyChanged(() => HasNext);
+				OnPropertyChanged(() => CanNavigate);
 			}
 		}
 
-        public int TotalItems
+		public int TotalItems
 		{
-            get { return totalItems; }
-            set
+			get { return totalItems; }
+			set
 			{
-                totalItems = value;
-                OnPropertyChanged(() => TotalItems);
-                OnPropertyChanged(() => HasPrevious);
-                OnPropertyChanged(() => HasNext);
-                OnPropertyChanged(() => CanNavigate);
+				totalItems = value;
+				OnPropertyChanged(() => TotalItems);
+				OnPropertyChanged(() => HasPrevious);
+				OnPropertyChanged(() => HasNext);
+				OnPropertyChanged(() => CanNavigate);
 			}
 		}
 
-        public bool HasPrevious
+		public bool HasPrevious
 		{
-            get { return !string.IsNullOrEmpty(urlForPrevious); }
+			get { return !string.IsNullOrEmpty(urlForPrevious); }
 		}
 
-        public bool HasNext
+		public bool HasNext
 		{
-            get { return !string.IsNullOrEmpty(urlForNext); }
+			get { return !string.IsNullOrEmpty(urlForNext); }
+		}
+
+		public bool CanNavigate
+		{
+			get { return Navigator != null && (HasNext || HasPrevious); }
+		}
+
+		public bool IsShowingErrors
+		{
+			get { return isShowingErrors; }
+			set
+			{
+				isShowingErrors = value;
+				OnPropertyChanged(() => IsShowingErrors);
+			}
+		}
+
+		public ObservableCollection<PathSegment> ParentPathSegments { get; private set; }
+		public ObservableCollection<DocumentError> DocumentErrors { get; private set; }
+
+		public IList<DocumentSection> DocumentSections { get; private set; }
+
+		private DocumentSection currentSection;
+
+		public DocumentSection CurrentSection
+		{
+			get { return currentSection; }
+			set
+			{
+				currentSection = value;
+				OnPropertyChanged(() => CurrentSection);
+			}
+		}
+
+		public void SetCurrentDocumentKey(string docId)
+		{
+			if (docId != null)
+			{
+				Mode = DocumentMode.DocumentWithId;
+			}
+			else
+			{
+				Mode = DocumentMode.New;
 			}
 
-        public bool CanNavigate
-		{
-            get { return Navigator != null && (HasNext || HasPrevious); }
+			DocumentKey = Key = docId;
 		}
 
-        public bool IsShowingErrors
-        {
-            get { return isShowingErrors; }
-            set
-            {
-                isShowingErrors = value;
-                OnPropertyChanged(() => IsShowingErrors);
-            }
-        }
-
-        public ObservableCollection<PathSegment> ParentPathSegments { get; private set; }
-        public ObservableCollection<DocumentError> DocumentErrors { get; private set; }
-
-        public IList<DocumentSection> DocumentSections { get; private set; }
-
-        private DocumentSection currentSection;
-
-        public DocumentSection CurrentSection
-        {
-            get { return currentSection; }
-            set
-            {
-                currentSection = value;
-                OnPropertyChanged(() => CurrentSection);
-            }
-        }
-
-        public void SetCurrentDocumentKey(string docId)
+		private void PutDocumentKeyInUrl(string docId, bool dontOpenNewTab)
 		{
-            if (docId != null)
-            {
-                Mode = DocumentMode.DocumentWithId;
-            }
-            else
-            {
-                Mode = DocumentMode.New;
-            }
-
-		    DocumentKey = Key = docId;
+			if (docId != null && DocumentKey != docId)
+				UrlUtil.Navigate("/edit?id=" + docId, dontOpenNewTab);
 		}
 
-        private void PutDocumentKeyInUrl(string docId, bool dontOpenNewTab)
-        {
-            if (docId != null && DocumentKey != docId)
-                UrlUtil.Navigate("/edit?id=" + docId, dontOpenNewTab);
-        }
-
-        private void UpdateFromDocument()
+		private void UpdateFromDocument()
 		{
 			var newdoc = document.Value;
-            RemoveNonDisplayedMetadata(newdoc.Metadata);
+			RemoveNonDisplayedMetadata(newdoc.Metadata);
 			UpdateMetadata(newdoc.Metadata);
 
-            JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
+			JsonData = newdoc.DataAsJson.ToString(Formatting.Indented);
 
+            HasUnsavedChanges = false;
 			UpdateRelated();
 			OnEverythingChanged();
 		}
 
-        private void RemoveNonDisplayedMetadata(RavenJObject metaData)
-        {
-            metaData.Remove("@etag");
-            metaData.Remove("@id");
-        }
+		private void RemoveNonDisplayedMetadata(RavenJObject metaData)
+		{
+			metaData.Remove("@etag");
+			metaData.Remove("@id");
+		}
 
 		private void UpdateMetadata(RavenJObject metadataAsJson)
 		{
@@ -446,7 +453,7 @@ namespace Raven.Studio.Models
 
 
 
-		public ObservableCollection<LinkModel> References { get; private set; }
+        public BindableCollection<LinkModel> References { get; private set; }
 		public BindableCollection<LinkModel> Related { get; private set; }
 
 		private bool searchEnabled;
@@ -468,7 +475,7 @@ namespace Raven.Studio.Models
 			{
 				localId = value;
 				OnPropertyChanged(() => LocalId);
-                OnPropertyChanged(() => CurrentItemNumber);
+				OnPropertyChanged(() => CurrentItemNumber);
 			}
 		}
 
@@ -496,189 +503,249 @@ namespace Raven.Studio.Models
 			}
 		}
 
-        public IEditorDocument JsonDataDocument
-        {
-            get { return dataSection.Document; }
-        }
-
-        public IEditorDocument MetaDataDocument
-        {
-            get { return metaDataSection.Document; }
-        }
-
-        protected string JsonData
-        {
-            get { return JsonDataDocument.CurrentSnapshot.Text; }
-            set { JsonDataDocument.SetText(value); }
-        }
-
-        protected string JsonMetadata
-        {
-            get { return MetaDataDocument.CurrentSnapshot.Text; }
-            set { MetaDataDocument.SetText(value); }
-        }
-
-        public string DocumentSize
+		public IEditorDocument JsonDataDocument
 		{
-			get { return documentSize; }
-            private set
-            {
-                documentSize = value;
-                OnPropertyChanged(() => DocumentSize);
-            }
+			get { return dataSection.Document; }
 		}
 
-        private void UpdateDocumentSize()
-        {
-            double byteCount = Encoding.UTF8.GetByteCount(JsonDataDocument.CurrentSnapshot.Text) 
-                + Encoding.UTF8.GetByteCount(MetaDataDocument.CurrentSnapshot.Text);
-
-            string sizeTerm = "Bytes";
-            if (byteCount >= 1024*1024)
-            {
-                sizeTerm = "MBytes";
-                byteCount = byteCount/(1024*1024);
-            }
-            else if (byteCount >= 1024)
-            {
-                sizeTerm = "KBytes";
-                byteCount = byteCount/1024;
-            }
-
-            DocumentSize = string.Format("Content-Length: {0:#,#.##;;0} {1}", byteCount, sizeTerm);
-        }
-
-        private bool notifiedOnDelete;
-		private bool notifiedOnChange;
-
-		protected override Task LoadedTimerTickedAsync()
+		public IEditorDocument MetaDataDocument
 		{
-			if (isLoaded == false ||
-				Mode != DocumentMode.DocumentWithId ||
-				currentDatabase != Database.Value.Name)
-				return null;
+			get { return metaDataSection.Document; }
+		}
 
-			return DatabaseCommands.GetAsync(DocumentKey)
-				.ContinueOnSuccess(docOnServer =>
-				{
-					if (docOnServer == null)
-					{
-						if (notifiedOnDelete)
-							return;
-						notifiedOnDelete = true;
-                                               ApplicationModel.Current.AddNotification(
-                                                   new Notification("Document " + Key + " was deleted on the server"));
-					}
-					else if (docOnServer.Etag != Etag)
-					{
-						if (notifiedOnChange)
-							return;
-						notifiedOnChange = true;
-                                               ApplicationModel.Current.AddNotification(
-                                                   new Notification("Document " + Key + " was changed on the server"));
-					}
-				});
+		protected string JsonData
+		{
+			get { return JsonDataDocument.CurrentSnapshot.Text; }
+			set { JsonDataDocument.SetText(value); }
+		}
+
+		protected string JsonMetadata
+		{
+			get { return MetaDataDocument.CurrentSnapshot.Text; }
+			set { MetaDataDocument.SetText(value); }
+		}
+
+		public string DocumentSize
+		{
+			get { return documentSize; }
+			private set
+			{
+				documentSize = value;
+				OnPropertyChanged(() => DocumentSize);
+			}
+		}
+
+		private void UpdateDocumentSize()
+		{
+			double byteCount = Encoding.UTF8.GetByteCount(JsonDataDocument.CurrentSnapshot.Text)
+				+ Encoding.UTF8.GetByteCount(MetaDataDocument.CurrentSnapshot.Text);
+
+			string sizeTerm = "Bytes";
+			if (byteCount >= 1024 * 1024)
+			{
+				sizeTerm = "MBytes";
+				byteCount = byteCount / (1024 * 1024);
+			}
+			else if (byteCount >= 1024)
+			{
+				sizeTerm = "KBytes";
+				byteCount = byteCount / 1024;
+			}
+
+			DocumentSize = string.Format("Content-Length: {0:#,#.##;;0} {1}", byteCount, sizeTerm);
 		}
 
 		private void UpdateReferences()
 		{
-			if (Seperator != null)
-			{
-				var referencesIds = Regex.Matches(JsonData, @"""(\w+" + Seperator + @"\w+)");
-				References.Clear();
-				foreach (var source in referencesIds.Cast<Match>().Select(x => x.Groups[1].Value).Distinct())
-				{
-					DateTime time;
-					if (DateTime.TryParse(source, out time))
-						continue;
+			if (Seperator == null)
+				return;
 
-					References.Add(new LinkModel
-					{
-						Title = source,
-						HRef = "/Edit?id=" + source
-					});
-				}
-			}
+            // Note: if this proves to be too slow with large documents, we can potential optimise the finding 
+            // of references by only considering the parts of the AST which occur after the Offset at which the text change began
+            // (we can find this by getting hold of the TextSnapshotChangedEventArgs)
+		    var potentialReferences = FindPotentialReferences(JsonDataDocument).ToList();
+		    var newReferences = potentialReferences.Where(id => documentIdManager.NeedsChecking(id)).ToArray();
+
+            if (newReferences.Any())
+            {
+                ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(
+                    newReferences, null)
+                    .ContinueOnSuccessInTheUIThread(results =>
+                    {
+                        var ids =
+                            results.Results.Where(r => r != null).Select(
+                                r => r["@metadata"].SelectToken("@id").ToString()).ToList();
+
+                        documentIdManager.AddKnownIds(ids);
+                        documentIdManager.AddKnownInvalidIds(newReferences.Except(ids));
+
+                        UpdateListWithKnownIds(potentialReferences);
+                    });
+            }
+            else
+            {
+                UpdateListWithKnownIds(potentialReferences);
+            }
+
 		}
+
+	    private void UpdateListWithKnownIds(IEnumerable<string> potentialReferences)
+	    {
+	        var referenceModels = potentialReferences.Where(id => documentIdManager.IsId(id))
+	            .Select(key => new LinkModel
+	            {
+	                Title = key,
+	                HRef = "/Edit?id=" + key
+	            })
+	            .ToArray();
+
+	        References.Match(referenceModels);
+	    }
+
+	    private IEnumerable<string> FindPotentialReferences(ICodeDocument document)
+        {
+            var stringValueNodes = document.FindAllStringValueNodes();
+            return stringValueNodes.Select(n => n.Text).Distinct().Where(IsPotentialReference);
+        } 
+
+        private bool IsPotentialReference(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            var pattern = "\\w" + Seperator + "\\w";
+            return Regex.IsMatch(value, pattern);
+        }
 
 		private void UpdateRelated()
 		{
-			if (string.IsNullOrEmpty(Key))
+			if (string.IsNullOrEmpty(Key) || string.IsNullOrEmpty(Seperator))
 				return;
-			DatabaseCommands.GetDocumentsStartingWithAsync(Key + Seperator, 0, 15)
-				.ContinueOnSuccess(items =>
-								   {
-									   if (items == null)
-										   return;
 
-									   var linkModels = items.Select(doc => new LinkModel
-																			{
-																				Title = doc.Key,
-																				HRef = "/Edit?id=" + doc.Key
-																			}).ToArray();
-									   Related.Set(linkModels);
-								   });
-		}
+			var childrenTask = DatabaseCommands.StartsWithAsync(Key + Seperator, 0, 15)
+                .ContinueOnSuccess(items => items == null ?  new string[0] : items.Select(i => i.Key));
 
-        private void HandleDeleteDocument()
-        {
-            if (string.IsNullOrEmpty(DocumentKey))
+            // find parent Ids
+            var parentids = new List<string>();
+            var id = LocalId;
+            var lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
+
+            while (!string.IsNullOrWhiteSpace(id) && lastindex != -1)
             {
-                return;
+                id = id.Remove(lastindex);
+                parentids.Add(id);
+                lastindex = id.LastIndexOf(Seperator, StringComparison.Ordinal);
             }
 
-            AskUser.ConfirmationAsync("Confirm Delete", string.Format("Are you sure you want do delete {0} ?", DocumentKey))
-                .ContinueWhenTrueInTheUIThread(() => DoDeleteDocument(DocumentKey));
-        }
+            var parentsTask = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.GetAsync(parentids.ToArray(), null)
+                .ContinueOnSuccess(results => results.Results.Where(r => r != null).Select(r => r["@metadata"].SelectToken("@id").ToString()));
 
-        private void DoDeleteDocument(string documentKey)
-        {
-            DatabaseCommands.DeleteDocumentAsync(documentKey)
-                .ContinueOnSuccessInTheUIThread(() =>
-                {
-                    ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was deleted", documentKey)));
-                    if (CanNavigate && HasNext)
-                    {
-                        // navigate to the current index because the document has just been deleted, so another will move up to take its place
-                        var url = Navigator.GetUrlForCurrentIndex();
-                        if (url == UrlUtil.Url)
-                        {
-                            LoadModelParameters(string.Empty);
-                        }
-                        else
-                        {
-                            UrlUtil.Navigate(url);
-                        }
-                    }
-                    else if (CanNavigate)
-                    {
-                        UrlUtil.Navigate(Navigator.GetUrlForPrevious());
-                    }
-                    else
-                    {
-                        UrlUtil.Navigate(ParentPathSegments.Last().Url);
-                    }
-                })
-                .Catch();
-        }
 
-        protected override void OnViewLoaded()
-        {
-            ParserDispatcherManager.EnsureParserDispatcherIsCreated();
+		    TaskEx.WhenAll(childrenTask, parentsTask).ContinueOnSuccessInTheUIThread(t =>
+		    {
+		        var linkModels =
+		            childrenTask.Result
+                    .Concat(parentsTask.Result)
+		                .OrderBy(key => key.Length)
+		                .Select(key => new LinkModel
+		                {
+		                    Title = key,
+		                    HRef = "/Edit?id=" + key
+		                })
+                        .ToArray();
+
+		        Related.Set(linkModels);
+		    });
+		}
+
+		private void HandleDeleteDocument()
+		{
+			if (string.IsNullOrEmpty(DocumentKey))
+			{
+				return;
+			}
+
+			AskUser.ConfirmationAsync("Confirm Delete", string.Format("Are you sure you want do delete {0} ?", DocumentKey))
+				.ContinueWhenTrueInTheUIThread(() => DoDeleteDocument(DocumentKey));
+		}
+
+		private void DoDeleteDocument(string documentKey)
+		{
+			DatabaseCommands.DeleteDocumentAsync(documentKey)
+				.ContinueOnSuccessInTheUIThread(() =>
+				{
+					ApplicationModel.Current.AddNotification(new Notification(string.Format("Document {0} was deleted", documentKey)));
+					if (CanNavigate && HasNext)
+					{
+						// navigate to the current index because the document has just been deleted, so another will move up to take its place
+						var url = Navigator.GetUrlForCurrentIndex();
+						if (url == UrlUtil.Url)
+						{
+							LoadModelParameters(string.Empty);
+						}
+						else
+						{
+							UrlUtil.Navigate(url);
+						}
+					}
+					else if (CanNavigate)
+					{
+						UrlUtil.Navigate(Navigator.GetUrlForPrevious());
+					}
+					else
+					{
+						UrlUtil.Navigate(ParentPathSegments.Last().Url);
+					}
+				})
+				.Catch();
+		}
+
+		protected override void OnViewLoaded()
+		{
+			ParserDispatcherManager.EnsureParserDispatcherIsCreated();
+
+            DocumentOutliningMode mode = null;
 
             if (!string.IsNullOrEmpty(Settings.Instance.DocumentOutliningMode))
             {
-                var mode = OutliningModes.FirstOrDefault(m => m.Name == Settings.Instance.DocumentOutliningMode);
-                if (mode == null)
-                {
-                    mode = OutliningModes.FirstOrDefault(m => m.Name == "Enabled");
-                }
+                mode = OutliningModes.FirstOrDefault(m => m.Name == Settings.Instance.DocumentOutliningMode);
+            }
 
-                SelectedOutliningMode = mode;
+            if (mode == null)
+            {
+                mode = OutliningModes.FirstOrDefault(m => m.Name == "Enabled");
+            }
+
+            SelectedOutliningMode = mode;
+
+            if (Database.Value != null)
+            {
+                Database.Value.DocumentChanges.TakeUntil(Unloaded)
+                    .ObserveOnDispatcher()
+                    .Subscribe(n => HandleChangeNotification(n));
             }
         }
 
-		public string Key
+	    private void HandleChangeNotification(DocumentChangeNotification notification)
+	    {
+            if (notification.Name.Equals(DocumentKey, StringComparison.InvariantCulture))
+            {
+                if (notification.Type == DocumentChangeTypes.Put && notification.Etag != Etag)
+                {
+                    ApplicationModel.Current.AddNotification(
+                            new Notification("Document " + Key + " was changed on the server"));
+                }
+                else if (notification.Type == DocumentChangeTypes.Delete)
+                {
+                    ApplicationModel.Current.AddNotification(
+                            new Notification("Document " + Key + " was deleted on the server"));
+                }
+            }
+	    }
+
+	    public string Key
 		{
 			get { return document.Value.Key; }
 			set
@@ -723,18 +790,19 @@ namespace Raven.Studio.Models
 		}
 
 		private IDictionary<string, string> metadata;
-        private ICommand toggleExpansion;
-        private DocumentOutliningMode outliningMode;
-        public static IList<DocumentOutliningMode> OutliningModes { get; private set; }
+		private ICommand toggleExpansion;
+		private DocumentOutliningMode outliningMode;
+	    private DocumentReferencedIdManager documentIdManager;
+	    public static IList<DocumentOutliningMode> OutliningModes { get; private set; }
 
 
-        public IEnumerable<KeyValuePair<string, string>> Metadata
+		public IEnumerable<KeyValuePair<string, string>> Metadata
 		{
 			get
 			{
 				return metadata
-                    .Where(x => x.Key != "@etag" && x.Key != "@id")
-                    .OrderBy(x => x.Key)
+					.Where(x => x.Key != "@etag" && x.Key != "@id")
+					.OrderBy(x => x.Key)
 					.Concat(new[]
 								{
 									new KeyValuePair<string, string>("ETag", Etag.HasValue ? Etag.ToString() : ""),
@@ -743,36 +811,49 @@ namespace Raven.Studio.Models
 			}
 		}
 
-        private bool IsDocumentValid()
-        {
-            return !EditorDocumentHasErrors(JsonDataDocument) && !EditorDocumentHasErrors(MetaDataDocument);
-        }
+		private bool IsDocumentValid()
+		{
+			return !EditorDocumentHasErrors(JsonDataDocument) && !EditorDocumentHasErrors(MetaDataDocument);
+		}
 
-        private bool EditorDocumentHasErrors(IEditorDocument editorDocument)
-        {
-            var parseData = editorDocument.ParseData as ILLParseData;
-            return parseData != null && parseData.Errors.Any();
-        }
+		private bool EditorDocumentHasErrors(IEditorDocument editorDocument)
+		{
+			var parseData = editorDocument.ParseData as ILLParseData;
+			return parseData != null && parseData.Errors.Any();
+		}
 
-        private Task WhenParsingComplete(IEditorDocument document)
+		private Task WhenParsingComplete(IEditorDocument document)
+		{
+			var tcs = new TaskCompletionSource<bool>();
+			if ((document.ParseData as ILLParseData).Snapshot == document.CurrentSnapshot)
+			{
+				tcs.SetResult(true);
+			}
+			else
+			{
+				EventHandler<ParseDataPropertyChangedEventArgs> completed = null;
+				completed = (s, e) =>
+								{
+									tcs.SetResult(true);
+									document.ParseDataChanged -= completed;
+								};
+				document.ParseDataChanged += completed;
+			}
+
+			return tcs.Task;
+		}
+
+        public override bool CanLeavePage()
         {
-            var tcs = new TaskCompletionSource<bool>();
-            if ((document.ParseData as ILLParseData).Snapshot == document.CurrentSnapshot)
+            if (HasUnsavedChanges)
             {
-                tcs.SetResult(true);
+                return AskUser.Confirmation("Edit Document",
+                                            "There are unsaved changes to this document. Are you sure you want to continue?");
             }
             else
             {
-                EventHandler<ParseDataPropertyChangedEventArgs> completed = null;
-                completed = (s, e) =>
-                                {
-                                    tcs.SetResult(true);
-                                    document.ParseDataChanged -= completed;
-                                };
-                document.ParseDataChanged += completed;
+                return true;
             }
-
-            return tcs.Task;
         }
 
 		public ICommand Save
@@ -780,9 +861,9 @@ namespace Raven.Studio.Models
 			get { return new SaveDocumentCommand(this); }
 		}
 
-        public ICommand Delete
+		public ICommand Delete
 		{
-            get { return deleteCommand ?? (deleteCommand = new ActionCommand(HandleDeleteDocument)); }
+			get { return deleteCommand ?? (deleteCommand = new ActionCommand(HandleDeleteDocument)); }
 		}
 
 		public ICommand Prettify
@@ -810,7 +891,13 @@ namespace Raven.Studio.Models
 			get { return new ChangeFieldValueCommand<EditableDocumentModel>(this, x => x.SearchEnabled = !x.searchEnabled); }
 		}
 
-		private class RefreshDocumentCommand : Command
+        protected bool HasUnsavedChanges
+        {
+            get { return hasUnsavedChanges; }
+            set { hasUnsavedChanges = value; }
+        }
+
+        private class RefreshDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel parent;
 
@@ -826,19 +913,33 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object _)
 			{
-				parent.DatabaseCommands.GetAsync(parent.DocumentKey)
-					.ContinueOnSuccess(doc =>
-										{
-											if (doc == null)
-											{
-												parent.HandleDocumentNotFound();
-												return;
-											}
-
-											parent.document.Value = doc;
-										})
-					.Catch();
+                if (parent.HasUnsavedChanges)
+                {
+                    AskUser.ConfirmationAsync("Edit Document",
+                                              "There are unsaved changes to this document. Are you sure you want to refresh?")
+                        .ContinueWhenTrueInTheUIThread(DoRefresh);
+                }
+                else
+                {
+                    DoRefresh();
+                }
 			}
+
+            private void DoRefresh()
+            {
+                parent.DatabaseCommands.GetAsync(parent.DocumentKey)
+                    .ContinueOnSuccess(doc =>
+                                           {
+                                               if (doc == null)
+                                               {
+                                                   parent.HandleDocumentNotFound();
+                                                   return;
+                                               }
+
+                                               parent.document.Value = doc;
+                                           })
+                    .Catch();
+            }
 		}
 
 		private class SaveDocumentCommand : Command
@@ -864,28 +965,28 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-			    TaskEx.WhenAll(parentModel.DocumentSections.Select(s => parentModel.WhenParsingComplete(s.Document)))
-			        .ContinueOnUIThread(t => ConfirmSave());
+				TaskEx.WhenAll(parentModel.DocumentSections.Select(s => parentModel.WhenParsingComplete(s.Document)))
+					.ContinueOnUIThread(t => ConfirmSave());
 			}
 
-		    private void ConfirmSave()
-		    {
-		        if (!parentModel.IsDocumentValid())
-		        {
-		            this.parentModel.IsShowingErrors = true;
-		        }
+			private void ConfirmSave()
+			{
+				if (!parentModel.IsDocumentValid())
+				{
+					this.parentModel.IsShowingErrors = true;
+				}
 
-		        if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
-		        {
-		            AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
-		                .ContinueWhenTrueInTheUIThread(SaveDocument);
-		            return;
-		        }
+				if (parentModel.Key != null && parentModel.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+				{
+					AskUser.ConfirmationAsync("Confirm Edit", "Are you sure that you want to edit a system document?")
+						.ContinueWhenTrueInTheUIThread(SaveDocument);
+					return;
+				}
 
-		        SaveDocument();
-		    }
+				SaveDocument();
+			}
 
-		    private void SaveDocument()
+			private void SaveDocument()
 			{
 				RavenJObject doc;
 				RavenJObject metadata;
@@ -910,32 +1011,33 @@ namespace Raven.Studio.Models
 				}
 				catch (Exception ex)
 				{
-                    ApplicationModel.Current.AddErrorNotification(ex, "Could not parse JSON");
+					ApplicationModel.Current.AddErrorNotification(ex, "Could not parse JSON");
 					return;
 				}
 
 				parentModel.UpdateMetadata(metadata);
-				ApplicationModel.Current.AddNotification(new Notification("Saving document " + parentModel.Key + " ..."));
+				ApplicationModel.Current.AddInfoNotification("Saving document " + parentModel.Key + " ...");
 
-				Guid? etag = string.Equals(parentModel.DocumentKey , parentModel.Key, StringComparison.InvariantCultureIgnoreCase) ? 
+				Guid? etag = string.Equals(parentModel.DocumentKey, parentModel.Key, StringComparison.InvariantCultureIgnoreCase) ?
 					parentModel.Etag : Guid.Empty;
-			
+
 				DatabaseCommands.PutAsync(parentModel.Key, etag, doc, metadata)
 					.ContinueOnSuccess(result =>
 					{
-						ApplicationModel.Current.AddNotification(new Notification("Document " + result.Key + " saved"));
-						parentModel.Etag = result.ETag;
+                        ApplicationModel.Current.AddInfoNotification("Document " + result.Key + " saved");
+					    parentModel.HasUnsavedChanges = false;
+                        parentModel.Etag = result.ETag;
 					    parentModel.PutDocumentKeyInUrl(result.Key, dontOpenNewTab:true);
 					    parentModel.SetCurrentDocumentKey(result.Key);
 					})
 					.ContinueOnSuccess(() => new RefreshDocumentCommand(parentModel).Execute(null))
-					.Catch(exception => ApplicationModel.Current.AddNotification(new Notification(exception.Message)));
+					.Catch(exception => ApplicationModel.Current.AddErrorNotification(exception, "Could not save document."));
 			}
 		}
 
 
 
-        private class PrettifyDocumentCommand : Command
+		private class PrettifyDocumentCommand : Command
 		{
 			private readonly EditableDocumentModel editableDocumentModel;
 
@@ -946,12 +1048,12 @@ namespace Raven.Studio.Models
 
 			public override void Execute(object parameter)
 			{
-			    var document = editableDocumentModel.CurrentSection.Document;
-			    var formatter = document.Language.GetService<ITextFormatter>();
-                if (formatter != null)
-                {
-                    formatter.Format(document.CurrentSnapshot.SnapshotRange);
-                }
+				var document = editableDocumentModel.CurrentSection.Document;
+				var formatter = document.Language.GetService<ITextFormatter>();
+				if (formatter != null)
+				{
+					formatter.Format(document.CurrentSnapshot.SnapshotRange);
+				}
 			}
 		}
 	}
@@ -964,28 +1066,28 @@ namespace Raven.Studio.Models
 		New,
 	}
 
-    public class DocumentSection
-    {
-        public string Name { get; set; }
+	public class DocumentSection
+	{
+		public string Name { get; set; }
 
-        public IEditorDocument Document { get; set; }
-    }
+		public IEditorDocument Document { get; set; }
+	}
 
-    public class DocumentError
-    {
-        public DocumentSection Section { get; set; }
+	public class DocumentError
+	{
+		public DocumentSection Section { get; set; }
 
-        public IParseError ParseError { get; set; }
-    }
+		public IParseError ParseError { get; set; }
+	}
 
-    public class DocumentOutliningMode
-    {
-        public DocumentOutliningMode(string name)
-        {
-            Name = name;
-        }
+	public class DocumentOutliningMode
+	{
+		public DocumentOutliningMode(string name)
+		{
+			Name = name;
+		}
 
-        public string Name { get; private set; }
-        public Action<IEditorDocument> Applicator { get; set; }
-    }
+		public string Name { get; private set; }
+		public Action<IEditorDocument> Applicator { get; set; }
+	}
 }

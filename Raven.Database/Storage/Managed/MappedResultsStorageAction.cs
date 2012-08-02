@@ -8,9 +8,12 @@ using System.Collections.Generic;
 using System.IO;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.MEF;
 using Raven.Database.Impl;
+using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
+using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
 using Raven.Database.Json;
@@ -21,17 +24,23 @@ namespace Raven.Storage.Managed
 	{
 		private readonly TableStorage storage;
 		private readonly IUuidGenerator generator;
+		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 
-		public MappedResultsStorageAction(TableStorage storage, IUuidGenerator generator)
+		public MappedResultsStorageAction(TableStorage storage, IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
 		{
 			this.storage = storage;
 			this.generator = generator;
+			this.documentCodecs = documentCodecs;
 		}
 
 		public void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data, byte[] viewAndReduceKeyHashed)
 		{
 			var ms = new MemoryStream();
-			data.WriteTo(ms);
+
+			using(var stream = documentCodecs.Aggregate((Stream) ms, (ds, codec) => codec.Value.Encode(reduceKey, data, null, ds)))
+			{
+				data.WriteTo(stream);
+			}
 			var byteArray = generator.CreateSequentialUuid().ToByteArray();
 			var key = new RavenJObject
 			{
@@ -62,9 +71,20 @@ namespace Raven.Storage.Managed
 					var readResult = storage.MappedResults.Read(x);
 					if (readResult == null)
 						return null;
-					return readResult.Data().ToJObject();
+					return LoadMappedResult(readResult);
 				}).Where(x => x != null);
 
+		}
+
+		private RavenJObject LoadMappedResult(Table.ReadResult readResult)
+		{
+			var key = readResult.Key.Value<string>("reduceKey");
+
+			Stream memoryStream = new MemoryStream(readResult.Data());
+			using(var stream = documentCodecs.ReverseAggregate(memoryStream, (ds, codec) => codec.Decode(key, null, ds)))
+			{
+				return stream.ToJObject();
+			}
 		}
 
 		public IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view)
@@ -112,7 +132,7 @@ namespace Raven.Storage.Managed
 					{
 						mappedResultInfo.Size = readResult.Size;
 						if (loadData)
-							mappedResultInfo.Data = readResult.Data().ToJObject();
+							mappedResultInfo.Data = LoadMappedResult(readResult);
 					}
 
 					return mappedResultInfo;

@@ -51,6 +51,9 @@ namespace Raven.Database.Extensions
 					}
 					if (i == retries-1)// last try also failed
 						throw;
+
+					GC.Collect();
+					GC.WaitForPendingFinalizers();
 					Thread.Sleep(100);
 				}
 			}

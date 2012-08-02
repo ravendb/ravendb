@@ -32,7 +32,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Retrieves documents for the specified key prefix
 		/// </summary>
-		JsonDocument[] StartsWith(string keyPrefix, int start, int pageSize);
+		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,  bool metadataOnly = false);
 
 		/// <summary>
 		/// Retrieves the document for the specified key
@@ -46,8 +46,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="ids">The ids.</param>
 		/// <param name="includes">The includes.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <returns></returns>
-		MultiLoadResult Get(string[] ids, string[] includes);
+		MultiLoadResult Get(string[] ids, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
 		/// Puts the document in the database with the specified key
@@ -86,7 +87,7 @@ namespace Raven.Client.Connection
 		/// Gets the attachments starting with the specified prefix
 		/// </summary>
 		IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize);
-		
+
 		/// <summary>
 		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
 		/// </summary>
@@ -171,7 +172,7 @@ namespace Raven.Client.Connection
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The includes.</param>
-		QueryResult Query(string index, IndexQuery query, string[] includes);
+		QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
 		/// Deletes the specified index
@@ -252,6 +253,15 @@ namespace Raven.Client.Connection
 		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests);
 
 		/// <summary>
+		/// Perform a set based update using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch);
+
+		/// <summary>
 		/// Perform a set based update using the specified index
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
@@ -259,6 +269,15 @@ namespace Raven.Client.Connection
 		/// <param name="patchRequests">The patch requests.</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
 		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale);
+
+		/// <summary>
+		/// Perform a set based update using the specified index
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+        /// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		void UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts
@@ -300,12 +319,27 @@ namespace Raven.Client.Connection
 		void Patch(string key, PatchRequest[] patches);
 
 		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		void Patch(string key, ScriptedPatchRequest patch);
+
+		/// <summary>
 		/// Sends a patch request for a specific document
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		void Patch(string key, PatchRequest[] patches, Guid? etag);
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+        /// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		void Patch(string key, ScriptedPatchRequest patch, Guid? etag);
 
 		/// <summary>
 		/// Disable all caching within the given scope

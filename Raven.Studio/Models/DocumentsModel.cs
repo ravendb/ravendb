@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Net;
+using System.Reactive;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Documents;
@@ -22,6 +23,7 @@ using Raven.Client.Connection;
 using Raven.Studio.Extensions;
 using System.Reactive.Linq;
 using Raven.Studio.Messages;
+using Notification = Raven.Studio.Messages.Notification;
 
 namespace Raven.Studio.Models
 {
@@ -30,7 +32,7 @@ namespace Raven.Studio.Models
         private const string PriorityColumnsDocumentName = "Raven/Studio/PriorityColumns";
         private EditVirtualDocumentCommand editDocument;
         private Func<string, int, DocumentNavigator> documentNavigatorFactory;
-
+        private IList<string> contextPriorityProperties; 
         public VirtualCollection<ViewableDocument> Documents { get; private set; }
         
         /// <summary>
@@ -40,8 +42,6 @@ namespace Raven.Studio.Models
         public WeakCollectionViewWrapper<VirtualCollection<ViewableDocument>> DocumentsWeak { get { return new WeakCollectionViewWrapper<VirtualCollection<ViewableDocument>>(Documents); } }
  
         private ColumnsModel columns;
-
-        public bool SkipAutoRefresh { get; set; }
 
         private string header;
         private string context;
@@ -53,6 +53,8 @@ namespace Raven.Studio.Models
         private MostRecentUsedList<VirtualItem<ViewableDocument>> mostRecentDocuments = new MostRecentUsedList<VirtualItem<ViewableDocument>>(60);
         private ICommand copyDocumentTextToClipboard;
         private List<PriorityColumn> priorityColumns;
+        private Func<DatabaseModel, IObservable<Unit>> observableGenerator;
+        private IDisposable changesSubscription;
 
         public DocumentsModel(VirtualCollectionSource<ViewableDocument> collectionSource)
         {
@@ -108,6 +110,17 @@ namespace Raven.Studio.Models
         private IList<ColumnDefinition> GetCurrentColumnsSuggestion()
         {
             var suggester = new ColumnSuggester();
+
+            var priorityColumns = this.priorityColumns;
+
+            if (contextPriorityProperties != null && contextPriorityProperties.Count > 0)
+            {
+                priorityColumns = contextPriorityProperties
+                    .Select(p => new PriorityColumn() { PropertyNamePattern = "^" + p.Replace(".", "\\.") + "$"})
+                    .Concat(priorityColumns.EmptyIfNull())
+                    .ToList();
+            }
+
             var newColumns = suggester.AutoSuggest(GetMostRecentDocuments(), Context, priorityColumns);
 
             return newColumns;
@@ -233,7 +246,62 @@ namespace Raven.Studio.Models
                                {
                                    BeginLoadPriorityProperties();
                                    UpdateColumnSet();
+                                   ObserveSourceChanges();
+                                   Documents.Refresh();
                                });
+
+            ObserveSourceChanges();
+
+            Documents.Refresh();
+        }
+
+        protected override void OnViewUnloaded()
+        {
+            base.OnViewUnloaded();
+
+            StopListeningForChanges();
+        }
+
+        public void SetChangesObservable(Func<DatabaseModel, IObservable<Unit>> observableGenerator)
+        {
+            this.observableGenerator = observableGenerator;
+            ObserveSourceChanges();
+        }
+
+        private void ObserveSourceChanges()
+        {
+            if (!IsLoaded)
+            {
+                return;
+            }
+
+            StopListeningForChanges();
+
+            var databaseModel = ApplicationModel.Database.Value;
+
+            if (observableGenerator != null && databaseModel != null)
+            {
+                var observable = observableGenerator(databaseModel);
+                changesSubscription = 
+                    observable
+                    .SampleResponsive(TimeSpan.FromSeconds(1))
+                    .ObserveOnDispatcher()
+                    .Subscribe(_ => Documents.Refresh(RefreshMode.PermitStaleDataWhilstRefreshing));
+            }
+        }
+
+        private void StopListeningForChanges()
+        {
+            if (changesSubscription != null)
+            {
+                changesSubscription.Dispose();
+            }
+        }
+
+        public void SetPriorityColumns(IList<string> priorityColumns)
+        {
+            contextPriorityProperties = priorityColumns;
+            UpdateColumnSet();
         }
 
         private void BeginLoadPriorityProperties()
@@ -300,17 +368,6 @@ namespace Raven.Studio.Models
                 Columns.LoadFromColumnDefinitions(columnSet.Columns);
                 Columns.Source = ColumnsSource.User;
             }
-        }
-
-        public override System.Threading.Tasks.Task TimerTickedAsync()
-        {
-            if (SkipAutoRefresh)
-            {
-                return null;
-            }
-
-            Documents.Refresh();
-            return base.TimerTickedAsync();
         }
 
         public string Header

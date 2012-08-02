@@ -32,7 +32,7 @@ namespace Raven.Client.Silverlight.Connection
 
 		public static string Static(this string url, string key)
 		{
-			return url + "/static/" + HttpUtility.HtmlEncode(key);
+			return url + "/static/" + HttpUtility.UrlEncode(key);
 		}
 
 		public static string Databases(this string url, int pageSize, int start)
@@ -55,17 +55,20 @@ namespace Raven.Client.Silverlight.Connection
 
 		public static string Docs(this string url, string key)
 		{
-			return url + "/docs/" + HttpUtility.HtmlEncode(key);
+			return url + "/docs/" + HttpUtility.UrlEncode(key);
 		}
 
-		public static string Docs(this string url, int start, int pageSize)
+		public static string Docs(this string url, int start, int pageSize, bool metadataOnly)
 		{
-			return url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+			var docs = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+			if (metadataOnly)
+				docs += "&metadata-only=true";
+			return docs;
 		}
 
-		public static string DocsStartingWith(this string url, string prefix, int start, int pageSize)
+		public static string DocsStartingWith(this string url, string prefix, int start, int pageSize, bool metadataOnly)
 		{
-			return Docs(url, start, pageSize) + "&startsWith=" + HttpUtility.HtmlEncode(prefix);
+			return Docs(url, start, pageSize, metadataOnly) + "&startsWith=" + HttpUtility.UrlEncode(prefix);
 		}
 
 		public static string Queries(this string url)
@@ -87,12 +90,12 @@ namespace Raven.Client.Silverlight.Connection
 
 		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, Document.DocumentConvention convention)
 		{
-			return requestor.JsonRequestFactory.CreateHttpJsonRequest(requestor, url, "GET", credentials, convention);
+			return requestor.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, "GET", credentials, convention));
 		}
 
 		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, DocumentConvention convention, IDictionary<string, string> operationsHeaders, string method)
 		{
-			var httpJsonRequest = requestor.JsonRequestFactory.CreateHttpJsonRequest(requestor, url, method, credentials, convention);
+			var httpJsonRequest = requestor.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention));
 			httpJsonRequest.AddOperationHeaders(operationsHeaders);
 			return httpJsonRequest;
 		}

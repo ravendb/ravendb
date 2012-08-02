@@ -155,6 +155,7 @@
     <Compile Include="Behaviors\BindColumnVisibility.cs" />
     <Compile Include="Behaviors\BindSelectedItemsBehavior.cs" />
     <Compile Include="Behaviors\BindSuggestionsProvider.cs" />
+    <Compile Include="Behaviors\CloseSplitButtonPopupAction.cs" />
     <Compile Include="Behaviors\ColumnHeaderContextMenu.cs" />
     <Compile Include="Behaviors\DataGridRowDoubleClickTrigger.cs" />
     <Compile Include="Behaviors\DefaultButtonBehavior.cs" />
@@ -170,6 +171,9 @@
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\ItemSelectionCommand.cs" />
+    <Compile Include="Commands\StopIndexingCommand.cs" />
+    <Compile Include="Commands\StartIndexingCommand.cs" />
     <Compile Include="Commands\CopyDocumentsToClipboardCommand.cs" />
     <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Commands\ShowErrorListWindowCommand.cs" />
@@ -177,14 +181,21 @@
     <Compile Include="Controls\BusynessIndicator.xaml.cs">
       <DependentUpon>BusynessIndicator.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\Editors\QuerySyntaxTextBlock.xaml.cs">
+      <DependentUpon>QuerySyntaxTextBlock.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\GoToDocumentControl.xaml.cs">
       <DependentUpon>GoToDocumentControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\RecentQueriesButton.xaml.cs">
+      <DependentUpon>RecentQueriesButton.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
     <Compile Include="Controls\VirtualizingWrapPanel.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
     <Compile Include="Extensions\DoubleExtensions.cs" />
     <Compile Include="Extensions\IObservableExtensions.cs" />
+    <Compile Include="Extensions\IsolatedStorageFileExtensions.cs" />
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\SyntaxEditorExtensions.cs" />
@@ -200,6 +211,7 @@
     <Compile Include="Features\Documents\ColumnSet.cs" />
     <Compile Include="Features\Documents\ColumnsModel.cs" />
     <Compile Include="Features\Documents\ColumnSuggester.cs" />
+    <Compile Include="Features\Documents\DocumentHelpers.cs" />
     <Compile Include="Features\Documents\DocumentNavigationStrategy.cs" />
     <Compile Include="Features\Documents\DocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\EditNeighbouringDocumentCommand.cs" />
@@ -210,8 +222,13 @@
     <Compile Include="Features\Documents\IndexDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\PriorityColumn.cs" />
     <Compile Include="Features\Documents\SingleDocumentNavigator.cs" />
+    <Compile Include="Features\IndexStats\StatsView.xaml.cs">
+      <DependentUpon>StatsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\JsonEditor\DocumentReferencedIdManager.cs" />
     <Compile Include="Features\JsonEditor\IJsonClassificationTypeProvider.g.cs" />
     <Compile Include="Features\JsonEditor\JsonArrayNode.g.cs" />
+    <Compile Include="Features\JsonEditor\JsonAstHelpers.cs" />
     <Compile Include="Features\JsonEditor\JsonAstNodeId.g.cs" />
     <Compile Include="Features\JsonEditor\JsonClassificationTypeProvider.g.cs" />
     <Compile Include="Features\JsonEditor\JsonExampleTextProvider.g.cs" />
@@ -231,10 +248,23 @@
     <Compile Include="Features\JsonEditor\JsonTokenReader.cs" />
     <Compile Include="Features\JsonEditor\JsonTokenTagger.g.cs" />
     <Compile Include="Features\JsonEditor\JsonTokenTaggerProvider.g.cs" />
+    <Compile Include="Features\JsonEditor\LinkTag.cs" />
+    <Compile Include="Features\JsonEditor\LinkTagAdornmentManager.cs" />
+    <Compile Include="Features\JsonEditor\LinkTagClickHandler.cs" />
+    <Compile Include="Features\JsonEditor\LinkTagQuickInfoProvider.cs" />
+    <Compile Include="Features\JsonEditor\PropertyValueLinkTagger.cs" />
     <Compile Include="Features\Query\IndexQueryHelpers.cs" />
     <Compile Include="Features\Query\ProjectionData.cs" />
     <Compile Include="Features\Query\QueryDocumentsCollectionSource.cs" />
+    <Compile Include="Features\Query\QueryHistoryManager.cs" />
     <Compile Include="Features\Query\QueryIndexAutoComplete.cs" />
+    <Compile Include="Features\Query\QueryState.cs" />
+    <Compile Include="Features\Query\RecentQueriesDropDownView.xaml.cs">
+      <DependentUpon>RecentQueriesDropDownView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Features\Query\RecentQueriesModel.cs" />
+    <Compile Include="Features\Query\SavedQuery.cs" />
+    <Compile Include="Features\Tasks\IndexingTask.cs" />
     <Compile Include="Features\Tasks\StartBackupTask.cs" />
     <Compile Include="Features\Tasks\TaskView.xaml.cs">
       <DependentUpon>TaskView.xaml</DependentUpon>
@@ -245,6 +275,7 @@
     <Compile Include="Features\Util\ErrorListWindow.xaml.cs">
       <DependentUpon>ErrorListWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Impl\SplitButton\PopupButton.cs" />
     <Compile Include="Impl\SplitButton\SplitButtonPopup.cs" />
     <Compile Include="Impl\SplitButton\GlobalSuppressions.cs" />
     <Compile Include="Impl\SplitButton\MenuButton.cs" />
@@ -253,8 +284,11 @@
     <Compile Include="Impl\WatermarkedTextBox\WatermarkedTextBox.cs" />
     <Compile Include="Infrastructure\ArrayContainer.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringToDefaultOperatorConverter.cs" />
     <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
+    <Compile Include="Infrastructure\Converters\EnumToVisibilityConverter.cs" />
     <Compile Include="Infrastructure\Converters\NegatingBoolConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringToSingleLineConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringValueToObjectConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringValueConversion.cs" />
     <Compile Include="Infrastructure\Converters\StringValueConversionCollection.cs" />
@@ -267,6 +301,7 @@
     <Compile Include="Infrastructure\FlexibleTemplateItemsControl.cs" />
     <Compile Include="Infrastructure\INotifyBusyness.cs" />
     <Compile Include="Infrastructure\ItemsRealizedEventArgs.cs" />
+    <Compile Include="Infrastructure\MarkupExtensions\ResourceKeyBinding.cs" />
     <Compile Include="Infrastructure\ParserDispatcherManager.cs" />
     <Compile Include="Infrastructure\ProvideVisibleItemRangeFromDataGridBehavior.cs" />
     <Compile Include="Infrastructure\DataFetchErrorEventArgs.cs" />
@@ -301,8 +336,12 @@
     <Compile Include="Infrastructure\WeakReference.cs" />
     <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
     <Compile Include="Models\ApplicationState.cs" />
+    <Compile Include="Models\DatabaseListItemModel.cs" />
+    <Compile Include="Models\DatabaseSelectionModel.cs" />
     <Compile Include="Models\DocumentSize.cs" />
     <Compile Include="Models\DocumentViewStateStore.cs" />
+    <Compile Include="Models\IndexStatsModel.cs" />
+    <Compile Include="Models\QueryStateStore.cs" />
     <Compile Include="Models\StudioErrorListModel.cs" />
     <Compile Include="Models\GoToDocumentModel.cs" />
     <Compile Include="Models\IHasPageTitle.cs" />
@@ -310,6 +349,9 @@
     <Compile Include="Models\PerDatabaseState.cs" />
     <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
+    <Compile Include="Views\IndexStats.xaml.cs">
+      <DependentUpon>IndexStats.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Terms.xaml.cs">
       <DependentUpon>Terms.xaml</DependentUpon>
     </Compile>
@@ -339,7 +381,6 @@
     <Compile Include="Commands\PromoteToAutoIndexCommand.cs" />
     <Compile Include="Commands\ShowLicensingStatusCommand.cs" />
     <Compile Include="Controls\Editors\EditorBase.cs" />
-    <Compile Include="Controls\ListBoxMenu.cs" />
     <Compile Include="Controls\SearchControl.xaml.cs">
       <DependentUpon>SearchControl.xaml</DependentUpon>
     </Compile>
@@ -555,6 +596,14 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Assets\PopupButton.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Assets\ProgressBarStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Assets\SplitButtonPopup.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -587,7 +636,15 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Controls\Editors\QuerySyntaxTextBlock.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\GoToDocumentControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\RecentQueriesButton.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -600,6 +657,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Features\Documents\DocumentsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\IndexStats\StatsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Query\RecentQueriesDropDownView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -618,6 +683,10 @@
     <Page Include="Impl\SplitButton\Themes\generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\IndexStats.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\Terms.xaml">
       <SubType>Designer</SubType>
@@ -845,6 +914,18 @@
     <Resource Include="Assets\Images\navigate_first_tiny.png" />
     <Resource Include="Assets\Images\navigate_last_tiny.png" />
     <Resource Include="Assets\Images\Collapse_tiny.png" />
+    <Resource Include="Assets\Images\index_showfields.png" />
+    <Resource Include="Assets\Images\index_skiptransform.png" />
+    <Resource Include="Assets\Images\VisitLink_Tiny.png" />
+    <Resource Include="Assets\Images\recent_queries_tiny.png" />
+    <Resource Include="Assets\Images\clear_history_tiny.png" />
+    <Resource Include="Assets\Images\pin_tiny.png" />
+    <Resource Include="Assets\Images\un_pin_tiny.png" />
+    <Resource Include="Assets\Images\backup_tiny.png" />
+    <Resource Include="Assets\Images\export_data_tiny.png" />
+    <Resource Include="Assets\Images\import_data_tiny.png" />
+    <Resource Include="Assets\Images\offline.png" />
+    <Resource Include="Assets\Images\online.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

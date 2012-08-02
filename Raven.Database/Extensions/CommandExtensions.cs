@@ -32,7 +32,6 @@ namespace Raven.Database.Extensions
 			var patchCommandData = self as PatchCommandData;
 			if (patchCommandData != null)
 			{
-
 				database.ApplyPatch(patchCommandData.Key, patchCommandData.Etag, patchCommandData.Patches, patchCommandData.TransactionInformation);
 
 				var doc = database.Get(patchCommandData.Key, patchCommandData.TransactionInformation);
@@ -40,6 +39,21 @@ namespace Raven.Database.Extensions
 				{
 					patchCommandData.Metadata = doc.Metadata;
 					patchCommandData.Etag = doc.Etag;
+				}
+				return;
+			}
+
+			var advPatchCommandData = self as ScriptedPatchCommandData;
+			if (advPatchCommandData != null)
+			{
+				database.ApplyPatch(advPatchCommandData.Key, advPatchCommandData.Etag,
+									advPatchCommandData.Patch, advPatchCommandData.TransactionInformation);
+
+				var doc = database.Get(advPatchCommandData.Key, advPatchCommandData.TransactionInformation);
+				if (doc != null)
+				{
+					advPatchCommandData.Metadata = doc.Metadata;
+					advPatchCommandData.Etag = doc.Etag;
 				}
 				return;
 			}

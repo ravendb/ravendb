@@ -14,6 +14,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 #if !NET35
+using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using System.Threading.Tasks;
 using Raven.Client.Document.Batches;
@@ -428,7 +429,8 @@ namespace Raven.Client.Document
 												theWaitForNonStaleResults,
 												setOperationHeaders,
 												timeout,
-												transformResultsFunc);
+												transformResultsFunc,
+												includes);
 		}
 
 #if !SILVERLIGHT
@@ -1475,6 +1477,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
 		{
+			searchTerms = searchTerms.Replace("<<", "").Replace(">>", "");
 			lastEquality = new KeyValuePair<string, string>(fieldName, "<<"+searchTerms+">>");
 			theQueryText.Append(' ');
 			

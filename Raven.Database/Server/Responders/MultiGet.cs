@@ -138,7 +138,7 @@ namespace Raven.Database.Server.Responders
 			public string GetRequestUrlForTenantSelection()
 			{
 				var requestUrl = this.GetRequestUrl();
-				if (string.IsNullOrEmpty(tenantId) || tenantId == Constants.DefaultDatabase)
+				if (string.IsNullOrEmpty(tenantId) || tenantId == Constants.SystemDatabase)
 					return requestUrl;
 				return "/databases/" + tenantId + requestUrl;
 			}
@@ -309,6 +309,11 @@ namespace Raven.Database.Server.Responders
 			}
 
 			public NameValueCollection GetHeaders()
+			{
+				throw new NotSupportedException();
+			}
+
+			public Task WriteAsync(string data)
 			{
 				throw new NotSupportedException();
 			}

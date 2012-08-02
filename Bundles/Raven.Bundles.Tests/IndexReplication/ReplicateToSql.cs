@@ -12,7 +12,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Raven.Abstractions.Indexing;
-using Raven.Bundles.Expiration;
 using Raven.Bundles.IndexReplication;
 using Raven.Bundles.IndexReplication.Data;
 using Raven.Client;
@@ -52,7 +51,7 @@ namespace Raven.Bundles.Tests.IndexReplication
 								}
 						},
 				});
-			ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
+			database::Raven.Bundles.Expiration.ExpirationReadTrigger.GetCurrentUtcDate = () => DateTime.UtcNow;
 			documentStore = new DocumentStore {Url = "http://localhost:8079"}.Initialize();
 
 			documentStore.DatabaseCommands.PutIndex(

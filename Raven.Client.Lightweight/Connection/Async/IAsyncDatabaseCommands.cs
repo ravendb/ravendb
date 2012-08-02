@@ -37,28 +37,18 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes);
+		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
 		/// Begins an async get operation for documents
 		/// </summary>
 		/// <param name="start">Paging start</param>
 		/// <param name="pageSize">Size of the page.</param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
 		/// <remarks>
 		/// This is primarily useful for administration of a database
 		/// </remarks>
-		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize);
-
-		/// <summary>
-		/// Begins an async get operation for documents whose id starts with the specified prefix
-		/// </summary>
-		/// <param name="prefix">Prefix that the ids begin with.</param>
-		/// <param name="start">Paging start.</param>
-		/// <param name="pageSize">Size of the page.</param>
-		/// <remarks>
-		/// This is primarily useful for administration of a database
-		/// </remarks>
-		Task<JsonDocument[]> GetDocumentsStartingWithAsync(string prefix, int start, int pageSize);
+		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false);
 
 		/// <summary>
 		/// Begins the async query.
@@ -66,7 +56,8 @@ namespace Raven.Client.Connection.Async
 		/// <param name="index">The index.</param>
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The include paths</param>
-		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes);
+		/// <param name="metadataOnly">Load just the document metadata</param>
+		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false);
 
 		/// <summary>
 		/// Begins the async batch operation
@@ -238,7 +229,13 @@ namespace Raven.Client.Connection.Async
 
 		Task StartBackupAsync(string backupLocation);
 
-		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize);
+		Task StartIndexing();
+
+		Task StopIndexing();
+
+		Task<string> GetIndexingStatus();
+
+		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false);
 
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.

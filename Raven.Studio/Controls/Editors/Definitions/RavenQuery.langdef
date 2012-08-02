@@ -12,27 +12,87 @@ Actipro Syntax Language Definition (.langdef)
 <LanguageDefinition LanguageKey="RavenQuery" LanguageDescription="Raven Query Syntax" Creator="Hibernating Rhinos LTD" Copyright="Hibernating Rhinos LTD 2011" xmlns="http://schemas.actiprosoftware.com/langdef/1.0">
 	<!-- Classification types -->
 	<LanguageDefinition.ClassificationTypes>
+		<ClassificationType Key="Brackets" DefaultStyle="#FF920000" />
 		<ClassificationType Key="Field" Description="Field Name" DefaultStyle="#FF0000CD" />
-		<ClassificationType Key="Keyword" DefaultStyle="#FFC0C0C0" />
-		<ClassificationType Key="KeywordValue" DefaultStyle="#FF6B8E23" />
-		<ClassificationType Key="SearchValue" DefaultStyle="#FF008080" />
-		<ClassificationType Key="StringValue" Description="String Value" DefaultStyle="#FFFF0000" />
-		<ClassificationType Key="Value" Description="General Value" DefaultStyle="#FF808080" />
+		<ClassificationType Key="Operator" DefaultStyle="#FF8A8A8A" />
+		<ClassificationType Key="Value" Description="General Value" DefaultStyle="#FF000000" />
 	</LanguageDefinition.ClassificationTypes>
 	<!-- Lexer -->
 	<LanguageDefinition.Lexer>
 		<DynamicLexer>
+			<DynamicLexer.Macros>
+				<Macro Key="Date" Pattern="\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}" />
+				<Macro Key="UnquotedValue" Pattern="([^\s\r\n:\[\]\{\}\(\)]|(\\:))+" />
+				<Macro Key="Field" Pattern="([^\s\r\n:\\\[\]\{\}]+)\s*:" />
+			</DynamicLexer.Macros>
 			<!-- Default state -->
 			<State Id="1" Key="Default">
-				<RegexPatternGroup ClassificationTypeKey="Keyword" CaseSensitivity="Sensitive">
-					<RegexPattern Value="AND" />
-					<RegexPattern Value="OR" />
-				</RegexPatternGroup>
-				<RegexPatternGroup ClassificationTypeKey="StringValue" Pattern="\&quot;[^\&quot;]*\&quot;" CaseSensitivity="Insensitive" />
-				<RegexPatternGroup Key="Field" ClassificationTypeKey="Field" Pattern="([^\s\r\n:]+)\s*:" CaseSensitivity="Sensitive" />
-				<RegexPatternGroup ClassificationTypeKey="SearchValue" Pattern="&lt;&lt;[^&gt;]+&gt;&gt;" />
-				<RegexPatternGroup ClassificationTypeKey="KeywordValue" Pattern="\[\[[^\]]+\]\]" />
-				<RegexPatternGroup Key="String" ClassificationTypeKey="Value" Pattern="[^\s\r\n:]*" CaseSensitivity="Insensitive" />
+				<State.ChildStates>
+					<StateRef Key="String" />
+					<StateRef Key="RangeQuery" />
+				</State.ChildStates>
+				<ExplicitPatternGroup TokenId="1" TokenKey="Operator" ClassificationTypeKey="Operator" CaseSensitivity="Sensitive">
+					<ExplicitPatterns><![CDATA[
+						AND OR NOT + - && || ^ ~
+					]]></ExplicitPatterns>
+				</ExplicitPatternGroup>
+				<RegexPatternGroup TokenId="2" TokenKey="Whitespace" Pattern="{Whitespace}" />
+				<ExplicitPatternGroup TokenId="1" TokenKey="Operator" ClassificationTypeKey="Brackets">
+					<ExplicitPatterns><![CDATA[
+						( )
+					]]></ExplicitPatterns>
+				</ExplicitPatternGroup>
+				<RegexPatternGroup TokenId="3" TokenKey="Value" ClassificationTypeKey="Value" Pattern="{Date}" />
+				<RegexPatternGroup Key="Field" TokenId="4" TokenKey="Field" ClassificationTypeKey="Field" Pattern="{Field}" CaseSensitivity="Sensitive" />
+				<RegexPatternGroup Key="String" TokenId="3" TokenKey="Value" ClassificationTypeKey="Value" Pattern="{UnquotedValue}" CaseSensitivity="Insensitive" />
+			</State>
+			<!-- String state -->
+			<State Id="2" Key="String">
+				<State.Scopes>
+					<Scope>
+						<Scope.StartPatternGroup>
+							<ExplicitPatternGroup TokenId="5" TokenKey="OpenQuotes" ClassificationTypeKey="Value" Pattern="&quot;" />
+						</Scope.StartPatternGroup>
+						<Scope.EndPatternGroup>
+							<ExplicitPatternGroup TokenId="6" TokenKey="CloseQuotes" ClassificationTypeKey="Value" Pattern="&quot;" />
+						</Scope.EndPatternGroup>
+					</Scope>
+				</State.Scopes>
+				<ExplicitPatternGroup TokenId="7" TokenKey="EscapedSpecial">
+					<ExplicitPatterns><![CDATA[
+						\" \:
+					]]></ExplicitPatterns>
+				</ExplicitPatternGroup>
+				<RegexPatternGroup TokenId="8" TokenKey="StringText" Pattern="[^\&quot;]+" />
+			</State>
+			<!-- RangeQuery state -->
+			<State Id="3" Key="RangeQuery">
+				<State.Scopes>
+					<Scope>
+						<Scope.StartPatternGroup>
+							<ExplicitPatternGroup TokenId="9" TokenKey="RangeQueryStart" ClassificationTypeKey="Brackets">
+								<ExplicitPatterns><![CDATA[
+						[ {
+					]]></ExplicitPatterns>
+							</ExplicitPatternGroup>
+						</Scope.StartPatternGroup>
+						<Scope.EndPatternGroup>
+							<ExplicitPatternGroup TokenId="10" TokenKey="RangeQueryEnd" ClassificationTypeKey="Brackets">
+								<ExplicitPatterns><![CDATA[
+						] }
+					]]></ExplicitPatterns>
+							</ExplicitPatternGroup>
+						</Scope.EndPatternGroup>
+					</Scope>
+				</State.Scopes>
+				<State.ChildStates>
+					<StateRef Key="String" />
+				</State.ChildStates>
+				<ExplicitPatternGroup TokenId="1" TokenKey="Operator" ClassificationTypeKey="Operator" Pattern="TO" CaseSensitivity="Sensitive" />
+				<RegexPatternGroup TokenId="2" TokenKey="Whitespace" Pattern="{Whitespace}" />
+				<RegexPatternGroup TokenId="3" TokenKey="Value" ClassificationTypeKey="Value" Pattern="{Date}" />
+				<RegexPatternGroup TokenId="4" TokenKey="Field" ClassificationTypeKey="Field" Pattern="{Field}" />
+				<RegexPatternGroup TokenId="3" TokenKey="Value" ClassificationTypeKey="Value" Pattern="{UnquotedValue}" CaseSensitivity="Insensitive" />
 			</State>
 		</DynamicLexer>
 	</LanguageDefinition.Lexer>

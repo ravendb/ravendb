@@ -1,5 +1,10 @@
+using System;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Text;
+using System.Xml;
 using NLog;
 
 namespace Raven.Database.Util
@@ -14,7 +19,14 @@ namespace Raven.Database.Util
 		{
 			if (portStr == "*" || string.IsNullOrWhiteSpace(portStr))
 			{
-				var autoPort = FindPort();
+				int autoPort;
+
+				if (TryReadPreviouslySelectAutoPort(out autoPort))
+					return autoPort;
+
+				autoPort = FindPort();
+				TrySaveAutoPortForNextTime(autoPort);
+
 				if (autoPort != DefaultPort)
 				{
 					logger.Info("Default port {0} was not available, so using available port {1}", DefaultPort, autoPort);
@@ -27,6 +39,51 @@ namespace Raven.Database.Util
 				return DefaultPort;
 
 			return port;
+		}
+
+		private static void TrySaveAutoPortForNextTime(int autoPort)
+		{
+			try
+			{
+				using (var localConfig = File.Create(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "local.config")))
+				using (var writer = XmlWriter.Create(localConfig, new XmlWriterSettings
+				{
+					Indent = true,
+					Encoding = Encoding.UTF8
+				}))
+				{
+					writer.WriteStartElement("LocalConfig");
+					writer.WriteAttributeString("Port", autoPort.ToString(CultureInfo.InvariantCulture));
+					writer.WriteEndElement();
+				}
+			}
+			catch (Exception e)
+			{
+				logger.InfoException("Could not store selected port to local config, next time the port could change", e);
+			}
+		}
+
+		private static bool TryReadPreviouslySelectAutoPort(out int i)
+		{
+			i = 0;
+			string localConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "local.config");
+			if (File.Exists(localConfigPath) == false)
+			{
+				return false;
+			}
+			var doc = new XmlDocument();
+			doc.Load(localConfigPath);
+			if (doc.DocumentElement == null)
+				return false;
+
+			var stringPort = doc.DocumentElement.GetAttribute("Port");
+			int localPort;
+
+			if (!int.TryParse(stringPort, out localPort))
+				return false;
+			
+			i = localPort;
+			return true;
 		}
 
 		private static int FindPort()

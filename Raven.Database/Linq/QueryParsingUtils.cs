@@ -19,12 +19,12 @@ using ICSharpCode.NRefactory.Ast;
 using ICSharpCode.NRefactory.PrettyPrinter;
 using Lucene.Net.Documents;
 using Microsoft.CSharp;
-using Microsoft.CSharp.RuntimeBinder;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
+using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace Raven.Database.Linq
 {
@@ -46,7 +46,7 @@ namespace Raven.Database.Linq
 				typeof(Field).Namespace,
 				typeof(CultureInfo).Namespace,
 			};
-			
+
 			foreach (var extension in extensions)
 			{
 				foreach (var ns in extension.Value.GetNamespacesToImport())
@@ -180,7 +180,7 @@ namespace Raven.Database.Linq
 		public static Expression GetAnonymousCreateExpression(Expression expression)
 		{
 			var invocationExpression = expression as InvocationExpression;
-			
+
 			if (invocationExpression == null)
 				return expression;
 			var memberReferenceExpression = invocationExpression.TargetObject as MemberReferenceExpression;
@@ -233,7 +233,7 @@ namespace Raven.Database.Linq
 		public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath)
 		{
 			CacheEntry entry;
-			if(cacheEntries.TryGetValue(source, out entry))
+			if (cacheEntries.TryGetValue(source, out entry))
 			{
 				Interlocked.Increment(ref entry.Usages);
 				return entry.Type;
@@ -259,7 +259,7 @@ namespace Raven.Database.Linq
 			var compilerParameters = new CompilerParameters
 			{
 				GenerateExecutable = false,
-				GenerateInMemory = true,
+				GenerateInMemory = true, 
 				IncludeDebugInformation = false
 			};
 			if (basePath != null)
@@ -284,6 +284,9 @@ namespace Raven.Database.Linq
 				}
 				throw new InvalidOperationException(sb.ToString());
 			}
+
+			CodeVerifier.AssertNoSecurityCriticalCalls(results.CompiledAssembly);
+
 			Type result = results.CompiledAssembly.GetType(name);
 
 			cacheEntries.TryAdd(source, new CacheEntry
@@ -293,10 +296,10 @@ namespace Raven.Database.Linq
 				Usages = 1
 			});
 
-			if(cacheEntries.Count > 256)
+			if (cacheEntries.Count > 256)
 			{
-				var kvp = cacheEntries.OrderBy(x=>x.Value.Usages).FirstOrDefault();
-				if(kvp.Key != null)
+				var kvp = cacheEntries.OrderBy(x => x.Value.Usages).FirstOrDefault();
+				if (kvp.Key != null)
 				{
 					CacheEntry _;
 					cacheEntries.TryRemove(kvp.Key, out _);

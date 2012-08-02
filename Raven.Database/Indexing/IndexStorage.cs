@@ -40,6 +40,7 @@ namespace Raven.Database.Indexing
 	/// </summary>
 	public class IndexStorage : CriticalFinalizerObject, IDisposable
 	{
+		private readonly DocumentDatabase documentDatabase;
 		private const string IndexVersion = "1.2.17";
 
 		private readonly IndexDefinitionStorage indexDefinitionStorage;
@@ -54,40 +55,49 @@ namespace Raven.Database.Indexing
 
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
 		{
-			this.indexDefinitionStorage = indexDefinitionStorage;
-			this.configuration = configuration;
-			path = configuration.IndexStoragePath;
-
-			if (Directory.Exists(path) == false && configuration.RunInMemory == false)
-				Directory.CreateDirectory(path);
-
-
-			if (configuration.RunInMemory == false)
+			try
 			{
-				var crashMarkerPath = Path.Combine(path, "indexing.crash-marker");
+				this.indexDefinitionStorage = indexDefinitionStorage;
+				this.configuration = configuration;
+				this.documentDatabase = documentDatabase;
+				path = configuration.IndexStoragePath;
 
-				if (File.Exists(crashMarkerPath))
+				if (Directory.Exists(path) == false && configuration.RunInMemory == false)
+					Directory.CreateDirectory(path);
+
+
+				if (configuration.RunInMemory == false)
 				{
-					// the only way this can happen is if we crashed because of a power outage
-					// in this case, we consider all open indexes to be corrupt and force them
-					// to be reset. This is because to get better perf, we don't flush the files to disk,
-					// so in the case of a power outage, we can't be sure that there wasn't still stuff in
-					// the OS buffer that wasn't written yet.
-					configuration.ResetIndexOnUncleanShutdown = true;
+					var crashMarkerPath = Path.Combine(path, "indexing.crash-marker");
+
+					if (File.Exists(crashMarkerPath))
+					{
+						// the only way this can happen is if we crashed because of a power outage
+						// in this case, we consider all open indexes to be corrupt and force them
+						// to be reset. This is because to get better perf, we don't flush the files to disk,
+						// so in the case of a power outage, we can't be sure that there wasn't still stuff in
+						// the OS buffer that wasn't written yet.
+						configuration.ResetIndexOnUncleanShutdown = true;
+					}
+
+					// The delete on close ensures that the only way this file will exists is if there was
+					// a power outage while the server was running.
+					crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
 				}
 
-				// The delete on close ensures that the only way this file will exists is if there was
-				// a power outage while the server was running.
-				crashMarker = File.Create(crashMarkerPath, 16, FileOptions.DeleteOnClose);
+				foreach (var indexName in indexDefinitionStorage.IndexNames)
+				{
+					OpenIndexOnStartup(indexName);
+				}
 			}
-
-			foreach (var indexName in indexDefinitionStorage.IndexNames)
+			catch
 			{
-				OpenIndexOnStartup(documentDatabase, indexName);
+				Dispose();
+				throw;
 			}
 		}
 
-		private void OpenIndexOnStartup(DocumentDatabase documentDatabase, string indexName)
+		private void OpenIndexOnStartup(string indexName)
 		{
 			if (indexName == null) throw new ArgumentNullException("indexName");
 
@@ -176,7 +186,7 @@ namespace Raven.Database.Indexing
 			{
 				var indexDirectory = indexName ?? IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
 				var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
-				directory = FSDirectory.Open(new DirectoryInfo(indexFullPath));
+				directory = new LuceneCodecDirectory(indexFullPath, documentDatabase.IndexCodecs.OfType<AbstractIndexCodec>());
 
 				if (!IndexReader.IndexExists(directory))
 				{
@@ -275,7 +285,7 @@ namespace Raven.Database.Indexing
 
 		internal Lucene.Net.Store.Directory MakeRAMDirectoryPhysical(RAMDirectory ramDir, string indexName)
 		{
-			var newDir = FSDirectory.Open(new DirectoryInfo(Path.Combine(path, MonoHttpUtility.UrlEncode(IndexDefinitionStorage.FixupIndexName(indexName, path)))));
+			var newDir = new LuceneCodecDirectory(Path.Combine(path, MonoHttpUtility.UrlEncode(IndexDefinitionStorage.FixupIndexName(indexName, path))), documentDatabase.IndexCodecs.OfType<AbstractIndexCodec>());
 			Lucene.Net.Store.Directory.Copy(ramDir, newDir, true);
 			return newDir;
 		}
@@ -418,10 +428,10 @@ namespace Raven.Database.Indexing
 				return;
 			}
 			value.Remove(keys, context);
-			context.RaiseChangeNotification(new ChangeNotification
+			context.RaiseIndexChangeNotification(new IndexChangeNotification
 			{
 				Name = index,
-				Type = ChangeTypes.IndexUpdated
+				Type = IndexChangeTypes.RemoveFromIndex
 			});
 		}
 
@@ -442,10 +452,10 @@ namespace Raven.Database.Indexing
 			using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 			{
 				value.IndexDocuments(viewGenerator, docs, context, actions, minimumTimestamp);
-				context.RaiseChangeNotification(new ChangeNotification
+				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = index,
-					Type = ChangeTypes.IndexUpdated
+					Type = IndexChangeTypes.MapCompleted
 				});
 			}
 		}
@@ -468,10 +478,10 @@ namespace Raven.Database.Indexing
 			using (EnsureInvariantCulture())
 			{
 				mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
-				context.RaiseChangeNotification(new ChangeNotification
+				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = index,
-					Type = ChangeTypes.IndexUpdated
+					Type = IndexChangeTypes.ReduceCompleted
 				});
 			}
 		}
@@ -531,6 +541,16 @@ namespace Raven.Database.Indexing
 			return indexes.Where(index => System.String.Compare(index.Key, indexName, System.StringComparison.OrdinalIgnoreCase) == 0)
 				.Select(x => x.Value)
 				.FirstOrDefault();
+		}
+
+		public void MarkCachedQuery(string indexName)
+		{
+			GetIndexByName(indexName).MarkQueried();
+		}
+
+		public DateTime? GetLastQueryTime(string index)
+		{
+			return GetIndexByName(index).LastQueryTime;
 		}
 	}
 }

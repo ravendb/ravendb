@@ -33,6 +33,11 @@ namespace Raven.Tests
 
 		private string path;
 
+		static RavenTest()
+		{
+			File.Delete("test.log");
+		}
+
 		public EmbeddableDocumentStore NewDocumentStore(string storageType = "munin", bool inMemory = true, int? allocatedMemory = null, bool deleteExisting = true)
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
@@ -49,22 +54,33 @@ namespace Raven.Tests
 											}
 									};
 
-			ModifyStore(documentStore);
-			ModifyConfiguration(documentStore.Configuration);
+			try
+			{
+				ModifyStore(documentStore);
+				ModifyConfiguration(documentStore.Configuration);
 
 			if (documentStore.Configuration.RunInMemory == false && deleteExisting)
-				IOExtensions.DeleteDirectory(path);
-			documentStore.Initialize();
+					IOExtensions.DeleteDirectory(path);
+				documentStore.Initialize();
 
-			CreateDefaultIndexes(documentStore);
 
-			if (allocatedMemory != null && inMemory)
-			{
-				var transactionalStorage = ((TransactionalStorage)documentStore.DocumentDatabase.TransactionalStorage);
-				transactionalStorage.EnsureCapacity(allocatedMemory.Value);
+				CreateDefaultIndexes(documentStore);
+
+				if (allocatedMemory != null && inMemory)
+				{
+					var transactionalStorage = ((TransactionalStorage)documentStore.DocumentDatabase.TransactionalStorage);
+					transactionalStorage.EnsureCapacity(allocatedMemory.Value);
+				}
+
+				return documentStore;
 			}
-
-			return documentStore;
+			catch
+			{
+				// We must dispose of this object in exceptional cases, otherwise this test will break all the following tests.
+				if (documentStore != null)
+					documentStore.Dispose();
+				throw;
+			}
 		}
 
 		protected virtual void CreateDefaultIndexes(IDocumentStore documentStore)
@@ -73,6 +89,11 @@ namespace Raven.Tests
 		}
 
 		protected virtual void ModifyStore(EmbeddableDocumentStore documentStore)
+		{
+
+		}
+
+		protected virtual void ModifyStore(DocumentStore documentStore)
 		{
 
 		}
@@ -190,7 +211,6 @@ namespace Raven.Tests
 
 		public RavenTest()
 		{
-
 			BoundedMemoryTarget boundedMemoryTarget = null;
 			if (LogManager.Configuration != null && LogManager.Configuration.AllTargets != null)
 			{
@@ -219,11 +239,29 @@ namespace Raven.Tests
 
 		protected void ClearDatabaseDirectory()
 		{
-			IOExtensions.DeleteDirectory(DbName);
-			IOExtensions.DeleteDirectory(DbDirectory);
+			bool isRetry = false;
 
-			// Delete tenants created using the EnsureDatabaseExists method.
-			IOExtensions.DeleteDirectory("Tenants");
+			while (true)
+			{
+				try
+				{
+					IOExtensions.DeleteDirectory(DbName);
+					IOExtensions.DeleteDirectory(DbDirectory);
+
+					// Delete tenants created using the EnsureDatabaseExists method.
+					IOExtensions.DeleteDirectory("Tenants");
+					break;
+				}
+				catch (IOException)
+				{
+					if (isRetry)
+						throw;
+
+					GC.Collect();
+					GC.WaitForPendingFinalizers();
+					isRetry = true;
+				}
+			}
 		}
 
 		public double Timer(Action action)
@@ -235,9 +273,24 @@ namespace Raven.Tests
 			return timeTaken.TotalMilliseconds;
 		}
 
+		public IDocumentStore NewRemoteDocumentStore()
+		{
+			var ravenDbServer = GetNewServer();
+			var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			};
+
+			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
+			ModifyStore(store);
+			return store.Initialize();
+		}
+
 		public virtual void Dispose()
 		{
 			ClearDatabaseDirectory();
+			GC.Collect(2);
+			GC.WaitForPendingFinalizers();
 		}
 	}
 }

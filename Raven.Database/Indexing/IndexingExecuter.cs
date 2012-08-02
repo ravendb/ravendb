@@ -7,9 +7,11 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Linq;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Json;
@@ -84,6 +86,7 @@ namespace Raven.Database.Indexing
 				
 				if (jsonDocs.Length > 0)
 				{
+					context.IndexedPerSecIncreaseBy(jsonDocs.Length);
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 					indexesToWorkOn = result.Select(x => x.Item1).ToList();
 					var sw = Stopwatch.StartNew();
@@ -150,8 +153,16 @@ namespace Raven.Database.Indexing
 			var filteredDocs =
 				BackgroundTaskExecuter.Instance.Apply(jsonDocs, doc =>
 				{
-					doc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
-					return doc == null ? null : new {Doc = doc, Json = JsonToExpando.Convert(doc.ToJson())};
+					var filteredDoc = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Index);
+					return filteredDoc == null ? new
+					{
+						Doc = doc,
+						Json = (object)new FilteredDocument(doc)
+					} : new
+					{
+						Doc = filteredDoc, 
+						Json = JsonToExpando.Convert(doc.ToJson())
+					};
 				});
 
 			log.Debug("After read triggers executed, {0} documents remained", filteredDocs.Count);
@@ -175,7 +186,11 @@ namespace Raven.Database.Indexing
 				foreach (var item in filteredDocs)
 				{
 					// did we already indexed this document in this index?
-					if (indexLastInedexEtag.CompareTo(new ComparableByteArray(item.Doc.Etag.Value.ToByteArray())) >= 0)
+					var etag = item.Doc.Etag;
+					if(etag == null)
+						continue;
+
+					if (indexLastInedexEtag.CompareTo(new ComparableByteArray(etag.Value.ToByteArray())) >= 0)
 						continue;
 
 

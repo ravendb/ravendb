@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -23,6 +24,7 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly bool waitForNonStaleResults;
 		private readonly TimeSpan timeout;
 		private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults;
+		private readonly HashSet<string> includes;
 		private QueryResult currentQueryResults;
 		private readonly string[] projectionFields;
 		private bool firstRequest = true;
@@ -44,15 +46,7 @@ namespace Raven.Client.Document.SessionOperations
 
 		private Stopwatch sp;
 
-		public QueryOperation(InMemoryDocumentSessionOperations sessionOperations,
-			string indexName,
-			IndexQuery indexQuery,
-			string[] projectionFields,
-			HashSet<KeyValuePair<string, Type>> sortByHints,
-			bool waitForNonStaleResults,
-			Action<string, string> setOperationHeaders,
-			TimeSpan timeout,
-			Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults)
+		public QueryOperation(InMemoryDocumentSessionOperations sessionOperations, string indexName, IndexQuery indexQuery, string[] projectionFields, HashSet<KeyValuePair<string, Type>> sortByHints, bool waitForNonStaleResults, Action<string, string> setOperationHeaders, TimeSpan timeout, Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults, HashSet<string> includes)
 		{
 			this.indexQuery = indexQuery;
 			this.sortByHints = sortByHints;
@@ -60,12 +54,39 @@ namespace Raven.Client.Document.SessionOperations
 			this.setOperationHeaders = setOperationHeaders;
 			this.timeout = timeout;
 			this.transformResults = transformResults;
+			this.includes = includes;
 			this.projectionFields = projectionFields;
 			this.sessionOperations = sessionOperations;
 			this.indexName = indexName;
 
-
+			AssertNotQueryById();
 			AddOperationHeaders();
+		}
+
+		private static readonly Regex idOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $", 
+#if !SILVERLIGHT
+			RegexOptions.Compiled|
+#endif
+			RegexOptions.IgnorePatternWhitespace);
+
+		private void AssertNotQueryById()
+		{
+			// this applies to dynamic indexes only
+			if (!indexName.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) &&
+			    !string.Equals(indexName, "dynamic", StringComparison.InvariantCultureIgnoreCase))
+				return;
+
+			var match = idOnly.Match(IndexQuery.Query);
+			if (match.Success == false)
+				return;
+
+			if (sessionOperations.Conventions.AllowQueriesOnId)
+				return;
+
+			var value = match.Groups[1].Value;
+			throw new InvalidOperationException(
+				"Attempt to query by id only is blocked, you should use call session.Load(\"" + value + "\"); instead of session.Query().Where(x=>x.Id == \"" + value + "\");" +
+			Environment.NewLine + "You can turn this error off by specifying documentStore.Conventions.AllowQueriesOnId = true;, but that is not recommend and provided for backward compatability reasons only.");
 		}
 
 		private void StartTiming()
@@ -114,6 +135,8 @@ namespace Raven.Client.Document.SessionOperations
 			var list = queryResult.Results
 				.Select(Deserialize<T>)
 				.ToList();
+
+			sessionOperations.RegisterMissingIncludes(queryResult.Results, includes);
 
 			if (transformResults == null)
 				return list;

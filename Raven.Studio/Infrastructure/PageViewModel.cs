@@ -7,7 +7,7 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
-    public abstract class PageViewModel : ViewModel
+	public abstract class PageViewModel : ViewModel
 	{
 		public List<string> ModelUrlIgnoreList { get; private set; }
 		public string ModelUrl { get; set; }
@@ -47,6 +47,11 @@ namespace Raven.Studio.Infrastructure
 		public IAsyncDatabaseCommands DatabaseCommands
 		{
 			get { return Database.Value.AsyncDatabaseCommands; }
+		}
+
+		public virtual bool CanLeavePage()
+		{
+			return true;
 		}
 	}
 }

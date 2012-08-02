@@ -59,7 +59,7 @@ namespace Raven.Tests.Bugs
 
 				using (var s = store.OpenSession())
 				{
-					var load = s.Query<WithIntKey>().Where(x => x.Id == 1).First();
+					var load = s.Query<WithIntKey>().First(x => x.Id == 1 && x.Name =="abcv");
 					Assert.Equal("abcv", load.Name);
 				}
 			}

@@ -83,7 +83,6 @@ namespace Raven.Tests.MailingList
 
 					session.Store(service1);
 					session.SaveChanges();
-					WaitForUserToContinueTheTest(store);
 					var results = session.Query<Service, Services_QueryIndex>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.ToList();

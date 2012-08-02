@@ -10,6 +10,7 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;

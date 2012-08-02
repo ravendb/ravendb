@@ -54,7 +54,10 @@ namespace Raven.Client.Document.SessionOperations
 		public T Complete<T>()
 		{
 			if (documentFound == null)
+			{
+				sessionOperations.RegisterMissing(id);
 				return default(T);
+			}
 			return sessionOperations.TrackEntity<T>(documentFound);
 		}
 	}

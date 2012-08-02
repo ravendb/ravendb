@@ -188,7 +188,7 @@
                             <Image Source="{StaticResource Image_ToggleExpansion_Tiny}"
 							   Stretch="None" />
                             <Delay:SplitButtonPopup.PopupContent>
-                                <Border Background="#EFEFEF"
+                                <Border Background="White"
 					                BorderThickness="1"
 					                BorderBrush="Gray"
 					                Margin="0,20,0,0">
@@ -196,8 +196,10 @@
                                         <DropShadowEffect Opacity="0.4" />
                                     </Border.Effect>
                                     <StackPanel>
-                                        <TextBlock Text="Outlining Mode" FontWeight="Bold" Margin="5,5"/>
-                                    <ListBox ItemsSource="{Binding OutliningModes}" SelectedItem="{Binding SelectedOutliningMode, Mode=TwoWay}"
+                                        <Border Background="{StaticResource Brush_ToolbarBackground}">
+                                            <TextBlock Text="Outlining Mode" FontWeight="Bold" Margin="5,5"/>
+                                        </Border>
+                                        <ListBox ItemsSource="{Binding OutliningModes}" SelectedItem="{Binding SelectedOutliningMode, Mode=TwoWay}"
                                              Style="{StaticResource Style_ListBox_RadioButtons}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>

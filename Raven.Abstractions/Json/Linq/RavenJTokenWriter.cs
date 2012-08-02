@@ -132,6 +132,11 @@ namespace Raven.Json.Linq
 			}
 		}
 
+		public override void WriteRaw(string json)
+		{
+			throw new NotSupportedException();
+		}
+
 		#region WriteValue methods
 		/// <summary>
 		/// Writes a null value.

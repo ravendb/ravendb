@@ -29,7 +29,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		IEnumerable<T> LoadStartingWith<T>(string keyPrefix, int start = 0, int pageSize = 25);
+		IEnumerable<T> LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25);
 
 #if !NET35
 		/// <summary>

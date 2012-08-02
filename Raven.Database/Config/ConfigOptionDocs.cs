@@ -70,7 +70,7 @@ namespace Raven.Database.Config
 			{"Raven/MemoryCacheLimitCheckInterval", "TimeSpan", "HH:MM:SS", "The internal for checking that the internal document cache inside RavenDB server will be cleaned, default: 2 minutes."},
 			{"Raven/MemoryCacheExpiration", "int", null, "The expiration value for documents in the internal document cache. Value is in seconds. Default: 5 minutes"},
 			// Esent
-			{"Raven/Esent/CacheSizeMax", "int", null, "The size in MB of the Esent page cache, which is the default storage engine. Default: 1,048 MB on 64 bits, 256 MB on 32 bits."},
+			{"Raven/Esent/CacheSizeMax", "int", null, "The size in MB of the Esent page cache, which is the default storage engine. Default: 25% of RAM on 64 bits, 256 MB on 32 bits."},
 			{"Raven/Esent/MaxVerPages", "int", null, "The maximum size of version store (in memory modified data) available. The value is in megabytes. Default: 128."},
 			{"Raven/Esent/LogFileSize", "int", null, "The size of the database log file. The value is in megabytes. Default: 64."},
 			{"Raven/Esent/LogBuffers", "int", null, "The size of the in memory buffer for transaction log. Default: 16."},
@@ -82,7 +82,7 @@ namespace Raven.Database.Config
 			{"Raven/TransactionMode", "string", "lazy,safe", "What transaction mode to use. Safe transaction mode ensures data consistency, but is slower. Lazy is faster, but may result in a data loss if the server crashes. Default: Safe."},
 			{"Raven/MaxNumberOfParallelIndexTasks", "int", "1 or higher", "The number of indexing tasks that can be run in parallel. There is usually one or two indexing tasks for each index. Default: machine processor count."},
 			{"Raven/SkipCreatingStudioIndexes", "bool", "true,false", "Control whatever the Studio default indexes will be created or not. These default indexes are only used by the UI, and are not required for RavenDB to operate. Default: false"},
-			
+			{"Raven/LimitIndexesCapabilities","bool","true,false","Control whatever RavenDB limits what the indexes can do (to avoid potentially distabilizing operations)."},
 			// Plugins
 			{"Raven/PluginsDirectory", "string", null, "The location of the plugins directory for this database. Default: ~\\Plugins."},
 			{"Raven/BundlesSearchPattern", "string", null, "Allow to limit the loaded plugins by specifying a search pattern, such as Raven.*.dll. Multiple values can be specified, separated by a semi column (;)."},

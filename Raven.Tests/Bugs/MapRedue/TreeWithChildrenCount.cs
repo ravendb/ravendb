@@ -79,8 +79,6 @@ namespace Raven.Tests.Bugs.MapRedue
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow())
 						.ToList();
 
-					WaitForUserToContinueTheTest(store);
-
 					Assert.NotEmpty(results);
 					Assert.Equal(3, results.First(x => x.Id == "categories/1").Count);
 					Assert.Equal(2, results.First(x => x.Id == "categories/2").Count);

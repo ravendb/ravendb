@@ -1,0 +1,17 @@
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Views.IndexStats"
+                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                     mc:Ignorable="d" xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                     xmlns:IndexStats="clr-namespace:Raven.Studio.Features.IndexStats"
+                     d:DesignWidth="640"
+                     d:DesignHeight="480"
+                     Title="Index Stats"
+                     Infrastructure:ModelAttacher.AttachObservableModel="IndexStatsModel"
+                         >
+
+	<Grid DataContext="{Binding Value}">
+		<IndexStats:StatsView />
+	</Grid>
+</Infrastructure:PageView>

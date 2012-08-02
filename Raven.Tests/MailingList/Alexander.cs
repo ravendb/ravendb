@@ -18,7 +18,7 @@ namespace Raven.Tests.MailingList
 				{Url = "http://localhost:8079", Conventions = {DefaultQueryingConsistency = ConsistencyOptions.QueryYourWrites}})
 			{
 				documentStore.Initialize();
-
+				documentStore.Conventions.AllowQueriesOnId = true;
 				documentStore.DatabaseCommands.PutIndex("CasinosCommentsIndex", new IndexDefinition
 				{
 					Map = @"

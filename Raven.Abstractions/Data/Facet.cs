@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Reflection;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
+using Raven.Abstractions.Util;
 
 namespace Raven.Abstractions.Data
 {
@@ -36,7 +37,7 @@ namespace Raven.Abstractions.Data
 			if (other.Name == null)
 				throw new InvalidOperationException();
 
-			var ranges = other.Ranges.Select(x => Facet<T>.Parse(x)).ToList();
+			var ranges = other.Ranges.Select(Parse).ToList();
 			
 			var shouldUseRanges = other.Ranges != null &&
 								other.Ranges.Count > 0 &&
@@ -69,14 +70,12 @@ namespace Raven.Abstractions.Data
 		{
 			Expression body = expr.Body;
 
-			var param = (ParameterExpression)expr.Parameters[0];
 			var operation = (BinaryExpression)expr.Body;
 
 			if (operation.Left is MemberExpression)
 			{
 				var subExpressionValue = ParseSubExpression(operation);
-				var left = (MemberExpression)operation.Left;
-				var expression = GetStringRepresentation(left.Member.Name, operation.NodeType, subExpressionValue);                
+				var expression = GetStringRepresentation(operation.NodeType, subExpressionValue);                
 				return expression;
 			}
 
@@ -85,7 +84,7 @@ namespace Raven.Abstractions.Data
 				var method = body as BinaryExpression;
 				var left = method.Left as BinaryExpression;
 				var right = method.Right as BinaryExpression;
-				if ((left == null && right == null) || method.NodeType != ExpressionType.AndAlso)
+				if ((left == null || right == null) || method.NodeType != ExpressionType.AndAlso)
 					throw new InvalidOperationException("Expression doesn't have the correct sub-expression(s) (expected \"&&\")");
 
 				var leftMember = left.Left as MemberExpression;
@@ -93,14 +92,20 @@ namespace Raven.Abstractions.Data
 				var validOperators = (left.NodeType == ExpressionType.LessThan && right.NodeType == ExpressionType.GreaterThan) ||
 									(left.NodeType == ExpressionType.GreaterThan && right.NodeType == ExpressionType.LessThan);
 				var validMemberNames = leftMember != null && rightMember != null && 
-										leftMember.Member.Name == rightMember.Member.Name;
+										GetFieldName(leftMember) == GetFieldName(rightMember);
 				if (validOperators && validMemberNames)
 				{
-					return GetStringRepresentation(leftMember.Member.Name, right.NodeType, 
-													ParseSubExpression(left), ParseSubExpression(right));
+					return GetStringRepresentation(right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
 				}
 			}
 			throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected \"<\" and \">\")");
+		}
+
+		private static string GetFieldName(MemberExpression left)
+		{
+			if (Nullable.GetUnderlyingType(left.Member.DeclaringType) != null)
+				return GetFieldName(((MemberExpression) left.Expression));
+			return left.Member.Name;
 		}
 
 		private static object ParseSubExpression(BinaryExpression operation)
@@ -121,7 +126,7 @@ namespace Raven.Abstractions.Data
 				{
 					//This handles x < somefield
 					var obj = right.Expression as ConstantExpression;
-					if (field != null && obj != null)
+					if (obj != null)
 					{
 						var value = field.GetValue(obj.Value);
 						return value;
@@ -153,58 +158,47 @@ namespace Raven.Abstractions.Data
 									operation.Left.GetType().Name, operation.NodeType, operation.Right.GetType().Name));
 		}
 
-		private static string GetStringRepresentation<U>(string fieldName, ExpressionType op, U value)
+		private static string GetStringRepresentation(ExpressionType op, object value)
 		{
 			var valueAsStr = GetStringValue(value);
-			var fullFieldName = value.GetType().FullName == "System.String" ? fieldName : fieldName + "_Range";
 			if (op == ExpressionType.LessThan)
-				return String.Format("{0}:[NULL TO {1}]", fullFieldName, valueAsStr);
+				return String.Format("[NULL TO {0}]", valueAsStr);
 			if (op == ExpressionType.GreaterThan)
-				return String.Format("{0}:[{1} TO NULL]", fullFieldName, valueAsStr);
+				return String.Format("[{0} TO NULL]", valueAsStr);
 			throw new InvalidOperationException("Unable to parse the given operation " + op + ", into a facet range!!! ");
 		}
 
-		private static string GetStringRepresentation<U, V>(string fieldName, ExpressionType op, U lValue, V rValue)
+		private static string GetStringRepresentation(ExpressionType op, object lValue, object rValue)
 		{
 			var lValueAsStr = GetStringValue(lValue);
 			var rValueAsStr = GetStringValue(rValue);
-			var fullFieldName = lValue.GetType().FullName == "System.String" ? fieldName : fieldName + "_Range";
 			if (lValueAsStr != null && rValueAsStr != null)
-				return String.Format("{0}:[{1} TO {2}]", fullFieldName, lValueAsStr, rValueAsStr);            
+				return String.Format("[{0} TO {1}]",lValueAsStr, rValueAsStr);            
 			throw new InvalidOperationException("Unable to parse the given operation " + op + ", into a facet range!!! ");
 		}
 
-		private static string GetStringValue<U>(U value)
+		private static string GetStringValue(object value)
 		{
-			var valueAsStr = String.Empty;
 			switch (value.GetType().FullName)
 			{
 				//The nullable stuff here it a bit wierd, but it helps with trying to cast Value types
 				case "System.DateTime":
-					valueAsStr = DateTools.DateToString((value as DateTime?).Value, DateTools.Resolution.MILLISECOND);
-					break;
+					return RavenQuery.Escape(((DateTime)value).ToString(Default.DateTimeFormatsToWrite));
 				case "System.Int32":
-					valueAsStr = NumberUtil.NumberToString((value as Int32?).Value);
-					break;
+					return NumberUtil.NumberToString(((int)value));
 				case "System.Int64":
-					valueAsStr = NumberUtil.NumberToString((value as Int64?).Value);
-					break;
+					return NumberUtil.NumberToString((long)value);
 				case "System.Single":
-					valueAsStr = NumberUtil.NumberToString((value as Single?).Value);
-					break;
+					return NumberUtil.NumberToString((float)value);
 				case "System.Double":
-					valueAsStr = NumberUtil.NumberToString((value as Double?).Value);
-					break;
+					return NumberUtil.NumberToString((double)value);
 				case "System.Decimal":
-					valueAsStr = NumberUtil.NumberToString((double)((value as Decimal?).Value));
-					break;
+					return NumberUtil.NumberToString((double)(decimal) value);
 				case "System.String":
-					valueAsStr = value.ToString();
-					break;
+					return RavenQuery.Escape(value.ToString());
 				default:
 					throw new InvalidOperationException("Unable to parse the given type " + value.GetType().Name + ", into a facet range!!! ");
 			}
-			return valueAsStr;
 		}
 	}
 }

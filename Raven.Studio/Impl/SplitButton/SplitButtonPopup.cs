@@ -211,5 +211,19 @@ namespace Delay
             }
         }
 
+        public bool IsPopupOpen
+        {
+            get
+            {
+                return _popup != null && _popup.IsOpen;
+            }
+            set
+            {
+                if (_popup != null)
+                {
+                    _popup.IsOpen = value;
+                }
+            }
+        }
     }
 }

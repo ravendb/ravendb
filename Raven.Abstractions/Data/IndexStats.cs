@@ -15,6 +15,7 @@ namespace Raven.Abstractions.Data
 		public int IndexingErrors { get; set; }
 		public Guid LastIndexedEtag { get; set; }
 		public DateTime LastIndexedTimestamp { get; set; }
+		public DateTime? LastQueryTimestamp { get; set; }
 		public int TouchCount { get; set; }
 
 		public int? ReduceIndexingAttempts { get; set; }

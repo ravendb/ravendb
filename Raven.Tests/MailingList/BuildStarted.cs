@@ -19,7 +19,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true, Identifier = "docstore1" }.Initialize())
 			{
-
+				documentStore.Conventions.AllowQueriesOnId = true;
 				using (var session = documentStore.OpenSession())
 				{
 					TestModel testModelItem = session.Query<TestModel>().SingleOrDefault(t => t.Id == 1) ??
@@ -48,6 +48,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true, Identifier = "docstore2" }.Initialize())
 			{
+				documentStore.Conventions.AllowQueriesOnId = true; 
 				using (var session = documentStore.OpenSession())
 				{
 					session.Store(new TestModel { Id = 1 });
@@ -75,6 +76,7 @@ namespace Raven.Tests.MailingList
 		{
 			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true, Identifier = "docstore3" }.Initialize())
 			{
+				documentStore.Conventions.AllowQueriesOnId = true;
 				using (var session = documentStore.OpenSession())
 				{
 					var deletedModel = new TestModel { Id = 1 };

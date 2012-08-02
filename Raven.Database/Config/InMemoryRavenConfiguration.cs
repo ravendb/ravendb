@@ -223,18 +223,22 @@ namespace Raven.Database.Config
 			var bundles = activeBundles.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
 				.Select(x => x.Trim())
 				.ToArray();
-			var catalog =
-				Catalog.Catalogs.Count == 1
-					? Catalog.Catalogs.First()
-					: new AggregateCatalog(Catalog.Catalogs);
 
-			var bundlesFilteredCatalog = catalog as BundlesFilteredCatalog;
+			if (container != null)
+				container.Dispose();
+			container = null;
+
+			var bundlesFilteredCatalog = Catalog.Catalogs.OfType<BundlesFilteredCatalog>().FirstOrDefault();
 			if(bundlesFilteredCatalog != null)
 			{
 				bundlesFilteredCatalog.Bundles = bundles;
 				return;
 			}
 
+			var catalog =
+				Catalog.Catalogs.Count == 1
+					? Catalog.Catalogs.First()
+					: new AggregateCatalog(Catalog.Catalogs);
 
 			Catalog.Catalogs.Clear();
 
@@ -756,8 +760,6 @@ namespace Raven.Database.Config
 
 			if (type == null)
 				throw new InvalidOperationException("Could not find transactional storage type: " + storageEngine);
-
-			Catalog.Catalogs.Add(new AssemblyCatalog(type.Assembly));
 
 			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
 		}

@@ -581,8 +581,8 @@ namespace Raven.Storage.Esent
 
 		private static ColumndefGrbit ColumnNotNullIfOnHigherThanWindowsXp()
 		{
-			var isWindowsXP = (Environment.OSVersion.Version.Major == 5) && (Environment.OSVersion.Version.Minor == 1);
-			return isWindowsXP ? ColumndefGrbit.None: ColumndefGrbit.ColumnNotNULL;
+			var isWindowsXpOrServer2003 = (Environment.OSVersion.Version.Major == 5);
+			return isWindowsXpOrServer2003 ? ColumndefGrbit.None : ColumndefGrbit.ColumnNotNULL;
 		}
 
 		private void CreateFilesTable(JET_DBID dbid)

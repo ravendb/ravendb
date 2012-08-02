@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Reactive;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
@@ -8,12 +10,15 @@ using Raven.Client.Connection.Async;
 using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
+using Notification = Raven.Studio.Messages.Notification;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Models
 {
 	public class CollectionsModel : PageViewModel, IHasPageTitle
 	{
-		private string initialSelectedDatabaseName;
+	    private const string CollectionsIndex = "Raven/DocumentsByEntityName";
+	    private string initialSelectedDatabaseName;
 		public BindableCollection<CollectionModel> Collections { get; set; }
 		public Observable<CollectionModel> SelectedCollection { get; set; }
 
@@ -64,17 +69,23 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/collections";
 
-            Collections = new BindableCollection<CollectionModel>(model => model.Name, new KeysComparer<CollectionModel>(model => model.Count));
+            Collections = new BindableCollection<CollectionModel>(model => model.Name);
             SelectedCollection = new Observable<CollectionModel>();
+
+            DocumentsForSelectedCollection.SetChangesObservable(d =>  d.IndexChanges
+                                 .Where(n =>n.Name.Equals(CollectionsIndex,StringComparison.InvariantCulture))
+                                 .Select(m => Unit.Default));
+
+		    DocumentsForSelectedCollection.DocumentNavigatorFactory =
+		        (id, index) =>
+		        DocumentNavigator.Create(id, index, CollectionsIndex,
+		                                 new IndexQuery() {Query = "Tag:" + GetSelectedCollectionName()});
 
             SelectedCollection.PropertyChanged += (sender, args) =>
             {
                 PutCollectionNameInTheUrl();
                 CollectionSource.CollectionName = GetSelectedCollectionName();
-                DocumentsForSelectedCollection.DocumentNavigatorFactory =
-                    (id, index) =>
-                    DocumentNavigator.Create(id, index, "Raven/DocumentsByEntityName",
-                                             new IndexQuery() { Query = "Tag:" + GetSelectedCollectionName() });
+
                 DocumentsForSelectedCollection.Context = "Collection/" + GetSelectedCollectionName();
             };
 		}
@@ -86,9 +97,9 @@ namespace Raven.Studio.Models
 			initialSelectedDatabaseName = name;
 		}
 
-		public override Task TimerTickedAsync()
+		private void RefreshCollectionsList()
 		{
-			return DatabaseCommands.GetTermsCount("Raven/DocumentsByEntityName", "Tag", "", 100)
+			DatabaseCommands.GetTermsCount(CollectionsIndex, "Tag", "", 100)
 				.ContinueOnSuccess(collections =>
 				                   	{
 										var collectionModels = collections.OrderByDescending(x => x.Count)
@@ -96,19 +107,26 @@ namespace Raven.Studio.Models
 											.Select(col => new CollectionModel { Name = col.Name, Count = col.Count })
 											.ToArray();
 
-				                   		Collections.Match(collectionModels, AfterUpdate);
+				                   		Collections.Match(collectionModels, () => AfterUpdate(collections));
 				                   	})
-				.CatchIgnore<WebException>(() =>
+				.Catch(ex =>
 				                           	{
 				                           		var urlParser = new UrlParser(UrlUtil.Url);
 				                           		if (urlParser.RemoveQueryParam("name"))
 				                           			UrlUtil.Navigate(urlParser.BuildUrl());
-				                           		ApplicationModel.Current.AddNotification(new Notification("Unable to retrieve collections from server.", NotificationLevel.Error));
+				                           		ApplicationModel.Current.AddErrorNotification(ex, "Unable to retrieve collections from server.");
 				                           	});
 		}
 
-		private void AfterUpdate()
+		private void AfterUpdate(NameAndCount[] collectionDocumentsCount)
 		{
+            // update documents count
+		    var nameToCount = collectionDocumentsCount.ToDictionary(i => i.Name, i => i.Count);
+		    foreach (var collectionModel in Collections)
+		    {
+		        collectionModel.Count = nameToCount[collectionModel.Name];
+		    }
+
 			if (initialSelectedDatabaseName != null &&
 				(SelectedCollection.Value == null || SelectedCollection.Value.Name != initialSelectedDatabaseName || Collections.Contains(SelectedCollection.Value) == false))
 			{
@@ -128,5 +146,32 @@ namespace Raven.Studio.Models
 				return "Collection: " + SelectedCollection.Value.Name;
 			}
 		}
+
+        protected override void OnViewLoaded()
+        {
+            var databaseChanged = Database.ObservePropertyChanged()
+                .Select(_ => Unit.Default)
+                .TakeUntil(Unloaded);
+
+            databaseChanged
+                .Do(_ => RefreshCollectionsList())
+                .Subscribe(_ => ObserveIndexChanges(databaseChanged));
+
+            ObserveIndexChanges(databaseChanged);
+            RefreshCollectionsList();
+        }
+
+	    private void ObserveIndexChanges(IObservable<Unit> databaseChanged)
+	    {
+            if (Database.Value != null)
+            {
+                Database.Value.IndexChanges
+                    .Where(n => n.Name.Equals(CollectionsIndex, StringComparison.InvariantCulture))
+                    .SampleResponsive(TimeSpan.FromSeconds(2))
+                    .TakeUntil(Unloaded.Merge(databaseChanged))
+                    .ObserveOnDispatcher()
+                    .Subscribe(__ => RefreshCollectionsList());
+            }
+	    }
 	}
 }

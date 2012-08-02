@@ -85,7 +85,7 @@ Actipro Syntax Language Project (.langproj)
 		</AstNode>
 		<AstNode Key="JsonStringNode" Description="Json string">
 			<AstNode.Properties>
-				<AstNodeProperty Key="Value" Type="String" Description="Value" />
+				<AstNodeProperty Key="Text" Type="String" Description="Text" />
 			</AstNode.Properties>
 		</AstNode>
 	</LanguageProject.AstNodes>

@@ -10,6 +10,8 @@ using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using ActiproSoftware.Text.Tagging;
 using ActiproSoftware.Text.Tagging.Implementation;
+using ActiproSoftware.Windows.Controls.SyntaxEditor;
+using ActiproSoftware.Windows.Controls.SyntaxEditor.Adornments.Implementation;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining;
@@ -29,7 +31,6 @@ namespace Raven.Studio.Features.JsonEditor
 
             RegisterService<ITextFormatter>(new JsonTextFormatter());
 
-            // Register a tagger provider on the language as a service that can create CustomTag objects
             this.RegisterService(new TextViewTaggerProvider<WordHighlightTagger>(typeof(WordHighlightTagger)));
 
             // Register a tagger provider for showing parse errors
@@ -37,6 +38,15 @@ namespace Raven.Studio.Features.JsonEditor
 
             // Register a squiggle tag quick info provider
             this.RegisterService<IQuickInfoProvider>(new SquiggleTagQuickInfoProvider());
+
+
+            this.RegisterService(new AdornmentManagerProvider<LinkTagAdornmentManager>(typeof(LinkTagAdornmentManager)));
+
+            this.RegisterService(new CodeDocumentTaggerProvider<PropertyValueLinkTagger>(typeof(PropertyValueLinkTagger)));
+
+            this.RegisterService<IEditorViewMouseInputEventSink>(new LinkTagClickHandler());
+
+            this.RegisterService<IQuickInfoProvider>(new LinkTagQuickInfoProvider());
         }
     }
 }
