@@ -18,18 +18,11 @@ public class Program
 		{
 			Console.WriteLine(i);
 
-			//using (var x = new WithIIS())
-			//{
-			//    x.CheckNotificationInIIS();
-			//}
-
-			//GC.Collect(2);
-			//GC.WaitForPendingFinalizers();
-
-			using (var x = new DtcBluesRemoteAndTouchingTheDisk())
+			using (var x = new ClientServer())
 			{
-				x.CanQueryDtcForUncommittedItem();
+				x.CanGetNotificationAboutDocumentIndexUpdate();
 			}
+
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
 

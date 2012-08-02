@@ -25,7 +25,9 @@ namespace Raven.Database.Server.Connections
 		public string Id { get; private set; }
 		public bool Connected { get; set; }
 
-		public event Action Disconnected = delegate { }; 
+		public event Action Disconnected = delegate { };
+
+		private Task InitTask;
 
 		public EventsTransport(IHttpContext context)
 		{
@@ -36,17 +38,18 @@ namespace Raven.Database.Server.Connections
 				throw new ArgumentException("Id is mandatory");
 
 			heartbeat = new Timer(Heartbeat);
-			heartbeat.Change(TimeSpan.Zero, TimeSpan.FromSeconds(5));
 	
 		}
 
 		public Task ProcessAsync()
 		{
 			context.Response.ContentType = "text/event-stream";
+			InitTask = SendAsync(new { Type = "Initialized" });
+			Thread.MemoryBarrier();
+			heartbeat.Change(TimeSpan.Zero, TimeSpan.FromSeconds(5));
 
+			return InitTask;
 
-			return SendAsync(new {Type = "Initialized"});
-			
 		}
 
 		private void Heartbeat(object _)
@@ -56,12 +59,20 @@ namespace Raven.Database.Server.Connections
 
 		public Task SendAsync(object data)
 		{
+			if (InitTask != null && // may be the very first time? 
+				InitTask.IsCompleted == false) // still pending on this...
+				return InitTask.ContinueWith(_ => SendAsync(data)).Unwrap();
+
+
 			return context.Response.WriteAsync("data: " + JsonConvert.SerializeObject(data,Formatting.None) + "\r\n\r\n")
 				.ContinueWith(DisconnectOnError);
 		}
 
 		public Task SendManyAsync(IEnumerable<object> data)
 		{
+			if (InitTask.IsCompleted == false)
+				return InitTask.ContinueWith(_ => SendManyAsync(data)).Unwrap();
+
 			var sb = new StringBuilder();
 
 			foreach (var o in data)
