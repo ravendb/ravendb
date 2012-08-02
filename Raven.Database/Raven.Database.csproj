@@ -574,11 +574,13 @@
     <Compile Include="Storage\Esent\SchemaCreator.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\SchemaUpdaterHelper.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From36To37.cs" />
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
     <Compile Include="Storage\Esent\StorageActions\General.cs" />
     <Compile Include="Storage\Esent\StorageActions\Indexing.cs" />
+    <Compile Include="Storage\Esent\StorageActions\Lists.cs" />
     <Compile Include="Storage\Esent\StorageActions\MappedResults.cs" />
     <Compile Include="Storage\Esent\StorageActions\OptimizedIndexReader.cs" />
     <Compile Include="Storage\Esent\StorageActions\Queue.cs" />
@@ -594,6 +596,7 @@
     <Compile Include="Storage\IDocumentStorageActions.cs" />
     <Compile Include="Storage\IGeneralStorageActions.cs" />
     <Compile Include="Storage\IIndexingStorageActions.cs" />
+    <Compile Include="Storage\IListsStorageActions.cs" />
     <Compile Include="Storage\IMappedResultsStorageAction.cs" />
     <Compile Include="Storage\IndexCreationOptions.cs" />
     <Compile Include="Storage\IndexDefinitionStorage.cs" />
@@ -611,6 +614,7 @@
     <Compile Include="Storage\Managed\GeneralStorageActions.cs" />
     <Compile Include="Storage\Managed\Impl\TableStorage.cs" />
     <Compile Include="Storage\Managed\IndexingStorageActions.cs" />
+    <Compile Include="Storage\Managed\ListsStorageActions.cs" />
     <Compile Include="Storage\Managed\MappedResultsStorageAction.cs" />
     <Compile Include="Storage\Managed\Munin\AbstractPersistentSource.cs" />
     <Compile Include="Storage\Managed\Munin\Command.cs" />

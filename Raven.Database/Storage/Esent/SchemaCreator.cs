@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "3.6";
+		public const string SchemaVersion = "3.7";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -40,6 +40,7 @@ namespace Raven.Storage.Esent
 					CreateIndexingEtagsTable(dbid);
 					CreateFilesTable(dbid);
 					CreateQueueTable(dbid);
+					CreateListsTable(dbid);
 					CreateIdentityTable(dbid);
 
 					tx.Commit(CommitTransactionGrbit.None);
@@ -323,7 +324,12 @@ namespace Raven.Storage.Esent
 						  });
 		}
 
-		private void CreateIndexes(JET_TABLEID tableid, params JET_INDEXCREATE[] indexes)
+		void CreateIndexes(JET_TABLEID tableid, params JET_INDEXCREATE[] indexes)
+		{
+			CreateIndexes(session, tableid, indexes);
+		}
+
+		public static void CreateIndexes(Session session, JET_TABLEID tableid, params JET_INDEXCREATE[] indexes)
 		{
 			foreach (var index in indexes)
 			{
@@ -579,7 +585,7 @@ namespace Raven.Storage.Esent
 						  });
 		}
 
-		private static ColumndefGrbit ColumnNotNullIfOnHigherThanWindowsXp()
+		public static ColumndefGrbit ColumnNotNullIfOnHigherThanWindowsXp()
 		{
 			var isWindowsXpOrServer2003 = (Environment.OSVersion.Version.Major == 5);
 			return isWindowsXpOrServer2003 ? ColumndefGrbit.None : ColumndefGrbit.ColumnNotNULL;
@@ -645,6 +651,71 @@ namespace Raven.Storage.Esent
 					grbit = CreateIndexGrbit.IndexDisallowNull
 				});
 		}
+
+		public void CreateListsTable(JET_DBID dbid)
+		{
+			JET_TABLEID tableid;
+			Api.JetCreateTable(session, dbid, "lists", 1, 80, out tableid);
+			JET_COLUMNID columnid;
+
+
+			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "name", new JET_COLUMNDEF
+			{
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
+				cp = JET_CP.Unicode,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
+			{
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
+				cp = JET_CP.Unicode,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.LongBinary,
+				grbit = ColumndefGrbit.ColumnTagged
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
+			{
+				cbMax = 16,
+				coltyp = JET_coltyp.Binary,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
+			}, null, 0, out columnid);
+
+
+			CreateIndexes(tableid,
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_id",
+					szKey = "+id\0\0",
+					grbit = CreateIndexGrbit.IndexPrimary
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_name_and_etag",
+					szKey = "+name\0+etag\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_name_and_key",
+					szKey = "+name\0+key\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique
+				});
+		}
+
 
 		public void CreateQueueTable(JET_DBID dbid)
 		{
@@ -741,6 +812,21 @@ namespace Raven.Storage.Esent
 				Api.SetColumn(session, tableid, documentCount, 0);
 				Api.SetColumn(session, tableid, attachmentCount, 0);
 				update.Save();
+			}
+		}
+
+		public static void UpdateVersion(Session session, JET_DBID dbid, string newVersion)
+		{
+			using(var table = new Table(session, dbid, "details", OpenTableGrbit.None))
+			{
+				if (Api.TryMoveFirst(session, table) == false)
+					throw new InvalidOperationException("Could not find details row");
+				using(var update = new Update(session, table, JET_prep.Replace))
+				{
+					var schemaVersion = Api.GetTableColumnid(session, table, "schema_version");
+					Api.SetColumn(session, table, schemaVersion, newVersion, Encoding.Unicode);
+					update.Save();
+				}
 			}
 		}
 	}

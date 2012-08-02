@@ -34,8 +34,10 @@ namespace Raven.Storage.Managed
 			Queue = new QueueStorageActions(storage, generator);
 			Tasks = new TasksStorageActions(storage, generator);
 			Staleness = new StalenessStorageActions(storage);
+			Lists = new ListsStorageActions(storage, generator);
 		}
 
+		public IListsStorageActions Lists { get; private set; }
 
 		public ITransactionStorageActions Transactions { get; private set; }
 

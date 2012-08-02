@@ -35,6 +35,8 @@ namespace Raven.Storage.Esent
 
 		public IDictionary<string, JET_COLUMNID> QueueColumns { get; set; }
 
+		public IDictionary<string, JET_COLUMNID> ListsColumns { get; set; }
+
 	    public void InitColumDictionaries(JET_INSTANCE instance, string database)
 	    {
 	        using (var session = new Session(instance))
@@ -45,7 +47,9 @@ namespace Raven.Storage.Esent
 	                Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
 	                using (var documents = new Table(session, dbid, "documents", OpenTableGrbit.None))
 	                    DocumentsColumns = Api.GetColumnDictionary(session, documents);
-	                using (var tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None))
+					using (var lists = new Table(session, dbid, "lists", OpenTableGrbit.None))
+						ListsColumns = Api.GetColumnDictionary(session, lists);
+					using (var tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None))
 	                    TasksColumns = Api.GetColumnDictionary(session, tasks);
 	                using (var files = new Table(session, dbid, "files", OpenTableGrbit.None))
 	                    FilesColumns = Api.GetColumnDictionary(session, files);

@@ -12,6 +12,7 @@ namespace Raven.Database.Storage
 		ITransactionStorageActions Transactions { get; }
 		IDocumentStorageActions Documents { get; }
 		IQueueStorageActions Queue { get; }
+		IListsStorageActions Lists { get; }
 		ITasksStorageActions Tasks { get; }
 		IStalenessStorageActions Staleness{ get; }
 		IAttachmentsStorageActions Attachments { get; }

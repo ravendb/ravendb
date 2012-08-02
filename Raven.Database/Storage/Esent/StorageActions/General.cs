@@ -80,6 +80,9 @@ namespace Raven.Storage.Esent.StorageActions
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Dispose()
 		{
+			if(lists != null)
+				lists.Dispose();
+
 			if(queue != null)
 				queue.Dispose();
 

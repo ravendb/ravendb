@@ -72,7 +72,18 @@ namespace Raven.Storage.Managed.Impl
 				{"ByIndexAndTime", x => Tuple.Create(x.Value<string>("index"), x.Value<DateTime>("time"))},
 				{"ByIndexAndType", x => Tuple.Create(x.Value<string>("index"), x.Value<string>("type"))}
 			});
+
+			Lists = Add(new Table(x => new RavenJObject
+			{
+				{"name", x.Value<string>("name")},
+				{"key", x.Value<string>("key")},
+			}, "Lists")
+			{
+				{"ByNameAndEtag", x => Tuple.Create(x.Value<string>("name"), new ComparableByteArray(x.Value<byte[]>("etag")))},
+			});
 		}
+
+		public Table Lists { get; private set; }
 
 		public Table Details { get; private set; }
 
