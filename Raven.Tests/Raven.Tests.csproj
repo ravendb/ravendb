@@ -628,6 +628,7 @@
     <Compile Include="MailingList\BrunoLopes.cs" />
     <Compile Include="MailingList\BlockedMethods.cs" />
     <Compile Include="MailingList\ChrisH.cs" />
+    <Compile Include="MailingList\Groenewoud.cs" />
     <Compile Include="MailingList\Hendrik.cs" />
     <Compile Include="MailingList\HiloWithMultiTenancy.cs" />
     <Compile Include="MailingList\Jon.cs" />
