@@ -1,0 +1,30 @@
+﻿<Infrastructure:PageView x:Class="Raven.Studio.Features.Bundles.BundlesView" 
+           xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+           xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+           xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+           xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+           mc:Ignorable="d"
+           xmlns:navigation="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Navigation"
+              xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                         xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" d:DesignWidth="640" d:DesignHeight="480"
+           Title="BundlesView Page">
+    <Grid x:Name="LayoutRoot">
+		<sdk:TabControl>
+			<sdk:TabItem Header="Selection">
+				
+			</sdk:TabItem>
+			<sdk:TabItem Header="Encryption">
+
+			</sdk:TabItem>
+			<sdk:TabItem Header="Quotas">
+
+			</sdk:TabItem>
+			<sdk:TabItem Header="Replication">
+
+			</sdk:TabItem>
+			<sdk:TabItem Header="Versioning">
+
+			</sdk:TabItem>		
+		</sdk:TabControl>
+    </Grid>
+</Infrastructure:PageView>

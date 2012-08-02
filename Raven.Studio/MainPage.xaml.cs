@@ -16,23 +16,23 @@ namespace Raven.Studio
 			InitializeComponent();
 		}
 
-	    public void Refresh()
-	    {
-	       ContentFrame.Refresh();
-	    }
+		public void Refresh()
+		{
+		   ContentFrame.Refresh();
+		}
 
 
 		private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
 		{
 			HighlightCurrentPage(e.Uri);
 
-            // update the current database here so that back button navigation works correctly with database changes
-            ApplicationModel.Current.Server.Value.SetCurrentDatabase(new UrlParser(e.Uri.OriginalString));
+			// update the current database here so that back button navigation works correctly with database changes
+			ApplicationModel.Current.Server.Value.SetCurrentDatabase(new UrlParser(e.Uri.OriginalString));
 
 			GC.Collect();
 		}
 
-        // After the Frame navigates, ensure the HyperlinkButton representing the current page is selected
+		// After the Frame navigates, ensure the HyperlinkButton representing the current page is selected
 		private void HighlightCurrentPage(Uri currentUri)
 		{
 			foreach (var hyperlink in MainLinks.Children.OfType<HyperlinkButton>())
@@ -45,11 +45,6 @@ namespace Raven.Studio
 				{
 					VisualStateManager.GoToState(hyperlink, "InactiveLink", true);
 				}
-			}
-
-			if (currentUri.ToString() == string.Empty)
-			{
-				VisualStateManager.GoToState(SummaryLink, "ActiveLink", true);
 			}
 		}
 
@@ -74,7 +69,7 @@ namespace Raven.Studio
 		private void ContentFrame_NavigationFailed(object sender, NavigationFailedEventArgs e)
 		{
 			e.Handled = true;
-            ApplicationModel.Current.AddErrorNotification(e.Exception, string.Format("Could not load page: {0}", e.Uri));
+			ApplicationModel.Current.AddErrorNotification(e.Exception, string.Format("Could not load page: {0}", e.Uri));
 		}
 	}
 }

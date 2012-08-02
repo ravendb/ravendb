@@ -123,6 +123,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Program Files (x86)\Microsoft SDKs\Silverlight\v5.0\Libraries\Client\System.Windows.Controls.Input.dll</HintPath>
     </Reference>
+    <Reference Include="System.Windows.Controls.Input.Toolkit, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Windows.Controls.Layout.Toolkit, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\System.Windows.Controls.Layout.Toolkit.dll</HintPath>
     </Reference>
@@ -171,6 +172,8 @@
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\DeleteDatabaseCommand.cs" />
+    <Compile Include="Commands\SelectSystemDatabaseCommand.cs" />
     <Compile Include="Commands\ItemSelectionCommand.cs" />
     <Compile Include="Commands\StopIndexingCommand.cs" />
     <Compile Include="Commands\StartIndexingCommand.cs" />
@@ -178,20 +181,42 @@
     <Compile Include="Commands\ResetIndexCommand.cs" />
     <Compile Include="Commands\ShowErrorListWindowCommand.cs" />
     <Compile Include="Commands\VirtualItemSelectionCommand.cs" />
+    <Compile Include="Controls\BundlesSelect.xaml.cs">
+      <DependentUpon>BundlesSelect.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\BusynessIndicator.xaml.cs">
       <DependentUpon>BusynessIndicator.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\DeleteDatabase.xaml.cs">
+      <DependentUpon>DeleteDatabase.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\Editors\QuerySyntaxTextBlock.xaml.cs">
       <DependentUpon>QuerySyntaxTextBlock.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\EncryotionSettings.xaml.cs">
+      <DependentUpon>EncryotionSettings.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\GoToDocumentControl.xaml.cs">
       <DependentUpon>GoToDocumentControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\NewDatabase.xaml.cs">
+      <DependentUpon>NewDatabase.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\QuotasSettings.xaml.cs">
+      <DependentUpon>QuotasSettings.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\RecentQueriesButton.xaml.cs">
       <DependentUpon>RecentQueriesButton.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\ReplicationSettings.xaml.cs">
+      <DependentUpon>ReplicationSettings.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
+    <Compile Include="Controls\VersioningSettings.xaml.cs">
+      <DependentUpon>VersioningSettings.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\VirtualizingWrapPanel.cs" />
+    <Compile Include="Controls\Wizard.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
     <Compile Include="Extensions\DoubleExtensions.cs" />
     <Compile Include="Extensions\IObservableExtensions.cs" />
@@ -199,6 +224,9 @@
     <Compile Include="Extensions\SilverlightExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\SyntaxEditorExtensions.cs" />
+    <Compile Include="Features\Bundles\BundlesView.xaml.cs">
+      <DependentUpon>BundlesView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Features\Documents\AllDocumentsNavigator.cs" />
     <Compile Include="Features\Documents\CollectionDocumentsCollectionSource.cs" />
     <Compile Include="Features\Documents\ColumnDefinition.cs" />
@@ -337,6 +365,7 @@
     <Compile Include="Infrastructure\WeakReference.cs" />
     <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
     <Compile Include="Models\ApplicationState.cs" />
+    <Compile Include="Models\BundlesModel.cs" />
     <Compile Include="Models\DatabaseListItemModel.cs" />
     <Compile Include="Models\DatabaseSelectionModel.cs" />
     <Compile Include="Models\DocumentSize.cs" />
@@ -350,6 +379,9 @@
     <Compile Include="Models\PerDatabaseState.cs" />
     <Compile Include="Models\PerDatabaseStateCollection.cs" />
     <Compile Include="Models\TermsModel.cs" />
+    <Compile Include="Views\Bundles.xaml.cs">
+      <DependentUpon>Bundles.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\IndexStats.xaml.cs">
       <DependentUpon>IndexStats.xaml</DependentUpon>
     </Compile>
@@ -633,11 +665,23 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Controls\BundlesSelect.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\BusynessIndicator.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Controls\DeleteDatabase.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\Editors\QuerySyntaxTextBlock.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\EncryotionSettings.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -645,11 +689,31 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\NewDatabase.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\QuotasSettings.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\RecentQueriesButton.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\ReplicationSettings.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\Taggers.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\VersioningSettings.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Features\Bundles\BundlesView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -684,6 +748,10 @@
     <Page Include="Impl\SplitButton\Themes\generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Bundles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\IndexStats.xaml">
       <SubType>Designer</SubType>
@@ -960,5 +1028,4 @@
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
 </Project>
