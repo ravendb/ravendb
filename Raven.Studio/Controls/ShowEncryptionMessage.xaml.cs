@@ -3,21 +3,15 @@ using System.Windows.Controls;
 
 namespace Raven.Studio.Controls
 {
-	public partial class QuotasSettings : ChildWindow
+	public partial class ShowEncryptionMessage : ChildWindow
 	{
-		public QuotasSettings()
+		private readonly string key;
+
+		public ShowEncryptionMessage(string key)
 		{
 			InitializeComponent();
-			
-			MaxSize.Maximum = int.MaxValue;
-			WarnSize.Maximum = int.MaxValue;
-			MaxDocs.Maximum = int.MaxValue;
-			WarnDocs.Maximum = int.MaxValue;
-
-			MaxSize.Value = 50;
-			WarnSize.Value = 45;
-			MaxDocs.Value = 10000;
-			WarnDocs.Value = 8000;
+			this.key = key;
+			KeyValue.Text = key;
 		}
 
 		private void OKButton_Click(object sender, RoutedEventArgs e)
@@ -28,6 +22,11 @@ namespace Raven.Studio.Controls
 		private void CancelButton_Click(object sender, RoutedEventArgs e)
 		{
 			this.DialogResult = false;
+		}
+
+		private void KeyValue_TextChanged(object sender, TextChangedEventArgs e)
+		{
+			KeyValue.Text = key;
 		}
 	}
 }

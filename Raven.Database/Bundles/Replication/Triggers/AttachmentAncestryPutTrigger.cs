@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
 using System.IO;
+using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -36,24 +37,24 @@ namespace Raven.Bundles.Replication.Triggers
 				var attachment = Database.GetStatic(key);
 				if (attachment != null)
 				{
-					var history = attachment.Metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ??
+					var history = attachment.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ??
 					              new RavenJArray();
-					metadata[ReplicationConstants.RavenReplicationHistory] = history;
+					metadata[Constants.RavenReplicationHistory] = history;
 
 					history.Add(new RavenJObject
 					{
-						{ReplicationConstants.RavenReplicationVersion, attachment.Metadata[ReplicationConstants.RavenReplicationVersion]},
-						{ReplicationConstants.RavenReplicationSource, attachment.Metadata[ReplicationConstants.RavenReplicationSource]}
+						{Constants.RavenReplicationVersion, attachment.Metadata[Constants.RavenReplicationVersion]},
+						{Constants.RavenReplicationSource, attachment.Metadata[Constants.RavenReplicationSource]}
 
 					});
 
-					if (history.Length > ReplicationConstants.ChangeHistoryLength)
+					if (history.Length > Constants.ChangeHistoryLength)
 					{
 						history.RemoveAt(0);
 					}
 				}
-				metadata[ReplicationConstants.RavenReplicationVersion] = RavenJToken.FromObject(HiLo.NextId());
-				metadata[ReplicationConstants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
+				metadata[Constants.RavenReplicationVersion] = RavenJToken.FromObject(HiLo.NextId());
+				metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
 			}
 		}
 	}

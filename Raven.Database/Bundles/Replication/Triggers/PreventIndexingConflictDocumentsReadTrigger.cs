@@ -1,4 +1,5 @@
 using System.ComponentModel.Composition;
+using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Replication.Triggers
@@ -10,7 +11,7 @@ namespace Raven.Bundles.Replication.Triggers
 	{
 		public override ReadVetoResult AllowRead(string key, Json.Linq.RavenJObject metadata, ReadOperation operation, Abstractions.Data.TransactionInformation transactionInformation)
 		{
-			if (operation == ReadOperation.Index  && metadata.ContainsKey(ReplicationConstants.RavenReplicationConflictDocument))
+			if (operation == ReadOperation.Index  && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
 			{
 				return ReadVetoResult.Ignore;
 			}

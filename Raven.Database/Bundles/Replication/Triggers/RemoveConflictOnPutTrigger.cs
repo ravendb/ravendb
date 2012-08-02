@@ -20,16 +20,16 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				metadata.Remove(ReplicationConstants.RavenReplicationConflict);// you can't put conflicts
+				metadata.Remove(Constants.RavenReplicationConflict);// you can't put conflicts
 
 				var oldVersion = Database.Get(key, transactionInformation);
 				if (oldVersion == null)
 					return;
-				if (oldVersion.Metadata[ReplicationConstants.RavenReplicationConflict] == null)
+				if (oldVersion.Metadata[Constants.RavenReplicationConflict] == null)
 					return;
 
-				RavenJArray history = metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ?? new RavenJArray();
-				metadata[ReplicationConstants.RavenReplicationHistory] = history;
+				RavenJArray history = metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
+				metadata[Constants.RavenReplicationHistory] = history;
 
 				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
 				// this is a conflict document, holding document keys in the 
@@ -40,11 +40,11 @@ namespace Raven.Bundles.Replication.Triggers
 					Database.Delete(prop.Value<string>(), null, transactionInformation, out deletedMetadata);
 
 					// add the conflict history to the mix, so we make sure that we mark that we resolved the conflict
-					var conflictHistory = deletedMetadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ?? new RavenJArray();
+					var conflictHistory = deletedMetadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
 					conflictHistory.Add(new RavenJObject
 					{
-						{ReplicationConstants.RavenReplicationVersion, deletedMetadata[ReplicationConstants.RavenReplicationVersion]},
-						{ReplicationConstants.RavenReplicationSource, deletedMetadata[ReplicationConstants.RavenReplicationSource]}
+						{Constants.RavenReplicationVersion, deletedMetadata[Constants.RavenReplicationVersion]},
+						{Constants.RavenReplicationSource, deletedMetadata[Constants.RavenReplicationSource]}
 					});
 
 					foreach (var item in conflictHistory)

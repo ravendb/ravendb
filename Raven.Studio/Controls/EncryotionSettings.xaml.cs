@@ -2,12 +2,13 @@
 using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
+using Raven.Abstractions.Data;
 
 namespace Raven.Studio.Controls
 {
 	public partial class EncryotionSettings : ChildWindow
 	{
-		private RandomNumberGenerator RandomNumberGenerator;
+		private readonly RandomNumberGenerator RandomNumberGenerator;
 		public EncryotionSettings()
 		{
 			RandomNumberGenerator = new RNGCryptoServiceProvider();
@@ -17,20 +18,19 @@ namespace Raven.Studio.Controls
 
 		private string GenerateRandomKey()
 		{
-			int length = 32;
-			var result = new byte[length];
+			var result = new byte[Constants.DefaultGeneratedEncryptionKeyLength];
 			RandomNumberGenerator.GetBytes(result);
 			return Convert.ToBase64String(result); 
 		}
 
 		private void OKButton_Click(object sender, RoutedEventArgs e)
 		{
-			this.DialogResult = true;
+			DialogResult = true;
 		}
 
 		private void CancelButton_Click(object sender, RoutedEventArgs e)
 		{
-			this.DialogResult = false;
+			DialogResult = false;
 		}
 	}
 }

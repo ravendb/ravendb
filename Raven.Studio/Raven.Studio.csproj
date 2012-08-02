@@ -152,6 +152,9 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Bundles\Versioning\Data\VersioningConfiguration.cs">
+      <Link>Features\Bundles\VersioningConfiguration.cs</Link>
+    </Compile>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
@@ -213,6 +216,9 @@
     </Compile>
     <Compile Include="Controls\ReplicationSettings.xaml.cs">
       <DependentUpon>ReplicationSettings.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ShowEncryptionMessage.xaml.cs">
+      <DependentUpon>ShowEncryptionMessage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
     <Compile Include="Controls\VersioningSettings.xaml.cs">
@@ -705,6 +711,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\ReplicationSettings.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ShowEncryptionMessage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

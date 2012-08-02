@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Encryption.Settings;
+using Raven.Abstractions.Data;
 
 namespace Raven.Bundles.Encryption
 {

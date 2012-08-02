@@ -21,8 +21,8 @@
 				<RowDefinition Height="10" />
 			</Grid.RowDefinitions>
 
-			<CheckBox Margin="5" VerticalAlignment="Center"/>
-			<TextBlock x:Name="defaultVersioning" Text="Add default versioning" Margin="5" Grid.Column="1"/>
+			<CheckBox x:Name="defaultVersioning" Margin="5" VerticalAlignment="Center"/>
+			<TextBlock Text="Add default versioning" Margin="5" Grid.Column="1"/>
 
 			<sdk:DataGrid Grid.Row="1" Grid.ColumnSpan="2"
 							  ItemsSource="{Binding Path=VersioningData}">

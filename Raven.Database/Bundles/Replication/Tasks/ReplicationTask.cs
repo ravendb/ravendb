@@ -132,7 +132,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private bool IsNotFailing(ReplicationStrategy dest, int currentReplicationAttempts)
 		{
-			var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(dest), null);
+			var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(dest), null);
 			if (jsonDocument == null)
 				return true;
 			var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
@@ -276,26 +276,26 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private void IncrementFailureCount(ReplicationStrategy destination)
 		{
-			var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null);
+			var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null);
 			var failureInformation = new DestinationFailureInformation { Destination = destination.ConnectionStringOptions.Url };
 			if (jsonDocument != null)
 			{
 				failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
 			}
 			failureInformation.FailureCount += 1;
-			docDb.Put(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null,
+			docDb.Put(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null,
 					  RavenJObject.FromObject(failureInformation), new RavenJObject(), null);
 		}
 
 		private void ResetFailureCount(ReplicationStrategy destination)
 		{
-			docDb.Delete(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null,
+			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null,
 			             null);
 		}
 
 		private bool IsFirstFailue(ReplicationStrategy destination)
 		{
-			var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null);
+			var jsonDocument = docDb.Get(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null);
 			if (jsonDocument == null)
 				return true;
 			var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
@@ -529,7 +529,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private ReplicationStrategy[] GetReplicationDestinations()
 		{
-			var document = docDb.Get(ReplicationConstants.RavenReplicationDestinations, null);
+			var document = docDb.Get(Constants.RavenReplicationDestinations, null);
 			if (document == null)
 			{
 				return new ReplicationStrategy[0];
@@ -617,16 +617,16 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 			if (document.Metadata.ContainsKey(Constants.NotForReplication) && document.Metadata.Value<bool>(Constants.NotForReplication)) // not explicitly marked to skip
 				return false;
-			if (document.Metadata[ReplicationConstants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propagate the conflict
+			if (document.Metadata[Constants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propagate the conflict
 				return false;
 
-			if (document.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == destinationId) // prevent replicating back to source
+			if (document.Metadata.Value<string>(Constants.RavenReplicationSource) == destinationId) // prevent replicating back to source
 				return false;
 
 			switch (ReplicationOptionsBehavior)
 			{
 				case TransitiveReplicationOptions.None:
-					var value = document.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource);
+					var value = document.Metadata.Value<string>(Constants.RavenReplicationSource);
 					var replicateDoc = value == null || (value == CurrentDatabaseId);
 					return replicateDoc;
 			}
@@ -644,18 +644,18 @@ namespace Raven.Bundles.Replication.Tasks
 			if (attachment.Metadata.ContainsKey(Constants.NotForReplication) && attachment.Metadata.Value<bool>(Constants.NotForReplication))
 				return false;
 
-			if (attachment.Metadata.ContainsKey(ReplicationConstants.RavenReplicationConflict))// don't replicate conflicted documents, that just propagate the conflict
+			if (attachment.Metadata.ContainsKey(Constants.RavenReplicationConflict))// don't replicate conflicted documents, that just propagate the conflict
 				return false;
 
 			// we don't replicate stuff that was created there
-			if (attachment.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == destinationInstanceId)
+			if (attachment.Metadata.Value<string>(Constants.RavenReplicationSource) == destinationInstanceId)
 				return false;
 
 			switch (ReplicationOptionsBehavior)
 			{
 				case TransitiveReplicationOptions.None:
-					return attachment.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == null ||
-						(attachment.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == CurrentDatabaseId);
+					return attachment.Metadata.Value<string>(Constants.RavenReplicationSource) == null ||
+						(attachment.Metadata.Value<string>(Constants.RavenReplicationSource) == CurrentDatabaseId);
 			}
 			return true;
 

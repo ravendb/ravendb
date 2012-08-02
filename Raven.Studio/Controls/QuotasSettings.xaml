@@ -25,26 +25,26 @@
 
 			<TextBlock Text="Select max size:" Margin="5" VerticalAlignment="Center"/>
 			<StackPanel Grid.Column="1" Orientation="Horizontal">
-				<toolkit:NumericUpDown x:Name="MaxSize" Margin="5" Maximum="9999999"/>
+				<toolkit:NumericUpDown x:Name="MaxSize" Margin="5"/>
 				<TextBlock Text="MB" VerticalAlignment="Center"/>
 			</StackPanel>
 			
 			<TextBlock Text="Select warning size:" Margin="5" VerticalAlignment="Center" Grid.Row="1" />
 			<StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal">
-				<toolkit:NumericUpDown x:Name="WarnSize" Margin="5" Grid.Column="1" Maximum="9999999"/>
+				<toolkit:NumericUpDown x:Name="WarnSize" Margin="5" Grid.Column="1"/>
 				<TextBlock Text="MB" VerticalAlignment="Center"/>
 			</StackPanel>
 
 
 			<TextBlock Text="Select max number of docs:" Margin="5" VerticalAlignment="Center" Grid.Row="2"/>
 			<StackPanel Grid.Column="1" Grid.Row="2" Orientation="Horizontal">
-				<toolkit:NumericUpDown x:Name="MaxDocs" Margin="5" Grid.Column="1" Maximum="9999999"/>
+				<toolkit:NumericUpDown x:Name="MaxDocs" Margin="5" Grid.Column="1"/>
 				<TextBlock Text="docs" VerticalAlignment="Center"/>
 			</StackPanel>
 			
 			<TextBlock Text="Select warning for docs:" Margin="5" VerticalAlignment="Center" Grid.Row="3"/>
 			<StackPanel Grid.Column="1" Grid.Row="3" Orientation="Horizontal">
-				<toolkit:NumericUpDown x:Name="WarnDocs" Margin="5" Grid.Column="1" Maximum="9999999"/>
+				<toolkit:NumericUpDown x:Name="WarnDocs" Margin="5" Grid.Column="1"/>
 			<TextBlock Text="docs" VerticalAlignment="Center"/>
 			</StackPanel>
 

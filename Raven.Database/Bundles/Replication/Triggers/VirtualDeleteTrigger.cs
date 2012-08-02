@@ -43,13 +43,13 @@ namespace Raven.Bundles.Replication.Triggers
 				var document = Database.Get(key, transactionInformation);
 				if (document == null)
 					return;
-				deletedHistory.Value = document.Metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ??
+				deletedHistory.Value = document.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ??
 									   new RavenJArray();
 				deletedHistory.Value.Add(
 					new RavenJObject
 					{
-						{ReplicationConstants.RavenReplicationVersion, document.Metadata[ReplicationConstants.RavenReplicationVersion]},
-						{ReplicationConstants.RavenReplicationSource, document.Metadata[ReplicationConstants.RavenReplicationSource]}
+						{Constants.RavenReplicationVersion, document.Metadata[Constants.RavenReplicationVersion]},
+						{Constants.RavenReplicationSource, document.Metadata[Constants.RavenReplicationSource]}
 					});
 			}
 		}
@@ -61,9 +61,9 @@ namespace Raven.Bundles.Replication.Triggers
 				var metadata = new RavenJObject
 				{
 					{"Raven-Delete-Marker", true},
-					{ReplicationConstants.RavenReplicationHistory, deletedHistory.Value },
-					{ReplicationConstants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
-					{ReplicationConstants.RavenReplicationVersion, HiLo.NextId()}
+					{Constants.RavenReplicationHistory, deletedHistory.Value },
+					{Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
+					{Constants.RavenReplicationVersion, HiLo.NextId()}
 				};
 				deletedHistory.Value = null;
 

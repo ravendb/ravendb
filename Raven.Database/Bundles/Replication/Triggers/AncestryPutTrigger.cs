@@ -38,26 +38,26 @@ namespace Raven.Bundles.Replication.Triggers
 				var doc = Database.Get(key, null);
 				if (doc != null)
 				{
-					var history = doc.Metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ?? new RavenJArray();
-					metadata[ReplicationConstants.RavenReplicationHistory] = history;
+					var history = doc.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ?? new RavenJArray();
+					metadata[Constants.RavenReplicationHistory] = history;
 
-					if (doc.Metadata.ContainsKey(ReplicationConstants.RavenReplicationVersion) && 
-						doc.Metadata.ContainsKey(ReplicationConstants.RavenReplicationSource))
+					if (doc.Metadata.ContainsKey(Constants.RavenReplicationVersion) && 
+						doc.Metadata.ContainsKey(Constants.RavenReplicationSource))
 					{
 						history.Add(new RavenJObject
 						{
-							{ReplicationConstants.RavenReplicationVersion, doc.Metadata[ReplicationConstants.RavenReplicationVersion]},
-							{ReplicationConstants.RavenReplicationSource, doc.Metadata[ReplicationConstants.RavenReplicationSource]}
+							{Constants.RavenReplicationVersion, doc.Metadata[Constants.RavenReplicationVersion]},
+							{Constants.RavenReplicationSource, doc.Metadata[Constants.RavenReplicationSource]}
 						});
 					}
 
-					if (history.Length > ReplicationConstants.ChangeHistoryLength)
+					if (history.Length > Constants.ChangeHistoryLength)
 					{
 						history.RemoveAt(0);
 					}
 				}
-				metadata[ReplicationConstants.RavenReplicationVersion] = RavenJToken.FromObject(HiLo.NextId());
-				metadata[ReplicationConstants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
+				metadata[Constants.RavenReplicationVersion] = RavenJToken.FromObject(HiLo.NextId());
+				metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(Database.TransactionalStorage.Id);
 			}
 		}
 	}

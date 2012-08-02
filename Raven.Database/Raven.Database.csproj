@@ -136,7 +136,6 @@
     <Compile Include="Bundles\Compression\Streams\DecompressStream.cs" />
     <Compile Include="Bundles\Compression\Streams\StreamReaderWithUnread.cs" />
     <Compile Include="Bundles\Encryption\Codec.cs" />
-    <Compile Include="Bundles\Encryption\Constants.cs" />
     <Compile Include="Bundles\Encryption\CryptoTransformExtensions.cs" />
     <Compile Include="Bundles\Encryption\Plugin\DocumentEncryption.cs" />
     <Compile Include="Bundles\Encryption\Plugin\EncryptionSettingsDeleteTrigger.cs" />
@@ -188,7 +187,6 @@
     <Compile Include="Bundles\Replication\Impl\ReplicationHiLo.cs" />
     <Compile Include="Bundles\Replication\Plugins\AbstractAttachmentReplicationConflictResolver.cs" />
     <Compile Include="Bundles\Replication\Plugins\AbstractDocumentReplicationConflictResolver.cs" />
-    <Compile Include="Bundles\Replication\ReplicationConstants.cs" />
     <Compile Include="Bundles\Replication\Responders\AttachmentReplicationResponder.cs" />
     <Compile Include="Bundles\Replication\Responders\DocumentReplicationResponder.cs" />
     <Compile Include="Bundles\Replication\Responders\ReplicationLastEtagResponser.cs" />

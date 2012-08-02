@@ -9,6 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Database;
 using Raven.Json.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Bundles.Replication.Impl
 {
@@ -62,10 +63,10 @@ namespace Raven.Bundles.Replication.Impl
 				try
 				{
 					var minNextMax = currentMax.Value;
-					var document = Database.Get(ReplicationConstants.RavenReplicationVersionHiLo, null);
+					var document = Database.Get(Constants.RavenReplicationVersionHiLo, null);
 					if (document == null)
 					{
-						Database.Put(ReplicationConstants.RavenReplicationVersionHiLo,
+						Database.Put(Constants.RavenReplicationVersionHiLo,
 									 Guid.Empty,
 									 // sending empty guid means - ensure the that the document does NOT exists
 									 RavenJObject.FromObject(RavenJObject.FromObject(new { Max = minNextMax + capacity })),
@@ -75,7 +76,7 @@ namespace Raven.Bundles.Replication.Impl
 					}
 					var max = GetMaxFromDocument(document, minNextMax);
 					document.DataAsJson["Max"] = max + capacity;
-					Database.Put(ReplicationConstants.RavenReplicationVersionHiLo, document.Etag,
+					Database.Put(Constants.RavenReplicationVersionHiLo, document.Etag,
 								 document.DataAsJson,
 								 document.Metadata, null);
 					current = max + 1;

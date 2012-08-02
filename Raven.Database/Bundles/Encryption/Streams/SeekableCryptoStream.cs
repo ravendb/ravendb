@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Raven.Bundles.Encryption.Settings;
+using Raven.Abstractions.Data;
 
 namespace Raven.Bundles.Encryption.Streams
 {
