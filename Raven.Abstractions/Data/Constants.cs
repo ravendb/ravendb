@@ -1,3 +1,7 @@
+using System;
+using System.Security.Cryptography;
+using Raven.Json.Linq;
+
 namespace Raven.Abstractions.Data
 {
 	public static class Constants
@@ -27,5 +31,51 @@ namespace Raven.Abstractions.Data
 		public const string Metadata = "@metadata";
 		public const string NotForReplication = "Raven-Not-For-Replication";
 		public const string RavenDeleteMarker = "Raven-Delete-Marker";
+		public const string ActiveBundles = "Raven/ActiveBundles";
+
+		//Paths
+		public const string RavenDataDir = "Raven/DataDir";
+		public const string RavenLogsPath = "Raven/Esent/LogsPath";
+		public const string RavenIndexPath = "Raven/IndexStoragePath";
+
+		//Encryption
+		public const string DontEncryptDocumentsStartingWith = "Raven/";
+		public const string AlgorithmTypeSetting = "Raven/Encryption/Algorithm";
+		public const string EncryptionKeySetting = "Raven/Encryption/Key";
+		public const string EncryptIndexes = "Raven/Encryption/EncryptIndexes";
+
+		public const string InDatabaseKeyVerificationDocumentName = "Raven/Encryption/Verification";
+		public static readonly RavenJObject InDatabaseKeyVerificationDocumentContents = new RavenJObject {
+			{ "Text", "The encryption is correct." }
+		};
+
+		public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
+		public const int MinimumAcceptableEncryptionKeyLength = 64 / 8;
+
+		public const int DefaultKeySizeToUseInActualEncryptionInBits = 128;
+		public const int Rfc2898Iterations = 1000;
+
+		public const int DefaultIndexFileBlockSize = 12 * 1024;
+
+		public static readonly Type DefaultCryptoServiceProvider = typeof(AesManaged);
+
+		//Quotas
+		public const string DocsHardLimit = "Raven/Quotas/Documents/HardLimit";
+		public const string DocsSoftLimit = "Raven/Quotas/Documents/SoftLimit";
+		public const string SizeHardLimitInKB = "Raven/Quotas/Size/HardLimitInKB";
+		public const string SizeSoftLimitInKB = "Raven/Quotas/Size/SoftMarginInKB";
+
+		//Replications
+		public const string RavenReplicationSource = "Raven-Replication-Source";
+		public const string RavenReplicationVersion = "Raven-Replication-Version";
+		public const string RavenReplicationHistory = "Raven-Replication-History";
+		public const string RavenReplicationVersionHiLo = "Raven/Replication/VersionHilo";
+		public const string RavenReplicationConflict = "Raven-Replication-Conflict";
+		public const string RavenReplicationConflictDocument = "Raven-Replication-Conflict-Document";
+		public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
+		public const string RavenReplicationDestinations = "Raven/Replication/Destinations";
+		public const string RavenReplicationDestinationsBasePath = "Raven/Replication/Destinations/";
+
+		public const int ChangeHistoryLength = 50;
 	}
 }

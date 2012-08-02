@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Abstractions.Extensions;
@@ -29,8 +30,8 @@ namespace Raven.Bundles.Quotas.Size
 		public SizeQuotaConfiguration(DocumentDatabase database)
 		{
 			this.database = database;
-			var hardLimitQuotaAsString = database.Configuration.Settings["Raven/Quotas/Size/HardLimitInKB"];
-			var marginAsString = database.Configuration.Settings["Raven/Quotas/Size/SoftMarginInKB"];
+			var hardLimitQuotaAsString = database.Configuration.Settings[Constants.SizeHardLimitInKB];
+			var marginAsString = database.Configuration.Settings[Constants.SizeSoftLimitInKB];
 
 			if (int.TryParse(marginAsString, out margin) == false)
 				margin = 1024 * 1024;// 1 MB by default

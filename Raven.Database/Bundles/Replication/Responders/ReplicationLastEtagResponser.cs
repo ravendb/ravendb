@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
 using NLog;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.Replication.Data;
 using Raven.Database.Extensions;
@@ -37,7 +38,7 @@ namespace Raven.Bundles.Replication.Responders
 			}
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var document = Database.Get(ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src, null);
+				var document = Database.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
 
 				SourceReplicationInformation sourceReplicationInformation;
 

@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.Plugins;
 using Raven.Abstractions.Extensions;
@@ -28,8 +29,8 @@ namespace Raven.Bundles.Quotas.Documents
 		public DocQuotaConfiguration(DocumentDatabase database)
 		{
 			this.database = database;
-			var hardLimitQuotaAsString = database.Configuration.Settings["Raven/Quotas/Documents/HardLimit"];
-			var softLimitQuotaAsString = database.Configuration.Settings["Raven/Quotas/Documents/SoftLimit"];
+			var hardLimitQuotaAsString = database.Configuration.Settings[Constants.DocsHardLimit];
+			var softLimitQuotaAsString = database.Configuration.Settings[Constants.DocsSoftLimit];
 
 			if (long.TryParse(hardLimitQuotaAsString, out hardLimit) == false)
 			{

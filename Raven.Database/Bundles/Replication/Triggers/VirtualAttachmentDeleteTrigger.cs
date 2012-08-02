@@ -6,6 +6,7 @@
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -42,14 +43,14 @@ namespace Raven.Bundles.Replication.Triggers
 				var attachment = Database.GetStatic(key);
 				if (attachment == null)
 					return;
-				deletedHistory.Value = attachment.Metadata.Value<RavenJArray>(ReplicationConstants.RavenReplicationHistory) ??
+				deletedHistory.Value = attachment.Metadata.Value<RavenJArray>(Constants.RavenReplicationHistory) ??
 									   new RavenJArray();
 
 				deletedHistory.Value.Add(
 					new RavenJObject
 				{
-					{ReplicationConstants.RavenReplicationVersion, attachment.Metadata[ReplicationConstants.RavenReplicationVersion]},
-					{ReplicationConstants.RavenReplicationSource, attachment.Metadata[ReplicationConstants.RavenReplicationSource]}
+					{Constants.RavenReplicationVersion, attachment.Metadata[Constants.RavenReplicationVersion]},
+					{Constants.RavenReplicationSource, attachment.Metadata[Constants.RavenReplicationSource]}
 				});
 			}
 		}
@@ -61,9 +62,9 @@ namespace Raven.Bundles.Replication.Triggers
 				var metadata = new RavenJObject
 				{
 					{"Raven-Delete-Marker", true},
-					{ReplicationConstants.RavenReplicationHistory, deletedHistory.Value},
-					{ReplicationConstants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
-					{ReplicationConstants.RavenReplicationVersion, HiLo.NextId()}
+					{Constants.RavenReplicationHistory, deletedHistory.Value},
+					{Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
+					{Constants.RavenReplicationVersion, HiLo.NextId()}
 				};
 				deletedHistory.Value = null;
 				Database.PutStatic(key, null, new MemoryStream(new byte[0]), metadata);

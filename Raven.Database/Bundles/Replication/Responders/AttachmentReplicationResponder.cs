@@ -21,6 +21,7 @@ using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Bundles.Replication.Responders
 {
@@ -57,11 +58,11 @@ namespace Raven.Bundles.Replication.Responders
 					foreach (RavenJObject attachment in array)
 					{
 						var metadata = attachment.Value<RavenJObject>("@metadata");
-						if(metadata[ReplicationConstants.RavenReplicationSource] == null)
+						if(metadata[Constants.RavenReplicationSource] == null)
 						{
 							// not sure why, old attachment from when the user didn't have replciation
 							// that we suddenly decided to replicate, choose the source for that
-							metadata[ReplicationConstants.RavenReplicationSource] = RavenJToken.FromObject(src);
+							metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
 						}
 						lastEtag = attachment.Value<byte[]>("@etag");
 						var id = attachment.Value<string>("@id");
@@ -69,7 +70,7 @@ namespace Raven.Bundles.Replication.Responders
 					}
 
 
-					var replicationDocKey = ReplicationConstants.RavenReplicationSourcesBasePath + "/" + src;
+					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
 					var replicationDocument = Database.Get(replicationDocKey,null);
 					var lastDocId = Guid.Empty;
 					if(replicationDocument != null)
@@ -102,13 +103,13 @@ namespace Raven.Bundles.Replication.Responders
 
 			// we just got the same version from the same source - request playback again?
 			// at any rate, not an error, moving on
-			if(existingAttachment.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == metadata.Value<string>(ReplicationConstants.RavenReplicationSource)  
-				&& existingAttachment.Metadata.Value<int>(ReplicationConstants.RavenReplicationVersion) == metadata.Value<int>(ReplicationConstants.RavenReplicationVersion))
+			if(existingAttachment.Metadata.Value<string>(Constants.RavenReplicationSource) == metadata.Value<string>(Constants.RavenReplicationSource)  
+				&& existingAttachment.Metadata.Value<int>(Constants.RavenReplicationVersion) == metadata.Value<int>(Constants.RavenReplicationVersion))
 			{
 				return;
 			}
 			
-			var existingDocumentIsInConflict = existingAttachment.Metadata[ReplicationConstants.RavenReplicationConflict] != null;
+			var existingDocumentIsInConflict = existingAttachment.Metadata[Constants.RavenReplicationConflict] != null;
 			if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics
 				(IsDirectChildOfCurrentAttachment(existingAttachment, metadata))) // this update is direct child of the existing doc, so we are fine with overwriting this
 			{
@@ -131,7 +132,7 @@ namespace Raven.Bundles.Replication.Responders
 				}));
 
 			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata, lastEtag);
-			metadata.Add(ReplicationConstants.RavenReplicationConflict, RavenJToken.FromObject(true));
+			metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
 			actions.Attachments.AddAttachment(newDocumentConflictId, null, new MemoryStream(data), metadata);
 
 			if (existingDocumentIsInConflict) // the existing document is in conflict
@@ -153,7 +154,7 @@ namespace Raven.Bundles.Replication.Responders
 			// move the existing doc to a conflict and create a conflict document
 			var existingDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(existingAttachment.Etag);
 			
-			existingAttachment.Metadata.Add(ReplicationConstants.RavenReplicationConflict, RavenJToken.FromObject(true));
+			existingAttachment.Metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
 			actions.Attachments.AddAttachment(existingDocumentConflictId, null, existingAttachment.Data(), existingAttachment.Metadata);
 			var conflictAttachment = new RavenJObject
 			{
@@ -166,7 +167,7 @@ namespace Raven.Bundles.Replication.Responders
 								memoryStream,
 								new RavenJObject
 								{
-									{ReplicationConstants.RavenReplicationConflict, true},
+									{Constants.RavenReplicationConflict, true},
 									{"@Http-Status-Code", 409},
 									{"@Http-Status-Description", "Conflict"}
 								});
@@ -176,7 +177,7 @@ namespace Raven.Bundles.Replication.Responders
 		{
 			using (var md5 = MD5.Create())
 			{
-				var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(ReplicationConstants.RavenReplicationSource) + "/" + lastEtag);
+				var bytes = Encoding.UTF8.GetBytes(metadata.Value<string>(Constants.RavenReplicationSource) + "/" + lastEtag);
 				return new Guid(md5.ComputeHash(bytes)).ToString();
 			}
 		}
@@ -194,11 +195,11 @@ namespace Raven.Bundles.Replication.Responders
 		{
 			var version = new RavenJObject
 			{
-				{ReplicationConstants.RavenReplicationSource, existingAttachment.Metadata[ReplicationConstants.RavenReplicationSource]},
-				{ReplicationConstants.RavenReplicationVersion, existingAttachment.Metadata[ReplicationConstants.RavenReplicationVersion]},
+				{Constants.RavenReplicationSource, existingAttachment.Metadata[Constants.RavenReplicationSource]},
+				{Constants.RavenReplicationVersion, existingAttachment.Metadata[Constants.RavenReplicationVersion]},
 			};
 
-			var history = metadata[ReplicationConstants.RavenReplicationHistory];
+			var history = metadata[Constants.RavenReplicationHistory];
 			if (history == null) // no history, not a parent
 				return false;
 
