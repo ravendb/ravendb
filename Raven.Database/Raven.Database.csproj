@@ -151,6 +151,9 @@
     <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
     <Compile Include="Bundles\IndexedProperties\IndexedPropertiesTrigger.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
+    <Compile Include="Bundles\Replication\Responders\AttachmentReplicationBehavior.cs" />
+    <Compile Include="Bundles\Replication\Responders\DocumentReplicationBehavior.cs" />
+    <Compile Include="Bundles\Replication\Responders\SingleItemReplicationBehavior.cs" />
     <Compile Include="Bundles\Versioning\Data\VersioningConfiguration.cs" />
     <Compile Include="Bundles\Versioning\Triggers\HideVersionedDocumentsFromIndexingTrigger.cs" />
     <Compile Include="Bundles\Versioning\Triggers\VersioningDeleteTrigger.cs" />
