@@ -66,7 +66,7 @@ namespace Raven.Bundles.Replication.Triggers
 			deletedHistory.Value = null;
 
 			Database.TransactionalStorage.Batch(accessor => 
-				accessor.Lists.Set("Raven/Replication/Docs/Tombstones", key, metadata));
+				accessor.Lists.Set(Constants.RavenReplicationDocsTombstones, key, metadata));
 		}
 	}
 }
