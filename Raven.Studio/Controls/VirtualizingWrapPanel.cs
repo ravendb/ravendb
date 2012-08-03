@@ -24,9 +24,9 @@ namespace Raven.Studio.Controls
         private Point _offset;
         private ItemsControl _itemsControl;
         private readonly Dictionary<UIElement, Rect> _childLayouts = new Dictionary<UIElement, Rect>();
- 
+
         public static readonly DependencyProperty ItemWidthProperty =
-            DependencyProperty.Register("ItemWidth", typeof (double), typeof (VirtualizingWrapPanel), new PropertyMetadata(1.0, HandleItemDimensionChanged));
+            DependencyProperty.Register("ItemWidth", typeof(double), typeof(VirtualizingWrapPanel), new PropertyMetadata(1.0, HandleItemDimensionChanged));
 
         public static readonly DependencyProperty ItemHeightProperty =
             DependencyProperty.Register("ItemHeight", typeof(double), typeof(VirtualizingWrapPanel), new PropertyMetadata(1.0, HandleItemDimensionChanged));
@@ -35,17 +35,7 @@ namespace Raven.Studio.Controls
             DependencyProperty.RegisterAttached("VirtualItemIndex", typeof(int), typeof(VirtualizingWrapPanel), new PropertyMetadata(-1));
         private IRecyclingItemContainerGenerator _itemsGenerator;
 
-        public static readonly DependencyProperty DeferScrollingProperty =
-            DependencyProperty.Register("DeferScrolling", typeof(bool), typeof(VirtualizingWrapPanel), new PropertyMetadata(default(bool)));
-
-        private DeferredActionInvoker _deferredMeasureInvalidation;
         private bool _isInMeasure;
-
-        public bool DeferScrolling
-        {
-            get { return (bool)GetValue(DeferScrollingProperty); }
-            set { SetValue(DeferScrollingProperty, value); }
-        }
 
         private static int GetVirtualItemIndex(DependencyObject obj)
         {
@@ -59,13 +49,13 @@ namespace Raven.Studio.Controls
 
         public double ItemHeight
         {
-            get { return (double) GetValue(ItemHeightProperty); }
+            get { return (double)GetValue(ItemHeightProperty); }
             set { SetValue(ItemHeightProperty, value); }
         }
 
         public double ItemWidth
         {
-            get { return (double) GetValue(ItemWidthProperty); }
+            get { return (double)GetValue(ItemWidthProperty); }
             set { SetValue(ItemWidthProperty, value); }
         }
 
@@ -75,15 +65,12 @@ namespace Raven.Studio.Controls
             {
                 Dispatcher.BeginInvoke(Initialize);
             }
-
-            _deferredMeasureInvalidation = new DeferredActionInvoker(InvalidateMeasure,
-                                                                     TimeSpan.FromSeconds(0.05));
         }
 
         private void Initialize()
         {
             _itemsControl = ItemsControl.GetItemsOwner(this);
-            _itemsGenerator = (IRecyclingItemContainerGenerator) ItemContainerGenerator;
+            _itemsGenerator = (IRecyclingItemContainerGenerator)ItemContainerGenerator;
 
             InvalidateMeasure();
         }
@@ -102,7 +89,6 @@ namespace Raven.Studio.Controls
                 return availableSize;
             }
 
-            _deferredMeasureInvalidation.Cancel();
             _isInMeasure = true;
             _childLayouts.Clear();
 
@@ -202,7 +188,7 @@ namespace Raven.Studio.Controls
             foreach (var child in Children)
             {
                 var virtualItemIndex = GetVirtualItemIndex(child);
-                
+
                 if (virtualItemIndex < layoutInfo.FirstRealizedItemIndex || virtualItemIndex > layoutInfo.LastRealizedItemIndex)
                 {
                     var generatorPosition = _itemsGenerator.GeneratorPositionFromIndex(virtualItemIndex);
@@ -260,7 +246,8 @@ namespace Raven.Studio.Controls
 
             // we need to ensure that there is one realized item prior to the first visible item, and one after the last visible item,
             // so that keyboard navigation works properly. For example, when focus is on the first visible item, and the user
-            // navigates up, the ListBox selects the previous item, and the scrolls that into view - and this triggers the loading of the rest of the items
+            // navigates up, the ListBox selects the previous item, and the scrolls that into view - and this triggers the loading of the rest of the items 
+            // in that row
 
             var firstVisibleLine = (int)Math.Floor(VerticalOffset / itemHeight);
 
@@ -291,15 +278,15 @@ namespace Raven.Studio.Controls
 
             var itemsPerLine = Math.Max((int)Math.Floor(viewPortSize.Width / ItemWidth), 1);
             var totalLines = (int)Math.Ceiling((double)_itemsControl.Items.Count / itemsPerLine);
-            var extentHeight = Math.Max(totalLines*ItemHeight, viewPortSize.Height);
+            var extentHeight = Math.Max(totalLines * ItemHeight, viewPortSize.Height);
 
             return new ExtentInfo()
-                       {
-                           ItemsPerLine = itemsPerLine,
-                           TotalLines = totalLines,
-                           ExtentHeight = extentHeight,
-                           MaxVerticalOffset = extentHeight - viewPortSize.Height,
-                       };
+            {
+                ItemsPerLine = itemsPerLine,
+                TotalLines = totalLines,
+                ExtentHeight = extentHeight,
+                MaxVerticalOffset = extentHeight - viewPortSize.Height,
+            };
         }
 
         public void LineUp()
@@ -387,15 +374,7 @@ namespace Raven.Studio.Controls
             _offset = new Point(_offset.X, offset);
 
             InvalidateScrollInfo();
-
-            if (DeferScrolling)
-            {
-                _deferredMeasureInvalidation.Request();
-            }
-            else
-            {
-                InvalidateMeasure();
-            }
+            InvalidateMeasure();
         }
 
         public Rect MakeVisible(UIElement visual, Rect rectangle)
@@ -410,19 +389,21 @@ namespace Raven.Studio.Controls
 
         public bool CanVerticallyScroll
         {
-            get; set;
+            get;
+            set;
         }
 
         public bool CanHorizontallyScroll
         {
-            get; set;
+            get;
+            set;
         }
-        
+
         public double ExtentWidth
         {
             get { return _extentSize.Width; }
         }
-        
+
         public double ExtentHeight
         {
             get { return _extentSize.Height; }
@@ -450,7 +431,8 @@ namespace Raven.Studio.Controls
 
         public ScrollViewer ScrollOwner
         {
-            get; set;
+            get;
+            set;
         }
 
         private void InvalidateScrollInfo()
