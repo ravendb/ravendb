@@ -21,10 +21,11 @@ namespace Raven.Storage.Managed
 			this.generator = generator;
 		}
 
-		public void Add(string name, string key, RavenJObject data)
+		public void Set(string name, string key, RavenJObject data)
 		{
 			var memoryStream = new MemoryStream();
 			data.WriteTo(memoryStream);
+			
 			storage.Lists.Put(new RavenJObject
 			{
 				{"name", name},

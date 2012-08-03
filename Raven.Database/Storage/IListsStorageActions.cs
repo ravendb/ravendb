@@ -6,7 +6,7 @@ namespace Raven.Database.Storage
 {
 	public interface IListsStorageActions
 	{
-		void Add(string name, string key, RavenJObject data);
+		void Set(string name, string key, RavenJObject data);
 		
 		void Remove(string name, string key);
 

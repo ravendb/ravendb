@@ -17,9 +17,16 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IListsStorageActions
 	{
-		public void Add(string name, string key, RavenJObject data)
+		public void Set(string name, string key, RavenJObject data)
 		{
-			using (var update = new Update(session, Lists, JET_prep.Insert))
+			Api.JetSetCurrentIndex(session, Lists, "by_name_and_key");
+			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Lists, key, Encoding.Unicode, MakeKeyGrbit.None);
+
+			var exists = Api.TrySeek(session, Lists, SeekGrbit.SeekEQ);
+
+
+			using (var update = new Update(session, Lists, exists ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["name"], name, Encoding.Unicode);
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["key"], key, Encoding.Unicode);

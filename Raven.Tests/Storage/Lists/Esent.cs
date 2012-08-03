@@ -35,7 +35,7 @@ namespace Raven.Tests.Storage.Lists
 		[Fact]
 		public void CanAddAndReadByKey()
 		{
-			db.TransactionalStorage.Batch(actions => actions.Lists.Add("items", "1", new RavenJObject
+			db.TransactionalStorage.Batch(actions => actions.Lists.Set("items", "1", new RavenJObject
 			{
 				{"test", "data"}
 			}));
@@ -51,7 +51,7 @@ namespace Raven.Tests.Storage.Lists
 		[Fact]
 		public void CanAddAndRemove()
 		{
-			db.TransactionalStorage.Batch(actions => actions.Lists.Add("items", "1", new RavenJObject
+			db.TransactionalStorage.Batch(actions => actions.Lists.Set("items", "1", new RavenJObject
 			{
 				{"test", "data"}
 			}));
@@ -74,7 +74,7 @@ namespace Raven.Tests.Storage.Lists
 			for (int i = 0; i < 10; i++)
 			{
 				db.TransactionalStorage.Batch(
-					actions => actions.Lists.Add("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
+					actions => actions.Lists.Set("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i}
 					}));
@@ -98,7 +98,7 @@ namespace Raven.Tests.Storage.Lists
 			for (int i = 0; i < 10; i++)
 			{
 				db.TransactionalStorage.Batch(
-					actions => actions.Lists.Add("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
+					actions => actions.Lists.Set("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i}
 					}));
@@ -129,13 +129,13 @@ namespace Raven.Tests.Storage.Lists
 			for (int i = 0; i < 10; i++)
 			{
 				db.TransactionalStorage.Batch(
-					actions => actions.Lists.Add("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
+					actions => actions.Lists.Set("items", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i}
 					}));
 
 				db.TransactionalStorage.Batch(
-					actions => actions.Lists.Add("another", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
+					actions => actions.Lists.Set("another", i.ToString(CultureInfo.InvariantCulture), new RavenJObject
 					{
 						{"i", i*2}
 					}));
