@@ -55,6 +55,11 @@ namespace Raven.Database.Indexing
 			lastQueryTime = DateTime.UtcNow;
 		}
 
+		public void MarkQueried(DateTime time)
+		{
+			lastQueryTime = time;
+		}
+
 		private int docCountSinceLastOptimization;
 
 		private readonly ConcurrentDictionary<string, IIndexExtension> indexExtensions =
@@ -68,8 +73,6 @@ namespace Raven.Database.Indexing
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
-		public DateTime? LastQueryTimestamp { get; set; }
-
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
 		{
