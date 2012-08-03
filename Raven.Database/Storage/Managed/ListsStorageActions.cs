@@ -46,7 +46,7 @@ namespace Raven.Storage.Managed
 			storage.Lists.Remove(readResult.Key);
 		}
 
-		public IEnumerable<Tuple<Guid, RavenJObject>> Read(string name, Guid start, int take)
+		public IEnumerable<ListItem> Read(string name, Guid start, int take)
 		{
 			return storage.Lists["ByNameAndEtag"].SkipAfter(new RavenJObject
 			{
@@ -57,9 +57,12 @@ namespace Raven.Storage.Managed
 			.Select(result =>
 			{
 				var readResult = storage.Lists.Read(result);
-				return Tuple.Create(
-					new Guid(readResult.Key.Value<byte[]>("etag")),
-					readResult.Data().ToJObject());
+				return new ListItem
+				{
+					Data = readResult.Data().ToJObject(),
+					Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+					Key = readResult.Key.Value<string>("key")
+				};
 			})
 			.Take(take);
 		}

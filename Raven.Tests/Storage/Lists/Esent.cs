@@ -87,7 +87,7 @@ namespace Raven.Tests.Storage.Lists
 				Assert.Equal(10, list.Count);
 				for (int i = 0; i < 10; i++)
 				{
-					Assert.Equal(i, list[i].Item2.Value<int>("i"));
+					Assert.Equal(i, list[i].Data.Value<int>("i"));
 				}
 			});
 		}
@@ -111,14 +111,14 @@ namespace Raven.Tests.Storage.Lists
 				Assert.Equal(5, list.Count);
 				for (int i = 0; i < 5; i++)
 				{
-					Assert.Equal(i, list[i].Item2.Value<int>("i"));
+					Assert.Equal(i, list[i].Data.Value<int>("i"));
 				}
 
-				list = actions.Lists.Read("items", list.Last().Item1, 5).ToList();
+				list = actions.Lists.Read("items", list.Last().Etag, 5).ToList();
 				Assert.Equal(5, list.Count);
 				for (int i = 0; i < 5; i++)
 				{
-					Assert.Equal(i+5, list[i].Item2.Value<int>("i"));
+					Assert.Equal(i+5, list[i].Data.Value<int>("i"));
 				}
 			});
 		}
@@ -147,7 +147,7 @@ namespace Raven.Tests.Storage.Lists
 				Assert.Equal(10, list.Count);
 				for (int i = 0; i < 10; i++)
 				{
-					Assert.Equal(i, list[i].Item2.Value<int>("i"));
+					Assert.Equal(i, list[i].Data.Value<int>("i"));
 				}
 			});
 		}

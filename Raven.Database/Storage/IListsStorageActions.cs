@@ -10,8 +10,15 @@ namespace Raven.Database.Storage
 		
 		void Remove(string name, string key);
 
-		IEnumerable<Tuple<Guid, RavenJObject>> Read(string name, Guid start, int take);
+		IEnumerable<ListItem> Read(string name, Guid start, int take);
 
 		RavenJObject Read(string name, string key);
+	}
+
+	public class ListItem
+	{
+		public string Key;
+		public Guid Etag;
+		public RavenJObject Data;
 	}
 }

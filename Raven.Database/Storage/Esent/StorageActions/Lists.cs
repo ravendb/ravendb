@@ -50,7 +50,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.JetDelete(session, Lists);
 		}
 
-		public IEnumerable<Tuple<Guid, RavenJObject>> Read(string name, Guid start, int take)
+		public IEnumerable<ListItem> Read(string name, Guid start, int take)
 		{
 			Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
 			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -69,7 +69,12 @@ namespace Raven.Storage.Esent.StorageActions
 				var etag = Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]).TransfromToGuidWithProperSorting();
 				using (Stream stream = new BufferedStream(new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"])))
 				{
-					yield return Tuple.Create(etag, stream.ToJObject());
+					yield return new ListItem
+					{
+						Etag = etag,
+						Data = stream.ToJObject(),
+						Key = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["key"], Encoding.Unicode)
+					};
 				}
 			} while (Api.TryMoveNext(session, Lists) && count < take);
 		
