@@ -19,9 +19,10 @@ namespace Raven.Studio.Infrastructure
     /// <typeparam name="T"></typeparam>
     /// <remarks>The trick to ensuring that the silverlight datagrid doesn't attempt to enumerate all
     /// items from its DataSource in one shot is to implement both IList and ICollectionView.</remarks>
-    public class VirtualCollection<T> : IList<VirtualItem<T>>, IList, ICollectionView, INotifyPropertyChanged, IEnquireAboutItemVisibility where T : class
+    public class VirtualCollection<T> : IList<VirtualItem<T>>, IList, ICollectionView, INotifyPropertyChanged,
+                                        IEnquireAboutItemVisibility where T : class
     {
-        const int IndividualItemNotificationLimit = 100;
+        private const int IndividualItemNotificationLimit = 100;
         private const int MaxConcurrentPageRequests = 4;
 
         public event NotifyCollectionChangedEventHandler CollectionChanged;
@@ -58,7 +59,8 @@ namespace Raven.Studio.Infrastructure
 
         }
 
-        public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize, int cachedPages, IEqualityComparer<T> equalityComparer)
+        public VirtualCollection(IVirtualCollectionSource<T> source, int pageSize, int cachedPages,
+                                 IEqualityComparer<T> equalityComparer)
         {
             if (pageSize < 1)
             {
@@ -82,7 +84,10 @@ namespace Raven.Studio.Infrastructure
             (_sortDescriptions as INotifyCollectionChanged).CollectionChanged += HandleSortDescriptionsChanged;
         }
 
-        public IVirtualCollectionSource<T> Source { get { return _source; } }
+        public IVirtualCollectionSource<T> Source
+        {
+            get { return _source; }
+        }
         public CultureInfo Culture { get; set; }
 
         public IEnumerable SourceCollection
@@ -181,7 +186,7 @@ namespace Raven.Studio.Infrastructure
 
         public void RealizeItemRequested(int index)
         {
-            var page = index / _pageSize;
+            var page = index/_pageSize;
             BeginGetPage(page);
         }
 
@@ -202,7 +207,7 @@ namespace Raven.Studio.Infrastructure
         {
             _requestedPages.Remove(e.Item);
             _fetchedPages.Remove(e.Item);
-            _virtualItems.RemoveRange(e.Item * _pageSize, _pageSize);
+            _virtualItems.RemoveRange(e.Item*_pageSize, _pageSize);
         }
 
         private SparseList<VirtualItem<T>> CreateItemsCache(int fetchPageSize)
@@ -217,7 +222,7 @@ namespace Raven.Studio.Infrastructure
             if (pageSize < TargetSparseListPageSize)
             {
                 // make pageSize the smallest multiple of fetchPageSize that is bigger than TargetSparseListPageSize
-                pageSize = (int)Math.Ceiling((double)TargetSparseListPageSize / pageSize) * pageSize;
+                pageSize = (int) Math.Ceiling((double) TargetSparseListPageSize/pageSize)*pageSize;
             }
 
             return new SparseList<VirtualItem<T>>(pageSize);
@@ -247,8 +252,8 @@ namespace Raven.Studio.Infrastructure
         {
             foreach (var page in _fetchedPages)
             {
-                var startIndex = page * _pageSize;
-                var endIndex = (page + 1) * _pageSize;
+                var startIndex = page*_pageSize;
+                var endIndex = (page + 1)*_pageSize;
 
                 for (int i = startIndex; i < endIndex; i++)
                 {
@@ -268,14 +273,8 @@ namespace Raven.Studio.Infrastructure
             }
 
             _mostRecentlyRequestedPages.Add(page);
-
             _requestedPages.Add(page);
 
-            ScheduleRequest(page);
-        }
-
-        private void ScheduleRequest(int page)
-        {
             _pendingPageRequests.Push(new PageRequest(page, _state));
 
             ProcessPageRequests();
@@ -304,7 +303,7 @@ namespace Raven.Studio.Infrastructure
 
                 _inProcessPageRequests++;
 
-                _source.GetPageAsync(request.Page * _pageSize, _pageSize, _sortDescriptions).ContinueWith(
+                _source.GetPageAsync(request.Page*_pageSize, _pageSize, _sortDescriptions).ContinueWith(
                     t =>
                     {
                         if (!t.IsFaulted)
@@ -337,7 +336,7 @@ namespace Raven.Studio.Infrastructure
                 return;
             }
 
-            var startIndex = page * _pageSize;
+            var startIndex = page*_pageSize;
 
             for (int i = 0; i < _pageSize; i++)
             {
@@ -371,13 +370,14 @@ namespace Raven.Studio.Infrastructure
 
             _fetchedPages.Add(page);
 
-            var startIndex = page * _pageSize;
+            var startIndex = page*_pageSize;
 
             for (int i = 0; i < results.Count; i++)
             {
                 var index = startIndex + i;
                 var virtualItem = _virtualItems[index] ?? (_virtualItems[index] = new VirtualItem<T>(this, index));
-                if (virtualItem.Item == null || results[i] == null || !_equalityComparer.Equals(virtualItem.Item, results[i]))
+                if (virtualItem.Item == null || results[i] == null ||
+                    !_equalityComparer.Equals(virtualItem.Item, results[i]))
                 {
                     virtualItem.SupplyValue(results[i]);
                 }
@@ -410,8 +410,8 @@ namespace Raven.Studio.Infrastructure
 
             if (queryItemVisibilityArgs.FirstVisibleIndex.HasValue)
             {
-                var firstVisiblePage = queryItemVisibilityArgs.FirstVisibleIndex.Value / _pageSize;
-                var lastVisiblePage = queryItemVisibilityArgs.LastVisibleIndex.Value / _pageSize;
+                var firstVisiblePage = queryItemVisibilityArgs.FirstVisibleIndex.Value/_pageSize;
+                var lastVisiblePage = queryItemVisibilityArgs.LastVisibleIndex.Value/_pageSize;
 
                 int numberOfVisiblePages = lastVisiblePage - firstVisiblePage + 1;
                 EnsurePageCacheSize(numberOfVisiblePages);
@@ -423,8 +423,8 @@ namespace Raven.Studio.Infrastructure
             }
             else
             {
-                // in this case we have no way of knowing which items are currenly visible,
-                // so we signal a collection reset, and wait to see which pages are requested
+                // in this case we have no way of knowing which items are currently visible,
+                // so we signal a collection reset, and wait to see which pages are requested by the UI
                 OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
             }
         }
@@ -444,10 +444,12 @@ namespace Raven.Studio.Infrastructure
                 return;
             }
 
+            _state++;
+
             foreach (var page in _fetchedPages)
             {
-                var startIndex = page * _pageSize;
-                var endIndex = (page + 1) * _pageSize;
+                var startIndex = page*_pageSize;
+                var endIndex = (page + 1)*_pageSize;
 
                 for (int i = startIndex; i < endIndex; i++)
                 {
@@ -545,7 +547,11 @@ namespace Raven.Studio.Infrastructure
         {
             _isRefreshDeferred = true;
 
-            return new Disposer(() => { _isRefreshDeferred = false; Refresh(); });
+            return new Disposer(() =>
+            {
+                _isRefreshDeferred = false;
+                Refresh();
+            });
         }
 
         public bool MoveCurrentToFirst()
@@ -570,7 +576,7 @@ namespace Raven.Studio.Infrastructure
 
         public bool MoveCurrentTo(object item)
         {
-            return MoveCurrentToPosition(((IList)this).IndexOf(item));
+            return MoveCurrentToPosition(((IList) this).IndexOf(item));
         }
 
         public bool MoveCurrentToPosition(int position)
