@@ -502,7 +502,7 @@ namespace Raven.Bundles.Replication.Tasks
 					                                  		{"@etag", x.Etag.ToByteArray()},
 					                                  		{"data", actions.Attachments.GetAttachment(x.Key).Data().ReadData()}
 					                                  	})
-					                                  	.Concat(actions.Lists.Read("Raven/Replication/Attachment/Tombstones",
+					                                  	.Concat(actions.Lists.Read(Constants.RavenReplicationAttachmentsTombstones,
 					                                  	                           lastAttachmentEtag, 100)
 					                                  	        	.Select(x => new RavenJObject
 					                                  	        	{
