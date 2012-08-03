@@ -27,6 +27,7 @@ namespace Raven.Studio.Models
 	    private IObservable<IndexChangeNotification> indexChanges;
 
         private readonly CompositeDisposable disposable = new CompositeDisposable();
+	    private IDatabaseChanges databaseChanges;
 
 	    public Observable<TaskModel> SelectedTask { get; set; }
 
@@ -101,14 +102,16 @@ namespace Raven.Studio.Models
             }
 	    }
 
-	    public IDatabaseChanges Changes()
+        public IDatabaseChanges Changes()
         {
-        	return name == Constants.SystemDatabase ? 
-				documentStore.Changes() : 
-				documentStore.Changes(name);
+            return databaseChanges ??
+                   (databaseChanges =
+                    name == Constants.SystemDatabase
+                        ? documentStore.Changes()
+                        : documentStore.Changes(name));
         }
 
-		public IAsyncDatabaseCommands AsyncDatabaseCommands
+	    public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
 			get { return asyncDatabaseCommands; }
 		}
@@ -137,6 +140,10 @@ namespace Raven.Studio.Models
 	    public void Dispose()
 	    {
 	        disposable.Dispose();
+
+            using ((IDisposable)databaseChanges)
+            {
+            }
 	    }
 	}
 }
