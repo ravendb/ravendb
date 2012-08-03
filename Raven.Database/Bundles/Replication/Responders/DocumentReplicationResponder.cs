@@ -91,80 +91,13 @@ namespace Raven.Bundles.Replication.Responders
 
 		private void ReplicateDocument(IStorageActionsAccessor actions, string id, RavenJObject metadata, RavenJObject document, string src)
 		{
-			var existingDoc = actions.Documents.DocumentByKey(id, null);
-			if (existingDoc == null)
+			new DocumentReplicationBehavior
 			{
-				log.Debug("New document {0} replicated successfully from {1}", id, src);
-				actions.Documents.AddDocument(id, Guid.Empty, document, metadata);
-				return;
-			}
-
-			// we just got the same version from the same source - request playback again?
-			// at any rate, not an error, moving on
-			if (existingDoc.Metadata.Value<string>(Constants.RavenReplicationSource) == metadata.Value<string>(Constants.RavenReplicationSource)
-				&& existingDoc.Metadata.Value<int>(Constants.RavenReplicationVersion) == metadata.Value<int>(Constants.RavenReplicationVersion))
-			{
-				return;
-			}
-			
-			
-			var existingDocumentIsInConflict = existingDoc.Metadata[Constants.RavenReplicationConflict] != null;
-			if (existingDocumentIsInConflict == false &&                    // if the current document is not in conflict, we can continue without having to keep conflict semantics
-				(IsDirectChildOfCurrentDocument(existingDoc, metadata))) // this update is direct child of the existing doc, so we are fine with overwriting this
-			{
-				log.Debug("Existing document {0} replicated successfully from {1}", id, src);
-				actions.Documents.AddDocument(id, null, document, metadata);
-				return;
-			}
-
-			if (ReplicationConflictResolvers.Any(replicationConflictResolver => replicationConflictResolver.TryResolve(id, metadata, document, existingDoc)))
-			{
-				actions.Documents.AddDocument(id, null, document, metadata);
-				return;
-			}
-
-			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSyncronization(() =>
-				Database.RaiseNotifications(new DocumentChangeNotification()
-				{
-					Name = id,
-					Type = DocumentChangeTypes.ReplicationConflict
-				}));
-
-			metadata[Constants.RavenReplicationConflictDocument] = true;
-			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata);
-			metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
-			actions.Documents.AddDocument(newDocumentConflictId, null, document, metadata);
-
-			if (existingDocumentIsInConflict) // the existing document is in conflict
-			{
-				log.Debug("Conflicted document {0} has a new version from {1}, adding to conflicted documents", id, src);
-				
-				// just update the current doc with the new conflict document
-				existingDoc.DataAsJson.Value<RavenJArray>("Conflicts").Add(RavenJToken.FromObject(newDocumentConflictId));
-				actions.Documents.AddDocument(id, existingDoc.Etag, existingDoc.DataAsJson, existingDoc.Metadata);
-				return;
-			}
-			log.Debug("Existing document {0} is in conflict with replicated version from {1}, marking document as conflicted", id, src);
-				
-			// we have a new conflict
-			// move the existing doc to a conflict and create a conflict document
-			var existingDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(existingDoc.Etag ?? Guid.Empty);
-			
-			existingDoc.Metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
-			actions.Documents.AddDocument(existingDocumentConflictId, null, existingDoc.DataAsJson, existingDoc.Metadata);
-			actions.Documents.AddDocument(id, null,
-			                              new RavenJObject
-			                              {
-			                              	{
-			                              	"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)
-			                              	}
-			                              },
-			                              new RavenJObject
-			                              {
-			                              	{Constants.RavenReplicationConflict, true},
-			                              	{"@Http-Status-Code", 409},
-			                              	{"@Http-Status-Description", "Conflict"}
-			                              });
+				Actions = actions,
+				Database = Database,
+				ReplicationConflictResolvers = ReplicationConflictResolvers,
+				Src = src
+			}.Replicate(id, metadata, document);
 		}
 
 		private static string HashReplicationIdentifier(RavenJObject metadata)
