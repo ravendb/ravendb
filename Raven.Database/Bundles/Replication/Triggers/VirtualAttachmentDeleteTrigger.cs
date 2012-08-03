@@ -59,6 +59,7 @@ namespace Raven.Bundles.Replication.Triggers
 		{
 			var metadata = new RavenJObject
 			{
+				{Constants.RavenDeleteMarker, true},
 				{Constants.RavenReplicationHistory, deletedHistory.Value},
 				{Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
 				{Constants.RavenReplicationVersion, HiLo.NextId()}

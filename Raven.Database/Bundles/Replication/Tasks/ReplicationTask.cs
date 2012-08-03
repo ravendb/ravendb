@@ -24,6 +24,7 @@ using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
+using Raven.Munin;
 
 namespace Raven.Bundles.Replication.Tasks
 {
@@ -414,8 +415,19 @@ namespace Raven.Bundles.Replication.Tasks
 					Guid lastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 					while (true)
 					{
-						docsToReplicate = actions.Documents.GetDocumentsAfter(lastDocumentEtag, 100).ToList();
-						filteredDocsToReplicate = docsToReplicate.Where(document => destination.FilterDocuments(document, destinationId)).ToList();
+						docsToReplicate = actions.Documents.GetDocumentsAfter(lastDocumentEtag, 100)
+							.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", lastDocumentEtag, 100)
+							        	.Select(x => new JsonDocument
+							        	{
+							        		Etag = x.Etag,
+							        		Key = x.Key,
+							        		Metadata = x.Data,
+							        		DataAsJson = new RavenJObject()
+							        	}))
+							.OrderBy(x => x.Etag)
+							.ToList();
+						;
+						filteredDocsToReplicate = docsToReplicate.Where(document => destination.FilterDocuments(destinationId, document.Key, document.Metadata)).ToList();
 
 						docsSinceLastReplEtag += docsToReplicate.Count;
 
@@ -428,7 +440,7 @@ namespace Raven.Bundles.Replication.Tasks
 						JsonDocument jsonDocument = docsToReplicate.Last();
 						Debug.Assert(jsonDocument.Etag != null);
 						Guid documentEtag = jsonDocument.Etag.Value;
-						log.Debug("All the docs were filtered, trying another batch from etag [>{0}]", docsToReplicate);
+						log.Debug("All the docs were filtered, trying another batch from etag [>{0}]", documentEtag);
 						lastDocumentEtag = documentEtag;
 					}
 
@@ -472,26 +484,40 @@ namespace Raven.Bundles.Replication.Tasks
 		private RavenJArray GetAttachments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
 		{
 			RavenJArray jsonAttachments = null;
+			var lastAttachmentEtag = destinationsReplicationInformationForSource.LastAttachmentEtag;
 			try
 			{
 				string destinationInstanceId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(destinationsReplicationInformationForSource.LastAttachmentEtag,100)
-						.Where(information => destination.FilterAttachments(information, destinationInstanceId))
-						.Select(x => new RavenJObject
-						{
-							{"@metadata", x.Metadata},
-							{"@id", x.Key},
-							{"@etag", x.Etag.ToByteArray()},
-							{"data", actions.Attachments.GetAttachment(x.Key).Data().ReadData()}
-						}));
+					jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100)
+					                                  	.Where(
+					                                  		information =>
+					                                  		destination.FilterAttachments(information, destinationInstanceId))
+					                                  	.Select(x => new RavenJObject
+					                                  	{
+					                                  		{"@metadata", x.Metadata},
+					                                  		{"@id", x.Key},
+					                                  		{"@etag", x.Etag.ToByteArray()},
+					                                  		{"data", actions.Attachments.GetAttachment(x.Key).Data().ReadData()}
+					                                  	})
+					                                  	.Concat(actions.Lists.Read("Raven/Replication/Attachment/Tombstones",
+					                                  	                           lastAttachmentEtag, 100)
+					                                  	        	.Select(x => new RavenJObject
+					                                  	        	{
+					                                  	        		{"@metadata", x.Data},
+					                                  	        		{"@id", x.Key},
+					                                  	        		{"@etag", x.Etag.ToByteArray()},
+					                                  	        		{"data", new byte[0]}
+					                                  	        	}))
+					                                  	.OrderBy(x => new ComparableByteArray(x.Value<byte[]>("@etag")))
+						);
 				});
 			}
 			catch (Exception e)
 			{
-				log.WarnException("Could not get attachments to replicate after: " + destinationsReplicationInformationForSource.LastAttachmentEtag, e);
+				log.WarnException("Could not get attachments to replicate after: " + lastAttachmentEtag, e);
 			}
 			return jsonAttachments;
 		}
@@ -608,25 +634,25 @@ namespace Raven.Bundles.Replication.Tasks
 
 	public class ReplicationStrategy
 	{
-		public bool FilterDocuments(JsonDocument document, string destinationId)
+		public bool FilterDocuments(string destinationId, string key, RavenJObject metadata)
 		{
-			if (document.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)) // don't replicate system docs
+			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)) // don't replicate system docs
 			{
-				if (document.Key.StartsWith("Raven/Hilo/", StringComparison.InvariantCultureIgnoreCase) == false) // except for hilo documents
+				if (key.StartsWith("Raven/Hilo/", StringComparison.InvariantCultureIgnoreCase) == false) // except for hilo documents
 					return false;
 			}
-			if (document.Metadata.ContainsKey(Constants.NotForReplication) && document.Metadata.Value<bool>(Constants.NotForReplication)) // not explicitly marked to skip
+			if (metadata.ContainsKey(Constants.NotForReplication) && metadata.Value<bool>(Constants.NotForReplication)) // not explicitly marked to skip
 				return false;
-			if (document.Metadata[Constants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propagate the conflict
+			if (metadata[Constants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propagate the conflict
 				return false;
 
-			if (document.Metadata.Value<string>(Constants.RavenReplicationSource) == destinationId) // prevent replicating back to source
+			if (metadata.Value<string>(Constants.RavenReplicationSource) == destinationId) // prevent replicating back to source
 				return false;
 
 			switch (ReplicationOptionsBehavior)
 			{
 				case TransitiveReplicationOptions.None:
-					var value = document.Metadata.Value<string>(Constants.RavenReplicationSource);
+					var value = metadata.Value<string>(Constants.RavenReplicationSource);
 					var replicateDoc = value == null || (value == CurrentDatabaseId);
 					return replicateDoc;
 			}
