@@ -212,6 +212,8 @@ namespace Raven.Client.Document
 #endif
 )
 				{
+					AssertNoNonUniqueInstance(instance, id);
+
 					var jsonDocument = GetJsonDocument(id);
 					entitiesByKey[id] = instance;
 					entitiesAndMetadata[instance] = value = new DocumentMetadata
