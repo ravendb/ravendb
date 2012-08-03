@@ -123,7 +123,7 @@ namespace Raven.Database.Indexing
 						if (read == null)
 							return;
 
-						var dateTime = read.Value<DateTime>("LastQueryTime");
+						var dateTime = read.Data.Value<DateTime>("LastQueryTime");
 						indexImplementation.MarkQueried(dateTime);
 						if (dateTime > latestPersistedQueryTime)
 							latestPersistedQueryTime = dateTime;

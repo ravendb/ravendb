@@ -67,7 +67,7 @@ namespace Raven.Storage.Managed
 			.Take(take);
 		}
 
-		public RavenJObject Read(string name, string key)
+		public ListItem Read(string name, string key)
 		{
 			var readResult = storage.Lists.Read(new RavenJObject
 			{
@@ -78,7 +78,12 @@ namespace Raven.Storage.Managed
 			if (readResult == null)
 				return null;
 
-			return readResult.Data().ToJObject();
+			return new ListItem
+			{
+				Data = readResult.Data().ToJObject(),
+				Key = readResult.Key.Value<string>("key"),
+				Etag = new Guid(readResult.Key.Value<byte[]>("etag"))
+			};
 		}
 	}
 }

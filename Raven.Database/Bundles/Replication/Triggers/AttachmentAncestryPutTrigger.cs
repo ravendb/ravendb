@@ -67,9 +67,10 @@ namespace Raven.Bundles.Replication.Triggers
 			RavenJObject result = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				result = accessor.Lists.Read(Constants.RavenReplicationAttachmentsTombstones, key);
-				if (result == null)
+				var tombstone = accessor.Lists.Read(Constants.RavenReplicationAttachmentsTombstones, key);
+				if (tombstone == null)
 					return;
+				result = tombstone.Data;
 				accessor.Lists.Remove(Constants.RavenReplicationAttachmentsTombstones, key);
 			});
 

@@ -43,7 +43,7 @@ namespace Raven.Tests.Storage.Lists
 			db.TransactionalStorage.Batch(actions =>
 			{
 				var ravenJObject = actions.Lists.Read("items", "1");
-				Assert.Equal("data", ravenJObject.Value<string>("test"));
+				Assert.Equal("data", ravenJObject.Data.Value<string>("test"));
 			});
 		}
 
@@ -59,7 +59,7 @@ namespace Raven.Tests.Storage.Lists
 			db.TransactionalStorage.Batch(actions =>
 			{
 				var ravenJObject = actions.Lists.Read("items", "1");
-				Assert.Equal("data", ravenJObject.Value<string>("test"));
+				Assert.Equal("data", ravenJObject.Data.Value<string>("test"));
 			});
 
 			db.TransactionalStorage.Batch(actions => actions.Lists.Remove("items", "1"));

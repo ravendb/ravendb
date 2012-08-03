@@ -12,7 +12,7 @@ namespace Raven.Database.Storage
 
 		IEnumerable<ListItem> Read(string name, Guid start, int take);
 
-		RavenJObject Read(string name, string key);
+		ListItem Read(string name, string key);
 	}
 
 	public class ListItem
