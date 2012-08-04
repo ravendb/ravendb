@@ -13,9 +13,9 @@ namespace Raven.Bundles.Replication.Responders
 	{
 		public IEnumerable<AbstractAttachmentReplicationConflictResolver> ReplicationConflictResolvers { get; set; }
 
-		protected override void AddWithoutConflict(string id, RavenJObject metadata, byte[] incoming)
+		protected override void AddWithoutConflict(string id, Guid? etag, RavenJObject metadata, byte[] incoming)
 		{
-			Actions.Attachments.AddAttachment(id, Guid.Empty, new MemoryStream(incoming), metadata);
+			Actions.Attachments.AddAttachment(id, etag, new MemoryStream(incoming), metadata);
 		}
 
 		protected override void CreateConflict(string id, string newDocumentConflictId, string existingDocumentConflictId, Attachment existingItem, RavenJObject existingMetadata)

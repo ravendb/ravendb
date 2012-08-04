@@ -27,7 +27,7 @@ namespace Raven.Bundles.Replication.Responders
 			if (existingMetadata == null)
 			{
 				log.Debug("New item {0} replicated successfully from {1}", id, Src);
-				AddWithoutConflict(id, metadata, incoming);
+				AddWithoutConflict(id, null, metadata, incoming);
 				return;
 			}
 
@@ -46,13 +46,13 @@ namespace Raven.Bundles.Replication.Responders
 			    (IsDirectChildOfCurrent(metadata, existingMetadata))) // this update is direct child of the existing doc, so we are fine with overwriting this
 			{
 				log.Debug("Existing item {0} replicated successfully from {1}", id, Src);
-				AddWithoutConflict(id, metadata, incoming);
+				AddWithoutConflict(id, existingEtag, metadata, incoming);
 				return;
 			}
 
 			if (TryResolveConflict(id, metadata, incoming, existingItem))
 			{
-				AddWithoutConflict(id, metadata, incoming);
+				AddWithoutConflict(id, existingEtag, metadata, incoming);
 				return;
 			}
 
@@ -66,7 +66,7 @@ namespace Raven.Bundles.Replication.Responders
 			metadata[Constants.RavenReplicationConflictDocument] = true;
 			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata);
 			metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
-			AddWithoutConflict(id, metadata, incoming);
+			AddWithoutConflict(id, existingEtag, metadata, incoming);
 
 			if (existingDocumentIsInConflict) // the existing document is in conflict
 			{
@@ -84,7 +84,7 @@ namespace Raven.Bundles.Replication.Responders
 			CreateConflict(id, newDocumentConflictId, existingDocumentConflictId, existingItem, existingMetadata);
 		}
 
-		protected abstract void AddWithoutConflict(string id, RavenJObject metadata, TExternal incoming);
+		protected abstract void AddWithoutConflict(string id, Guid? etag, RavenJObject metadata, TExternal incoming);
 
 		protected abstract void CreateConflict(string id, string newDocumentConflictId, string existingDocumentConflictId, TInternal existingItem, RavenJObject existingMetadata);
 
