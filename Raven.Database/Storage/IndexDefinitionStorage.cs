@@ -212,9 +212,10 @@ namespace Raven.Database.Storage
 
 		public IndexCreationOptions FindIndexCreationOptions(IndexDefinition indexDef)
 		{
-			if (indexCache.ContainsKey(indexDef.Name))
+			var indexDefinition = GetIndexDefinition(indexDef.Name);
+			if (indexDefinition != null)
 			{
-				return GetIndexDefinition(indexDef.Name).Equals(indexDef)
+				return indexDefinition.Equals(indexDef)
 					? IndexCreationOptions.Noop
 					: IndexCreationOptions.Update;
 			}
