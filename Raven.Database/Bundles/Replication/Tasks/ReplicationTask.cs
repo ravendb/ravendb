@@ -415,7 +415,7 @@ namespace Raven.Bundles.Replication.Tasks
 					Guid lastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
 					while (true)
 					{
-						docsToReplicate = actions.Documents.GetDocumentsAfter(lastDocumentEtag, 100)
+						docsToReplicate = actions.Documents.GetDocumentsAfter(lastDocumentEtag, 100, 1024 * 1024 * 10)
 							.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", lastDocumentEtag, 100)
 										.Select(x => new JsonDocument
 										{
