@@ -65,7 +65,7 @@ namespace Raven.Bundles.Replication.Responders
 			                                                                            Database.RaiseNotifications(new DocumentChangeNotification
 			                                                                            {
 			                                                                            	Name = id,
-			                                                                            	Type = DocumentChangeTypes.ReplicationConflict
+			                                                                            	Type = ReplicationConflict
 			                                                                            }));
 
 			var newDocumentConflictId = SaveConflictedItem(id, metadata, incoming, existingEtag);
@@ -85,6 +85,8 @@ namespace Raven.Bundles.Replication.Responders
 
 			CreateConflict(id, newDocumentConflictId, existingDocumentConflictId, existingItem, existingMetadata);
 		}
+
+		protected abstract DocumentChangeTypes ReplicationConflict { get; }
 
 		private string SaveConflictedItem(string id, RavenJObject metadata, TExternal incoming, Guid existingEtag)
 		{

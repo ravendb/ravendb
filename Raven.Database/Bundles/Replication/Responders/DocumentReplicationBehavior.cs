@@ -11,6 +11,11 @@ namespace Raven.Bundles.Replication.Responders
 	{
 		public IEnumerable<AbstractDocumentReplicationConflictResolver> ReplicationConflictResolvers { get; set; }
 
+		protected override DocumentChangeTypes ReplicationConflict
+		{
+			get { return DocumentChangeTypes.ReplicationConflict; }
+		}
+
 		protected override void DeleteItem(string id, Guid etag)
 		{
 			RavenJObject _;
