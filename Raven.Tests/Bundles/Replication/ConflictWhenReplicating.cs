@@ -124,7 +124,7 @@ namespace Raven.Bundles.Tests.Replication
 				}
 			}
 
-			using (var session = store2.OpenSession())
+			using (var session = store1.OpenSession())
 			{
 				session.Delete(session.Load<Company>("companies/1"));
 				session.SaveChanges();

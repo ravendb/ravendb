@@ -32,6 +32,7 @@ namespace Raven.Bundles.Replication.Responders
 		{
 			existingItem.Metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
 			Actions.Attachments.AddAttachment(existingDocumentConflictId, null, existingItem.Data(), existingItem.Metadata);
+			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
 			var conflictAttachment = new RavenJObject
 			{
 				{"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)}
@@ -39,7 +40,8 @@ namespace Raven.Bundles.Replication.Responders
 			var memoryStream = new MemoryStream();
 			conflictAttachment.WriteTo(memoryStream);
 			memoryStream.Position = 0;
-			Actions.Attachments.AddAttachment(id, existingItem.Etag,
+			var etag = existingMetadata.Value<bool>(Constants.RavenDeleteMarker) ? Guid.Empty : existingItem.Etag;
+			Actions.Attachments.AddAttachment(id, etag,
 								memoryStream,
 								new RavenJObject
 								{

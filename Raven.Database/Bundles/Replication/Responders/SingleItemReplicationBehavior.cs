@@ -91,7 +91,7 @@ namespace Raven.Bundles.Replication.Responders
 			metadata[Constants.RavenReplicationConflictDocument] = true;
 			var newDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(metadata);
 			metadata.Add(Constants.RavenReplicationConflict, RavenJToken.FromObject(true));
-			AddWithoutConflict(id, existingEtag, metadata, incoming);
+			AddWithoutConflict(newDocumentConflictId, Guid.Empty, metadata, incoming);
 			return newDocumentConflictId;
 		}
 

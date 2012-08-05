@@ -31,8 +31,10 @@ namespace Raven.Bundles.Replication.Responders
 			string existingDocumentConflictId, JsonDocument existingItem, RavenJObject existingMetadata)
 		{
 			existingMetadata.Add(Constants.RavenReplicationConflict, true);
-			Actions.Documents.AddDocument(existingDocumentConflictId, null, existingItem.DataAsJson, existingItem.Metadata);
-			Actions.Documents.AddDocument(id, existingItem.Etag,
+			Actions.Documents.AddDocument(existingDocumentConflictId, Guid.Empty, existingItem.DataAsJson, existingItem.Metadata);
+			var etag = existingMetadata.Value<bool>(Constants.RavenDeleteMarker) ? Guid.Empty : existingItem.Etag;
+			Actions.Lists.Remove(Constants.RavenReplicationDocsTombstones, id);
+			Actions.Documents.AddDocument(id, etag,
 			                              new RavenJObject
 			                              {
 			                              	{"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)}
