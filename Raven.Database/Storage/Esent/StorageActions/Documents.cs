@@ -274,18 +274,17 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, Documents, SeekGrbit.SeekGE) == false)
 				return Enumerable.Empty<JsonDocument>();
 
+			Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
+			if (Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
+				return Enumerable.Empty<JsonDocument>();
+
+			if (TryMoveDocumentRecords(start, backward: false))
+				return Enumerable.Empty<JsonDocument>();
+
 			var optimizer = new OptimizedIndexReader(Session, Documents, take);
 			do
 			{
-				Api.MakeKey(session, Documents, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey | MakeKeyGrbit.SubStrLimit);
-				if (Api.TrySetIndexRange(session, Documents, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive) == false)
-					return Enumerable.Empty<JsonDocument>();
-
-				if (TryMoveDocumentRecords(start, backward: false))
-					return Enumerable.Empty<JsonDocument>();
-
 				optimizer.Add();
-
 			} while (Api.TryMoveNext(session, Documents) && optimizer.Count < take);
 
 			return optimizer.Select(ReadCurrentDocument);
