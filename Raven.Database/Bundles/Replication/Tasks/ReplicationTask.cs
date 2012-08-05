@@ -50,7 +50,7 @@ namespace Raven.Bundles.Replication.Tasks
 			docDb = database;
 			var replicationRequestTimeoutInMs =
 				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ??
-				60*1000;
+				60 * 1000;
 
 			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
 
@@ -291,7 +291,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private void ResetFailureCount(ReplicationStrategy destination)
 		{
 			docDb.Delete(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null,
-			             null);
+						 null);
 		}
 
 		private bool IsFirstFailue(ReplicationStrategy destination)
@@ -312,7 +312,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var sp = Stopwatch.StartNew();
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 
-				request.WebRequest.Headers.Add("Attachment-Ids", string.Join(", ", jsonAttachments.Select(x=>x.Value<string>("@id"))));
+				request.WebRequest.Headers.Add("Attachment-Ids", string.Join(", ", jsonAttachments.Select(x => x.Value<string>("@id"))));
 
 				request.WriteBson(jsonAttachments);
 				request.ExecuteRequest();
@@ -417,13 +417,13 @@ namespace Raven.Bundles.Replication.Tasks
 					{
 						docsToReplicate = actions.Documents.GetDocumentsAfter(lastDocumentEtag, 100)
 							.Concat(actions.Lists.Read("Raven/Replication/Docs/Tombstones", lastDocumentEtag, 100)
-							        	.Select(x => new JsonDocument
-							        	{
-							        		Etag = x.Etag,
-							        		Key = x.Key,
-							        		Metadata = x.Data,
-							        		DataAsJson = new RavenJObject()
-							        	}))
+										.Select(x => new JsonDocument
+										{
+											Etag = x.Etag,
+											Key = x.Key,
+											Metadata = x.Data,
+											DataAsJson = new RavenJObject()
+										}))
 							.OrderBy(x => x.Etag)
 							.ToList();
 						;
@@ -431,7 +431,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 						docsSinceLastReplEtag += docsToReplicate.Count;
 
-						if (docsToReplicate.Count == 0 || 
+						if (docsToReplicate.Count == 0 ||
 							filteredDocsToReplicate.Count != 0)
 						{
 							break;
@@ -448,9 +448,9 @@ namespace Raven.Bundles.Replication.Tasks
 					{
 						if (docsSinceLastReplEtag == 0)
 							return string.Format("Nothing to replicate to {0} - last replicated etag: {1}", destination,
-							                     destinationsReplicationInformationForSource.LastDocumentEtag);
-											 
-						if(docsSinceLastReplEtag == filteredDocsToReplicate.Count)
+												 destinationsReplicationInformationForSource.LastDocumentEtag);
+
+						if (docsSinceLastReplEtag == filteredDocsToReplicate.Count)
 							return string.Format("Replicating {0} docs [>{1}] to {2}.",
 											 docsSinceLastReplEtag,
 											 destinationsReplicationInformationForSource.LastDocumentEtag,
@@ -458,20 +458,20 @@ namespace Raven.Bundles.Replication.Tasks
 
 						var diff = docsToReplicate.Except(filteredDocsToReplicate).Select(x => x.Key);
 						return string.Format("Replicating {1} docs (out of {0}) [>{4}] to {2}. [Not replicated: {3}]",
-						                     docsSinceLastReplEtag,
-											 filteredDocsToReplicate.Count, 
+											 docsSinceLastReplEtag,
+											 filteredDocsToReplicate.Count,
 											 destination,
-						                     string.Join(", ", diff),
+											 string.Join(", ", diff),
 											 destinationsReplicationInformationForSource.LastDocumentEtag);
 					});
 
 					jsonDocuments = new RavenJArray(filteredDocsToReplicate
-					                                	.Select(x =>
-					                                	{
-					                                		DocumentRetriever.EnsureIdInMetadata(x);
-					                                		return x;
-					                                	})
-					                                	.Select(x => x.ToJson()));
+														.Select(x =>
+														{
+															DocumentRetriever.EnsureIdInMetadata(x);
+															return x;
+														})
+														.Select(x => x.ToJson()));
 				});
 			}
 			catch (Exception e)
@@ -491,27 +491,27 @@ namespace Raven.Bundles.Replication.Tasks
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100)
-					                                  	.Where(
-					                                  		information =>
-					                                  		destination.FilterAttachments(information, destinationInstanceId))
-					                                  	.Select(x => new RavenJObject
+					jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(lastAttachmentEtag, 100, 1024 * 1024 * 10)
+														.Where(
+															information =>
+															destination.FilterAttachments(information, destinationInstanceId))
+														.Select(x => new RavenJObject
 					                                  	{
 					                                  		{"@metadata", x.Metadata},
 					                                  		{"@id", x.Key},
 					                                  		{"@etag", x.Etag.ToByteArray()},
 					                                  		{"data", actions.Attachments.GetAttachment(x.Key).Data().ReadData()}
 					                                  	})
-					                                  	.Concat(actions.Lists.Read(Constants.RavenReplicationAttachmentsTombstones,
-					                                  	                           lastAttachmentEtag, 100)
-					                                  	        	.Select(x => new RavenJObject
+														.Concat(actions.Lists.Read(Constants.RavenReplicationAttachmentsTombstones,
+																				   lastAttachmentEtag, 100)
+																	.Select(x => new RavenJObject
 					                                  	        	{
 					                                  	        		{"@metadata", x.Data},
 					                                  	        		{"@id", x.Key},
 					                                  	        		{"@etag", x.Etag.ToByteArray()},
 					                                  	        		{"data", new byte[0]}
 					                                  	        	}))
-					                                  	.OrderBy(x => new ComparableByteArray(x.Value<byte[]>("@etag")))
+														.OrderBy(x => new ComparableByteArray(x.Value<byte[]>("@etag")))
 						);
 				});
 			}
@@ -529,7 +529,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var currentEtag = Guid.Empty;
 				docDb.TransactionalStorage.Batch(accessor => currentEtag = accessor.Staleness.GetMostRecentDocumentEtag());
 				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
-				          "&currentEtag=" + currentEtag;
+						  "&currentEtag=" + currentEtag;
 				var request = httpRavenRequestFactory.Create(url, "GET", destination.ConnectionStringOptions);
 				return request.ExecuteRequest<SourceReplicationInformation>();
 			}
@@ -622,11 +622,11 @@ namespace Raven.Bundles.Replication.Tasks
 				Url = url,
 				ApiKey = x.ApiKey,
 			};
-			if(string.IsNullOrEmpty(x.Username) == false)
+			if (string.IsNullOrEmpty(x.Username) == false)
 			{
 				replicationStrategy.ConnectionStringOptions.Credentials = string.IsNullOrEmpty(x.Domain)
-				    ? new NetworkCredential(x.Username, x.Password)
-				    : new NetworkCredential(x.Username, x.Password, x.Domain);
+					? new NetworkCredential(x.Username, x.Password)
+					: new NetworkCredential(x.Username, x.Password, x.Domain);
 			}
 			return replicationStrategy;
 		}

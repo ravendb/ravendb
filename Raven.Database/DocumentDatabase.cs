@@ -1252,7 +1252,7 @@ namespace Raven.Database
 			return list;
 		}
 
-		public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag, string startsWith)
+		public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag, string startsWith, long maxSize)
 		{
 			AttachmentInformation[] attachments = null;
 
@@ -1261,7 +1261,7 @@ namespace Raven.Database
 				if (string.IsNullOrEmpty(startsWith) == false)
 					attachments = actions.Attachments.GetAttachmentsStartingWith(startsWith, start, pageSize).ToArray();
 				else if (etag != null)
-					attachments = actions.Attachments.GetAttachmentsAfter(etag.Value, pageSize).ToArray();
+					attachments = actions.Attachments.GetAttachmentsAfter(etag.Value, pageSize, maxSize).ToArray();
 				else
 					attachments = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
 
