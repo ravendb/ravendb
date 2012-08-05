@@ -13,6 +13,16 @@ namespace Raven.Bundles.Replication.Responders
 	{
 		public IEnumerable<AbstractAttachmentReplicationConflictResolver> ReplicationConflictResolvers { get; set; }
 
+		protected override void DeleteItem(string id, Guid etag)
+		{
+			Actions.Attachments.DeleteAttachment(id, etag);
+		}
+
+		protected override void MarkAsDeleted(string id, RavenJObject metadata)
+		{
+			Actions.Lists.Set(Constants.RavenReplicationAttachmentsTombstones, id, metadata);
+		}
+
 		protected override void AddWithoutConflict(string id, Guid? etag, RavenJObject metadata, byte[] incoming)
 		{
 			Actions.Attachments.AddAttachment(id, etag, new MemoryStream(incoming), metadata);
@@ -29,7 +39,7 @@ namespace Raven.Bundles.Replication.Responders
 			var memoryStream = new MemoryStream();
 			conflictAttachment.WriteTo(memoryStream);
 			memoryStream.Position = 0;
-			Actions.Attachments.AddAttachment(id, null,
+			Actions.Attachments.AddAttachment(id, existingItem.Etag,
 								memoryStream,
 								new RavenJObject
 								{
@@ -67,7 +77,7 @@ namespace Raven.Bundles.Replication.Responders
 				return existingAttachment.Metadata;
 			}
 
-			var listItem = Actions.Lists.Read(Constants.RavenReplicationDocsTombstones, id);
+			var listItem = Actions.Lists.Read(Constants.RavenReplicationAttachmentsTombstones, id);
 			if (listItem != null)
 			{
 				existingEtag = listItem.Etag;

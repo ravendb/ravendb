@@ -11,6 +11,17 @@ namespace Raven.Bundles.Replication.Responders
 	{
 		public IEnumerable<AbstractDocumentReplicationConflictResolver> ReplicationConflictResolvers { get; set; }
 
+		protected override void DeleteItem(string id, Guid etag)
+		{
+			RavenJObject _;
+			Actions.Documents.DeleteDocument(id, etag, out _);
+		}
+
+		protected override void MarkAsDeleted(string id, RavenJObject metadata)
+		{
+			Actions.Lists.Set(Constants.RavenReplicationDocsTombstones, id, metadata);
+		}
+
 		protected override void AddWithoutConflict(string id, Guid? etag, RavenJObject metadata, RavenJObject incoming)
 		{
 			Actions.Documents.AddDocument(id, etag, incoming, metadata);
@@ -21,7 +32,7 @@ namespace Raven.Bundles.Replication.Responders
 		{
 			existingMetadata.Add(Constants.RavenReplicationConflict, true);
 			Actions.Documents.AddDocument(existingDocumentConflictId, null, existingItem.DataAsJson, existingItem.Metadata);
-			Actions.Documents.AddDocument(id, null,
+			Actions.Documents.AddDocument(id, existingItem.Etag,
 			                              new RavenJObject
 			                              {
 			                              	{"Conflicts", new RavenJArray(existingDocumentConflictId, newDocumentConflictId)}
