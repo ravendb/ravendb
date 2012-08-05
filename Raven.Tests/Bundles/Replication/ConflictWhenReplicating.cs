@@ -48,6 +48,45 @@ namespace Raven.Bundles.Tests.Replication
 		}
 
 		[Fact]
+		public void Can_resolve_conflict_by_deleting_conflicted_doc()
+		{
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+			using (var session = store1.OpenSession())
+			{
+				session.Store(new Company());
+				session.SaveChanges();
+			}
+
+			using (var session = store2.OpenSession())
+			{
+				session.Store(new Company());
+				session.SaveChanges();
+			}
+
+			TellFirstInstanceToReplicateToSecondInstance();
+
+			var conflictException = Assert.Throws<ConflictException>(() =>
+			{
+				for (int i = 0; i < RetriesCount; i++)
+				{
+					using (var session = store2.OpenSession())
+					{
+						session.Load<Company>("companies/1");
+						Thread.Sleep(100);
+					}
+				}
+			});
+
+			store2.DatabaseCommands.Delete("companies/1", null);
+
+			foreach (var conflictedVersionId in conflictException.ConflictedVersionIds)
+			{
+				Assert.Null(store2.DatabaseCommands.Get(conflictedVersionId));
+			}
+		}
+
+		[Fact]
 		public void When_replicating_from_two_different_source_different_documents()
 		{
 			var store1 = CreateStore();
