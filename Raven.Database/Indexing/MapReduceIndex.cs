@@ -270,66 +270,83 @@ namespace Raven.Database.Indexing
 				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
 					.Where(x => x != null)
 					.ToList();
-				foreach (var reduceKey in reduceKeys)
+				try
 				{
-					var entryKey = reduceKey;
-					indexWriter.DeleteDocuments(new Term(Constants.ReduceKeyFieldName, entryKey.ToLowerInvariant()));
-					batchers.ApplyAndIgnoreAllErrors(
-						exception =>
-						{
-							logIndexing.WarnException(
-								string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
-											  name, entryKey),
-								exception);
-							context.AddError(name, entryKey, exception.Message);
-						},
-						trigger => trigger.OnIndexEntryDeleted(entryKey));
-				}
-				PropertyDescriptorCollection properties = null;
-				var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
-				var luceneDoc = new Document();
-				var reduceKeyField = new Field(Constants.ReduceKeyFieldName, "dummy",
-									  Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
-				foreach (var doc in RobustEnumerationReduce(mappedResults, viewGenerator.ReduceDefinition, actions, context, stats))
-				{
-					count++;
-					float boost;
-					var fields = GetFields(anonymousObjectToLuceneDocumentConverter, doc, ref properties, out boost).ToList();
-
-					string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
-					reduceKeyField.SetValue(reduceKeyAsString.ToLowerInvariant());
-
-					luceneDoc.GetFields().Clear();
-					luceneDoc.SetBoost(boost);
-					luceneDoc.Add(reduceKeyField);
-					foreach (var field in fields)
+					foreach (var reduceKey in reduceKeys)
 					{
-						luceneDoc.Add(field);
+						var entryKey = reduceKey;
+						indexWriter.DeleteDocuments(new Term(Constants.ReduceKeyFieldName, entryKey.ToLowerInvariant()));
+						batchers.ApplyAndIgnoreAllErrors(
+							exception =>
+							{
+								logIndexing.WarnException(
+									string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
+												  name, entryKey),
+									exception);
+								context.AddError(name, entryKey, exception.Message);
+							},
+							trigger => trigger.OnIndexEntryDeleted(entryKey));
 					}
+					PropertyDescriptorCollection properties = null;
+					var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
+					var luceneDoc = new Document();
+					var reduceKeyField = new Field(Constants.ReduceKeyFieldName, "dummy",
+										  Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
+					foreach (var doc in RobustEnumerationReduce(mappedResults, viewGenerator.ReduceDefinition, actions, context, stats))
+					{
+						count++;
+						float boost;
+						var fields = GetFields(anonymousObjectToLuceneDocumentConverter, doc, ref properties, out boost).ToList();
 
-					batchers.ApplyAndIgnoreAllErrors(
-						exception =>
+						string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
+						reduceKeyField.SetValue(reduceKeyAsString.ToLowerInvariant());
+
+						luceneDoc.GetFields().Clear();
+						luceneDoc.SetBoost(boost);
+						luceneDoc.Add(reduceKeyField);
+						foreach (var field in fields)
 						{
-							logIndexing.WarnException(
-								string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-											  name, reduceKeyAsString),
-								exception);
-							context.AddError(name, reduceKeyAsString, exception.Message);
-						},
-						trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
+							luceneDoc.Add(field);
+						}
 
-					LogIndexedDocument(reduceKeyAsString, luceneDoc);
+						batchers.ApplyAndIgnoreAllErrors(
+							exception =>
+							{
+								logIndexing.WarnException(
+									string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
+												  name, reduceKeyAsString),
+									exception);
+								context.AddError(name, reduceKeyAsString, exception.Message);
+							},
+							trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
 
-					AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
-					stats.ReduceSuccesses++;
+						LogIndexedDocument(reduceKeyAsString, luceneDoc);
+
+						AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+						stats.ReduceSuccesses++;
+					}
 				}
-				batchers.ApplyAndIgnoreAllErrors(
+				catch (Exception e)
+				{
+					batchers.ApplyAndIgnoreAllErrors(
+						ex =>
+						{
+							logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
+							context.AddError(name, null, ex.Message);
+						},
+						x => x.AnErrorOccured(e));
+					throw;
+				}
+				finally
+				{
+					batchers.ApplyAndIgnoreAllErrors(
 					e =>
 					{
 						logIndexing.WarnException("Failed to dispose on index update trigger", e);
 						context.AddError(name, null, e.Message);
 					},
 					x => x.Dispose());
+				}
 				return count + reduceKeys.Length;
 			});
 			logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name, string.Join(", ", reduceKeys)));
