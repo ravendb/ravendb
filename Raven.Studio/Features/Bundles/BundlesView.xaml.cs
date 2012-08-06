@@ -1,6 +1,8 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using Raven.Abstractions.Replication;
 using Raven.Studio.Infrastructure;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Bundles
 {
@@ -69,6 +71,16 @@ namespace Raven.Studio.Features.Bundles
 				}
 			}
 
+		}
+
+		private void ButtonBase_OnClick(object sender, RoutedEventArgs e)
+		{
+			var bundleModel = this.DataContext as BaseBundlesModel;
+			var button = sender as Button;
+			if (bundleModel != null && button != null)
+			{
+				bundleModel.ReplicationDestinations.Remove(button.DataContext as ReplicationDestination);
+			}
 		}
 	}
 }

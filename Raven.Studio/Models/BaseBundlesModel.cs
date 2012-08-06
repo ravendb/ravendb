@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -16,6 +17,8 @@ namespace Raven.Studio.Models
 		{
 			ReplicationDestinations = new ObservableCollection<ReplicationDestination>();
 			VersioningConfigurations = new ObservableCollection<VersioningConfiguration>();
+
+			VersioningConfigurations.CollectionChanged += (sender, args) => OnPropertyChanged(() => HasDefaultVersioning);
 		}
 
 		public ReplicationDocument ReplicationData { get; set; }
@@ -28,7 +31,10 @@ namespace Raven.Studio.Models
 		public virtual bool HasQuotas { get; set; }
 		public virtual bool HasReplication { get; set; }
 		public virtual bool HasVersioning { get; set; }
-		public bool HasDefaultVersioning { get; set; }
+		public bool HasDefaultVersioning
+		{
+			get { return VersioningConfigurations.Any(configuration => configuration.Id == "Raven/Versioning/DefaultConfiguration"); }
+		}
 
 		public virtual int MaxSize { get; set; }
 		public virtual int WarnSize { get; set; }
@@ -37,5 +43,8 @@ namespace Raven.Studio.Models
 
 		public ICommand DeleteReplication { get { return new DeleteReplicationCommand(this); } }
 		public ICommand DeleteVersioning { get { return new DeleteVersioningCommand(this); } }
+		public ICommand AddReplication { get { return new AddReplicationCommand(this); } }
+		public ICommand AddVersioning { get { return new AddVersioningCommand(this); } }
+		public ICommand AddDefaultVersioning { get { return new AddDefaultVersioningCommand(this); } }
 	}
 }

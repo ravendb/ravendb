@@ -177,6 +177,9 @@
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
+    <Compile Include="Commands\AddDefaultVersioningCommand.cs" />
+    <Compile Include="Commands\AddReplicationCommand.cs" />
+    <Compile Include="Commands\AddVersioningCommand.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
     <Compile Include="Commands\DeleteReplicationCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />

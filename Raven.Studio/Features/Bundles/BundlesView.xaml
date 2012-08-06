@@ -25,7 +25,7 @@
 						<ColumnDefinition Width="130" />
 						<ColumnDefinition Width="Auto" />
 					</Grid.ColumnDefinitions>
-					<Button Grid.ColumnSpan="2" HorizontalAlignment="Right">
+					<Button Grid.ColumnSpan="2" HorizontalAlignment="Right" Click="ButtonBase_OnClick">
 						<Image Source="{StaticResource Image_Error_Tiny}"/>
 					</Button>
 
@@ -113,7 +113,7 @@
 				<ColumnDefinition Width="Auto"/>
 				<ColumnDefinition Width="*"/>
 			</Grid.ColumnDefinitions>
-			<sdk:TabControl Width="Auto" Height="Auto">
+			<sdk:TabControl Width="Auto" Height="Auto" MaxWidth="1000">
 				<sdk:TabItem Header="Quotas" Visibility="{Binding HasQuotas, Converter={StaticResource BooleanToVisibility}}">
 					<Grid Margin="2">
 						<Grid.RowDefinitions>
@@ -159,6 +159,7 @@
 						</Grid>
 					</Grid>
 				</sdk:TabItem>
+				
 				<sdk:TabItem Header="Replication" Visibility="{Binding HasReplication, Converter={StaticResource BooleanToVisibility}}">
 					<Grid Margin="2">
 						<Grid.RowDefinitions>
@@ -178,61 +179,26 @@
 									<RowDefinition Height="10" />
 								</Grid.RowDefinitions>
 
-								<!--<sdk:DataGrid Grid.Row="1" Grid.ColumnSpan="2"
-											  ItemsSource="{Binding Path=ReplicationDestinations}" x:Name="ReplicationGrid"
-											  SelectedItem="{Binding SeletedReplication, Mode=TwoWay}">
-									<i:Interaction.Behaviors>
-										<Behaviors:SelectRowOnRightClickBehavior />
-									</i:Interaction.Behaviors>
-									<Controls:ContextMenuService.ContextMenu>
-										<Controls:ContextMenu>
-											<Controls:MenuItem Header="Delete"
-											Command="{Binding DeleteReplication}"
-															   CommandParameter="{Binding SeletedReplication}">
-												<Controls:MenuItem.Icon>
-													<Image Source="{StaticResource Image_Delete_Tiny}"/>
-												</Controls:MenuItem.Icon>
-											</Controls:MenuItem>
-										</Controls:ContextMenu>
-									</Controls:ContextMenuService.ContextMenu>
-								</sdk:DataGrid>-->
-
 								<ListBox Style="{StaticResource Databases_FluidList}"
 										 ItemsSource="{Binding ReplicationDestinations}"
 										 SelectedItem="{Binding SelectedReplication, Mode=TwoWay}"
 										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
 										 ItemTemplate="{StaticResource ReplicationItemTemplate}"
-										 Margin="10">
-
-									<i:Interaction.Triggers>
-										<Behaviors:StudioKeyTrigger Key="Delete">
-											<i:InvokeCommandAction Command="{Binding}" />
-										</Behaviors:StudioKeyTrigger>
-									</i:Interaction.Triggers>
+										 Margin="10"
+										 MaxWidth="1000"
+										 MaxHeight="700"
+										 ScrollViewer.VerticalScrollBarVisibility="Auto"
+										 HorizontalAlignment="Left">
 
 									<i:Interaction.Behaviors>
 										<Behaviors:SelectItemOnRightClick />
 									</i:Interaction.Behaviors>
-
-									<Controls:ContextMenuService.ContextMenu>
-										<Controls:ContextMenu>
-											<Controls:MenuItem Header="Edit Bundles"
-											Command="{StaticResource NavigateToCommand}" 
-										 CommandParameter="/bundles"
-										   Visibility="{Binding ShowEditBundles, Converter={StaticResource BooleanToVisibility}}"/>
-											<Controls:MenuItem Header="Delete"
-											Command="{Binding DeleteSelectedDatabase}">
-												<Controls:MenuItem.Icon>
-													<Image Source="{StaticResource Image_Delete_Tiny}"/>
-												</Controls:MenuItem.Icon>
-											</Controls:MenuItem>
-										</Controls:ContextMenu>
-									</Controls:ContextMenuService.ContextMenu>
 								</ListBox>
 								<Button Content="Add"
-							Grid.Row="2"
-							Grid.ColumnSpan="2"
-							HorizontalAlignment="Left"/>
+										Grid.Row="2"
+										Grid.ColumnSpan="2"
+										HorizontalAlignment="Left"
+										Command="{Binding AddReplication}"/>
 							</Grid>
 						</Grid>
 
@@ -256,12 +222,20 @@
 								<RowDefinition Height="10" />
 							</Grid.RowDefinitions>
 
-							<CheckBox Margin="5" VerticalAlignment="Center" IsChecked="{Binding HasDefaultVersioning}"/>
-							<TextBlock Text="Add default versioning" Margin="5" Grid.Column="1"/>
-
+							<Button Content="Add Default Versioning" Visibility="{Binding HasDefaultVersioning,Converter={StaticResource BooleanToOppositeVisibility}, Mode=TwoWay}"
+									Command="{Binding AddDefaultVersioning}"/>
+							
 							<sdk:DataGrid Grid.Row="1" Grid.ColumnSpan="2"
 										  SelectedItem="{Binding SeletedVersioning, Mode=TwoWay}"
-										  ItemsSource="{Binding Path=VersioningConfigurations}">
+										  ItemsSource="{Binding Path=VersioningConfigurations}"
+										  MaxHeight="650"
+										  ScrollViewer.VerticalScrollBarVisibility="Auto"
+										  AutoGenerateColumns="False">
+								<sdk:DataGrid.Columns>
+									<sdk:DataGridTextColumn Header="Version Tag" Binding="{Binding Id}"/>
+									<sdk:DataGridTextColumn Header="Max Revisions" Binding="{Binding MaxRevisions}"/>
+									<sdk:DataGridCheckBoxColumn Header="Exclude" Binding="{Binding Exclude}"/>
+								</sdk:DataGrid.Columns>
 								<i:Interaction.Behaviors>
 									<Behaviors:SelectRowOnRightClickBehavior />
 								</i:Interaction.Behaviors>
@@ -281,7 +255,7 @@
 							Grid.Row="2"
 							Grid.ColumnSpan="2"
 							HorizontalAlignment="Left"
-							/>
+							Command="{Binding AddVersioning}"/>
 						</Grid>
 					</Grid>
 				</sdk:TabItem>

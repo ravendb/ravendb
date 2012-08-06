@@ -18,7 +18,9 @@ namespace Raven.Studio.Commands
 			var versioningConfiguration = parameter as VersioningConfiguration;
 			if (versioningConfiguration == null)
 				return;
+
 			bundlesModel.VersioningConfigurations.Remove(versioningConfiguration);
+			var test = bundlesModel.HasDefaultVersioning;
 			bundlesModel.SeletedVersioning = null;
 		}
 	}

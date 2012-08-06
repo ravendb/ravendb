@@ -16,6 +16,7 @@ namespace Raven.Studio.Models
 
 		public BundlesModel()
 		{
+			VersioningConfigurations.CollectionChanged += (sender, args) => OnPropertyChanged(() => HasDefaultVersioning);
 			InitializeFromServer();
 		}
 
@@ -58,7 +59,10 @@ namespace Raven.Studio.Models
 							.ContinueOnSuccessInTheUIThread(document =>
 							{
 								if (document != null)
-									HasDefaultVersioning = true;
+								{
+									VersioningConfigurations.Insert(0, document as VersioningConfiguration);
+									OnPropertyChanged(() => HasDefaultVersioning);
+								}
 							});
 					}
 				});
