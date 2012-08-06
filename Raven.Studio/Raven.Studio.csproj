@@ -178,7 +178,10 @@
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\DeleteReplicationCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
+    <Compile Include="Commands\DeleteVersioningCommand.cs" />
+    <Compile Include="Commands\SaveBundlesCommand.cs" />
     <Compile Include="Commands\SelectSystemDatabaseCommand.cs" />
     <Compile Include="Commands\ItemSelectionCommand.cs" />
     <Compile Include="Commands\StopIndexingCommand.cs" />
@@ -320,6 +323,7 @@
     <Compile Include="Impl\WatermarkedTextBox\VisualStateHelper.cs" />
     <Compile Include="Impl\WatermarkedTextBox\WatermarkedTextBox.cs" />
     <Compile Include="Infrastructure\ArrayContainer.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToIntConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringToDefaultOperatorConverter.cs" />
     <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
@@ -375,6 +379,8 @@
     <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
     <Compile Include="Models\ApplicationState.cs" />
     <Compile Include="Models\BundlesModel.cs" />
+    <Compile Include="Models\BaseBundlesModel.cs" />
+    <Compile Include="Models\CreateBundlesModel.cs" />
     <Compile Include="Models\DatabaseListItemModel.cs" />
     <Compile Include="Models\DatabaseSelectionModel.cs" />
     <Compile Include="Models\DocumentSize.cs" />
