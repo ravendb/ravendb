@@ -111,6 +111,18 @@ namespace Raven.Database.Indexing
 						stats.IndexingSuccesses++;
 					}
 				}
+				catch(Exception e)
+				{
+
+					batchers.ApplyAndIgnoreAllErrors(
+						ex =>
+						{
+							logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
+							context.AddError(name, null, ex.Message);
+						},
+						x => x.AnErrorOccured(e));
+					throw;
+				}
 				finally
 				{
 					batchers.ApplyAndIgnoreAllErrors(
