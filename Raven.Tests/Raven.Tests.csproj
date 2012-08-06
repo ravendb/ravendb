@@ -99,6 +99,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -682,6 +683,7 @@
     <Compile Include="MailingList\linmouhong.cs" />
     <Compile Include="MailingList\LinusK.cs" />
     <Compile Include="MailingList\LuceneScoreTests.cs" />
+    <Compile Include="MailingList\Marcus.cs" />
     <Compile Include="MailingList\Mark2.cs" />
     <Compile Include="MailingList\MattJohnson.cs" />
     <Compile Include="MailingList\Maverix.cs" />
