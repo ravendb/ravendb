@@ -80,7 +80,11 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
 
     private static byte[] GetStrongKey()
     {
-      const string name = "Newtonsoft.Json.Dynamic.snk";
+#if SILVERLIGHT
+		const string name = "Raven.Abstractions.Imports.Newtonsoft.Json.Dynamic.snk";
+#else
+		const string name = "Raven.Client.Silverlight.Imports.Imports.Newtonsoft.Json.Dynamic.snk";
+#endif
 
       using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(name))
       {
