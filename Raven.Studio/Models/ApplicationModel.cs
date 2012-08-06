@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Net;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using Raven.Client.Connection.Async;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using System.Linq;
@@ -77,7 +81,46 @@ namespace Raven.Studio.Models
 
         public void AddErrorNotification(Exception exception, string message = null, params object[] details)
         {
-            AddNotification(new Notification(message ?? exception.Message, NotificationLevel.Error, exception, details));
+			if (message == null)
+			{
+				var webException = exception as WebException;
+				if (webException != null)
+				{
+					var httpWebResponse = webException.Response as HttpWebResponse;
+					if (httpWebResponse != null)
+					{
+						message = httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription;
+						var error = new StreamReader(httpWebResponse.GetResponseStream()).ReadToEnd();
+
+						var objects = new List<object>(details);
+						try
+						{
+							var item = RavenJObject.Parse(error);
+							objects.Insert(0, "Server Error:");
+							objects.Insert(1, "-----------------------------------------");
+							objects.Insert(2, item.Value<string>("Url"));
+							objects.Insert(3, item.Value<string>("Error"));
+							objects.Insert(4, "-----------------------------------------");
+							objects.Insert(5, Environment.NewLine);
+							objects.Insert(6, Environment.NewLine);
+						}
+						catch (Exception)
+						{
+							objects.Insert(0, "Server sent:"); 
+							objects.Insert(1, error);
+							objects.Insert(2, Environment.NewLine);
+							objects.Insert(3, Environment.NewLine);
+						}
+						details = objects.ToArray();
+					}
+				}
+				if(message == null)
+				{
+					message = exception.Message;
+				}
+			}
+
+        	AddNotification(new Notification(message, NotificationLevel.Error, exception, details));
         }
 
 		public Observable<string> LastNotification { get; set; }
