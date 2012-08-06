@@ -313,6 +313,12 @@ namespace Raven.Database.Indexing
 				SetupPreformanceCounter(name);
 				CreatePreformanceCounters(name);
 			}
+			catch(UnauthorizedAccessException e)
+			{
+				log.WarnException(
+					"Could not setup performance counters properly because of access permissions, perf counters will not be used", e);
+				useCounters = false;
+			}
 			catch (SecurityException e)
 			{
 				log.WarnException(
