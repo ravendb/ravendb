@@ -18,7 +18,7 @@ public class Program
 		{
 			Console.WriteLine(i);
 
-			using (var x = new ClientServer())
+			using (var x = new Embedded())
 			{
 				x.CanGetNotificationAboutDocumentIndexUpdate();
 			}
