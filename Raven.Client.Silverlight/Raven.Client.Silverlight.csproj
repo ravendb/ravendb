@@ -736,6 +736,9 @@
     <Compile Include="..\Raven.Abstractions\Logging\LogProviders\NLogLogProvider.cs">
       <Link>Imports\Logging\LogProviders\NLogLogProvider.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Properties\JsonNetInfo.cs">
+      <Link>Properties\JsonNetInfo.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\SystemTime.cs">
       <Link>Imports\SystemTime.cs</Link>
     </Compile>
