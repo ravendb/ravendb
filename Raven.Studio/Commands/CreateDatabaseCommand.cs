@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Windows.Controls;
@@ -9,6 +10,7 @@ using Raven.Bundles.Versioning.Data;
 using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Studio.Controls;
+using Raven.Studio.Features.Bundles;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
@@ -36,21 +38,36 @@ namespace Raven.Studio.Commands
 					new BundlesSelect().ShowAsync()
 						.ContinueOnSuccessInTheUIThread(bundles =>
 						{
+							var bundlesModel = new CreateBundlesModel();
 							var bundlesSettings = new List<ChildWindow>();
 							if (bundles.Encryption.IsChecked == true)
 								bundlesSettings.Add(new EncryotionSettings());
-							if (bundles.Quotas.IsChecked == true)
-								bundlesSettings.Add(new QuotasSettings());
-							if (bundles.Replication.IsChecked == true)
-								bundlesSettings.Add(new ReplicationSettings());
-							if (bundles.Versioning.IsChecked == true)
-								bundlesSettings.Add(new VersioningSettings());
+							if (bundles.Quotas.IsChecked == true || bundles.Replication.IsChecked == true || bundles.Versioning.IsChecked == true)
+							{
+								bundlesModel = new CreateBundlesModel()
+									{
+										HasQuotas = bundles.Quotas.IsChecked == true,
+										HasReplication = bundles.Replication.IsChecked == true,
+										HasVersioning = bundles.Versioning.IsChecked == true
+									};
+
+								var bundleView = new BundlesView()
+								{
+									DataContext = bundlesModel
+								};
+
+								bundlesSettings.Add(new ChildWindow()
+								{
+									Title = "Setup bundles",
+									Content = bundleView
+								});
+							}
 
 							new Wizard(bundlesSettings).StartAsync()
 								.ContinueOnSuccessInTheUIThread(bundlesData =>
 								{
 									ApplicationModel.Current.AddNotification(new Notification("Creating database: " + databaseName));
-									var settings = UpdateSettings(newDatabase, bundles, bundlesData);
+									var settings = UpdateSettings(newDatabase, bundles, bundlesModel);
 									var securedSettings = UpdateSecuredSettings(bundlesData);
 
 									var databaseDocuemnt = new DatabaseDocument
@@ -59,6 +76,11 @@ namespace Raven.Studio.Commands
 										Settings = settings,
 										SecuredSettings = securedSettings
 									};
+
+									string encryptionKey = null;
+									var encryotionSettings = bundlesData.FirstOrDefault(window => window is EncryotionSettings) as EncryotionSettings;
+									if (encryotionSettings != null)
+										encryptionKey = encryotionSettings.EncryptionKey.Text;
 
 									DatabaseCommands.CreateDatabaseAsync(databaseDocuemnt).ContinueOnSuccess(
 										() => DatabaseCommands.ForDatabase(databaseName).EnsureSilverlightStartUpAsync())
@@ -70,7 +92,7 @@ namespace Raven.Studio.Commands
 											ApplicationModel.Current.AddNotification(
 												new Notification("Database " + databaseName + " created"));
 
-											HendleBundleAfterCreation(bundlesData, databaseName);
+											HendleBundleAfterCreation(bundlesModel, databaseName, encryptionKey);
 
 											ExecuteCommand(new ChangeDatabaseCommand(), databaseName);
 										})
@@ -95,50 +117,37 @@ namespace Raven.Studio.Commands
 			return settings;
 		}
 
-		private void HendleBundleAfterCreation(List<ChildWindow> bundlesData, string databaseName)
+		private void HendleBundleAfterCreation(CreateBundlesModel bundlesModel, string databaseName, string encryptionKey)
 		{
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName);
-			var versioningData = bundlesData.FirstOrDefault(window => window is VersioningSettings) as VersioningSettings;
-			if (versioningData != null)
-			{
-				StoreVersioningData(versioningData, session);
-			}
+			if (bundlesModel.HasVersioning)
+				StoreVersioningData(bundlesModel.VersioningConfigurations, session);
 
-			var replicationData = bundlesData.FirstOrDefault(window => window is ReplicationSettings) as ReplicationSettings;
-			if (replicationData != null)
+			if (bundlesModel.HasReplication)
 			{
 				var replicationDocument = new ReplicationDocument
 				{
-					Destinations = replicationData.Destinations.ToList()
+					Destinations = new List<ReplicationDestination>(bundlesModel.ReplicationDestinations)
 				};
 				session.Store(replicationDocument);
 			}
 
 			session.SaveChangesAsync();
 
-			var encryotionSettings = bundlesData.FirstOrDefault(window => window is EncryotionSettings) as EncryotionSettings;
-			if (encryotionSettings != null)
-				new ShowEncryptionMessage(encryotionSettings.EncryptionKey.Text).Show();
+			if (!string.IsNullOrEmpty(encryptionKey))
+				new ShowEncryptionMessage(encryptionKey).Show();
 
 		}
 
-		private void StoreVersioningData(VersioningSettings versioningData, IAsyncDocumentSession session)
+		private void StoreVersioningData(IEnumerable<VersioningConfiguration> versioningData, IAsyncDocumentSession session)
 		{
-			if (versioningData.defaultVersioning.IsChecked == true)
-				session.Store(new VersioningConfiguration
-				{
-					Exclude = false,
-					Id = "Raven/Versioning/DefaultConfiguration",
-					MaxRevisions = 5
-				});
-
-			foreach (var data in versioningData.VersioningData)
+			foreach (var data in versioningData)
 			{
 				session.Store(data);
 			}
 		}
 
-		private static Dictionary<string, string> UpdateSettings(NewDatabase newDatabase, BundlesSelect bundles, List<ChildWindow> bundlesData)
+		private static Dictionary<string, string> UpdateSettings(NewDatabase newDatabase, BundlesSelect bundles, CreateBundlesModel bundlesData)
 		{
 			var settings = new Dictionary<string, string>
 			{
@@ -155,13 +164,12 @@ namespace Raven.Studio.Commands
 			if (!string.IsNullOrWhiteSpace(newDatabase.IndexPath.Text))
 				settings.Add(Constants.RavenIndexPath, newDatabase.IndexPath.Text);
 
-			var quatasData = bundlesData.FirstOrDefault(window => window is QuotasSettings) as QuotasSettings;
-			if (quatasData != null)
+			if (bundlesData.HasQuotas)
 			{
-				settings[Constants.DocsHardLimit] = (quatasData.MaxDocs.Value).ToString(CultureInfo.InvariantCulture);
-				settings[Constants.DocsSoftLimit] = (quatasData.WarnDocs.Value).ToString(CultureInfo.InvariantCulture);
-				settings[Constants.SizeHardLimitInKB] = (quatasData.MaxSize.Value * 1024).ToString(CultureInfo.InvariantCulture);
-				settings[Constants.SizeSoftLimitInKB] = (quatasData.WarnSize.Value * 1024).ToString(CultureInfo.InvariantCulture);
+				settings[Constants.DocsHardLimit] = (bundlesData.MaxDocs).ToString(CultureInfo.InvariantCulture);
+				settings[Constants.DocsSoftLimit] = (bundlesData.WarnDocs).ToString(CultureInfo.InvariantCulture);
+				settings[Constants.SizeHardLimitInKB] = (bundlesData.MaxSize * 1024).ToString(CultureInfo.InvariantCulture);
+				settings[Constants.SizeSoftLimitInKB] = (bundlesData.WarnSize * 1024).ToString(CultureInfo.InvariantCulture);
 			}
 
 			return settings;

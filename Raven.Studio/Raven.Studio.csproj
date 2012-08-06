@@ -211,22 +211,13 @@
     <Compile Include="Controls\NewDatabase.xaml.cs">
       <DependentUpon>NewDatabase.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\QuotasSettings.xaml.cs">
-      <DependentUpon>QuotasSettings.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Controls\RecentQueriesButton.xaml.cs">
       <DependentUpon>RecentQueriesButton.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\ReplicationSettings.xaml.cs">
-      <DependentUpon>ReplicationSettings.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\ShowEncryptionMessage.xaml.cs">
       <DependentUpon>ShowEncryptionMessage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
-    <Compile Include="Controls\VersioningSettings.xaml.cs">
-      <DependentUpon>VersioningSettings.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Controls\VirtualizingWrapPanel.cs" />
     <Compile Include="Controls\Wizard.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
@@ -708,15 +699,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\QuotasSettings.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Controls\RecentQueriesButton.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\ReplicationSettings.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -725,10 +708,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\Taggers.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\VersioningSettings.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
