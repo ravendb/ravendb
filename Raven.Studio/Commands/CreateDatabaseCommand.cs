@@ -152,7 +152,7 @@ namespace Raven.Studio.Commands
 			var settings = new Dictionary<string, string>
 			{
 				{
-					Constants.RavenDataDir, newDatabase.ShowAdvanded.IsChecked == true
+					Constants.RavenDataDir, newDatabase.ShowAdvanced.IsChecked == true
 					                 	? newDatabase.DbPath.Text
 					                 	: Path.Combine("~", Path.Combine("Databases", newDatabase.DbName.Text))
 					},

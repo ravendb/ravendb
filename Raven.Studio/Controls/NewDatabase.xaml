@@ -28,10 +28,11 @@
 			<TextBox x:Name="DbName"
 					 Grid.Column="1"
 					 Margin="5"/>
-			<CheckBox Grid.Row="1" HorizontalAlignment="Right" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" x:Name="ShowAdvanded"/>
+			<CheckBox Grid.Row="1" HorizontalAlignment="Right" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked" x:Name="ShowAdvanced"/>
 			<TextBlock Text="Advanced Settings"
 					   Grid.Column="1"
-					   Grid.Row="1"/>	
+					   Grid.Row="1"
+					   MouseLeftButtonDown="Toggle"/>	
 		</Grid>
 		<Grid Grid.Row="1" x:Name="AdvancedSettings" Visibility="Collapsed">
 			<Grid.RowDefinitions>
