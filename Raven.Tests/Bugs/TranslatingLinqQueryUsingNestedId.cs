@@ -26,14 +26,9 @@ namespace Raven.Tests.Bugs
 								  SubCategoryId = subCategory.Parent.Id
 							  }
 			}.ToIndexDefinition(new DocumentConvention());
-			var original = new IndexDefinition
-			{
-				Map =
-					@"docs.SubCategories
-	.Select(subCategory => new {CategoryId = subCategory.__document_id, SubCategoryId = subCategory.Parent.Id})"
-			};
-
-			Assert.Equal(original.Map, generated.Map);
+			
+			Assert.Contains("CategoryId = subCategory.__document_id", generated.Map);
+			Assert.Contains("SubCategoryId = subCategory.Parent.Id", generated.Map);
 		}
 
 		#region Nested type: Category
