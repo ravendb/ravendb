@@ -14,8 +14,7 @@ namespace Raven.Tests.MailingList
 
 		[Fact]
 		public void MissingManifestResourceException()
-		{
-			using (var _store = NewDocumentStore())
+		{using (var _store = NewDocumentStore())
 			using (var session = _store.OpenSession())
 			{
 				// create and store a new page model

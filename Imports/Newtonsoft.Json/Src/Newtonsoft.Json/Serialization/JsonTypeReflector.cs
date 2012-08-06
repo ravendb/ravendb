@@ -44,7 +44,7 @@ using System.Runtime.Serialization;
 namespace Raven.Imports.Newtonsoft.Json.Serialization
 {
 #if !SILVERLIGHT && !PocketPC && !NET20 && !NETFX_CORE
-  internal interface IMetadataTypeAttribute
+	public interface IMetadataTypeAttribute
   {
     Type MetadataClassType { get; }
   }
