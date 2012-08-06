@@ -542,7 +542,7 @@ namespace Raven.Client.Util
 			digits = "0123456789";
 
 			// <!-- is a special case (ok, it's a minor hack actually)
-			punct = "+ - * / % & ++ -- = => += -= *= /= %= == === != !== > < >= <= >> << >>> >>>= >>= <<= && &= | || ! !! , : ? ^ ^= |= ::".Split(' ');
+			punct = "+ - * / % & ++ -- = => += ?? -= *= /= %= == === != !== > < >= <= >> << >>> >>>= >>= <<= && &= | || ! !! , : ? ^ ^= |= ::".Split(' ');
 
 			// words which should always start on new line.
 			line_starters = "continue,try,throw,return,var,if,switch,case,default,for,while,break,function".Split(',');
