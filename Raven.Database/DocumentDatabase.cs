@@ -368,7 +368,7 @@ namespace Raven.Database
 				disposed = true;
 
 				if (workContext != null)
-					workContext.StopWork();
+					workContext.StopWorkRude();
 			});
 
 			exceptionAggregator.Execute(() =>
@@ -911,7 +911,7 @@ namespace Raven.Database
 						viewGenerator.TransformResultsDefinition != null)
 					{
 						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.ToJson())).ToArray();
-						var robustEnumerator = new RobustEnumerator(dynamicJsonObjects.Length)
+						var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
 						{
 							OnError =
 								(exception, o) =>

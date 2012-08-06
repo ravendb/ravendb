@@ -12,7 +12,7 @@ namespace Raven.Database.Indexing
 
 		void Repeat(IRepeatedAction action);
 
-		void ExecuteAll<T>(InMemoryRavenConfiguration configuration, TaskScheduler scheduler, IList<T> source, Action<T, long> action);
+		void ExecuteAll<T>(InMemoryRavenConfiguration configuration, TaskScheduler scheduler, WorkContext context, IList<T> source, Action<T, long> action);
 	}
 
 	public interface IRepeatedAction

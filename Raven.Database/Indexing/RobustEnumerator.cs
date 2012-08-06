@@ -17,10 +17,12 @@ namespace Raven.Database.Indexing
 		public Action BeforeMoveNext = delegate { };
 		public Action CancelMoveNext = delegate { };
 		public Action<Exception, object> OnError = delegate { };
+		private readonly WorkContext context;
 		private readonly int numberOfConsecutiveErrors;
 
-		public RobustEnumerator(int numberOfConsecutiveErrors)
+		public RobustEnumerator(WorkContext context, int numberOfConsecutiveErrors)
 		{
+			this.context = context;
 			this.numberOfConsecutiveErrors = numberOfConsecutiveErrors;
 		}
 
@@ -52,6 +54,7 @@ namespace Raven.Database.Indexing
 						int maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
 						do
 						{
+							context.CancellationToken.ThrowIfCancellationRequested();
 							var moveSuccessful = MoveNext(en, wrapped);
 							if (moveSuccessful == false)
 								break;

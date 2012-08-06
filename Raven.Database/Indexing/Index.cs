@@ -417,7 +417,7 @@ namespace Raven.Database.Indexing
 		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IEnumerable<IndexingFunc> funcs,
 															IStorageActionsAccessor actions, WorkContext context, IndexingWorkStats stats)
 		{
-			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
 				BeforeMoveNext = () => stats.IndexingAttempts++,
 				CancelMoveNext = () => stats.IndexingAttempts--,
@@ -442,7 +442,7 @@ namespace Raven.Database.Indexing
 			IndexingWorkStats stats)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
 				BeforeMoveNext = () => stats.ReduceAttempts++,
 				CancelMoveNext = () => stats.ReduceAttempts--,
@@ -468,7 +468,7 @@ namespace Raven.Database.Indexing
 															IStorageActionsAccessor actions, WorkContext context)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
 				BeforeMoveNext = () => { }, // don't care
 				CancelMoveNext = () => { }, // don't care
