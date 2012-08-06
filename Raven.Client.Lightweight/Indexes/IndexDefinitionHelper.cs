@@ -3,6 +3,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using Raven.Client.Document;
+using Raven.Client.Util;
 
 namespace Raven.Client.Indexes
 {
@@ -24,16 +25,13 @@ namespace Raven.Client.Indexes
 				return null;
 			var expression = expr.Body;
 
-#if !NET35
 			string queryRootName = null;
-#endif
 			switch (expression.NodeType)
 			{
 				case ExpressionType.ConvertChecked:
 				case ExpressionType.Convert:
 					expression = ((UnaryExpression)expression).Operand;
 					break;
-#if !NET35
 				case ExpressionType.Call:
 					var methodCallExpression = ((MethodCallExpression)expression);
 					switch (methodCallExpression.Method.Name)
@@ -46,14 +44,9 @@ namespace Raven.Client.Indexes
 							break;
 					}
 					break;
-#endif
 			}
 
-#if !NET35
 			var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, translateIdentityProperty, typeof(TQueryRoot), queryRootName, expression);
-#else
-			var linqQuery =expression.ToString();
-#endif
 
 			var querySourceName = expr.Parameters.First(x => x.Type != typeof(IClientSideDatabase)).Name;
 
@@ -70,8 +63,7 @@ namespace Raven.Client.Indexes
 			linqQuery = Regex.Replace(linqQuery, @"new ((VB\$)|(<>))[\w_]+(`\d+)?", "new ");// remove anonymous types
 			linqQuery = Regex.Replace(linqQuery, @"new " + typeof(TReduceResult).Name, "new ");// remove reduce result type
 			linqQuery = Regex.Replace(linqQuery, @"<>([a-z])_", "__$1_"); // replace <>h_ in transperant identifiers
-			const string pattern = @"(\.Where\(|\.Select\(|\.GroupBy\(|\.SelectMany)";
-			linqQuery = Regex.Replace(linqQuery, pattern, "\r\n\t$1"); // formatting
+			linqQuery = JSBeautify.Apply(linqQuery);
 			return linqQuery;
 		}
 
@@ -110,7 +102,7 @@ namespace Raven.Client.Indexes
 						otherBraces++;
 						continue;
 					}
-					else if (linqQuery[j] != ')')
+					if (linqQuery[j] != ')')
 						continue;
 					if (otherBraces == 0)
 					{
