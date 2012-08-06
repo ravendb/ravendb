@@ -1,4 +1,5 @@
-﻿using System.Windows.Navigation;
+﻿using System.Windows;
+using System.Windows.Controls;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Bundles
@@ -14,10 +15,60 @@ namespace Raven.Studio.Features.Bundles
 			WarnDocs.Maximum = int.MaxValue;
 		}
 
-		// Executes when the user navigates to this page.
-		protected override void OnNavigatedTo(NavigationEventArgs e)
+		private void UseConnectionCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
 		{
-		}
+			var connectionCombo = sender as ComboBox;
+			if (connectionCombo == null)
+				return;
+			
+			var grid = connectionCombo.Parent as Grid;
+			var children = grid.Children;
 
+			if (connectionCombo.SelectedIndex == 0)
+			{	
+				foreach (var child in children)
+				{
+					if (child is TextBox)
+					{
+						switch ((child as TextBox).Name)
+						{
+							case "UrlText":
+								child.Visibility = Visibility.Visible;
+								break;
+							case "ConnectionText":
+								child.Visibility = Visibility.Collapsed;
+								break;
+						}
+					}
+					else if (child is Grid)
+					{
+						child.Visibility = Visibility.Visible;
+					}
+				}
+			}
+			else
+			{
+				foreach (var child in children)
+				{
+					if (child is TextBox)
+					{
+						switch ((child as TextBox).Name)
+						{
+							case "UrlText":
+								child.Visibility = Visibility.Collapsed;
+								break;
+							case "ConnectionText":
+								child.Visibility = Visibility.Visible;
+								break;
+						}
+					}
+					else if (child is Grid)
+					{
+						child.Visibility = Visibility.Collapsed;
+					}
+				}
+			}
+
+		}
 	}
 }
