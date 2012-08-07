@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows.Controls;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -27,13 +28,13 @@ namespace Raven.Studio.Commands
 				.ContinueOnSuccessInTheUIThread(newDatabase =>
 				{
 					var databaseName = newDatabase.DbName.Text;
-					if (string.IsNullOrEmpty(databaseName))
-						return;
 
 					if (Path.GetInvalidPathChars().Any(databaseName.Contains))
 						throw new ArgumentException("Cannot create a database with invalid path characters: " + databaseName);
 					if (ApplicationModel.Current.Server.Value.Databases.Count(s => s == databaseName) != 0)
 						throw new ArgumentException("A database with the name " + databaseName + " already exists");
+
+					AssertValidName(databaseName);
 
 					new BundlesSelect().ShowAsync()
 						.ContinueOnSuccessInTheUIThread(bundles =>
@@ -173,6 +174,18 @@ namespace Raven.Studio.Commands
 			}
 
 			return settings;
+		}
+		
+		private static readonly string validDbNameChars = @"([A-Za-z0-9_\-\.]+)";
+
+		public static void AssertValidName(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+			var result = Regex.Matches(name, validDbNameChars);
+			if (result.Count == 0 || result[0].Value != name)
+			{
+				throw new InvalidOperationException("Database name can only contain only A-Z, a-z, \"_\", \".\" or \"-\" but was: " + name);
+			}
 		}
 	}
 }
