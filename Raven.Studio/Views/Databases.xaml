@@ -96,7 +96,7 @@
 											 Grid.Column="3">
 								<HyperlinkButton.Content>
 									<StackPanel Orientation="Horizontal">
-										<Image Source="{StaticResource Image_Reformat_Small}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
+										<Image Source="{StaticResource Image_Database_System_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
 										<TextBlock Text="System Database" VerticalAlignment="Center"/>
 									</StackPanel>
 								</HyperlinkButton.Content>

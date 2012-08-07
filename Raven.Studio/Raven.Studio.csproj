@@ -996,6 +996,7 @@
     <Resource Include="Assets\Images\import_data_tiny.png" />
     <Resource Include="Assets\Images\offline.png" />
     <Resource Include="Assets\Images\online.png" />
+    <Resource Include="Assets\Images\database_system_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

@@ -32,7 +32,8 @@
     <BitmapImage x:Key="Image_PreviousPage_Tiny" UriSource="previous_tiny.png"/>
     <BitmapImage x:Key="Image_LastPage_Tiny" UriSource="navigate_last_tiny.png"/>
     <BitmapImage x:Key="Image_FirstPage_Tiny" UriSource="navigate_first_tiny.png"/>
-    <BitmapImage x:Key="Image_Database_Tiny" UriSource="database_tiny.png"/>
+	<BitmapImage x:Key="Image_Database_Tiny" UriSource="database_tiny.png"/>
+	<BitmapImage x:Key="Image_Database_System_Tiny" UriSource="database_system_tiny.png"/>
     <BitmapImage x:Key="Image_AddDatabase_Tiny" UriSource="database_add_tiny.png"/>
     <BitmapImage x:Key="Image_AddIndex_Tiny" UriSource="index_add_tiny.png"/>
     <BitmapImage x:Key="Image_ExecuteQuery_Small" UriSource="execute_query_tiny.png"/>
