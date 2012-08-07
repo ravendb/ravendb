@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Client.Extensions;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using Raven.Studio.Models;
@@ -32,8 +33,9 @@ namespace Raven.Studio.Commands
 					(bundlesModel.MaxDocs).ToString(CultureInfo.InvariantCulture);
 				bundlesModel.DatabaseDocument.Settings[Constants.DocsSoftLimit] =
 					(bundlesModel.WarnDocs).ToString(CultureInfo.InvariantCulture);
-				
-				//TODO: Save settings changes
+				if (bundlesModel.DatabaseDocument.Id == null)
+					bundlesModel.DatabaseDocument.Id = databaseName;
+				DatabaseCommands.CreateDatabaseAsync(bundlesModel.DatabaseDocument);
 			}
 
 			if (bundlesModel.HasReplication)
