@@ -94,11 +94,7 @@ Public Class LinqQueriesUsingVB
 			 Select New With {IdxMod.ModuleId}
 			}
 
-			Dim result = index.ToIndexDefinition(store.Conventions)
-
-			Assert.Equal("docs.WhereEntityIs(new System.String []{""Ayende"", ""Rahien""})" & vbCrLf & _
-			"	.SelectMany(page => (page.Zones[""Left""].Modules), (page, IdxMod) => new {ModuleId = IdxMod.ModuleId})", result.Map)
-
+			store.DatabaseCommands.PutIndex("test", index)
 		End Using
 
 	End Sub

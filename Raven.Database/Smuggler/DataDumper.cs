@@ -111,7 +111,7 @@ namespace Raven.Database.Smuggler
 		private RavenJArray GetAttachments(int start, Guid? etag)
 		{
 			var array = new RavenJArray();
-			var attachmentInfos = _database.GetAttachments(start, 128, etag, null);
+			var attachmentInfos = _database.GetAttachments(start, 128, etag, null, 1024*1024*10);
 
 			foreach (var attachmentInfo in attachmentInfos)
 			{

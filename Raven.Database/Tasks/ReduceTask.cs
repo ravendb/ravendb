@@ -38,7 +38,8 @@ namespace Raven.Database.Tasks
 		{
 			if (ReduceKeys.Length == 0)
 				return;
-
+			
+			context.CancellationToken.ThrowIfCancellationRequested();
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(Index);
 			if (viewGenerator == null)
 				return; // deleted view?
@@ -58,6 +59,8 @@ namespace Raven.Database.Tasks
 				var results = mappedResults.ToArray();
 				context.ReducedPerSecIncreaseBy(results.Length);
 				log.Debug("Read {0} reduce keys in {1} with {2} results for index {3}", ReduceKeys.Length, sp.Elapsed, results.Length, Index);
+
+				context.CancellationToken.ThrowIfCancellationRequested();
 				sp = Stopwatch.StartNew();
 				context.IndexStorage.Reduce(Index, viewGenerator, results, context, actions, ReduceKeys);
 				log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3}", ReduceKeys.Length, sp.Elapsed,

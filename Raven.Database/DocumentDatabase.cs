@@ -115,6 +115,7 @@ namespace Raven.Database
 		private System.Threading.Tasks.Task indexingBackgroundTask;
 		private System.Threading.Tasks.Task reducingBackgroundTask;
 		private readonly TaskScheduler backgroundTaskScheduler;
+		private object idleLocker = new object();
 
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 
@@ -367,7 +368,7 @@ namespace Raven.Database
 				disposed = true;
 
 				if (workContext != null)
-					workContext.StopWork();
+					workContext.StopWorkRude();
 			});
 
 			exceptionAggregator.Execute(() =>
@@ -458,8 +459,19 @@ namespace Raven.Database
 
 		public void RunIdleOperations()
 		{
-			TransportState.OnIdle();
-			workContext.IndexStorage.RunIdleOperations();
+			var tryEnter = Monitor.TryEnter(idleLocker);
+			try
+			{
+				if (tryEnter == false)
+					return;
+				TransportState.OnIdle();
+				IndexStorage.RunIdleOperations();
+			}
+			finally
+			{
+				if(tryEnter)
+					Monitor.Exit(idleLocker);
+			}
 		}
 
 		private long sequentialUuidCounter;
@@ -899,7 +911,7 @@ namespace Raven.Database
 						viewGenerator.TransformResultsDefinition != null)
 					{
 						var dynamicJsonObjects = collection.Select(x => new DynamicJsonObject(x.ToJson())).ToArray();
-						var robustEnumerator = new RobustEnumerator(dynamicJsonObjects.Length)
+						var robustEnumerator = new RobustEnumerator(workContext, dynamicJsonObjects.Length)
 						{
 							OnError =
 								(exception, o) =>
@@ -1240,7 +1252,7 @@ namespace Raven.Database
 			return list;
 		}
 
-		public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag, string startsWith)
+		public AttachmentInformation[] GetAttachments(int start, int pageSize, Guid? etag, string startsWith, long maxSize)
 		{
 			AttachmentInformation[] attachments = null;
 
@@ -1249,7 +1261,7 @@ namespace Raven.Database
 				if (string.IsNullOrEmpty(startsWith) == false)
 					attachments = actions.Attachments.GetAttachmentsStartingWith(startsWith, start, pageSize).ToArray();
 				else if (etag != null)
-					attachments = actions.Attachments.GetAttachmentsAfter(etag.Value, pageSize).ToArray();
+					attachments = actions.Attachments.GetAttachmentsAfter(etag.Value, pageSize, maxSize).ToArray();
 				else
 					attachments = actions.Attachments.GetAttachmentsByReverseUpdateOrder(start).Take(pageSize).ToArray();
 

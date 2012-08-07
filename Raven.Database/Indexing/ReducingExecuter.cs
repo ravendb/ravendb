@@ -22,10 +22,12 @@ namespace Raven.Database.Indexing
 		{
 			TimeSpan reduceDuration= TimeSpan.Zero;
 			List<MappedResultInfo> reduceKeyAndEtags = null;
+			bool operationCanceled = false;
 			try
 			{
 				transactionalStorage.Batch(actions =>
 				{
+					context.CancellationToken.ThrowIfCancellationRequested();
 					reduceKeyAndEtags = actions.MappedResults.GetMappedResultsReduceKeysAfter
 						(
 							indexToWorkOn.IndexName,
@@ -53,9 +55,13 @@ namespace Raven.Database.Indexing
 				});
 
 			}
+			catch(OperationCanceledException)
+			{
+				operationCanceled = true;
+			}
 			finally
 			{
-				if (reduceKeyAndEtags != null && reduceKeyAndEtags.Count > 0)
+				if (operationCanceled == false && reduceKeyAndEtags != null && reduceKeyAndEtags.Count > 0)
 				{
 					var lastByEtag = GetLastByEtag(reduceKeyAndEtags);
 					var lastEtag = lastByEtag.Etag;
@@ -117,7 +123,7 @@ namespace Raven.Database.Indexing
 
 		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
 		{
-			BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, indexesToWorkOn, (indexToWorkOn, l) => HandleReduceForIndex(indexToWorkOn));
+			BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, context, indexesToWorkOn, (indexToWorkOn, l) => HandleReduceForIndex(indexToWorkOn));
 		}
 
 		protected override bool IsValidIndex(IndexStats indexesStat)

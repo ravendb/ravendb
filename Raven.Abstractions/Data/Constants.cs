@@ -6,6 +6,7 @@ namespace Raven.Abstractions.Data
 {
 	public static class Constants
 	{
+		
 		public const string RavenShardId = "Raven-Shard-Id";
 		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
 		public const string LastModified = "Last-Modified";
@@ -75,6 +76,9 @@ namespace Raven.Abstractions.Data
 		public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
 		public const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 		public const string RavenReplicationDestinationsBasePath = "Raven/Replication/Destinations/";
+
+		public const string RavenReplicationDocsTombstones = "Raven/Replication/Docs/Tombstones";
+		public const string RavenReplicationAttachmentsTombstones = "Raven/Replication/Attachments/Tombstones";
 
 		public const int ChangeHistoryLength = 50;
 	}

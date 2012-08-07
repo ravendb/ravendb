@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Text;
+using System.Web;
 using System.Xml;
 using NLog;
 
@@ -17,6 +18,24 @@ namespace Raven.Database.Util
 
 		public static int GetPort(string portStr)
 		{
+			try
+			{
+				if (HttpContext.Current != null)
+				{
+					var url = HttpContext.Current.Request.Url;
+					if (url.IsDefaultPort)
+						return string.Equals("https", url.Scheme,StringComparison.InvariantCultureIgnoreCase) ?
+						 443 : 80;
+					return url.Port;
+				}
+			}
+			catch (HttpException)
+			{
+				// explicitly ignoring this because we might be running in embedded mode
+				// inside IIS during init stages, in which case we can't access the HttpContext
+				// nor do we actually care
+			}
+
 			if (portStr == "*" || string.IsNullOrWhiteSpace(portStr))
 			{
 				int autoPort;
@@ -63,9 +82,9 @@ namespace Raven.Database.Util
 			}
 		}
 
-		private static bool TryReadPreviouslySelectAutoPort(out int i)
+		private static bool TryReadPreviouslySelectAutoPort(out int port)
 		{
-			i = 0;
+			port = 0;
 			string localConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "local.config");
 			if (File.Exists(localConfigPath) == false)
 			{
@@ -82,7 +101,7 @@ namespace Raven.Database.Util
 			if (!int.TryParse(stringPort, out localPort))
 				return false;
 			
-			i = localPort;
+			port = localPort;
 			return true;
 		}
 

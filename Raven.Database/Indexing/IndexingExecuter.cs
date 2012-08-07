@@ -61,6 +61,9 @@ namespace Raven.Database.Indexing
 
 			var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToGuid();
 
+			context.CancellationToken.ThrowIfCancellationRequested();
+
+			var operationCancelled = false;
 			TimeSpan indexingDuration = TimeSpan.Zero;
 			JsonDocument[] jsonDocs = null;
 			try
@@ -83,14 +86,16 @@ namespace Raven.Database.Indexing
 
 				log.Debug("Found a total of {0} documents that requires indexing since etag: {1}",
 										  jsonDocs.Length, lastIndexedGuidForAllIndexes);
-				
+
+				context.CancellationToken.ThrowIfCancellationRequested();
+
 				if (jsonDocs.Length > 0)
 				{
 					context.IndexedPerSecIncreaseBy(jsonDocs.Length);
 					var result = FilterIndexes(indexesToWorkOn, jsonDocs).ToList();
 					indexesToWorkOn = result.Select(x => x.Item1).ToList();
 					var sw = Stopwatch.StartNew();
-					BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, result, (indexToWorkOn,_) =>
+					BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, context, result, (indexToWorkOn,_) =>
 					{
 						var index = indexToWorkOn.Item1;
 						var docs = indexToWorkOn.Item2;
@@ -101,9 +106,13 @@ namespace Raven.Database.Indexing
 					indexingDuration = sw.Elapsed;
 				}
 			}
+			catch(OperationCanceledException)
+			{
+				operationCancelled = true;
+			}
 			finally
 			{
-				if (jsonDocs != null && jsonDocs.Length > 0)
+				if (operationCancelled == false && jsonDocs != null && jsonDocs.Length > 0)
 				{
 					var last = jsonDocs.Last();
 					
@@ -170,7 +179,7 @@ namespace Raven.Database.Indexing
 			var results = new Tuple<IndexToWorkOn, IndexingBatch>[indexesToWorkOn.Count];
 			var actions = new Action<IStorageActionsAccessor>[indexesToWorkOn.Count];
 
-			BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, indexesToWorkOn, (indexToWorkOn, i) =>
+			BackgroundTaskExecuter.Instance.ExecuteAll(context.Configuration, scheduler, context, indexesToWorkOn, (indexToWorkOn, i) =>
 			{
 				var indexLastInedexEtag = new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray());
 				if (indexLastInedexEtag.CompareTo(lastIndexedEtag) >= 0)
@@ -278,7 +287,13 @@ namespace Raven.Database.Indexing
 					}
 					log.Debug("Indexing {0} documents for index: {1}. ({2})", batch.Docs.Count, index, ids);
 				}
+				context.CancellationToken.ThrowIfCancellationRequested();
+
 				context.IndexStorage.Index(index, viewGenerator, batch.Docs, context, actions, batch.DateTime ?? DateTime.MinValue);
+			}
+			catch(OperationCanceledException)
+			{
+				throw;
 			}
 			catch (Exception e)
 			{

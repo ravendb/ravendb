@@ -21,10 +21,11 @@ namespace Raven.Storage.Managed
 			this.generator = generator;
 		}
 
-		public void Add(string name, string key, RavenJObject data)
+		public void Set(string name, string key, RavenJObject data)
 		{
 			var memoryStream = new MemoryStream();
 			data.WriteTo(memoryStream);
+			
 			storage.Lists.Put(new RavenJObject
 			{
 				{"name", name},
@@ -45,7 +46,7 @@ namespace Raven.Storage.Managed
 			storage.Lists.Remove(readResult.Key);
 		}
 
-		public IEnumerable<Tuple<Guid, RavenJObject>> Read(string name, Guid start, int take)
+		public IEnumerable<ListItem> Read(string name, Guid start, int take)
 		{
 			return storage.Lists["ByNameAndEtag"].SkipAfter(new RavenJObject
 			{
@@ -56,14 +57,17 @@ namespace Raven.Storage.Managed
 			.Select(result =>
 			{
 				var readResult = storage.Lists.Read(result);
-				return Tuple.Create(
-					new Guid(readResult.Key.Value<byte[]>("etag")),
-					readResult.Data().ToJObject());
+				return new ListItem
+				{
+					Data = readResult.Data().ToJObject(),
+					Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
+					Key = readResult.Key.Value<string>("key")
+				};
 			})
 			.Take(take);
 		}
 
-		public RavenJObject Read(string name, string key)
+		public ListItem Read(string name, string key)
 		{
 			var readResult = storage.Lists.Read(new RavenJObject
 			{
@@ -74,7 +78,12 @@ namespace Raven.Storage.Managed
 			if (readResult == null)
 				return null;
 
-			return readResult.Data().ToJObject();
+			return new ListItem
+			{
+				Data = readResult.Data().ToJObject(),
+				Key = readResult.Key.Value<string>("key"),
+				Etag = new Guid(readResult.Key.Value<byte[]>("etag"))
+			};
 		}
 	}
 }

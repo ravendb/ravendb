@@ -1128,7 +1128,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (boost != 1m)
 			{
 				// 1.0 is the default
-				theQueryText.Append("^").Append(boost);
+				theQueryText.Append("^").Append(boost.ToString(CultureInfo.InvariantCulture));
 			}
 		}
 
@@ -1163,7 +1163,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (fuzzy != 0.5m)
 			{
 				// 0.5 is the default
-				theQueryText.Append(fuzzy);
+				theQueryText.Append(fuzzy.ToString(CultureInfo.InvariantCulture));
 			}
 		}
 
@@ -1193,7 +1193,7 @@ If you really want to do in memory filtering on the data returned from the query
 				throw new InvalidOperationException("Proximity distance can only modify a phrase");
 			}
 
-			theQueryText.Append("~").Append(proximity);
+			theQueryText.Append("~").Append(proximity.ToString(CultureInfo.InvariantCulture));
 		}
 
 		/// <summary>

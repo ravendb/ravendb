@@ -79,7 +79,11 @@ namespace Raven.Database.Indexing
 		/// Note that we assume that source is a relatively small number, expected to be 
 		/// the number of indexes, not the number of documents.
 		/// </summary>
-		public void ExecuteAll<T>(InMemoryRavenConfiguration configuration, TaskScheduler scheduler, IList<T> source, Action<T, long> action)
+		public void ExecuteAll<T>(
+			InMemoryRavenConfiguration configuration, 
+			TaskScheduler scheduler, 
+			WorkContext context,
+			IList<T> source, Action<T, long> action)
 		{
 			if(configuration.MaxNumberOfParallelIndexTasks == 1)
 			{
@@ -90,11 +94,12 @@ namespace Raven.Database.Indexing
 				}
 				return;
 			}
-
+			context.CancellationToken.ThrowIfCancellationRequested();;
 			var partitioneds = Partition(source, configuration.MaxNumberOfParallelIndexTasks).ToList();
 			int start = 0;
 			foreach (var partitioned in partitioneds)
 			{
+				context.CancellationToken.ThrowIfCancellationRequested(); ;
 				var currentStart = start;
 				Parallel.ForEach(partitioned, new ParallelOptions
 				{

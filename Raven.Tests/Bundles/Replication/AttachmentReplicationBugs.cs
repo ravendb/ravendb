@@ -1,6 +1,8 @@
 ﻿
 using System.IO;
 using System.Threading;
+using Raven.Client.Connection;
+using Raven.Client.Exceptions;
 using Raven.Json.Linq;
 using Xunit;
 
@@ -19,7 +21,7 @@ namespace Raven.Bundles.Tests.Replication
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
-			
+
 			TellFirstInstanceToReplicateToSecondInstance();
 
 			var databaseCommands = store1.DatabaseCommands;
@@ -48,5 +50,35 @@ namespace Raven.Bundles.Tests.Replication
 			Assert.True(foundAll);
 		}
 
+
+		[Fact]
+		public void Can_resolve_conflict_with_delete()
+		{
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+
+
+			store1.DatabaseCommands.PutAttachment("static", null, new MemoryStream(new[] { (byte)1 }), new RavenJObject());
+			store2.DatabaseCommands.PutAttachment("static", null, new MemoryStream(new[] { (byte)1 }), new RavenJObject());
+
+			TellFirstInstanceToReplicateToSecondInstance();
+
+			var conflictException = Assert.Throws<ConflictException>(() =>
+			{
+				for (int i = 0; i < RetriesCount; i++)
+				{
+					store2.DatabaseCommands.GetAttachment("static");
+					Thread.Sleep(100);
+				}
+			});
+
+			store2.DatabaseCommands.DeleteAttachment("static", null);
+
+
+			foreach (var conflictedVersionId in conflictException.ConflictedVersionIds)
+			{
+				Assert.Null(store2.DatabaseCommands.GetAttachment(conflictedVersionId));
+			}
+		}
 	}
 }

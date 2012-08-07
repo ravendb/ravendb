@@ -17,9 +17,16 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IListsStorageActions
 	{
-		public void Add(string name, string key, RavenJObject data)
+		public void Set(string name, string key, RavenJObject data)
 		{
-			using (var update = new Update(session, Lists, JET_prep.Insert))
+			Api.JetSetCurrentIndex(session, Lists, "by_name_and_key");
+			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, Lists, key, Encoding.Unicode, MakeKeyGrbit.None);
+
+			var exists = Api.TrySeek(session, Lists, SeekGrbit.SeekEQ);
+
+
+			using (var update = new Update(session, Lists, exists ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["name"], name, Encoding.Unicode);
 				Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["key"], key, Encoding.Unicode);
@@ -43,7 +50,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.JetDelete(session, Lists);
 		}
 
-		public IEnumerable<Tuple<Guid, RavenJObject>> Read(string name, Guid start, int take)
+		public IEnumerable<ListItem> Read(string name, Guid start, int take)
 		{
 			Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
 			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -62,13 +69,18 @@ namespace Raven.Storage.Esent.StorageActions
 				var etag = Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]).TransfromToGuidWithProperSorting();
 				using (Stream stream = new BufferedStream(new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"])))
 				{
-					yield return Tuple.Create(etag, stream.ToJObject());
+					yield return new ListItem
+					{
+						Etag = etag,
+						Data = stream.ToJObject(),
+						Key = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["key"], Encoding.Unicode)
+					};
 				}
 			} while (Api.TryMoveNext(session, Lists) && count < take);
 		
 		}
 
-		public RavenJObject Read(string name, string key)
+		public ListItem Read(string name, string key)
 		{
 			Api.JetSetCurrentIndex(session, Lists, "by_name_and_key");
 			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -79,7 +91,12 @@ namespace Raven.Storage.Esent.StorageActions
 
 			using (Stream stream = new BufferedStream(new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"])))
 			{
-				return stream.ToJObject();
+				return new ListItem
+				{
+					Data = stream.ToJObject(),
+					Key = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["key"], Encoding.Unicode),
+					Etag = Api.RetrieveColumn(session, Lists, tableColumnsCache.ListsColumns["etag"]).TransfromToGuidWithProperSorting()
+				};
 			}
 		}
 	}

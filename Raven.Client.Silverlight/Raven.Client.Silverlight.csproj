@@ -931,6 +931,9 @@
     <Compile Include="..\Raven.Client.Lightweight\Util\ConcatObservable.cs">
       <Link>Imports\Util\ConcatObservable.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Util\JSBeautify.cs">
+      <Link>Imports\Util\JSBeautify.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Util\Types.cs">
       <Link>Imports\Util\Types.cs</Link>
     </Compile>
@@ -979,6 +982,9 @@
     <Compile Include="MissingFromSilverlight\Stopwatch.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">
+      <Link>Imports\Imports\Newtonsoft.Json\Dynamic.snk</Link>
+    </EmbeddedResource>
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>Imports\RavenDB.snk</Link>
     </None>
