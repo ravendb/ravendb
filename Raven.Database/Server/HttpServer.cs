@@ -45,6 +45,7 @@ namespace Raven.Database.Server
 	public class HttpServer : IDisposable
 	{
 		private readonly DateTime startUpTime = DateTime.UtcNow;
+		private DateTime lastWriteRequest;
 		private const int MaxConcurrentRequests = 192;
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
@@ -254,6 +255,9 @@ namespace Raven.Database.Server
 
 		private void IdleOperations(object state)
 		{
+			if ((DateTime.UtcNow - lastWriteRequest).TotalMinutes < 1)
+				return;// not idle, we just had a write request coming in
+
 			try
 			{
 				SystemDatabase.RunIdleOperations();
@@ -403,11 +407,11 @@ namespace Raven.Database.Server
 				try
 				{
 					LogHttpRequestStats(new LogHttpRequestStatsParams(
-					                    	sw,
-					                    	context.Request.Headers,
-					                    	context.Request.HttpMethod,
-					                    	context.Response.StatusCode,
-					                    	context.Request.Url.PathAndQuery));
+											sw,
+											context.Request.Headers,
+											context.Request.HttpMethod,
+											context.Response.StatusCode,
+											context.Request.Url.PathAndQuery));
 				}
 				catch (Exception e)
 				{
@@ -428,6 +432,10 @@ namespace Raven.Database.Server
 				if (disposed)
 					return;
 
+				if (IsWriteRequest(ctx))
+				{
+					lastWriteRequest = DateTime.UtcNow;
+				}
 				var sw = Stopwatch.StartNew();
 				bool ravenUiRequest = false;
 				try
@@ -457,6 +465,12 @@ namespace Raven.Database.Server
 				if (isReadLockHeld == false)
 					disposerLock.ExitReadLock();
 			}
+		}
+
+		private static bool IsWriteRequest(IHttpContext ctx)
+		{
+			return AbstractRequestAuthorizer.IsGetRequest(ctx.Request.HttpMethod, ctx.Request.Url.AbsoluteUri) ==
+				   false;
 		}
 
 		protected bool ShouldLogException(Exception exception)
