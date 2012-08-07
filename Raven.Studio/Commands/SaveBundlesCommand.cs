@@ -33,7 +33,7 @@ namespace Raven.Studio.Commands
 				bundlesModel.DatabaseDocument.Settings[Constants.DocsSoftLimit] =
 					(bundlesModel.WarnDocs).ToString(CultureInfo.InvariantCulture);
 				
-				//Todo: Save settings changes
+				//TODO: Save settings changes
 			}
 
 			if (bundlesModel.HasReplication)

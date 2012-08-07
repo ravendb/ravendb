@@ -6,6 +6,7 @@
 	<Converters:BooleanToIntConverter x:Key="BooleanToInt"/>
 	<Converters:BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
 	<Converters:BooleanToOppositeVisibilityConverter x:Key="BooleanToOppositeVisibility" />
+	<Converters:StringToBooleanConverter x:Key="StringToBoolean"/>
 	<Converters:BooleanToStaleStatConverter x:Key="BooleanToStaleStatConverter" />
 	<Converters:UtcToLocalConverter x:Key="UtcToLocalConverter" />
 	<Converters:RedIfError x:Key="RedIfError" />

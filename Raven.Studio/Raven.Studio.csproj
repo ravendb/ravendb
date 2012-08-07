@@ -319,6 +319,7 @@
     <Compile Include="Infrastructure\ArrayContainer.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToIntConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringToBooleanConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringToDefaultOperatorConverter.cs" />
     <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\EnumToVisibilityConverter.cs" />
