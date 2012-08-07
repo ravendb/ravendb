@@ -12,39 +12,39 @@ namespace Raven.Studio
 	{
 		public App()
 		{
-		    this.Exit += HandleExit;
+			this.Exit += HandleExit;
 			this.Startup += this.Application_Startup;
 			this.UnhandledException += this.Application_UnhandledException;
 
-            LoadDefaults();
+			LoadDefaults();
 			InitializeComponent();
 		}
 
-	    private void Application_Startup(object sender, StartupEventArgs e)
+		private void Application_Startup(object sender, StartupEventArgs e)
 		{
 			SettingsRegister.Register();
 
-	        Schedulers.UIScheduler = TaskScheduler.FromCurrentSynchronizationContext();
+			Schedulers.UIScheduler = TaskScheduler.FromCurrentSynchronizationContext();
 
 			var rootVisual = new MainPage();
 			ApplicationModel.Current.Setup(rootVisual);
 			this.RootVisual = rootVisual;
-
 		}
 
-	    private void LoadDefaults()
-	    {
-	        Settings.Instance.LoadSettings(IsolatedStorageSettings.ApplicationSettings);
-	    }
+		private void LoadDefaults()
+		{
+			Settings.Instance.LoadSettings(IsolatedStorageSettings.ApplicationSettings);
+		}
 
-	    private void HandleExit(object sender, EventArgs e)
-	    {
-            Settings.Instance.SaveSettings(IsolatedStorageSettings.ApplicationSettings);
+		private void HandleExit(object sender, EventArgs e)
+		{
+			Settings.Instance.LastUrl = UrlUtil.Url;
+			Settings.Instance.SaveSettings(IsolatedStorageSettings.ApplicationSettings);
 
-            IsolatedStorageSettings.ApplicationSettings.Save();
-	    }
+			IsolatedStorageSettings.ApplicationSettings.Save();
+		}
 
-	    private void Application_UnhandledException(object sender, ApplicationUnhandledExceptionEventArgs e)
+		private void Application_UnhandledException(object sender, ApplicationUnhandledExceptionEventArgs e)
 		{
 			if (System.Diagnostics.Debugger.IsAttached) return;
 			

@@ -115,6 +115,8 @@ namespace Raven.Studio.Models
 				                   	    var url = new UrlParser(UrlUtil.Url);
                                         url.SetQueryParam("database", Settings.Instance.SelectedDatabase);
                                         SetCurrentDatabase(url);
+
+										UrlUtil.Navigate(Settings.Instance.LastUrl);
 				                   	})
 				.Catch();
 		}
