@@ -11,6 +11,7 @@ namespace Raven.Studio.Models
 {
 	public class BaseBundlesModel : ViewModel
 	{
+		public bool Creation { get; set; }
 		public DatabaseDocument DatabaseDocument { get; set; }
 
 		public BaseBundlesModel() 

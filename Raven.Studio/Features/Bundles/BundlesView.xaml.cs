@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using Raven.Abstractions.Replication;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
+using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Bundles
 {
@@ -81,6 +82,22 @@ namespace Raven.Studio.Features.Bundles
 			{
 				bundleModel.ReplicationDestinations.Remove(button.DataContext as ReplicationDestination);
 			}
+		}
+
+		private void CancelButton_Click(object sender, RoutedEventArgs e)
+		{
+			var parentWindow = this.Parent as ChildWindow;
+			if (parentWindow == null)
+				return;
+			parentWindow.DialogResult = false;
+		}
+
+		private void OKButton_Click(object sender, RoutedEventArgs e)
+		{
+			var parentWindow = this.Parent as ChildWindow;
+			if (parentWindow == null)
+				return;
+			parentWindow.DialogResult = true;
 		}
 	}
 }

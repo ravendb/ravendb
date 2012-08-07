@@ -262,6 +262,9 @@
 			</sdk:TabControl>
 		</Grid>
 
-		<Button Grid.Row="3" Content="Save" Command="{Binding SaveBundles}" HorizontalAlignment="Left"/>
+		<Button Grid.Row="3" Content="Save" Command="{Binding SaveBundles}" HorizontalAlignment="Left" Visibility="{Binding Creation, Converter={StaticResource BooleanToOppositeVisibility}}"/>
+		
+		<Button x:Name="CancelButton" Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,0,0" Grid.Row="3" Visibility="{Binding Creation, Converter={StaticResource BooleanToVisibility}}" />
+		<Button x:Name="OKButton" Content="OK" Click="OKButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,79,0" Grid.Row="3" Visibility="{Binding Creation, Converter={StaticResource BooleanToVisibility}}" />
 	</Grid>
 </Infrastructure:PageView>

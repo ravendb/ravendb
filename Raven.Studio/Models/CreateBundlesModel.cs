@@ -8,6 +8,7 @@
 			WarnSize = 45;
 			MaxDocs = 10000;
 			WarnDocs = 8000;
+			Creation = true;
 		}
 	}
 }
