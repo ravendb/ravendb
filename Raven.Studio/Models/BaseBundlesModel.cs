@@ -24,6 +24,7 @@ namespace Raven.Studio.Models
 
 		public ReplicationDocument ReplicationData { get; set; }
 		public ObservableCollection<VersioningConfiguration> VersioningConfigurations { get; set; }
+		public ObservableCollection<VersioningConfiguration> OriginalVersioningConfigurations { get; set; }
 		public string CurrentDatabase { get { return ApplicationModel.Database.Value.Name; } }
 		public ReplicationDestination SelectedReplication { get; set; }
 		public VersioningConfiguration SeletedVersioning { get; set; }

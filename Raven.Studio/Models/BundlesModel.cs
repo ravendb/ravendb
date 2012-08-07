@@ -33,7 +33,11 @@ namespace Raven.Studio.Models
 
 			ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName)
 				.Query<VersioningConfiguration>().ToListAsync().ContinueOnSuccessInTheUIThread(
-					list => { VersioningConfigurations = new ObservableCollection<VersioningConfiguration>(list); });
+					list =>
+					{
+						VersioningConfigurations = new ObservableCollection<VersioningConfiguration>(list);
+						OriginalVersioningConfigurations = new ObservableCollection<VersioningConfiguration>(list);
+					});
 
 			ApplicationModel.Current.Server.Value.DocumentStore
 				.AsyncDatabaseCommands
@@ -61,6 +65,7 @@ namespace Raven.Studio.Models
 								if (document != null)
 								{
 									VersioningConfigurations.Insert(0, document as VersioningConfiguration);
+									OriginalVersioningConfigurations.Insert(0, document as VersioningConfiguration);
 									OnPropertyChanged(() => HasDefaultVersioning);
 								}
 							});

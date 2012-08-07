@@ -3,7 +3,6 @@ using System.Windows.Controls;
 using Raven.Abstractions.Replication;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
-using Raven.Studio.Extensions;
 
 namespace Raven.Studio.Features.Bundles
 {
