@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Threading;
+using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Index;
@@ -333,13 +334,19 @@ namespace Raven.Database.Indexing
 
 		public void Dispose()
 		{
-			foreach (var index in indexes.Values)
+			var exceptionAggregator = new ExceptionAggregator(log, "Could not properly close index storage");
+
+			exceptionAggregator.Execute(() => Parallel.ForEach(indexes.Values, index => index.Dispose()));
+
+			exceptionAggregator.Execute(() => dummyAnalyzer.Close());
+			
+			exceptionAggregator.Execute(() =>
 			{
-				index.Dispose();
-			}
-			dummyAnalyzer.Close();
-			if (crashMarker != null)
-				crashMarker.Dispose();
+				if (crashMarker != null)
+					crashMarker.Dispose();
+			});
+
+			exceptionAggregator.ThrowIfNeeded();
 		}
 
 		public void DeleteIndex(string name)
