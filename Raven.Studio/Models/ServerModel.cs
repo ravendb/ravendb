@@ -195,14 +195,14 @@ namespace Raven.Studio.Models
 
 		private void DisplayBuildNumber()
 		{
-			SelectedDatabase.Value.AsyncDatabaseCommands.GetBuildNumber()
+			SelectedDatabase.Value.AsyncDatabaseCommands.GetBuildNumberAsync()
 				.ContinueOnSuccessInTheUIThread(x => BuildNumber = x.BuildVersion)
 				.Catch();
 		}
 
 		private void DisplyaLicenseStatus()
 		{
-			SelectedDatabase.Value.AsyncDatabaseCommands.GetLicenseStatus()
+			SelectedDatabase.Value.AsyncDatabaseCommands.GetLicenseStatusAsync()
 				.ContinueOnSuccessInTheUIThread(x =>
 				{
 					License.Value = x;

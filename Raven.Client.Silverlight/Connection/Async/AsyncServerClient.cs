@@ -297,18 +297,23 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
 		{
-			var requestUri = url + "/logs";
-			if (errorsOnly)
-				requestUri += "?type=error";
+			return ExecuteWithReplication("GET", operationUrl =>
+			{
+				var requestUri = url + "/logs";
+				if (errorsOnly)
+					requestUri += "?type=error";
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET",
+					                                                                         credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task => convention.CreateSerializer().Deserialize<LogItem[]>(new RavenJTokenReader(task.Result)));
+				return request.ReadResponseJsonAsync()
+					.ContinueWith(task => convention.CreateSerializer().Deserialize<LogItem[]>(new RavenJTokenReader(task.Result)));
+			});
 		}
 
-		public Task<LicensingStatus> GetLicenseStatus()
+		public Task<LicensingStatus> GetLicenseStatusAsync()
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/license/status").NoCache(), "GET", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
@@ -334,29 +339,47 @@ namespace Raven.Client.Silverlight.Connection.Async
 				}).Unwrap();
 		}
 
-		public Task StartIndexing()
+		public Task StartIndexingAsync()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/StartIndexing").NoCache(), "POST", credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
+			return ExecuteWithReplication("POST", operationUrl =>
+			{
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+																							 (operationUrl + "/admin/StartIndexing").NoCache(),
+					                                                                         "POST", credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ExecuteRequestAsync();
+				return request.ExecuteRequestAsync();
+			});
 		}
 
-		public Task StopIndexing()
+		public Task StopIndexingAsync()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/StopIndexing").NoCache(), "POST", credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
+			return ExecuteWithReplication("POST", operationUrl =>
+			{
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+					                                                                         (operationUrl + "/admin/StopIndexing").NoCache(),
+					                                                                         "POST", credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ExecuteRequestAsync();
+				return request.ExecuteRequestAsync();
+			});
 		}
 
-		public Task<string> GetIndexingStatus()
+		public Task<string> GetIndexingStatusAsync()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/IndexingStatus").NoCache(), "GET", credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
+			return ExecuteWithReplication("GET", operationUrl =>
+			{
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+					                                                                         (operationUrl + "/admin/IndexingStatus").
+					                                                                         	NoCache(), "GET", credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task => task.Result.Value<string>("IndexingStatus"));
+				return request.ReadResponseJsonAsync()
+					.ContinueWith(task => task.Result.Value<string>("IndexingStatus"));
+			});
 		}
 
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false)
@@ -375,7 +398,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			});
 		}
 
-		public Task<BuildNumber> GetBuildNumber()
+		public Task<BuildNumber> GetBuildNumberAsync()
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/build/version").NoCache(), "GET", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
@@ -389,20 +412,25 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// </summary>
 		public Task<IDictionary<string, IEnumerable<FacetValue>>> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc)
 		{
-			var requestUri = url + string.Format("/facets/{0}?facetDoc={1}&query={2}",
-			Uri.EscapeUriString(index),
-			Uri.EscapeDataString(facetSetupDoc),
-			Uri.EscapeDataString(query.Query));
+			return ExecuteWithReplication("GET", operationUrl =>
+			{
+				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
+				                                     Uri.EscapeUriString(index),
+				                                     Uri.EscapeDataString(facetSetupDoc),
+				                                     Uri.EscapeDataString(query.Query));
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET",
+					                                                                         credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task =>
-				{
-					var json = (RavenJObject)task.Result;
-					return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
-				});
+				return request.ReadResponseJsonAsync()
+					.ContinueWith(task =>
+					{
+						var json = (RavenJObject) task.Result;
+						return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
+					});
+			});
 		}
 
 		/// <summary>
