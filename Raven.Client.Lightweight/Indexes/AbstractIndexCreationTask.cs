@@ -158,7 +158,7 @@ namespace Raven.Client.Indexes
 				}
 				catch (Exception e)
 				{
-					LogProvider.GetCurrentClassLogger().WarnException("Could not put index in replication server", e);
+					Logger.WarnException("Could not put index in replication server", e);
 				}
 			}
 		}
@@ -180,6 +180,7 @@ namespace Raven.Client.Indexes
 				.Unwrap();
 		}
 
+		private ILog Logger = LogProvider.GetCurrentClassLogger();
 		private Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
 		                                           DocumentConvention documentConvention, IndexDefinition indexDefinition)
 		{
@@ -194,11 +195,22 @@ namespace Raven.Client.Indexes
 					documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.Result.DataAsJson));
 				if (replicationDocument == null)
 					return new CompletedTask();
-				Task.WaitAll(replicationDocument.Destinations.Select(replicationDestination => asyncServerClient.DirectPutIndexAsync(IndexName, indexDefinition, true, replicationDestination.Url))
-					.Cast<Task>()
-					.ToArray());
-				return new CompletedTask();
-			});
+				var tasks = new List<Task>();
+				foreach (var replicationDestination in replicationDocument.Destinations)
+				{
+					tasks.Add(asyncServerClient.DirectPutIndexAsync(IndexName, indexDefinition, true, replicationDestination.Url));
+				}
+				return Task.Factory.ContinueWhenAll(tasks.ToArray(), indexingTask =>
+				{
+					foreach (var indexTask in indexingTask)
+					{
+						if (indexTask.IsFaulted)
+						{
+							Logger.WarnException("Could not put index in replication server", indexTask.Exception);
+						}
+					}
+				});
+			}).Unwrap();
 		}
 #endif
 	}

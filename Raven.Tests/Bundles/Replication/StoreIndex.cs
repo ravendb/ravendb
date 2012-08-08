@@ -40,7 +40,7 @@ namespace Raven.Tests.Bundles.Replication
 			{
 				Assert.True(store2.DatabaseCommands.GetIndexNames(0, 10).ToList().Contains(index.IndexName));
 				Assert.True(store3.DatabaseCommands.GetIndexNames(0, 10).ToList().Contains(index.IndexName));
-			});
+			}).Wait();
 		}
 	}
 
