@@ -545,6 +545,7 @@
     <Compile Include="Bundles\Replication\ReadStriping.cs" />
     <Compile Include="Bundles\Replication\ReplicationBase.cs" />
     <Compile Include="Bundles\Replication\SimpleReplication.cs" />
+    <Compile Include="Bundles\Replication\StoreIndex.cs" />
     <Compile Include="Bundles\Replication\WritesDuringFailover.cs" />
     <Compile Include="Bundles\Replication\WritesDuringFailover2.cs" />
     <Compile Include="Bundles\TestUtil.cs" />

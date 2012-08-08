@@ -634,46 +634,62 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="overwrite">Should overwrite index</param>
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
-			return ExecuteWithReplication("PUT", url =>
-			{
-				string requestUri = url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
-				var webRequest = requestUri
-					.ToJsonRequest(this, credentials, convention, OperationsHeaders, "GET");
-
-				return webRequest.ExecuteRequestAsync()
-					.ContinueWith(task =>
-					{
-						try
-						{
-							task.Wait(); // should throw if it is bad
-							if (overwrite == false)
-								throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
-						}
-						catch (AggregateException e)
-						{
-							var webException = e.ExtractSingleInnerException() as WebException;
-							if (ShouldThrowForPutIndexAsync(webException))
-								throw;
-						}
-
-						var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention));
-						request.AddOperationHeaders(OperationsHeaders);
-
-						var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
-						return request
-							.WriteAsync(serializeObject)
-							.ContinueWith(writeTask => AttemptToProcessResponse(() => request
-								.ReadResponseJsonAsync()
-								.ContinueWith(readStrTask => AttemptToProcessResponse(() =>
-									{
-										//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctor is private!
-										var obj = convention.CreateSerializer().Deserialize<IndexContainer>(new RavenJTokenReader(readStrTask.Result));
-										return obj.Index;
-									})))
-						).Unwrap();
-					}).Unwrap();
-			});
+			return ExecuteWithReplication("PUT", url => DirectPutIndexAsync(name, indexDef, overwrite, url));
 		}
+
+		/// <summary>
+		/// Puts the index definition for the specified name asynchronously with url
+		/// </summary>
+		/// <param name="name">The name.</param>
+		/// <param name="indexDef">The index def.</param>
+		/// <param name="overwrite">Should overwrite index</param>
+		/// <param name="url">The server's url</param>
+		public Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, string url)
+		{
+			var requestUri = url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
+			var webRequest = requestUri
+				.ToJsonRequest(this, credentials, convention, OperationsHeaders, "GET");
+
+			return webRequest.ExecuteRequestAsync()
+				.ContinueWith(task =>
+				{
+					try
+					{
+						task.Wait(); // should throw if it is bad
+						if (overwrite == false)
+							throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+					}
+					catch (AggregateException e)
+					{
+						var webException = e.ExtractSingleInnerException() as WebException;
+						if (ShouldThrowForPutIndexAsync(webException))
+							throw;
+					}
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials,
+						                                                                         convention));
+					request.AddOperationHeaders(OperationsHeaders);
+
+					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
+					return request
+						.WriteAsync(serializeObject)
+						.ContinueWith(writeTask => AttemptToProcessResponse(() => request
+						                                                          	.ReadResponseJsonAsync()
+						                                                          	.ContinueWith(
+						                                                          		readStrTask => AttemptToProcessResponse(() =>
+						                                                          		{
+						                                                          			//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctor is private!
+						                                                          			var obj =
+						                                                          				convention.CreateSerializer().Deserialize
+						                                                          					<IndexContainer>(
+						                                                          						new RavenJTokenReader(readStrTask.Result));
+						                                                          			return obj.Index;
+						                                                          		})))
+						).Unwrap();
+				}).Unwrap();
+		}
+
 
 		/// <summary>
 		/// Used for deserialization only :-P

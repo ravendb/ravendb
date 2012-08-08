@@ -665,7 +665,7 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("PUT", operationUrl => DirectPutIndex(name, operationUrl, overwrite, definition));
 		}
 
-		private string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)
+		public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)
 		{
 			string requestUri = operationUrl + "/indexes/" + name;
 

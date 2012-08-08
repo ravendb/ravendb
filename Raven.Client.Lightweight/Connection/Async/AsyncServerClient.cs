@@ -135,46 +135,52 @@ namespace Raven.Client.Connection.Async
 		/// <param name="overwrite">Should overwrite index</param>
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
-			return ExecuteWithReplication("PUT", opUrl =>
-			{
-				string requestUri = opUrl + "/indexes/" + name;
-				var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
-						.AddOperationHeaders(OperationsHeaders));
+			return ExecuteWithReplication("PUT", opUrl => DirectPutIndexAsync(name, indexDef, overwrite, opUrl));
+		}
 
-				return webRequest.ExecuteRequestAsync()
-					.ContinueWith(task =>
+		/// <summary>
+		/// Puts the index definition for the specified name asynchronously with url
+		/// </summary>
+		/// <param name="name">The name.</param>
+		/// <param name="indexDef">The index def.</param>
+		/// <param name="overwrite">Should overwrite index</param>
+		/// <param name="url">The server's url</param>
+		public Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, string url)
+		{
+			var requestUri = url + "/indexes/" + name;
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders));
+
+			return webRequest.ExecuteRequestAsync()
+				.ContinueWith(task =>
+				{
+					try
 					{
-						try
-						{
-							task.Wait();
-							if (overwrite == false)
-								throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+						task.Wait();
+						if (overwrite == false)
+							throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+					}
+					catch (AggregateException e)
+					{
+						var we = e.ExtractSingleInnerException() as WebException;
+						if (we == null)
+							throw;
+						var response = we.Response as HttpWebResponse;
+						if (response == null || response.StatusCode != HttpStatusCode.NotFound)
+							throw;
+					}
 
-						}
-						catch (AggregateException e)
-						{
-							var we = e.ExtractSingleInnerException() as WebException;
-							if (we == null)
-								throw;
-							var response = we.Response as HttpWebResponse;
-							if (response == null || response.StatusCode != HttpStatusCode.NotFound)
-								throw;
-						}
+					var request = jsonRequestFactory.CreateHttpJsonRequest(
+						new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
+							.AddOperationHeaders(OperationsHeaders));
 
-						var request = jsonRequestFactory.CreateHttpJsonRequest(
-							new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
-								.AddOperationHeaders(OperationsHeaders));
-
-						var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
-						return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, serializeObject, null)
-							.ContinueWith(writeTask => request.ReadResponseJsonAsync()
-														.ContinueWith(readJsonTask =>
-														{
-															return readJsonTask.Result.Value<string>("index");
-														})).Unwrap();
-					}).Unwrap();
-			});
+					var serializeObject = JsonConvert.SerializeObject(indexDef, Default.Converters);
+					return Task.Factory.FromAsync(request.BeginWrite, request.EndWrite, serializeObject, null)
+						.ContinueWith(writeTask => request.ReadResponseJsonAsync()
+						                           	.ContinueWith(readJsonTask => { return readJsonTask.Result.Value<string>("index"); })).
+						Unwrap();
+				}).Unwrap();
 		}
 
 		/// <summary>
