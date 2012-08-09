@@ -13,6 +13,7 @@ namespace Raven.Database.Server.Security
 				"/clientaccesspolicy.xml",
 				"/build/version",
 				"/OAuth/AccessToken",
+				"/OAuth/API-Key",
 			};
 	}
 }
