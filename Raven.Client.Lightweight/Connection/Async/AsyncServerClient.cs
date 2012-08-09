@@ -554,6 +554,16 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
+		public Task<LicensingStatus> GetLicenseStatusAsync()
+		{
+			throw new NotImplementedException();
+		}
+
+		public Task<BuildNumber> GetBuildNumberAsync()
+		{
+			throw new NotImplementedException();
+		}
+
 		public Task<LicensingStatus> GetLicenseStatus()
 		{
 			var actualUrl = string.Format("{0}/license/status", url);
@@ -939,7 +949,7 @@ namespace Raven.Client.Connection.Async
 				if (etag != null)
 					metadata["ETag"] = new RavenJValue(etag.Value.ToString());
 
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url.Static(key), "PUT", metadata, credentials, convention));
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(url, key), "PUT", metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 
 				return request
@@ -1039,15 +1049,17 @@ namespace Raven.Client.Connection.Async
 				if (etag != null)
 					metadata["ETag"] = new RavenJValue(etag.Value.ToString());
 
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url.Static(key), "DELETE", metadata, credentials, convention));
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Static(url, key), "DELETE", metadata, credentials, convention));
 				request.AddOperationHeaders(OperationsHeaders);
 
 				return request.ExecuteRequestAsync();
 			});
 		}
 
-
-
+		public static string Static(string url, string key)
+		{
+			return url + "/static/" + Uri.EscapeUriString(key);
+		}
 		/// <summary>
 		/// Disable all caching within the given scope
 		/// </summary>
