@@ -52,7 +52,6 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="Codec.cs" />
-    <Compile Include="CryptoTransformExtensions.cs" />
     <Compile Include="Plugin\EncryptionSettingsPutTrigger.cs" />
     <Compile Include="Streams\BlockReaderWriter.cs" />
     <Compile Include="Streams\EncryptedFile.cs" />

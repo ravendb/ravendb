@@ -6,9 +6,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Bundles.Encryption
+namespace Raven.Abstractions.Extensions
 {
-	internal static class CryptoTransformExtensions
+	public static class CryptoTransformExtensions
 	{
 		public static byte[] TransformEntireBlock(this ICryptoTransform transform, byte[] data)
 		{
