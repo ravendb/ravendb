@@ -38,6 +38,11 @@ namespace Raven.Database.Server.Abstractions
 			get { return request.InputStream; }
 		}
 
+		public long ContentLength
+		{
+			get { return request.ContentLength; }
+		}
+
 		public NameValueCollection QueryString
 		{
 			get { return queryString; }
