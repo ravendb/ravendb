@@ -8,6 +8,7 @@ using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Util;
+using Raven.Json.Linq;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using System.Linq;
@@ -21,21 +22,22 @@ namespace Raven.Studio.Models
 	{
 		private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
 		private readonly string name;
-	    private readonly DocumentStore documentStore;
+		private readonly DocumentStore documentStore;
 
-	    private IObservable<DocumentChangeNotification> documentChanges;
-	    private IObservable<IndexChangeNotification> indexChanges;
+		private IObservable<DocumentChangeNotification> documentChanges;
+		private IObservable<IndexChangeNotification> indexChanges;
 
-        private readonly CompositeDisposable disposable = new CompositeDisposable();
+		private readonly CompositeDisposable disposable = new CompositeDisposable();
 
-	    public Observable<TaskModel> SelectedTask { get; set; }
+		public Observable<TaskModel> SelectedTask { get; set; }
+		public Observable<DatabaseDocument> DatabaseDocument { get; set; }
 
 		public DatabaseModel(string name, DocumentStore documentStore)
 		{
 			this.name = name;
-		    this.documentStore = documentStore;
+			this.documentStore = documentStore;
 
-		    Tasks = new BindableCollection<TaskModel>(x => x.Name)
+			Tasks = new BindableCollection<TaskModel>(x => x.Name)
 			{
 				new ImportTask(),
 				new ExportTask(),
@@ -43,7 +45,7 @@ namespace Raven.Studio.Models
 				new IndexingTask()
 			};
 
-			SelectedTask = new Observable<TaskModel> {Value = Tasks.FirstOrDefault()};
+			SelectedTask = new Observable<TaskModel> { Value = Tasks.FirstOrDefault() };
 			Statistics = new Observable<DatabaseStatistics>();
 			Status = new Observable<string>
 			{
@@ -51,62 +53,89 @@ namespace Raven.Studio.Models
 			};
 
 			asyncDatabaseCommands = name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase)
-			                             	? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
-			                             	: documentStore.AsyncDatabaseCommands.ForDatabase(name);
+											? documentStore.AsyncDatabaseCommands.ForDefaultDatabase()
+											: documentStore.AsyncDatabaseCommands.ForDatabase(name);
 
-		    DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
-		        .SampleResponsive(TimeSpan.FromSeconds(2))
-		        .Subscribe(_ => RefreshStatistics());
+			DocumentChanges.Select(c => Unit.Default).Merge(IndexChanges.Select(c => Unit.Default))
+				.SampleResponsive(TimeSpan.FromSeconds(2))
+				.Subscribe(_ => RefreshStatistics());
 
-            RefreshStatistics();
+			RefreshStatistics();
+		}
+
+		public void UpdateDatabaseDocument()
+		{
+			if (ApplicationModel.Current != null)
+				ApplicationModel.Current.Server.Value.DocumentStore
+					.AsyncDatabaseCommands
+					.ForDefaultDatabase()
+					.GetAsync("Raven/Databases/" + Name)
+					.ContinueOnSuccessInTheUIThread(doc =>
+					{
+						DatabaseDocument = new Observable<DatabaseDocument>
+						{
+							Value = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer().Deserialize
+								<DatabaseDocument>(new RavenJTokenReader(doc.DataAsJson))
+						};
+						OnPropertyChanged(() => HasReplication);
+					});
+		}
+
+		public bool HasReplication
+		{
+			get
+			{
+				return DatabaseDocument != null &&
+					   DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Contains("Quotas");
+			}
 		}
 
 		public BindableCollection<TaskModel> Tasks { get; private set; }
 
-	    public IObservable<DocumentChangeNotification> DocumentChanges
-	    {
-            get
-            {
-                if (documentChanges == null)
-                {
-                    documentChanges = Changes()
-                        .ForAllDocuments()
-                        .Publish(); // use a single underlying subscription
+		public IObservable<DocumentChangeNotification> DocumentChanges
+		{
+			get
+			{
+				if (documentChanges == null)
+				{
+					documentChanges = Changes()
+						.ForAllDocuments()
+						.Publish(); // use a single underlying subscription
 
-                    var documentChangesSubscription =
-                        ((IConnectableObservable<DocumentChangeNotification>) documentChanges).Connect();
+					var documentChangesSubscription =
+						((IConnectableObservable<DocumentChangeNotification>)documentChanges).Connect();
 
-                    disposable.Add(documentChangesSubscription);
-                }
+					disposable.Add(documentChangesSubscription);
+				}
 
-                return documentChanges;
-            }
-	    }
+				return documentChanges;
+			}
+		}
 
-	    public IObservable<IndexChangeNotification> IndexChanges
-	    {
-            get
-            {
-                if (indexChanges == null)
-                {
-                    indexChanges = Changes()
-                        .ForAllIndexes()
-                        .Publish(); // use a single underlying subscription
+		public IObservable<IndexChangeNotification> IndexChanges
+		{
+			get
+			{
+				if (indexChanges == null)
+				{
+					indexChanges = Changes()
+						.ForAllIndexes()
+						.Publish(); // use a single underlying subscription
 
-                    var indexChangesSubscription = ((IConnectableObservable<IndexChangeNotification>)indexChanges).Connect();
-                    disposable.Add(indexChangesSubscription);
-                }
-             
-                return indexChanges;
-            }
-	    }
+					var indexChangesSubscription = ((IConnectableObservable<IndexChangeNotification>)indexChanges).Connect();
+					disposable.Add(indexChangesSubscription);
+				}
 
-	    public IDatabaseChanges Changes()
-        {
-        	return name == Constants.SystemDatabase ? 
-				documentStore.Changes() : 
+				return indexChanges;
+			}
+		}
+
+		public IDatabaseChanges Changes()
+		{
+			return name == Constants.SystemDatabase ?
+				documentStore.Changes() :
 				documentStore.Changes(name);
-        }
+		}
 
 		public IAsyncDatabaseCommands AsyncDatabaseCommands
 		{
@@ -120,9 +149,9 @@ namespace Raven.Studio.Models
 
 		public Observable<DatabaseStatistics> Statistics { get; set; }
 
-		public Observable<string> Status { get; set; } 
+		public Observable<string> Status { get; set; }
 
-                private void RefreshStatistics()
+		private void RefreshStatistics()
 		{
 			asyncDatabaseCommands
 				.GetStatisticsAsync()
@@ -134,9 +163,9 @@ namespace Raven.Studio.Models
 				.Catch(exception => Status.Value = "Offline");
 		}
 
-	    public void Dispose()
-	    {
-	        disposable.Dispose();
-	    }
+		public void Dispose()
+		{
+			disposable.Dispose();
+		}
 	}
 }

@@ -323,6 +323,8 @@
 							   Margin="15,0,15,0"
 							   LastChildFill="False">
 				<Stats:DatabaseStatisticsView toolkit:DockPanel.Dock="Left" />
+				
+				<TextBlock toolkit:DockPanel.Dock="Left" Text="Replication Statistics: " Visibility="{Binding Server.Value.SelectedDatabase.Value.HasReplication, Converter={StaticResource BooleanToVisibility}}"/>
 
 				<StackPanel toolkit:DockPanel.Dock="Right"
 							Orientation="Horizontal">

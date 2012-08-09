@@ -37,6 +37,8 @@ namespace Raven.Studio.Models
 			{
 				OnPropertyChanged(() => StatusImage);
 			};
+
+			Server.Value.SelectedDatabase.PropertyChanged += (sender, args) => Server.Value.SelectedDatabase.Value.UpdateDatabaseDocument();
 		    State = new ApplicationState();
 		}
 
