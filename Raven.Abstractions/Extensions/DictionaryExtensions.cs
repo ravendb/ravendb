@@ -14,5 +14,14 @@ namespace Raven.Abstractions.Extensions
 			self.Add(key, value);
 			return value;
 		}
+
+		/// <summary>
+		/// Returns dictionary[key] or default<V>.
+		/// </summary>
+		public static V TryGetValue<K, V>(this IDictionary<K, V> dictionary, K key) {
+			V result;
+			dictionary.TryGetValue(key, out result);
+			return result;
+		}
 	}
 }
