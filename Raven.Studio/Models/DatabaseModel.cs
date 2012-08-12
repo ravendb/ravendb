@@ -1,12 +1,15 @@
 using System;
+using System.Collections.Generic;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Silverlight.Connection.Async;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 using Raven.Studio.Features.Tasks;
@@ -36,6 +39,7 @@ namespace Raven.Studio.Models
 		{
 			this.name = name;
 			this.documentStore = documentStore;
+			ReplicationOnline = new Dictionary<string, string>();
 
 			Tasks = new BindableCollection<TaskModel>(x => x.Name)
 			{
@@ -78,15 +82,52 @@ namespace Raven.Studio.Models
 								<DatabaseDocument>(new RavenJTokenReader(doc.DataAsJson))
 						};
 						OnPropertyChanged(() => HasReplication);
+						UpdateReplicationOnlineStatus();
 					});
 		}
+
+		private void UpdateReplicationOnlineStatus()
+		{
+			if (HasReplication == false)
+				return;
+			ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(Name)
+				.LoadAsync<ReplicationDocument>("Raven/Replication/Destinations")
+				.ContinueOnSuccessInTheUIThread(document =>
+				{
+					ReplicationOnline = new Dictionary<string, string>();
+					var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
+					if (asyncServerClient == null)
+						return;
+
+					foreach (var replicationDestination in document.Destinations)
+					{
+						var destination = replicationDestination;
+						asyncServerClient.DirectGetAsync(replicationDestination.Url, "/docs?metadata-only=true&pageSize=1").
+							ContinueOnSuccessInTheUIThread(doc =>
+							{
+								if(doc == null)
+									ReplicationOnline.Add(destination.Url, "Offline");
+								else
+								{
+									//TODO: add check for last etag for up to date status
+									ReplicationOnline.Add(destination.Url, "Online");
+									
+								}
+							})
+							.Catch();
+					}
+				}).Catch();
+
+		}
+
+		public Dictionary<string, string> ReplicationOnline { get; set; } 
 
 		public bool HasReplication
 		{
 			get
 			{
 				return DatabaseDocument != null &&
-					   DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Contains("Quotas");
+					   DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Contains("Replication");
 			}
 		}
 
