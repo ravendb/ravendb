@@ -6,6 +6,7 @@ using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Bundles.Replication.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
@@ -102,19 +103,28 @@ namespace Raven.Studio.Models
 					foreach (var replicationDestination in document.Destinations)
 					{
 						var destination = replicationDestination;
-						asyncServerClient.DirectGetAsync(replicationDestination.Url, "/docs?metadata-only=true&pageSize=1").
+						asyncServerClient.DirectGetAsync(replicationDestination.Url,
+						                                 "Raven/Replication/Sources/" + ApplicationModel.Current.Server.Value.Url).
 							ContinueOnSuccessInTheUIThread(doc =>
 							{
-								if(doc == null)
+								var sourceReplicationInformation = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.
+									CreateSerializer().Deserialize
+									<SourceReplicationInformation>(new RavenJTokenReader(doc.DataAsJson));
+								if (sourceReplicationInformation == null)
 									ReplicationOnline.Add(destination.Url, "Offline");
 								else
 								{
-									//TODO: add check for last etag for up to date status
-									ReplicationOnline.Add(destination.Url, "Online");
-									
+									asyncServerClient.DirectGetLastEtagAsync(ApplicationModel.Current.Server.Value.Url)
+										.ContinueOnSuccessInTheUIThread(etag =>
+										{
+											if(etag == sourceReplicationInformation.LastDocumentEtag)
+												ReplicationOnline.Add(destination.Url, "Updated");
+											else
+												ReplicationOnline.Add(destination.Url, "Online");
+										});
 								}
 							})
-							.Catch();
+							.Catch(_ => ReplicationOnline.Add(destination.Url, "Offline"));
 					}
 				}).Catch();
 
