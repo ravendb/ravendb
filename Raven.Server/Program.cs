@@ -302,11 +302,11 @@ Configuration options:
 			bool? done = null;
 			var actions = new Dictionary<string,Action>
 			{
-				{"cls", () => Console.Clear()},
+				{"cls", () => ConsoleEx.ClearIfNotRedirected()},
 				{
 					"reset", () =>
 					{
-						Console.Clear();
+						ConsoleEx.ClearIfNotRedirected();
 						done = true;
 					}
 					},

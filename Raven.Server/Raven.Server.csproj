@@ -110,6 +110,7 @@
     <Compile Include="..\Raven.Smuggler\SmugglerApi.cs">
       <Link>Smuggler\SmugglerApi.cs</Link>
     </Compile>
+    <Compile Include="ConsoleEx.cs" />
     <Compile Include="FromMono\Options.cs" />
     <Compile Include="RavenDbServer.cs" />
     <Compile Include="Program.cs" />
