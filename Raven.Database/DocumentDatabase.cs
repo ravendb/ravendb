@@ -555,6 +555,18 @@ namespace Raven.Database
 						newEtag = actions.Documents.AddDocument(key, etag, document, metadata);
 
 						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, transactionInformation));
+
+						TransactionalStorage
+							.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+							{
+								PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
+								RaiseNotifications(new DocumentChangeNotification
+								{
+									Name = key,
+									Type = DocumentChangeTypes.Put,
+									Etag = newEtag
+								});
+							});
 					}
 					else
 					{
@@ -564,17 +576,6 @@ namespace Raven.Database
 					workContext.ShouldNotifyAboutWork(() => "PUT " + key);
 				});
 			}
-			TransactionalStorage
-				.ExecuteImmediatelyOrRegisterForSyncronization(() =>
-				{
-					PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
-					RaiseNotifications(new DocumentChangeNotification
-					{
-						Name = key,
-						Type = DocumentChangeTypes.Put,
-						Etag = newEtag
-					});
-				});
 
 			log.Debug("Put document {0} with etag {1}", key, newEtag);
 			return new PutResult
@@ -697,6 +698,18 @@ namespace Raven.Database
 						}
 						DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, transactionInformation));
 					}
+
+					TransactionalStorage
+						.ExecuteImmediatelyOrRegisterForSyncronization(() =>
+						{
+							DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
+							RaiseNotifications(new DocumentChangeNotification
+							{
+								Name = key,
+								Type = DocumentChangeTypes.Delete,
+							});
+						});
+
 				}
 				else
 				{
@@ -704,17 +717,7 @@ namespace Raven.Database
 				}
 				workContext.ShouldNotifyAboutWork(() => "DEL " + key);
 			});
-			TransactionalStorage
-				.ExecuteImmediatelyOrRegisterForSyncronization(() =>
-				{
-					DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
-					RaiseNotifications(new DocumentChangeNotification
-					{
-						Name = key,
-						Type = DocumentChangeTypes.Delete,
-					});
-				});
-
+			
 			metadata = metadataVar;
 			return deleted;
 		}
