@@ -17,9 +17,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using Raven.Database.Server.Connections;
-using Raven.Database.Server.SignalR;
 using Raven.Database.Util;
-using Raven.Imports.Newtonsoft.Json;
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -27,10 +25,8 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Json;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
-using Raven.Database.Backup;
 using Raven.Database.Config;
 using Raven.Database.Data;
 using Raven.Database.Exceptions;
@@ -690,7 +686,7 @@ namespace Raven.Database
 							}
 
 							string indexNameCopy = indexName;
-							var task = actions.GetTask<RemoveFromIndexTask>(x => x.Index == indexNameCopy, new RemoveFromIndexTask
+							var task = actions.GetTask(x => x.Index == indexNameCopy, new RemoveFromIndexTask
 							{
 								Index = indexNameCopy
 							});
