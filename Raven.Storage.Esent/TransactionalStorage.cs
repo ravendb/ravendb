@@ -111,13 +111,19 @@ namespace Raven.Storage.Esent
 			{
 				if (disposed)
 					return;
-				
+
+				var exceptionAggregator = new ExceptionAggregator(log, "Could not close database properly");
 				disposed = true;
-				GC.SuppressFinalize(this);
-				current.Dispose();
+				exceptionAggregator.Execute(current.Dispose);
 				if (documentCacher != null)
-					documentCacher.Dispose();
-				Api.JetTerm2(instance, TermGrbit.Complete);
+					exceptionAggregator.Execute(documentCacher.Dispose);
+				exceptionAggregator.Execute(() =>
+					{
+						Api.JetTerm2(instance, TermGrbit.Complete);
+						GC.SuppressFinalize(this);
+					});
+
+				exceptionAggregator.ThrowIfNeeded();
 			}
 			finally
 			{
@@ -369,7 +375,7 @@ namespace Raven.Storage.Esent
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
 				: CommitTransactionGrbit.None;
-			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, ocumentCacher, this))
 			{
 				var storageActionsAccessor = new StorageActionsAccessor(pht);
 				current.Value = storageActionsAccessor;
