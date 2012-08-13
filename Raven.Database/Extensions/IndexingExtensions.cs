@@ -119,119 +119,13 @@ namespace Raven.Database.Extensions
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);
 								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
-								switch (sortOptions.Value)
-								{
-									case SortOptions.String:
-									case SortOptions.Custom:
-									case SortOptions.StringVal:
-										return new SortField(sortedField.Field, (int)sortOptions.Value, sortedField.Descending);
-								}
-								return new SortField(sortedField.Field, GetParser(sortOptions.Value), sortedField.Descending);
+							
+								return new SortField(sortedField.Field, (int)sortOptions.Value, sortedField.Descending);
 							
 							})
 							.ToArray());
 		}
 
-		private static Parser GetParser(SortOptions sortOptions)
-		{
-			switch (sortOptions)
-			{
-				case SortOptions.Int:
-					return new NullableIntParser();
-				case SortOptions.Float:
-					return new NullableFloatParser();
-				case SortOptions.Long:
-					return new NullableLongParser();
-				case SortOptions.Double:
-					return new NullableDoubleParser();
-				case SortOptions.Short:
-					return new NullableShortParser();
-				case SortOptions.Byte:
-					return new NullableByteParser();
-				default:
-					throw new ArgumentOutOfRangeException(sortOptions.ToString());
-			}
-		}
-
-		private class NullableByteParser : ByteParser
-		{
-			public sbyte ParseByte(string val)
-			{
-				if(val == Constants.NullValue)
-					return sbyte.MaxValue;
-				return System.SByte.Parse(val);
-			}
-		}
-
-		private class NullableShortParser : ShortParser
-		{
-			public short ParseShort(string val)
-			{
-				if (val == Constants.NullValue)
-					return short.MaxValue;
-				return Int16.Parse(val);
-			}
-		}
-
-		private class NullableIntParser: IntParser
-		{
-			private bool prefix;
-			public int ParseInt(string val)
-			{
-				if (val == Constants.NullValue)
-					return int.MaxValue;
-				int result;
-				if (prefix == false && int.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out result))
-					return result;
-				prefix = true;
-				return NumericUtils.PrefixCodedToInt(val);
-			}
-		}
-
-		private class NullableFloatParser : FloatParser
-		{
-			private bool prefix;
-			public float ParseFloat(string val)
-			{
-				if (val == Constants.NullValue)
-					return float.MaxValue;
-				float result;
-				if (prefix == false && float.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out result))
-					return result;
-				prefix = true;
-				return NumericUtils.SortableIntToFloat(NumericUtils.PrefixCodedToInt(val));
-			}
-		}
-
-		private class NullableDoubleParser : DoubleParser
-		{
-			private bool prefix;
-			public double ParseDouble(string val)
-			{
-				if (val == Constants.NullValue)
-					return double.MaxValue;
-				double result;
-				if (prefix == false && double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out result))
-					return result;
-				prefix = true;
-				return NumericUtils.SortableLongToDouble(NumericUtils.PrefixCodedToLong(val));
-			}
-		}
-
-		private class NullableLongParser : LongParser
-		{
-			private bool prefix;
-			public long ParseLong(string val)
-			{
-				if (val == Constants.NullValue)
-					return long.MaxValue;
-				long result;
-				if (prefix == false && long.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out result))
-					return result;
-				prefix = true;
-				return NumericUtils.PrefixCodedToLong(val);
-			}
-		}
 
 		public static SortOptions? GetSortOption(this IndexDefinition self, string name)
 		{

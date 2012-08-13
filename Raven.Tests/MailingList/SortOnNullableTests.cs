@@ -24,6 +24,9 @@ namespace Raven.Tests.MailingList
 			new SortOnNullableEntity {Text = "boo", Num = 1}
 		};
 
+		protected override void CreateDefaultIndexes(Client.IDocumentStore documentStore)
+		{
+		}
 
 		[Fact]
 		public void SortOnNullable()
@@ -47,9 +50,9 @@ namespace Raven.Tests.MailingList
 						.ToList();
 
 					Assert.NotEmpty(tst);
-					Assert.Equal("boo", tst[0].Text);
-					Assert.Equal("foo", tst[1].Text);
-					Assert.Equal("fail", tst[2].Text);
+					Assert.Equal("fail", tst[0].Text);
+					Assert.Equal("boo", tst[1].Text);
+					Assert.Equal("foo", tst[2].Text);
 					Assert.False(stats.IsStale, "Index is stale.");
 				}
 			}
