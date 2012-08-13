@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Database.Json;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Task = Raven.Database.Tasks.Task;
@@ -20,40 +21,57 @@ namespace Raven.Database.Indexing
 
 		protected void HandleReduceForIndex(IndexToWorkOn indexToWorkOn)
 		{
-			TimeSpan reduceDuration= TimeSpan.Zero;
-			List<MappedResultInfo> reduceKeyAndEtags = null;
+			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexToWorkOn.IndexName);
+			if(viewGenerator == null)
+				return;
+			TimeSpan reduceDuration = TimeSpan.Zero;
+			List<MappedResultInfo> persistedResults = null;
 			bool operationCanceled = false;
 			try
 			{
-				transactionalStorage.Batch(actions =>
+				var sw = Stopwatch.StartNew();
+				for (int level = 0; level < 3; level++)
 				{
-					context.CancellationToken.ThrowIfCancellationRequested();
-					reduceKeyAndEtags = actions.MapRduce.GetMappedResultsReduceKeysAfter
-						(
-							indexToWorkOn.IndexName,
-							indexToWorkOn.LastIndexedEtag,
-							loadData: false,
-							take: autoTuner.NumberOfItemsToIndexInSingleBatch
-						)
-						.ToList();
-
-					if(log.IsDebugEnabled)
+					transactionalStorage.Batch(actions =>
 					{
-						if (reduceKeyAndEtags.Count > 0)
-							log.Debug(() => string.Format("Found {0} mapped results for keys [{1}] for index {2}", reduceKeyAndEtags.Count, string.Join(", ", reduceKeyAndEtags.Select(x => x.ReduceKey).Distinct()), indexToWorkOn.IndexName));
-						else
-							log.Debug("No reduce keys found for {0}", indexToWorkOn.IndexName);
-					}
+						context.CancellationToken.ThrowIfCancellationRequested();
+						
+						var sp = Stopwatch.StartNew();
+						persistedResults = actions.MapRduce.GetItemsToReduce
+							(
+								take: autoTuner.NumberOfItemsToIndexInSingleBatch,
+								level: 1,
+								index: indexToWorkOn.IndexName
+							)
+							.ToList();
 
-					var sw = Stopwatch.StartNew();
-					new ReduceTask
-					{
-						Index = indexToWorkOn.IndexName,
-						ReduceKeys = reduceKeyAndEtags.Select(x => x.ReduceKey).Distinct().ToArray(),
-					}.Execute(context);
-					reduceDuration = sw.Elapsed;
-				});
+						if (log.IsDebugEnabled)
+						{
+							if (persistedResults.Count > 0)
+								log.Debug(() => string.Format("Found {0} results for keys [{1}] for index {2} at level {3} in {4}",
+								persistedResults.Count, string.Join(", ", persistedResults.Select(x => x.ReduceKey).Distinct()), indexToWorkOn.IndexName, level, sp.Elapsed));
+							else
+								log.Debug("No reduce keys found for {0}", indexToWorkOn.IndexName);
+						}
 
+						context.CancellationToken.ThrowIfCancellationRequested();
+
+
+						var results = persistedResults
+							.Where(x=>x.Data != null)
+							.GroupBy(x => x.Bucket, x=> JsonToExpando.Convert(x.Data))
+							.ToArray();
+						var reduceKeys = persistedResults.Select(x => x.ReduceKey).ToArray();
+						context.ReducedPerSecIncreaseBy(results.Length);
+
+						context.CancellationToken.ThrowIfCancellationRequested();
+						sp = Stopwatch.StartNew();
+						context.IndexStorage.Reduce(indexToWorkOn.IndexName, viewGenerator, results, level, context, actions, reduceKeys);
+						log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4}", reduceKeys.Length, sp.Elapsed,
+										results.Length, indexToWorkOn.IndexName, sp.Elapsed);
+					});
+				}
+				reduceDuration = sw.Elapsed;
 			}
 			catch(OperationCanceledException)
 			{
@@ -61,9 +79,9 @@ namespace Raven.Database.Indexing
 			}
 			finally
 			{
-				if (operationCanceled == false && reduceKeyAndEtags != null && reduceKeyAndEtags.Count > 0)
+				if (operationCanceled == false && persistedResults != null && persistedResults.Count > 0)
 				{
-					var lastByEtag = GetLastByEtag(reduceKeyAndEtags);
+					var lastByEtag = GetLastByEtag(persistedResults);
 					var lastEtag = lastByEtag.Etag;
 
 					var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
@@ -77,7 +95,7 @@ namespace Raven.Database.Indexing
 						}
 					});
 
-					autoTuner.AutoThrottleBatchSize(reduceKeyAndEtags.Count, reduceKeyAndEtags.Sum(x => x.Size), reduceDuration);
+					autoTuner.AutoThrottleBatchSize(persistedResults.Count, persistedResults.Sum(x => x.Size), reduceDuration);
 				}
 			}
 		}
@@ -104,7 +122,8 @@ namespace Raven.Database.Indexing
 
 		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
 		{
-			return actions.Tasks.GetMergedTask<ReduceTask>();
+			return null;
+			//return actions.Tasks.GetMergedTask<ReduceTask>();
 		}
 
 		protected override void FlushAllIndexes()

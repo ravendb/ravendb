@@ -17,6 +17,8 @@ namespace Raven.Database.Storage
 		void DeleteMappedResultsForView(string view);
 		IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take);
 		void ScheduleReductions(string view, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBukcets);
+		IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take);
+		void PutReducedResult(string name, string reduceKey, int level, int bucket, RavenJObject data);
 	}
 
 	public class ReduceKeyAndBucket
@@ -61,5 +63,6 @@ namespace Raven.Database.Storage
 
 		public RavenJObject Data { get; set; }
 		public int Size { get; set; }
+		public int Bucket { get; set; }
 	}
 }

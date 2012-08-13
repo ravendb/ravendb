@@ -175,5 +175,15 @@ namespace Raven.Storage.Managed
 				}
 			}
 		}
+
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void PutReducedResult(string name, string reduceKey, int level, int bucket, RavenJObject data)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

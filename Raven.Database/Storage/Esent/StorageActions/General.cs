@@ -83,6 +83,9 @@ namespace Raven.Storage.Esent.StorageActions
 			if (lists != null)
 				lists.Dispose();
 
+			if (reducedResults != null)
+				reducedResults.Dispose();
+
 			if (queue != null)
 				queue.Dispose();
 

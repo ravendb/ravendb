@@ -29,8 +29,35 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], view, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"], docId, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
-				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key_and_view_hashed"], IndexingUtil.ComputeHash(view, reduceKey));
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"], IndexingUtil.MapBucket(docId));
+
+				using (Stream stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
+				{
+					using (var dataStream = documentCodecs.Aggregate(stream, (ds, codec) => codec.Value.Encode(reduceKey, data, null, ds)))
+					{
+						data.WriteTo(dataStream);
+						dataStream.Flush();
+					}
+				}
+
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"], etag.TransformToValueForEsentSorting());
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"], SystemTime.Now);
+
+				update.Save();
+			}
+		}
+
+
+		public void PutReducedResult(string view, string reduceKey, int level, int bucket, RavenJObject data)
+		{
+			Guid etag = uuidGenerator.CreateSequentialUuid();
+
+			using (var update = new Update(session, MappedResults, JET_prep.Insert))
+			{
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], view, Encoding.Unicode);
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["level"], level);
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"], bucket);
 
 				using (Stream stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
 				{
@@ -123,6 +150,130 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take)
+		{
+			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_reduce_key_and_bucket");
+			Api.MakeKey(session, ScheduledReductions, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
+			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
+				yield break;
+
+			Api.MakeKey(session, ScheduledReductions, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, ScheduledReductions, level, MakeKeyGrbit.None);
+			Api.JetSetIndexRange(session, ScheduledReductions, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
+
+			do
+			{
+				var reduceKey = Api.RetrieveColumnAsString(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["reduce_key"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex);
+				var bucket =
+					Api.RetrieveColumnAsInt32(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"], RetrieveColumnGrbit.RetrieveFromIndex).
+						Value;
+				IEnumerable<MappedResultInfo> mappedResultsForBucket;
+				switch (level)
+				{
+					case 0:
+						mappedResultsForBucket = GetMappedResultsForBucket(index, reduceKey, bucket);
+						break;
+					case 1:
+					case 2:
+						mappedResultsForBucket = GetReducedResultsForBucket(index, reduceKey, level, bucket);
+						break;
+					default:
+						throw new ArgumentException("Invalid level: " + level);
+				}
+				foreach (var mappedResultInfo in mappedResultsForBucket)
+				{
+					take--;
+					mappedResultInfo.Bucket = bucket;
+					yield return mappedResultInfo;
+				}
+				Api.JetDelete(session, ScheduledReductions);
+			} while (Api.TryMoveNext(session, ScheduledReductions) && take > 0);
+		}
+
+		private IEnumerable<MappedResultInfo> GetMappedResultsForBucket(string index, string reduceKey, int bucket)
+		{
+			Api.JetSetCurrentIndex(session, MappedResults, "by_view_reduce_key_and_bucket");
+			Api.MakeKey(session, MappedResults, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, MappedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.MakeKey(session, MappedResults, bucket, MakeKeyGrbit.None);
+
+			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
+			{
+				yield return new MappedResultInfo
+				{
+					ReduceKey = reduceKey,
+				};
+				yield break;
+			}
+
+			Api.MakeKey(session, MappedResults, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, MappedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.MakeKey(session, MappedResults, bucket, MakeKeyGrbit.None);
+			Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
+
+			do
+			{
+				var key = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
+				if (string.Equals(key, reduceKey, StringComparison.InvariantCultureIgnoreCase))
+					break;
+				yield return new MappedResultInfo
+				{
+					ReduceKey =
+						key,
+					Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
+					Timestamp =
+						Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).
+							Value,
+					Data = LoadMappedResults(key),
+					Size = Api.RetrieveColumnSize(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]) ?? 0
+				};
+			} while (Api.TryMoveNext(session, MappedResults));
+
+		}
+
+		private IEnumerable<MappedResultInfo> GetReducedResultsForBucket(string index, string reduceKey, int level, int bucket)
+		{
+			Api.JetSetCurrentIndex(session, ReducedResults, "by_view_level_reduce_key_and_bucket");
+			Api.MakeKey(session, ReducedResults, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, ReducedResults, level, MakeKeyGrbit.None);
+			Api.MakeKey(session, ReducedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.MakeKey(session, ReducedResults, bucket, MakeKeyGrbit.None);
+
+			if (Api.TrySeek(session, ReducedResults, SeekGrbit.SeekEQ) == false)
+			{
+				yield return new MappedResultInfo
+				{
+					ReduceKey = reduceKey,
+				};
+				yield break;
+			}
+
+			Api.MakeKey(session, ReducedResults, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, ReducedResults, level, MakeKeyGrbit.None);
+			Api.MakeKey(session, ReducedResults, reduceKey, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.MakeKey(session, ReducedResults, bucket, MakeKeyGrbit.None);
+			Api.JetSetIndexRange(session, ReducedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
+
+			do
+			{
+				var key = Api.RetrieveColumnAsString(session, ReducedResults, tableColumnsCache.ReducedResultsColumns["reduce_key"]);
+				if (string.Equals(key, reduceKey, StringComparison.InvariantCultureIgnoreCase))
+					break;
+				yield return new MappedResultInfo
+				{
+					ReduceKey =
+						key,
+					Etag = new Guid(Api.RetrieveColumn(session, ReducedResults, tableColumnsCache.ReducedResultsColumns["etag"])),
+					Timestamp =
+						Api.RetrieveColumnAsDateTime(session, ReducedResults, tableColumnsCache.ReducedResultsColumns["timestamp"]).
+							Value,
+					Data = LoadReducedResults(key),
+					Size = Api.RetrieveColumnSize(session, ReducedResults, tableColumnsCache.ReducedResultsColumns["data"]) ?? 0
+				};
+			} while (Api.TryMoveNext(session, ReducedResults));
+
+		}
 		public void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_doc_key");
@@ -213,6 +364,15 @@ namespace Raven.Storage.Esent.StorageActions
 		private RavenJObject LoadMappedResults(string key)
 		{
 			using (Stream stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
+			using (var dataStream = documentCodecs.ReverseAggregate(stream, (ds, codec) => codec.Decode(key, null, ds)))
+			{
+				return dataStream.ToJObject();
+			}
+		}
+
+		private RavenJObject LoadReducedResults(string key)
+		{
+			using (Stream stream = new BufferedStream(new ColumnStream(session, ReducedResults, tableColumnsCache.ReducedResultsColumns["data"])))
 			using (var dataStream = documentCodecs.ReverseAggregate(stream, (ds, codec) => codec.Decode(key, null, ds)))
 			{
 				return dataStream.ToJObject();

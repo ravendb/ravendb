@@ -339,7 +339,7 @@ namespace Raven.Database.Indexing
 			exceptionAggregator.Execute(() => Parallel.ForEach(indexes.Values, index => index.Dispose()));
 
 			exceptionAggregator.Execute(() => dummyAnalyzer.Close());
-			
+
 			exceptionAggregator.Execute(() =>
 			{
 				if (crashMarker != null)
@@ -362,7 +362,7 @@ namespace Raven.Database.Indexing
 			Index ignored;
 			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(name));
 
-			documentDatabase.TransactionalStorage.Batch(accessor => 
+			documentDatabase.TransactionalStorage.Batch(accessor =>
 				accessor.Lists.Remove("Raven/Indexes/QueryTime", name));
 
 			if (!indexes.TryRemove(name, out ignored) || !Directory.Exists(dirOnDisk))
@@ -487,8 +487,14 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void Reduce(string index, AbstractViewGenerator viewGenerator, IEnumerable<object> mappedResults,
-						   WorkContext context, IStorageActionsAccessor actions, string[] reduceKeys)
+		public void Reduce(
+			string index, 
+			AbstractViewGenerator viewGenerator, 
+			IEnumerable<IGrouping<int, object>> mappedResults,
+			int level,
+			WorkContext context, 
+			IStorageActionsAccessor actions,
+			string[] reduceKeys)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -504,7 +510,8 @@ namespace Raven.Database.Indexing
 			}
 			using (EnsureInvariantCulture())
 			{
-				mapReduceIndex.ReduceDocuments(viewGenerator, mappedResults, context, actions, reduceKeys);
+				var reduceDocuments = new MapReduceIndex.ReduceDocuments(mapReduceIndex, viewGenerator, mappedResults, level, context, actions, reduceKeys);
+				reduceDocuments.Execute();
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = index,
