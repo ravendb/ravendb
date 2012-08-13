@@ -198,12 +198,6 @@ namespace Raven.Database.Indexing
 			return documentId;
 		}
 
-		public static byte[] ComputeHash(string name, string reduceKey)
-		{
-			using (var sha256 = SHA256.Create())
-				return sha256.ComputeHash(Encoding.UTF8.GetBytes(name + "/" + reduceKey));
-		}
-
 		private static string ReduceKeyToString(object reduceValue)
 		{
 			if (reduceValue is string || reduceValue is ValueType)

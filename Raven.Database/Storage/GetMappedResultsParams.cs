@@ -30,7 +30,7 @@ namespace Raven.Database.Storage
 			{
 				if (viewAndReduceKeyHashed == null)
 				{
-					viewAndReduceKeyHashed = MapReduceIndex.ComputeHash(view, reduceKey);
+					viewAndReduceKeyHashed = IndexingUtil.ComputeHash(view, reduceKey);
 				}
 				return viewAndReduceKeyHashed;
 			}
