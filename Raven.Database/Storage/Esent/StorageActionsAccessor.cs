@@ -71,7 +71,7 @@ namespace Raven.Storage.Esent
 			get { return inner; }
 		}
 
-		public IMappedResultsStorageAction MappedResults
+		public IMappedResultsStorageAction MapRduce
 		{
 			get { return inner; }
 		}

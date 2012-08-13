@@ -25,6 +25,8 @@ namespace Raven.Storage.Esent
 		
 		public IDictionary<string, JET_COLUMNID> MappedResultsColumns { get; set; }
 
+		public IDictionary<string, JET_COLUMNID> ScheduledReductionColumns { get; set; }
+
 		public IDictionary<string, JET_COLUMNID> DocumentsModifiedByTransactionsColumns { get; set; }
 
 		public IDictionary<string, JET_COLUMNID> TransactionsColumns { get; set; }
@@ -51,9 +53,11 @@ namespace Raven.Storage.Esent
 						ListsColumns = Api.GetColumnDictionary(session, lists);
 					using (var tasks = new Table(session, dbid, "tasks", OpenTableGrbit.None))
 	                    TasksColumns = Api.GetColumnDictionary(session, tasks);
-	                using (var files = new Table(session, dbid, "files", OpenTableGrbit.None))
-	                    FilesColumns = Api.GetColumnDictionary(session, files);
-	                using (var indexStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None))
+					using (var files = new Table(session, dbid, "files", OpenTableGrbit.None))
+						FilesColumns = Api.GetColumnDictionary(session, files);
+					using (var scheduledReductions = new Table(session, dbid, "scheduled_reductions", OpenTableGrbit.None))
+						ScheduledReductionColumns = Api.GetColumnDictionary(session, scheduledReductions);
+					using (var indexStats = new Table(session, dbid, "indexes_stats", OpenTableGrbit.None))
 	                    IndexesStatsColumns = Api.GetColumnDictionary(session, indexStats);
 					using (var indexStatsReduce = new Table(session, dbid, "indexes_stats_reduce", OpenTableGrbit.None))
 						IndexesStatsReduceColumns = Api.GetColumnDictionary(session, indexStatsReduce);

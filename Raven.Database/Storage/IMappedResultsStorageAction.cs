@@ -13,9 +13,44 @@ namespace Raven.Database.Storage
 	{
 		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
 		IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams);
-		IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view);
+		void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed);
 		void DeleteMappedResultsForView(string view);
 		IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take);
+		void ScheduleReductions(string view, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBukcets);
+	}
+
+	public class ReduceKeyAndBucket
+	{
+		public readonly int Bucket;
+		public readonly string ReduceKey;
+
+		public ReduceKeyAndBucket(int bucket, string reduceKey)
+		{
+			if (reduceKey == null) throw new ArgumentNullException("reduceKey");
+			Bucket = bucket;
+			ReduceKey = reduceKey;
+		}
+
+		protected bool Equals(ReduceKeyAndBucket other)
+		{
+			return Bucket == other.Bucket && string.Equals(ReduceKey, other.ReduceKey);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((ReduceKeyAndBucket) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				return (Bucket*397) ^ (ReduceKey != null ? ReduceKey.GetHashCode() : 0);
+			}
+		}
 	}
 
 	public class MappedResultInfo

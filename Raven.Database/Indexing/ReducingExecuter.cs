@@ -28,7 +28,7 @@ namespace Raven.Database.Indexing
 				transactionalStorage.Batch(actions =>
 				{
 					context.CancellationToken.ThrowIfCancellationRequested();
-					reduceKeyAndEtags = actions.MappedResults.GetMappedResultsReduceKeysAfter
+					reduceKeyAndEtags = actions.MapRduce.GetMappedResultsReduceKeysAfter
 						(
 							indexToWorkOn.IndexName,
 							indexToWorkOn.LastIndexedEtag,

@@ -24,10 +24,10 @@ namespace Raven.Storage.Esent.StorageActions
 	[CLSCompliant(false)]
 	public partial class DocumentStorageActions : IDisposable, IGeneralStorageActions
 	{
-		public event Action OnCommit = delegate { }; 
+		public event Action OnCommit = delegate { };
 		private readonly TableColumnsCache tableColumnsCache;
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
-	    private readonly IUuidGenerator uuidGenerator;
+		private readonly IUuidGenerator uuidGenerator;
 		private readonly IDocumentCacher cacher;
 		private readonly TransactionalStorage transactionalStorage;
 		protected readonly JET_DBID dbid;
@@ -49,17 +49,17 @@ namespace Raven.Storage.Esent.StorageActions
 		[CLSCompliant(false)]
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public DocumentStorageActions(
-			JET_INSTANCE instance, 
-			string database, 
-			TableColumnsCache tableColumnsCache, 
-			OrderedPartCollection<AbstractDocumentCodec> documentCodecs, 
-			IUuidGenerator uuidGenerator, 
-			IDocumentCacher cacher, 
+			JET_INSTANCE instance,
+			string database,
+			TableColumnsCache tableColumnsCache,
+			OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
+			IUuidGenerator uuidGenerator,
+			IDocumentCacher cacher,
 			TransactionalStorage transactionalStorage)
 		{
 			this.tableColumnsCache = tableColumnsCache;
 			this.documentCodecs = documentCodecs;
-		    this.uuidGenerator = uuidGenerator;
+			this.uuidGenerator = uuidGenerator;
 			this.cacher = cacher;
 			this.transactionalStorage = transactionalStorage;
 			try
@@ -75,18 +75,18 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		
+
 
 		[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void Dispose()
 		{
-			if(lists != null)
+			if (lists != null)
 				lists.Dispose();
 
-			if(queue != null)
+			if (queue != null)
 				queue.Dispose();
 
-			if(directories != null)
+			if (directories != null)
 				directories.Dispose();
 
 			if (details != null)
@@ -103,6 +103,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 			if (mappedResults != null)
 				mappedResults.Dispose();
+
+			if (scheduledReductions != null)
+				scheduledReductions.Dispose();
 
 			if (indexesStats != null)
 				indexesStats.Dispose();
@@ -157,7 +160,7 @@ namespace Raven.Storage.Esent.StorageActions
 		{
 			CompleteTransaction(txId, doc =>
 			{
-				Api.JetSetCurrentIndex(session,Documents,"by_key");
+				Api.JetSetCurrentIndex(session, Documents, "by_key");
 				Api.MakeKey(session, Documents, doc.Key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ))
 				{
@@ -193,11 +196,11 @@ namespace Raven.Storage.Esent.StorageActions
 					AddDocumentInTransaction(doc.Key, null, doc.Data, doc.Metadata, transactionInformation);
 			});
 		}
-		
+
 		public IEnumerable<Guid> GetTransactionIds()
 		{
 			Api.MoveBeforeFirst(session, Transactions);
-			while(Api.TryMoveNext(session, Transactions))
+			while (Api.TryMoveNext(session, Transactions))
 			{
 				var guid = Api.RetrieveColumnAsGuid(session, Transactions, tableColumnsCache.TransactionsColumns["tx_id"]);
 				yield return (Guid)guid;
@@ -231,13 +234,13 @@ namespace Raven.Storage.Esent.StorageActions
 				// esent index ranges are approximate, and we need to check them ourselves as well
 				if (
 					Api.RetrieveColumnAsGuid(session, DocumentsModifiedByTransactions,
-					                         tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]) != txId)
+											 tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]) != txId)
 					continue;
 				var metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
-				                                  tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]);
+												  tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]);
 				var key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions,
-				                                     tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"],
-				                                     Encoding.Unicode);
+													 tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"],
+													 Encoding.Unicode);
 
 				RavenJObject dataAsJson;
 				var metadataAsJson = metadata.ToJObject();
@@ -256,9 +259,9 @@ namespace Raven.Storage.Esent.StorageActions
 					Data = dataAsJson,
 					Delete =
 						Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions,
-						                            tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]).Value,
+													tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]).Value,
 					Etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
-					                          tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).
+											  tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).
 						TransfromToGuidWithProperSorting(),
 					Key = key,
 					Metadata = metadata.ToJObject(),
@@ -289,5 +292,5 @@ namespace Raven.Storage.Esent.StorageActions
 
 	}
 
-	
+
 }

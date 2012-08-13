@@ -22,5 +22,10 @@ namespace Raven.Database.Indexing
 			using (var sha256 = SHA256.Create())
 				return sha256.ComputeHash(Encoding.UTF8.GetBytes(name + "/" + reduceKey));
 		}
+
+		public static int MapBucket(string docId)
+		{
+			return (AbsStableInvariantIgnoreCaseStringHash(docId) / 1024) / 1024;
+		}
 	}
 }

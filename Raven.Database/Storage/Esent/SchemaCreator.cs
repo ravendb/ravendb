@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "3.7";
+		public const string SchemaVersion = "3.8";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -34,6 +34,7 @@ namespace Raven.Storage.Esent
 					CreateDocumentsBeingModifiedByTransactionsTable(dbid);
 					CreateTransactionsTable(dbid);
 					CreateTasksTable(dbid);
+					CreateScheduledReductionsTable(dbid);
 					CreateMapResultsTable(dbid);
 					CreateIndexingStatsTable(dbid);
 					CreateIndexingStatsReduceTable(dbid);
@@ -425,6 +426,90 @@ namespace Raven.Storage.Esent
 				});
 		}
 
+		private void CreateScheduledReductionsTable(JET_DBID dbid)
+		{
+			JET_TABLEID tableid;
+			Api.JetCreateTable(session, dbid, "scheduled_reductions", 1, 80, out tableid);
+			JET_COLUMNID columnid;
+
+			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "view", new JET_COLUMNDEF
+			{
+				cbMax = 2048,
+				coltyp = JET_coltyp.LongText,
+				cp = JET_CP.Unicode,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "reduce_key", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.LongText,
+				cp = JET_CP.Unicode,
+				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "reduce_key_and_view_hashed", new JET_COLUMNDEF
+			{
+				cbMax = 32,
+				coltyp = JET_coltyp.Binary,
+				grbit = ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "etag", new JET_COLUMNDEF
+			{
+				cbMax = 16,
+				coltyp = JET_coltyp.Binary,
+				grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "timestamp", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.DateTime,
+				grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "bucket", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "level", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.UnsignedByte,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			CreateIndexes(tableid,
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_id",
+					szKey = "+id\0\0",
+					grbit = CreateIndexGrbit.IndexPrimary
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view",
+					szKey = "+view\0\0",
+					grbit = CreateIndexGrbit.IndexDisallowNull
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_view_and_etag",
+					szKey = "+view\0-etag\0\0",
+				},
+				new JET_INDEXCREATE
+				{
+					szIndexName = "by_reduce_key_and_view_hashed_and_bucket",
+					szKey = "+reduce_key_and_view_hashed\0+bucket\0\0",
+				});
+		}
+
 		private void CreateMapResultsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
@@ -486,6 +571,13 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed
 			}, null, 0, out columnid);
 
+			Api.JetAddColumn(session, tableid, "bucket", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+
 			CreateIndexes(tableid,
 				new JET_INDEXCREATE
 				{
@@ -512,8 +604,8 @@ namespace Raven.Storage.Esent
 				},
 				new JET_INDEXCREATE
 				{
-					szIndexName = "by_reduce_key_and_view_hashed",
-					szKey = "+reduce_key_and_view_hashed\0\0",
+					szIndexName = "by_reduce_key_and_view_hashed_and_bucket",
+					szKey = "+reduce_key_and_view_hashed\0+bucket\0\0",
 				});
 		}
 

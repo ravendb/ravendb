@@ -51,7 +51,7 @@ namespace Raven.Database.Tasks
 				var itemsToFind = ReduceKeys
 					.Select(reduceKey => new GetMappedResultsParams(Index, reduceKey))
 					.ToArray();
-				var mappedResults = actions.MappedResults.GetMappedResults(itemsToFind)
+				var mappedResults = actions.MapRduce.GetMappedResults(itemsToFind)
 					.Select(JsonToExpando.Convert);
 				
 				var sp = Stopwatch.StartNew();

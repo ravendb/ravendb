@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="MappedResults.cs" company="Hibernating Rhinos LTD">
+// <copyright file="MapRduce.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -22,7 +22,7 @@ namespace Raven.Storage.Esent.StorageActions
 	{
 		public void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data)
 		{
-	        Guid etag = uuidGenerator.CreateSequentialUuid();
+			Guid etag = uuidGenerator.CreateSequentialUuid();
 
 			using (var update = new Update(session, MappedResults, JET_prep.Insert))
 			{
@@ -30,6 +30,7 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"], docId, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"], reduceKey, Encoding.Unicode);
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key_and_view_hashed"], IndexingUtil.ComputeHash(view, reduceKey));
+				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"], IndexingUtil.MapBucket(docId));
 
 				using (Stream stream = new BufferedStream(new ColumnStream(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"])))
 				{
@@ -37,7 +38,7 @@ namespace Raven.Storage.Esent.StorageActions
 					{
 						data.WriteTo(dataStream);
 						dataStream.Flush();
-				}
+					}
 				}
 
 				Api.SetColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"], etag.TransformToValueForEsentSorting());
@@ -50,9 +51,9 @@ namespace Raven.Storage.Esent.StorageActions
 		public IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
 		{
 			var optimizedIndexReader = new OptimizedIndexReader<GetMappedResultsParams>(Session, MappedResults, getMappedResultsParams.Length);
-			
+
 			Api.JetSetCurrentIndex(session, MappedResults, "by_reduce_key_and_view_hashed");
-			
+
 			foreach (var item in getMappedResultsParams)
 			{
 				Api.MakeKey(session, MappedResults, item.ViewAndReduceKeyHashed, MakeKeyGrbit.NewKey);
@@ -72,26 +73,64 @@ namespace Raven.Storage.Esent.StorageActions
 				{
 					// we need to check that we don't have hash collisions
 					var currentReduceKey = Api.RetrieveColumnAsString(session, MappedResults,
-					                                                  tableColumnsCache.MappedResultsColumns["reduce_key"]);
+																	  tableColumnsCache.MappedResultsColumns["reduce_key"]);
 					if (currentReduceKey != item.ReduceKey)
 						return false;
 
 					var currentView = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
-					
+
 					return currentView == item.View;
 				})
 				.Select(item => LoadMappedResults(item.ReduceKey));
 		}
 
-		public IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view)
+		public void ScheduleReductions(string view, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBukcets)
+		{
+			foreach (var reduceKeysAndBukcet in reduceKeysAndBukcets)
+			{
+				for (int i = 0; i < 3; i++)
+				{
+					using (var map = new Update(session, ScheduledReductions, JET_prep.Insert))
+					{
+						Api.SetColumn(session, scheduledReductions, tableColumnsCache.ScheduledReductionColumns["view"],
+									  view, Encoding.Unicode);
+						Api.SetColumn(session, scheduledReductions, tableColumnsCache.ScheduledReductionColumns["reduce_key"],
+									  reduceKeysAndBukcet.ReduceKey, Encoding.Unicode);
+
+						Api.SetColumn(session, scheduledReductions, tableColumnsCache.ScheduledReductionColumns["reduce_key_and_view_hashed"],
+									  IndexingUtil.ComputeHash(view, reduceKeysAndBukcet.ReduceKey));
+
+						Api.SetColumn(session, scheduledReductions, tableColumnsCache.ScheduledReductionColumns["etag"],
+									  uuidGenerator.CreateSequentialUuid());
+
+						Api.SetColumn(session, scheduledReductions, tableColumnsCache.ScheduledReductionColumns["timestamp"],
+									  SystemTime.Now);
+
+						var bucket = reduceKeysAndBukcet.Bucket;
+						for (int j = 0; j < i; j++)
+						{
+							bucket /= 1024;
+						}
+						Api.SetColumn(session, scheduledReductions, tableColumnsCache.ScheduledReductionColumns["bucket"],
+									  bucket);
+
+						Api.SetColumn(session, scheduledReductions, tableColumnsCache.ScheduledReductionColumns["level"], i);
+
+						map.Save();
+					}
+
+				}
+			}
+		}
+
+		public void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed)
 		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_doc_key");
 			Api.MakeKey(session, MappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, MappedResults, documentId, Encoding.Unicode, MakeKeyGrbit.None);
 			if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
-				return new string[0];
+				return;
 
-			var reduceKeys = new HashSet<string>();
 			Api.MakeKey(session, MappedResults, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, MappedResults, documentId, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
@@ -103,13 +142,14 @@ namespace Raven.Storage.Esent.StorageActions
 					continue;
 				var documentIdFromDb = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["document_key"]);
 				if (StringComparer.InvariantCultureIgnoreCase.Equals(documentIdFromDb, documentId) == false)
-					continue; 
+					continue;
 				var reduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"],
 														   Encoding.Unicode);
-				reduceKeys.Add(reduceKey);
+				var bucket = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["bucket"]).Value;
+
+				removed.Add(new ReduceKeyAndBucket(bucket, reduceKey));
 				Api.JetDelete(session, MappedResults);
 			} while (Api.TryMoveNext(session, MappedResults));
-			return reduceKeys;
 		}
 
 		public void DeleteMappedResultsForView(string view)
@@ -131,8 +171,8 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, MappedResults));
 		}
 
-	    public IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take)
-	    {
+		public IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take)
+		{
 			Api.JetSetCurrentIndex(session, MappedResults, "by_view_and_etag");
 			Api.MakeKey(session, MappedResults, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, MappedResults, lastReducedEtag, MakeKeyGrbit.None);
@@ -140,35 +180,35 @@ namespace Raven.Storage.Esent.StorageActions
 				return Enumerable.Empty<MappedResultInfo>();
 
 			var results = new Dictionary<string, MappedResultInfo>();
-	        while (
-				results.Count < take && 
+			while (
+				results.Count < take &&
 				Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"], Encoding.Unicode, RetrieveColumnGrbit.RetrieveFromIndex) == indexName)
-	        {
-	        	var key = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
-	        	var mappedResultInfo = new MappedResultInfo
-	        	{
-	        		ReduceKey =
-	        			key,
-	        		Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
-	        		Timestamp =
-	        			Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).
-	        			Value,
-	        		Data = loadData
-	        		       	? LoadMappedResults(key)
-	        		       	: null,
+			{
+				var key = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
+				var mappedResultInfo = new MappedResultInfo
+				{
+					ReduceKey =
+						key,
+					Etag = new Guid(Api.RetrieveColumn(session, MappedResults, tableColumnsCache.MappedResultsColumns["etag"])),
+					Timestamp =
+						Api.RetrieveColumnAsDateTime(session, MappedResults, tableColumnsCache.MappedResultsColumns["timestamp"]).
+						Value,
+					Data = loadData
+							? LoadMappedResults(key)
+							: null,
 					Size = Api.RetrieveColumnSize(session, MappedResults, tableColumnsCache.MappedResultsColumns["data"]) ?? 0
-	        	};
+				};
 
-	        	results[mappedResultInfo.ReduceKey] = mappedResultInfo;
+				results[mappedResultInfo.ReduceKey] = mappedResultInfo;
 
-	        	// the index is view ascending and etag descending
+				// the index is view ascending and etag descending
 				// that means that we are going backward to go up
 				if (Api.TryMovePrevious(session, MappedResults) == false)
 					break;
-	        }
+			}
 
-	    	return results.Values;
-	    }
+			return results.Values;
+		}
 
 		private RavenJObject LoadMappedResults(string key)
 		{

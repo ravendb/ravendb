@@ -51,17 +51,11 @@ namespace Raven.Database.Indexing
 		{
 			var count = 0;
 
-			// we mark the reduce keys to delete when we delete the mapped results, then we remove
-			// any reduce key that is actually being used to generate new mapped results
-			// this way, only reduces that removed data will force us to use the tasks approach
-			var reduceKeysToDelete = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			var changed = new HashSet<ReduceKeyAndBucket>();
 			var documentsWrapped = documents.Select(doc =>
 			{
 				var documentId = doc.__document_id;
-				foreach (var reduceKey in actions.MappedResults.DeleteMappedResultsForDocumentId((string)documentId, name))
-				{
-					reduceKeysToDelete.Add(reduceKey);
-				}
+				actions.MapRduce.DeleteMappedResultsForDocumentId((string)documentId, name, changed);
 				return doc;
 			})
 			.Where(x=>x is FilteredDocument == false);
@@ -82,25 +76,17 @@ namespace Raven.Database.Indexing
 					var reduceKey = ReduceKeyToString(reduceValue);
 					var docId = mappedResultFromDocument.Key.ToString();
 
-					reduceKeysToDelete.Remove((string)reduceKey);
-
 					var data = GetMappedData(doc);
 
 					logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId, data);
 
-					actions.MappedResults.PutMappedResult(name, docId, reduceKey, data);
+					actions.MapRduce.PutMappedResult(name, docId, reduceKey, data);
+
+					changed.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), reduceKey));
 				}
 			}
 			UpdateIndexingStats(context, stats);
-			if (reduceKeysToDelete.Count > 0)
-			{
-				actions.Tasks.AddTask(new ReduceTask
-				{
-					Index = name,
-					ReduceKeys = reduceKeysToDelete.ToArray()
-				}, minimumTimestamp);
-			}
-
+			actions.MapRduce.ScheduleReductions(name, changed);
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
 		}
 
@@ -220,21 +206,13 @@ namespace Raven.Database.Indexing
 		{
 			context.TransactionaStorage.Batch(actions =>
 			{
-				var reduceKeys = new HashSet<string>();
+				var reduceKeyAndBuckets = new HashSet<ReduceKeyAndBucket>();
 				foreach (var key in keys)
 				{
-					var reduceKeysFromDocuments = actions.MappedResults.DeleteMappedResultsForDocumentId(key, name);
-					foreach (var reduceKey in reduceKeysFromDocuments)
-					{
-						reduceKeys.Add(reduceKey);
-					}
+					actions.MapRduce.DeleteMappedResultsForDocumentId(key, name, reduceKeyAndBuckets);
+					
 				}
-				actions.Tasks.AddTask(new ReduceTask
-				{
-					Index = name,
-					ReduceKeys = reduceKeys.ToArray()
-				}, SystemTime.UtcNow);
-
+				actions.MapRduce.ScheduleReductions(name, reduceKeyAndBuckets);
 			});
 			Write(context, (writer, analyzer, stats) =>
 			{

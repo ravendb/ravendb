@@ -18,7 +18,7 @@ namespace Raven.Database.Storage
 		IAttachmentsStorageActions Attachments { get; }
 		IIndexingStorageActions Indexing { get; }
 		IGeneralStorageActions General { get; }
-		IMappedResultsStorageAction MappedResults { get; }
+		IMappedResultsStorageAction MapRduce { get; }
 		event Action OnCommit;
 		bool IsWriteConflict(Exception exception);
 		T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Tasks.Task;

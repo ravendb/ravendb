@@ -10,6 +10,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Impl;
+using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -48,6 +49,7 @@ namespace Raven.Storage.Managed
 				{"reduceKey", reduceKey},
 				{"docId", docId},
 				{"etag", byteArray},
+				{"bucket", IndexingUtil.MapBucket(docId)},
 				{"timestamp", SystemTime.Now}
 			};
 			storage.MappedResults.Put(key, ms.ToArray());
@@ -87,7 +89,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view)
+		public void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed)
 		{
 			foreach (var key in storage.MappedResults["ByViewAndDocumentId"].SkipTo(new RavenJObject
 			{
@@ -97,7 +99,7 @@ namespace Raven.Storage.Managed
 							  StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("docId"), documentId)))
 			{
 				storage.MappedResults.Remove(key);
-				yield return key.Value<string>("reduceKey");
+				removed.Add(new ReduceKeyAndBucket(key.Value<int>("bucket"), key.Value<string>("reduceKey")));
 			}
 		}
 
@@ -148,6 +150,30 @@ namespace Raven.Storage.Managed
 			}
 
 			return results.Values;
+		}
+
+		public void ScheduleReductions(string view, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets)
+		{
+			foreach (var reduceKeysAndBukcet in reduceKeysAndBuckets)
+			{
+				for (int i = 0; i < 3; i++)
+				{
+					var bucket = reduceKeysAndBukcet.Bucket;
+					for (int j = 0; j < i; j++)
+					{
+						bucket /= 1024;
+					}
+					storage.ScheduleReductions.UpdateKey(new RavenJObject
+					{
+						{"view", view},
+						{"reduceKey", reduceKeysAndBukcet.ReduceKey},
+						{"bucket", bucket},
+						{"etag", generator.CreateSequentialUuid().ToByteArray()},
+						{"timestamp", SystemTime.Now},
+						{"level", i}
+					});
+				}
+			}
 		}
 	}
 }

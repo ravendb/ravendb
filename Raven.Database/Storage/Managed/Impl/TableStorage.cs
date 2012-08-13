@@ -81,6 +81,13 @@ namespace Raven.Storage.Managed.Impl
 			{
 				{"ByNameAndEtag", x => Tuple.Create(x.Value<string>("name"), new ComparableByteArray(x.Value<byte[]>("etag")))},
 			});
+
+			ScheduleReductions = Add(new Table("ScheduleReductions")
+			{
+				{"ByViewAndReduceKey", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"))},
+				{"ByViewAndEtagDesc", x => Tuple.Create(x.Value<string>("view"), new ReverseComparableByteArrayWhichIgnoresNull(x.Value<byte[]>("etag")))},
+				{"ByViewAndEtag", x => Tuple.Create(x.Value<string>("view"), new ComparableByteArray(x.Value<byte[]>("etag")))}
+			});
 		}
 
 		public Table Lists { get; private set; }
@@ -92,6 +99,8 @@ namespace Raven.Storage.Managed.Impl
 		public Table Queues { get; private set; }
 
 		public Table MappedResults { get; private set; }
+
+		public Table ScheduleReductions { get; private set; }
 
 		public Table IndexingStats { get; private set; }
 
