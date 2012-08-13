@@ -1,16 +1,17 @@
-﻿namespace Raven.Database.Storage
+﻿using Raven.Database.Indexing;
+
+namespace Raven.Database.Storage
 {
 	public class GetMappedResultsParams
 	{
 		private readonly string view;
 		private readonly string reduceKey;
-		private readonly byte[] viewAndReduceKeyHashed;
+		private byte[] viewAndReduceKeyHashed;
 
-		public GetMappedResultsParams(string view, string reduceKey, byte[] viewAndReduceKeyHashed)
+		public GetMappedResultsParams(string view, string reduceKey)
 		{
 			this.view = view;
 			this.reduceKey = reduceKey;
-			this.viewAndReduceKeyHashed = viewAndReduceKeyHashed;
 		}
 
 		public string View
@@ -25,7 +26,14 @@
 
 		public byte[] ViewAndReduceKeyHashed
 		{
-			get { return viewAndReduceKeyHashed; }
+			get
+			{
+				if (viewAndReduceKeyHashed == null)
+				{
+					viewAndReduceKeyHashed = MapReduceIndex.ComputeHash(view, reduceKey);
+				}
+				return viewAndReduceKeyHashed;
+			}
 		}
 	}
 }

@@ -88,9 +88,7 @@ namespace Raven.Database.Indexing
 
 					logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId, data);
 
-					var hash = ComputeHash(name, reduceKey);
-
-					actions.MappedResults.PutMappedResult(name, docId, reduceKey, data, hash);
+					actions.MappedResults.PutMappedResult(name, docId, reduceKey, data);
 				}
 			}
 			UpdateIndexingStats(context, stats);

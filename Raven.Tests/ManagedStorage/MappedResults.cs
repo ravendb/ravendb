@@ -17,9 +17,9 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.MappedResults.PutMappedResult("test", "users/ayende","ayende", RavenJObject.FromObject(new { Name = "Rahien" }), null));
+				tx.Batch(mutator => mutator.MappedResults.PutMappedResult("test", "users/ayende","ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 
-				tx.Batch(viewer => Assert.NotEmpty(viewer.MappedResults.GetMappedResults(new GetMappedResultsParams("test", "ayende", null))));
+				tx.Batch(viewer => Assert.NotEmpty(viewer.MappedResults.GetMappedResults(new GetMappedResultsParams("test", "ayende"))));
 			}
 		}
 
@@ -28,10 +28,10 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.MappedResults.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" }), null));
+				tx.Batch(mutator => mutator.MappedResults.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 				tx.Batch(mutator => Assert.NotEmpty(mutator.MappedResults.DeleteMappedResultsForDocumentId("users/ayende","test")));
 
-				tx.Batch(viewer => Assert.Empty(viewer.MappedResults.GetMappedResults(new GetMappedResultsParams("test", "ayende", null))));
+				tx.Batch(viewer => Assert.Empty(viewer.MappedResults.GetMappedResults(new GetMappedResultsParams("test", "ayende"))));
 			}
 		}
 
@@ -40,10 +40,10 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.MappedResults.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" }), null));
+				tx.Batch(mutator => mutator.MappedResults.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 				tx.Batch(mutator => mutator.MappedResults.DeleteMappedResultsForView("test"));
 
-				tx.Batch(viewer => Assert.Empty(viewer.MappedResults.GetMappedResults(new GetMappedResultsParams("test", "ayende", null))));
+				tx.Batch(viewer => Assert.Empty(viewer.MappedResults.GetMappedResults(new GetMappedResultsParams("test", "ayende"))));
 			}
 		}
 
@@ -52,10 +52,10 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.MappedResults.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" }), null));
-				tx.Batch(mutator => mutator.MappedResults.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" }), null));
+				tx.Batch(mutator => mutator.MappedResults.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
+				tx.Batch(mutator => mutator.MappedResults.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 
-				tx.Batch(viewer => Assert.Equal(2, viewer.MappedResults.GetMappedResults(new GetMappedResultsParams("test", "ayende", null)).Count()));
+				tx.Batch(viewer => Assert.Equal(2, viewer.MappedResults.GetMappedResults(new GetMappedResultsParams("test", "ayende")).Count()));
 			}
 		}
 
@@ -66,13 +66,11 @@ namespace Raven.Tests.ManagedStorage
 			{
 				tx.Batch(mutator =>
 				{
-					mutator.MappedResults.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new {Name = "Rahien"}),
-					                                      null);
-					mutator.MappedResults.PutMappedResult("test", "users/rahien", "ayende", RavenJObject.FromObject(new { Name = "Rahien" }),
-														  null);
+					mutator.MappedResults.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new {Name = "Rahien"}));
+					mutator.MappedResults.PutMappedResult("test", "users/rahien", "ayende", RavenJObject.FromObject(new { Name = "Rahien" }));
 				});
 
-				tx.Batch(viewer => Assert.Equal(2, viewer.MappedResults.GetMappedResults(new GetMappedResultsParams("test", "ayende", null)).Count()));
+				tx.Batch(viewer => Assert.Equal(2, viewer.MappedResults.GetMappedResults(new GetMappedResultsParams("test", "ayende")).Count()));
 			}
 		}
 	}

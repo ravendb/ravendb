@@ -33,7 +33,7 @@ namespace Raven.Storage.Managed
 			this.documentCodecs = documentCodecs;
 		}
 
-		public void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data, byte[] viewAndReduceKeyHashed)
+		public void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data)
 		{
 			var ms = new MemoryStream();
 

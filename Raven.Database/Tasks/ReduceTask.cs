@@ -49,7 +49,7 @@ namespace Raven.Database.Tasks
 				log.Debug("Starting to read {0} reduce keys for index {1}", ReduceKeys.Length, Index);
 
 				var itemsToFind = ReduceKeys
-					.Select(reduceKey => new GetMappedResultsParams(Index, reduceKey, MapReduceIndex.ComputeHash(Index, reduceKey)))
+					.Select(reduceKey => new GetMappedResultsParams(Index, reduceKey))
 					.ToArray();
 				var mappedResults = actions.MappedResults.GetMappedResults(itemsToFind)
 					.Select(JsonToExpando.Convert);

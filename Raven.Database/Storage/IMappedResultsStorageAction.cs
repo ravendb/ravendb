@@ -11,7 +11,7 @@ namespace Raven.Database.Storage
 {
 	public interface IMappedResultsStorageAction
 	{
-		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data, byte[] viewAndReduceKeyHashed);
+		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
 		IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams);
 		IEnumerable<string> DeleteMappedResultsForDocumentId(string documentId, string view);
 		void DeleteMappedResultsForView(string view);
