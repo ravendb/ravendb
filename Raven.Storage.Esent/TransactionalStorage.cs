@@ -375,7 +375,7 @@ namespace Raven.Storage.Esent
 			var txMode = configuration.TransactionMode == TransactionMode.Lazy
 				? CommitTransactionGrbit.LazyFlush
 				: CommitTransactionGrbit.None;
-			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, ocumentCacher, this))
+			using (var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator, documentCacher, this))
 			{
 				var storageActionsAccessor = new StorageActionsAccessor(pht);
 				current.Value = storageActionsAccessor;
