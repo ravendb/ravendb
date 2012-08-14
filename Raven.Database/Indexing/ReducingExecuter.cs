@@ -30,8 +30,9 @@ namespace Raven.Database.Indexing
 			try
 			{
 				var sw = Stopwatch.StartNew();
-				for (int level = 0; level < 3; level++)
+				for (int i = 0; i< 3; i++)
 				{
+					var level = i;
 					transactionalStorage.Batch(actions =>
 					{
 						context.CancellationToken.ThrowIfCancellationRequested();
@@ -39,7 +40,7 @@ namespace Raven.Database.Indexing
 						var sp = Stopwatch.StartNew();
 						persistedResults = actions.MapRduce.GetItemsToReduce
 							(
-								take: autoTuner.NumberOfItemsToIndexInSingleBatch,
+								take: context.CurrentNumberOfItemsToReduceInSingleBatch,
 								level: level,
 								index: indexToWorkOn.IndexName
 							)
@@ -56,6 +57,19 @@ namespace Raven.Database.Indexing
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 
+						var requiredReduceNextTime = persistedResults.Select(x=>new ReduceKeyAndBucket(x.Bucket, x.ReduceKey)).Distinct().ToArray();
+						foreach (var mappedResultInfo in requiredReduceNextTime)
+						{
+							actions.MapRduce.RemoveReduceResults(indexToWorkOn.IndexName, level +1, mappedResultInfo.ReduceKey, mappedResultInfo.Bucket);
+						}
+						if(level != 2)
+						{
+							var reduceKeysAndBukcets = requiredReduceNextTime
+								.Select(x => new ReduceKeyAndBucket(x.Bucket/1024, x.ReduceKey))
+								.Distinct()
+								.ToArray();
+							actions.MapRduce.ScheduleReductions(indexToWorkOn.IndexName, level + 1, reduceKeysAndBukcets);
+						}
 
 						var results = persistedResults
 							.Where(x=>x.Data != null)
