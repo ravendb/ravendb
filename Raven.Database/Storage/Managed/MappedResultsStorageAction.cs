@@ -307,9 +307,12 @@ namespace Raven.Storage.Managed
 				data.WriteTo(stream);
 			}
 
+			var etag = generator.CreateSequentialUuid().ToByteArray();
+
 			storage.ReduceResults.Put(new RavenJObject
 			{
 				{"view", name},
+				{"etag", etag},
 				{"reduceKey", reduceKey},
 				{"level", level},
 				{"sourceBucket", sourceBucket},

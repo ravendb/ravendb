@@ -12,10 +12,9 @@ namespace Raven.Tryouts
 	{
 		public static void Main()
 		{
-			IOExtensions.DeleteDirectory("Data");
 			using(var store = new EmbeddableDocumentStore
 			{
-				DataDirectory = "Data",
+				RunInMemory = true,
 				UseEmbeddedHttpServer = true
 			}.Initialize())
 			{
@@ -25,7 +24,7 @@ namespace Raven.Tryouts
 				{
 					using (var session = store.OpenSession())
 					{
-						for (int i = 0; i < 6000; i++)
+						for (int i = 0; i < 5; i++)
 						{
 							session.Store(new Person
 							{
@@ -48,12 +47,6 @@ namespace Raven.Tryouts
 						}
 					}
 					Console.WriteLine("Reduced in {0:#,#} ms",sp.ElapsedMilliseconds);
-
-					using (var session = store.OpenSession())
-					{
-						session.Delete(session.Load<Person>(1));
-						session.SaveChanges();
-					}
 
 					Console.WriteLine("Press key to continue");
 					Console.ReadKey();

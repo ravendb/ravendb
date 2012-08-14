@@ -67,7 +67,10 @@ namespace Raven.Storage.Managed
 
 		public bool IsReduceStale(string name)
 		{
-			return storage.ScheduleReductions["ByView"].SkipTo(name).Any();
+			return storage.ScheduleReductions["ByView"].SkipTo(new RavenJObject
+			{
+				{ "view", name }
+			}).Any();
 		}
 
 		public bool IsMapStale(string name)
