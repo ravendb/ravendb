@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace Raven.Studio.Controls
 {
@@ -40,6 +41,13 @@ namespace Raven.Studio.Controls
 			if (checkbox == null)
 				return;
 			checkbox.IsChecked = !checkbox.IsChecked;
+		}
+
+		private void DbName_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+		{
+			if (e.Key == Key.Enter && !string.IsNullOrWhiteSpace(DbName.Text))
+				DialogResult = true;
+				
 		}
 	}
 }
