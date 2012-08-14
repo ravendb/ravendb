@@ -113,9 +113,9 @@ namespace Raven.Storage.Esent.StorageActions
 				.Select(item => LoadMappedResults(item.ReduceKey));
 		}
 
-		public void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBukcets)
+		public void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets)
 		{
-			foreach (var reduceKeysAndBukcet in reduceKeysAndBukcets)
+			foreach (var reduceKeysAndBukcet in reduceKeysAndBuckets)
 			{
 				var bucket = reduceKeysAndBukcet.Bucket;
 
@@ -184,20 +184,16 @@ namespace Raven.Storage.Esent.StorageActions
 
 		private IEnumerable<MappedResultInfo> GetResultsForBucket(string index, int level, string reduceKey, int bucket)
 		{
-			IEnumerable<MappedResultInfo> mappedResultsForBucket;
 			switch (level)
 			{
 				case 0:
-					mappedResultsForBucket = GetMappedResultsForBucket(index, reduceKey, bucket);
-					break;
+					return GetMappedResultsForBucket(index, reduceKey, bucket);
 				case 1:
 				case 2:
-					mappedResultsForBucket = GetReducedResultsForBucket(index, reduceKey, level, bucket);
-					break;
+					return GetReducedResultsForBucket(index, reduceKey, level, bucket);
 				default:
 					throw new ArgumentException("Invalid level: " + level);
 			}
-			return mappedResultsForBucket;
 		}
 
 		private IEnumerable<MappedResultInfo> GetMappedResultsForBucket(string index, string reduceKey, int bucket)
