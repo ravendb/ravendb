@@ -11,26 +11,7 @@
 			 xmlns:RavenControls="clr-namespace:Raven.Studio.Controls"
 			 xmlns:toolkit="http://schemas.microsoft.com/winfx/2006/xaml/presentation/toolkit"
 			 xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-			 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" xmlns:Delay="clr-namespace:Delay"
-			 xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared">
-
-	<UserControl.Resources>
-		<DataTemplate x:Key="ReplicationStatus">
-			<Grid VerticalAlignment="Center">
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto" />
-					<ColumnDefinition Width="Auto" />
-				</Grid.ColumnDefinitions>
-
-				<TextBlock Text="{Binding Key,StringFormat='\{0\} - '}"
-						   Grid.Column="0"
-						   VerticalAlignment="Center"/>
-				<TextBlock Text="{Binding Value}"
-							   Grid.Column="1"
-							   VerticalAlignment="Center" />
-			</Grid>
-		</DataTemplate>
-	</UserControl.Resources>
+			 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" xmlns:Delay="clr-namespace:Delay">
 
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
@@ -346,12 +327,11 @@
 				<ListBox toolkit:DockPanel.Dock="Left"  Visibility="{Binding Server.Value.SelectedDatabase.Value.HasReplication, Converter={StaticResource BooleanToVisibility}}"
 						 ItemsSource="{Binding Server.Value.SelectedDatabase.Value.ReplicationOnline}"
 						 ScrollViewer.VerticalScrollBarVisibility="Hidden"
-						 ItemTemplate="{StaticResource ReplicationStatus}"
 						 Background="Transparent"
-						 BorderBrush="Transparent">
+						 BorderThickness="0">
 					<ListBox.ItemsPanel>
 						<ItemsPanelTemplate>
-							<StackPanel Orientation="Horizontal"/>
+							<StackPanel Orientation="Horizontal" VerticalAlignment="Top"/>
 						</ItemsPanelTemplate>
 					</ListBox.ItemsPanel>
 				</ListBox>
