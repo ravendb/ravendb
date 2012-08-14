@@ -90,7 +90,7 @@ namespace Raven.Storage.Esent.StorageActions
 		private Table reducedResults;
 		protected Table ReducedResults
 		{
-			get { return reducedResults ?? (reducedResults = new Table(session, dbid, "reduced_results", OpenTableGrbit.None)); }
+			get { return reducedResults ?? (reducedResults = new Table(session, dbid, "reduce_results", OpenTableGrbit.None)); }
 		}
 
 		private Table tasks;

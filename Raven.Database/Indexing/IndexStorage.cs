@@ -494,7 +494,7 @@ namespace Raven.Database.Indexing
 			int level,
 			WorkContext context, 
 			IStorageActionsAccessor actions,
-			string[] reduceKeys)
+			HashSet<string> reduceKeys)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)

@@ -25,7 +25,8 @@ namespace Raven.Database.Indexing
 
 		public static int MapBucket(string docId)
 		{
-			return (AbsStableInvariantIgnoreCaseStringHash(docId) / 1024) / 1024;
+			var hash = AbsStableInvariantIgnoreCaseStringHash(docId);
+			return hash % (1024 * 1024);
 		}
 	}
 }

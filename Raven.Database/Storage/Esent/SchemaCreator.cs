@@ -496,6 +496,7 @@ namespace Raven.Storage.Esent
 				{
 					szIndexName = "by_view_level_reduce_key_and_bucket",
 					szKey = "+view\0+level\0+reduce_key\0+bucket\0\0",
+					grbit = CreateIndexGrbit.IndexUnique
 				});
 		}
 

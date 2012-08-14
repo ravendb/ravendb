@@ -40,7 +40,7 @@ namespace Raven.Database.Indexing
 						persistedResults = actions.MapRduce.GetItemsToReduce
 							(
 								take: autoTuner.NumberOfItemsToIndexInSingleBatch,
-								level: 1,
+								level: level,
 								index: indexToWorkOn.IndexName
 							)
 							.ToList();
@@ -61,13 +61,14 @@ namespace Raven.Database.Indexing
 							.Where(x=>x.Data != null)
 							.GroupBy(x => x.Bucket, x=> JsonToExpando.Convert(x.Data))
 							.ToArray();
-						var reduceKeys = persistedResults.Select(x => x.ReduceKey).ToArray();
+						var reduceKeys = new HashSet<string>(persistedResults.Select(x => x.ReduceKey),
+						                                     StringComparer.InvariantCultureIgnoreCase);
 						context.ReducedPerSecIncreaseBy(results.Length);
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 						sp = Stopwatch.StartNew();
 						context.IndexStorage.Reduce(indexToWorkOn.IndexName, viewGenerator, results, level, context, actions, reduceKeys);
-						log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4}", reduceKeys.Length, sp.Elapsed,
+						log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4}", reduceKeys.Count, sp.Elapsed,
 										results.Length, indexToWorkOn.IndexName, sp.Elapsed);
 					});
 				}
