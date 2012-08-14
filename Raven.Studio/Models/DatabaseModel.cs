@@ -74,6 +74,8 @@ namespace Raven.Studio.Models
 					.GetAsync("Raven/Databases/" + Name)
 					.ContinueOnSuccessInTheUIThread(doc =>
 					{
+						if (doc == null)
+							return;
 						DatabaseDocument = new Observable<DatabaseDocument>
 						{
 							Value = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer().Deserialize
