@@ -1527,6 +1527,18 @@ namespace Raven.Database
 
 		static string productVersion;
 		private volatile bool disposed;
+		public string ServerUrl
+		{
+			get
+			{
+				var serverUrl = Configuration.ServerUrl;
+				if (string.IsNullOrEmpty(Name))
+					return serverUrl;
+				if(serverUrl.EndsWith("/"))
+					return serverUrl + "databases/" + Name;
+				return serverUrl + "/databases/" + Name;
+			}
+		}
 
 		public static string ProductVersion
 		{
