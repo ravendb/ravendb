@@ -85,9 +85,9 @@ namespace Raven.Database.Server.Responders
 			{
 				GetIndexSource(context, index);
 			}
-			else if (string.IsNullOrEmpty(context.Request.QueryString["mapresults"]) == false)
+			else if (string.IsNullOrEmpty(context.Request.QueryString["debug"]) == false)
 			{
-				GetIndexMappedResult(context, index);
+				DebugIndex(context, index);
 			}
 			else if (string.IsNullOrEmpty(context.Request.QueryString["explain"]) == false)
 			{
@@ -96,6 +96,26 @@ namespace Raven.Database.Server.Responders
 			else 
 			{
 				GetIndexQueryRessult(context, index);
+			}
+		}
+
+		private void DebugIndex(IHttpContext context, string index)
+		{
+			switch (context.Request.QueryString["debug"].ToLowerInvariant())
+			{
+				case "map":
+					GetIndexMappedResult(context, index);
+					break;
+				case "reduce":
+					GetIndexReducedResult(context, index);
+					break;
+				default:
+					context.WriteJson(new
+					{
+						Error = "Unknown debug option " + context.Request.QueryString["debug"]
+					});
+					context.SetStatusToBadRequest();
+					break;
 			}
 		}
 
@@ -131,17 +151,70 @@ namespace Raven.Database.Server.Responders
 				context.SetStatusToNotFound();
 				return;
 			}
+			var key = context.Request.QueryString["key"];
+			if(string.IsNullOrEmpty(key))
+			{
+				context.WriteJson(new
+				{
+					Error = "Query string argument \'key\' is required"
+				});
+				context.SetStatusToBadRequest();
+				return;
+			}
 
-			var etag = context.GetEtagFromQueryString() ?? Guid.Empty;
 			List<MappedResultInfo> mappedResult = null;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
-				mappedResult = accessor.MapRduce.GetMappedResultsReduceKeysAfter(index, etag, 
-					loadData: true, 
-					take: context.GetPageSize(Settings.MaxPageSize))
+				mappedResult = accessor.MapRduce.GetMappedResultsForDebug(index, key, context.GetPageSize(Settings.MaxPageSize))
 					.ToList();
 			});
-			context.WriteJson(mappedResult);
+			context.WriteJson(new
+			{
+				mappedResult.Count,
+				Results = mappedResult
+			});
+		}
+
+		private void GetIndexReducedResult(IHttpContext context, string index)
+		{
+			if (Database.IndexDefinitionStorage.GetIndexDefinition(index) == null)
+			{
+				context.SetStatusToNotFound();
+				return;
+			}
+			var key = context.Request.QueryString["key"];
+			if (string.IsNullOrEmpty(key))
+			{
+				context.WriteJson(new
+				{
+					Error = "Query string argument 'key' is required"
+				});
+				context.SetStatusToBadRequest();
+				return;
+			}
+
+			int level;
+			if(int.TryParse(context.Request.QueryString["level"], out level) == false)
+			{
+				context.WriteJson(new
+				{
+					Error = "Query string argument 'level' is required and must be numeric"
+				});
+				context.SetStatusToBadRequest();
+				return;
+			}
+
+			List<MappedResultInfo> mappedResult = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				mappedResult = accessor.MapRduce.GetReducedResultsForDebug(index, key, level, context.GetPageSize(Settings.MaxPageSize))
+					.ToList();
+			});
+			context.WriteJson(new
+			{
+				mappedResult.Count,
+				Results = mappedResult
+			});
 		}
 
 		private void GetIndexQueryRessult(IHttpContext context, string index)
