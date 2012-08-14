@@ -117,8 +117,6 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				store.DatabaseCommands.Delete("items/1", null);
-
 				IndexChangeNotification indexChangeNotification;
 				Assert.True(list.TryTake(out indexChangeNotification, TimeSpan.FromSeconds(5)));
 

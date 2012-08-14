@@ -42,7 +42,7 @@ namespace Raven.Database.Config
 			MaxNumberOfItemsToReduceInSingleBatch = MaxNumberOfItemsToIndexInSingleBatch / 2;
 			InitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 			InitialNumberOfItemsToReduceInSingleBatch = InitialNumberOfItemsToIndexInSingleBatch / 2;
-			MaxIndexingRunLatency = TimeSpan.FromMinutes(1);
+			MaxIndexingRunLatency = TimeSpan.FromMinutes(5);
 
 			CreateTemporaryIndexesForAdHocQueriesIfNeeded = true;
 

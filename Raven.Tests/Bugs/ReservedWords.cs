@@ -27,7 +27,11 @@ namespace Raven.Tests.Bugs
 				Conventions = new DocumentConvention()
 			}.CreateIndexDefinition();
 
-			Assert.Equal("docs.Events\r\n\t.Select(@event => new {Year = @event.Date.Year, Month = @event.Date.Month, Count = 1})", indexDefinition.Map);
+			Assert.Equal(@"docs.Events.Select(@event => new {
+    Year = @event.Date.Year,
+    Month = @event.Date.Month,
+    Count = 1
+})", indexDefinition.Map);
 		}
 
 		[Fact]

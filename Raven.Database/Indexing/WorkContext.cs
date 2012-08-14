@@ -26,6 +26,7 @@ namespace Raven.Database.Indexing
 		private readonly object waitForWork = new object();
 		private volatile bool doWork = true;
 		private int workCounter;
+		private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 		private static readonly Logger log = LogManager.GetCurrentClassLogger();
 		private readonly ThreadLocal<List<Func<string>>> shouldNotifyOnWork = new ThreadLocal<List<Func<string>>>(() => new List<Func<string>>());
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
@@ -158,6 +159,16 @@ namespace Raven.Database.Indexing
 			serverErrors.TryDequeue(out ignored);
 		}
 
+		public void StopWorkRude()
+		{
+			StopWork();
+			cancellationTokenSource.Cancel();
+		}
+
+		public CancellationToken CancellationToken
+		{
+			get { return cancellationTokenSource.Token; }
+		}
 
 		public void Dispose()
 		{
@@ -168,6 +179,7 @@ namespace Raven.Database.Indexing
 				ReducedPerSecCounter.Dispose();
 			if (IndexedPerSecCounter != null)
 				IndexedPerSecCounter.Dispose();
+			cancellationTokenSource.Dispose();
 		}
 
 		public void ClearErrorsFor(string name)
@@ -300,6 +312,12 @@ namespace Raven.Database.Indexing
 			{
 				SetupPreformanceCounter(name);
 				CreatePreformanceCounters(name);
+			}
+			catch(UnauthorizedAccessException e)
+			{
+				log.WarnException(
+					"Could not setup performance counters properly because of access permissions, perf counters will not be used", e);
+				useCounters = false;
 			}
 			catch (SecurityException e)
 			{

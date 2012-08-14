@@ -24,7 +24,7 @@ namespace Raven.Tests.MailingList
 		{
 			var usersDeleteStatus = new Users_DeleteStatus {Conventions = new DocumentConvention()};
 			var indexDefinition = usersDeleteStatus.CreateIndexDefinition();
-			Assert.Equal("docs.Users\r\n\t.Select(user => new {Deleted = user[\"@metadata\"][\"Deleted\"]})", indexDefinition.Map);
+			Assert.Contains("Deleted = user[\"@metadata\"][\"Deleted\"]", indexDefinition.Map);
 		}
 
 		[Fact]

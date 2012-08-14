@@ -203,6 +203,24 @@ namespace Raven.Client.Silverlight.Connection.Async
 				});
 		}
 
+		public Task<Guid> DirectGetLastEtagAsync(string url)
+		{
+
+			var request = url.Docs(0,1,metadataOnly:true)
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention);
+
+			return request
+				.ReadResponseJsonAsync()
+				.ContinueWith(task =>
+				{
+					var results = ((RavenJArray) task.Result);
+					if(results.Length ==0)
+						return Guid.Empty;
+					return new Guid(results[0].Value<RavenJObject>(Constants.Metadata).Value<string>("@etag"));
+				});
+		}
+
 		private static bool HandleWebExceptionForGetAsync(string key, WebException e)
 		{
 			var httpWebResponse = e.Response as HttpWebResponse;
@@ -297,18 +315,23 @@ namespace Raven.Client.Silverlight.Connection.Async
 
 		public Task<LogItem[]> GetLogsAsync(bool errorsOnly)
 		{
-			var requestUri = url + "/logs";
-			if (errorsOnly)
-				requestUri += "?type=error";
+			return ExecuteWithReplication("GET", operationUrl =>
+			{
+				var requestUri = url + "/logs";
+				if (errorsOnly)
+					requestUri += "?type=error";
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET",
+					                                                                         credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task => convention.CreateSerializer().Deserialize<LogItem[]>(new RavenJTokenReader(task.Result)));
+				return request.ReadResponseJsonAsync()
+					.ContinueWith(task => convention.CreateSerializer().Deserialize<LogItem[]>(new RavenJTokenReader(task.Result)));
+			});
 		}
 
-		public Task<LicensingStatus> GetLicenseStatus()
+		public Task<LicensingStatus> GetLicenseStatusAsync()
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/license/status").NoCache(), "GET", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
@@ -334,29 +357,47 @@ namespace Raven.Client.Silverlight.Connection.Async
 				}).Unwrap();
 		}
 
-		public Task StartIndexing()
+		public Task StartIndexingAsync()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/StartIndexing").NoCache(), "POST", credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
+			return ExecuteWithReplication("POST", operationUrl =>
+			{
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+																							 (operationUrl + "/admin/StartIndexing").NoCache(),
+					                                                                         "POST", credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ExecuteRequestAsync();
+				return request.ExecuteRequestAsync();
+			});
 		}
 
-		public Task StopIndexing()
+		public Task StopIndexingAsync()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/StopIndexing").NoCache(), "POST", credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
+			return ExecuteWithReplication("POST", operationUrl =>
+			{
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+					                                                                         (operationUrl + "/admin/StopIndexing").NoCache(),
+					                                                                         "POST", credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ExecuteRequestAsync();
+				return request.ExecuteRequestAsync();
+			});
 		}
 
-		public Task<string> GetIndexingStatus()
+		public Task<string> GetIndexingStatusAsync()
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/IndexingStatus").NoCache(), "GET", credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
+			return ExecuteWithReplication("GET", operationUrl =>
+			{
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+					                                                                         (operationUrl + "/admin/IndexingStatus").
+					                                                                         	NoCache(), "GET", credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task => task.Result.Value<string>("IndexingStatus"));
+				return request.ReadResponseJsonAsync()
+					.ContinueWith(task => task.Result.Value<string>("IndexingStatus"));
+			});
 		}
 
 		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false)
@@ -375,7 +416,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			});
 		}
 
-		public Task<BuildNumber> GetBuildNumber()
+		public Task<BuildNumber> GetBuildNumberAsync()
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/build/version").NoCache(), "GET", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
@@ -389,20 +430,25 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// </summary>
 		public Task<IDictionary<string, IEnumerable<FacetValue>>> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc)
 		{
-			var requestUri = url + string.Format("/facets/{0}?facetDoc={1}&query={2}",
-			Uri.EscapeUriString(index),
-			Uri.EscapeDataString(facetSetupDoc),
-			Uri.EscapeDataString(query.Query));
+			return ExecuteWithReplication("GET", operationUrl =>
+			{
+				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&query={2}",
+				                                     Uri.EscapeUriString(index),
+				                                     Uri.EscapeDataString(facetSetupDoc),
+				                                     Uri.EscapeDataString(query.Query));
 
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET",
+					                                                                         credentials, convention));
+				request.AddOperationHeaders(OperationsHeaders);
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task =>
-				{
-					var json = (RavenJObject)task.Result;
-					return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
-				});
+				return request.ReadResponseJsonAsync()
+					.ContinueWith(task =>
+					{
+						var json = (RavenJObject) task.Result;
+						return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
+					});
+			});
 		}
 
 		/// <summary>
@@ -634,46 +680,62 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="overwrite">Should overwrite index</param>
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
-			return ExecuteWithReplication("PUT", url =>
-			{
-				string requestUri = url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
-				var webRequest = requestUri
-					.ToJsonRequest(this, credentials, convention, OperationsHeaders, "GET");
-
-				return webRequest.ExecuteRequestAsync()
-					.ContinueWith(task =>
-					{
-						try
-						{
-							task.Wait(); // should throw if it is bad
-							if (overwrite == false)
-								throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
-						}
-						catch (AggregateException e)
-						{
-							var webException = e.ExtractSingleInnerException() as WebException;
-							if (ShouldThrowForPutIndexAsync(webException))
-								throw;
-						}
-
-						var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention));
-						request.AddOperationHeaders(OperationsHeaders);
-
-						var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
-						return request
-							.WriteAsync(serializeObject)
-							.ContinueWith(writeTask => AttemptToProcessResponse(() => request
-								.ReadResponseJsonAsync()
-								.ContinueWith(readStrTask => AttemptToProcessResponse(() =>
-									{
-										//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctor is private!
-										var obj = convention.CreateSerializer().Deserialize<IndexContainer>(new RavenJTokenReader(readStrTask.Result));
-										return obj.Index;
-									})))
-						).Unwrap();
-					}).Unwrap();
-			});
+			return ExecuteWithReplication("PUT", url => DirectPutIndexAsync(name, indexDef, overwrite, url));
 		}
+
+		/// <summary>
+		/// Puts the index definition for the specified name asynchronously with url
+		/// </summary>
+		/// <param name="name">The name.</param>
+		/// <param name="indexDef">The index def.</param>
+		/// <param name="overwrite">Should overwrite index</param>
+		/// <param name="url">The server's url</param>
+		public Task<string> DirectPutIndexAsync(string name, IndexDefinition indexDef, bool overwrite, string url)
+		{
+			var requestUri = url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
+			var webRequest = requestUri
+				.ToJsonRequest(this, credentials, convention, OperationsHeaders, "GET");
+
+			return webRequest.ExecuteRequestAsync()
+				.ContinueWith(task =>
+				{
+					try
+					{
+						task.Wait(); // should throw if it is bad
+						if (overwrite == false)
+							throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+					}
+					catch (AggregateException e)
+					{
+						var webException = e.ExtractSingleInnerException() as WebException;
+						if (ShouldThrowForPutIndexAsync(webException))
+							throw;
+					}
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials,
+						                                                                         convention));
+					request.AddOperationHeaders(OperationsHeaders);
+
+					var serializeObject = JsonConvert.SerializeObject(indexDef, new JsonEnumConverter());
+					return request
+						.WriteAsync(serializeObject)
+						.ContinueWith(writeTask => AttemptToProcessResponse(() => request
+						                                                          	.ReadResponseJsonAsync()
+						                                                          	.ContinueWith(
+						                                                          		readStrTask => AttemptToProcessResponse(() =>
+						                                                          		{
+						                                                          			//NOTE: JsonConvert.DeserializeAnonymousType() doesn't work in Silverlight because the ctor is private!
+						                                                          			var obj =
+						                                                          				convention.CreateSerializer().Deserialize
+						                                                          					<IndexContainer>(
+						                                                          						new RavenJTokenReader(readStrTask.Result));
+						                                                          			return obj.Index;
+						                                                          		})))
+						).Unwrap();
+				}).Unwrap();
+		}
+
 
 		/// <summary>
 		/// Used for deserialization only :-P

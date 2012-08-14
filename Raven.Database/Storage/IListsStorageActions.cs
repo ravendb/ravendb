@@ -6,12 +6,19 @@ namespace Raven.Database.Storage
 {
 	public interface IListsStorageActions
 	{
-		void Add(string name, string key, RavenJObject data);
+		void Set(string name, string key, RavenJObject data);
 		
 		void Remove(string name, string key);
 
-		IEnumerable<Tuple<Guid, RavenJObject>> Read(string name, Guid start, int take);
+		IEnumerable<ListItem> Read(string name, Guid start, int take);
 
-		RavenJObject Read(string name, string key);
+		ListItem Read(string name, string key);
+	}
+
+	public class ListItem
+	{
+		public string Key;
+		public Guid Etag;
+		public RavenJObject Data;
 	}
 }

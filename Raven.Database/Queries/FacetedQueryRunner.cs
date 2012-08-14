@@ -32,7 +32,7 @@ namespace Raven.Database.Queries
 			IndexSearcher currentIndexSearcher;
 			using (database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
 			{
-				BackgroundTaskExecuter.Instance.ExecuteAll(database.Configuration, database.BackgroundTaskScheduler, facets, (facet, counter) =>
+				BackgroundTaskExecuter.Instance.ExecuteAll(database.Configuration, database.BackgroundTaskScheduler, database.WorkContext, facets, (facet, counter) =>
 				{
 					switch (facet.Mode)
 					{

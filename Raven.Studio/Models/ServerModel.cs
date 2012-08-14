@@ -115,6 +115,8 @@ namespace Raven.Studio.Models
 				                   	    var url = new UrlParser(UrlUtil.Url);
                                         url.SetQueryParam("database", Settings.Instance.SelectedDatabase);
                                         SetCurrentDatabase(url);
+
+										UrlUtil.Navigate(Settings.Instance.LastUrl);
 				                   	})
 				.Catch();
 		}
@@ -187,20 +189,20 @@ namespace Raven.Studio.Models
             SelectedDatabase.Value.AsyncDatabaseCommands
                 .EnsureSilverlightStartUpAsync()
                 .Catch();
-
-            Settings.Instance.SelectedDatabase = databaseName;
+			if(databaseName != null && databaseName != Constants.SystemDatabase)
+				Settings.Instance.SelectedDatabase = databaseName;
 		}
 
 		private void DisplayBuildNumber()
 		{
-			SelectedDatabase.Value.AsyncDatabaseCommands.GetBuildNumber()
+			SelectedDatabase.Value.AsyncDatabaseCommands.GetBuildNumberAsync()
 				.ContinueOnSuccessInTheUIThread(x => BuildNumber = x.BuildVersion)
 				.Catch();
 		}
 
 		private void DisplyaLicenseStatus()
 		{
-			SelectedDatabase.Value.AsyncDatabaseCommands.GetLicenseStatus()
+			SelectedDatabase.Value.AsyncDatabaseCommands.GetLicenseStatusAsync()
 				.ContinueOnSuccessInTheUIThread(x =>
 				{
 					License.Value = x;

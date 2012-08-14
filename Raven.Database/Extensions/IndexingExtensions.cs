@@ -10,6 +10,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Search;
+using Lucene.Net.Util;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing.Sorting;
@@ -118,10 +119,13 @@ namespace Raven.Database.Extensions
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);
 								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
+							
 								return new SortField(sortedField.Field, (int)sortOptions.Value, sortedField.Descending);
+							
 							})
 							.ToArray());
 		}
+
 
 		public static SortOptions? GetSortOption(this IndexDefinition self, string name)
 		{

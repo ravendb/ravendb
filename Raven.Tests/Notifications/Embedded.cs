@@ -79,7 +79,7 @@ namespace Raven.Tests.Notifications
 				var indexSubscription = databaseChanges.ForIndex("Raven/DocumentsByEntityName");
 				indexSubscription.Task.Wait();
 				indexSubscription
-					.Where(x=>x.Type==IndexChangeTypes.MapCompleted)
+					.Where(x => x.Type == IndexChangeTypes.MapCompleted)
 					.Subscribe(list.Add);
 
 				using (var session = store.OpenSession())
@@ -88,10 +88,8 @@ namespace Raven.Tests.Notifications
 					session.SaveChanges();
 				}
 
-				store.DatabaseCommands.Delete("items/1", null);
-
 				IndexChangeNotification changeNotification;
-				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(2)));
+				Assert.True(list.TryTake(out changeNotification, TimeSpan.FromSeconds(3)));
 
 				Assert.Equal("Raven/DocumentsByEntityName", changeNotification.Name);
 				Assert.Equal(changeNotification.Type, IndexChangeTypes.MapCompleted);

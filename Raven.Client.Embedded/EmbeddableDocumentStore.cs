@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Document;
@@ -27,6 +28,8 @@ namespace Raven.Client.Embedded
 	/// </summary>
 	public class EmbeddableDocumentStore : DocumentStore
 	{
+		ILog log = Raven.Abstractions.Logging.LogProvider.GetCurrentClassLogger();
+
 		static EmbeddableDocumentStore()
 		{
 			HttpEndpointRegistration.RegisterHttpEndpointTarget();
@@ -103,6 +106,7 @@ namespace Raven.Client.Embedded
 		}
 
 		private EmbeddableDatabaseChanges databaseChanges;
+		private Timer idleTimer;
 
 		/// <summary>
 		/// Subscribe to change notifications from the server
@@ -141,6 +145,8 @@ namespace Raven.Client.Embedded
 				return;
 			wasDisposed = true;
 			base.Dispose();
+			if (idleTimer != null)
+				idleTimer.Dispose();
 			if (DocumentDatabase != null)
 				DocumentDatabase.Dispose();
 			if (httpServer != null)
@@ -205,6 +211,20 @@ namespace Raven.Client.Embedded
 				{
 					httpServer = new HttpServer(configuration, DocumentDatabase);
 					httpServer.StartListening();
+				}
+				else // we need to setup our own idle timer
+				{
+					idleTimer = new Timer(state =>
+					{
+						try
+						{
+							DocumentDatabase.RunIdleOperations();
+						}
+						catch (Exception e)
+						{
+							log.WarnException("Error during database idle operations", e);
+						}
+					},null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 				}
 				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId);
 			}

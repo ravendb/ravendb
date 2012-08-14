@@ -66,6 +66,11 @@ namespace Raven.Database.Indexing
 						HandleOutOfMemoryException(oome);
 					}
 				}
+				catch (OperationCanceledException)
+				{
+					log.Info("Got rude cancelation of indexing as a result of shutdown, aborting current indexing run");
+					return;
+				}
 				catch (Exception e)
 				{
 					foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
@@ -107,6 +112,8 @@ namespace Raven.Database.Indexing
 
 				log.Debug("Executing {0}", task);
 				foundWork = true;
+				
+				context.CancellationToken.ThrowIfCancellationRequested();
 
 				try
 				{
@@ -157,6 +164,8 @@ namespace Raven.Database.Indexing
 
 			if (indexesToWorkOn.Count == 0)
 				return false;
+
+			context.CancellationToken.ThrowIfCancellationRequested();
 
 			using(context.IndexDefinitionStorage.CurrentlyIndexing())
 				ExecuteIndexingWork(indexesToWorkOn);

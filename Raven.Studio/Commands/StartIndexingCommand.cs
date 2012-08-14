@@ -19,7 +19,7 @@ namespace Raven.Studio.Commands
 		{
 			ShouldExecute = false;
 			output("Enabling indexing...");
-			ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.StartIndexing()
+			ApplicationModel.Current.Server.Value.SelectedDatabase.Value.AsyncDatabaseCommands.StartIndexingAsync()
 				.ContinueOnSuccessInTheUIThread(() =>
 				                                	{
 				                                		output("Indexing enabled");

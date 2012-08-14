@@ -57,18 +57,17 @@ namespace Raven.Bundles.Replication.Triggers
 
 		public override void AfterDelete(string key)
 		{
-			using(Database.DisableAllTriggersForCurrentThread())
+			var metadata = new RavenJObject
 			{
-				var metadata = new RavenJObject
-				{
-					{"Raven-Delete-Marker", true},
-					{Constants.RavenReplicationHistory, deletedHistory.Value},
-					{Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
-					{Constants.RavenReplicationVersion, HiLo.NextId()}
-				};
-				deletedHistory.Value = null;
-				Database.PutStatic(key, null, new MemoryStream(new byte[0]), metadata);
-			}
+				{Constants.RavenDeleteMarker, true},
+				{Constants.RavenReplicationHistory, deletedHistory.Value},
+				{Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
+				{Constants.RavenReplicationVersion, HiLo.NextId()}
+			};
+			deletedHistory.Value = null;
+			Database.TransactionalStorage.Batch(accessor =>
+				accessor.Lists.Set(Constants.RavenReplicationAttachmentsTombstones, key, metadata));
+		
 		}
 	}
 }

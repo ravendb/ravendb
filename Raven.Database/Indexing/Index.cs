@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -43,17 +44,12 @@ namespace Raven.Database.Indexing
 		private readonly List<Document> currentlyIndexDocuments = new List<Document>();
 		private Directory directory;
 		protected readonly IndexDefinition indexDefinition;
-
+		private volatile string waitReason;
 		/// <summary>
 		/// Note, this might be written to be multiple threads at the same time
 		/// We don't actually care for exact timing, it is more about general feeling
 		/// </summary>
 		private DateTime? lastQueryTime;
-
-		public void MarkQueried()
-		{
-			lastQueryTime = DateTime.UtcNow;
-		}
 
 		private int docCountSinceLastOptimization;
 
@@ -68,8 +64,6 @@ namespace Raven.Database.Indexing
 		private volatile bool disposed;
 		private IndexWriter indexWriter;
 		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
-		public DateTime? LastQueryTimestamp { get; set; }
-
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
 		{
@@ -107,8 +101,19 @@ namespace Raven.Database.Indexing
 
 		public void Dispose()
 		{
-			lock (writeLock)
+			try
 			{
+				// this is here so we can give good logs in the case of a long shutdown process
+				if(Monitor.TryEnter(writeLock, 100) == false)
+				{
+					var localReason = waitReason;
+					if(localReason !=null)
+						logIndexing.Warn("Waiting for {0} to complete before disposing of index {1}, that might take a while if the server is very busy",
+						 localReason, name);
+					
+					Monitor.Enter(writeLock);
+				}
+
 				disposed = true;
 				foreach (var indexExtension in indexExtensions)
 				{
@@ -152,6 +157,10 @@ namespace Raven.Database.Indexing
 					logIndexing.ErrorException("Error when closing the directory", e);
 				}
 			}
+			finally
+			{
+				Monitor.Exit(writeLock);
+			}
 		}
 
 		public void Flush()
@@ -162,8 +171,17 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter == null)
 					return;
-
-				indexWriter.Commit();
+				
+				try
+				{
+					
+					waitReason = "Flush";
+					indexWriter.Commit();
+				}
+				finally
+				{
+					waitReason = null;
+				}
 			}
 		}
 
@@ -172,7 +190,15 @@ namespace Raven.Database.Indexing
 			if (docCountSinceLastOptimization <= 2048) return;
 			lock (writeLock)
 			{
-				indexWriter.Optimize();
+				waitReason = "Merge / Optimize";
+				try
+				{
+					indexWriter.Optimize();
+				}
+				finally
+				{
+					waitReason = null;
+				}
 				docCountSinceLastOptimization = 0;
 			}
 		}
@@ -253,6 +279,7 @@ namespace Raven.Database.Indexing
 				Analyzer searchAnalyzer = null;
 				try
 				{
+					waitReason = "Write";
 					try
 					{
 						searchAnalyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose);
@@ -301,6 +328,7 @@ namespace Raven.Database.Indexing
 					{
 						dispose();
 					}
+					waitReason = null;
 				}
 				if (shouldRecreateSearcher)
 					RecreateSearcher();
@@ -414,7 +442,7 @@ namespace Raven.Database.Indexing
 		protected IEnumerable<object> RobustEnumerationIndex(IEnumerable<object> input, IEnumerable<IndexingFunc> funcs,
 															IStorageActionsAccessor actions, WorkContext context, IndexingWorkStats stats)
 		{
-			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
 				BeforeMoveNext = () => stats.IndexingAttempts++,
 				CancelMoveNext = () => stats.IndexingAttempts--,
@@ -439,7 +467,7 @@ namespace Raven.Database.Indexing
 			IndexingWorkStats stats)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
 				BeforeMoveNext = () => stats.ReduceAttempts++,
 				CancelMoveNext = () => stats.ReduceAttempts--,
@@ -465,7 +493,7 @@ namespace Raven.Database.Indexing
 															IStorageActionsAccessor actions, WorkContext context)
 		{
 			// not strictly accurate, but if we get that many errors, probably an error anyway.
-			return new RobustEnumerator(context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
+			return new RobustEnumerator(context, context.Configuration.MaxNumberOfItemsToIndexInSingleBatch)
 			{
 				BeforeMoveNext = () => { }, // don't care
 				CancelMoveNext = () => { }, // don't care
@@ -540,6 +568,16 @@ namespace Raven.Database.Indexing
 				if (newAnalyzer != analyzer)
 					newAnalyzer.Close();
 			}
+		}
+
+		public void MarkQueried()
+		{
+			lastQueryTime = DateTime.UtcNow;
+		}
+
+		public void MarkQueried(DateTime time)
+		{
+			lastQueryTime = time;
 		}
 
 		public IIndexExtension GetExtension(string indexExtensionKey)
@@ -630,6 +668,8 @@ namespace Raven.Database.Indexing
 				logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, name,
 								sb.ToString());
 			}
+
+
 		}
 
 

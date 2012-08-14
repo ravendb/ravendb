@@ -11,12 +11,17 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 #if !NET35
 using System.Threading.Tasks;
+using Raven.Abstractions.Logging;
+using Raven.Abstractions.Replication;
+using Raven.Abstractions.Util;
+using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 #endif
-using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Connection;
 using Raven.Client.Document;
+#if SILVERLIGHT
+using Raven.Client.Silverlight.Connection.Async;
+#endif
 using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
@@ -125,8 +130,37 @@ namespace Raven.Client.Indexes
 			var indexDefinition = CreateIndexDefinition();
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
-			// the new defintion.
+			// the new definition.
 			databaseCommands.PutIndex(IndexName, indexDefinition, true);
+
+			UpdateIndexInReplication(databaseCommands, documentConvention, indexDefinition);
+		}
+
+		private void UpdateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention,
+		                                      IndexDefinition indexDefinition)
+		{
+			var serverClient = databaseCommands as ServerClient;
+			if (serverClient == null)
+				return;
+			var doc = serverClient.Get("Raven/Replication/Destinations");
+			if (doc == null)
+				return;
+			var replicationDocument =
+				documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.DataAsJson));
+			if (replicationDocument == null)
+				return;
+
+			foreach (var replicationDestination in replicationDocument.Destinations)
+			{
+				try
+				{
+					serverClient.DirectPutIndex(IndexName, replicationDestination.Url, true, indexDefinition);
+				}
+				catch (Exception e)
+				{
+					Logger.WarnException("Could not put index in replication server", e);
+				}
+			}
 		}
 #endif
 
@@ -140,8 +174,43 @@ namespace Raven.Client.Indexes
 			var indexDefinition = CreateIndexDefinition();
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
-			// the new defintion.
-			return asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true);
+			// the new definition.
+			return asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true)
+				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, indexDefinition))
+				.Unwrap();
+		}
+
+		private ILog Logger = LogProvider.GetCurrentClassLogger();
+		private Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
+		                                           DocumentConvention documentConvention, IndexDefinition indexDefinition)
+		{
+			var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
+			if (asyncServerClient == null)
+				return new CompletedTask();
+			return asyncServerClient.GetAsync("Raven/Replication/Destinations").ContinueWith(doc =>
+			{
+				if (doc == null)
+					return new CompletedTask();
+				var replicationDocument =
+					documentConvention.CreateSerializer().Deserialize<ReplicationDocument>(new RavenJTokenReader(doc.Result.DataAsJson));
+				if (replicationDocument == null)
+					return new CompletedTask();
+				var tasks = new List<Task>();
+				foreach (var replicationDestination in replicationDocument.Destinations)
+				{
+					tasks.Add(asyncServerClient.DirectPutIndexAsync(IndexName, indexDefinition, true, replicationDestination.Url));
+				}
+				return Task.Factory.ContinueWhenAll(tasks.ToArray(), indexingTask =>
+				{
+					foreach (var indexTask in indexingTask)
+					{
+						if (indexTask.IsFaulted)
+						{
+							Logger.WarnException("Could not put index in replication server", indexTask.Exception);
+						}
+					}
+				});
+			}).Unwrap();
 		}
 #endif
 	}

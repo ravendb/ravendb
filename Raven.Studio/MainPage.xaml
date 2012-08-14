@@ -14,6 +14,24 @@
 			 xmlns:Infrastructure="clr-namespace:Raven.Studio.Infrastructure" xmlns:Delay="clr-namespace:Delay"
 			 xmlns:shared="http://schemas.actiprosoftware.com/winfx/xaml/shared">
 
+	<UserControl.Resources>
+		<DataTemplate x:Key="ReplicationStatus">
+			<Grid VerticalAlignment="Center">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
+
+				<TextBlock Text="{Binding Key,StringFormat='\{0\} - '}"
+						   Grid.Column="0"
+						   VerticalAlignment="Center"/>
+				<TextBlock Text="{Binding Value}"
+							   Grid.Column="1"
+							   VerticalAlignment="Center" />
+			</Grid>
+		</DataTemplate>
+	</UserControl.Resources>
+
 	<Grid x:Name="LayoutRoot"
 		  Style="{StaticResource LayoutRootGridStyle}">
 		<Grid.RowDefinitions>
@@ -88,7 +106,7 @@
 					<ColumnDefinition Width="Auto" />
 					<ColumnDefinition Width="Auto" />
 				</Grid.ColumnDefinitions>
-				
+
 				<Image Grid.Column="3"
 					   ToolTipService.ToolTip="{Binding Server.Value.SelectedDatabase.Value.Status.Value, StringFormat='Server stauts: {0}'}"
 					   Source="{Binding StatusImage}"
@@ -116,7 +134,7 @@
 					<Image Source="{StaticResource Image_Error_Small}"
 						   Stretch="Fill" Width="24" Height="24"/>
 				</Button>
-				
+
 				<Databases:DatabaseSelectionView VerticalAlignment="Center"
 												 HorizontalAlignment="Right" />
 			</Grid>
@@ -185,15 +203,15 @@
 								   VerticalAlignment="Center">
 					<Delay:SplitButton.ButtonMenuItemsSource>
 						<Controls:MenuItem Header="New Document" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/edit?mode=new">
-						  <Controls:MenuItem.Icon>
+							<Controls:MenuItem.Icon>
 								<Image Source="{StaticResource Image_AddDocument_Tiny}"/>
-						  </Controls:MenuItem.Icon>
+							</Controls:MenuItem.Icon>
 						</Controls:MenuItem>
-					  <Controls:MenuItem Header="New Index" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/indexes/new?mode=new">
+						<Controls:MenuItem Header="New Index" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/indexes/new?mode=new">
 							<Controls:MenuItem.Icon>
 								<Image Source="{StaticResource Image_AddIndex_Tiny}"/>
 							</Controls:MenuItem.Icon>
-					  </Controls:MenuItem>
+						</Controls:MenuItem>
 						<Controls:Separator/>
 						<Controls:MenuItem Header="New Dynamic Query" Command="{StaticResource NavigateToCommandEnsureRefresh}" CommandParameter="/query?mode=dynamic">
 							<Controls:MenuItem.Icon>
@@ -289,7 +307,7 @@
 											  MappedUri="/Views/{pageName}.xaml" />
 						<sdk:UriMapping Uri="/bundles"
 											  MappedUri="/Views/bundles.xaml" />
-						
+
 					</sdk:UriMapper>
 				</sdk:Frame.UriMapper>
 			</sdk:Frame>
@@ -324,6 +342,19 @@
 							   LastChildFill="False">
 				<Stats:DatabaseStatisticsView toolkit:DockPanel.Dock="Left" />
 
+				<TextBlock toolkit:DockPanel.Dock="Left" Text="Replication Statistics: " Visibility="{Binding Server.Value.SelectedDatabase.Value.HasReplication, Converter={StaticResource BooleanToVisibility}}"/>
+				<ListBox toolkit:DockPanel.Dock="Left"  Visibility="{Binding Server.Value.SelectedDatabase.Value.HasReplication, Converter={StaticResource BooleanToVisibility}}"
+						 ItemsSource="{Binding Server.Value.SelectedDatabase.Value.ReplicationOnline}"
+						 ScrollViewer.VerticalScrollBarVisibility="Hidden"
+						 ItemTemplate="{StaticResource ReplicationStatus}"
+						 Background="Transparent"
+						 BorderBrush="Transparent">
+					<ListBox.ItemsPanel>
+						<ItemsPanelTemplate>
+							<StackPanel Orientation="Horizontal"/>
+						</ItemsPanelTemplate>
+					</ListBox.ItemsPanel>
+				</ListBox>
 				<StackPanel toolkit:DockPanel.Dock="Right"
 							Orientation="Horizontal">
 					<Databases:LicenseView Margin="0,0,15,0"

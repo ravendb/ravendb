@@ -45,6 +45,7 @@ namespace Raven.Database.Server
 	public class HttpServer : IDisposable
 	{
 		private readonly DateTime startUpTime = DateTime.UtcNow;
+		private DateTime lastWriteRequest;
 		private const int MaxConcurrentRequests = 192;
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
@@ -69,9 +70,6 @@ namespace Raven.Database.Server
 		{
 			get { return Thread.VolatileRead(ref physicalRequestsCount); }
 		}
-
-		[ImportMany]
-		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
 
 		[ImportMany]
 		public OrderedPartCollection<IConfigureHttpListener> ConfigureHttpListeners { get; set; }
@@ -126,10 +124,7 @@ namespace Raven.Database.Server
 
 			configuration.Container.SatisfyImportsOnce(this);
 
-			foreach (var responder in RequestResponders)
-			{
-				responder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
-			}
+			InitializeRequestResponders(SystemDatabase);
 
 			switch (configuration.AuthenticationMode.ToLowerInvariant())
 			{
@@ -145,6 +140,15 @@ namespace Raven.Database.Server
 			}
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
+		}
+
+		private void InitializeRequestResponders(DocumentDatabase documentDatabase)
+		{
+			foreach (var responder in documentDatabase.RequestResponders)
+			{
+				responder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value,
+				                           this);
+			}
 		}
 
 		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
@@ -254,6 +258,9 @@ namespace Raven.Database.Server
 
 		private void IdleOperations(object state)
 		{
+			if ((DateTime.UtcNow - lastWriteRequest).TotalMinutes < 1)
+				return;// not idle, we just had a write request coming in
+
 			try
 			{
 				SystemDatabase.RunIdleOperations();
@@ -403,11 +410,11 @@ namespace Raven.Database.Server
 				try
 				{
 					LogHttpRequestStats(new LogHttpRequestStatsParams(
-					                    	sw,
-					                    	context.Request.Headers,
-					                    	context.Request.HttpMethod,
-					                    	context.Response.StatusCode,
-					                    	context.Request.Url.PathAndQuery));
+											sw,
+											context.Request.Headers,
+											context.Request.HttpMethod,
+											context.Response.StatusCode,
+											context.Request.Url.PathAndQuery));
 				}
 				catch (Exception e)
 				{
@@ -428,6 +435,10 @@ namespace Raven.Database.Server
 				if (disposed)
 					return;
 
+				if (IsWriteRequest(ctx))
+				{
+					lastWriteRequest = DateTime.UtcNow;
+				}
 				var sw = Stopwatch.StartNew();
 				bool ravenUiRequest = false;
 				try
@@ -457,6 +468,12 @@ namespace Raven.Database.Server
 				if (isReadLockHeld == false)
 					disposerLock.ExitReadLock();
 			}
+		}
+
+		private static bool IsWriteRequest(IHttpContext ctx)
+		{
+			return AbstractRequestAuthorizer.IsGetRequest(ctx.Request.HttpMethod, ctx.Request.Url.AbsoluteUri) ==
+				   false;
 		}
 
 		protected bool ShouldLogException(Exception exception)
@@ -657,7 +674,7 @@ namespace Raven.Database.Server
 				if (ctx.Request.HttpMethod == "OPTIONS")
 					return false;
 
-				foreach (var requestResponderLazy in RequestResponders)
+				foreach (var requestResponderLazy in currentDatabase.Value.RequestResponders)
 				{
 					var requestResponder = requestResponderLazy.Value;
 					if (requestResponder.WillRespond(ctx))
@@ -823,6 +840,7 @@ namespace Raven.Database.Server
 			{
 				var documentDatabase = new DocumentDatabase(config);
 				documentDatabase.SpinBackgroundWorkers();
+				InitializeRequestResponders(documentDatabase);
 				return documentDatabase;
 			});
 			return true;
