@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Storage
@@ -16,9 +17,14 @@ namespace Raven.Database.Storage
 		void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed);
 		void DeleteMappedResultsForView(string view);
 		IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take);
-		void ScheduleReductions(string view, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBukcets);
+
+		IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int take);
+		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int take);
+
+		void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBukcets);
 		IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take);
-		void PutReducedResult(string name, string reduceKey, int level, int bucket, RavenJObject data);
+		void PutReducedResult(string name, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
+		void RemoveReduceResults(string indexName, int level, string reduceKey, int sourceBucket);
 	}
 
 	public class ReduceKeyAndBucket
@@ -62,7 +68,14 @@ namespace Raven.Database.Storage
 		public Guid Etag { get; set; }
 
 		public RavenJObject Data { get; set; }
+		[JsonIgnore]
 		public int Size { get; set; }
 		public int Bucket { get; set; }
+		public string Source { get; set; }
+
+		public override string ToString()
+		{
+			return string.Format("{0},{1}: {2}", ReduceKey, Bucket, Data == null ? "null" : Data.ToString(Formatting.None));
+		}
 	}
 }
