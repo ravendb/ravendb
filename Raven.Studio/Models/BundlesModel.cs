@@ -71,12 +71,23 @@ namespace Raven.Studio.Models
 							});
 					}
 
-					if(HasQuotas)
+					if (HasQuotas)
+					{
 						Bundles.Add("Quotas");
-					if(HasReplication)
+						SelectedBundle.Value = "Quotas";
+					}
+					if (HasReplication)
+					{
 						Bundles.Add("Replication");
-					if(HasVersioning)
+						if (SelectedBundle.Value == null)
+							SelectedBundle.Value = "Replication";
+					}
+					if (HasVersioning)
+					{
 						Bundles.Add("Versioning");
+						if (SelectedBundle.Value == null)
+							SelectedBundle.Value = "Versioning";
+					}
 				});
 		}
 
