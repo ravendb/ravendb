@@ -208,8 +208,8 @@
     <Compile Include="Controls\Editors\QuerySyntaxTextBlock.xaml.cs">
       <DependentUpon>QuerySyntaxTextBlock.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\EncryotionSettings.xaml.cs">
-      <DependentUpon>EncryotionSettings.xaml</DependentUpon>
+    <Compile Include="Controls\EncryptionSettings.xaml.cs">
+      <DependentUpon>EncryptionSettings.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\GoToDocumentControl.xaml.cs">
       <DependentUpon>GoToDocumentControl.xaml</DependentUpon>
@@ -694,7 +694,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\EncryotionSettings.xaml">
+    <Page Include="Controls\EncryptionSettings.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

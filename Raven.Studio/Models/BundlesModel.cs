@@ -70,6 +70,13 @@ namespace Raven.Studio.Models
 								}
 							});
 					}
+
+					if(HasQuotas)
+						Bundles.Add("Quotas");
+					if(HasReplication)
+						Bundles.Add("Replication");
+					if(HasVersioning)
+						Bundles.Add("Versioning");
 				});
 		}
 

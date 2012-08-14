@@ -6,10 +6,10 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Studio.Controls
 {
-	public partial class EncryotionSettings : ChildWindow
+	public partial class EncryptionSettings : ChildWindow
 	{
 		private readonly RandomNumberGenerator RandomNumberGenerator;
-		public EncryotionSettings()
+		public EncryptionSettings()
 		{
 			RandomNumberGenerator = new RNGCryptoServiceProvider();
 			InitializeComponent();
