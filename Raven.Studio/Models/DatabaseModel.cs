@@ -99,6 +99,9 @@ namespace Raven.Studio.Models
 					if (asyncServerClient == null)
 						return;
 
+					if (document == null)
+						return;
+
 					foreach (var replicationDestination in document.Destinations)
 					{
 						var destination = replicationDestination;

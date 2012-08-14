@@ -27,6 +27,8 @@ namespace Raven.Studio.Models
 				.LoadAsync<ReplicationDocument>("Raven/Replication/Destinations")
 				.ContinueOnSuccessInTheUIThread(document =>
 				{
+					if (document == null)
+						return;
 					ReplicationData = document;
 					ReplicationDestinations = new ObservableCollection<ReplicationDestination>(ReplicationData.Destinations);
 				});
