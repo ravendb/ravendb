@@ -80,21 +80,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public bool IsReduceStale(string name)
 		{
-			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-			Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
-				return false;// not a map/reduce index
-
-			var lastReducedEtag = Api.RetrieveColumn(session, IndexesStatsReduce,tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"]);
-
-			var mostRecentReducedEtag = GetMostRecentReducedEtag(name);
-			if (mostRecentReducedEtag == null)
-				return false;// there are no mapped results, maybe there are documents to be indexed, not stale
-
-			if (lastReducedEtag == null)
-				return true; // first reduce did not happen
-
-			return Buffers.Compare(mostRecentReducedEtag.Value.ToByteArray(), lastReducedEtag) > 0;
+			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view");
+			Api.MakeKey(session, ScheduledReductions, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			return Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekEQ);
 		}
 
 		public bool IsMapStale(string name)
