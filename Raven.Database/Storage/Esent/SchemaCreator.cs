@@ -496,7 +496,6 @@ namespace Raven.Storage.Esent
 				{
 					szIndexName = "by_view_level_reduce_key_and_bucket",
 					szKey = "+view\0+level\0+reduce_key\0+bucket\0\0",
-					grbit = CreateIndexGrbit.IndexUnique
 				});
 		}
 
@@ -643,6 +642,12 @@ namespace Raven.Storage.Esent
 				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
 			}, null, 0, out columnid);
 
+			Api.JetAddColumn(session, tableid, "source_bucket", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
 			Api.JetAddColumn(session, tableid, "level", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.Long,
@@ -666,7 +671,12 @@ namespace Raven.Storage.Esent
 			              {
 				              szIndexName = "by_view_level_reduce_key_and_bucket",
 				              szKey = "+view\0+level\0+reduce_key\0+bucket\0\0",
-			              });
+						  },
+						  new JET_INDEXCREATE
+						  {
+							  szIndexName = "by_view_level_reduce_key_and_source_bucket",
+							  szKey = "+view\0+level\0+reduce_key\0+source_bucket\0\0",
+						  });
 		}
 		private void CreateTasksTable(JET_DBID dbid)
 		{
