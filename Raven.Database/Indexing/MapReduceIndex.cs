@@ -94,7 +94,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 			UpdateIndexingStats(context, stats);
-			actions.MapRduce.ScheduleReductions(name, changed);
+			actions.MapRduce.ScheduleReductions(name, 0, changed);
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
 		}
 
@@ -222,7 +222,7 @@ namespace Raven.Database.Indexing
 					actions.MapRduce.DeleteMappedResultsForDocumentId(key, name, reduceKeyAndBuckets);
 
 				}
-				actions.MapRduce.ScheduleReductions(name, reduceKeyAndBuckets);
+				actions.MapRduce.ScheduleReductions(name, 0, reduceKeyAndBuckets);
 			});
 			Write(context, (writer, analyzer, stats) =>
 			{
@@ -369,13 +369,11 @@ namespace Raven.Database.Indexing
 								count++;
 								string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
 
-								var bucket = mappedResults.Key / 1024;
-
 								switch (Level)
 								{
 									case 0:
 									case 1:
-										Actions.MapRduce.PutReducedResult(name, reduceKeyAsString, Level + 1, bucket, ToJsonDocument(doc));
+										Actions.MapRduce.PutReducedResult(name, reduceKeyAsString, Level + 1, mappedResults.Key, mappedResults.Key / 1024, ToJsonDocument(doc));
 										break;
 									case 2:
 										WriteDocumentToIndex(doc, indexWriter, analyzer);
