@@ -86,7 +86,7 @@ namespace Raven.Studio.Models
 					});
 		}
 
-		private void UpdateReplicationOnlineStatus()
+		public void UpdateReplicationOnlineStatus()
 		{
 			if (HasReplication == false)
 				return;
@@ -121,6 +121,13 @@ namespace Raven.Studio.Models
 								asyncServerClient.DirectGetAsync(destination.Url + "/databases/" + destination.Database, "Raven/Replication/Sources/" + url).
 									ContinueOnSuccessInTheUIThread(data =>
 									{
+										if (data == null)
+										{
+											ReplicationOnline.Add(destination.Url + " - Offline");
+											OnPropertyChanged(() => ReplicationOnline);
+											return;
+										}
+
 										var sourceReplicationInformation = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.
 											CreateSerializer().Deserialize
 											<SourceReplicationInformation>(new RavenJTokenReader(data.DataAsJson));
