@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
+using Raven.Database.Extensions;
 
 namespace Raven.Tryouts
 {
@@ -9,35 +12,51 @@ namespace Raven.Tryouts
 	{
 		public static void Main()
 		{
+			IOExtensions.DeleteDirectory("Data");
 			using(var store = new EmbeddableDocumentStore
 			{
-				DataDirectory = "Data"
+				DataDirectory = "Data",
+				UseEmbeddedHttpServer = true
 			}.Initialize())
 			{
 				new PopulationByState().Execute(store);
 
-				using(var session = store.OpenSession())
+				for (int aa = 0; aa < 1000; aa++)
 				{
-					for (int i = 0; i < 40; i++)
+					using (var session = store.OpenSession())
 					{
-						session.Store(new Person
+						for (int i = 0; i < 6000; i++)
 						{
-							State = i % 2 == 0 ? "TX" : "CA"
-						});
+							session.Store(new Person
+							{
+								State = i % 2 == 0 ? "TX" : "CA"
+							});
+						}
+						session.SaveChanges();
 					}
-					session.SaveChanges();
-				}
 
-				using(var session = store.OpenSession())
-				{
-					var q = session.Query<Population, PopulationByState>()
-						.Customize(x=>x.WaitForNonStaleResults())
-						.ToList();
-
-					foreach (var population in q)
+					var sp = Stopwatch.StartNew();
+					using (var session = store.OpenSession())
 					{
-						Console.WriteLine(population);
+						var q = session.Query<Population, PopulationByState>()
+							.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(10)))
+							.ToList();
+
+						foreach (var population in q)
+						{
+							Console.WriteLine(population);
+						}
 					}
+					Console.WriteLine("Reduced in {0:#,#} ms",sp.ElapsedMilliseconds);
+
+					using (var session = store.OpenSession())
+					{
+						session.Delete(session.Load<Person>(1));
+						session.SaveChanges();
+					}
+
+					Console.WriteLine("Press key to continue");
+					Console.ReadKey();
 				}
 			}
 
