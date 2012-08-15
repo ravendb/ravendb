@@ -6,6 +6,7 @@ using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing.Sorting;
 
 namespace Raven.Database.Queries
 {
@@ -18,7 +19,7 @@ namespace Raven.Database.Queries
 			this.database = database;
 		}
 
-		public IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery indexQuery, string facetSetupDoc)
+		public FacetResults GetFacets(string index, IndexQuery indexQuery, string facetSetupDoc)
 		{
 			var facetSetup = database.Get(facetSetupDoc, null);
 			if (facetSetup == null)
@@ -26,24 +27,28 @@ namespace Raven.Database.Queries
 
 			var facets = facetSetup.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
 
-			var results = new Dictionary<string, IEnumerable<FacetValue>>();
+			var results = new FacetResults();
 
 			IndexSearcher currentIndexSearcher;
 			using (database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
 			{
 				foreach (var facet in facets)
 				{
+					var facetResult = new FacetResult();
+
 					switch (facet.Mode)
 					{
 						case FacetMode.Default:
-							HandleTermsFacet(index, facet, indexQuery, currentIndexSearcher, results);
+							HandleTermsFacet(index, facet, indexQuery, currentIndexSearcher, facetResult);
 							break;
 						case FacetMode.Ranges:
-							HandleRangeFacet(index, facet, indexQuery, currentIndexSearcher, results);
+							HandleRangeFacet(index, facet, indexQuery, currentIndexSearcher, facetResult);
 							break;
 						default:
 							throw new ArgumentException(string.Format("Could not understand '{0}'", facet.Mode));
 					}
+
+					results.Results[facet.Name] = facetResult;
 				}
 
 			}
@@ -51,9 +56,8 @@ namespace Raven.Database.Queries
 			return results;
 		}
 
-		private void HandleRangeFacet(string index, Facet facet, IndexQuery indexQuery, IndexSearcher currentIndexSearcher, Dictionary<string, IEnumerable<FacetValue>> results)
+		private void HandleRangeFacet(string index, Facet facet, IndexQuery indexQuery, IndexSearcher currentIndexSearcher, FacetResult result)
 		{
-			var rangeResults = new List<FacetValue>();
 			foreach (var range in facet.Ranges)
 			{
 				var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery, database.IndexQueryTriggers);
@@ -72,45 +76,95 @@ namespace Raven.Database.Queries
 
 				if (topDocs.TotalHits > 0)
 				{
-					rangeResults.Add(new FacetValue
+					result.Values.Add(new FacetValue
 					{
 						Count = topDocs.TotalHits,
 						Range = range
 					});
 				}
-			}
 
-			results[facet.Name] = rangeResults;
+				result.Terms.Add(range);
+			}
 		}
 
-		private void HandleTermsFacet(string index, Facet facet, IndexQuery indexQuery, IndexSearcher currentIndexSearcher, Dictionary<string, IEnumerable<FacetValue>> results)
+		private void HandleTermsFacet(string index, Facet facet, IndexQuery indexQuery, IndexSearcher currentIndexSearcher, FacetResult result)
 		{
-			var terms = database.ExecuteGetTermsQuery(index,
-													  facet.Name, null,
-													  database.Configuration.MaxPageSize);
-			var termResults = new List<FacetValue>();
+			List<string> allTerms;
+			var values = new List<FacetValue>();
+
+			int maxResults = facet.MaxResults.GetValueOrDefault(database.Configuration.MaxPageSize);
 			var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery, database.IndexQueryTriggers);
-			foreach (var term in terms)
+
+			var termCollector = new AllTermsCollector(facet.Name);
+			currentIndexSearcher.Search(baseQuery, termCollector);
+
+			if(facet.TermSortMode == FacetTermSortMode.ValueAsc)
+				allTerms = new List<string>(termCollector.Groups.Keys.OrderBy((x) => x));
+			else if(facet.TermSortMode == FacetTermSortMode.ValueDesc)
+				allTerms = new List<string>(termCollector.Groups.Keys.OrderByDescending((x) => x));
+			else if(facet.TermSortMode == FacetTermSortMode.HitsAsc)
+				allTerms = new List<string>(termCollector.Groups.OrderBy((x) => x.Value).Select((x) => x.Key));
+			else if(facet.TermSortMode == FacetTermSortMode.HitsDesc)
+				allTerms = new List<string>(termCollector.Groups.OrderByDescending((x) => x.Value).Select((x) => x.Key));
+			else
+				throw new ArgumentException(string.Format("Could not understand '{0}'", facet.TermSortMode));
+
+			foreach(var term in allTerms)
 			{
-				var termQuery = new TermQuery(new Term(facet.Name, term));
+				if (values.Count >= maxResults)
+					break;
 
-				var joinedQuery = new BooleanQuery();
-				joinedQuery.Add(baseQuery, BooleanClause.Occur.MUST);
-				joinedQuery.Add(termQuery, BooleanClause.Occur.MUST);
-
-				var topDocs = currentIndexSearcher.Search(joinedQuery, null, 1);
-
-				if (topDocs.TotalHits > 0)
-				{
-					termResults.Add(new FacetValue
-					{
-						Count = topDocs.TotalHits,
-						Range = term
-					});
-				}
+				values.Add(new FacetValue
+					           {
+						           Count = termCollector.Groups[term],
+								   Range = term
+					           });
 			}
 
-			results[facet.Name] = termResults;
+			result.Values = values;
+			result.Terms = allTerms;
+		}
+
+		private class AllTermsCollector : Collector
+		{
+			private readonly string field;
+			private int currentDocBase;
+			private string[] currentValues;
+			private int[] currentOrders;
+			private readonly Dictionary<string, int> groups = new Dictionary<string, int>();
+
+			public AllTermsCollector(string field)
+			{
+				this.field = field;
+			}
+
+			public override bool AcceptsDocsOutOfOrder()
+			{
+				return true;
+			}
+
+			public override void Collect(int doc)
+			{
+				string term = currentValues[currentOrders[doc]];
+				if(!groups.ContainsKey(term))
+					groups.Add(term, 1);
+				else
+					groups[term] = groups[term] + 1;
+			}
+
+			public override void SetNextReader(IndexReader reader, int docBase)
+			{
+				StringIndex currentReaderValues = Lucene.Net.Search.FieldCache_Fields.DEFAULT.GetStringIndex(reader, field);
+				this.currentDocBase = docBase;
+				this.currentOrders = currentReaderValues.order;
+				this.currentValues = currentReaderValues.lookup;
+			}
+
+			public override void SetScorer(Scorer scorer)
+			{
+			}
+
+			public IDictionary<string, int> Groups { get { return groups; } }
 		}
 	}
 }

@@ -106,8 +106,17 @@
     <Compile Include="..\Raven.Abstractions\Data\FacetMode.cs">
       <Link>Imports\Data\FacetMode.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\FacetResult.cs">
+      <Link>Imports\Data\FacetResult.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\FacetResults.cs">
+      <Link>Imports\Data\FacetResults.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Abstractions\Data\FacetSetup.cs">
       <Link>Imports\Data\FacetSetup.cs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Data\FacetTermSortMode.cs">
+      <Link>Imports\Data\FacetTermSortMode.cs</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\FacetValue.cs">
       <Link>Imports\Data\FacetValue.cs</Link>

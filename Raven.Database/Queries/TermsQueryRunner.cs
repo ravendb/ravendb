@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using Lucene.Net.Index;
@@ -20,12 +21,11 @@ namespace Raven.Database.Queries
 			this.database = database;
 		}
 
-		public ISet<string> GetTerms(string index, string field, string fromValue, int pageSize)
+		public ISet<string> GetTerms(string index, string field, string fromValue, int pageSize, List<string> allTerms)
 		{
 			if(field == null) throw new ArgumentNullException("field");
 			if(index == null) throw new ArgumentNullException("index");
 			
-			var result = new HashSet<string>();
 			IndexSearcher currentIndexSearcher;
 			using(database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
 			{
@@ -36,18 +36,18 @@ namespace Raven.Database.Queries
 					{
 						while (termEnum.Term() == null || fromValue.Equals(termEnum.Term().Text()))
 						{
-							if (termEnum.Next() == false)
-								return result;
+							if(termEnum.Next() == false)
+							{
+								allTerms.Sort();
+								return new HashSet<string>(allTerms.Take(pageSize));
+							}
 						}
 					}
 					while (termEnum.Term() == null || 
 						field.Equals(termEnum.Term().Field()))
 					{
 						if (termEnum.Term() != null)
-							result.Add(termEnum.Term().Text());
-
-						if (result.Count >= pageSize)
-							break;
+							allTerms.Add(termEnum.Term().Text());
 
 						if (termEnum.Next() == false)
 							break;
@@ -59,7 +59,8 @@ namespace Raven.Database.Queries
 				}
 			}
 
-			return result;
+			allTerms.Sort();
+			return new HashSet<string>(allTerms.Take(pageSize));
 		}
 	}
 }

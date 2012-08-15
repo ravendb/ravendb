@@ -75,6 +75,9 @@
     <Compile Include="Data\BuildNumber.cs" />
     <Compile Include="Data\ConnectionStringParser.cs" />
     <Compile Include="Data\Constants.cs" />
+    <Compile Include="Data\FacetTermSortMode.cs" />
+    <Compile Include="Data\FacetResults.cs" />
+    <Compile Include="Data\FacetResult.cs" />
     <Compile Include="Data\DatabaseDocument.cs" />
     <Compile Include="Data\DatabaseStatistics.cs" />
     <Compile Include="Commands\ICommandData.cs" />

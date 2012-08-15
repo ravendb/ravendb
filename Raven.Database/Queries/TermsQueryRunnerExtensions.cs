@@ -12,7 +12,13 @@ namespace Raven.Database.Queries
 	{
 		public static ISet<string> ExecuteGetTermsQuery(this DocumentDatabase self, string index, string field, string fromValue, int pageSize)
 		{
-			return new TermsQueryRunner(self).GetTerms(index, field, fromValue, Math.Min(pageSize, self.Configuration.MaxPageSize));
+			var allTerms = new List<string>();
+			return ExecuteGetTermsQuery(self, index, field, fromValue, pageSize, allTerms);
+		}
+
+		public static ISet<string> ExecuteGetTermsQuery(this DocumentDatabase self, string index, string field, string fromValue, int pageSize, List<string> allTerms)
+		{
+			return new TermsQueryRunner(self).GetTerms(index, field, fromValue, Math.Min(pageSize, self.Configuration.MaxPageSize), allTerms);
 		}
 	}
 }
