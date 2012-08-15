@@ -554,6 +554,7 @@
     <Compile Include="Bundles\Versioning\Versioning.cs" />
     <Compile Include="Bundles\Versioning\VersioningTest.cs" />
     <Compile Include="ConcurrentPatching.cs" />
+    <Compile Include="Confclits\ConflictResolverTests.cs" />
     <Compile Include="ConnectionStrings.cs" />
     <Compile Include="CriticalCulturesAttribute.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
