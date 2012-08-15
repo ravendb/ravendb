@@ -136,7 +136,6 @@
     <Compile Include="Bundles\Compression\Streams\DecompressStream.cs" />
     <Compile Include="Bundles\Compression\Streams\StreamReaderWithUnread.cs" />
     <Compile Include="Bundles\Encryption\Codec.cs" />
-    <Compile Include="Bundles\Encryption\CryptoTransformExtensions.cs" />
     <Compile Include="Bundles\Encryption\Plugin\DocumentEncryption.cs" />
     <Compile Include="Bundles\Encryption\Plugin\EncryptionSettingsDeleteTrigger.cs" />
     <Compile Include="Bundles\Encryption\Plugin\EncryptionSettingsPutTrigger.cs" />
@@ -303,6 +302,7 @@
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
     <Compile Include="Server\Security\OAuth\AccessTokenBody.cs" />
     <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
+    <Compile Include="Server\Security\OAuth\OAuthApiKeyResponder.cs" />
     <Compile Include="Server\Security\OAuth\OAuthClientCredentialsTokenResponder.cs" />
     <Compile Include="Server\Security\OAuth\OAuthConfigureHttpListener.cs" />
     <Compile Include="Server\Security\OAuth\OAuthRequestAuthorizer.cs" />

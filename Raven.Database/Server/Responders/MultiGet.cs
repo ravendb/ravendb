@@ -211,6 +211,11 @@ namespace Raven.Database.Server.Responders
 				get { return Stream.Null; }
 			}
 
+			public long ContentLength
+			{
+				get { return 0; }
+			}
+
 			public NameValueCollection QueryString { get; set; }
 
 			public string HttpMethod
