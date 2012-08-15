@@ -45,7 +45,7 @@ namespace Raven.Studio.Models
 							return;
 
 						var bundles = doc.DataAsJson["Settings"].SelectToken("Raven/ActiveBundles", false).ToString();
-						if (!bundles.Contains("Quotas") && !bundles.Contains("Replications") && !bundles.Contains("Versioning")) 
+						if (!bundles.Contains("Quotas") && !bundles.Contains("Replication") && !bundles.Contains("Versioning")) 
 							return;
 
 						DatabasesWithEditableBundles.Add(doc.Key.Split('/')[2]);

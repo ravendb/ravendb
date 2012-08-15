@@ -42,7 +42,7 @@ namespace Raven.Studio.Commands
 							var bundlesModel = new CreateBundlesModel();
 							var bundlesSettings = new List<ChildWindow>();
 							if (bundles.Encryption.IsChecked == true)
-								bundlesSettings.Add(new EncryotionSettings());
+								bundlesSettings.Add(new EncryptionSettings());
 							if (bundles.Quotas.IsChecked == true || bundles.Replication.IsChecked == true || bundles.Versioning.IsChecked == true)
 							{
 								bundlesModel = new CreateBundlesModel()
@@ -51,6 +51,23 @@ namespace Raven.Studio.Commands
 										HasReplication = bundles.Replication.IsChecked == true,
 										HasVersioning = bundles.Versioning.IsChecked == true
 									};
+								if (bundlesModel.HasQuotas)
+								{
+									bundlesModel.Bundles.Add("Quotas");
+									bundlesModel.SelectedBundle.Value = "Quotas";
+								}
+								if (bundlesModel.HasReplication)
+								{ 
+									bundlesModel.Bundles.Add("Replication");
+									if(bundlesModel.SelectedBundle.Value == null)
+										bundlesModel.SelectedBundle.Value = "Replication";
+								}
+								if (bundlesModel.HasVersioning)
+								{
+									bundlesModel.Bundles.Add("Versioning");
+									if (bundlesModel.SelectedBundle.Value == null)
+										bundlesModel.SelectedBundle.Value = "Versioning";
+								}
 
 								var bundleView = new BundlesView()
 								{
@@ -79,7 +96,7 @@ namespace Raven.Studio.Commands
 									};
 
 									string encryptionKey = null;
-									var encryotionSettings = bundlesData.FirstOrDefault(window => window is EncryotionSettings) as EncryotionSettings;
+									var encryotionSettings = bundlesData.FirstOrDefault(window => window is EncryptionSettings) as EncryptionSettings;
 									if (encryotionSettings != null)
 										encryptionKey = encryotionSettings.EncryptionKey.Text;
 
@@ -109,7 +126,7 @@ namespace Raven.Studio.Commands
 			var settings = new Dictionary<string, string>();
 
 
-			var encryptionData = bundlesData.FirstOrDefault(window => window is EncryotionSettings) as EncryotionSettings;
+			var encryptionData = bundlesData.FirstOrDefault(window => window is EncryptionSettings) as EncryptionSettings;
 			if (encryptionData != null)
 			{
 				settings[Constants.EncryptionKeySetting] = encryptionData.EncryptionKey.Text;
