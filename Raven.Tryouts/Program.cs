@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
+using Raven.Client.Linq;
 
 namespace Raven.Tryouts
 {
@@ -24,7 +25,7 @@ namespace Raven.Tryouts
 				{
 					using (var session = store.OpenSession())
 					{
-						for (int i = 0; i < 5; i++)
+						for (int i = 0; i < 80; i++)
 						{
 							session.Store(new Person
 							{
@@ -37,6 +38,7 @@ namespace Raven.Tryouts
 					var sp = Stopwatch.StartNew();
 					using (var session = store.OpenSession())
 					{
+
 						var q = session.Query<Population, PopulationByState>()
 							.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(10)))
 							.ToList();
