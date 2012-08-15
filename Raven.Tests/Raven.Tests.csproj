@@ -617,6 +617,7 @@
     <Compile Include="Issues\RavenDB_421.cs" />
     <Compile Include="Issues\RavenDB_423.cs" />
     <Compile Include="Issues\RavenDB_425.cs" />
+    <Compile Include="Issues\RavenDB_483.cs" />
     <Compile Include="Issues\Raven_410.cs" />
     <Compile Include="Issues\ReplicationBehavior.cs" />
     <Compile Include="Linq\LongCount.cs" />
