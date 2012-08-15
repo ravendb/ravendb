@@ -184,6 +184,7 @@
     <Compile Include="Commands\AddReplicationCommand.cs" />
     <Compile Include="Commands\AddVersioningCommand.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\DeleteAllIndexsCommand.cs" />
     <Compile Include="Commands\DeleteReplicationCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
     <Compile Include="Commands\DeleteVersioningCommand.cs" />
@@ -1001,6 +1002,8 @@
     <Resource Include="Assets\Images\offline.png" />
     <Resource Include="Assets\Images\online.png" />
     <Resource Include="Assets\Images\database_system_tiny.png" />
+    <Resource Include="Assets\Images\index_delete_small.png" />
+    <Resource Include="Assets\Images\index_delete_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />
