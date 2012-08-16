@@ -328,7 +328,7 @@ namespace Raven.Database.Indexing
 				return fields;
 			}
 
-			private RavenJObject ToJsonDocument(object doc)
+			private static RavenJObject ToJsonDocument(object doc)
 			{
 				var boostedValue = doc as BoostedValue;
 				if (boostedValue != null)

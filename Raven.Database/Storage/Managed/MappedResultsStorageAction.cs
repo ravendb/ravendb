@@ -138,7 +138,9 @@ namespace Raven.Storage.Managed
 						{"view", view},
 						{"reduceKey", reduceKeysAndBukcet.ReduceKey},
 						{"bucket", reduceKeysAndBukcet.Bucket},
-						{"level", level}
+						{"level", level},
+						// every item in this collection has to be unique
+						{"unique", Guid.NewGuid().ToByteArray()}
 					});
 			}
 		}
