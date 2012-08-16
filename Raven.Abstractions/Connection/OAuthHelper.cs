@@ -45,21 +45,13 @@ namespace Raven.Abstractions.Connection
 
 		public static string EncryptAssymetric(RSAParameters parameters, string data)
 		{
-			const int partLength = 50;
-
 			var bytes = Encoding.UTF8.GetBytes(data);
+
 			using (var rsa = new RSACryptoServiceProvider())
 			{
 				rsa.ImportParameters(parameters);
-
-				string result = "";
-				for (int index = 0; index < bytes.Length; index += partLength)
-				{
-					var partBytes = bytes.Skip(index).Take(partLength);
-					var part = rsa.Encrypt(partBytes.ToArray(), true);
-					result += BytesToString(part) + "&";
-				}
-				return result;
+				var encrypted = rsa.Encrypt(bytes, true);
+				return BytesToString(encrypted);
 			}
 		}
 
