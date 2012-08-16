@@ -61,12 +61,9 @@ namespace Raven.Tests.Storage
 				accessor.Indexing.AddIndex("b", true);
 				accessor.Indexing.AddIndex("c", true);
 
-				accessor.MapRduce.PutMappedResult("a", "a/1", "a", new RavenJObject());
-				accessor.MapRduce.PutMappedResult("a", "a/2", "a", new RavenJObject());
-				accessor.MapRduce.PutMappedResult("b", "a/1", "a", new RavenJObject());
-				accessor.MapRduce.PutMappedResult("b", "a/1", "a", new RavenJObject());
-				accessor.MapRduce.PutMappedResult("c", "a/1", "a", new RavenJObject());
-				accessor.MapRduce.PutMappedResult("c", "a/1", "a", new RavenJObject());
+				accessor.MapRduce.ScheduleReductions("a", 0, new[]{new ReduceKeyAndBucket(0, "a"), });
+				accessor.MapRduce.ScheduleReductions("b", 0, new[] { new ReduceKeyAndBucket(0, "a"), });
+				accessor.MapRduce.ScheduleReductions("c", 0, new[] { new ReduceKeyAndBucket(0, "a"), });
 			});
 
 			transactionalStorage.Batch(actionsAccessor =>
