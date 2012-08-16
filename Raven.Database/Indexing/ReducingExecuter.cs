@@ -27,6 +27,7 @@ namespace Raven.Database.Indexing
 			TimeSpan reduceDuration = TimeSpan.Zero;
 			List<MappedResultInfo> persistedResults = null;
 			bool operationCanceled = false;
+			var itemsToDelete = new List<object>();
 			try
 			{
 				var sw = Stopwatch.StartNew();
@@ -42,7 +43,8 @@ namespace Raven.Database.Indexing
 							(
 								take: context.CurrentNumberOfItemsToReduceInSingleBatch,
 								level: level,
-								index: indexToWorkOn.IndexName
+								index: indexToWorkOn.IndexName,
+								itemsToDelete: itemsToDelete
 							)
 							.ToList();
 
@@ -104,6 +106,7 @@ namespace Raven.Database.Indexing
 					// because otherwise we keep trying to re-index failed mapped results
 					transactionalStorage.Batch(actions =>
 					{
+						actions.MapReduce.DeleteScheduledReduction(itemsToDelete);
 						if (new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray()).CompareTo(lastIndexedEtag) <= 0)
 						{
 							actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexName, lastByEtag.Etag, lastByEtag.Timestamp);

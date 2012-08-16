@@ -21,7 +21,8 @@ namespace Raven.Database.Storage
 		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int take);
 
 		void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets);
-		IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take);
+		IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take, List<object> itemsToDelete);
+		void DeleteScheduledReduction(List<object> itemsToDelete);
 		void PutReducedResult(string name, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
 		void RemoveReduceResults(string indexName, int level, string reduceKey, int sourceBucket);
 	}

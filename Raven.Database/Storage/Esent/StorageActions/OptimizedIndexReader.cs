@@ -51,17 +51,19 @@ namespace Raven.Storage.Esent.StorageActions
 			});
 		}
 
+		public void DeleteAll()
+		{
+			SortPrimaryKeys();
+			foreach (var primaryKeyIndex in primaryKeyIndexes)
+			{
+				Api.JetGotoBookmark(session, table, primaryKeyIndex.Buffer, primaryKeyIndex.Buffer.Length);
+				Api.JetDelete(session, table);
+			}
+		}
+
 		public IEnumerable<TResult> Select<TResult>(Func<T,TResult> func)
 		{
-			primaryKeyIndexes.Sort((x, y) =>
-			{
-				for (int i = 0; i < Math.Min(x.Buffer.Length, y.Buffer.Length); i++)
-				{
-					if (x.Buffer[i] != y.Buffer[i])
-						return x.Buffer[i] - y.Buffer[i];
-				}
-				return x.Buffer.Length - y.Buffer.Length;
-			});
+			SortPrimaryKeys();
 
 			return primaryKeyIndexes.Select(key =>
 			{
@@ -75,6 +77,19 @@ namespace Raven.Storage.Esent.StorageActions
 			})
 				.OrderBy(x => x.Index)
 				.Select(x => x.Result);
+		}
+
+		private void SortPrimaryKeys()
+		{
+			primaryKeyIndexes.Sort((x, y) =>
+			{
+				for (int i = 0; i < Math.Min(x.Buffer.Length, y.Buffer.Length); i++)
+				{
+					if (x.Buffer[i] != y.Buffer[i])
+						return x.Buffer[i] - y.Buffer[i];
+				}
+				return x.Buffer.Length - y.Buffer.Length;
+			});
 		}
 
 		public OptimizedIndexReader<T> Where(Func<T, bool> predicate)
@@ -103,6 +118,8 @@ namespace Raven.Storage.Esent.StorageActions
 		public IEnumerable<TResult> Select<TResult>(Func<TResult> func)
 		{
 			return Select(_ => func());
-		} 
+		}
+
+		
 	}
 }

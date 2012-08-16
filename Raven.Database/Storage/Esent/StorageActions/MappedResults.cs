@@ -106,7 +106,15 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take)
+		public void DeleteScheduledReduction(List<object> itemsToDelete)
+		{
+			foreach (OptimizedIndexReader reader in itemsToDelete)
+			{
+				reader.DeleteAll();
+			}
+		}
+
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take, List<object> itemsToDelete)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_reduce_key_and_bucket");
 			Api.MakeKey(session, ScheduledReductions, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -114,6 +122,8 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, ScheduledReductions, SeekGrbit.SeekGE) == false)
 				yield break;
 
+			var reader = new OptimizedIndexReader(session, ScheduledReductions, take);
+			itemsToDelete.Add(reader);
 			var seen = new HashSet<Tuple<string, int>>();
 			do
 			{
@@ -140,7 +150,7 @@ namespace Raven.Storage.Esent.StorageActions
 					}
 				}
 
-				Api.JetDelete(session, ScheduledReductions);
+				reader.Add();
 			} while (Api.TryMoveNext(session, ScheduledReductions) && take > 0);
 
 

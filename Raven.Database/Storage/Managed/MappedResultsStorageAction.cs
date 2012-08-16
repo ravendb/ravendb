@@ -145,7 +145,15 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take)
+		public void DeleteScheduledReduction(List<object> itemsToDelete)
+		{
+			foreach (RavenJToken token in itemsToDelete)
+			{
+				storage.ScheduleReductions.Remove(token);
+			}
+		}
+
+		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take, List<object> itemsToDelete)
 		{
 			var seen = new HashSet<Tuple<string, int>>();
 
@@ -173,7 +181,7 @@ namespace Raven.Storage.Managed
 						yield return mappedResultInfo;
 					}
 				}
-				storage.ScheduleReductions.Remove(result);
+				itemsToDelete.Add(result);
 				if (--take <= 0)
 					break;
 			}
