@@ -603,7 +603,7 @@ namespace Raven.Client.Embedded
 	    /// <param name="query"></param>
 	    /// <param name="facetSetupDoc"></param>
 	    /// <returns></returns>
-	    public IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery query, string facetSetupDoc)
+	    public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database.ExecuteGetTermsQuery(index, query, facetSetupDoc);

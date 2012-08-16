@@ -1340,7 +1340,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 		/// <param name="query"></param>
 		/// <param name="facetSetupDoc"></param>
 		/// <returns></returns>
-		public IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery query, string facetSetupDoc)
+		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc)
 		{
 			return ExecuteWithReplication("GET", operationUrl =>
 			{
@@ -1354,7 +1354,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 						.AddOperationHeaders(OperationsHeaders));
 				
 				var json = (RavenJObject)request.ReadResponseJson();
-				return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
+				return json.JsonDeserialization<FacetResults>();
 			});
 		}
 

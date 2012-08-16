@@ -67,7 +67,7 @@ namespace Raven.Tests.MailingList
 			[Fact]
 			public void ShouldMatchMakeFacetsOnLocation()
 			{
-				IDictionary<string, IEnumerable<FacetValue>> facetvalues;
+				FacetResults facetvalues;
 
 				using (var s = Store.OpenSession())
 				{
@@ -85,7 +85,7 @@ namespace Raven.Tests.MailingList
 				}
 
 				Assert.NotNull(facetvalues);
-				Assert.Equal(2, facetvalues["Make"].Count());
+				Assert.Equal(2, facetvalues.Results["Make"].Values.Count());
 			}
 		}
 

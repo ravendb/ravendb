@@ -48,27 +48,39 @@ namespace Raven.Client.Document.Batches
 			}
 
 			var result = RavenJObject.Parse(response.Result);
-			Result = result.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
+			Result = result.JsonDeserialization<FacetResults>();
 		}
 
 #if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
-			var result = new Dictionary<string, IEnumerable<FacetValue>>();
+			var result = new FacetResults();
 
-			IEnumerable<IGrouping<string, KeyValuePair<string, IEnumerable<FacetValue>>>> list = responses.Select(response => RavenJObject.Parse(response.Result))
-				.SelectMany(jsonResult => jsonResult.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>())
-				.GroupBy(x => x.Key);
-
-			foreach (var facet in list)
+			foreach(var response in responses.Select(response => RavenJObject.Parse(response.Result)))
 			{
-				var individualFacet = facet.SelectMany(x=>x.Value).GroupBy(x=>x.Range)
-					.Select(g=>new FacetValue
+				var facet = response.JsonDeserialization<FacetResults>();
+				foreach(var facetResult in facet.Results)
+				{
+					if (!result.Results.ContainsKey(facetResult.Key))
+						result.Results[facetResult.Key] = new FacetResult();
+
+					var newFacetResult = result.Results[facetResult.Key];
+
+					foreach (var facetValue in facetResult.Value.Values)
 					{
-						Count = g.Sum(y=>y.Count),
-						Range = g.Key
-					});
-				result[facet.Key] = individualFacet.ToList();
+						var existingFacetValueRange = newFacetResult.Values.Find((x) => x.Range == facetValue.Range);
+						if(existingFacetValueRange != null)
+							existingFacetValueRange.Hits += facetValue.Hits;
+						else
+							newFacetResult.Values.Add(new FacetValue() { Hits = facetValue.Hits, Range = facetValue.Range });
+					}
+
+					foreach (var facetTerm in facetResult.Value.RemainingTerms)
+					{
+						if(!newFacetResult.RemainingTerms.Contains(facetTerm))
+							newFacetResult.RemainingTerms.Add(facetTerm);
+					}
+				}
 			}
 
 			Result = result;

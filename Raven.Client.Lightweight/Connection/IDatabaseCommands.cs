@@ -286,7 +286,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
-		IDictionary<string, IEnumerable<FacetValue>> GetFacets(string index, IndexQuery query, string facetSetupDoc);
+		FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc);
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
