@@ -5,8 +5,6 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Extensions;
-using Raven.Database.Indexing.Sorting;
 
 namespace Raven.Database.Queries
 {
@@ -28,9 +26,9 @@ namespace Raven.Database.Queries
 			var facets = facetSetup.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
 
 			var results = new FacetResults();
-
 			var defaultFacets = new List<Facet>();
 			IndexSearcher currentIndexSearcher;
+
 			using (database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
 			{
 				foreach (var facet in facets)
@@ -88,7 +86,7 @@ namespace Raven.Database.Queries
 			}
 		}
 
-		private void HandleTermsFacet(string index, IEnumerable<Facet> facets, IndexQuery indexQuery, IndexSearcher currentIndexSearcher, FacetResults results)
+		private void HandleTermsFacet(string index, List<Facet> facets, IndexQuery indexQuery, IndexSearcher currentIndexSearcher, FacetResults results)
 		{
 			var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery, database.IndexQueryTriggers);
 			var termCollector = new AllTermsCollector(facets.Select(x => x.Name));
@@ -100,18 +98,25 @@ namespace Raven.Database.Queries
 				List<string> allTerms;
 
 				int maxResults = facet.MaxResults.GetValueOrDefault(database.Configuration.MaxPageSize);
-				var groups = termCollector.GetGroups(facet.Name);
+				var groups = termCollector.GetGroupValues(facet.Name);
 
-				if (facet.TermSortMode == FacetTermSortMode.ValueAsc)
-					allTerms = new List<string>(groups.Keys.OrderBy((x) => x));
-				else if (facet.TermSortMode == FacetTermSortMode.ValueDesc)
-					allTerms = new List<string>(groups.Keys.OrderByDescending((x) => x));
-				else if (facet.TermSortMode == FacetTermSortMode.HitsAsc)
-					allTerms = new List<string>(groups.OrderBy((x) => x.Value).Select((x) => x.Key));
-				else if (facet.TermSortMode == FacetTermSortMode.HitsDesc)
-					allTerms = new List<string>(groups.OrderByDescending((x) => x.Value).Select((x) => x.Key));
-				else
-					throw new ArgumentException(string.Format("Could not understand '{0}'", facet.TermSortMode));
+				switch (facet.TermSortMode)
+				{
+					case FacetTermSortMode.ValueAsc:
+						allTerms = new List<string>(groups.Keys.OrderBy((x) => x));
+						break;
+					case FacetTermSortMode.ValueDesc:
+						allTerms = new List<string>(groups.Keys.OrderByDescending((x) => x));
+						break;
+					case FacetTermSortMode.HitsAsc:
+						allTerms = new List<string>(groups.OrderBy((x) => x.Value).Select((x) => x.Key));
+						break;
+					case FacetTermSortMode.HitsDesc:
+						allTerms = new List<string>(groups.OrderByDescending((x) => x.Value).Select((x) => x.Key));
+						break;
+					default:
+						throw new ArgumentException(string.Format("Could not understand '{0}'", facet.TermSortMode));
+				}
 
 				foreach (var term in allTerms)
 				{
@@ -131,13 +136,17 @@ namespace Raven.Database.Queries
 
 		private class AllTermsCollector : Collector
 		{
-			private int currentDocBase;
 			private readonly List<FieldData> fields = new List<FieldData>();
 
 			public AllTermsCollector(IEnumerable<string> fields)
 			{
 				foreach(var field in fields)
 					this.fields.Add(new FieldData { FieldName = field });
+			}
+
+			public IDictionary<string, int> GetGroupValues(string fieldName)
+			{
+				return fields.First(x => x.FieldName == fieldName).Groups;
 			}
 
 			public override bool AcceptsDocsOutOfOrder()
@@ -159,11 +168,9 @@ namespace Raven.Database.Queries
 
 			public override void SetNextReader(IndexReader reader, int docBase)
 			{
-				this.currentDocBase = docBase;
-
 				foreach(var data in fields)
 				{
-					StringIndex currentReaderValues = Lucene.Net.Search.FieldCache_Fields.DEFAULT.GetStringIndex(reader, data.FieldName);
+					StringIndex currentReaderValues = FieldCache_Fields.DEFAULT.GetStringIndex(reader, data.FieldName);
 					data.CurrentOrders = currentReaderValues.order;
 					data.CurrentValues = currentReaderValues.lookup;
 				}
@@ -171,11 +178,6 @@ namespace Raven.Database.Queries
 
 			public override void SetScorer(Scorer scorer)
 			{
-			}
-
-			public IDictionary<string, int> GetGroups(string fieldName)
-			{
-				return fields.Where(x => x.FieldName == fieldName).First().Groups;
 			}
 
 			private class FieldData
