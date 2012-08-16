@@ -5,11 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Database;
 using Raven.Json.Linq;
-using Raven.Abstractions.Data;
 
 namespace Raven.Bundles.Replication.Impl
 {
@@ -52,12 +52,12 @@ namespace Raven.Bundles.Replication.Impl
 
 		private long GetNextMax()
 		{
-			var span = DateTime.UtcNow - lastRequestedUtc;
+			var span = SystemTime.UtcNow - lastRequestedUtc;
 			if (span.TotalSeconds < 1)
 			{
 				capacity *= 2;
 			}
-			lastRequestedUtc = DateTime.UtcNow;
+			lastRequestedUtc = SystemTime.UtcNow;
 			while (true)
 			{
 				try

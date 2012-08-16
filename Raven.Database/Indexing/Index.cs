@@ -18,6 +18,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using NLog;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -29,7 +30,6 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-using Spatial4n.Core.Query;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -572,7 +572,7 @@ namespace Raven.Database.Indexing
 
 		public void MarkQueried()
 		{
-			lastQueryTime = DateTime.UtcNow;
+			lastQueryTime = SystemTime.UtcNow;
 		}
 
 		public void MarkQueried(DateTime time)

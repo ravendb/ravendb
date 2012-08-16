@@ -224,7 +224,7 @@ Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
 Configuration options:
 ",
-				SystemTime.Now.Year);
+				SystemTime.UtcNow.Year);
 
 			foreach (var configOptionDoc in ConfigOptionDocs.OptionsDocs)
 			{
@@ -411,7 +411,7 @@ Document Database for the .Net Platform
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
 Command line ptions:",
-				SystemTime.Now.Year);
+				SystemTime.UtcNow.Year);
 
 			optionSet.WriteOptionDescriptions(Console.Out);
 

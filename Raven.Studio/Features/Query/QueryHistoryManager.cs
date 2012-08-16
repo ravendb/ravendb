@@ -1,19 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.IO.IsolatedStorage;
-using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
 using System.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Studio.Extensions;
@@ -124,9 +114,9 @@ namespace Raven.Studio.Features.Query
 
         private void CleanupStoredHistory()
         {
-            if (DateTime.Now - lastCleanupStarted > TimeSpan.FromMinutes(2))
+			if (SystemTime.UtcNow - lastCleanupStarted > TimeSpan.FromMinutes(2))
             {
-                lastCleanupStarted = DateTime.Now;
+				lastCleanupStarted = SystemTime.UtcNow;
 
                 Task.Factory.StartNew(
                     () =>

@@ -9,6 +9,7 @@ using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
+using Raven.Abstractions;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Raven.Database.Config
@@ -27,8 +28,8 @@ namespace Raven.Database.Config
 			gen.SetSerialNumber(serialNumber);
 			gen.SetSubjectDN(certificateName);
 			gen.SetIssuerDN(certificateName);
-			gen.SetNotAfter(DateTime.Now.AddYears(100));
-			gen.SetNotBefore(DateTime.Now.AddDays(-1));
+			gen.SetNotAfter(SystemTime.UtcNow.AddYears(100));
+			gen.SetNotBefore(SystemTime.UtcNow.AddDays(-1));
 			gen.SetSignatureAlgorithm("SHA256WithRSAEncryption");
 			gen.SetPublicKey(keyPair.Public);
 

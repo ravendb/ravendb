@@ -38,7 +38,7 @@ namespace Raven.Client.Connection
 				var metadata = (RavenJObject)doc["@metadata"];
 				doc.Remove("@metadata");
 				var key = Extract(metadata, "@id", string.Empty);
-				var lastModified = Extract(metadata, Constants.LastModified, SystemTime.Now, (string d) => ConvertToUtcDate(d));
+				var lastModified = Extract(metadata, Constants.LastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d));
 				var etag = Extract(metadata, "@etag", Guid.Empty, (string g) => HttpExtensions.EtagHeaderToGuid(g));
 				var nai = Extract(metadata, "Non-Authoritative-Information", false, (string b) => Convert.ToBoolean(b));
 				list.Add(new JsonDocument

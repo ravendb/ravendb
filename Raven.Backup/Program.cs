@@ -1,5 +1,6 @@
 ﻿using System;
 using NDesk.Options;
+using Raven.Abstractions;
 
 namespace Raven.Backup
 {
@@ -71,7 +72,7 @@ Backup utility for RavenDB
 ----------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
-Command line options:", DateTime.UtcNow.Year);
+Command line options:", SystemTime.UtcNow.Year);
 
 			optionSet.WriteOptionDescriptions(Console.Out);
 

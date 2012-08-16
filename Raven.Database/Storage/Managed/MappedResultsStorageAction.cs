@@ -16,7 +16,6 @@ using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
-using Raven.Database.Json;
 
 namespace Raven.Storage.Managed
 {
@@ -48,7 +47,7 @@ namespace Raven.Storage.Managed
 				{"reduceKey", reduceKey},
 				{"docId", docId},
 				{"etag", byteArray},
-				{"timestamp", SystemTime.Now}
+				{"timestamp", SystemTime.UtcNow}
 			};
 			storage.MappedResults.Put(key, ms.ToArray());
 		}
