@@ -25,8 +25,6 @@ namespace Raven.Tests.Bugs
 		{
 			for (int x = 0; x < 50; x++)
 			{
-				Console.Clear();
-				Console.WriteLine(x);
 				using (var store = CreateStore())
 				{
 					for (int i = 0; i < 12; i++)
