@@ -199,7 +199,7 @@ namespace Raven.Storage.Managed
 			{
 				var metadataCopy = (RavenJObject)metadata.Metadata.CloneToken() ;
 				using (docDataStream = documentCodecs
-					.ReverseAggregate(docDataStream, (dataStream, codec) => codec.Decode(metadata.Key, metadataCopy, dataStream)))
+					.Aggregate(docDataStream, (dataStream, codec) => codec.Decode(metadata.Key, metadataCopy, dataStream)))
 					result = docDataStream.ToJObject();
 			}
 			else

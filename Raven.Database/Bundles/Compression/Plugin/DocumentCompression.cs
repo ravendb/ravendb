@@ -14,7 +14,7 @@ using Raven.Json.Linq;
 namespace Raven.Bundles.Compression.Plugin
 {
 	[InheritedExport(typeof(AbstractDocumentCodec))]
-	[ExportMetadata("Order", 500)]
+	[ExportMetadata("Order", 10000)]
 	[ExportMetadata("Bundle", "Compression")]
 	public class DocumentCompression : AbstractDocumentCodec
 	{
