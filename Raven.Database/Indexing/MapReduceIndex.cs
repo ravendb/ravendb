@@ -346,11 +346,7 @@ namespace Raven.Database.Indexing
 				return RavenJObject.FromObject(doc);
 			}
 
-
-			// This method may be called concurrently, by both the ReduceTask (for removal)
-			// and by the ReducingExecuter (for add/modify). This is okay with us, since the 
-			// Write() call is already handling locking properly
-			public void Execute()
+			public void ExecuteReduction()
 			{
 				var count = 0;
 				parent.Write(Context, (indexWriter, analyzer, stats) =>

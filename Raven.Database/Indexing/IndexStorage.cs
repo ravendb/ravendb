@@ -511,7 +511,7 @@ namespace Raven.Database.Indexing
 			using (EnsureInvariantCulture())
 			{
 				var reduceDocuments = new MapReduceIndex.ReduceDocuments(mapReduceIndex, viewGenerator, mappedResults, level, context, actions, reduceKeys);
-				reduceDocuments.Execute();
+				reduceDocuments.ExecuteReduction();
 				context.RaiseIndexChangeNotification(new IndexChangeNotification
 				{
 					Name = index,
