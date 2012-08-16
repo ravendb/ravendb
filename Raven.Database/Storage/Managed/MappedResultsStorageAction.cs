@@ -195,15 +195,17 @@ namespace Raven.Storage.Managed
 
 		private IEnumerable<MappedResultInfo> GetReducedResultsForBucket(string index, string reduceKey, int level, int bucket)
 		{
-			var results = storage.ReduceResults["ByViewReduceKeyAndBucket"]
+			var results = storage.ReduceResults["ByViewReduceKeyLevelAndBucket"]
 				.SkipTo(new RavenJObject
 				{
 					{"view", index},
 					{"reduceKey", reduceKey},
+					{"level", level},
 					{"bucket", bucket}
 				})
 				.TakeWhile(x => string.Equals(index, x.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase) &&
 								string.Equals(reduceKey, x.Value<string>("reduceKey"), StringComparison.InvariantCultureIgnoreCase) &&
+								level == x.Value<int>("level") &&
 								bucket == x.Value<int>("bucket"));
 
 			bool hasResults = false;
@@ -218,10 +220,10 @@ namespace Raven.Storage.Managed
 					Etag = new Guid(readResult.Key.Value<byte[]>("etag")),
 					Timestamp = readResult.Key.Value<DateTime>("timestamp"),
 					Bucket = readResult.Key.Value<int>("bucket"),
-					Source = readResult.Key.Value<int>("sourceBucket").ToString()
+					Source = readResult.Key.Value<int>("sourceBucket").ToString(),
+					Size = readResult.Size,
+					Data = LoadMappedResult(readResult)
 				};
-				mappedResultInfo.Size = readResult.Size;
-				mappedResultInfo.Data = LoadMappedResult(readResult);
 
 				yield return mappedResultInfo;
 			}
@@ -345,7 +347,7 @@ namespace Raven.Storage.Managed
 
 		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int take)
 		{
-			var results = storage.ReduceResults["ByViewReduceKeyAndBucket"].SkipTo(new RavenJObject
+			var results = storage.ReduceResults["ByViewReduceKeyLevelAndBucket"].SkipTo(new RavenJObject
 			{
 				{"view", indexName},
 				{"reduceKey", key},

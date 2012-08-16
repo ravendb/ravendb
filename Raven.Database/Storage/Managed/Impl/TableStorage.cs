@@ -57,7 +57,7 @@ namespace Raven.Storage.Managed.Impl
 			ReduceResults = Add(new Table("ReducedResults")
 			{
 				{"ByViewReduceKeyAndSourceBucket", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"), x.Value<int>("sourceBucket"))},
-				{"ByViewReduceKeyAndBucket", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"), x.Value<int>("bucket"))}
+				{"ByViewReduceKeyLevelAndBucket", x => Tuple.Create(x.Value<string>("view"), x.Value<string>("reduceKey"), x.Value<int>("level"), x.Value<int>("bucket"))}
 			});
 
 			Queues = Add(new Table(x => new RavenJObject
