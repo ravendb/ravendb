@@ -194,11 +194,11 @@ namespace Raven.Database.Server.Responders
 			}
 
 			int level;
-			if(int.TryParse(context.Request.QueryString["level"], out level) == false)
+			if(int.TryParse(context.Request.QueryString["level"], out level) == false || (level != 1 && level != 2))
 			{
 				context.WriteJson(new
 				{
-					Error = "Query string argument 'level' is required and must be numeric"
+					Error = "Query string argument 'level' is required and must be 1 or 2"
 				});
 				context.SetStatusToBadRequest();
 				return;
