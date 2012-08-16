@@ -32,6 +32,7 @@ namespace Raven.Tests.Bugs.Indexing
 				{
 					var objects = session.Advanced.LuceneQuery<dynamic>()
 						.GroupBy(AggregationOperation.Count, "Address")
+						.OrderBy("-Address")
 						.WaitForNonStaleResults(TimeSpan.FromMinutes(1))
 						.ToArray();
 
