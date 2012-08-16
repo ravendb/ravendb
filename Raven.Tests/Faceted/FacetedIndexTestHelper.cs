@@ -28,6 +28,15 @@ namespace Raven.Tests.Faceted
 						"Jessops"
 					};
 
+		private static readonly List<string> Models = new List<string> 
+					{ 
+						"Model1", 
+						"Model2",
+						"Model3",
+						"Model4",
+						"Model5"
+					};
+
 		private static readonly Random random = new Random(1337);
 
 		public static IList<Camera> GetCameras(int numCameras)
@@ -41,7 +50,7 @@ namespace Raven.Tests.Faceted
 					Id = i,
 					DateOfListing = new DateTime(1980 + random.Next(1, 30), random.Next(1, 12), random.Next(1, 27)),
 					Manufacturer = Manufacturers[(int)(random.NextDouble() * Manufacturers.Count)],
-					Model = "blah",
+					Model = Models[(int)(random.NextDouble() * Models.Count)],
 					Cost = (decimal)((random.NextDouble() * 900.0) + 100.0),    //100.0 to 1000.0
 					Zoom = (int)(random.NextDouble() * 12) + 2,                 //2.0 to 12.0
 					Megapixels = (decimal)((random.NextDouble() * 10.0) + 1.0), //1.0 to 11.0

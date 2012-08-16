@@ -90,14 +90,13 @@ namespace Raven.Database.Queries
 
 		private void HandleTermsFacet(string index, IEnumerable<Facet> facets, IndexQuery indexQuery, IndexSearcher currentIndexSearcher, FacetResults results)
 		{
-			var values = new List<FacetValue>();
-
 			var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery, database.IndexQueryTriggers);
 			var termCollector = new AllTermsCollector(facets.Select(x => x.Name));
 			currentIndexSearcher.Search(baseQuery, termCollector);
 
 			foreach(var facet in facets)
 			{
+				var values = new List<FacetValue>();
 				List<string> allTerms;
 
 				int maxResults = facet.MaxResults.GetValueOrDefault(database.Configuration.MaxPageSize);

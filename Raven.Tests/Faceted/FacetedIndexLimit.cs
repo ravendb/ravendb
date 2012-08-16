@@ -29,6 +29,67 @@ namespace Raven.Tests.Faceted
 		}
 
 		[Fact]
+		public void CanPerformSearchWithTwoDefaultFacets()
+		{
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer" }, new Facet { Name = "Model" } };
+
+			using (var store = NewDocumentStore())
+			{
+				Setup(store);
+
+				using(var s = store.OpenSession())
+				{
+					s.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets });
+					s.SaveChanges();
+
+					var facetResults = s.Query<Camera>("CameraCost")
+						.ToFacets("facets/CameraFacets");
+
+					Assert.Equal(5, facetResults.Results["Manufacturer"].Values.Count());
+					Assert.Equal("canon", facetResults.Results["Manufacturer"].Values[0].Range);
+					Assert.Equal("jessops", facetResults.Results["Manufacturer"].Values[1].Range);
+					Assert.Equal("nikon", facetResults.Results["Manufacturer"].Values[2].Range);
+					Assert.Equal("phillips", facetResults.Results["Manufacturer"].Values[3].Range);
+					Assert.Equal("sony", facetResults.Results["Manufacturer"].Values[4].Range);
+
+					foreach (var facet in facetResults.Results["Manufacturer"].Values)
+					{
+						var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
+						Assert.Equal(inMemoryCount, facet.Count);
+					}
+
+					Assert.Equal(5, facetResults.Results["Manufacturer"].Terms.Count());
+					Assert.Equal("canon", facetResults.Results["Manufacturer"].Terms[0]);
+					Assert.Equal("jessops", facetResults.Results["Manufacturer"].Terms[1]);
+					Assert.Equal("nikon", facetResults.Results["Manufacturer"].Terms[2]);
+					Assert.Equal("phillips", facetResults.Results["Manufacturer"].Terms[3]);
+					Assert.Equal("sony", facetResults.Results["Manufacturer"].Terms[4]);
+
+
+					Assert.Equal(5, facetResults.Results["Model"].Values.Count());
+					Assert.Equal("model1", facetResults.Results["Model"].Values[0].Range);
+					Assert.Equal("model2", facetResults.Results["Model"].Values[1].Range);
+					Assert.Equal("model3", facetResults.Results["Model"].Values[2].Range);
+					Assert.Equal("model4", facetResults.Results["Model"].Values[3].Range);
+					Assert.Equal("model5", facetResults.Results["Model"].Values[4].Range);
+
+					foreach (var facet in facetResults.Results["Model"].Values)
+					{
+						var inMemoryCount = _data.Where(x => x.Model.ToLower() == facet.Range).Count();
+						Assert.Equal(inMemoryCount, facet.Count);
+					}
+
+					Assert.Equal(5, facetResults.Results["Model"].Terms.Count());
+					Assert.Equal("model1", facetResults.Results["Model"].Terms[0]);
+					Assert.Equal("model2", facetResults.Results["Model"].Terms[1]);
+					Assert.Equal("model3", facetResults.Results["Model"].Terms[2]);
+					Assert.Equal("model4", facetResults.Results["Model"].Terms[3]);
+					Assert.Equal("model5", facetResults.Results["Model"].Terms[4]);
+				}
+			}
+		}
+
+		[Fact]
 		public void CanPerformFacetedLimitSearch_TermAsc()
 		{
 			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2 } };
