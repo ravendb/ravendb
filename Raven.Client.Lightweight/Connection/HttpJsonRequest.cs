@@ -213,8 +213,11 @@ namespace Raven.Client.Connection
 						httpWebResponse.StatusCode != HttpStatusCode.Unauthorized)
 						throw;
 
-					if (HandleUnauthorizedResponse(httpWebResponse) == false)
-						throw;
+					using (httpWebResponse)
+					{
+						if (HandleUnauthorizedResponse(httpWebResponse) == false)
+							throw;
+					}
 				}
 			}
 		}
@@ -312,6 +315,7 @@ namespace Raven.Client.Connection
 
 			ResponseHeaders = new NameValueCollection(response.Headers);
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
+			using (response)
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
 				var data = RavenJToken.TryLoad(responseStream);

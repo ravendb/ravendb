@@ -469,7 +469,7 @@ namespace Raven.Client.Document
 				var oauthSource = response.Headers["OAuth-Source"];
 				if (string.IsNullOrEmpty(oauthSource))
 					oauthSource = Url + "/OAuth/API-Key";
-
+				response.Close();
 
 				return DoOAuthRequest(oauthSource);
 			};
@@ -482,6 +482,7 @@ namespace Raven.Client.Document
 				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
 				if (string.IsNullOrEmpty(oauthSource))
 					oauthSource = Url + "/OAuth/API-Key";
+				unauthorizedResponse.Close();
 
 				return DoOAuthRequestAsync(oauthSource, null, null, null, 0);
 			};
@@ -523,13 +524,15 @@ namespace Raven.Client.Document
 						// We've already tried three times and failed
 						throw;
 
-					var authResponse = ((HttpWebResponse)ex.Response);
-					if (authResponse.StatusCode != HttpStatusCode.Unauthorized)
+					var authResponse = ex.Response as HttpWebResponse;
+					if (authResponse == null || authResponse.StatusCode != HttpStatusCode.Unauthorized)
 						throw;
 
 					var header = authResponse.Headers[HttpResponseHeader.WwwAuthenticate];
 					if (string.IsNullOrEmpty(header) || !header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey))
 						throw;
+
+					authResponse.Close();
 
 					var challengeDictionary = OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
 					serverRSAExponent = challengeDictionary.TryGetValue(OAuthHelper.Keys.RSAExponent);
@@ -570,6 +573,8 @@ namespace Raven.Client.Document
 						var header = authResponse.Headers[HttpResponseHeader.WwwAuthenticate];
 						if (string.IsNullOrEmpty(header) || !header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey))
 							throw;
+
+						authResponse.Close();
 
 						var challengeDictionary = OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
 
