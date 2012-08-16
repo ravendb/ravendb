@@ -36,6 +36,7 @@ namespace Raven.Database.Queries
 					switch (facet.Mode)
 					{
 						case FacetMode.Default:
+							//Remember the facet, so we can run them all under one query
 							defaultFacets.Add(facet);
 							break;
 						case FacetMode.Ranges:
@@ -48,6 +49,8 @@ namespace Raven.Database.Queries
 					}
 				}
 
+				//We only want to run the base query once, so we capture all of the facet-ing terms then run the query
+				//	once through the collector and pull out all of the terms in one shot
 				if(defaultFacets.Count > 0)
 					HandleTermsFacet(index, defaultFacets, indexQuery, currentIndexSearcher, results);
 			}
@@ -156,13 +159,13 @@ namespace Raven.Database.Queries
 
 			public override void Collect(int doc)
 			{
-				foreach (var data in fields)
+				//Since Collect can be called a rediculous number of times, we don't want to go through an iterator for this loop,
+				//	thus no fancy foreach
+				for(int i = 0; i < fields.Count; i++)
 				{
+					var data = fields[i];
 					string term = data.CurrentValues[data.CurrentOrders[doc]];
-					if (!data.Groups.ContainsKey(term))
-						data.Groups.Add(term, 1);
-					else
-						data.Groups[term] = data.Groups[term] + 1;
+					data.Groups[term] = data.Groups.GetOrAdd(term) + 1;
 				}
 			}
 
