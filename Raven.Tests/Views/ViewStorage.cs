@@ -43,19 +43,19 @@ namespace Raven.Tests.Views
 		{
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog", "324", "2", RavenJObject.Parse("{'a': 'def'}"));
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog", "321", "1", RavenJObject.Parse("{'a': 'ijg'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "324", "2", RavenJObject.Parse("{'a': 'def'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "321", "1", RavenJObject.Parse("{'a': 'ijg'}"));
 			});
 		}
 
 		[Fact]
 		public void CanUpdateValue()
 		{
-			transactionalStorage.Batch(actions => actions.MapRduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}")));
+			transactionalStorage.Batch(actions => actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}")));
 
 
-			transactionalStorage.Batch(actions => actions.MapRduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}")));
+			transactionalStorage.Batch(actions => actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}")));
 		}
 
 		[Fact]
@@ -63,15 +63,15 @@ namespace Raven.Tests.Views
 		{
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog", "324", "2", RavenJObject.Parse("{'a': 'def'}"));
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog", "321", "1", RavenJObject.Parse("{'a': 'ijg'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "324", "2", RavenJObject.Parse("{'a': 'def'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "321", "1", RavenJObject.Parse("{'a': 'ijg'}"));
 			});
 
 
 			transactionalStorage.Batch(actions =>
 			{
-				var vals = actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog", "1",100).ToArray();
+				var vals = actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog", "1",100).ToArray();
 				Assert.Equal(2, vals.Length);
 				Assert.Contains("abc", vals[0].ToString());
 				Assert.Contains("ijg", vals[1].ToString());
@@ -84,18 +84,18 @@ namespace Raven.Tests.Views
 		{
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
 			});
 
 
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}"));
 			});
 
 			transactionalStorage.Batch(actions =>
 			{
-				var strings = actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog", "1", 100).Select(x => x.ToString()).ToArray();
+				var strings = actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog", "1", 100).Select(x => x.ToString()).ToArray();
 				Assert.Equal(2, strings.Length);
 				Assert.Contains("abc", strings[0]);
 				Assert.Contains("def", strings[1]);
@@ -107,19 +107,19 @@ namespace Raven.Tests.Views
 		{
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
 			});
 
 
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapRduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog", new HashSet<ReduceKeyAndBucket>());
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}"));
+				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog", new HashSet<ReduceKeyAndBucket>());
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog", "123", "1", RavenJObject.Parse("{'a': 'def'}"));
 			});
 
 			transactionalStorage.Batch(actions =>
 			{
-				var strings = actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog", "1", 1000).Select(x => x.ToString()).ToArray();
+				var strings = actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog", "1", 1000).Select(x => x.ToString()).ToArray();
 				Assert.Contains("def", strings[0]);
 			});
 		}
@@ -130,20 +130,20 @@ namespace Raven.Tests.Views
 		{
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog1", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog2", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog1", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog2", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
 			});
 
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapRduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog2", new HashSet<ReduceKeyAndBucket>());
-				actions.MapRduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog1", new HashSet<ReduceKeyAndBucket>());
+				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog2", new HashSet<ReduceKeyAndBucket>());
+				actions.MapReduce.DeleteMappedResultsForDocumentId("123", "CommentCountsByBlog1", new HashSet<ReduceKeyAndBucket>());
 			});
 
 			transactionalStorage.Batch(actions =>
 			{
-				Assert.Empty(actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog1", "1",100));
-				Assert.Empty(actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog2", "1",100));
+				Assert.Empty(actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog1", "1",100));
+				Assert.Empty(actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog2", "1",100));
 			});
 		}
 
@@ -152,20 +152,20 @@ namespace Raven.Tests.Views
 		{
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog1", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
-				actions.MapRduce.PutMappedResult("CommentCountsByBlog2", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog1", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
+				actions.MapReduce.PutMappedResult("CommentCountsByBlog2", "123", "1", RavenJObject.Parse("{'a': 'abc'}"));
 			});
 
 
 			transactionalStorage.Batch(actions =>
 			{
-				actions.MapRduce.DeleteMappedResultsForView("CommentCountsByBlog2");
+				actions.MapReduce.DeleteMappedResultsForView("CommentCountsByBlog2");
 			});
 
 			transactionalStorage.Batch(actions =>
 			{
-				Assert.NotEmpty(actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog1", "1", 100));
-				Assert.Empty(actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog2", "1", 100));
+				Assert.NotEmpty(actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog1", "1", 100));
+				Assert.Empty(actions.MapReduce.GetMappedResultsForDebug("CommentCountsByBlog2", "1", 100));
 			});
 		}
 	}

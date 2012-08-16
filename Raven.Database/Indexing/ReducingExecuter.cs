@@ -38,7 +38,7 @@ namespace Raven.Database.Indexing
 						context.CancellationToken.ThrowIfCancellationRequested();
 						
 						var sp = Stopwatch.StartNew();
-						persistedResults = actions.MapRduce.GetItemsToReduce
+						persistedResults = actions.MapReduce.GetItemsToReduce
 							(
 								take: context.CurrentNumberOfItemsToReduceInSingleBatch,
 								level: level,
@@ -60,7 +60,7 @@ namespace Raven.Database.Indexing
 						var requiredReduceNextTime = persistedResults.Select(x=>new ReduceKeyAndBucket(x.Bucket, x.ReduceKey)).Distinct().ToArray();
 						foreach (var mappedResultInfo in requiredReduceNextTime)
 						{
-							actions.MapRduce.RemoveReduceResults(indexToWorkOn.IndexName, level +1, mappedResultInfo.ReduceKey, mappedResultInfo.Bucket);
+							actions.MapReduce.RemoveReduceResults(indexToWorkOn.IndexName, level +1, mappedResultInfo.ReduceKey, mappedResultInfo.Bucket);
 						}
 						if(level != 2)
 						{
@@ -68,7 +68,7 @@ namespace Raven.Database.Indexing
 								.Select(x => new ReduceKeyAndBucket(x.Bucket/1024, x.ReduceKey))
 								.Distinct()
 								.ToArray();
-							actions.MapRduce.ScheduleReductions(indexToWorkOn.IndexName, level + 1, reduceKeysAndBukcets);
+							actions.MapReduce.ScheduleReductions(indexToWorkOn.IndexName, level + 1, reduceKeysAndBukcets);
 						}
 
 						var results = persistedResults

@@ -18,9 +18,9 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.MapRduce.PutMappedResult("test", "users/ayende","ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
+				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende","ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 
-				tx.Batch(viewer => Assert.NotEmpty(viewer.MapRduce.GetMappedResultsForDebug("test", "ayende", 100)));
+				tx.Batch(viewer => Assert.NotEmpty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 100)));
 			}
 		}
 
@@ -29,13 +29,13 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.MapRduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
+				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 				var reduceKeyAndBuckets = new HashSet<ReduceKeyAndBucket>();
-				tx.Batch(mutator => mutator.MapRduce.DeleteMappedResultsForDocumentId("users/ayende","test", reduceKeyAndBuckets));
+				tx.Batch(mutator => mutator.MapReduce.DeleteMappedResultsForDocumentId("users/ayende","test", reduceKeyAndBuckets));
 
 				Assert.NotEmpty(reduceKeyAndBuckets);
 
-				tx.Batch(viewer => Assert.Empty(viewer.MapRduce.GetMappedResultsForDebug("test", "ayende", 100)));
+				tx.Batch(viewer => Assert.Empty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 100)));
 			}
 		}
 
@@ -44,10 +44,10 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.MapRduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
-				tx.Batch(mutator => mutator.MapRduce.DeleteMappedResultsForView("test"));
+				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
+				tx.Batch(mutator => mutator.MapReduce.DeleteMappedResultsForView("test"));
 
-				tx.Batch(viewer => Assert.Empty(viewer.MapRduce.GetMappedResultsForDebug("test", "ayende", 100)));
+				tx.Batch(viewer => Assert.Empty(viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 100)));
 			}
 		}
 
@@ -56,10 +56,10 @@ namespace Raven.Tests.ManagedStorage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.MapRduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
-				tx.Batch(mutator => mutator.MapRduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
+				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
+				tx.Batch(mutator => mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 
-				tx.Batch(viewer => Assert.Equal(2, viewer.MapRduce.GetMappedResultsForDebug("test", "ayende", 100).Count()));
+				tx.Batch(viewer => Assert.Equal(2, viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 100).Count()));
 			}
 		}
 
@@ -70,11 +70,11 @@ namespace Raven.Tests.ManagedStorage
 			{
 				tx.Batch(mutator =>
 				{
-					mutator.MapRduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new {Name = "Rahien"}));
-					mutator.MapRduce.PutMappedResult("test", "users/rahien", "ayende", RavenJObject.FromObject(new { Name = "Rahien" }));
+					mutator.MapReduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new {Name = "Rahien"}));
+					mutator.MapReduce.PutMappedResult("test", "users/rahien", "ayende", RavenJObject.FromObject(new { Name = "Rahien" }));
 				});
 
-				tx.Batch(viewer => Assert.Equal(2, viewer.MapRduce.GetMappedResultsForDebug("test", "ayende", 100).Count()));
+				tx.Batch(viewer => Assert.Equal(2, viewer.MapReduce.GetMappedResultsForDebug("test", "ayende", 100).Count()));
 			}
 		}
 	}

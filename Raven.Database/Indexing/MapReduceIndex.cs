@@ -58,7 +58,7 @@ namespace Raven.Database.Indexing
 			var documentsWrapped = documents.Select(doc =>
 			{
 				var documentId = doc.__document_id;
-				actions.MapRduce.DeleteMappedResultsForDocumentId((string)documentId, name, changed);
+				actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, name, changed);
 				return doc;
 			})
 				.Where(x => x is FilteredDocument == false);
@@ -88,13 +88,13 @@ namespace Raven.Database.Indexing
 
 					logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId, data);
 
-					actions.MapRduce.PutMappedResult(name, docId, reduceKey, data);
+					actions.MapReduce.PutMappedResult(name, docId, reduceKey, data);
 
 					changed.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), reduceKey));
 				}
 			}
 			UpdateIndexingStats(context, stats);
-			actions.MapRduce.ScheduleReductions(name, 0, changed);
+			actions.MapReduce.ScheduleReductions(name, 0, changed);
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
 		}
 
@@ -219,10 +219,10 @@ namespace Raven.Database.Indexing
 				var reduceKeyAndBuckets = new HashSet<ReduceKeyAndBucket>();
 				foreach (var key in keys)
 				{
-					actions.MapRduce.DeleteMappedResultsForDocumentId(key, name, reduceKeyAndBuckets);
+					actions.MapReduce.DeleteMappedResultsForDocumentId(key, name, reduceKeyAndBuckets);
 
 				}
-				actions.MapRduce.ScheduleReductions(name, 0, reduceKeyAndBuckets);
+				actions.MapReduce.ScheduleReductions(name, 0, reduceKeyAndBuckets);
 			});
 			Write(context, (writer, analyzer, stats) =>
 			{
@@ -373,7 +373,7 @@ namespace Raven.Database.Indexing
 								{
 									case 0:
 									case 1:
-										Actions.MapRduce.PutReducedResult(name, reduceKeyAsString, Level + 1, mappedResults.Key, mappedResults.Key / 1024, ToJsonDocument(doc));
+										Actions.MapReduce.PutReducedResult(name, reduceKeyAsString, Level + 1, mappedResults.Key, mappedResults.Key / 1024, ToJsonDocument(doc));
 										break;
 									case 2:
 										WriteDocumentToIndex(doc, indexWriter, analyzer);

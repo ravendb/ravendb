@@ -30,7 +30,7 @@ namespace Raven.Storage.Managed
 			Transactions = new TransactionStorageActions(storage, generator, documentCodecs);
 			Documents = new DocumentsStorageActions(storage, Transactions, generator, documentCodecs, documentCacher);
 			Indexing = new IndexingStorageActions(storage);
-			MapRduce = new MappedResultsStorageAction(storage, generator, documentCodecs);
+			MapReduce = new MappedResultsStorageAction(storage, generator, documentCodecs);
 			Queue = new QueueStorageActions(storage, generator);
 			Tasks = new TasksStorageActions(storage, generator);
 			Staleness = new StalenessStorageActions(storage);
@@ -55,7 +55,7 @@ namespace Raven.Storage.Managed
 
 		public IGeneralStorageActions General { get; private set; }
 
-		public IMappedResultsStorageAction MapRduce { get; private set; }
+		public IMappedResultsStorageAction MapReduce { get; private set; }
 
 		public event Action OnCommit;
 
