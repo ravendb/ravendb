@@ -6,7 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Raven.Abstractions.Extensions;
-using Raven.Imports.Newtonsoft.Json;
+using Raven.Abstractions.Extensions.Internal;
 
 namespace Raven.Abstractions.Connection
 {
@@ -14,13 +14,15 @@ namespace Raven.Abstractions.Connection
 	{
 		public static class Keys
 		{
-			public const string RSAPublicKey = "rsa key";
 			public const string EncryptedData = "data";
 			public const string APIKeyName = "api key name";
 			public const string Challenge = "challenge";
 			public const string Response = "response";
 
-			public const string ChallengeTimestamp = "timestamp";
+			public const string RSAExponent = "exponent";
+			public const string RSAModulus = "modulus";
+
+			public const string ChallengeTimestamp = "pepper";
 			public const string ChallengeSalt = "salt";
 			public const int ChallengeSaltLength = 64;
 
@@ -30,22 +32,30 @@ namespace Raven.Abstractions.Connection
 
 		private static readonly RandomNumberGenerator rng = RandomNumberGenerator.Create();
 		private static readonly SHA1 sha1 = SHA1.Create();
-		private static RSA rsa = null;
-		private static Aes aes = null;
+		private static RSACryptoServiceProvider rsa = null;
+		private static AesCryptoServiceProvider aes = null;
 
-		private static string rsaPublicKey = null;
+		private static string rsaExponent = null;
+		private static string rsaModulus = null;
 
 		public static void InitializeServerKeys()
 		{
-			rsa = RSA.Create();
-			aes = Aes.Create();
+			rsa = new RSACryptoServiceProvider();
+			aes = new AesCryptoServiceProvider();
 
-			rsaPublicKey = SerializeRsaParameters(rsa.ExportParameters(false));
+			var rsaParameters = rsa.ExportParameters(false);
+			rsaExponent = BytesToString(rsaParameters.Exponent);
+			rsaModulus = BytesToString(rsaParameters.Modulus);
 		}
 
-		public static string RSAPublicKey
+		public static string RSAExponent
 		{
-			get { return rsaPublicKey; }
+			get { return rsaExponent; }
+		}
+
+		public static string RSAModulus
+		{
+			get { return rsaModulus; }
 		}
 
 		/**** Cryptography *****/
@@ -86,20 +96,37 @@ namespace Raven.Abstractions.Connection
 
 		public static string EncryptAssymetric(RSAParameters parameters, string data)
 		{
+			const int partLength = 50;
+
 			var bytes = Encoding.UTF8.GetBytes(data);
 			using (var rsa = new RSACryptoServiceProvider())
 			{
 				rsa.ImportParameters(parameters);
-				var result = rsa.EncryptValue(bytes);
-				return BytesToString(result);
+
+				string result = "";
+				for (int index = 0; index < bytes.Length; index += partLength)
+				{
+					var partBytes = bytes.Skip(index).Take(partLength);
+					var part = rsa.Encrypt(partBytes.ToArray(), true);
+					result += BytesToString(part) + "&";
+				}
+				return result;
 			}
 		}
 
 		public static string DecryptAsymmetric(string data)
 		{
-			var bytes = ParseBytes(data);
-			var result = rsa.DecryptValue(bytes);
-			return Encoding.UTF8.GetString(result);
+			var parts = data.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
+
+			var result = Enumerable.Empty<byte>();
+			foreach (var part in parts)
+			{
+				var partBytes = ParseBytes(part);
+				var decrypted = rsa.Decrypt(partBytes, true);
+				result = result.Concat(decrypted);
+			}
+
+			return Encoding.UTF8.GetString(result.ToArray());
 		}
 
 		/**** On the wire *****/
@@ -109,7 +136,7 @@ namespace Raven.Abstractions.Connection
 			return data.Split(',')
 				.Select(item => item.Split(new[] { '=' }, 2))
 				.ToDictionary(
-					item => (item.First() ?? "").Trim(),
+					item => (item.First()).Trim(),
 					item => (item.Skip(1).FirstOrDefault() ?? "").Trim()
 				);
 		}
@@ -144,7 +171,7 @@ namespace Raven.Abstractions.Connection
 		public static DateTime? ParseDateTime(string data)
 		{
 			DateTime result;
-			if (DateTime.TryParseExact(data, "O", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out result))
+			if (DateTime.TryParseExact(data, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
 				return result;
 			else
 				return null;
@@ -153,23 +180,6 @@ namespace Raven.Abstractions.Connection
 		public static string DateTimeToString(DateTime data)
 		{
 			return data.ToString("O", CultureInfo.InvariantCulture);
-		}
-
-		public static string SerializeRsaParameters(RSAParameters data)
-		{
-			using (var writer = new StringWriter())
-			{
-				new JsonSerializer().Serialize(writer, data);
-				return writer.ToString();
-			}
-		}
-
-		public static RSAParameters DeserializeRSAParameters(string data)
-		{
-			using (var reader = new StringReader(data))
-			{
-				return new JsonSerializer().Deserialize<RSAParameters>(reader);
-			}
 		}
 	}
 }
