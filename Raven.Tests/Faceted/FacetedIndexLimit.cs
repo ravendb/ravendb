@@ -55,16 +55,12 @@ namespace Raven.Tests.Faceted
 					foreach (var facet in facetResults.Results["Manufacturer"].Values)
 					{
 						var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-						Assert.Equal(inMemoryCount, facet.Count);
+						Assert.Equal(inMemoryCount, facet.Hits);
 					}
 
-					Assert.Equal(5, facetResults.Results["Manufacturer"].Terms.Count());
-					Assert.Equal("canon", facetResults.Results["Manufacturer"].Terms[0]);
-					Assert.Equal("jessops", facetResults.Results["Manufacturer"].Terms[1]);
-					Assert.Equal("nikon", facetResults.Results["Manufacturer"].Terms[2]);
-					Assert.Equal("phillips", facetResults.Results["Manufacturer"].Terms[3]);
-					Assert.Equal("sony", facetResults.Results["Manufacturer"].Terms[4]);
-
+					Assert.Equal(null, facetResults.Results["Manufacturer"].RemainingTerms);
+					Assert.Equal(0, facetResults.Results["Manufacturer"].RemainingTermsCount);
+					Assert.Equal(0, facetResults.Results["Manufacturer"].RemainingHits);
 
 					Assert.Equal(5, facetResults.Results["Model"].Values.Count());
 					Assert.Equal("model1", facetResults.Results["Model"].Values[0].Range);
@@ -76,15 +72,12 @@ namespace Raven.Tests.Faceted
 					foreach (var facet in facetResults.Results["Model"].Values)
 					{
 						var inMemoryCount = _data.Where(x => x.Model.ToLower() == facet.Range).Count();
-						Assert.Equal(inMemoryCount, facet.Count);
+						Assert.Equal(inMemoryCount, facet.Hits);
 					}
 
-					Assert.Equal(5, facetResults.Results["Model"].Terms.Count());
-					Assert.Equal("model1", facetResults.Results["Model"].Terms[0]);
-					Assert.Equal("model2", facetResults.Results["Model"].Terms[1]);
-					Assert.Equal("model3", facetResults.Results["Model"].Terms[2]);
-					Assert.Equal("model4", facetResults.Results["Model"].Terms[3]);
-					Assert.Equal("model5", facetResults.Results["Model"].Terms[4]);
+					Assert.Equal(null, facetResults.Results["Model"].RemainingTerms);
+					Assert.Equal(0, facetResults.Results["Model"].RemainingTermsCount);
+					Assert.Equal(0, facetResults.Results["Model"].RemainingHits);
 				}
 			}
 		}
@@ -92,7 +85,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedLimitSearch_TermAsc()
 		{
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2 } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, InclueRemainingTerms = true } };
 
 			using (var store = NewDocumentStore())
 			{
@@ -114,15 +107,19 @@ namespace Raven.Tests.Faceted
 					foreach (var facet in facetResults.Results["Manufacturer"].Values)
 					{
 						var inMemoryCount = _data.Where(x => x.DateOfListing > new DateTime(2000, 1, 1)).Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-						Assert.Equal(inMemoryCount, facet.Count);
+						Assert.Equal(inMemoryCount, facet.Hits);
 					}
 
-					Assert.Equal(5, facetResults.Results["Manufacturer"].Terms.Count());
-					Assert.Equal("canon", facetResults.Results["Manufacturer"].Terms[0]);
-					Assert.Equal("jessops", facetResults.Results["Manufacturer"].Terms[1]);
-					Assert.Equal("nikon", facetResults.Results["Manufacturer"].Terms[2]);
-					Assert.Equal("phillips", facetResults.Results["Manufacturer"].Terms[3]);
-					Assert.Equal("sony", facetResults.Results["Manufacturer"].Terms[4]);
+					Assert.Equal(3, facetResults.Results["Manufacturer"].RemainingTermsCount);
+					Assert.Equal(3, facetResults.Results["Manufacturer"].RemainingTerms.Count());
+					Assert.Equal("nikon", facetResults.Results["Manufacturer"].RemainingTerms[0]);
+					Assert.Equal("phillips", facetResults.Results["Manufacturer"].RemainingTerms[1]);
+					Assert.Equal("sony", facetResults.Results["Manufacturer"].RemainingTerms[2]);
+
+					Assert.Equal(_data.Count(x => x.DateOfListing > new DateTime(2000, 1, 1)),
+						facetResults.Results["Manufacturer"].Values[0].Hits +
+						facetResults.Results["Manufacturer"].Values[1].Hits +
+						facetResults.Results["Manufacturer"].RemainingHits);
 				}
 			}
 		}
@@ -130,7 +127,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedLimitSearch_TermDesc()
 		{
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 3, TermSortMode = FacetTermSortMode.ValueDesc, InclueRemainingTerms = true } };
 
 			using (var store = NewDocumentStore())
 			{
@@ -153,15 +150,19 @@ namespace Raven.Tests.Faceted
 					foreach (var facet in facetResults.Results["Manufacturer"].Values)
 					{
 						var inMemoryCount = _data.Where(x => x.DateOfListing > new DateTime(2000, 1, 1)).Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-						Assert.Equal(inMemoryCount, facet.Count);
+						Assert.Equal(inMemoryCount, facet.Hits);
 					}
 
-					Assert.Equal(5, facetResults.Results["Manufacturer"].Terms.Count());
-					Assert.Equal("sony", facetResults.Results["Manufacturer"].Terms[0]);
-					Assert.Equal("phillips", facetResults.Results["Manufacturer"].Terms[1]);
-					Assert.Equal("nikon", facetResults.Results["Manufacturer"].Terms[2]);
-					Assert.Equal("jessops", facetResults.Results["Manufacturer"].Terms[3]);
-					Assert.Equal("canon", facetResults.Results["Manufacturer"].Terms[4]);
+					Assert.Equal(2, facetResults.Results["Manufacturer"].RemainingTermsCount);
+					Assert.Equal(2, facetResults.Results["Manufacturer"].RemainingTerms.Count());
+					Assert.Equal("jessops", facetResults.Results["Manufacturer"].RemainingTerms[0]);
+					Assert.Equal("canon", facetResults.Results["Manufacturer"].RemainingTerms[1]);
+
+					Assert.Equal(_data.Count(x => x.DateOfListing > new DateTime(2000, 1, 1)),
+						facetResults.Results["Manufacturer"].Values[0].Hits +
+						facetResults.Results["Manufacturer"].Values[1].Hits +
+						facetResults.Results["Manufacturer"].Values[2].Hits +
+						facetResults.Results["Manufacturer"].RemainingHits);
 				}
 			}
 		}
@@ -169,7 +170,7 @@ namespace Raven.Tests.Faceted
 		[Fact]
 		public void CanPerformFacetedLimitSearch_HitsAsc()
 		{
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsAsc } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 2, TermSortMode = FacetTermSortMode.HitsAsc, InclueRemainingTerms = true } };
 
 			using (var store = NewDocumentStore())
 			{
@@ -196,15 +197,19 @@ namespace Raven.Tests.Faceted
 					foreach (var facet in facetResults.Results["Manufacturer"].Values)
 					{
 						var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-						Assert.Equal(inMemoryCount, facet.Count);
+						Assert.Equal(inMemoryCount, facet.Hits);
 					}
 
-					Assert.Equal(5, facetResults.Results["Manufacturer"].Terms.Count());
-					Assert.Equal(camerasByHits[0], facetResults.Results["Manufacturer"].Terms[0]);
-					Assert.Equal(camerasByHits[1], facetResults.Results["Manufacturer"].Terms[1]);
-					Assert.Equal(camerasByHits[2], facetResults.Results["Manufacturer"].Terms[2]);
-					Assert.Equal(camerasByHits[3], facetResults.Results["Manufacturer"].Terms[3]);
-					Assert.Equal(camerasByHits[4], facetResults.Results["Manufacturer"].Terms[4]);
+					Assert.Equal(3, facetResults.Results["Manufacturer"].RemainingTermsCount);
+					Assert.Equal(3, facetResults.Results["Manufacturer"].RemainingTerms.Count());
+					Assert.Equal(camerasByHits[2], facetResults.Results["Manufacturer"].RemainingTerms[0]);
+					Assert.Equal(camerasByHits[3], facetResults.Results["Manufacturer"].RemainingTerms[1]);
+					Assert.Equal(camerasByHits[4], facetResults.Results["Manufacturer"].RemainingTerms[2]);
+
+					Assert.Equal(_data.Count(),
+						facetResults.Results["Manufacturer"].Values[0].Hits +
+						facetResults.Results["Manufacturer"].Values[1].Hits +
+						facetResults.Results["Manufacturer"].RemainingHits);
 				}
 			}
 		}
@@ -213,7 +218,7 @@ namespace Raven.Tests.Faceted
 		public void CanPerformFacetedLimitSearch_HitsDesc()
 		{
 			//also specify more results than we have
-			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 20, TermSortMode = FacetTermSortMode.HitsDesc } };
+			var facets = new List<Facet> { new Facet { Name = "Manufacturer", MaxResults = 20, TermSortMode = FacetTermSortMode.HitsDesc, InclueRemainingTerms = true } };
 
 			using (var store = NewDocumentStore())
 			{
@@ -243,15 +248,12 @@ namespace Raven.Tests.Faceted
 					foreach (var facet in facetResults.Results["Manufacturer"].Values)
 					{
 						var inMemoryCount = _data.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-						Assert.Equal(inMemoryCount, facet.Count);
+						Assert.Equal(inMemoryCount, facet.Hits);
 					}
 
-					Assert.Equal(5, facetResults.Results["Manufacturer"].Terms.Count());
-					Assert.Equal(camerasByHits[0], facetResults.Results["Manufacturer"].Terms[0]);
-					Assert.Equal(camerasByHits[1], facetResults.Results["Manufacturer"].Terms[1]);
-					Assert.Equal(camerasByHits[2], facetResults.Results["Manufacturer"].Terms[2]);
-					Assert.Equal(camerasByHits[3], facetResults.Results["Manufacturer"].Terms[3]);
-					Assert.Equal(camerasByHits[4], facetResults.Results["Manufacturer"].Terms[4]);
+					Assert.Equal(0, facetResults.Results["Manufacturer"].RemainingTermsCount);
+					Assert.Equal(0, facetResults.Results["Manufacturer"].RemainingTerms.Count());
+					Assert.Equal(0, facetResults.Results["Manufacturer"].RemainingHits);
 				}
 			}
 		}

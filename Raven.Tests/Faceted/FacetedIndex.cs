@@ -244,7 +244,7 @@ namespace Raven.Tests.Faceted
 					Console.WriteLine(kvp.Key + ":");
 					foreach (var facet in kvp.Value.Values)
 					{
-						Console.WriteLine("    {0}: {1}", facet.Range, facet.Count);
+						Console.WriteLine("    {0}: {1}", facet.Range, facet.Hits);
 					}
 					Console.WriteLine();
 				}
@@ -259,19 +259,10 @@ namespace Raven.Tests.Faceted
 			Assert.Equal(filteredData.GroupBy(x => x.Manufacturer).Count(),
 						facetResults.Results["Manufacturer"].Values.Count());
 
-			//Make sure we get all terms
-			Assert.Equal(filteredData.GroupBy(x => x.Manufacturer).Count(),
-						facetResults.Results["Manufacturer"].Terms.Count());
-
 			foreach (var facet in facetResults.Results["Manufacturer"].Values)
 			{
 				var inMemoryCount = filteredData.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
-				Assert.Equal(inMemoryCount, facet.Count);
-			}
-
-			foreach (var facetTerm in facetResults.Results["Manufacturer"].Terms)
-			{
-				Assert.True(filteredData.Exists(x => x.Manufacturer.ToLower() == facetTerm));
+				Assert.Equal(inMemoryCount, facet.Hits);
 			}
 
 			//Go through the expected (in-memory) results and check that there is a corresponding facet result
@@ -305,7 +296,7 @@ namespace Raven.Tests.Faceted
 			if (expectedCount > 0)
 			{
 				Assert.NotNull(facets);
-				Assert.Equal(expectedCount, facets.Count);
+				Assert.Equal(expectedCount, facets.Hits);
 			}
 		}
 

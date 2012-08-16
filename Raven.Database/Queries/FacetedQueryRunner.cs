@@ -80,12 +80,10 @@ namespace Raven.Database.Queries
 				{
 					result.Values.Add(new FacetValue
 					{
-						Count = topDocs.TotalHits,
+						Hits = topDocs.TotalHits,
 						Range = range
 					});
 				}
-
-				result.Terms.Add(range);
 			}
 		}
 
@@ -128,12 +126,20 @@ namespace Raven.Database.Queries
 
 					values.Add(new FacetValue
 						           {
-							           Count = groups[term],
+							           Hits = groups[term],
 							           Range = term
 						           });
 				}
 
-				results.Results[facet.Name] = new FacetResult() {Terms = allTerms, Values = values};
+				results.Results[facet.Name] = new FacetResult()
+					                              {
+						                              Values = values,
+						                              RemainingTermsCount = allTerms.Count - values.Count,
+						                              RemainingHits = groups.Values.Sum() - values.Sum(x => x.Hits),
+					                              };
+
+				if(facet.InclueRemainingTerms)
+					results.Results[facet.Name].RemainingTerms = allTerms.Skip(maxResults).ToList();
 			}
 		}
 

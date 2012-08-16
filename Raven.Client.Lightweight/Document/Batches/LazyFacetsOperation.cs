@@ -70,15 +70,15 @@ namespace Raven.Client.Document.Batches
 					{
 						var existingFacetValueRange = newFacetResult.Values.Find((x) => x.Range == facetValue.Range);
 						if(existingFacetValueRange != null)
-							existingFacetValueRange.Count += facetValue.Count;
+							existingFacetValueRange.Hits += facetValue.Hits;
 						else
-							newFacetResult.Values.Add(new FacetValue() { Count = facetValue.Count, Range = facetValue.Range });
+							newFacetResult.Values.Add(new FacetValue() { Hits = facetValue.Hits, Range = facetValue.Range });
 					}
 
-					foreach (var facetTerm in facetResult.Value.Terms)
+					foreach (var facetTerm in facetResult.Value.RemainingTerms)
 					{
-						if(!newFacetResult.Terms.Contains(facetTerm))
-							newFacetResult.Terms.Add(facetTerm);
+						if(!newFacetResult.RemainingTerms.Contains(facetTerm))
+							newFacetResult.RemainingTerms.Add(facetTerm);
 					}
 				}
 			}
