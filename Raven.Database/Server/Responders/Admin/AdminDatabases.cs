@@ -36,10 +36,11 @@ namespace Raven.Database.Server.Responders.Admin
 			var db = Uri.UnescapeDataString(match.Groups[1].Value);
 
 			DatabaseDocument dbDoc;
+			var docKey = "Raven/Databases/" + db;
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					var document = Database.Get("Raven/Databases/" + db, null);
+					var document = Database.Get(docKey, null);
 					if (document == null)
 					{
 						context.SetStatusToNotFound();
@@ -56,10 +57,18 @@ namespace Raven.Database.Server.Responders.Admin
 					var json = RavenJObject.FromObject(dbDoc);
 					json.Remove("Id");
 
-					Database.Put("Raven/Databases/" + db, null, json, new RavenJObject(), null);
+					Database.Put(docKey, null, json, new RavenJObject(), null);
 					break;
 				case "DELETE":
-					Database.Delete("Raven/Databases/" + db, null, null);
+					var configuration = server.CreateTenantConfiguration(db);
+					if (configuration == null)
+						return;
+					Database.Delete(docKey, null, null);
+					bool result;
+					if(bool.TryParse(context.Request.QueryString["hard-delete"], out result) && result)
+					{
+						IOExtensions.DeleteDirectory(configuration.DataDirectory);	
+					}
 					break;
 			}
 		}
