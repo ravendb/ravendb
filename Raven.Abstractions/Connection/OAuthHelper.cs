@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Extensions.Internal;
 
@@ -30,68 +31,16 @@ namespace Raven.Abstractions.Connection
 			public const string WWWAuthenticateHeaderKey = "Raven ";
 		}
 
-		private static readonly RandomNumberGenerator rng = RandomNumberGenerator.Create();
-		private static readonly SHA1 sha1 = SHA1.Create();
-		private static RSACryptoServiceProvider rsa = null;
-		private static AesCryptoServiceProvider aes = null;
+		private static readonly ThreadLocal<SHA1> sha1 = new ThreadLocal<SHA1>(() => SHA1.Create());
 
-		private static string rsaExponent = null;
-		private static string rsaModulus = null;
-
-		public static void InitializeServerKeys()
-		{
-			rsa = new RSACryptoServiceProvider();
-			aes = new AesCryptoServiceProvider();
-
-			var rsaParameters = rsa.ExportParameters(false);
-			rsaExponent = BytesToString(rsaParameters.Exponent);
-			rsaModulus = BytesToString(rsaParameters.Modulus);
-		}
-
-		public static string RSAExponent
-		{
-			get { return rsaExponent; }
-		}
-
-		public static string RSAModulus
-		{
-			get { return rsaModulus; }
-		}
 
 		/**** Cryptography *****/
-
-		public static byte[] RandomBytes(int count)
-		{
-			var result = new byte[count];
-			rng.GetBytes(result);
-			return result;
-		}
 
 		public static string Hash(string data)
 		{
 			var bytes = Encoding.UTF8.GetBytes(data);
-			var hash = sha1.ComputeHash(bytes);
+			var hash = sha1.Value.ComputeHash(bytes);
 			return BytesToString(hash);
-		}
-
-		public static string EncryptSymmetric(string data)
-		{
-			var bytes = Encoding.UTF8.GetBytes(data);
-			using (var encryptor = aes.CreateEncryptor())
-			{
-				var result = encryptor.TransformEntireBlock(bytes);
-				return BytesToString(result);
-			}
-		}
-
-		public static string DecryptSymmetric(string data)
-		{
-			var bytes = ParseBytes(data);
-			using (var decryptor = aes.CreateDecryptor())
-			{
-				var result = decryptor.TransformEntireBlock(bytes);
-				return Encoding.UTF8.GetString(result);
-			}
 		}
 
 		public static string EncryptAssymetric(RSAParameters parameters, string data)
@@ -112,21 +61,6 @@ namespace Raven.Abstractions.Connection
 				}
 				return result;
 			}
-		}
-
-		public static string DecryptAsymmetric(string data)
-		{
-			var parts = data.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries);
-
-			var result = Enumerable.Empty<byte>();
-			foreach (var part in parts)
-			{
-				var partBytes = ParseBytes(part);
-				var decrypted = rsa.Decrypt(partBytes, true);
-				result = result.Concat(decrypted);
-			}
-
-			return Encoding.UTF8.GetString(result.ToArray());
 		}
 
 		/**** On the wire *****/
@@ -166,20 +100,6 @@ namespace Raven.Abstractions.Connection
 			if (data == null)
 				return null;
 			return Convert.ToBase64String(data);
-		}
-
-		public static DateTime? ParseDateTime(string data)
-		{
-			DateTime result;
-			if (DateTime.TryParseExact(data, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
-				return result;
-			else
-				return null;
-		}
-
-		public static string DateTimeToString(DateTime data)
-		{
-			return data.ToString("O", CultureInfo.InvariantCulture);
 		}
 	}
 }
