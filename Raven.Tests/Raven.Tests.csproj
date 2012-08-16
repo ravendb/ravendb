@@ -749,6 +749,7 @@
     <Compile Include="MailingList\TomCabanski.cs" />
     <Compile Include="MailingList\WallaceTurner.cs" />
     <Compile Include="Querying\UsingStronglyTypedDocumentQuery.cs" />
+    <Compile Include="Security\OAuth\ApiKey.cs" />
     <Compile Include="Shard\ShardingFailure.cs" />
     <Compile Include="Storage\Lists\Munin.cs" />
     <Compile Include="Storage\Lists\Esent.cs" />
