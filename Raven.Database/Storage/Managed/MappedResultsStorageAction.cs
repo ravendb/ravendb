@@ -55,29 +55,6 @@ namespace Raven.Storage.Managed
 			storage.MappedResults.Put(key, ms.ToArray());
 		}
 
-		public IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
-		{
-			return getMappedResultsParams.SelectMany(GetMappedResults);
-		}
-
-		public IEnumerable<RavenJObject> GetMappedResults(GetMappedResultsParams getMappedResultsParams)
-		{
-			return storage.MappedResults["ByViewAndReduceKey"].SkipTo(new RavenJObject
-			{
-				{"view", getMappedResultsParams.View},
-				{"reduceKey", getMappedResultsParams.ReduceKey}
-		}).TakeWhile(x => StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("view"), getMappedResultsParams.View) &&
-							  StringComparer.InvariantCultureIgnoreCase.Equals(x.Value<string>("reduceKey"), getMappedResultsParams.ReduceKey))
-				.Select(x =>
-				{
-					var readResult = storage.MappedResults.Read(x);
-					if (readResult == null)
-						return null;
-					return LoadMappedResult(readResult);
-				}).Where(x => x != null);
-
-		}
-
 		private RavenJObject LoadMappedResult(Table.ReadResult readResult)
 		{
 			var key = readResult.Key.Value<string>("reduceKey");

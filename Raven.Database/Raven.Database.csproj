@@ -595,7 +595,6 @@
     <Compile Include="Storage\Esent\TableColumnsCache.cs" />
     <Compile Include="Storage\Esent\TransactionalStorage.cs" />
     <Compile Include="Storage\Esent\TransactionalStorageConfigurator.cs" />
-    <Compile Include="Storage\GetMappedResultsParams.cs" />
     <Compile Include="Storage\IAttachmentsStorageActions.cs" />
     <Compile Include="Storage\IDocumentStorageActions.cs" />
     <Compile Include="Storage\IGeneralStorageActions.cs" />

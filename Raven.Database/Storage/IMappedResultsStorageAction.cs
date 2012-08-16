@@ -13,7 +13,6 @@ namespace Raven.Database.Storage
 	public interface IMappedResultsStorageAction
 	{
 		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
-		IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams);
 		void DeleteMappedResultsForDocumentId(string documentId, string view, HashSet<ReduceKeyAndBucket> removed);
 		void DeleteMappedResultsForView(string view);
 		IEnumerable<MappedResultInfo> GetMappedResultsReduceKeysAfter(string indexName, Guid lastReducedEtag, bool loadData, int take);

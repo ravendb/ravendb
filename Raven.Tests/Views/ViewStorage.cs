@@ -71,7 +71,7 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				var vals = actions.MapRduce.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog", "1")).ToArray();
+				var vals = actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog", "1",100).ToArray();
 				Assert.Equal(2, vals.Length);
 				Assert.Contains("abc", vals[0].ToString());
 				Assert.Contains("ijg", vals[1].ToString());
@@ -95,7 +95,7 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				var strings = actions.MapRduce.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog", "1")).Select(x => x.ToString()).ToArray();
+				var strings = actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog", "1", 100).Select(x => x.ToString()).ToArray();
 				Assert.Equal(2, strings.Length);
 				Assert.Contains("abc", strings[0]);
 				Assert.Contains("def", strings[1]);
@@ -119,7 +119,7 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				var strings = actions.MapRduce.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog", "1")).Select(x => x.ToString()).ToArray();
+				var strings = actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog", "1", 1000).Select(x => x.ToString()).ToArray();
 				Assert.Contains("def", strings[0]);
 			});
 		}
@@ -142,8 +142,8 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				Assert.Empty(actions.MapRduce.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog1", "1")));
-				Assert.Empty(actions.MapRduce.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog2", "1")));
+				Assert.Empty(actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog1", "1",100));
+				Assert.Empty(actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog2", "1",100));
 			});
 		}
 
@@ -164,8 +164,8 @@ namespace Raven.Tests.Views
 
 			transactionalStorage.Batch(actions =>
 			{
-				Assert.NotEmpty(actions.MapRduce.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog1", "1")));
-				Assert.Empty(actions.MapRduce.GetMappedResults(new GetMappedResultsParams("CommentCountsByBlog2", "1")));
+				Assert.NotEmpty(actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog1", "1", 100));
+				Assert.Empty(actions.MapRduce.GetMappedResultsForDebug("CommentCountsByBlog2", "1", 100));
 			});
 		}
 	}

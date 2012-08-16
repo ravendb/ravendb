@@ -77,42 +77,6 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IEnumerable<RavenJObject> GetMappedResults(params GetMappedResultsParams[] getMappedResultsParams)
-		{
-			var optimizedIndexReader = new OptimizedIndexReader<GetMappedResultsParams>(Session, MappedResults, getMappedResultsParams.Length);
-
-			Api.JetSetCurrentIndex(session, MappedResults, "by_reduce_key_and_view_hashed");
-
-			foreach (var item in getMappedResultsParams)
-			{
-				Api.MakeKey(session, MappedResults, item.ViewAndReduceKeyHashed, MakeKeyGrbit.NewKey);
-				if (Api.TrySeek(session, MappedResults, SeekGrbit.SeekEQ) == false)
-					continue;
-
-				Api.MakeKey(session, MappedResults, item.ViewAndReduceKeyHashed, MakeKeyGrbit.NewKey);
-				Api.JetSetIndexRange(session, MappedResults, SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
-				do
-				{
-					optimizedIndexReader.Add(item);
-				} while (Api.TryMoveNext(session, MappedResults));
-			}
-
-			return optimizedIndexReader
-				.Where(item =>
-				{
-					// we need to check that we don't have hash collisions
-					var currentReduceKey = Api.RetrieveColumnAsString(session, MappedResults,
-																	  tableColumnsCache.MappedResultsColumns["reduce_key"]);
-					if (currentReduceKey != item.ReduceKey)
-						return false;
-
-					var currentView = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
-
-					return currentView == item.View;
-				})
-				.Select(item => LoadMappedResults(item.ReduceKey));
-		}
-
 		public void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets)
 		{
 			foreach (var reduceKeysAndBukcet in reduceKeysAndBuckets)

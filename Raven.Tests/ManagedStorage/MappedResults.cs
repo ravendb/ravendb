@@ -20,7 +20,7 @@ namespace Raven.Tests.ManagedStorage
 			{
 				tx.Batch(mutator => mutator.MapRduce.PutMappedResult("test", "users/ayende","ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 
-				tx.Batch(viewer => Assert.NotEmpty(viewer.MapRduce.GetMappedResults(new GetMappedResultsParams("test", "ayende"))));
+				tx.Batch(viewer => Assert.NotEmpty(viewer.MapRduce.GetMappedResultsForDebug("test", "ayende", 100)));
 			}
 		}
 
@@ -35,7 +35,7 @@ namespace Raven.Tests.ManagedStorage
 
 				Assert.NotEmpty(reduceKeyAndBuckets);
 
-				tx.Batch(viewer => Assert.Empty(viewer.MapRduce.GetMappedResults(new GetMappedResultsParams("test", "ayende"))));
+				tx.Batch(viewer => Assert.Empty(viewer.MapRduce.GetMappedResultsForDebug("test", "ayende", 100)));
 			}
 		}
 
@@ -47,7 +47,7 @@ namespace Raven.Tests.ManagedStorage
 				tx.Batch(mutator => mutator.MapRduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 				tx.Batch(mutator => mutator.MapRduce.DeleteMappedResultsForView("test"));
 
-				tx.Batch(viewer => Assert.Empty(viewer.MapRduce.GetMappedResults(new GetMappedResultsParams("test", "ayende"))));
+				tx.Batch(viewer => Assert.Empty(viewer.MapRduce.GetMappedResultsForDebug("test", "ayende", 100)));
 			}
 		}
 
@@ -59,7 +59,7 @@ namespace Raven.Tests.ManagedStorage
 				tx.Batch(mutator => mutator.MapRduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 				tx.Batch(mutator => mutator.MapRduce.PutMappedResult("test", "users/ayende", "ayende", RavenJObject.FromObject(new { Name = "Rahien" })));
 
-				tx.Batch(viewer => Assert.Equal(2, viewer.MapRduce.GetMappedResults(new GetMappedResultsParams("test", "ayende")).Count()));
+				tx.Batch(viewer => Assert.Equal(2, viewer.MapRduce.GetMappedResultsForDebug("test", "ayende", 100).Count()));
 			}
 		}
 
@@ -74,7 +74,7 @@ namespace Raven.Tests.ManagedStorage
 					mutator.MapRduce.PutMappedResult("test", "users/rahien", "ayende", RavenJObject.FromObject(new { Name = "Rahien" }));
 				});
 
-				tx.Batch(viewer => Assert.Equal(2, viewer.MapRduce.GetMappedResults(new GetMappedResultsParams("test", "ayende")).Count()));
+				tx.Batch(viewer => Assert.Equal(2, viewer.MapRduce.GetMappedResultsForDebug("test", "ayende", 100).Count()));
 			}
 		}
 	}
