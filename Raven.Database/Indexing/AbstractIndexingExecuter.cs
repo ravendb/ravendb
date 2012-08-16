@@ -110,6 +110,8 @@ namespace Raven.Database.Indexing
 				if (task == null)
 					return;
 
+				context.UpdateFoundWork();
+
 				log.Debug("Executing {0}", task);
 				foundWork = true;
 				
@@ -165,6 +167,7 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 
+			context.UpdateFoundWork();
 			context.CancellationToken.ThrowIfCancellationRequested();
 
 			using(context.IndexDefinitionStorage.CurrentlyIndexing())
