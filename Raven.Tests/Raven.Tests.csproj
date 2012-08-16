@@ -511,6 +511,9 @@
     <Compile Include="Bugs\WithPrivateProtectedSetter.cs" />
     <Compile Include="Bugs\Zhang\UseMaxForDateTimeTypeInReduce.cs" />
     <Compile Include="Bugs\Zhang\UseMaxForLongTypeInReduce.cs" />
+    <Compile Include="Bundles\CompressionAndEncryption\CompressionAndEncryption.cs" />
+    <Compile Include="Bundles\CompressionAndEncryption\Crud.cs" />
+    <Compile Include="Bundles\CompressionAndEncryption\Indexes.cs" />
     <Compile Include="Bundles\Compression\Compression.cs" />
     <Compile Include="Bundles\Compression\Crud.cs" />
     <Compile Include="Bundles\Compression\Indexes.cs" />
