@@ -104,6 +104,11 @@ namespace Raven.Database.Indexing
 			{
 				if(((DynamicNullObject)value).IsExplicitNull)
 				{
+					var sortOptions = indexDefinition.GetSortOption(name);
+					if(sortOptions != null && sortOptions.Value != SortOptions.None)
+					{
+						yield break; // we don't emit null for sorting	
+					}
 					yield return CreateFieldWithCaching(name, Constants.NullValue, storage,
 					                                    Field.Index.NOT_ANALYZED_NO_NORMS);
 				}

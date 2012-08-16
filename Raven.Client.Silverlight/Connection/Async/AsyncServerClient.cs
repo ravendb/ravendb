@@ -203,6 +203,24 @@ namespace Raven.Client.Silverlight.Connection.Async
 				});
 		}
 
+		public Task<Guid> DirectGetLastEtagAsync(string url)
+		{
+
+			var request = url.Docs(0,1,metadataOnly:true)
+				.NoCache()
+				.ToJsonRequest(this, credentials, convention);
+
+			return request
+				.ReadResponseJsonAsync()
+				.ContinueWith(task =>
+				{
+					var results = ((RavenJArray) task.Result);
+					if(results.Length ==0)
+						return Guid.Empty;
+					return new Guid(results[0].Value<RavenJObject>(Constants.Metadata).Value<string>("@etag"));
+				});
+		}
+
 		private static bool HandleWebExceptionForGetAsync(string key, WebException e)
 		{
 			var httpWebResponse = e.Response as HttpWebResponse;
@@ -1154,23 +1172,6 @@ namespace Raven.Client.Silverlight.Connection.Async
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
 			return replicationInformer.ExecuteWithReplicationAsync(method, url, currentRequest, readStripingBase, operation);
-		}
-
-		public Task<Guid> DirectGetLastEtagAsync(string url)
-		{
-			var request = url.Docs(0, 1, metadataOnly: true)
-			 .NoCache()
-			 .ToJsonRequest(this, credentials, convention);
-
-			return request
-			 .ReadResponseJsonAsync()
-			 .ContinueWith(task =>
-			 {
-				 var results = ((RavenJArray)task.Result);
-				 if (results.Length == 0)
-					 return Guid.Empty;
-				 return new Guid(results[0].Value<RavenJObject>(Constants.Metadata).Value<string>("@etag"));
-			 });
 		}
 	}
 }

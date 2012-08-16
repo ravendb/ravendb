@@ -27,6 +27,8 @@ namespace Raven.Studio.Models
 				.LoadAsync<ReplicationDocument>("Raven/Replication/Destinations")
 				.ContinueOnSuccessInTheUIThread(document =>
 				{
+					if (document == null)
+						return;
 					ReplicationData = document;
 					ReplicationDestinations = new ObservableCollection<ReplicationDestination>(ReplicationData.Destinations);
 				});
@@ -69,6 +71,24 @@ namespace Raven.Studio.Models
 									OnPropertyChanged(() => HasDefaultVersioning);
 								}
 							});
+					}
+
+					if (HasQuotas)
+					{
+						Bundles.Add("Quotas");
+						SelectedBundle.Value = "Quotas";
+					}
+					if (HasReplication)
+					{
+						Bundles.Add("Replication");
+						if (SelectedBundle.Value == null)
+							SelectedBundle.Value = "Replication";
+					}
+					if (HasVersioning)
+					{
+						Bundles.Add("Versioning");
+						if (SelectedBundle.Value == null)
+							SelectedBundle.Value = "Versioning";
 					}
 				});
 		}

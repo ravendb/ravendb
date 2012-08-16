@@ -72,9 +72,6 @@ namespace Raven.Database.Server
 		}
 
 		[ImportMany]
-		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
-
-		[ImportMany]
 		public OrderedPartCollection<IConfigureHttpListener> ConfigureHttpListeners { get; set; }
 
 		public InMemoryRavenConfiguration Configuration
@@ -127,10 +124,7 @@ namespace Raven.Database.Server
 
 			configuration.Container.SatisfyImportsOnce(this);
 
-			foreach (var responder in RequestResponders)
-			{
-				responder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
-			}
+			InitializeRequestResponders(SystemDatabase);
 
 			switch (configuration.AuthenticationMode.ToLowerInvariant())
 			{
@@ -146,6 +140,15 @@ namespace Raven.Database.Server
 			}
 
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
+		}
+
+		private void InitializeRequestResponders(DocumentDatabase documentDatabase)
+		{
+			foreach (var responder in documentDatabase.RequestResponders)
+			{
+				responder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value,
+				                           this);
+			}
 		}
 
 		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
@@ -671,7 +674,7 @@ namespace Raven.Database.Server
 				if (ctx.Request.HttpMethod == "OPTIONS")
 					return false;
 
-				foreach (var requestResponderLazy in RequestResponders)
+				foreach (var requestResponderLazy in currentDatabase.Value.RequestResponders)
 				{
 					var requestResponder = requestResponderLazy.Value;
 					if (requestResponder.WillRespond(ctx))
@@ -837,6 +840,7 @@ namespace Raven.Database.Server
 			{
 				var documentDatabase = new DocumentDatabase(config);
 				documentDatabase.SpinBackgroundWorkers();
+				InitializeRequestResponders(documentDatabase);
 				return documentDatabase;
 			});
 			return true;

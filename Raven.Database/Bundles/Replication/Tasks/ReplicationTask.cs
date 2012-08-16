@@ -550,7 +550,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private string UrlEncodedServerUrl()
 		{
-			return Uri.EscapeDataString(docDb.Configuration.ServerUrl);
+			return Uri.EscapeDataString(docDb.ServerUrl);
 		}
 
 		private ReplicationStrategy[] GetReplicationDestinations()

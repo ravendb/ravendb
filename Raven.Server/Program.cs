@@ -353,14 +353,14 @@ Configuration options:
 			bool? done = null;
 			var actions = new Dictionary<string,Action>
 			{
-				{"cls", () => Console.Clear()},
+				{"cls", TryClearingConsole},
 				{
 					"reset", () =>
 					{
-						Console.Clear();
+						TryClearingConsole();
 						done = true;
 					}
-					},
+				},
 				{
 					"gc", () =>
 					{
@@ -393,6 +393,18 @@ Configuration options:
 				value();
 				if (done != null)
 					return done.Value;
+			}
+		}
+
+		private static void TryClearingConsole()
+		{
+			try
+			{
+				Console.Clear();
+			}
+			catch (IOException)
+			{
+				// redirected output, probably, ignoring
 			}
 		}
 

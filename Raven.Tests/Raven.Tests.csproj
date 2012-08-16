@@ -724,6 +724,8 @@
     <Compile Include="MailingList\StartsWith.cs" />
     <Compile Include="MailingList\StatsTest.cs" />
     <Compile Include="MailingList\Stockholm.cs" />
+    <Compile Include="MailingList\Tobias.cs" />
+    <Compile Include="MailingList\SortOnNullableTests.cs" />
     <Compile Include="MailingList\Vicente.cs" />
     <Compile Include="Patching\AdvancedPatching.cs" />
     <Compile Include="MailingList\Tony.cs" />

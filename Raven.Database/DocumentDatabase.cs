@@ -16,6 +16,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.SignalR;
 using Raven.Database.Util;
@@ -51,6 +52,9 @@ namespace Raven.Database
 {
 	public class DocumentDatabase : IUuidGenerator, IDisposable
 	{
+		[ImportMany]
+		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
+
 		[ImportMany]
 		public OrderedPartCollection<IStartupTask> StartupTasks { get; set; }
 
@@ -1523,6 +1527,18 @@ namespace Raven.Database
 
 		static string productVersion;
 		private volatile bool disposed;
+		public string ServerUrl
+		{
+			get
+			{
+				var serverUrl = Configuration.ServerUrl;
+				if (string.IsNullOrEmpty(Name))
+					return serverUrl;
+				if(serverUrl.EndsWith("/"))
+					return serverUrl + "databases/" + Name;
+				return serverUrl + "/databases/" + Name;
+			}
+		}
 
 		public static string ProductVersion
 		{

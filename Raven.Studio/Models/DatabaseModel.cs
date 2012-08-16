@@ -1,9 +1,8 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Subjects;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Data;
@@ -11,14 +10,12 @@ using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Silverlight.Connection.Async;
-using Raven.Client.Util;
 using Raven.Json.Linq;
 using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using System.Linq;
 using System.Reactive.Linq;
 using Raven.Studio.Extensions;
-using VirtualCollection.VirtualCollection;
 
 namespace Raven.Studio.Models
 {
@@ -40,7 +37,7 @@ namespace Raven.Studio.Models
 		{
 			this.name = name;
 			this.documentStore = documentStore;
-			ReplicationOnline = new Dictionary<string, string>();
+			ReplicationOnline = new ObservableCollection<string>();
 
 			Tasks = new BindableCollection<TaskModel>(x => x.Name)
 			{
@@ -77,6 +74,8 @@ namespace Raven.Studio.Models
 					.GetAsync("Raven/Databases/" + Name)
 					.ContinueOnSuccessInTheUIThread(doc =>
 					{
+						if (doc == null)
+							return;
 						DatabaseDocument = new Observable<DatabaseDocument>
 						{
 							Value = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer().Deserialize
@@ -87,7 +86,7 @@ namespace Raven.Studio.Models
 					});
 		}
 
-		private void UpdateReplicationOnlineStatus()
+		public void UpdateReplicationOnlineStatus()
 		{
 			if (HasReplication == false)
 				return;
@@ -95,42 +94,68 @@ namespace Raven.Studio.Models
 				.LoadAsync<ReplicationDocument>("Raven/Replication/Destinations")
 				.ContinueOnSuccessInTheUIThread(document =>
 				{
-					ReplicationOnline = new Dictionary<string, string>();
+					ReplicationOnline = new ObservableCollection<string>();
 					var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
 					if (asyncServerClient == null)
+						return;
+
+					if (document == null)
 						return;
 
 					foreach (var replicationDestination in document.Destinations)
 					{
 						var destination = replicationDestination;
-						asyncServerClient.DirectGetAsync(replicationDestination.Url,
-						                                 "Raven/Replication/Sources/" + ApplicationModel.Current.Server.Value.Url).
-							ContinueOnSuccessInTheUIThread(doc =>
+						asyncServerClient.CreateRequest("GET", "/replication/info")
+							.ReadResponseJsonAsync()
+							.ContinueWith(task =>
 							{
-								var sourceReplicationInformation = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.
-									CreateSerializer().Deserialize
-									<SourceReplicationInformation>(new RavenJTokenReader(doc.DataAsJson));
-								if (sourceReplicationInformation == null)
-									ReplicationOnline.Add(destination.Url, "Offline");
-								else
-								{
-									asyncServerClient.DirectGetLastEtagAsync(ApplicationModel.Current.Server.Value.Url)
-										.ContinueOnSuccessInTheUIThread(etag =>
+								if (task.IsFaulted)
+									throw new InvalidOperationException("Could not get replication info");
+
+								var url = task.Result.SelectToken("Self").ToString();
+								var lastEtag = task.Result.SelectToken("MostRecentDocumentEtag").ToString();
+
+								if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(lastEtag))
+									throw new Exception("Replication info is not as expected");
+
+								asyncServerClient.DirectGetAsync(destination.Url + "/databases/" + destination.Database, "Raven/Replication/Sources/" + url).
+									ContinueOnSuccessInTheUIThread(data =>
+									{
+										if (data == null)
 										{
-											if(etag == sourceReplicationInformation.LastDocumentEtag)
-												ReplicationOnline.Add(destination.Url, "Updated");
+											ReplicationOnline.Add(destination.Url + " - Offline");
+											OnPropertyChanged(() => ReplicationOnline);
+											return;
+										}
+
+										var sourceReplicationInformation = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.
+											CreateSerializer().Deserialize
+											<SourceReplicationInformation>(new RavenJTokenReader(data.DataAsJson));
+										if (sourceReplicationInformation == null)
+											ReplicationOnline.Add(destination.Url + " - Offline");
+										else
+										{
+
+											if (lastEtag == sourceReplicationInformation.LastDocumentEtag.ToString())
+												ReplicationOnline.Add(destination.Url + " - Updated");
 											else
-												ReplicationOnline.Add(destination.Url, "Online");
-										});
-								}
-							})
-							.Catch(_ => ReplicationOnline.Add(destination.Url, "Offline"));
+												ReplicationOnline.Add(destination.Url + " - Online");
+
+										}
+										OnPropertyChanged(() => ReplicationOnline);
+									})
+									.Catch(_ =>
+									{
+										ReplicationOnline.Add(destination.Url + " - Offline");
+										OnPropertyChanged(() => ReplicationOnline);
+									});
+							});
 					}
 				}).Catch();
 
 		}
 
-		public Dictionary<string, string> ReplicationOnline { get; set; } 
+		public ObservableCollection<string> ReplicationOnline { get; set; } 
 
 		public bool HasReplication
 		{

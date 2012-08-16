@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using Raven.Abstractions.Data;
@@ -16,10 +17,18 @@ namespace Raven.Studio.Models
 
 		public BaseBundlesModel() 
 		{
+			Bundles = new ObservableCollection<string>();
 			ReplicationDestinations = new ObservableCollection<ReplicationDestination>();
 			VersioningConfigurations = new ObservableCollection<VersioningConfiguration>();
+			SelectedBundle = new Observable<string>();
 
 			VersioningConfigurations.CollectionChanged += (sender, args) => OnPropertyChanged(() => HasDefaultVersioning);
+			SelectedBundle.PropertyChanged += (sender, args) =>
+			{
+				OnPropertyChanged(() => QuotasSelected);
+				OnPropertyChanged(() => ReplicationSelected);
+				OnPropertyChanged(() => VersioningSelected);
+			};
 		}
 
 		public ReplicationDocument ReplicationData { get; set; }
@@ -29,6 +38,8 @@ namespace Raven.Studio.Models
 		public ReplicationDestination SelectedReplication { get; set; }
 		public VersioningConfiguration SeletedVersioning { get; set; }
 		public ObservableCollection<ReplicationDestination> ReplicationDestinations { get; set; }
+		public ObservableCollection<string> Bundles { get; set; }
+		public Observable<string> SelectedBundle { get; set; }
 
 		public virtual bool HasQuotas { get; set; }
 		public virtual bool HasReplication { get; set; }
@@ -36,6 +47,21 @@ namespace Raven.Studio.Models
 		public bool HasDefaultVersioning
 		{
 			get { return VersioningConfigurations.Any(configuration => configuration.Id == "Raven/Versioning/DefaultConfiguration"); }
+		}
+
+		public bool QuotasSelected
+		{
+			get { return SelectedBundle.Value == "Quotas"; }
+		}
+
+		public bool ReplicationSelected
+		{
+			get { return SelectedBundle.Value == "Replication"; }
+		}
+
+		public bool VersioningSelected
+		{
+			get { return SelectedBundle.Value == "Versioning"; }
 		}
 
 		public virtual int MaxSize { get; set; }
