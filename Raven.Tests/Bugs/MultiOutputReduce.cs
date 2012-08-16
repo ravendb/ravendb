@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Raven.Client.Indexes;
 using Xunit;
@@ -9,47 +10,48 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanGetCorrectResultsFromAllItems()
 		{
-			using (var store = NewDocumentStore())
+			for (int xx = 0; xx < 50; xx++)
 			{
-				new Orders_Search().Execute(store);
-
-				using (var session = store.OpenSession())
+				using (var store = NewDocumentStore())
 				{
-					for (int i = 0; i < 3; i++)
+					new Orders_Search().Execute(store);
+
+					for (int i = 0; i < 12; i++)
 					{
-						var customerId = "customers/" + i;
-						session.Store(new Customer
+						using (var session = store.OpenSession())
 						{
-							Id = customerId,
-							Name = "oren"
-						});
+							var customerId = "customers/" + i;
+							session.Store(new Customer
+							{
+								Id = customerId,
+								Name = "oren"
+							});
 
-						session.Store(new Order
-						{
-							CustomerId = customerId,
-							Id = "orders/1"
-						});
-						session.Store(new Order
-						{
-							CustomerId = customerId,
-							Id = "orders/2"
-						});
-
+							for (int j = 0; j < 5; j++)
+							{
+								session.Store(new Order
+								{
+									CustomerId = customerId,
+									Id = "orders/" + i +"/"+j
+								});
+							}
+							
+							session.SaveChanges();
+						}
 					}
-					session.SaveChanges();
-				}
 
-				using (var session = store.OpenSession())
-				{
-					var searchResults = session.Query<SearchResult, Orders_Search>()
-						.Customize(x => x.WaitForNonStaleResults())
-						.Where(x => x.OrderId != null)
-						.ToList();
-
-					Assert.Equal(6, searchResults.Count);
-					foreach (var searchResult in searchResults)
+					using (var session = store.OpenSession())
 					{
-						Assert.Equal("oren", searchResult.CustomerName);
+						var searchResults = session.Query<SearchResult, Orders_Search>()
+							.Customize(x => x.WaitForNonStaleResults())
+							.Where(x => x.OrderId != null)
+							.ToList();
+
+						Assert.Equal(12*5, searchResults.Count);
+						foreach (var searchResult in searchResults)
+						{
+							Assert.Equal("oren", searchResult.CustomerName);
+						}
 					}
 				}
 			}
