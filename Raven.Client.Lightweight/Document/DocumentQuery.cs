@@ -31,7 +31,7 @@ namespace Raven.Client.Document
 #if !NET35
 			, IAsyncDatabaseCommands asyncDatabaseCommands
 #endif
-			, string indexName, string[] projectionFields, IDocumentQueryListener[] queryListeners)
+, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners)
 			: base(session
 #if !SILVERLIGHT
 			, databaseCommands
@@ -39,7 +39,7 @@ namespace Raven.Client.Document
 #if !NET35
 			, asyncDatabaseCommands
 #endif
-			, indexName, projectionFields, queryListeners)
+			, indexName, fieldsToFetch, projectionFields, queryListeners)
 		{
 		}
 
@@ -58,15 +58,24 @@ namespace Raven.Client.Document
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		public IDocumentQuery<TProjection> SelectFields<TProjection>()
 		{
-			return SelectFields<TProjection>(typeof (TProjection).GetProperties().Select(x => x.Name).ToArray());
+			var props = typeof (TProjection).GetProperties().Select(x => x.Name).ToArray();
+			return SelectFields<TProjection>(props, props);
 		}
 
 		/// <summary>
 		/// Selects the specified fields directly from the index
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
-		/// <param name="fields">The fields.</param>
-		public virtual IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields)
+		public IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
+		{
+			return SelectFields<TProjection>(fields, fields);
+		}
+
+		/// <summary>
+		/// Selects the specified fields directly from the index
+		/// </summary>
+		/// <typeparam name="TProjection">The type of the projection.</typeparam>
+		public virtual IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
 		{
 			var documentQuery = new DocumentQuery<TProjection>(theSession,
 #if !SILVERLIGHT
@@ -75,7 +84,9 @@ namespace Raven.Client.Document
 #if !NET35
 			                                                   theAsyncDatabaseCommands,
 #endif
-			                                                   indexName, fields,
+			                                                   indexName, 
+															   fields,
+															   projections,
 			                                                   queryListeners)
 			{
 				pageSize = pageSize,

@@ -72,9 +72,14 @@ namespace Raven.Client.Document
 		private KeyValuePair<string, string> lastEquality;
 
 		/// <summary>
-		///   The list of fields to project directly from the index
+		///   The list of fields to project directly from the results
 		/// </summary>
 		protected readonly string[] projectionFields;
+
+		/// <summary>
+		///   The list of fields to project directly from the index on the server
+		/// </summary>
+		protected readonly string[] fieldsToFetch;
 
 		/// <summary>
 		/// The query listeners for this query
@@ -224,9 +229,10 @@ namespace Raven.Client.Document
 		protected AbstractDocumentQuery(InMemoryDocumentSessionOperations theSession,
 									 IDatabaseCommands databaseCommands,
 									 string indexName,
+									 string[] fieldsToFetch,
 									 string[] projectionFields,
 									 IDocumentQueryListener[] queryListeners)
-			: this(theSession, databaseCommands, null, indexName, projectionFields, queryListeners)
+			: this(theSession, databaseCommands, null, indexName, fieldsToFetch, projectionFields, queryListeners)
 		{
 		}
 #endif
@@ -242,6 +248,7 @@ namespace Raven.Client.Document
 									 IAsyncDatabaseCommands asyncDatabaseCommands,
 #endif
 									 string indexName,
+									 string [] fieldsToFetch,
 									 string[] projectionFields,
 									 IDocumentQueryListener[] queryListeners)
 		{
@@ -249,6 +256,7 @@ namespace Raven.Client.Document
 			this.theDatabaseCommands = databaseCommands;
 #endif
 			this.projectionFields = projectionFields;
+			this.fieldsToFetch = fieldsToFetch;
 			this.queryListeners = queryListeners;
 			this.indexName = indexName;
 			this.theSession = theSession;
@@ -1436,7 +1444,7 @@ If you really want to do in memory filtering on the data returned from the query
 					Cutoff = cutoff,
 					CutoffEtag = cutoffEtag,
 					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-					FieldsToFetch = projectionFields,
+					FieldsToFetch = fieldsToFetch,
 					Latitude = lat,
 					Longitude = lng,
 					Radius = radius,
@@ -1455,7 +1463,7 @@ If you really want to do in memory filtering on the data returned from the query
 				Cutoff = cutoff,
 				CutoffEtag = cutoffEtag,
 				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
-				FieldsToFetch = projectionFields,
+				FieldsToFetch = fieldsToFetch,
 				DefaultField = defaultField,
 				DefaultOperator = defaultOperator
 			};

@@ -25,12 +25,12 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			IDatabaseCommands databaseCommands,
 #endif
-			IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] projectionFields, IDocumentQueryListener[] queryListeners)
+			IAsyncDatabaseCommands asyncDatabaseCommands, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners)
 			: base(session, 
 #if !SILVERLIGHT
 			databaseCommands, 
 #endif
-			asyncDatabaseCommands, indexName, projectionFields, queryListeners)
+			asyncDatabaseCommands, indexName, fieldsToFetch, projectionFields, queryListeners)
 		{
 		}
 
@@ -576,8 +576,16 @@ namespace Raven.Client.Document
 		/// Selects the specified fields directly from the index
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
-		/// <param name="fields">The fields.</param>
-		public virtual IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
+		public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
+		{
+			return SelectFields<TProjection>(fields, fields);
+		}
+
+		/// <summary>
+		/// Selects the specified fields directly from the index
+		/// </summary>
+		/// <typeparam name="TProjection">The type of the projection.</typeparam>
+		public virtual IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
 		{
 			var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(theSession,
 #if !SILVERLIGHT
@@ -586,7 +594,7 @@ namespace Raven.Client.Document
 #if !NET35
 																		 theAsyncDatabaseCommands,
 #endif
-																		 indexName, fields, queryListeners)
+																		 indexName, fields, projections, queryListeners)
 										{
 											pageSize = pageSize,
 											theQueryText = new StringBuilder(theQueryText.ToString()),

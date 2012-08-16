@@ -16,6 +16,7 @@ using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Linq
 {
@@ -921,7 +922,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					break;
 				case ExpressionType.MemberAccess:
 					MemberExpression memberExpression = ((MemberExpression)body);
-					AddToFieldsToFetch(memberExpression.Member.Name, memberExpression.Member.Name);
+					AddToFieldsToFetch(memberExpression.ToPropertyPath('_'), memberExpression.Member.Name);
 					if(insideSelect == false)
 					{
 						FieldsToRename[memberExpression.Member.Name] = null;
@@ -1139,7 +1140,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 #if !SILVERLIGHT
 		private object ExecuteQuery<TProjection>()
 		{
-			var finalQuery = ((IDocumentQuery<T>)luceneQuery).SelectFields<TProjection>(FieldsToFetch.ToArray());
+			var renamedFields = FieldsToFetch.Select(field =>
+			{
+				string value;
+				if (FieldsToRename.TryGetValue(field, out value))
+					return value;
+				return field;
+			}).ToArray();
+
+			var finalQuery = ((IDocumentQuery<T>) luceneQuery).SelectFields<TProjection>(FieldsToFetch.ToArray(), renamedFields);
 
 
 			if (FieldsToRename.Count > 0)
