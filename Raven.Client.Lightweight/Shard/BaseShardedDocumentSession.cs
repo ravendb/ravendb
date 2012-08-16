@@ -5,6 +5,7 @@ using System.Text;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Extensions.Internal;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
