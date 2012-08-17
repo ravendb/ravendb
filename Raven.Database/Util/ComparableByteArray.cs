@@ -24,6 +24,14 @@ namespace Raven.Database.Util
 
 		public int CompareTo(byte[] otherBuffer)
 		{
+			if (inner == null && otherBuffer == null)
+				return 0;
+			if (inner == null)
+				return 1;
+			if (otherBuffer == null)
+				return -1;
+
+
 			if (inner.Length != otherBuffer.Length)
 				return inner.Length - otherBuffer.Length;
 			for (int i = 0; i < inner.Length; i++)
