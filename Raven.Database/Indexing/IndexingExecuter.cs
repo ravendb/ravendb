@@ -115,35 +115,34 @@ namespace Raven.Database.Indexing
 			{
 				if (operationCancelled == false && jsonDocs != null && jsonDocs.Length > 0)
 				{
-					var last = jsonDocs.Last();
+					var last = jsonDocs.OrderByDescending(x => new ComparableByteArray(x.Etag.Value.ToByteArray())).First();
 					
-					Debug.Assert(last.Etag != null);
-					Debug.Assert(last.LastModified != null);
 
 					var lastEtag = last.Etag.Value;
 					var lastModified = last.LastModified.Value;
 
-					var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
+					if(log.IsDebugEnabled)
+					{
+						log.Debug("Aftering indexing {0} documents, the new last etag for is: {1} for {2}",
+						          jsonDocs.Length,
+						          lastEtag,
+								  string.Join(", ", indexesToWorkOn.Select(x => x.IndexName))
+							);
+					}
+
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed documents
 					transactionalStorage.Batch(actions =>
 					{
 						foreach (var indexToWorkOn in indexesToWorkOn)
 						{
-							MarkIndexes(indexToWorkOn, lastIndexedEtag, actions, lastEtag, lastModified);
+							actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
 						}
 					});
 
 					autoTuner.AutoThrottleBatchSize(jsonDocs.Length, jsonDocs.Sum(x => x.SerializedSizeOnDisk), indexingDuration);
 				}
 			}
-		}
-
-		private void MarkIndexes(IndexToWorkOn indexToWorkOn, ComparableByteArray lastIndexedEtag, IStorageActionsAccessor actions, Guid lastEtag, DateTime lastModified)
-		{
-			if (new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray()).CompareTo(lastIndexedEtag) > 0)
-				return;
-			actions.Indexing.UpdateLastIndexed(indexToWorkOn.IndexName, lastEtag, lastModified);
 		}
 
 		private IEnumerable<Tuple<IndexToWorkOn, IndexingBatch>> FilterIndexes(IList<IndexToWorkOn> indexesToWorkOn, JsonDocument[] jsonDocs)
