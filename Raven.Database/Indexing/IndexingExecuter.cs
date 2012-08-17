@@ -18,6 +18,7 @@ using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Raven.Database.Util;
 using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
