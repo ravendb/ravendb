@@ -6,6 +6,7 @@ using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Database.Extensions;
 using Raven.Client.Linq;
+using Raven.Tests.Bugs;
 
 namespace Raven.Tryouts
 {
@@ -13,46 +14,9 @@ namespace Raven.Tryouts
 	{
 		public static void Main()
 		{
-			using(var store = new EmbeddableDocumentStore
+			using (var x = new MultiOutputReduce())
 			{
-				RunInMemory = true,
-				UseEmbeddedHttpServer = true
-			}.Initialize())
-			{
-				new PopulationByState().Execute(store);
-
-				for (int aa = 0; aa < 1000; aa++)
-				{
-					using (var session = store.OpenSession())
-					{
-						for (int i = 0; i < 80; i++)
-						{
-							session.Store(new Person
-							{
-								State = i % 2 == 0 ? "TX" : "CA"
-							});
-						}
-						session.SaveChanges();
-					}
-
-					var sp = Stopwatch.StartNew();
-					using (var session = store.OpenSession())
-					{
-
-						var q = session.Query<Population, PopulationByState>()
-							.Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(10)))
-							.ToList();
-
-						foreach (var population in q)
-						{
-							Console.WriteLine(population);
-						}
-					}
-					Console.WriteLine("Reduced in {0:#,#} ms",sp.ElapsedMilliseconds);
-
-					Console.WriteLine("Press key to continue");
-					Console.ReadKey();
-				}
+				x.CanGetCorrectResultsFromAllItems();
 			}
 
 		}
@@ -76,11 +40,11 @@ namespace Raven.Tryouts
 			public PopulationByState()
 			{
 				Map = people => from person in people
-				                select new { person.State, Count = 1 };
+								select new { person.State, Count = 1 };
 				Reduce = results => from result in results
-				                    group result by result.State
-				                    into g
-				                    select new { State = g.Key, Count = g.Sum(x => x.Count) };
+									group result by result.State
+										into g
+										select new { State = g.Key, Count = g.Sum(x => x.Count) };
 			}
 		}
 	}
