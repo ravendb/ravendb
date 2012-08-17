@@ -737,7 +737,8 @@
   <!-- LayoutRoot Grid Style -->
   <Style x:Key="LayoutRootGridStyle" TargetType="Grid">
 	<Setter Property="Background" Value="#FFFFFFFF"/>
-		<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
+<!--		<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>-->
+		<Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
 	</Style>
 
   <!-- Content Border Style -->
@@ -2235,7 +2236,6 @@
 
 	<Style x:Key="Style_ListBoxItem_Tabs" TargetType="ListBoxItem">
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
-		<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ListBoxItem">
@@ -2327,7 +2327,6 @@
 	<Style x:Key="Style_ListBoxItem_RadioButtons" TargetType="ListBoxItem">
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
 		<Setter Property="HorizontalAlignment" Value="Stretch"/>
-		<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="ListBoxItem">
@@ -2483,7 +2482,6 @@
 		<Setter Property="VerticalContentAlignment" Value="Center"/>
 		<Setter Property="HorizontalContentAlignment" Value="Left"/>
 		<Setter Property="Padding" Value="2"/>
-		<Setter Property="TextOptions.TextHintingMode" Value="Animated"/>
 		<Setter Property="Template">
 			<Setter.Value>
 				<ControlTemplate TargetType="HyperlinkButton">
