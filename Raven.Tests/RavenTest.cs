@@ -98,9 +98,9 @@ namespace Raven.Tests
 
 		}
 
-		static public void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore)
+		static public void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore, bool debug = true)
 		{
-			if (Debugger.IsAttached == false)
+			if (debug && Debugger.IsAttached == false)
 				return;
 
 			documentStore.DatabaseCommands.Put("Pls Delete Me", null,
@@ -117,7 +117,7 @@ namespace Raven.Tests
 				do
 				{
 					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && Debugger.IsAttached);
+				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug  == false || Debugger.IsAttached));
 			}
 		}
 
