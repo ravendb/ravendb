@@ -70,7 +70,9 @@ namespace Raven.Storage.Managed
 			return storage.ScheduleReductions["ByView"].SkipTo(new RavenJObject
 			{
 				{ "view", name }
-			}).Any();
+			})
+			.TakeWhile(token => string.Equals(name, token.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase))
+			.Any();
 		}
 
 		public bool IsMapStale(string name)
