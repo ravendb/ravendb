@@ -11,7 +11,7 @@ namespace Raven.Database.Queries
 {
 	public static class FacetedQueryRunnerExtensions
 	{
-		public static IDictionary<string, IEnumerable<FacetValue>> ExecuteGetTermsQuery(this DocumentDatabase self,
+		public static FacetResults ExecuteGetTermsQuery(this DocumentDatabase self,
 			string index, IndexQuery query, string facetSetupDoc)
 		{
 			return new FacetedQueryRunner(self).GetFacets(index, query, facetSetupDoc);

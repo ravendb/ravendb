@@ -348,7 +348,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc
 		/// </summary>
-		public Task<IDictionary<string, IEnumerable<FacetValue>>> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc)
+		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc)
 		{
 			var requestUri = url + string.Format("/facets/{0}?facetDoc={1}&query={2}",
 			Uri.EscapeUriString(index),
@@ -362,7 +362,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 				.ContinueWith(task =>
 				{
 					var json = (RavenJObject)task.Result;
-					return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
+					return json.JsonDeserialization<FacetResults>();
 				});
 		}
 

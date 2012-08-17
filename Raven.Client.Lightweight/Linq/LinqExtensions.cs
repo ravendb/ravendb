@@ -28,7 +28,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document
 		/// </summary>
-		public static IDictionary<string, IEnumerable<FacetValue>> ToFacets<T>(this IQueryable<T> queryable, string facetDoc)
+		public static FacetResults ToFacets<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.ToString();
@@ -40,7 +40,7 @@ namespace Raven.Client.Linq
 #endif
 
 #if !NET_3_5 && !SILVERLIGHT
-		public static Lazy<IDictionary<string, IEnumerable<FacetValue>>> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
+		public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.ToString();
@@ -48,7 +48,7 @@ namespace Raven.Client.Linq
 			var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.IndexQueried, facetDoc, new IndexQuery { Query = query });
 
 			var documentSession = ((DocumentSession)ravenQueryInspector.Session);
-			return documentSession.AddLazyOperation<IDictionary<string, IEnumerable<FacetValue>>>(lazyOperation, null);
+			return documentSession.AddLazyOperation<FacetResults>(lazyOperation, null);
 		}
 #endif
 
@@ -59,7 +59,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document
 		/// </summary>
-		public static Task<IDictionary<string, IEnumerable<FacetValue>>> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetDoc)
+		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetDoc)
 		{
 			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
 			var query = ravenQueryInspector.ToString();
