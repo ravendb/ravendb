@@ -22,7 +22,7 @@ namespace Raven.Database.Storage
 
 		void ScheduleReductions(string view, int level, IEnumerable<ReduceKeyAndBucket> reduceKeysAndBuckets);
 		IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take, List<object> itemsToDelete);
-		void DeleteScheduledReduction(List<object> itemsToDelete);
+		ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete);
 		void PutReducedResult(string name, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
 		void RemoveReduceResults(string indexName, int level, string reduceKey, int sourceBucket);
 	}
@@ -59,6 +59,12 @@ namespace Raven.Database.Storage
 				return (Bucket*397) ^ (ReduceKey != null ? ReduceKey.GetHashCode() : 0);
 			}
 		}
+	}
+
+	public class ScheduledReductionInfo
+	{
+		public DateTime Timestamp { get; set; }
+		public Guid Etag { get; set; }
 	}
 
 	public class MappedResultInfo

@@ -9,15 +9,16 @@ using System.IO;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Json.Linq;
-using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 using System.Linq;
-using Raven.Database.Json;
+using Table = Raven.Munin.Table;
 
 namespace Raven.Storage.Managed
 {
@@ -133,24 +134,42 @@ namespace Raven.Storage.Managed
 		{
 			foreach (var reduceKeysAndBukcet in reduceKeysAndBuckets)
 			{
+				var etag = generator.CreateSequentialUuid().ToByteArray();
 				storage.ScheduleReductions.UpdateKey(new RavenJObject
 					{
 						{"view", view},
 						{"reduceKey", reduceKeysAndBukcet.ReduceKey},
 						{"bucket", reduceKeysAndBukcet.Bucket},
 						{"level", level},
-						// every item in this collection has to be unique
-						{"unique", Guid.NewGuid().ToByteArray()}
+						{"etag", etag},
+						{"timestamp", SystemTime.UtcNow}
 					});
 			}
 		}
 
-		public void DeleteScheduledReduction(List<object> itemsToDelete)
+		public ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete)
 		{
+			var result = new ScheduledReductionInfo();
+			var hasResult = false;
+			var currentEtagBinary = Guid.Empty.ToByteArray();
 			foreach (RavenJToken token in itemsToDelete)
 			{
+				var readResult = storage.ScheduleReductions.Read(token);
+				if(readResult == null)
+					continue;
+
+				var etagBinary = readResult.Key.Value<byte[]>("etag");
+				if (new ComparableByteArray(etagBinary).CompareTo(currentEtagBinary) > 0)
+				{
+					hasResult = true;
+					var timestamp = readResult.Key.Value<DateTime>("timestamp");
+					result.Etag = etagBinary.TransfromToGuidWithProperSorting();
+					result.Timestamp = timestamp;
+				}
+
 				storage.ScheduleReductions.Remove(token);
 			}
+			return hasResult ? result : null;
 		}
 
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take, List<object> itemsToDelete)

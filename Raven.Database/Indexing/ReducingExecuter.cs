@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Database.Json;
 using Raven.Database.Storage;
-using Raven.Database.Tasks;
 using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
@@ -22,24 +21,25 @@ namespace Raven.Database.Indexing
 		protected void HandleReduceForIndex(IndexToWorkOn indexToWorkOn)
 		{
 			var viewGenerator = context.IndexDefinitionStorage.GetViewGenerator(indexToWorkOn.IndexName);
-			if(viewGenerator == null)
+			if (viewGenerator == null)
 				return;
 			TimeSpan reduceDuration = TimeSpan.Zero;
-			List<MappedResultInfo> persistedResults = null;
+			int totalCount = 0;
+			int totalSize = 0;
 			bool operationCanceled = false;
 			var itemsToDelete = new List<object>();
 			try
 			{
 				var sw = Stopwatch.StartNew();
-				for (int i = 0; i< 3; i++)
+				for (int i = 0; i < 3; i++)
 				{
 					var level = i;
 					transactionalStorage.Batch(actions =>
 					{
 						context.CancellationToken.ThrowIfCancellationRequested();
-						
+
 						var sp = Stopwatch.StartNew();
-						persistedResults = actions.MapReduce.GetItemsToReduce
+						var persistedResults = actions.MapReduce.GetItemsToReduce
 							(
 								take: context.CurrentNumberOfItemsToReduceInSingleBatch,
 								level: level,
@@ -47,6 +47,9 @@ namespace Raven.Database.Indexing
 								itemsToDelete: itemsToDelete
 							)
 							.ToList();
+
+						totalCount += persistedResults.Count;
+						totalSize += persistedResults.Sum(x => x.Size);
 
 						if (log.IsDebugEnabled)
 						{
@@ -59,26 +62,26 @@ namespace Raven.Database.Indexing
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 
-						var requiredReduceNextTime = persistedResults.Select(x=>new ReduceKeyAndBucket(x.Bucket, x.ReduceKey)).Distinct().ToArray();
+						var requiredReduceNextTime = persistedResults.Select(x => new ReduceKeyAndBucket(x.Bucket, x.ReduceKey)).Distinct().ToArray();
 						foreach (var mappedResultInfo in requiredReduceNextTime)
 						{
-							actions.MapReduce.RemoveReduceResults(indexToWorkOn.IndexName, level +1, mappedResultInfo.ReduceKey, mappedResultInfo.Bucket);
+							actions.MapReduce.RemoveReduceResults(indexToWorkOn.IndexName, level + 1, mappedResultInfo.ReduceKey, mappedResultInfo.Bucket);
 						}
-						if(level != 2)
+						if (level != 2)
 						{
 							var reduceKeysAndBukcets = requiredReduceNextTime
-								.Select(x => new ReduceKeyAndBucket(x.Bucket/1024, x.ReduceKey))
+								.Select(x => new ReduceKeyAndBucket(x.Bucket / 1024, x.ReduceKey))
 								.Distinct()
 								.ToArray();
 							actions.MapReduce.ScheduleReductions(indexToWorkOn.IndexName, level + 1, reduceKeysAndBukcets);
 						}
 
 						var results = persistedResults
-							.Where(x=>x.Data != null)
-							.GroupBy(x => x.Bucket, x=> JsonToExpando.Convert(x.Data))
+							.Where(x => x.Data != null)
+							.GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
 							.ToArray();
 						var reduceKeys = new HashSet<string>(persistedResults.Select(x => x.ReduceKey),
-						                                     StringComparer.InvariantCultureIgnoreCase);
+															 StringComparer.InvariantCultureIgnoreCase);
 						context.ReducedPerSecIncreaseBy(results.Length);
 
 						context.CancellationToken.ThrowIfCancellationRequested();
@@ -90,47 +93,36 @@ namespace Raven.Database.Indexing
 				}
 				reduceDuration = sw.Elapsed;
 			}
-			catch(OperationCanceledException)
+			catch (OperationCanceledException)
 			{
 				operationCanceled = true;
 			}
 			finally
 			{
-				if (operationCanceled == false && persistedResults != null && persistedResults.Count > 0)
+				if (operationCanceled == false)
 				{
-					var lastByEtag = GetLastByEtag(persistedResults);
-					var lastEtag = lastByEtag.Etag;
-
-					var lastIndexedEtag = new ComparableByteArray(lastEtag.ToByteArray());
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed mapped results
 					transactionalStorage.Batch(actions =>
 					{
-						actions.MapReduce.DeleteScheduledReduction(itemsToDelete);
-						if (new ComparableByteArray(indexToWorkOn.LastIndexedEtag.ToByteArray()).CompareTo(lastIndexedEtag) <= 0)
-						{
-							actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexName, lastByEtag.Etag, lastByEtag.Timestamp);
-						}
-					});
+						var latest= actions.MapReduce.DeleteScheduledReduction(itemsToDelete);
 
-					autoTuner.AutoThrottleBatchSize(persistedResults.Count, persistedResults.Sum(x => x.Size), reduceDuration);
+						if(latest == null)
+							return;
+						actions.Indexing.UpdateLastReduced(indexToWorkOn.IndexName, latest.Etag, latest.Timestamp);
+					});
+					autoTuner.AutoThrottleBatchSize(totalCount, totalSize, reduceDuration);
 				}
 			}
 		}
 
 
-// ReSharper disable ParameterTypeCanBeEnumerable.Local
-		private static MappedResultInfo GetLastByEtag(List<MappedResultInfo> reduceKeyAndEtags)
-// ReSharper restore ParameterTypeCanBeEnumerable.Local
+		private static MappedResultInfo GetLastByTimestamp(ICollection<MappedResultInfo> reduceKeyAndEtags)
 		{
-			// the last item is either the first or the last
+			if (reduceKeyAndEtags == null || reduceKeyAndEtags.Count == 0)
+				return null;
 
-			var first = reduceKeyAndEtags.First();
-			var last = reduceKeyAndEtags.Last();
-
-			if (new ComparableByteArray(first.Etag.ToByteArray()).CompareTo(new ComparableByteArray(last.Etag.ToByteArray())) < 0)
-				return last;
-			return first;
+			return reduceKeyAndEtags.OrderByDescending(x => x.Timestamp).First();
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
@@ -154,7 +146,7 @@ namespace Raven.Database.Indexing
 			return new IndexToWorkOn
 			{
 				IndexName = indexesStat.Name,
-				LastIndexedEtag = indexesStat.LastReducedEtag ?? Guid.Empty
+				LastIndexedEtag = Guid.Empty
 			};
 		}
 

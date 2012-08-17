@@ -51,14 +51,10 @@ namespace Raven.Storage.Esent.StorageActions
 			});
 		}
 
-		public void DeleteAll()
+		public IEnumerable<byte[]> GetSortedBookmarks()
 		{
 			SortPrimaryKeys();
-			foreach (var primaryKeyIndex in primaryKeyIndexes)
-			{
-				Api.JetGotoBookmark(session, table, primaryKeyIndex.Buffer, primaryKeyIndex.Buffer.Length);
-				Api.JetDelete(session, table);
-			}
+			return primaryKeyIndexes.Select(x => x.Buffer);
 		}
 
 		public IEnumerable<TResult> Select<TResult>(Func<T,TResult> func)

@@ -14,8 +14,10 @@ using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using System.Linq;
+using Raven.Munin;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -106,12 +108,26 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public void DeleteScheduledReduction(List<object> itemsToDelete)
+		public ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete)
 		{
-			foreach (OptimizedIndexReader reader in itemsToDelete)
+			var hasResult = false;
+			var result = new ScheduledReductionInfo();
+			var currentEtagBinary = Guid.Empty.ToByteArray();
+			foreach (var sortedBookmark in itemsToDelete.Cast<OptimizedIndexReader>().SelectMany(reader => reader.GetSortedBookmarks()))
 			{
-				reader.DeleteAll();
+				Api.JetGotoBookmark(session, ScheduledReductions, sortedBookmark, sortedBookmark.Length);
+				var etagBinary = Api.RetrieveColumn(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["etag"]);
+				if( new ComparableByteArray(etagBinary).CompareTo(currentEtagBinary) > 0)
+				{
+					hasResult = true;
+					var timestamp = Api.RetrieveColumnAsDateTime(session, ScheduledReductions, tableColumnsCache.ScheduledReductionColumns["timestamp"]).Value;
+					result.Etag = etagBinary.TransfromToGuidWithProperSorting();
+					result.Timestamp = timestamp;
+				}
+
+				Api.JetDelete(session, ScheduledReductions);
 			}
+			return hasResult ? result : null;
 		}
 
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(string index, int level, int take, List<object> itemsToDelete)
