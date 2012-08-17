@@ -14,6 +14,7 @@ namespace Raven.Tryouts
 	{
 		public static void Main()
 		{
+			IOExtensions.DeleteDirectory("Logs");
 			using (var x = new MultiOutputReduce())
 			{
 				x.CanGetCorrectResultsFromAllItems();
