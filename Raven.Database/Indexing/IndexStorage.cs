@@ -354,10 +354,10 @@ namespace Raven.Database.Indexing
 			Index value;
 			if (indexes.TryGetValue(name, out value) == false)
 			{
-				log.Info("Ignoring delete for non existing index {0}", name);
+				log.Debug("Ignoring delete for non existing index {0}", name);
 				return;
 			}
-			log.Info("Deleting index {0}", name);
+			log.Debug("Deleting index {0}", name);
 			value.Dispose();
 			Index ignored;
 			var dirOnDisk = Path.Combine(path, MonoHttpUtility.UrlEncode(name));
@@ -374,7 +374,7 @@ namespace Raven.Database.Indexing
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)
 		{
 			var encodedName = IndexDefinitionStorage.FixupIndexName(indexDefinition.Name, path);
-			log.Info("Creating index {0} with encoded name {1}", indexDefinition.Name, encodedName);
+			log.Debug("Creating index {0} with encoded name {1}", indexDefinition.Name, encodedName);
 
 			IndexDefinitionStorage.ResolveAnalyzers(indexDefinition);
 			AssertAnalyzersValid(indexDefinition);
