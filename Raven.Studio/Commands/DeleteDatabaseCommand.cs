@@ -21,10 +21,15 @@ namespace Raven.Studio.Commands
 			new DeleteDatabase().ShowAsync()
 				.ContinueOnSuccessInTheUIThread(deleteDatabase => {
 					if (deleteDatabase.DialogResult == true)
-						ApplicationModel.Current.Server.Value.DocumentStore
+					{
+						var asyncDatabaseCommands = ApplicationModel.Current.Server.Value.DocumentStore
 							.AsyncDatabaseCommands
-							.ForDefaultDatabase()
-							.DeleteDocumentAsync("Raven/Databases/" + databasesModel.SelectedDatabase.Name)
+							.ForDefaultDatabase();
+						var relativeUrl = "/admin/databases/" + databasesModel.SelectedDatabase.Name;
+						if (deleteDatabase.hardDelete.IsChecked == true)
+							relativeUrl += "?hard-delete=true";
+						var httpJsonRequest = asyncDatabaseCommands.CreateRequest(relativeUrl, "DELETE");
+						httpJsonRequest.ExecuteRequestAsync()
 							.ContinueOnSuccessInTheUIThread(() =>
 							{
 								var database =
@@ -33,6 +38,7 @@ namespace Raven.Studio.Commands
 									Constants.SystemDatabase;
 								ExecuteCommand(new ChangeDatabaseCommand(), database);
 							});
+					}
 				});
 		}
 	}

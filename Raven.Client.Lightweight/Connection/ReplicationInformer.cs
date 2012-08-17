@@ -188,7 +188,7 @@ namespace Raven.Client.Connection
 
 			public FailureCounter()
 			{
-				LastCheck = DateTime.UtcNow;
+				LastCheck = SystemTime.UtcNow;
 			}
 		}
 
@@ -490,7 +490,7 @@ namespace Raven.Client.Connection
 		{
 			var value = GetHolder(operationUrl);
 			var oldVal = Interlocked.Exchange(ref value.Value, 0);
-			value.LastCheck = DateTime.UtcNow;
+			value.LastCheck = SystemTime.UtcNow;
 			if (oldVal != 0)
 			{
 				FailoverStatusChanged(this,

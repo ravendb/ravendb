@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.Plugins;
@@ -51,7 +52,7 @@ namespace Raven.Bundles.Quotas.Documents
 			// checking the size of the database is pretty expensive, we only check it every so often, to reduce
 			// its cost. This means that users might go beyond the limit, but that is okay, since the quota is soft
 			// anyway
-			if ((DateTime.UtcNow - lastCheck).TotalMinutes < 3)
+			if ((SystemTime.UtcNow - lastCheck).TotalMinutes < 3)
 				return skipCheck;
 
 			UpdateSkippedCheck();
@@ -61,7 +62,7 @@ namespace Raven.Bundles.Quotas.Documents
 
 		private void UpdateSkippedCheck()
 		{
-			lastCheck = DateTime.UtcNow;
+			lastCheck = SystemTime.UtcNow;
 
 			var countOfDocuments = database.Statistics.CountOfDocuments;
 			if (countOfDocuments <= softLimit)

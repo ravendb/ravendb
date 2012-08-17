@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using System.Net;
 using NDesk.Options;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 
@@ -171,7 +172,7 @@ Usage:
 	- Export a local instance to dump.raven:
 		Raven.Smuggler out http://localhost:8080/ dump.raven
 
-Command line options:", DateTime.UtcNow.Year);
+Command line options:", SystemTime.UtcNow.Year);
 
 			optionSet.WriteOptionDescriptions(Console.Out);
 			Console.WriteLine();

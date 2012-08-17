@@ -1469,7 +1469,7 @@ namespace Raven.Client.Connection
 			GC.SuppressFinalize(this);
 			if (ProfilingInformation != null)
 			{
-				ProfilingInformation.DurationMilliseconds = (SystemTime.Now - ProfilingInformation.At).TotalMilliseconds;
+				ProfilingInformation.DurationMilliseconds = (SystemTime.UtcNow - ProfilingInformation.At).TotalMilliseconds;
 			}
 		}
 

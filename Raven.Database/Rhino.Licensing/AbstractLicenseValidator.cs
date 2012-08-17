@@ -8,6 +8,7 @@ using System.ServiceModel;
 using System.Threading;
 using System.Xml;
 using NLog;
+using Raven.Abstractions;
 using Rhino.Licensing.Discovery;
 
 namespace Rhino.Licensing
@@ -291,7 +292,7 @@ namespace Rhino.Licensing
 					result = ValidateLicense();
 				else
 				{
-					result = DateTime.UtcNow < ExpirationDate;
+					result = SystemTime.UtcNow < ExpirationDate;
 					if (result)
 						result = ValidateLicense();
 				}
@@ -314,11 +315,11 @@ namespace Rhino.Licensing
 
 		private bool ValidateLicense()
 		{
-			if ((ExpirationDate - DateTime.UtcNow).TotalDays > 4)
+			if ((ExpirationDate - SystemTime.UtcNow).TotalDays > 4)
 				return true;
 
 			if (currentlyValidatingLicense)
-				return DateTime.UtcNow < ExpirationDate;
+				return SystemTime.UtcNow < ExpirationDate;
 
 			if (SubscriptionEndpoint == null)
 				throw new InvalidOperationException("Subscription endpoints are not supported for this license validator");
@@ -538,7 +539,7 @@ namespace Rhino.Licensing
 				if (validLicense)
 				{
 					//setup next lease
-					var time = (ExpirationDate.AddMinutes(-5) - DateTime.UtcNow);
+					var time = (ExpirationDate.AddMinutes(-5) - SystemTime.UtcNow);
 					Logger.Debug("Will lease license again at {0}", time);
 					if (disableFutureChecks == false)
 						nextLeaseTimer.Change(time, time);

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
@@ -33,6 +34,6 @@ namespace Raven.Bundles.Expiration
 			return ReadVetoResult.Ignore;
 		}
 
-		public static Func<DateTime> GetCurrentUtcDate = () => DateTime.UtcNow;
+		public static Func<DateTime> GetCurrentUtcDate = () => SystemTime.UtcNow;
 	}
 }

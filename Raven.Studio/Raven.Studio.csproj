@@ -32,7 +32,7 @@
     <LinkedServerProject>
     </LinkedServerProject>
     <Utf8Output>true</Utf8Output>
-    <ExpressionBlendVersion>4.0.20525.0</ExpressionBlendVersion>
+    <ExpressionBlendVersion>4.1.20402.0</ExpressionBlendVersion>
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
@@ -184,6 +184,7 @@
     <Compile Include="Commands\AddReplicationCommand.cs" />
     <Compile Include="Commands\AddVersioningCommand.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\DeleteAllIndexsCommand.cs" />
     <Compile Include="Commands\DeleteReplicationCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
     <Compile Include="Commands\DeleteVersioningCommand.cs" />
@@ -686,6 +687,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Assets\ChildWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Controls\DeleteDatabase.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -1001,6 +1006,8 @@
     <Resource Include="Assets\Images\offline.png" />
     <Resource Include="Assets\Images\online.png" />
     <Resource Include="Assets\Images\database_system_tiny.png" />
+    <Resource Include="Assets\Images\index_delete_small.png" />
+    <Resource Include="Assets\Images\index_delete_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

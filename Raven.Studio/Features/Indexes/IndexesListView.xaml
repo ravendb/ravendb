@@ -120,53 +120,67 @@
 			<toolkit:DockPanel LastChildFill="False">
 				<StackPanel Orientation="Horizontal"
 							toolkit:DockPanel.Dock="Top"
-                            UseLayoutRounding="True">
+							UseLayoutRounding="True">
 					<Image Style="{StaticResource Style_Image_IndexPageHeader}"/>
 					<TextBlock Text="Indexes"
 							   Style="{StaticResource Style_Text_Header}"/>
 				</StackPanel>
-                <Border toolkit:DockPanel.Dock="Top" Background="{StaticResource Brush_ToolbarBackground}" UseLayoutRounding="True">
-				    <StackPanel Orientation="Horizontal"
-							    VerticalAlignment="Center"
-							    Margin="0,4,4,4">
-					    <HyperlinkButton Command="{StaticResource NavigateToCommand}"
-									     CommandParameter="/indexes/new?mode=new"
-									     Style="{StaticResource Style_Button_MouseOverChrome}"
-									     VerticalAlignment="Center"
-                                         ToolTipService.ToolTip="Create a new index (Ctrl+N)">
-						    <HyperlinkButton.Content>
-							    <StackPanel Orientation="Horizontal">
-								    <Image Source="{StaticResource Image_AddIndex_Tiny}"
-									       Stretch="None"
-									       VerticalAlignment="Center"
-									       Margin="4,0,4,0" />
-								    <TextBlock Text="New Index"
-										       VerticalAlignment="Center" />
-							    </StackPanel>
-						    </HyperlinkButton.Content>
-					    </HyperlinkButton>
+				<Border toolkit:DockPanel.Dock="Top" Background="{StaticResource Brush_ToolbarBackground}" UseLayoutRounding="True">
+					<StackPanel Orientation="Horizontal"
+								VerticalAlignment="Center"
+								Margin="0,4,4,4">
+						<HyperlinkButton Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="/indexes/new?mode=new"
+										 Style="{StaticResource Style_Button_MouseOverChrome}"
+										 VerticalAlignment="Center"
+										 ToolTipService.ToolTip="Create a new index (Ctrl+N)">
+							<HyperlinkButton.Content>
+								<StackPanel Orientation="Horizontal">
+									<Image Source="{StaticResource Image_AddIndex_Tiny}"
+										   Stretch="None"
+										   VerticalAlignment="Center"
+										   Margin="4,0,4,0" />
+									<TextBlock Text="New Index"
+											   VerticalAlignment="Center" />
+								</StackPanel>
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
 
-					    <HyperlinkButton Command="{StaticResource NavigateToCommand}"
-									     CommandParameter="/query?mode=dynamic"
-									     Style="{StaticResource Style_Button_MouseOverChrome}"
-									     VerticalAlignment="Center">
-						    <HyperlinkButton.Content>
-							    <StackPanel Orientation="Horizontal">
-								    <Image Source="{StaticResource Image_Query_Small}"
-									       Stretch="None"
-									       VerticalAlignment="Center"
-									       Margin="4,0,4,0" />
-								    <TextBlock Text="Dynamic Query"
-										       VerticalAlignment="Center" />
-							    </StackPanel>
-						    </HyperlinkButton.Content>
-					    </HyperlinkButton>
+						<HyperlinkButton Command="{StaticResource NavigateToCommand}"
+										 CommandParameter="/query?mode=dynamic"
+										 Style="{StaticResource Style_Button_MouseOverChrome}"
+										 VerticalAlignment="Center">
+							<HyperlinkButton.Content>
+								<StackPanel Orientation="Horizontal">
+									<Image Source="{StaticResource Image_Query_Small}"
+										   Stretch="None"
+										   VerticalAlignment="Center"
+										   Margin="4,0,4,0" />
+									<TextBlock Text="Dynamic Query"
+											   VerticalAlignment="Center" />
+								</StackPanel>
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
 
-                        <Controls1:RecentQueriesButton/>
+						<Controls1:RecentQueriesButton/>
 
-                    </StackPanel>
-                </Border>
-            </toolkit:DockPanel>
+						<HyperlinkButton Command="{Binding DeleteAllIndexes}"
+										 Style="{StaticResource Style_Button_MouseOverChrome}"
+										 VerticalAlignment="Center">
+							<HyperlinkButton.Content>
+								<StackPanel Orientation="Horizontal">
+									<Image Source="{StaticResource Image_DeleteIndex_Tiny}"
+										   Stretch="None"
+										   VerticalAlignment="Center"
+										   Margin="4,0,4,0" />
+									<TextBlock Text="Delete All Indexes"
+											   VerticalAlignment="Center" />
+								</StackPanel>
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
+					</StackPanel>
+				</Border>
+			</toolkit:DockPanel>
 		</toolkit:HeaderedContentControl.Header>
 
 		<ListBox x:Name="IndexesList" 
@@ -174,10 +188,10 @@
 							   ItemsSource="{Binding GroupedIndexes}"
 							   ItemTemplate="{StaticResource IndexItemTemplate}"
 							   Margin="10,5">
-            <i:Interaction.Behaviors>
-                <Behaviors:SelectItemOnRightClick/>
-                <Behaviors:BindSelectedItemsBehavior Target="{Binding ItemSelection}"/>
-            </i:Interaction.Behaviors>
+			<i:Interaction.Behaviors>
+				<Behaviors:SelectItemOnRightClick/>
+				<Behaviors:BindSelectedItemsBehavior Target="{Binding ItemSelection}"/>
+			</i:Interaction.Behaviors>
 			<Controls:ContextMenuService.ContextMenu>
 				<Controls:ContextMenu x:Name="IndexesContextMenu">
 					<Controls:MenuItem Header="Delete index"

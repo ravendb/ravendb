@@ -868,7 +868,7 @@ namespace Ionic.Zlib
 			header[i++] = flag;
 
 			// mtime
-			if (!LastModified.HasValue) LastModified = SystemTime.Now;
+			if (!LastModified.HasValue) LastModified = SystemTime.UtcNow;
 			System.TimeSpan delta = LastModified.Value - _unixEpoch;
 			Int32 timet = (Int32)delta.TotalSeconds;
 			Array.Copy(BitConverter.GetBytes(timet), 0, header, i, 4);

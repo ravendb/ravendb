@@ -15,7 +15,7 @@ namespace Raven.Studio.Messages
 	        this.details = details;
 	        Message = message;
 			Level = level;
-			CreatedAt = SystemTime.Now;
+			CreatedAt = SystemTime.UtcNow;
 		}
 
 		public DateTime CreatedAt { get; private set; }

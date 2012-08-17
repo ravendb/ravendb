@@ -7,21 +7,22 @@
 					 xmlns:Behaviors="clr-namespace:Raven.Studio.Behaviors">
 
 	<Grid Margin="{StaticResource Margin_ContentPage}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
 		<TextBlock Text="Collections"
-                   Grid.Row="0"
+				   Grid.Row="0"
 				   Style="{StaticResource Style_Text_Header}" />
 
 		<ListBox x:Name="CollectionsList" 
-                 Grid.Row="1"
+				 Grid.Row="1"
 				 Style="{StaticResource Collections_FluidList}"
-                 Background="#4CFFFFFF"
+				 Background="#4CFFFFFF"
 				 ItemsSource="{Binding Collections}"
-                 ItemContainerStyle="{StaticResource Style_ListBoxItem_Collection}"
-				 SelectedItem="{Binding Path=SelectedCollection.Value, Mode=TwoWay}">
+				 ItemContainerStyle="{StaticResource Style_ListBoxItem_Collection}"
+				 SelectedItem="{Binding Path=SelectedCollection.Value, Mode=TwoWay}"
+				 SelectionMode="Extended">
 
 			<i:Interaction.Behaviors>
 				<Behaviors:SelectItemOnRightClick />
@@ -37,53 +38,53 @@
 			
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
-                    <Grid Margin="0,2,2,2">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+					<Grid Margin="0,2,2,2">
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="*" />
+						</Grid.RowDefinitions>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+						</Grid.ColumnDefinitions>
 
-                        <Rectangle Margin="0"
-                       HorizontalAlignment="Left"
-                       Fill="#06000000"
-                       Width="7"
-                       RadiusX="1"
+						<Rectangle Margin="0"
+					   HorizontalAlignment="Left"
+					   Fill="#06000000"
+					   Width="7"
+					   RadiusX="1"
 					   RadiusY="1"
-                       Grid.RowSpan="3"/>
+					   Grid.RowSpan="3"/>
 
-                        <Rectangle HorizontalAlignment="Left"
+						<Rectangle HorizontalAlignment="Left"
 					   Width="4"
 					   Fill="{Binding Path=Fill}"
 					   Margin="3"
 					   RadiusX="1"
 					   RadiusY="1"
 					   Grid.RowSpan="3">
-                        </Rectangle>
+						</Rectangle>
 
-                        <StackPanel Margin="12,10,10,10">
-                            <TextBlock Text="{Binding Name}"
-										    FontSize="12" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding Count, StringFormat='\{0:#,#;;0\}'}"
-										    FontStyle="Italic"
-										    Foreground="#9000"
-										    FontSize="10.667"
-                                       HorizontalAlignment="Center"/>
-                        </StackPanel>
-                    </Grid>
+						<StackPanel Margin="12,10,10,10">
+							<TextBlock Text="{Binding Name}"
+											FontSize="12" HorizontalAlignment="Center"/>
+							<TextBlock Text="{Binding Count, StringFormat='\{0:#,#;;0\}'}"
+											FontStyle="Italic"
+											Foreground="#9000"
+											FontSize="10.667"
+									   HorizontalAlignment="Center"/>
+						</StackPanel>
+					</Grid>
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
 		</ListBox>
 
-        <TextBlock Grid.Row="1" HorizontalAlignment="Center" TextAlignment="Center" Margin="10" 
-                   Visibility="{Binding Collections.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
-                   LineHeight="20" FontSize="13">
-            <Run Text="No collections defined"/>
-            <LineBreak/>
-            <Run Foreground="Gray" FontStyle="Italic" Text="Add &quot;Raven-Entity-Name&quot;: &quot;[Desired Collection Name]&quot; to a document's metadata to include it in a collection"/>
-        </TextBlock>
-    </Grid>
+		<TextBlock Grid.Row="1" HorizontalAlignment="Center" TextAlignment="Center" Margin="10" 
+				   Visibility="{Binding Collections.Count, Converter={StaticResource HiddenWhenGreaterThen}, ConverterParameter=0}"
+				   LineHeight="20" FontSize="13">
+			<Run Text="No collections defined"/>
+			<LineBreak/>
+			<Run Foreground="Gray" FontStyle="Italic" Text="Add &quot;Raven-Entity-Name&quot;: &quot;[Desired Collection Name]&quot; to a document's metadata to include it in a collection"/>
+		</TextBlock>
+	</Grid>
 </Infrastructure:PageView>

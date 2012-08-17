@@ -87,7 +87,7 @@ namespace Raven.Bundles.Tests.Authentication
 				}
 			}
 
-			var oAuthClientCredentialsTokenResponder = embeddedStore.HttpServer.RequestResponders.OfType<database::Raven.Database.Server.Security.OAuth.OAuthClientCredentialsTokenResponder>().First();
+			var oAuthClientCredentialsTokenResponder = embeddedStore.DocumentDatabase.RequestResponders.OfType<database::Raven.Database.Server.Security.OAuth.OAuthClientCredentialsTokenResponder>().First();
 			Assert.Equal(1, oAuthClientCredentialsTokenResponder.NumberOfTokensIssued);
 		}
 
