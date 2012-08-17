@@ -1143,7 +1143,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			var renamedFields = FieldsToFetch.Select(field =>
 			{
 				string value;
-				if (FieldsToRename.TryGetValue(field, out value))
+				if (FieldsToRename.TryGetValue(field, out value) && value != null)
 					return value;
 				return field;
 			}).ToArray();
