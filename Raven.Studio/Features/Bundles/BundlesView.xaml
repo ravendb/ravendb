@@ -13,9 +13,33 @@
 
 	<UserControl.Resources>
 		<DataTemplate x:Key="ReplicationItemTemplate">
-			<Grid Background="Transparent">
-				<Grid Margin="4" x:Name="grid">
+			<Grid Margin="4" x:Name="grid">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="130" />
+					<ColumnDefinition Width="Auto" MinWidth="125" MaxWidth="250"/>
+					<ColumnDefinition Width="20" />
+				</Grid.ColumnDefinitions>
+				<HyperlinkButton Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" Click="ButtonBase_OnClick" VerticalAlignment="Center">
+					<Image Source="{StaticResource Image_Error_Tiny}"/>
+				</HyperlinkButton>
+
+				<ComboBox x:Name="UseConnectionCombo" Width="130" HorizontalAlignment="Left" Grid.Row="1" Margin="0,5,0,5" SelectedIndex="{Binding UseConnectionString, Converter={StaticResource BooleanToInt}, Mode=TwoWay}" SelectionChanged="UseConnectionCombo_SelectionChanged">
+					<ComboBoxItem Content="Url"/>
+					<ComboBoxItem Content="Connection String"/>
+				</ComboBox>
+
+				<TextBox x:Name="UrlText" Grid.Row="1" Grid.Column="1" Text="{Binding Url, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+				<TextBox x:Name="ConnectionText" Grid.Row="1" Grid.Column="1" Text="{Binding ConnectionStringName, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+
+				<Grid Grid.Row="2" Grid.ColumnSpan="2">
 					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="Auto" />
@@ -23,56 +47,29 @@
 					</Grid.RowDefinitions>
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="130" />
-						<ColumnDefinition Width="Auto" />
+						<ColumnDefinition Width="Auto" MinWidth="125" MaxWidth="250" />
 					</Grid.ColumnDefinitions>
-					<Button Grid.ColumnSpan="2" HorizontalAlignment="Right" Click="ButtonBase_OnClick">
-						<Image Source="{StaticResource Image_Error_Tiny}"/>
-					</Button>
 
-					<ComboBox x:Name="UseConnectionCombo" Grid.Row="1" Margin="0,5,0,5" SelectedIndex="{Binding UseConnectionString, Converter={StaticResource BooleanToInt}, Mode=TwoWay}" SelectionChanged="UseConnectionCombo_SelectionChanged">
-						<ComboBoxItem Content="Url"/>
-						<ComboBoxItem Content="Connection String"/>
-					</ComboBox>
+					<TextBlock Grid.Row="0" Text="Password: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
 
-					<TextBox x:Name="UrlText" Grid.Row="1" Grid.Column="1" Text="{Binding Url, Mode=TwoWay}" Margin="5" Width="250"/>
-					<TextBox x:Name="ConnectionText" Grid.Row="1" Grid.Column="1" Text="{Binding ConnectionStringName, Mode=TwoWay}" Margin="5" Width="250"/>
-					
-					<Grid Grid.Row="2" Grid.ColumnSpan="2">
-						<Grid.RowDefinitions>
-							<RowDefinition Height="Auto" />
-							<RowDefinition Height="Auto" />
-							<RowDefinition Height="Auto" />
-							<RowDefinition Height="Auto" />
-							<RowDefinition Height="Auto" />
-						</Grid.RowDefinitions>
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="130" />
-							<ColumnDefinition Width="Auto" />
-						</Grid.ColumnDefinitions>
-						
-						<TextBlock Grid.Row="0" Text="Password: " VerticalAlignment="Center"/>
-						<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" Width="250"/>
+					<TextBlock Grid.Row="1" Text="User Name: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding UserName, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
 
-						<TextBlock Grid.Row="1" Text="User Name: " VerticalAlignment="Center"/>
-						<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding UserName, Mode=TwoWay}" Margin="5" Width="250"/>
+					<TextBlock Grid.Row="2" Text="Domain: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Domain, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
 
-						<TextBlock Grid.Row="2" Text="Domain: " VerticalAlignment="Center"/>
-						<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Domain, Mode=TwoWay}" Margin="5" Width="250"/>
+					<TextBlock Grid.Row="3" Text="ApiKey: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ApiKey, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
 
-						<TextBlock Grid.Row="3" Text="ApiKey: " VerticalAlignment="Center"/>
-						<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ApiKey, Mode=TwoWay}" Margin="5" Width="250"/>
-
-						<TextBlock Grid.Row="4" Text="Database: " VerticalAlignment="Center"/>
-						<TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Database, Mode=TwoWay}" Margin="5" Width="250"/>
-					</Grid>
-
-					<TextBlock Grid.Row="3" Text="Replication Behavior: " VerticalAlignment="Center"/>
-
-					<ComboBox Grid.Row="3" Grid.Column="1" Margin="5" SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay}" HorizontalAlignment="Left">
-						<ComboBoxItem Content="None"/>
-						<ComboBoxItem Content="Replicate"/>
-					</ComboBox>
+					<TextBlock Grid.Row="4" Text="Database: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Database, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
 				</Grid>
+
+				<TextBlock Grid.Row="3" Text="Replication Behavior: " VerticalAlignment="Center"/>
+
+				<ComboBox Grid.Row="3" Grid.Column="1" Margin="5" SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay}" HorizontalAlignment="Left"
+							  ItemsSource="{Binding TransitiveReplicationBehavior, Converter={StaticResource enumerationFromValue}}"/>
 			</Grid>
 		</DataTemplate>
 	</UserControl.Resources>
@@ -119,62 +116,18 @@
 				<RowDefinition Height="Auto"/>
 			</Grid.RowDefinitions>
 
-			<ListBox ItemsSource="{Binding Bundles}" SelectedValue="{Binding SelectedBundle.Value, Mode=TwoWay}"
+			<ListBox ItemsSource="{Binding Bundles, Mode=OneWay}" SelectedValue="{Binding SelectedBundle.Value, Mode=TwoWay}"
 						 Style="{StaticResource Style_ListBox_TabStrip}"
 						 Margin="5,10,10,0">
 			</ListBox>
 
-			<Grid Grid.Row="1" Background="White" Margin="2" Visibility="{Binding QuotasSelected, Converter={StaticResource BooleanToVisibility}}">
-				<Grid.RowDefinitions>
-					<RowDefinition />
-					<RowDefinition Height="Auto" />
-				</Grid.RowDefinitions>
-				<Grid Margin="5">
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="Auto" />
-						<ColumnDefinition Width="Auto" />
-					</Grid.ColumnDefinitions>
+			<Border Grid.Row="1" Background="White" BorderThickness="5" BorderBrush="Gray" CornerRadius="10" Visibility="{Binding QuotasSelected, Converter={StaticResource BooleanToVisibility}}">
+				<Grid>
 					<Grid.RowDefinitions>
+						<RowDefinition />
 						<RowDefinition Height="Auto" />
-						<RowDefinition Height="Auto" />
-						<RowDefinition Height="Auto" />
-						<RowDefinition Height="Auto" />
-						<RowDefinition Height="10" />
 					</Grid.RowDefinitions>
-
-					<TextBlock Text="Select max size:" Margin="5" VerticalAlignment="Center"/>
-					<StackPanel Grid.Column="1" Orientation="Horizontal">
-						<toolkit:NumericUpDown x:Name="MaxSize" Margin="5" Value="{Binding MaxSize, Mode=TwoWay}" Width="100"/>
-						<TextBlock Text="MB" VerticalAlignment="Center"/>
-					</StackPanel>
-
-					<TextBlock Text="Select warning size:" Margin="5" VerticalAlignment="Center" Grid.Row="1" />
-					<StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal">
-						<toolkit:NumericUpDown x:Name="WarnSize" Margin="5" Grid.Column="1" Value="{Binding WarnSize, Mode=TwoWay}" Width="100"/>
-						<TextBlock Text="MB" VerticalAlignment="Center"/>
-					</StackPanel>
-
-					<TextBlock Text="Select max number of docs:" Margin="5" VerticalAlignment="Center" Grid.Row="2"/>
-					<StackPanel Grid.Column="1" Grid.Row="2" Orientation="Horizontal">
-						<toolkit:NumericUpDown x:Name="MaxDocs" Margin="5" Grid.Column="1" Value="{Binding MaxDocs, Mode=TwoWay}" Width="100"/>
-						<TextBlock Text="docs" VerticalAlignment="Center"/>
-					</StackPanel>
-
-					<TextBlock Text="Select warning for docs:" Margin="5" VerticalAlignment="Center" Grid.Row="3"/>
-					<StackPanel Grid.Column="1" Grid.Row="3" Orientation="Horizontal">
-						<toolkit:NumericUpDown x:Name="WarnDocs" Margin="5" Grid.Column="1" Value="{Binding WarnDocs, Mode=TwoWay}" Width="100"/>
-						<TextBlock Text="docs" VerticalAlignment="Center"/>
-					</StackPanel>
-				</Grid>
-			</Grid>
-
-			<Grid Grid.Row="1"  Background="White" Margin="2" Visibility="{Binding ReplicationSelected, Converter={StaticResource BooleanToVisibility}}">
-				<Grid.RowDefinitions>
-					<RowDefinition />
-					<RowDefinition Height="Auto" />
-				</Grid.RowDefinitions>
-				<Grid  Margin="5">
-					<Grid Margin="15">
+					<Grid Margin="5">
 						<Grid.ColumnDefinitions>
 							<ColumnDefinition Width="Auto" />
 							<ColumnDefinition Width="Auto" />
@@ -183,39 +136,44 @@
 							<RowDefinition Height="Auto" />
 							<RowDefinition Height="Auto" />
 							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto" />
 							<RowDefinition Height="10" />
 						</Grid.RowDefinitions>
 
-						<ListBox Style="{StaticResource Databases_FluidList}"
-										 ItemsSource="{Binding ReplicationDestinations}"
-										 SelectedItem="{Binding SelectedReplication, Mode=TwoWay}"
-										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
-										 ItemTemplate="{StaticResource ReplicationItemTemplate}"
-										 Margin="10"
-										 MaxWidth="1000"
-										 MaxHeight="700"
-										 ScrollViewer.VerticalScrollBarVisibility="Auto"
-										 HorizontalAlignment="Left">
+						<TextBlock Text="Select max size:" Margin="5" VerticalAlignment="Center"/>
+						<StackPanel Grid.Column="1" Orientation="Horizontal">
+							<toolkit:NumericUpDown x:Name="MaxSize" Margin="5" Value="{Binding MaxSize, Mode=TwoWay}" Width="100"/>
+							<TextBlock Text="MB" VerticalAlignment="Center"/>
+						</StackPanel>
 
-							<i:Interaction.Behaviors>
-								<Behaviors:SelectItemOnRightClick />
-							</i:Interaction.Behaviors>
-						</ListBox>
-						<Button Content="Add"
-										Grid.Row="2"
-										Grid.ColumnSpan="2"
-										HorizontalAlignment="Left"
-										Command="{Binding AddReplication}"/>
+						<TextBlock Text="Select warning size:" Margin="5" VerticalAlignment="Center" Grid.Row="1" />
+						<StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal">
+							<toolkit:NumericUpDown x:Name="WarnSize" Margin="5" Grid.Column="1" Value="{Binding WarnSize, Mode=TwoWay}" Width="100"/>
+							<TextBlock Text="MB" VerticalAlignment="Center"/>
+						</StackPanel>
+
+						<TextBlock Text="Select max number of docs:" Margin="5" VerticalAlignment="Center" Grid.Row="2"/>
+						<StackPanel Grid.Column="1" Grid.Row="2" Orientation="Horizontal">
+							<toolkit:NumericUpDown x:Name="MaxDocs" Margin="5" Grid.Column="1" Value="{Binding MaxDocs, Mode=TwoWay}" Width="100"/>
+							<TextBlock Text="docs" VerticalAlignment="Center"/>
+						</StackPanel>
+
+						<TextBlock Text="Select warning for docs:" Margin="5" VerticalAlignment="Center" Grid.Row="3"/>
+						<StackPanel Grid.Column="1" Grid.Row="3" Orientation="Horizontal">
+							<toolkit:NumericUpDown x:Name="WarnDocs" Margin="5" Grid.Column="1" Value="{Binding WarnDocs, Mode=TwoWay}" Width="100"/>
+							<TextBlock Text="docs" VerticalAlignment="Center"/>
+						</StackPanel>
 					</Grid>
 				</Grid>
+			</Border>
 
-			</Grid>
-
-			<Grid Grid.Row="1"  Background="White" Margin="2" Visibility="{Binding VersioningSelected, Converter={StaticResource BooleanToVisibility}}">
-						<Grid.RowDefinitions>
-							<RowDefinition />
-							<RowDefinition Height="Auto" />
-						</Grid.RowDefinitions>
+			<Border Background="White" BorderThickness="5" Grid.Row="1" BorderBrush="Gray" CornerRadius="10" Visibility="{Binding ReplicationSelected, Converter={StaticResource BooleanToVisibility}}">
+				<Grid Margin="2" >
+					<Grid.RowDefinitions>
+						<RowDefinition />
+						<RowDefinition Height="Auto" />
+					</Grid.RowDefinitions>
+					<Grid  Margin="5">
 						<Grid Margin="15">
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition Width="Auto" />
@@ -228,46 +186,92 @@
 								<RowDefinition Height="10" />
 							</Grid.RowDefinitions>
 
-							<Button Content="Add Default Versioning" Visibility="{Binding HasDefaultVersioning,Converter={StaticResource BooleanToOppositeVisibility}, Mode=TwoWay}"
+							<ListBox Style="{StaticResource Databases_FluidList}"
+										 ItemsSource="{Binding ReplicationDestinations}"
+										 SelectedItem="{Binding SelectedReplication, Mode=TwoWay}"
+										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
+										 ItemTemplate="{StaticResource ReplicationItemTemplate}"
+										 Margin="10"
+										 MaxWidth="1000"
+										 MaxHeight="700"
+										 ScrollViewer.VerticalScrollBarVisibility="Auto"
+										 HorizontalAlignment="Left">
+
+								<i:Interaction.Behaviors>
+									<Behaviors:SelectItemOnRightClick />
+								</i:Interaction.Behaviors>
+							</ListBox>
+							<Button Content="Add"
+										Grid.Row="2"
+										Grid.ColumnSpan="2"
+										HorizontalAlignment="Left"
+										Command="{Binding AddReplication}"/>
+						</Grid>
+					</Grid>
+
+				</Grid>
+			</Border>
+
+			<Border Background="White" BorderThickness="5" Grid.Row="1" BorderBrush="Gray" CornerRadius="10"  Visibility="{Binding VersioningSelected, Converter={StaticResource BooleanToVisibility}}">
+				<Grid Margin="2">
+					<Grid.RowDefinitions>
+						<RowDefinition />
+						<RowDefinition Height="Auto" />
+					</Grid.RowDefinitions>
+					<Grid Margin="15">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto" />
+							<ColumnDefinition Width="Auto" />
+						</Grid.ColumnDefinitions>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="10" />
+						</Grid.RowDefinitions>
+
+						<Button Content="Add Default Versioning" Visibility="{Binding HasDefaultVersioning,Converter={StaticResource BooleanToOppositeVisibility}, Mode=TwoWay}"
 									Command="{Binding AddDefaultVersioning}"/>
-							
-							<sdk:DataGrid Grid.Row="1" Grid.ColumnSpan="2"
+
+						<sdk:DataGrid Grid.Row="1" Grid.ColumnSpan="2"
 										  SelectedItem="{Binding SeletedVersioning, Mode=TwoWay}"
 										  ItemsSource="{Binding Path=VersioningConfigurations}"
 										  MaxHeight="650"
 										  ScrollViewer.VerticalScrollBarVisibility="Auto"
 										  AutoGenerateColumns="False">
-								<sdk:DataGrid.Columns>
-									<sdk:DataGridTextColumn Header="Version Tag" Binding="{Binding Id}"/>
-									<sdk:DataGridTextColumn Header="Max Revisions" Binding="{Binding MaxRevisions}"/>
-									<sdk:DataGridCheckBoxColumn Header="Exclude" Binding="{Binding Exclude}"/>
-								</sdk:DataGrid.Columns>
-								<i:Interaction.Behaviors>
-									<Behaviors:SelectRowOnRightClickBehavior />
-								</i:Interaction.Behaviors>
-								<Controls:ContextMenuService.ContextMenu>
-									<Controls:ContextMenu>
-										<Controls:MenuItem Header="Delete"
+							<sdk:DataGrid.Columns>
+								<sdk:DataGridTextColumn Header="Version Tag" Binding="{Binding Id}"/>
+								<sdk:DataGridTextColumn Header="Max Revisions" Binding="{Binding MaxRevisions}"/>
+								<sdk:DataGridCheckBoxColumn Header="Exclude" Binding="{Binding Exclude}"/>
+							</sdk:DataGrid.Columns>
+							<i:Interaction.Behaviors>
+								<Behaviors:SelectRowOnRightClickBehavior />
+							</i:Interaction.Behaviors>
+							<Controls:ContextMenuService.ContextMenu>
+								<Controls:ContextMenu>
+									<Controls:MenuItem Header="Delete"
 											Command="{Binding DeleteVersioning}"
 															   CommandParameter="{Binding SeletedVersioning}">
-											<Controls:MenuItem.Icon>
-												<Image Source="{StaticResource Image_Delete_Tiny}"/>
-											</Controls:MenuItem.Icon>
-										</Controls:MenuItem>
-									</Controls:ContextMenu>
-								</Controls:ContextMenuService.ContextMenu>
-							</sdk:DataGrid>
-							<Button Content="Add"
+										<Controls:MenuItem.Icon>
+											<Image Source="{StaticResource Image_Delete_Tiny}"/>
+										</Controls:MenuItem.Icon>
+									</Controls:MenuItem>
+								</Controls:ContextMenu>
+							</Controls:ContextMenuService.ContextMenu>
+						</sdk:DataGrid>
+						<Button Content="Add"
 							Grid.Row="2"
 							Grid.ColumnSpan="2"
 							HorizontalAlignment="Left"
 							Command="{Binding AddVersioning}"/>
-						</Grid>
 					</Grid>
+				</Grid>
+			</Border>
+
 		</Grid>
 
 		<Button Grid.Row="3" Content="Save" Command="{Binding SaveBundles}" HorizontalAlignment="Left" Visibility="{Binding Creation, Converter={StaticResource BooleanToOppositeVisibility}}"/>
-		
+
 		<Button x:Name="CancelButton" Content="Cancel" Click="CancelButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,0,0" Grid.Row="3" Visibility="{Binding Creation, Converter={StaticResource BooleanToVisibility}}" />
 		<Button x:Name="OKButton" Content="OK" Click="OKButton_Click" Width="75" Height="23" HorizontalAlignment="Right" Margin="0,12,79,0" Grid.Row="3" Visibility="{Binding Creation, Converter={StaticResource BooleanToVisibility}}" />
 	</Grid>
