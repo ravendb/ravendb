@@ -37,7 +37,11 @@ namespace Raven.Studio.Models
 				.Query<VersioningConfiguration>().ToListAsync().ContinueOnSuccessInTheUIThread(
 					list =>
 					{
-						VersioningConfigurations = new ObservableCollection<VersioningConfiguration>(list);
+						VersioningConfigurations.Clear();
+						foreach (var versioningConfiguration in list)
+						{
+							VersioningConfigurations.Add(versioningConfiguration);
+						}
 						OriginalVersioningConfigurations = new ObservableCollection<VersioningConfiguration>(list);
 					});
 

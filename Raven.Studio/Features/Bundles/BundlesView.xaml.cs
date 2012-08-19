@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 using Raven.Abstractions.Replication;
+using Raven.Bundles.Versioning.Data;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
 
@@ -73,10 +74,10 @@ namespace Raven.Studio.Features.Bundles
 
 		}
 
-		private void ButtonBase_OnClick(object sender, RoutedEventArgs e)
+		private void DeleteReplication(object sender, RoutedEventArgs e)
 		{
 			var bundleModel = this.DataContext as BaseBundlesModel;
-			var button = sender as Button;
+			var button = sender as HyperlinkButton;
 			if (bundleModel != null && button != null)
 			{
 				bundleModel.ReplicationDestinations.Remove(button.DataContext as ReplicationDestination);
@@ -97,6 +98,16 @@ namespace Raven.Studio.Features.Bundles
 			if (parentWindow == null)
 				return;
 			parentWindow.DialogResult = true;
+		}
+
+		private void DeleteVersioning(object sender, RoutedEventArgs e)
+		{
+			var bundleModel = this.DataContext as BaseBundlesModel;
+			var button = sender as HyperlinkButton;
+			if (bundleModel != null && button != null)
+			{
+				bundleModel.VersioningConfigurations.Remove(button.DataContext as VersioningConfiguration);
+			}
 		}
 	}
 }

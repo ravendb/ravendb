@@ -25,7 +25,7 @@
 					<ColumnDefinition Width="Auto" MinWidth="125" MaxWidth="250"/>
 					<ColumnDefinition Width="20" />
 				</Grid.ColumnDefinitions>
-				<HyperlinkButton Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" Click="ButtonBase_OnClick" VerticalAlignment="Center">
+				<HyperlinkButton Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" Click="DeleteReplication" VerticalAlignment="Center">
 					<Image Source="{StaticResource Image_Error_Tiny}"/>
 				</HyperlinkButton>
 
@@ -70,6 +70,34 @@
 
 				<ComboBox Grid.Row="3" Grid.Column="1" Margin="5" SelectedValue="{Binding TransitiveReplicationBehavior,Mode=TwoWay}" HorizontalAlignment="Left"
 							  ItemsSource="{Binding TransitiveReplicationBehavior, Converter={StaticResource enumerationFromValue}}"/>
+			</Grid>
+		</DataTemplate>
+
+		<DataTemplate x:Key="VersioningItemTemplate">
+			<Grid Margin="4" x:Name="grid">
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
+				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="100" />
+					<ColumnDefinition Width="Auto" MinWidth="100" MaxWidth="250"/>
+					<ColumnDefinition Width="20" />
+				</Grid.ColumnDefinitions>
+				
+				<HyperlinkButton Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" Click="DeleteVersioning" VerticalAlignment="Center">
+					<Image Source="{StaticResource Image_Error_Tiny}"/>
+				</HyperlinkButton>
+
+					<TextBlock Grid.Row="0" Text="Version Tag: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Id, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+
+					<TextBlock Grid.Row="1" Text="Max Revisions: " VerticalAlignment="Center"/>
+				<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MaxRevisions, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+
+				<TextBlock Grid.Row="2" Text="Exclude: " VerticalAlignment="Center"/>
+				<CheckBox Grid.Row="2" IsChecked="{Binding Exclude, Mode=TwoWay}" Margin="55,5,5,5" MaxWidth="250"/>
 			</Grid>
 		</DataTemplate>
 	</UserControl.Resources>
@@ -193,7 +221,7 @@
 										 ItemTemplate="{StaticResource ReplicationItemTemplate}"
 										 Margin="10"
 										 MaxWidth="1000"
-										 MaxHeight="700"
+										 MaxHeight="450"
 										 ScrollViewer.VerticalScrollBarVisibility="Auto"
 										 HorizontalAlignment="Left">
 
@@ -230,35 +258,20 @@
 							<RowDefinition Height="10" />
 						</Grid.RowDefinitions>
 
-						<Button Content="Add Default Versioning" Visibility="{Binding HasDefaultVersioning,Converter={StaticResource BooleanToOppositeVisibility}, Mode=TwoWay}"
+						<Button Content="Add Default Versioning" HorizontalAlignment="Left" Visibility="{Binding HasDefaultVersioning,Converter={StaticResource BooleanToOppositeVisibility}, Mode=TwoWay}"
 									Command="{Binding AddDefaultVersioning}"/>
 
-						<sdk:DataGrid Grid.Row="1" Grid.ColumnSpan="2"
-										  SelectedItem="{Binding SeletedVersioning, Mode=TwoWay}"
-										  ItemsSource="{Binding Path=VersioningConfigurations}"
-										  MaxHeight="650"
-										  ScrollViewer.VerticalScrollBarVisibility="Auto"
-										  AutoGenerateColumns="False">
-							<sdk:DataGrid.Columns>
-								<sdk:DataGridTextColumn Header="Version Tag" Binding="{Binding Id}"/>
-								<sdk:DataGridTextColumn Header="Max Revisions" Binding="{Binding MaxRevisions}"/>
-								<sdk:DataGridCheckBoxColumn Header="Exclude" Binding="{Binding Exclude}"/>
-							</sdk:DataGrid.Columns>
-							<i:Interaction.Behaviors>
-								<Behaviors:SelectRowOnRightClickBehavior />
-							</i:Interaction.Behaviors>
-							<Controls:ContextMenuService.ContextMenu>
-								<Controls:ContextMenu>
-									<Controls:MenuItem Header="Delete"
-											Command="{Binding DeleteVersioning}"
-															   CommandParameter="{Binding SeletedVersioning}">
-										<Controls:MenuItem.Icon>
-											<Image Source="{StaticResource Image_Delete_Tiny}"/>
-										</Controls:MenuItem.Icon>
-									</Controls:MenuItem>
-								</Controls:ContextMenu>
-							</Controls:ContextMenuService.ContextMenu>
-						</sdk:DataGrid>
+						<ListBox Grid.Row="1" Style="{StaticResource Databases_FluidList}"
+										 ItemsSource="{Binding VersioningConfigurations}"
+										 SelectedItem="{Binding SeletedVersioning, Mode=TwoWay}"
+										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
+										 ItemTemplate="{StaticResource VersioningItemTemplate}"
+										 Margin="10"
+										 MaxWidth="1000"
+										 MaxHeight="450"
+										 ScrollViewer.VerticalScrollBarVisibility="Auto"
+										 HorizontalAlignment="Left">
+						</ListBox>
 						<Button Content="Add"
 							Grid.Row="2"
 							Grid.ColumnSpan="2"
