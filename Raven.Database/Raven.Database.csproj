@@ -154,6 +154,7 @@
     <Compile Include="Bundles\Replication\Responders\AttachmentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\DocumentReplicationBehavior.cs" />
     <Compile Include="Bundles\Replication\Responders\SingleItemReplicationBehavior.cs" />
+    <Compile Include="Bundles\Replication\Responders\StudioInformationResponder.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
     <Compile Include="Bundles\Versioning\Data\VersioningConfiguration.cs" />

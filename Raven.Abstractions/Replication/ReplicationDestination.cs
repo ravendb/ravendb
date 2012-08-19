@@ -33,6 +33,11 @@ namespace Raven.Abstractions.Replication
 		}
 
 		/// <summary>
+		/// Gets or sets if the replication will use ConnectionString or Url
+		/// </summary>
+		public bool UseConnectionString { get; set; }
+
+		/// <summary>
 		/// The replication server username to use
 		/// </summary>
 		public string Username { get; set; }

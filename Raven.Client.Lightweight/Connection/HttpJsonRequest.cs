@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
@@ -425,6 +426,19 @@ namespace Raven.Client.Connection
 				}
 				throw new InvalidOperationException(readToEnd, e);
 			}
+		}
+
+		/// <summary>
+		/// Adds the operation headers.
+		/// </summary>
+		/// <param name="operationsHeaders">The operations headers.</param>
+		public HttpJsonRequest AddOperationHeaders(IDictionary<string, string> operationsHeaders)
+		{
+			foreach (var header in operationsHeaders)
+			{
+				webRequest.Headers[header.Key] = header.Value;
+			}
+			return this;
 		}
 
 		/// <summary>

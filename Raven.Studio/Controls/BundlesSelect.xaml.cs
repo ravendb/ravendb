@@ -25,6 +25,18 @@ namespace Raven.Studio.Controls
 			DialogResult = false;
 		}
 
+		private void Toggle(object sender, RoutedEventArgs e)
+		{
+			var textblock = sender as TextBlock;
+			if (textblock == null)
+				return;
+
+			var checkbox = this.FindName(textblock.Text.Split(null)[0]) as CheckBox;
+			if (checkbox == null)
+				return;
+			checkbox.IsChecked = !checkbox.IsChecked;
+		}
+
 		private void Checked(object sender, RoutedEventArgs e)
 		{
 			var checkbox = sender as CheckBox;

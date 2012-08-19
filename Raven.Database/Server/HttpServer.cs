@@ -44,7 +44,7 @@ namespace Raven.Database.Server
 {
 	public class HttpServer : IDisposable
 	{
-		private readonly DateTime startUpTime = DateTime.UtcNow;
+		private readonly DateTime startUpTime = SystemTime.UtcNow;
 		private DateTime lastWriteRequest;
 		private const int MaxConcurrentRequests = 192;
 		public DocumentDatabase SystemDatabase { get; private set; }
@@ -70,9 +70,6 @@ namespace Raven.Database.Server
 		{
 			get { return Thread.VolatileRead(ref physicalRequestsCount); }
 		}
-
-		[ImportMany]
-		public OrderedPartCollection<AbstractRequestResponder> RequestResponders { get; set; }
 
 		[ImportMany]
 		public OrderedPartCollection<IConfigureHttpListener> ConfigureHttpListeners { get; set; }
@@ -127,10 +124,7 @@ namespace Raven.Database.Server
 
 			configuration.Container.SatisfyImportsOnce(this);
 
-			foreach (var responder in RequestResponders)
-			{
-				responder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
-			}
+			InitializeRequestResponders(SystemDatabase);
 
 			switch (configuration.AuthenticationMode.ToLowerInvariant())
 			{
@@ -148,6 +142,15 @@ namespace Raven.Database.Server
 			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
 		}
 
+		private void InitializeRequestResponders(DocumentDatabase documentDatabase)
+		{
+			foreach (var responder in documentDatabase.RequestResponders)
+			{
+				responder.Value.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value,
+				                           this);
+			}
+		}
+
 		private void TenantDatabaseRemoved(object sender, TenantDatabaseModified.Event @event)
 		{
 			if (@event.Database != SystemDatabase)
@@ -163,7 +166,7 @@ namespace Raven.Database.Server
 				return new
 				{
 					TotalNumberOfRequests = NumberOfRequests,
-					Uptime = DateTime.UtcNow - startUpTime,
+					Uptime = SystemTime.UtcNow - startUpTime,
 					LoadedDatabases =
 						from documentDatabase in ResourcesStoresCache
 								.Concat(new[] { new KeyValuePair<string, DocumentDatabase>("System", SystemDatabase), })
@@ -255,7 +258,7 @@ namespace Raven.Database.Server
 
 		private void IdleOperations(object state)
 		{
-			if ((DateTime.UtcNow - lastWriteRequest).TotalMinutes < 1)
+			if ((SystemTime.UtcNow - lastWriteRequest).TotalMinutes < 1)
 				return;// not idle, we just had a write request coming in
 
 			try
@@ -280,7 +283,7 @@ namespace Raven.Database.Server
 			}
 
 			var databasesToCleanup = databaseLastRecentlyUsed
-				.Where(x => (SystemTime.Now - x.Value) > maxTimeDatabaseCanBeIdle)
+				.Where(x => (SystemTime.UtcNow - x.Value) > maxTimeDatabaseCanBeIdle)
 				.Select(x => x.Key)
 				.ToArray();
 
@@ -434,7 +437,7 @@ namespace Raven.Database.Server
 
 				if (IsWriteRequest(ctx))
 				{
-					lastWriteRequest = DateTime.UtcNow;
+					lastWriteRequest = SystemTime.UtcNow;
 				}
 				var sw = Stopwatch.StartNew();
 				bool ravenUiRequest = false;
@@ -671,7 +674,7 @@ namespace Raven.Database.Server
 				if (ctx.Request.HttpMethod == "OPTIONS")
 					return false;
 
-				foreach (var requestResponderLazy in RequestResponders)
+				foreach (var requestResponderLazy in currentDatabase.Value.RequestResponders)
 				{
 					var requestResponder = requestResponderLazy.Value;
 					if (requestResponder.WillRespond(ctx))
@@ -769,14 +772,14 @@ namespace Raven.Database.Server
 				currentTenantId.Value = Constants.SystemDatabase;
 				currentDatabase.Value = SystemDatabase;
 				currentConfiguration.Value = SystemConfiguration;
-				databaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.Now, (s, time) => SystemTime.Now);
+				databaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
 				return;
 			}
 			var tenantId = match.Groups[1].Value;
 			DocumentDatabase resourceStore;
 			if (TryGetOrCreateResourceStore(tenantId, out resourceStore))
 			{
-				databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.Now, (s, time) => SystemTime.Now);
+				databaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
 
 				if (string.IsNullOrEmpty(Configuration.VirtualDirectory) == false && Configuration.VirtualDirectory != "/")
 				{
@@ -837,6 +840,7 @@ namespace Raven.Database.Server
 			{
 				var documentDatabase = new DocumentDatabase(config);
 				documentDatabase.SpinBackgroundWorkers();
+				InitializeRequestResponders(documentDatabase);
 				return documentDatabase;
 			});
 			return true;

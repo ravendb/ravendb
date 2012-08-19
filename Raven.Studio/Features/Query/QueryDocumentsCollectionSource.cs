@@ -2,16 +2,8 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Linq;
@@ -95,7 +87,7 @@ namespace Raven.Studio.Features.Query
             query.Start = start;
             query.PageSize = pageSize;
 
-            var queryStartTime = DateTime.Now.Ticks;
+			var queryStartTime = SystemTime.UtcNow.Ticks;
             var queryEndtime = DateTime.MinValue.Ticks;
 
             return ApplicationModel.DatabaseCommands
@@ -104,7 +96,7 @@ namespace Raven.Studio.Features.Query
                             new string[] { }, MetadataOnly)
                             .ContinueWith(task =>
                                               {
-                                                  queryEndtime = DateTime.Now.Ticks;
+												  queryEndtime = SystemTime.UtcNow.Ticks;
 
                                                   var queryTime = new TimeSpan(queryEndtime - queryStartTime);
 
@@ -120,13 +112,13 @@ namespace Raven.Studio.Features.Query
                                                                            IsStale = task.Result.IsStale,
                                                                            SkippedResults =
                                                                                task.Result.SkippedResults,
-                                                                           Timestamp = DateTime.Now,
+																		   Timestamp = SystemTime.UtcNow,
                                                                            TotalResults = task.Result.TotalResults
                                                                        };
                                                   }
                                                   else
                                                   {
-                                                      statistics = new RavenQueryStatistics() {Timestamp = DateTime.Now};
+													  statistics = new RavenQueryStatistics() { Timestamp = SystemTime.UtcNow };
                                                   }
 
                                                   OnQueryStatisticsUpdated(new QueryStatisticsUpdatedEventArgs()

@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.ComponentModel.Composition;
 using NLog;
 using Raven.Abstractions.Data;
@@ -23,6 +24,10 @@ namespace Raven.Bundles.Replication.Responders
 		public override void Respond(IHttpContext context)
 		{
 			var src = context.Request.QueryString["from"];
+			var dbid = context.Request.QueryString["dbid"];
+			if(dbid == Database.TransactionalStorage.Id.ToString())
+				throw new InvalidOperationException("Both source and target databases have database id = " + dbid + "\r\nDatabase cannot replicate to itself.");
+
 			var currentEtag = context.Request.QueryString["currentEtag"];
 			if (string.IsNullOrEmpty(src))
 			{

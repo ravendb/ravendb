@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interactivity;
+using Raven.Abstractions;
 
 namespace Raven.Studio.Behaviors
 {
@@ -50,7 +51,7 @@ namespace Raven.Studio.Behaviors
 
         private void HandleRowLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-           if (sender == _lastClickedRow && (DateTime.Now - _lastClickTime).TotalMilliseconds < DoubleClickInterval)
+			if (sender == _lastClickedRow && (SystemTime.UtcNow - _lastClickTime).TotalMilliseconds < DoubleClickInterval)
            {
                var data = _lastClickedRow.DataContext;
                if (Command != null && Command.CanExecute(data))
@@ -59,7 +60,7 @@ namespace Raven.Studio.Behaviors
                }
            }
 
-            _lastClickTime = DateTime.Now;
+			_lastClickTime = SystemTime.UtcNow;
             _lastClickedRow = sender as DataGridRow;
         }
     }

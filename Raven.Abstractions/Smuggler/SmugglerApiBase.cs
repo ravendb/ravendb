@@ -46,14 +46,14 @@ namespace Raven.Abstractions.Smuggler
 					Directory.CreateDirectory(folder);
 				}
 
-				options.File = Path.Combine(folder, DateTime.Now.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
+				options.File = Path.Combine(folder, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
 				if (File.Exists(options.File))
 				{
 					var counter = 1;
 					var found = false;
 					while (found == false)
 					{
-						options.File = Path.Combine(folder, DateTime.Now.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-incremental-dump");
+						options.File = Path.Combine(folder, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-incremental-dump");
 
 						if (File.Exists(options.File) == false)
 							found = true;

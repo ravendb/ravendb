@@ -1,67 +1,116 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Bundles.Versioning.Data;
 using Raven.Json.Linq;
+using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
+using Raven.Client.Linq;
 
 namespace Raven.Studio.Models
 {
-	public class BundlesModel : ViewModel
+	public class BundlesModel : BaseBundlesModel
 	{
-		public List<string> AllTabs = new List<string>
-		{
-			"Selection",
-			"Encryption",
-			"Quotas",
-			"Replication",
-			"Versioning"
-		};
-
-		private RavenJToken databaseSettings; 
+		private string databaseName;
 
 		public BundlesModel()
 		{
-		//	ReplicationData =
-		//		ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().LoadAsync<ReplicationDocument>();
-
-			ApplicationModel.Current.Server.Value.DocumentStore
-			.AsyncDatabaseCommands
-			.ForDefaultDatabase()
-			.GetAsync("Raven/Databases/" + ApplicationModel.Database.Value.Name)
-			.ContinueOnSuccessInTheUIThread(doc =>
-			{
-				databaseSettings = doc.DataAsJson["Settings"];
-				OnPropertyChanged(() => HasQuotas);
-				OnPropertyChanged(() => HasReplication);
-				OnPropertyChanged(() => HasVersioning);
-				OnPropertyChanged(() => MaxSize);
-				OnPropertyChanged(() => WarnSize);
-				OnPropertyChanged(() => MaxDocs);
-				OnPropertyChanged(() => WarnDocs);
-			});
+			VersioningConfigurations.CollectionChanged += (sender, args) => OnPropertyChanged(() => HasDefaultVersioning);
+			InitializeFromServer();
 		}
 
-		public ReplicationDocument ReplicationData { get; set; }
-		public string CurrentDatabase { get { return ApplicationModel.Database.Value.Name; } }
-
-		public bool HasQuotas
+		private void InitializeFromServer()
 		{
-			get
-			{
-				return databaseSettings != null && databaseSettings.SelectToken("Raven/ActiveBundles").ToString().Contains("Quotas");
-			}
+			databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
+			ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName)
+				.LoadAsync<ReplicationDocument>("Raven/Replication/Destinations")
+				.ContinueOnSuccessInTheUIThread(document =>
+				{
+					if (document == null)
+						return;
+					ReplicationData = document;
+					ReplicationDestinations = new ObservableCollection<ReplicationDestination>(ReplicationData.Destinations);
+				});
+
+			ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName)
+				.Query<VersioningConfiguration>().ToListAsync().ContinueOnSuccessInTheUIThread(
+					list =>
+					{
+						VersioningConfigurations.Clear();
+						foreach (var versioningConfiguration in list)
+						{
+							VersioningConfigurations.Add(versioningConfiguration);
+						}
+						OriginalVersioningConfigurations = new ObservableCollection<VersioningConfiguration>(list);
+					});
+
+			ApplicationModel.Current.Server.Value.DocumentStore
+				.AsyncDatabaseCommands
+				.ForDefaultDatabase()
+				.GetAsync("Raven/Databases/" + ApplicationModel.Database.Value.Name)
+				.ContinueOnSuccessInTheUIThread(doc =>
+				{
+					DatabaseDocument = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer().Deserialize
+						<DatabaseDocument>(
+							new RavenJTokenReader(doc.DataAsJson));
+					OnPropertyChanged(() => HasQuotas);
+					OnPropertyChanged(() => HasReplication);
+					OnPropertyChanged(() => HasVersioning);
+					OnPropertyChanged(() => MaxSize);
+					OnPropertyChanged(() => WarnSize);
+					OnPropertyChanged(() => MaxDocs);
+					OnPropertyChanged(() => WarnDocs);
+
+					if (HasVersioning)
+					{
+						ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(databaseName)
+							.LoadAsync<object>("Raven/Versioning/DefaultConfiguration")
+							.ContinueOnSuccessInTheUIThread(document =>
+							{
+								if (document != null)
+								{
+									VersioningConfigurations.Insert(0, document as VersioningConfiguration);
+									OriginalVersioningConfigurations.Insert(0, document as VersioningConfiguration);
+									OnPropertyChanged(() => HasDefaultVersioning);
+								}
+							});
+					}
+
+					if (HasQuotas)
+					{
+						Bundles.Add("Quotas");
+						SelectedBundle.Value = "Quotas";
+					}
+					if (HasReplication)
+					{
+						Bundles.Add("Replication");
+						if (SelectedBundle.Value == null)
+							SelectedBundle.Value = "Replication";
+					}
+					if (HasVersioning)
+					{
+						Bundles.Add("Versioning");
+						if (SelectedBundle.Value == null)
+							SelectedBundle.Value = "Versioning";
+					}
+				});
+		}
+
+		public override bool HasQuotas
+		{
+			get{return DatabaseDocument != null && DatabaseDocument.Settings["Raven/ActiveBundles"].Contains("Quotas");}
 		}
 
 		private int maxSize;
-		public int MaxSize
+		public override int MaxSize
 		{
 			get
 			{
 				if (maxSize == 0)
 				{
 					if (HasQuotas)
-						int.TryParse(databaseSettings.SelectToken(Constants.SizeHardLimitInKB).ToString(), out maxSize);
+						int.TryParse(DatabaseDocument.Settings[Constants.SizeHardLimitInKB], out maxSize);
 					maxSize /= 1024;
 				}
 				return maxSize;
@@ -70,14 +119,14 @@ namespace Raven.Studio.Models
 		}
 
 		private int warnSize;
-		public int WarnSize
+		public override int WarnSize
 		{
 			get
 			{
 				if (warnSize == 0)
 				{
 					if (HasQuotas)
-						int.TryParse(databaseSettings.SelectToken(Constants.SizeSoftLimitInKB).ToString(), out warnSize);
+						int.TryParse(DatabaseDocument.Settings[Constants.SizeSoftLimitInKB], out warnSize);
 					warnSize /= 1024;
 				}
 				return warnSize;
@@ -86,14 +135,14 @@ namespace Raven.Studio.Models
 		}
 
 		private int maxDocs;
-		public int MaxDocs
+		public override int MaxDocs
 		{
 			get
 			{
 				if (maxDocs == 0)
 				{
 					if (HasQuotas)
-						int.TryParse(databaseSettings.SelectToken(Constants.DocsHardLimit).ToString(), out maxDocs);
+						int.TryParse(DatabaseDocument.Settings[Constants.DocsHardLimit], out maxDocs);
 				}
 				return maxDocs;
 			}
@@ -101,34 +150,30 @@ namespace Raven.Studio.Models
 		}
 
 		private int warnDocs;
-		public int WarnDocs
+		public override int WarnDocs
 		{
 			get
 			{
 				if (warnDocs == 0)
 				{
 					if (HasQuotas)
-						int.TryParse(databaseSettings.SelectToken(Constants.DocsSoftLimit).ToString(), out warnDocs);
+						int.TryParse(DatabaseDocument.Settings[Constants.DocsSoftLimit], out warnDocs);
 				}
 				return warnDocs;
 			}
 			set { warnDocs = value; }
 		}
 
-		public bool HasReplication
+		public override bool HasReplication
 		{
-			get
-			{
-				return databaseSettings != null && databaseSettings.SelectToken("Raven/ActiveBundles").ToString().Contains("Replication");
-			}
+			get{return DatabaseDocument != null && DatabaseDocument.Settings["Raven/ActiveBundles"].Contains("Replication");}
 		}
 
-		public bool HasVersioning
+		public override bool HasVersioning
 		{
-			get
-			{
-				return databaseSettings != null && databaseSettings.SelectToken("Raven/ActiveBundles").ToString().Contains("Versioning");
-			}
+			get{return DatabaseDocument != null && DatabaseDocument.Settings["Raven/ActiveBundles"].Contains("Versioning");}
 		}
+
+		public ICommand SaveBundles { get { return new SaveBundlesCommand(this); } }
 	}
 }

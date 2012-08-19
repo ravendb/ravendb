@@ -32,7 +32,7 @@
     <LinkedServerProject>
     </LinkedServerProject>
     <Utf8Output>true</Utf8Output>
-    <ExpressionBlendVersion>4.0.20525.0</ExpressionBlendVersion>
+    <ExpressionBlendVersion>4.1.20402.0</ExpressionBlendVersion>
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
@@ -152,6 +152,9 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="..\Raven.Database\Bundles\Replication\Data\SourceReplicationInformation.cs">
+      <Link>Features\Bundles\SourceReplicationInformation.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Database\Bundles\Versioning\Data\VersioningConfiguration.cs">
       <Link>Features\Bundles\VersioningConfiguration.cs</Link>
     </Compile>
@@ -177,8 +180,15 @@
     <Compile Include="Behaviors\ShowPopupWhilstMouseOver.cs" />
     <Compile Include="Behaviors\StudioBehavior.cs" />
     <Compile Include="Behaviors\StudioKeyTrigger.cs" />
+    <Compile Include="Commands\AddDefaultVersioningCommand.cs" />
+    <Compile Include="Commands\AddReplicationCommand.cs" />
+    <Compile Include="Commands\AddVersioningCommand.cs" />
     <Compile Include="Commands\BackupCommand.cs" />
+    <Compile Include="Commands\DeleteAllIndexsCommand.cs" />
+    <Compile Include="Commands\DeleteReplicationCommand.cs" />
     <Compile Include="Commands\DeleteDatabaseCommand.cs" />
+    <Compile Include="Commands\DeleteVersioningCommand.cs" />
+    <Compile Include="Commands\SaveBundlesCommand.cs" />
     <Compile Include="Commands\SelectSystemDatabaseCommand.cs" />
     <Compile Include="Commands\ItemSelectionCommand.cs" />
     <Compile Include="Commands\StopIndexingCommand.cs" />
@@ -199,8 +209,8 @@
     <Compile Include="Controls\Editors\QuerySyntaxTextBlock.xaml.cs">
       <DependentUpon>QuerySyntaxTextBlock.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\EncryotionSettings.xaml.cs">
-      <DependentUpon>EncryotionSettings.xaml</DependentUpon>
+    <Compile Include="Controls\EncryptionSettings.xaml.cs">
+      <DependentUpon>EncryptionSettings.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\GoToDocumentControl.xaml.cs">
       <DependentUpon>GoToDocumentControl.xaml</DependentUpon>
@@ -208,22 +218,13 @@
     <Compile Include="Controls\NewDatabase.xaml.cs">
       <DependentUpon>NewDatabase.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\QuotasSettings.xaml.cs">
-      <DependentUpon>QuotasSettings.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Controls\RecentQueriesButton.xaml.cs">
       <DependentUpon>RecentQueriesButton.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\ReplicationSettings.xaml.cs">
-      <DependentUpon>ReplicationSettings.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\ShowEncryptionMessage.xaml.cs">
       <DependentUpon>ShowEncryptionMessage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\UpdateSourceTrigger.cs" />
-    <Compile Include="Controls\VersioningSettings.xaml.cs">
-      <DependentUpon>VersioningSettings.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Controls\VirtualizingWrapPanel.cs" />
     <Compile Include="Controls\Wizard.cs" />
     <Compile Include="Controls\WordHighlightTagger.cs" />
@@ -320,7 +321,9 @@
     <Compile Include="Impl\WatermarkedTextBox\VisualStateHelper.cs" />
     <Compile Include="Impl\WatermarkedTextBox\WatermarkedTextBox.cs" />
     <Compile Include="Infrastructure\ArrayContainer.cs" />
+    <Compile Include="Infrastructure\Converters\BooleanToIntConverter.cs" />
     <Compile Include="Infrastructure\Converters\BooleanToStaleStatConverter.cs" />
+    <Compile Include="Infrastructure\Converters\StringToBooleanConverter.cs" />
     <Compile Include="Infrastructure\Converters\StringToDefaultOperatorConverter.cs" />
     <Compile Include="Infrastructure\Converters\DocumentPropertyToSingleLineStringConverter.cs" />
     <Compile Include="Infrastructure\Converters\EnumToVisibilityConverter.cs" />
@@ -375,6 +378,8 @@
     <Compile Include="Infrastructure\WeakCollectionViewWrapper.cs" />
     <Compile Include="Models\ApplicationState.cs" />
     <Compile Include="Models\BundlesModel.cs" />
+    <Compile Include="Models\BaseBundlesModel.cs" />
+    <Compile Include="Models\CreateBundlesModel.cs" />
     <Compile Include="Models\DatabaseListItemModel.cs" />
     <Compile Include="Models\DatabaseSelectionModel.cs" />
     <Compile Include="Models\DocumentSize.cs" />
@@ -682,6 +687,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Assets\ChildWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Controls\DeleteDatabase.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -690,7 +699,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\EncryotionSettings.xaml">
+    <Page Include="Controls\EncryptionSettings.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -702,15 +711,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\QuotasSettings.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Controls\RecentQueriesButton.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\ReplicationSettings.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -719,10 +720,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\Taggers.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\VersioningSettings.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -1008,6 +1005,9 @@
     <Resource Include="Assets\Images\import_data_tiny.png" />
     <Resource Include="Assets\Images\offline.png" />
     <Resource Include="Assets\Images\online.png" />
+    <Resource Include="Assets\Images\database_system_tiny.png" />
+    <Resource Include="Assets\Images\index_delete_small.png" />
+    <Resource Include="Assets\Images\index_delete_tiny.png" />
     <Content Include="Impl\SplitButton\Credits.txt" />
     <Content Include="Impl\WatermarkedTextBox\Credits.txt" />
     <Resource Include="Assets\Images\BackgroundTexture.png" />

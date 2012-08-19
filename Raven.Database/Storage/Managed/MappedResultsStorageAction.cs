@@ -51,7 +51,7 @@ namespace Raven.Storage.Managed
 				{"docId", docId},
 				{"etag", byteArray},
 				{"bucket", IndexingUtil.MapBucket(docId)},
-				{"timestamp", SystemTime.Now}
+				{"timestamp", SystemTime.UtcNow}
 			};
 			storage.MappedResults.Put(key, ms.ToArray());
 		}

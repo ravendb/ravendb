@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
-using Raven.Client.Extensions;
-using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Document
 {
@@ -58,13 +55,13 @@ namespace Raven.Client.Document
 
 		protected void IncreaseCapacityIfRequired()
 		{
-			var span = DateTime.UtcNow - lastRequestedUtc;
+			var span = SystemTime.UtcNow - lastRequestedUtc;
 			if (span.TotalSeconds < 1)
 			{
 				capacity *= 2;
 			}
 
-			lastRequestedUtc = DateTime.UtcNow;
+			lastRequestedUtc = SystemTime.UtcNow;
 		}
 
 		protected JsonDocument HandleGetDocumentResult(MultiLoadResult documents)

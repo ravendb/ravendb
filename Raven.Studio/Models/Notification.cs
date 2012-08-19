@@ -15,7 +15,7 @@ namespace Raven.Studio.Messages
 	        this.details = details;
 	        Message = message;
 			Level = level;
-			CreatedAt = SystemTime.Now;
+			CreatedAt = SystemTime.UtcNow;
 		}
 
 		public DateTime CreatedAt { get; private set; }
@@ -29,21 +29,22 @@ namespace Raven.Studio.Messages
 	        {
 	            var sb = new StringBuilder();
 
-	            if (exception != null)
-	            {
-	                sb.Append(exception.ToString());
-	            }
-
-	            sb.AppendLine();
-	            sb.AppendLine();
-
-                if (details != null)
+				if (details != null)
                 {
                     foreach (var detail in details)
                     {
                         sb.AppendLine(detail.ToString());
                     }    
                 }
+
+				sb.AppendLine();
+				sb.AppendLine();
+
+				if (exception != null)
+				{
+					sb.AppendLine("Client side exception:");
+					sb.Append(exception.ToString());
+				}
 
 	            return sb.ToString();
 	        }

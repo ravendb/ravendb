@@ -529,7 +529,7 @@ namespace Raven.Bundles.Replication.Tasks
 				var currentEtag = Guid.Empty;
 				docDb.TransactionalStorage.Batch(accessor => currentEtag = accessor.Staleness.GetMostRecentDocumentEtag());
 				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
-						  "&currentEtag=" + currentEtag;
+						  "&currentEtag=" + currentEtag + "&dbid=" + docDb.TransactionalStorage.Id;
 				var request = httpRavenRequestFactory.Create(url, "GET", destination.ConnectionStringOptions);
 				return request.ExecuteRequest<SourceReplicationInformation>();
 			}
@@ -550,7 +550,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private string UrlEncodedServerUrl()
 		{
-			return Uri.EscapeDataString(docDb.Configuration.ServerUrl);
+			return Uri.EscapeDataString(docDb.ServerUrl);
 		}
 
 		private ReplicationStrategy[] GetReplicationDestinations()

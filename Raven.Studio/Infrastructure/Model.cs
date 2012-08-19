@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 
 namespace Raven.Studio.Infrastructure
@@ -34,7 +34,7 @@ namespace Raven.Studio.Infrastructure
 				if (currentTask != null)
 					return;
 
-				var timeFromLastRefresh = DateTime.Now - lastRefresh;
+				var timeFromLastRefresh = SystemTime.UtcNow - lastRefresh;
 				var refreshRate = GetRefreshRate();
 				if (timeFromLastRefresh < refreshRate)
 					return;
@@ -49,7 +49,7 @@ namespace Raven.Studio.Infrastructure
 					.Catch()
 					.Finally(() =>
 					{
-						lastRefresh = DateTime.Now;
+						lastRefresh = SystemTime.UtcNow;
 						IsForced = false;
 						currentTask = null;
 					});
