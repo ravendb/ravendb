@@ -565,7 +565,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 				ResetFailureCount(operationUrl);
 				return true;
 			}
-			catch (WebException e)
+			catch (Exception e)
 			{
 				if (avoidThrowing == false)
 					throw;
