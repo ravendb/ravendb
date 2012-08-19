@@ -163,6 +163,7 @@
     <Compile Include="Bundles\Versioning\Triggers\VersioningPutTrigger.cs" />
     <Compile Include="Bundles\Versioning\VersioningUtil.cs" />
     <Compile Include="Indexing\FilteredDocument.cs" />
+    <Compile Include="Indexing\IndexingUtil.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsForTransformResults.cs" />
     <Compile Include="Linq\CodeVerifier.cs" />
     <Compile Include="Linq\Mono.Reflection\BackingFieldResolver.cs" />
@@ -595,7 +596,6 @@
     <Compile Include="Storage\Esent\TableColumnsCache.cs" />
     <Compile Include="Storage\Esent\TransactionalStorage.cs" />
     <Compile Include="Storage\Esent\TransactionalStorageConfigurator.cs" />
-    <Compile Include="Storage\GetMappedResultsParams.cs" />
     <Compile Include="Storage\IAttachmentsStorageActions.cs" />
     <Compile Include="Storage\IDocumentStorageActions.cs" />
     <Compile Include="Storage\IGeneralStorageActions.cs" />
@@ -623,7 +623,6 @@
     <Compile Include="Storage\Managed\Munin\AbstractPersistentSource.cs" />
     <Compile Include="Storage\Managed\Munin\Command.cs" />
     <Compile Include="Storage\Managed\Munin\CommandType.cs" />
-    <Compile Include="Storage\Managed\Munin\ComparableByteArray.cs" />
     <Compile Include="Storage\Managed\Munin\Database.cs" />
     <Compile Include="Storage\Managed\Munin\FileBasedPersistentSource.cs" />
     <Compile Include="Storage\Managed\Munin\IComparerAndEquality.cs" />
@@ -653,11 +652,11 @@
     <Compile Include="Storage\Managed\TasksStorageActions.cs" />
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
     <Compile Include="Storage\Managed\TransactionStorageActions.cs" />
-    <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
     <Compile Include="Util\BoundedMemoryTarget.cs" />
+    <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\WildcardMatcher.cs" />
   </ItemGroup>

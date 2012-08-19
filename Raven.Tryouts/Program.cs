@@ -1,21 +1,52 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.ComponentModel.Composition.Hosting;
-using System.Net;
-using System.Threading;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Client.Util;
-using Raven.Json.Linq;
+using Raven.Database.Extensions;
+using Raven.Client.Linq;
 using Raven.Tests.Bugs;
-using Raven.Tests.Notifications;
-using Xunit;
 
-public class Program
+namespace Raven.Tryouts
 {
-	public static void Main()
+	public class Program
 	{
+		public static void Main()
+		{
+			IOExtensions.DeleteDirectory("Logs");
+			using (var x = new MultiOutputReduce())
+			{
+				x.CanGetCorrectResultsFromAllItems();
+			}
+
+		}
+
+		public class Person
+		{
+			public string State { get; set; }
+		}
+		public class Population
+		{
+			public int Count { get; set; }
+			public string State { get; set; }
+
+			public override string ToString()
+			{
+				return string.Format("Count: {0}, State: {1}", Count, State);
+			}
+		}
+		public class PopulationByState : AbstractIndexCreationTask<Person, Population>
+		{
+			public PopulationByState()
+			{
+				Map = people => from person in people
+								select new { person.State, Count = 1 };
+				Reduce = results => from result in results
+									group result by result.State
+										into g
+										select new { State = g.Key, Count = g.Sum(x => x.Count) };
+			}
+		}
 	}
 }

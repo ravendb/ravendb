@@ -54,12 +54,12 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ShardedDocumentQuery{T}"/> class.
 		/// </summary>
-		public AsyncShardedDocumentQuery(InMemoryDocumentSessionOperations session, Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn, ShardStrategy shardStrategy, string indexName, string[] projectionFields, IDocumentQueryListener[] queryListeners)
+		public AsyncShardedDocumentQuery(InMemoryDocumentSessionOperations session, Func<ShardRequestData, IList<Tuple<string, IAsyncDatabaseCommands>>> getShardsToOperateOn, ShardStrategy shardStrategy, string indexName, string[] fieldsToFetch, string[] projectionFields, IDocumentQueryListener[] queryListeners)
 			: base(session
 #if !SILVERLIGHT
 , null
 #endif
-, null, indexName, projectionFields, queryListeners)
+, null, indexName, fieldsToFetch, projectionFields, queryListeners)
 		{
 			this.getShardsToOperateOn = getShardsToOperateOn;
 			this.shardStrategy = shardStrategy;
@@ -85,13 +85,14 @@ namespace Raven.Client.Document
 			return ExecuteActualQueryAsync();
 		}
 
-		public override IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
+		public override IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
 		{
 			var documentQuery = new AsyncShardedDocumentQuery<TProjection>(theSession,
 				getShardsToOperateOn,
 				shardStrategy,
 				indexName,
 				fields,
+				projections,
 				queryListeners)
 			{
 				pageSize = pageSize,

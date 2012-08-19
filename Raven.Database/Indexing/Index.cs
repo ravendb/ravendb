@@ -56,7 +56,7 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentDictionary<string, IIndexExtension> indexExtensions =
 			new ConcurrentDictionary<string, IIndexExtension>();
 
-		protected readonly string name;
+		internal readonly string name;
 
 		private readonly AbstractViewGenerator viewGenerator;
 		private readonly InMemoryRavenConfiguration configuration;

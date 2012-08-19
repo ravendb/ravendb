@@ -11,9 +11,12 @@ using System.ComponentModel;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
+using Raven.Database.Extensions;
+using Raven.Database.Plugins;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -22,7 +25,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Database.Config;
 using Raven.Database.Data;
-using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
@@ -32,7 +34,8 @@ namespace Raven.Database.Indexing
 {
 	public class MapReduceIndex : Index
 	{
-		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
+		public MapReduceIndex(Directory directory, string name, IndexDefinition indexDefinition,
+							  AbstractViewGenerator viewGenerator, InMemoryRavenConfiguration configuration)
 			: base(directory, name, indexDefinition, viewGenerator, configuration)
 		{
 		}
@@ -51,65 +54,54 @@ namespace Raven.Database.Indexing
 		{
 			var count = 0;
 
-			// we mark the reduce keys to delete when we delete the mapped results, then we remove
-			// any reduce key that is actually being used to generate new mapped results
-			// this way, only reduces that removed data will force us to use the tasks approach
-			var reduceKeysToDelete = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			var changed = new HashSet<ReduceKeyAndBucket>();
 			var documentsWrapped = documents.Select(doc =>
 			{
 				var documentId = doc.__document_id;
-				foreach (var reduceKey in actions.MappedResults.DeleteMappedResultsForDocumentId((string)documentId, name))
-				{
-					reduceKeysToDelete.Add(reduceKey);
-				}
+				actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, name, changed);
 				return doc;
 			})
-			.Where(x=>x is FilteredDocument == false);
+				.Where(x => x is FilteredDocument == false);
 			var stats = new IndexingWorkStats();
-			foreach (var mappedResultFromDocument in GroupByDocumentId(context,RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context,stats)))
+			foreach (
+				var mappedResultFromDocument in
+					GroupByDocumentId(context,
+									  RobustEnumerationIndex(documentsWrapped, viewGenerator.MapDefinitions, actions, context, stats)))
 			{
-				foreach (var doc in RobustEnumerationReduceDuringMapPhase(mappedResultFromDocument, viewGenerator.ReduceDefinition, actions, context))
+				foreach (
+					var doc in
+						RobustEnumerationReduceDuringMapPhase(mappedResultFromDocument, viewGenerator.ReduceDefinition, actions, context))
 				{
 					count++;
 
 					var reduceValue = viewGenerator.GroupByExtraction(doc);
 					if (reduceValue == null)
 					{
-						logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}", 
-											viewGenerator.GroupByExtraction, mappedResultFromDocument.Key);
+						logIndexing.Debug("Field {0} is used as the reduce key and cannot be null, skipping document {1}",
+										  viewGenerator.GroupByExtraction, mappedResultFromDocument.Key);
 						continue;
 					}
 					var reduceKey = ReduceKeyToString(reduceValue);
 					var docId = mappedResultFromDocument.Key.ToString();
 
-					reduceKeysToDelete.Remove((string)reduceKey);
-
 					var data = GetMappedData(doc);
 
 					logIndexing.Debug("Mapped result for index '{0}' doc '{1}': '{2}'", name, docId, data);
 
-					var hash = ComputeHash(name, reduceKey);
+					actions.MapReduce.PutMappedResult(name, docId, reduceKey, data);
 
-					actions.MappedResults.PutMappedResult(name, docId, reduceKey, data, hash);
+					changed.Add(new ReduceKeyAndBucket(IndexingUtil.MapBucket(docId), reduceKey));
 				}
 			}
 			UpdateIndexingStats(context, stats);
-			if (reduceKeysToDelete.Count > 0)
-			{
-				actions.Tasks.AddTask(new ReduceTask
-				{
-					Index = name,
-					ReduceKeys = reduceKeysToDelete.ToArray()
-				}, minimumTimestamp);
-			}
-
+			actions.MapReduce.ScheduleReductions(name, 0, changed);
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
 		}
 
 		// we don't use the usual GroupBy, because that isn't streaming
 		// we rely on the fact that all values from the same docs are always outputed at 
 		// the same time, so we can take advantage of this fact
-		private IEnumerable<IGrouping<object, dynamic>> GroupByDocumentId( WorkContext context,IEnumerable<object> docs)
+		private IEnumerable<IGrouping<object, dynamic>> GroupByDocumentId(WorkContext context, IEnumerable<object> docs)
 		{
 			var enumerator = docs.GetEnumerator();
 			if (enumerator.MoveNext() == false)
@@ -125,7 +117,7 @@ namespace Raven.Database.Indexing
 				catch (Exception e)
 				{
 					context.AddError(name, null, e.Message);
-					if(enumerator.MoveNext() == false)
+					if (enumerator.MoveNext() == false)
 						yield break;
 					continue;
 				}
@@ -141,6 +133,7 @@ namespace Raven.Database.Indexing
 			private readonly IEnumerator enumerator;
 			private bool newKeyFound;
 			public bool Done { get; private set; }
+
 			public IEnumerator<object> GetEnumerator()
 			{
 				if (newKeyFound || Done)
@@ -177,7 +170,8 @@ namespace Raven.Database.Indexing
 			return RavenJObject.FromObject(doc);
 		}
 
-		private static readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache = new ConcurrentDictionary<Type, Func<object, object>>();
+		private static readonly ConcurrentDictionary<Type, Func<object, object>> documentIdFetcherCache =
+			new ConcurrentDictionary<Type, Func<object, object>>();
 
 		private static object GetDocumentId(object doc)
 		{
@@ -200,13 +194,7 @@ namespace Raven.Database.Indexing
 			return documentId;
 		}
 
-		public static byte[] ComputeHash(string name, string reduceKey)
-		{
-			using (var sha256 = SHA256.Create())
-				return sha256.ComputeHash(Encoding.UTF8.GetBytes(name + "/" + reduceKey));
-		}
-
-		private static string ReduceKeyToString(object reduceValue)
+		internal static string ReduceKeyToString(object reduceValue)
 		{
 			if (reduceValue is string || reduceValue is ValueType)
 				return reduceValue.ToString();
@@ -228,21 +216,13 @@ namespace Raven.Database.Indexing
 		{
 			context.TransactionaStorage.Batch(actions =>
 			{
-				var reduceKeys = new HashSet<string>();
+				var reduceKeyAndBuckets = new HashSet<ReduceKeyAndBucket>();
 				foreach (var key in keys)
 				{
-					var reduceKeysFromDocuments = actions.MappedResults.DeleteMappedResultsForDocumentId(key, name);
-					foreach (var reduceKey in reduceKeysFromDocuments)
-					{
-						reduceKeys.Add(reduceKey);
-					}
-				}
-				actions.Tasks.AddTask(new ReduceTask
-				{
-					Index = name,
-					ReduceKeys = reduceKeys.ToArray()
-				}, SystemTime.UtcNow);
+					actions.MapReduce.DeleteMappedResultsForDocumentId(key, name, reduceKeyAndBuckets);
 
+				}
+				actions.MapReduce.ScheduleReductions(name, 0, reduceKeyAndBuckets);
 			});
 			Write(context, (writer, analyzer, stats) =>
 			{
@@ -253,152 +233,239 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-
-		// This method may be called concurrently, by both the ReduceTask (for removal)
-		// and by the ReducingExecuter (for add/modify). This is okay with us, since the 
-		// Write() call is already handling locking properly
-		public void ReduceDocuments(AbstractViewGenerator viewGenerator,
-									IEnumerable<object> mappedResults,
-									WorkContext context,
-									IStorageActionsAccessor actions,
-									string[] reduceKeys)
+		public class ReduceDocuments
 		{
-			var count = 0;
-			Write(context, (indexWriter, analyzer, stats) =>
+			private readonly MapReduceIndex parent;
+			private readonly string name;
+			readonly AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter;
+			private readonly Document luceneDoc = new Document();
+			private readonly Field reduceKeyField = new Field(Constants.ReduceKeyFieldName, "dummy",
+													 Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
+			private PropertyDescriptorCollection properties = null;
+			private readonly List<AbstractIndexUpdateTriggerBatcher> batchers;
+
+			public ReduceDocuments(
+				MapReduceIndex parent,
+				AbstractViewGenerator viewGenerator,
+				IEnumerable<IGrouping<int, object>> mappedResultsByBucket,
+				int level,
+				WorkContext context,
+				IStorageActionsAccessor actions,
+				HashSet<string> reduceKeys)
 			{
-				stats.Operation = IndexingWorkStats.Status.Reduce;
-				var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
-					.Where(x => x != null)
-					.ToList();
+				this.parent = parent;
+				name = this.parent.name;
+				ViewGenerator = viewGenerator;
+				MappedResultsByBucket = mappedResultsByBucket;
+				Level = level;
+				Context = context;
+				Actions = actions;
+				ReduceKeys = reduceKeys;
+
+				anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(this.parent.indexDefinition);
+
+				if (Level == 2)
+				{
+					batchers = Context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
+								.Where(x => x != null)
+								.ToList();
+				}
+			}
+
+			public AbstractViewGenerator ViewGenerator { get; private set; }
+			public IEnumerable<IGrouping<int, object>> MappedResultsByBucket { get; private set; }
+			public int Level { get; private set; }
+			public WorkContext Context { get; private set; }
+			public IStorageActionsAccessor Actions { get; private set; }
+			public HashSet<string> ReduceKeys { get; private set; }
+
+			private string ExtractReduceKey(AbstractViewGenerator viewGenerator, object doc)
+			{
 				try
 				{
-					foreach (var reduceKey in reduceKeys)
+					object reduceKey = viewGenerator.GroupByExtraction(doc);
+					if (reduceKey == null)
 					{
-						var entryKey = reduceKey;
-						indexWriter.DeleteDocuments(new Term(Constants.ReduceKeyFieldName, entryKey.ToLowerInvariant()));
-						batchers.ApplyAndIgnoreAllErrors(
-							exception =>
-							{
-								logIndexing.WarnException(
-									string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
-												  name, entryKey),
-									exception);
-								context.AddError(name, entryKey, exception.Message);
-							},
-							trigger => trigger.OnIndexEntryDeleted(entryKey));
+						throw new InvalidOperationException("Could not find reduce key for " + name + " in the result: " + doc);
 					}
-					PropertyDescriptorCollection properties = null;
-					var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
-					var luceneDoc = new Document();
-					var reduceKeyField = new Field(Constants.ReduceKeyFieldName, "dummy",
-										  Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS);
-					foreach (var doc in RobustEnumerationReduce(mappedResults, viewGenerator.ReduceDefinition, actions, context, stats))
-					{
-						count++;
-						float boost;
-						var fields = GetFields(anonymousObjectToLuceneDocumentConverter, doc, ref properties, out boost).ToList();
-
-						string reduceKeyAsString = ExtractReduceKey(viewGenerator, doc);
-						reduceKeyField.SetValue(reduceKeyAsString.ToLowerInvariant());
-
-						luceneDoc.GetFields().Clear();
-						luceneDoc.SetBoost(boost);
-						luceneDoc.Add(reduceKeyField);
-						foreach (var field in fields)
-						{
-							luceneDoc.Add(field);
-						}
-
-						batchers.ApplyAndIgnoreAllErrors(
-							exception =>
-							{
-								logIndexing.WarnException(
-									string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-												  name, reduceKeyAsString),
-									exception);
-								context.AddError(name, reduceKeyAsString, exception.Message);
-							},
-							trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
-
-						LogIndexedDocument(reduceKeyAsString, luceneDoc);
-
-						AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
-						stats.ReduceSuccesses++;
-					}
+					return ReduceKeyToString(reduceKey);
 				}
 				catch (Exception e)
 				{
-					batchers.ApplyAndIgnoreAllErrors(
-						ex =>
-						{
-							logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
-							context.AddError(name, null, ex.Message);
-						},
-						x => x.AnErrorOccured(e));
-					throw;
+					throw new InvalidOperationException("Could not extract reduce key from reduce result!", e);
 				}
-				finally
+			}
+
+			private IEnumerable<AbstractField> GetFields(object doc, out float boost)
+			{
+				boost = 1;
+				var boostedValue = doc as BoostedValue;
+				if (boostedValue != null)
 				{
-					batchers.ApplyAndIgnoreAllErrors(
-					e =>
+					doc = boostedValue.Value;
+					boost = boostedValue.Boost;
+				}
+				IEnumerable<AbstractField> fields;
+				if (doc is IDynamicJsonObject)
+				{
+
+					fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)doc).Inner, Field.Store.YES);
+				}
+				else
+				{
+					properties = properties ?? TypeDescriptor.GetProperties(doc);
+					fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.YES);
+				}
+				if (Math.Abs(boost - 1) > float.Epsilon)
+				{
+					var abstractFields = fields.ToList();
+					foreach (var abstractField in abstractFields)
 					{
-						logIndexing.WarnException("Failed to dispose on index update trigger", e);
-						context.AddError(name, null, e.Message);
-					},
-					x => x.Dispose());
+						abstractField.SetOmitNorms(false);
+					}
+					return abstractFields;
 				}
-				return count + reduceKeys.Length;
-			});
-			logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name, string.Join(", ", reduceKeys)));
-		}
+				return fields;
+			}
 
-		private string ExtractReduceKey(AbstractViewGenerator viewGenerator, object doc)
-		{
-			try
+			private static RavenJObject ToJsonDocument(object doc)
 			{
-				dynamic reduceKey = viewGenerator.GroupByExtraction(doc);
-				if (reduceKey == null)
+				var boostedValue = doc as BoostedValue;
+				if (boostedValue != null)
 				{
-					throw new InvalidOperationException("Could not find reduce key for " + name + " in the result: " + doc);
+					doc = boostedValue.Value;
 				}
-				return ReduceKeyToString(reduceKey);
-			}
-			catch (Exception e)
-			{
-				throw new InvalidOperationException("Could not extract reduce key from reduce result!", e);
-			}
-		}
-
-		private IEnumerable<AbstractField> GetFields(AnonymousObjectToLuceneDocumentConverter anonymousObjectToLuceneDocumentConverter, object doc, ref PropertyDescriptorCollection properties, out float boost)
-		{
-			boost = 1;
-			var boostedValue = doc as BoostedValue;
-			if (boostedValue != null)
-			{
-				doc = boostedValue.Value;
-				boost = boostedValue.Boost;
-			}
-			IEnumerable<AbstractField> fields;
-			if (doc is IDynamicJsonObject)
-			{
-
-				fields = anonymousObjectToLuceneDocumentConverter.Index(((IDynamicJsonObject)doc).Inner, Field.Store.YES);
-			}
-			else
-			{
-				properties = properties ?? TypeDescriptor.GetProperties(doc);
-				fields = anonymousObjectToLuceneDocumentConverter.Index(doc, properties, Field.Store.YES);
-			}
-			if (Math.Abs(boost - 1) > float.Epsilon)
-			{
-				var abstractFields = fields.ToList();
-				foreach (var abstractField in abstractFields)
+				var dynamicJsonObject = doc as IDynamicJsonObject;
+				if (dynamicJsonObject != null)
 				{
-					abstractField.SetOmitNorms(false);
+					return dynamicJsonObject.Inner;
 				}
-				return abstractFields;
+				var ravenJObject = doc as RavenJObject;
+				if (ravenJObject != null)
+					return ravenJObject;
+				return RavenJObject.FromObject(doc);
 			}
-			return fields;
+
+			public void ExecuteReduction()
+			{
+				var count = 0;
+				parent.Write(Context, (indexWriter, analyzer, stats) =>
+				{
+					stats.Operation = IndexingWorkStats.Status.Reduce;
+					try
+					{
+						if (Level == 2)
+						{
+							RemoveExistingReduceKeysFromIndex(indexWriter);
+						}
+						foreach (var mappedResults in MappedResultsByBucket)
+						{
+							foreach (var doc in parent.RobustEnumerationReduce(mappedResults, ViewGenerator.ReduceDefinition, Actions, Context, stats))
+							{
+								count++;
+								string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
+
+								switch (Level)
+								{
+									case 0:
+									case 1:
+										Actions.MapReduce.PutReducedResult(name, reduceKeyAsString, Level + 1, mappedResults.Key, mappedResults.Key / 1024, ToJsonDocument(doc));
+										break;
+									case 2:
+										WriteDocumentToIndex(doc, indexWriter, analyzer);
+										break;
+									default:
+										throw new InvalidOperationException("Uknown level: " + Level);
+								}
+								stats.ReduceSuccesses++;
+							}
+						}
+					}
+					catch (Exception e)
+					{
+						if (Level == 2)
+						{
+							batchers.ApplyAndIgnoreAllErrors(
+								ex =>
+								{
+									logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
+									Context.AddError(name, null, ex.Message);
+								},
+								x => x.AnErrorOccured(e));
+						}
+						throw;
+					}
+					finally
+					{
+						if (Level == 2)
+						{
+							batchers.ApplyAndIgnoreAllErrors(
+								e =>
+								{
+									logIndexing.WarnException("Failed to dispose on index update trigger", e);
+									Context.AddError(name, null, e.Message);
+								},
+								x => x.Dispose());
+						}
+					}
+					return count + ReduceKeys.Count;
+				});
+				logIndexing.Debug(() => string.Format("Reduce resulted in {0} entries for {1} for reduce keys: {2}", count, name, string.Join(", ", ReduceKeys)));
+			}
+
+			private void WriteDocumentToIndex(object doc, IndexWriter indexWriter, Analyzer analyzer)
+			{
+				float boost;
+				var fields = GetFields(doc, out boost).ToList();
+
+				string reduceKeyAsString = ExtractReduceKey(ViewGenerator, doc);
+				reduceKeyField.SetValue(reduceKeyAsString.ToLowerInvariant());
+
+				luceneDoc.GetFields().Clear();
+				luceneDoc.SetBoost(boost);
+				luceneDoc.Add(reduceKeyField);
+				foreach (var field in fields)
+				{
+					luceneDoc.Add(field);
+				}
+
+				if (Level == 2)
+				{
+					batchers.ApplyAndIgnoreAllErrors(
+						exception =>
+						{
+							logIndexing.WarnException(
+								string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
+											  name, reduceKeyAsString),
+								exception);
+							Context.AddError(name, reduceKeyAsString, exception.Message);
+						},
+						trigger => trigger.OnIndexEntryCreated(reduceKeyAsString, luceneDoc));
+				}
+
+				parent.LogIndexedDocument(reduceKeyAsString, luceneDoc);
+
+				parent.AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+			}
+
+			private void RemoveExistingReduceKeysFromIndex(IndexWriter indexWriter)
+			{
+				foreach (var reduceKey in ReduceKeys)
+				{
+					var entryKey = reduceKey;
+					indexWriter.DeleteDocuments(new Term(Constants.ReduceKeyFieldName, entryKey.ToLowerInvariant()));
+					batchers.ApplyAndIgnoreAllErrors(
+						exception =>
+						{
+							logIndexing.WarnException(
+								string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
+											  name, entryKey),
+								exception);
+							Context.AddError(name, entryKey, exception.Message);
+						},
+						trigger => trigger.OnIndexEntryDeleted(entryKey));
+				}
+			}
 		}
 	}
 }

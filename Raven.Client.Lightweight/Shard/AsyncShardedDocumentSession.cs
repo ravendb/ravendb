@@ -234,7 +234,7 @@ namespace Raven.Client.Shard
 
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>(string indexName)
 		{
-			return new AsyncShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, listeners.QueryListeners);
+			return new AsyncShardedDocumentQuery<T>(this, GetShardsToOperateOn, shardStrategy, indexName, null, null, listeners.QueryListeners);
 		}
 
 		public IAsyncDocumentQuery<T> AsyncLuceneQuery<T>()

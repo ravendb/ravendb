@@ -61,12 +61,9 @@ namespace Raven.Tests.Storage
 				accessor.Indexing.AddIndex("b", true);
 				accessor.Indexing.AddIndex("c", true);
 
-				accessor.MappedResults.PutMappedResult("a", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("a", "a"));
-				accessor.MappedResults.PutMappedResult("a", "a/2", "a", new RavenJObject(), MapReduceIndex.ComputeHash("a", "a"));
-				accessor.MappedResults.PutMappedResult("b", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("b", "a"));
-				accessor.MappedResults.PutMappedResult("b", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("b", "a"));
-				accessor.MappedResults.PutMappedResult("c", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("c", "a"));
-				accessor.MappedResults.PutMappedResult("c", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("c", "a"));
+				accessor.MapReduce.ScheduleReductions("a", 0, new[]{new ReduceKeyAndBucket(0, "a"), });
+				accessor.MapReduce.ScheduleReductions("b", 0, new[] { new ReduceKeyAndBucket(0, "a"), });
+				accessor.MapReduce.ScheduleReductions("c", 0, new[] { new ReduceKeyAndBucket(0, "a"), });
 			});
 
 			transactionalStorage.Batch(actionsAccessor =>
@@ -113,19 +110,19 @@ namespace Raven.Tests.Storage
 				accessor.Indexing.AddIndex("b", true);
 				accessor.Indexing.AddIndex("c", true);
 
-				accessor.MappedResults.PutMappedResult("a", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("a", "a"));
-				accessor.MappedResults.PutMappedResult("a", "a/2", "a", new RavenJObject(), MapReduceIndex.ComputeHash("a", "a"));
-				accessor.MappedResults.PutMappedResult("b", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("b", "a"));
-				accessor.MappedResults.PutMappedResult("b", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("b", "a"));
-				accessor.MappedResults.PutMappedResult("c", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("c", "a"));
-				accessor.MappedResults.PutMappedResult("c", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("c", "a"));
+				accessor.MapReduce.PutMappedResult("a", "a/1", "a", new RavenJObject());
+				accessor.MapReduce.PutMappedResult("a", "a/2", "a", new RavenJObject());
+				accessor.MapReduce.PutMappedResult("b", "a/1", "a", new RavenJObject());
+				accessor.MapReduce.PutMappedResult("b", "a/1", "a", new RavenJObject());
+				accessor.MapReduce.PutMappedResult("c", "a/1", "a", new RavenJObject());
+				accessor.MapReduce.PutMappedResult("c", "a/1", "a", new RavenJObject());
 			});
 
 			transactionalStorage.Batch(actionsAccessor =>
 			{
-				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("a", Guid.Empty, false, 100).Count());
-				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("b", Guid.Empty, false, 100).Count());
-				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("c", Guid.Empty, false, 100).Count());
+				Assert.Equal(1, actionsAccessor.MapReduce.GetMappedResultsReduceKeysAfter("a", Guid.Empty, false, 100).Count());
+				Assert.Equal(1, actionsAccessor.MapReduce.GetMappedResultsReduceKeysAfter("b", Guid.Empty, false, 100).Count());
+				Assert.Equal(1, actionsAccessor.MapReduce.GetMappedResultsReduceKeysAfter("c", Guid.Empty, false, 100).Count());
 			});
 		}
 
@@ -169,22 +166,22 @@ namespace Raven.Tests.Storage
 				accessor.Indexing.AddIndex("b", true);
 				accessor.Indexing.AddIndex("c", true);
 
-				accessor.MappedResults.PutMappedResult("a", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("a", "a"));
+				accessor.MapReduce.PutMappedResult("a", "a/1", "a", new RavenJObject());
 				a = dummyUuidGenerator.CreateSequentialUuid();
-				accessor.MappedResults.PutMappedResult("a", "a/2", "a", new RavenJObject(), MapReduceIndex.ComputeHash("a", "a"));
-				accessor.MappedResults.PutMappedResult("b", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("b", "a"));
+				accessor.MapReduce.PutMappedResult("a", "a/2", "a", new RavenJObject());
+				accessor.MapReduce.PutMappedResult("b", "a/1", "a", new RavenJObject());
 				b = dummyUuidGenerator.CreateSequentialUuid();
-				accessor.MappedResults.PutMappedResult("b", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("b", "a"));
-				accessor.MappedResults.PutMappedResult("c", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("c", "a"));
+				accessor.MapReduce.PutMappedResult("b", "a/1", "a", new RavenJObject());
+				accessor.MapReduce.PutMappedResult("c", "a/1", "a", new RavenJObject());
 				c = dummyUuidGenerator.CreateSequentialUuid();
-				accessor.MappedResults.PutMappedResult("c", "a/1", "a", new RavenJObject(), MapReduceIndex.ComputeHash("c", "a"));
+				accessor.MapReduce.PutMappedResult("c", "a/1", "a", new RavenJObject());
 			});
 
 			transactionalStorage.Batch(actionsAccessor =>
 			{
-				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("a", a, false, 100).Count());
-				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("b", b, false, 100).Count());
-				Assert.Equal(1, actionsAccessor.MappedResults.GetMappedResultsReduceKeysAfter("c", c, false, 100).Count());
+				Assert.Equal(1, actionsAccessor.MapReduce.GetMappedResultsReduceKeysAfter("a", a, false, 100).Count());
+				Assert.Equal(1, actionsAccessor.MapReduce.GetMappedResultsReduceKeysAfter("b", b, false, 100).Count());
+				Assert.Equal(1, actionsAccessor.MapReduce.GetMappedResultsReduceKeysAfter("c", c, false, 100).Count());
 			});
 		}
 
