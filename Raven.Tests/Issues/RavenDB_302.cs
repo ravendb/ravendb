@@ -124,7 +124,7 @@ namespace Raven.Tests.Issues
 						new IndexQuery { Query = x.ToString(), DefaultField = "Query" },
 						"Raven/Facets/LastName");
 
-					Assert.Equal(1, ravenfacets["LastName"].First(y=>y.Range == "brown").Count);
+					Assert.Equal(1, ravenfacets.Results["LastName"].Values.First(y=>y.Range == "brown").Hits);
 				}
 			}
 		}
