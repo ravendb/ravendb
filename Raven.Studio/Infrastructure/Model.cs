@@ -3,6 +3,8 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
+using Raven.Studio.Commands;
+using Raven.Studio.Models;
 
 namespace Raven.Studio.Infrastructure
 {
@@ -26,6 +28,12 @@ namespace Raven.Studio.Infrastructure
 
 		internal void TimerTicked()
 		{
+			if (ApplicationModel.Current.Server.Value.CreateNewDatabase)
+			{
+				ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
+				Command.ExecuteCommand(new CreateDatabaseCommand());
+			}
+
 			if (currentTask != null)
 				return;
 
