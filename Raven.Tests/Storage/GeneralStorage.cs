@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Raven.Client.Embedded;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -21,21 +22,20 @@ using System.Linq;
 
 namespace Raven.Tests.Storage
 {
-	public class GeneralStorage : AbstractDocumentStorageTest
+	public class GeneralStorage : RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public GeneralStorage()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-			});
+			store = NewDocumentStore();
+			db = store.DocumentDatabase;
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 

@@ -129,19 +129,16 @@ namespace Raven.Tests.Bugs.MultiMap
 						.ToList();
 
 					Assert.Equal(1, ups.Count);
-
 					Assert.Equal(5, ups[0].PostCount);
 					Assert.Equal("Ayende Rahien", ups[0].UserName);
 				}
 			}
-
 		}
-
 
 		[Fact]
 		public void JustQuerying()
 		{
-			using (var store = NewDocumentStore("esent", true))
+			using (var store = NewDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{

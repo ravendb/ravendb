@@ -1,5 +1,4 @@
 using System.Linq;
-using Microsoft.Isam.Esent.Interop;
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -11,7 +10,6 @@ namespace Raven.Tests.Bugs
 		{
 			using(var store = NewDocumentStore())
 			{
-
 				using (var session = store.OpenSession())
 				{
 					session.Store(new Post{Title = "ayende"});
@@ -28,8 +26,6 @@ namespace Raven.Tests.Bugs
 					Assert.Equal("posts/1", postReference.Id);
 				}
 			}
-
-
 		}
 
 		public class Post

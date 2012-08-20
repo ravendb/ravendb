@@ -30,7 +30,7 @@ namespace Raven.Tests.Bugs.Indexing
 		[Fact]
 		public void WillNotProduceAnyErrors()
 		{
-			using (var store = NewDocumentStore("esent", false))
+			using (var store = NewDocumentStore())
 			{
 				var indexCreationTask = new Companies_ByTurnover();
 				indexCreationTask.Execute(store);

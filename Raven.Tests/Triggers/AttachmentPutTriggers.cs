@@ -6,6 +6,7 @@
 using System;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -15,25 +16,20 @@ using Xunit;
 
 namespace Raven.Tests.Triggers
 {
-	public class AttachmentPutTriggers: AbstractDocumentStorageTest
+	public class AttachmentPutTriggers: RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public AttachmentPutTriggers()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				Container = new CompositionContainer(new TypeCatalog(
-					typeof(AuditAttachmentPutTrigger),
-					typeof(RefuseBigAttachmentPutTrigger))),
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
-			});
+			store = NewDocumentStore(new CompositionContainer(new TypeCatalog(typeof (AuditAttachmentPutTrigger), typeof(RefuseBigAttachmentPutTrigger))));
+			db = store.DocumentDatabase;
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 

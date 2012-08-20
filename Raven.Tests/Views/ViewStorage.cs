@@ -12,24 +12,18 @@ using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
-using Raven.Storage.Esent;
 using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Views
 {
-	public class ViewStorage : AbstractDocumentStorageTest
+	public class ViewStorage : RavenTest
 	{
 		private readonly ITransactionalStorage transactionalStorage;
 
 		public ViewStorage()
 		{
-			transactionalStorage = new TransactionalStorage(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
-			}, () => { });
-			transactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
+			transactionalStorage = NewTransactionalStorage();
 		}
 
 		public override void Dispose()

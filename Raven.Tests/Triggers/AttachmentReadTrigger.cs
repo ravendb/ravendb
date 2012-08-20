@@ -6,6 +6,7 @@
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using Raven.Abstractions.Data;
+using Raven.Client.Embedded;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
@@ -16,24 +17,20 @@ using Xunit;
 
 namespace Raven.Tests.Triggers
 {
-	public class AttachmentReadTrigger : AbstractDocumentStorageTest
+	public class AttachmentReadTrigger : RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public AttachmentReadTrigger()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				Container = new CompositionContainer(new TypeCatalog(
-					typeof(HideAttachmentByCaseReadTrigger)))
-			});
-
+			store = NewDocumentStore(new CompositionContainer(new TypeCatalog(typeof (HideAttachmentByCaseReadTrigger))));
+			db = store.DocumentDatabase;
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 
