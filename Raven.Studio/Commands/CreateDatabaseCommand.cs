@@ -143,10 +143,13 @@ namespace Raven.Studio.Commands
 
 			if (bundlesModel.HasReplication)
 			{
-				var replicationDocument = new ReplicationDocument
+				var replicationDocument = new ReplicationDocument();
+				foreach (var replicationDestination in bundlesModel.ReplicationDestinations
+					.Where(replicationDestination => !string.IsNullOrWhiteSpace(replicationDestination.Url) || !string.IsNullOrWhiteSpace(replicationDestination.ConnectionStringName)))
 				{
-					Destinations = new List<ReplicationDestination>(bundlesModel.ReplicationDestinations)
-				};
+					replicationDocument.Destinations.Add(replicationDestination);
+				}
+				
 				session.Store(replicationDocument);
 			}
 

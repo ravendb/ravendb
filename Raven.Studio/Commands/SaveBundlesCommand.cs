@@ -43,7 +43,13 @@ namespace Raven.Studio.Commands
 				session.LoadAsync<ReplicationDocument>("Raven/Replication/Destinations")
 					.ContinueOnSuccessInTheUIThread(document =>
 					{
-						document.Destinations = bundlesModel.ReplicationDestinations.ToList();
+						document.Destinations.Clear();
+						foreach (var destination in bundlesModel.ReplicationDestinations
+							.Where(destination => !string.IsNullOrWhiteSpace(destination.Url) || !string.IsNullOrWhiteSpace(destination.ConnectionStringName)))
+						{
+							document.Destinations.Add(destination);
+						}
+						
 						session.Store(document);
 					});
 			}
