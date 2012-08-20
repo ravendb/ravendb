@@ -134,6 +134,8 @@ task Compile -depends Init {
 }
 
 task Test -depends Compile {
+	Clear-Host
+	
 	Write-Host $test_prjs
 	Copy-Item (Get-DependencyPackageFiles 'Rx-Main' -frameworkVersion 'Net4') $build_dir -force
 	

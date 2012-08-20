@@ -34,7 +34,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 		protected static readonly Logger logger = LogManager.GetCurrentClassLogger();
 		protected readonly Session session;
-		private readonly Transaction transaction;
+		private Transaction transaction;
 
 		public JET_DBID Dbid
 		{
@@ -131,6 +131,13 @@ namespace Raven.Storage.Esent.StorageActions
 			if (session != null)
 				session.Dispose();
 
+		}
+
+		public void PulseTransaction()
+		{
+			transaction.Commit(CommitTransactionGrbit.LazyFlush);
+			transaction.Dispose();
+			transaction = new Transaction(session);
 		}
 
 		public void Commit(CommitTransactionGrbit txMode)
