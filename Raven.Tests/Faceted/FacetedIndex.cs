@@ -306,22 +306,22 @@ namespace Raven.Tests.Faceted
 
 			foreach (var facet in facetResults.Results["Manufacturer"].Values)
 			{
-				var inMemoryCount = filteredData.Where(x => x.Manufacturer.ToLower() == facet.Range).Count();
+				var inMemoryCount = filteredData.Count(x => x.Manufacturer.ToLower() == facet.Range);
 				Assert.Equal(inMemoryCount, facet.Hits);
 			}
 
 			//Go through the expected (in-memory) results and check that there is a corresponding facet result
 			//Not the prettiest of code, but it works!!!
 			var costFacets = facetResults.Results["Cost_Range"].Values;
-			CheckFacetCount(filteredData.Where(x => x.Cost <= 200.0m).Count(),
+			CheckFacetCount(filteredData.Count(x => x.Cost <= 200.0m),
 							costFacets.FirstOrDefault(x => x.Range == "[NULL TO Dx200]"));
-			CheckFacetCount(filteredData.Where(x => x.Cost >= 200.0m && x.Cost <= 400).Count(),
+			CheckFacetCount(filteredData.Count(x => x.Cost >= 200.0m && x.Cost <= 400),
 							costFacets.FirstOrDefault(x => x.Range == "[Dx200 TO Dx400]"));
-			CheckFacetCount(filteredData.Where(x => x.Cost >= 400.0m && x.Cost <= 600.0m).Count(),
+			CheckFacetCount(filteredData.Count(x => x.Cost >= 400.0m && x.Cost <= 600.0m),
 							costFacets.FirstOrDefault(x => x.Range == "[Dx400 TO Dx600]"));
-			CheckFacetCount(filteredData.Where(x => x.Cost >= 600.0m && x.Cost <= 800.0m).Count(),
+			CheckFacetCount(filteredData.Count(x => x.Cost >= 600.0m && x.Cost <= 800.0m),
 							costFacets.FirstOrDefault(x => x.Range == "[Dx600 TO Dx800]"));
-			CheckFacetCount(filteredData.Where(x => x.Cost >= 800.0m).Count(),
+			CheckFacetCount(filteredData.Count(x => x.Cost >= 800.0m),
 							costFacets.FirstOrDefault(x => x.Range == "[Dx800 TO NULL]"));
 
 			//Test the Megapixels_Range facets using the same method

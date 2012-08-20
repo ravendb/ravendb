@@ -24,7 +24,7 @@ namespace Raven.Database.Indexing
 	
 	public class RangeQueryParser : QueryParser
 	{
-		static readonly Regex rangeValue = new Regex(@"^[\w\d]x[-\w\d.]+$", RegexOptions.Compiled);
+		public static readonly Regex NumerciRangeValue = new Regex(@"^[\w\d]x[-\w\d.]+$", RegexOptions.Compiled);
 
 		private readonly Dictionary<string, HashSet<string>> untokenized = new Dictionary<string, HashSet<string>>();
 		private readonly Dictionary<Tuple<string,string>, string> replacedTokens = new Dictionary<Tuple<string, string>, string>();
@@ -93,7 +93,7 @@ namespace Raven.Database.Indexing
 			if (upper == "NULL" || upper == "*")
 				upper = null;
 
-			if ( (lower == null || !rangeValue.IsMatch(lower)) && (upper == null || !rangeValue.IsMatch(upper)))
+			if ( (lower == null || !NumerciRangeValue.IsMatch(lower)) && (upper == null || !NumerciRangeValue.IsMatch(upper)))
 			{
 				return NewRangeQuery(field, lower, upper, inclusive);
 			}

@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
+using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Util;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
 
 namespace Raven.Database.Queries
@@ -28,6 +32,7 @@ namespace Raven.Database.Queries
 
 			var results = new FacetResults();
 			var defaultFacets = new List<Facet>();
+			var rangeFacets = new List<ParsedRange>();
 			IndexSearcher currentIndexSearcher;
 
 			using (database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
@@ -41,9 +46,7 @@ namespace Raven.Database.Queries
 							defaultFacets.Add(facet);
 							break;
 						case FacetMode.Ranges:
-							var facetResult = new FacetResult();
-							HandleRangeFacet(index, facet, indexQuery, currentIndexSearcher, facetResult);
-							results.Results[facet.Name] = facetResult;
+							rangeFacets.AddRange(facet.Ranges.Select(range => ParseRange(facet.Name, range)));
 							break;
 						default:
 							throw new ArgumentException(string.Format("Could not understand '{0}'", facet.Mode));
@@ -51,49 +54,137 @@ namespace Raven.Database.Queries
 				}
 				//We only want to run the base query once, so we capture all of the facet-ing terms then run the query
 				//	once through the collector and pull out all of the terms in one shot
-				if(defaultFacets.Count > 0)
-					HandleTermsFacet(index, defaultFacets, indexQuery, currentIndexSearcher, results);
+					
+				QueryForFacets(index, defaultFacets, rangeFacets, indexQuery, currentIndexSearcher, results);
 			}
 
 			return results;
 		}
-
-		private void HandleRangeFacet(string index, Facet facet, IndexQuery indexQuery, IndexSearcher currentIndexSearcher, FacetResult result)
+		private static ParsedRange ParseRange(string field, string range)
 		{
-			foreach (var range in facet.Ranges)
+			var parts = range.Split(new[] { " TO " }, 2, StringSplitOptions.RemoveEmptyEntries);
+
+			if (parts.Length != 2)
+				throw new ArgumentException("Could not understand range query: " + range);
+
+			var trimmedLow = parts[0].Trim();
+			var trimmedHigh = parts[1].Trim();
+			var parsedRange = new ParsedRange
 			{
-				var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery, database.IndexQueryTriggers);
-				//TODO the built-in parser can't handle [NULL TO 100.0}, i.e. a mix of [ and }
-				//so we need to handle this ourselves (greater and less-than-or-equal)
-				var rangeQuery = database.IndexStorage.GetLuceneQuery(index, new IndexQuery
-				{
-					Query = facet.Name + ":" + range
-				}, database.IndexQueryTriggers);
+				Field = field,
+				RangeText = range,
+				LowInclusive = IsInclusive(trimmedLow.First()),
+				HighInclusive = IsInclusive(trimmedHigh.Last()),
+				LowValue = trimmedLow.Substring(1),
+				HighValue = trimmedHigh.Substring(0, trimmedHigh.Length - 1)
+			};
 
-				var joinedQuery = new BooleanQuery();
-				joinedQuery.Add(baseQuery, BooleanClause.Occur.MUST);
-				joinedQuery.Add(rangeQuery, BooleanClause.Occur.MUST);
+			if (RangeQueryParser.NumerciRangeValue.IsMatch(parsedRange.LowValue))
+			{
+				parsedRange.LowValue = NumericStringToSortableNumeric(parsedRange.LowValue);
+			}
 
-				var topDocs = currentIndexSearcher.Search(joinedQuery, null, 1);
+			if (RangeQueryParser.NumerciRangeValue.IsMatch(parsedRange.HighValue))
+			{
+				parsedRange.HighValue = NumericStringToSortableNumeric(parsedRange.HighValue);
+			}
 
-				if (topDocs.TotalHits > 0)
-				{
-					result.Values.Add(new FacetValue
-					{
-						Hits = topDocs.TotalHits,
-						Range = range
-					});
-				}
+
+			if (parsedRange.LowValue == "NULL" || parsedRange.LowValue == "*")
+				parsedRange.LowValue = null;
+			if (parsedRange.HighValue == "NULL" || parsedRange.HighValue == "*")
+				parsedRange.HighValue = null;
+
+
+
+			return parsedRange;
+		}
+
+		private static string NumericStringToSortableNumeric(string value)
+		{
+			var number = NumberUtil.StringToNumber(value);
+			if (number is int)
+			{
+				return NumericUtils.IntToPrefixCoded((int)number);
+			}
+			if (number is long)
+			{
+				return NumericUtils.LongToPrefixCoded((long)number);
+			}
+			if (number is float)
+			{
+				return NumericUtils.FloatToPrefixCoded((float)number);
+			}
+			if (number is double)
+			{
+				return NumericUtils.DoubleToPrefixCoded((double)number);
+			}
+
+			throw new ArgumentException("Uknown type for " + number.GetType() + " which started as " + value);
+		}
+
+		private static bool IsInclusive(char ch)
+		{
+			switch (ch)
+			{
+				case '[':
+				case ']':
+					return true;
+				case '{':
+				case '}':
+					return false;
+				default:
+					throw new ArgumentException("Could not understand range prefix: " + ch);
 			}
 		}
 
-		private void HandleTermsFacet(string index, List<Facet> facets, IndexQuery indexQuery, IndexSearcher currentIndexSearcher, FacetResults results)
+		private class ParsedRange
+		{
+			public bool LowInclusive;
+			public bool HighInclusive;
+			public string LowValue;
+			public string HighValue;
+			public string RangeText;
+			public string Field;
+
+			public bool IsMatch(string value)
+			{
+				var compareLow =
+					LowValue == null
+						? -1
+						: string.CompareOrdinal(value, LowValue);
+				var compareHigh = HighValue == null ? 1 : string.CompareOrdinal(value, HighValue);
+				// if we are range exclusive on either end, check that we will skip the edge values
+				if (compareLow == 0 && LowInclusive == false ||
+					compareHigh == 0 && HighInclusive == false)
+					return false;
+
+				if(LowValue != null && compareLow < 0)
+					return false;
+
+				if(HighValue != null && compareHigh > 0)
+					return false;
+
+				return true;
+			}
+		}
+
+		private void QueryForFacets(string index, List<Facet> facets, List<ParsedRange> ranges,IndexQuery indexQuery, IndexSearcher currentIndexSearcher, FacetResults results)
 		{
 			var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery, database.IndexQueryTriggers);
-			var termCollector = new AllTermsCollector(facets.Select(x => x.Name));
+			var termCollector = new AllTermsCollector(facets.Select(x => x.Name), ranges);
 			currentIndexSearcher.Search(baseQuery, termCollector);
 
-			foreach(var facet in facets)
+			foreach (var range in ranges)
+			{
+				var facetResult = results.Results.GetOrAdd(range.Field);
+				facetResult.Values.Add(new FacetValue
+				{
+					Range = range.RangeText,
+					Hits = termCollector.GetRangeValue(range)
+				});
+			}
+			foreach (var facet in facets)
 			{
 				var values = new List<FacetValue>();
 				List<string> allTerms;
@@ -119,44 +210,42 @@ namespace Raven.Database.Queries
 						throw new ArgumentException(string.Format("Could not understand '{0}'", facet.TermSortMode));
 				}
 
-				foreach (var term in allTerms)
+				foreach (var term in allTerms.TakeWhile(term => values.Count < maxResults))
 				{
-					if (values.Count >= maxResults)
-						break;
-
 					values.Add(new FacetValue
 					{
-							           Hits = groups[term],
+						Hits = groups.GetOrDefault(term),
 						Range = term
 					});
 				}
 
-				results.Results[facet.Name] = new FacetResult()
-					                              {
-						                              Values = values,
-						                              RemainingTermsCount = allTerms.Count - values.Count,
-						                              RemainingHits = groups.Values.Sum() - values.Sum(x => x.Hits),
-					                              };
+				results.Results[facet.Name] = new FacetResult
+				{
+					Values = values,
+					RemainingTermsCount = allTerms.Count - values.Count,
+					RemainingHits = groups.Values.Sum() - values.Sum(x => x.Hits),
+				};
 
-				if(facet.InclueRemainingTerms)
+				if (facet.InclueRemainingTerms)
 					results.Results[facet.Name].RemainingTerms = allTerms.Skip(maxResults).ToList();
 			}
-			}
+		}
 
 		private class AllTermsCollector : Collector
 		{
-			private readonly List<FieldData> fields = new List<FieldData>();
+			private readonly List<FieldRangeData> ranges;
+			private readonly List<FieldData> fields;
 
-			public AllTermsCollector(IEnumerable<string> fields)
+			public AllTermsCollector(IEnumerable<string> fields, IEnumerable<ParsedRange> ranges)
 			{
-				foreach(var field in fields)
-					this.fields.Add(new FieldData { FieldName = field });
+				this.ranges = ranges.Select(x => new FieldRangeData {Range = x}).ToList();
+				this.fields = fields.Select(field => new FieldData { FieldName = field }).ToList();
 			}
 
 			public IDictionary<string, int> GetGroupValues(string fieldName)
 			{
 				var firstOrDefault = fields.FirstOrDefault(x => x.FieldName == fieldName);
-				if(firstOrDefault == null)
+				if (firstOrDefault == null)
 					return new Dictionary<string, int>();
 				return firstOrDefault.Groups;
 			}
@@ -168,23 +257,37 @@ namespace Raven.Database.Queries
 
 			public override void Collect(int doc)
 			{
-				//Since Collect can be called a ridiculous number of times, we don't want to go through an iterator for this loop,
-				//	thus no fancy foreach
-				for(int i = 0; i < fields.Count; i++)
+				for (int index = 0; index < fields.Count; index++)
 				{
-					var data = fields[i];
-					string term = data.CurrentValues[data.CurrentOrders[doc]];
+					var data = fields[index];
+					var term = data.CurrentValues[data.CurrentOrders[doc]];
 					data.Groups[term] = data.Groups.GetOrAdd(term) + 1;
+				}
+
+				for (int index = 0; index < ranges.Count; index++)
+				{
+					var data = ranges[index];
+					var term = data.CurrentValues[data.CurrentOrders[doc]];
+					if (data.Range.IsMatch(term))
+						data.Hits++;
 				}
 			}
 
 			public override void SetNextReader(IndexReader reader, int docBase)
 			{
-				foreach(var data in fields)
+				foreach (var data in fields)
 				{
-					StringIndex currentReaderValues = FieldCache_Fields.DEFAULT.GetStringIndex(reader, data.FieldName);
+					var currentReaderValues = FieldCache_Fields.DEFAULT.GetStringIndex(reader, data.FieldName);
 					data.CurrentOrders = currentReaderValues.order;
 					data.CurrentValues = currentReaderValues.lookup;
+				}
+
+				foreach (var data in ranges)
+				{
+					var currentReaderValues = FieldCache_Fields.DEFAULT.GetStringIndex(reader, data.Range.Field);
+					data.CurrentOrders = currentReaderValues.order;
+					data.CurrentValues = currentReaderValues.lookup;
+				
 				}
 			}
 
@@ -198,6 +301,20 @@ namespace Raven.Database.Queries
 				public string[] CurrentValues;
 				public int[] CurrentOrders;
 				public readonly Dictionary<string, int> Groups = new Dictionary<string, int>();
+			}
+
+			private class FieldRangeData
+			{
+				public ParsedRange Range;
+				public string[] CurrentValues;
+				public int[] CurrentOrders;
+				public int Hits;
+			}
+
+			public int GetRangeValue(ParsedRange range)
+			{
+				var result = ranges.FirstOrDefault(x => x.Range == range);
+				return result == null ? 0 : result.Hits;
 			}
 		}
 	}
