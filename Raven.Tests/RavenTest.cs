@@ -121,7 +121,7 @@ namespace Raven.Tests
 			if(!string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("raventest_storage_engine")))
 				storageType = System.Environment.GetEnvironmentVariable("raventest_storage_engine");
 			else
-				storageType = System.Configuration.ConfigurationSettings.AppSettings["Raven/StorageTypeName"];
+				storageType = System.Configuration.ConfigurationManager.AppSettings["Raven/StorageEngine"];
 
 			if(storageType == "munin")
 				newTransactionalStorage = new Raven.Storage.Managed.TransactionalStorage(new RavenConfiguration { DataDirectory = DbDirectory, }, () => { });
