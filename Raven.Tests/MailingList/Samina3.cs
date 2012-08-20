@@ -62,11 +62,12 @@ namespace Raven.Tests.MailingList
 
 					var result = query.ToList();
 
-					var facetedCount = store.DatabaseCommands.GetFacets("PropertiesSearchIndex", new IndexQuery { Query = query.ToString() }, "facets/PropertySearchingFacets")["Feature"];
+					var facetResults = store.DatabaseCommands.GetFacets("PropertiesSearchIndex", new IndexQuery {Query = query.ToString()}, "facets/PropertySearchingFacets");
+					var facetedCount = facetResults.Results["Feature"];
 
 
 					Assert.Equal(1, result.Count());
-					Assert.Equal(1, facetedCount.First(x => x.Range == "pool").Count);
+					Assert.Equal(1, facetResults.Results.First(x => x.Key == "pool").Value.Values.Count);
 					Assert.Equal("PropertiesSearchIndex", stats.IndexName);
 				}
 			}
