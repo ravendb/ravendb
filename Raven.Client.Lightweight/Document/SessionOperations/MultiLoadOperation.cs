@@ -77,7 +77,7 @@ namespace Raven.Client.Document.SessionOperations
 					sessionOperations.RegisterMissing(ids[i]);
 			}
 
-			sessionOperations.RegisterMissingIncludes(results.Select(x=>x.DataAsJson), includes);
+			sessionOperations.RegisterMissingIncludes(results.Where(x => x != null).Select(x => x.DataAsJson), includes);
 
 			return finalResults;
 		}
