@@ -67,7 +67,7 @@ namespace Raven.Tests.MailingList
 
 
 					Assert.Equal(1, result.Count());
-					Assert.Equal(1, facetResults.Results.First(x => x.Key == "pool").Value.Values.Count);
+					Assert.Equal(1, facetResults.Results["Feature"].Values.First(x => x.Range == "pool").Hits);
 					Assert.Equal("PropertiesSearchIndex", stats.IndexName);
 				}
 			}
