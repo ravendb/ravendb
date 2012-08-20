@@ -32,7 +32,7 @@ namespace Raven.Database.Queries
 
 			using (database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
 			{
-				BackgroundTaskExecuter.Instance.ExecuteAll(database.Configuration, database.BackgroundTaskScheduler, database.WorkContext, facets, (facet, counter) =>
+				foreach (var facet in facets)
 				{
 					switch (facet.Mode)
 					{
@@ -48,7 +48,7 @@ namespace Raven.Database.Queries
 						default:
 							throw new ArgumentException(string.Format("Could not understand '{0}'", facet.Mode));
 					}
-				});
+				}
 				//We only want to run the base query once, so we capture all of the facet-ing terms then run the query
 				//	once through the collector and pull out all of the terms in one shot
 				if(defaultFacets.Count > 0)
@@ -98,22 +98,22 @@ namespace Raven.Database.Queries
 				var values = new List<FacetValue>();
 				List<string> allTerms;
 
-				int maxResults = facet.MaxResults.GetValueOrDefault(database.Configuration.MaxPageSize);
+				int maxResults = Math.Min(facet.MaxResults ?? database.Configuration.MaxPageSize, database.Configuration.MaxPageSize);
 				var groups = termCollector.GetGroupValues(facet.Name);
 
 				switch (facet.TermSortMode)
 				{
 					case FacetTermSortMode.ValueAsc:
-						allTerms = new List<string>(groups.Keys.OrderBy((x) => x));
+						allTerms = new List<string>(groups.Keys.OrderBy(x => x));
 						break;
 					case FacetTermSortMode.ValueDesc:
-						allTerms = new List<string>(groups.Keys.OrderByDescending((x) => x));
+						allTerms = new List<string>(groups.Keys.OrderByDescending(x => x));
 						break;
 					case FacetTermSortMode.HitsAsc:
-						allTerms = new List<string>(groups.OrderBy((x) => x.Value).Select((x) => x.Key));
+						allTerms = new List<string>(groups.OrderBy(x => x.Value).Select(x => x.Key));
 						break;
 					case FacetTermSortMode.HitsDesc:
-						allTerms = new List<string>(groups.OrderByDescending((x) => x.Value).Select((x) => x.Key));
+						allTerms = new List<string>(groups.OrderByDescending(x => x.Value).Select(x => x.Key));
 						break;
 					default:
 						throw new ArgumentException(string.Format("Could not understand '{0}'", facet.TermSortMode));
@@ -155,7 +155,10 @@ namespace Raven.Database.Queries
 
 			public IDictionary<string, int> GetGroupValues(string fieldName)
 			{
-				return fields.First(x => x.FieldName == fieldName).Groups;
+				var firstOrDefault = fields.FirstOrDefault(x => x.FieldName == fieldName);
+				if(firstOrDefault == null)
+					return new Dictionary<string, int>();
+				return firstOrDefault.Groups;
 			}
 
 			public override bool AcceptsDocsOutOfOrder()
@@ -165,7 +168,7 @@ namespace Raven.Database.Queries
 
 			public override void Collect(int doc)
 			{
-				//Since Collect can be called a rediculous number of times, we don't want to go through an iterator for this loop,
+				//Since Collect can be called a ridiculous number of times, we don't want to go through an iterator for this loop,
 				//	thus no fancy foreach
 				for(int i = 0; i < fields.Count; i++)
 				{
