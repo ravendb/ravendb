@@ -1,7 +1,7 @@
 ﻿<sdk:ChildWindow x:Class="Raven.Studio.Features.Util.MessageBoxWindow"
 				 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 				 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-				 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk">
+				 xmlns:sdk="http://schemas.microsoft.com/winfx/2006/xaml/presentation/sdk" Style="{StaticResource ChildWindowNoAnimationStyle}">
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="*" />
