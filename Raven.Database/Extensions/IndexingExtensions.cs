@@ -39,10 +39,10 @@ namespace Raven.Database.Extensions
 			}
 		}
 
-		public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index defaultIndex)
+		public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index? defaultIndex)
 		{
 			if (self.Indexes == null)
-				return defaultIndex;
+				return defaultIndex ?? Field.Index.NOT_ANALYZED_NO_NORMS;
 			FieldIndexing value;
 			if (self.Indexes.TryGetValue(name, out value) == false)
 			{
@@ -54,7 +54,7 @@ namespace Raven.Database.Extensions
 					{
 						return Field.Index.ANALYZED; // if there is a custom analyzer, the value should be analyzed
 					}
-					return defaultIndex;
+					return defaultIndex ?? Field.Index.NOT_ANALYZED_NO_NORMS;
 				}
 			}
 			switch (value)
@@ -66,7 +66,7 @@ namespace Raven.Database.Extensions
 				case FieldIndexing.NotAnalyzed:
 					return Field.Index.NOT_ANALYZED_NO_NORMS;
 				case FieldIndexing.Default:
-					return defaultIndex;
+					return defaultIndex ?? Field.Index.NOT_ANALYZED_NO_NORMS;
 				default:
 					throw new ArgumentOutOfRangeException();
 			}

@@ -10,10 +10,10 @@ using Lucene.Net.Search;
 using Lucene.Net.Spatial;
 using Lucene.Net.Spatial.Prefix;
 using Lucene.Net.Spatial.Prefix.Tree;
+using Lucene.Net.Spatial.Queries;
 using Raven.Abstractions.Data;
 using Spatial4n.Core.Context;
 using Spatial4n.Core.Distance;
-using Spatial4n.Core.Query;
 using Spatial4n.Core.Shapes;
 
 
@@ -21,23 +21,21 @@ namespace Raven.Database.Indexing
 {
 	public static class SpatialIndex
 	{
-		internal static readonly SpatialContext Context = new SpatialContext(DistanceUnits.MILES);
-		internal static readonly SpatialStrategy<SimpleSpatialFieldInfo> Strategy;
-		private static readonly SimpleSpatialFieldInfo fieldInfo;
+		internal static readonly SpatialContext Context = new SpatialContext(DistanceUnits.MILES);// TODO: Support KM
+		internal static readonly SpatialStrategy Strategy;
 		private static readonly int maxLength;
 
 		static SpatialIndex()
 		{
 			maxLength = GeohashPrefixTree.GetMaxLevelsPossible();
-			fieldInfo = new SimpleSpatialFieldInfo(Constants.SpatialFieldName);
-			Strategy = new RecursivePrefixTreeStrategy(new GeohashPrefixTree(Context, maxLength));
+			Strategy = new RecursivePrefixTreeStrategy(new GeohashPrefixTree(Context, maxLength), Constants.SpatialFieldName);
 		}
 
-		public static IEnumerable<Fieldable> Generate(double? lat, double? lng)
+		public static IEnumerable<IFieldable> Generate(double? lat, double? lng)
 		{
 			Shape shape = Context.MakePoint(lng ?? 0, lat ?? 0);
-			return Strategy.CreateFields(fieldInfo, shape, true, false).Where(f => f != null)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, Context.ToString(shape), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS), });
+			return Strategy.CreateIndexableFields(shape).Where(f => f != null)
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, Context.ToString(shape), Field.Store.YES, Field.Index.NO), });
 		}
 
 		/// <summary>
@@ -49,7 +47,7 @@ namespace Raven.Database.Indexing
 		/// <returns></returns>
 		public static Query MakeQuery(double lat, double lng, double radius)
 		{
-			return Strategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, Context.MakeCircle(lng, lat, radius)), fieldInfo);
+			return Strategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, Context.MakeCircle(lng, lat, radius)));
 		}
 
 		public static Filter MakeFilter(IndexQuery indexQuery)
@@ -58,7 +56,7 @@ namespace Raven.Database.Indexing
 			if (spatialQry == null) return null;
 
 			var args = new SpatialArgs(SpatialOperation.IsWithin, Context.MakeCircle(spatialQry.Longitude, spatialQry.Latitude, spatialQry.Radius));
-			return Strategy.MakeFilter(args, fieldInfo);
+			return Strategy.MakeFilter(args);
 		}
 
 		public static double GetDistance(double fromLat, double fromLng, double toLat, double toLng)

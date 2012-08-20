@@ -102,7 +102,7 @@ namespace Raven.Database.Queries
 			{
 				return (from document in documents 
 						from fieldable in document.GetFieldables(field) 
-						select fieldable.StringValue()
+						select fieldable.StringValue
 						).GetEnumerator();
 			}
 		}

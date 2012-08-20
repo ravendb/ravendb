@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
-using Spatial4n.Core.Exceptions;
 using Spatial4n.Core.Shapes;
 
 namespace Raven.Database.Indexing.Sorting
@@ -25,10 +21,13 @@ namespace Raven.Database.Indexing.Sorting
 			return new SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator(lat, lng, numHits);
 		}
 
-		public override FieldComparatorSource GetComparatorSource()
+		public override FieldComparatorSource ComparatorSource
 		{
-			return new SpatialDistanceFieldComparatorSource(lat, lng);
-		}
+			get
+			{
+				return new SpatialDistanceFieldComparatorSource(lat, lng);
+			}
+		} 
 	}
 
 	public class SpatialDistanceFieldComparatorSource : FieldComparatorSource
@@ -107,7 +106,7 @@ namespace Raven.Database.Indexing.Sorting
 				var field = document.GetField(Constants.SpatialShapeFieldName);
 				if(field == null)
 					return double.NaN;
-				var shapeAsText = field.StringValue();
+				var shapeAsText = field.StringValue;
 				Shape shape;
 				try
 				{
@@ -127,11 +126,10 @@ namespace Raven.Database.Indexing.Sorting
 				currentDocBase = docBase;
 			}
 
-			public override IComparable Value(int slot)
+			public override IComparable this[int slot]
 			{
-				return values[slot];
+				get { return values[slot]; }
 			}
-
 		}
 	}
 }

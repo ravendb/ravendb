@@ -18,7 +18,7 @@ namespace Raven.Database.Indexing.Collation
 		public CollationKeyFilter(TokenStream input, CultureInfo cultureInfo) : base(input)
 		{
 			this.cultureInfo = cultureInfo;
-			termAtt = (TermAttribute) base.AddAttribute(typeof (TermAttribute));
+			termAtt = (TermAttribute)base.AddAttribute <ITermAttribute>();
 		}
 
 		public override bool IncrementToken()

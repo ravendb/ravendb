@@ -43,7 +43,7 @@ namespace Raven.Database.Indexing
 			return tokenReplacement;
 		}
 
-		public override Query GetFieldQuery(string field, string queryText)
+		protected override Query GetFieldQuery(string field, string queryText)
 		{
 			string value;
 			if (replacedTokens.TryGetValue(Tuple.Create(field, queryText), out value))
@@ -62,15 +62,15 @@ namespace Raven.Database.Indexing
 				&& !queryText.EndsWith(@"\*")
 				&& queryText.Contains(" "))
 			{ 
-				var analyzer = GetAnalyzer();
+				var analyzer = Analyzer;
 				var tokenStream = analyzer.ReusableTokenStream(field, new StringReader(queryText.Substring(0, queryText.Length-1)));
 				var sb = new StringBuilder();
 				while (tokenStream.IncrementToken())
 				{
-					var attribute = (TermAttribute)tokenStream.GetAttribute(typeof(TermAttribute));
+					var attribute = (TermAttribute) tokenStream.GetAttribute<ITermAttribute>();
 					if (sb.Length != 0)
 						sb.Append(' ');
-					sb.Append(attribute.Term());
+					sb.Append(attribute.Term);
 				}
 				var prefix = new Term(field, sb.ToString());
 				return new PrefixQuery(prefix);

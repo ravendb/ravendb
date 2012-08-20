@@ -207,7 +207,7 @@ namespace Raven.Database.Indexing
 		protected override IndexQueryResult RetrieveDocument(Document document, FieldsToFetch fieldsToFetch, float score)
 		{
 			if (fieldsToFetch.IsProjection == false)
-				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().OfType<Fieldable>().Select(x => x.Name()).ToArray());
+				fieldsToFetch = fieldsToFetch.CloneWith(document.GetFields().Select(x => x.Name).ToArray());
 			fieldsToFetch.EnsureHasField(Constants.ReduceKeyFieldName);
 			return base.RetrieveDocument(document, fieldsToFetch, score);
 		}
@@ -321,7 +321,7 @@ namespace Raven.Database.Indexing
 					var abstractFields = fields.ToList();
 					foreach (var abstractField in abstractFields)
 					{
-						abstractField.SetOmitNorms(false);
+						abstractField.OmitNorms = false;
 					}
 					return abstractFields;
 				}
@@ -422,7 +422,7 @@ namespace Raven.Database.Indexing
 				reduceKeyField.SetValue(reduceKeyAsString.ToLowerInvariant());
 
 				luceneDoc.GetFields().Clear();
-				luceneDoc.SetBoost(boost);
+				luceneDoc.Boost = boost;
 				luceneDoc.Add(reduceKeyField);
 				foreach (var field in fields)
 				{

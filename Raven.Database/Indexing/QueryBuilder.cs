@@ -32,14 +32,16 @@ namespace Raven.Database.Indexing
 			Analyzer keywordAnalyzer = new KeywordAnalyzer();
 			try
 			{
-				var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer);
-				queryParser.SetDefaultOperator(indexQuery.DefaultOperator == QueryOperator.Or
-				                               	? QueryParser.Operator.OR
-				                               	: QueryParser.Operator.AND);
+				var queryParser = new RangeQueryParser(Version.LUCENE_29, indexQuery.DefaultField ?? string.Empty, analyzer)
+				{
+					DefaultOperator = indexQuery.DefaultOperator == QueryOperator.Or
+					                  	? QueryParser.Operator.OR
+					                  	: QueryParser.Operator.AND,
+					AllowLeadingWildcard = true
+				};
 				query = PreProcessUntokenizedTerms(query, queryParser);
 				query = PreProcessSearchTerms(query);
 				query = PreProcessDateTerms(query, queryParser);
-				queryParser.SetAllowLeadingWildcard(true);
 				return queryParser.Parse(query);
 			}
 			catch (ParseException pe)

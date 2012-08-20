@@ -2,15 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Lucene.Net.Index;
 using Lucene.Net.Store;
 using NLog;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Extensions;
 using Raven.Database.Plugins;
-using Directory = Lucene.Net.Store.Directory;
 
 namespace Raven.Database.Indexing
 {
@@ -56,13 +51,6 @@ namespace Raven.Database.Indexing
 				return input.Length();
 		}
 
-		[Obsolete]
-		// Note that this method is already obsoleted by Lucene, so disallowing it is okay.
-		public override void RenameFile(string from, string to)
-		{
-			throw new NotSupportedException("Because encrypted files use their name as part of the encryption key, renaming is not supported.");
-		}
-
 		private Stream ApplyReadCodecs(string key, Stream stream)
 		{
 			try
@@ -95,15 +83,15 @@ namespace Raven.Database.Indexing
 
 		private FileInfo GetFile(string name)
 		{
-			return new FileInfo(Path.Combine(directory.FullName, name));
+			return new FileInfo(Path.Combine(Directory.FullName, name));
 		}
 
 		private void CreateDirectory()
 		{
-			if (!directory.Exists)
+			if (!Directory.Exists)
 			{
-				directory.Create();
-				directory.Refresh();
+				Directory.Create();
+				Directory.Refresh();
 			}
 		}
 
@@ -125,7 +113,7 @@ namespace Raven.Database.Indexing
 		private class CodecIndexInput : IndexInput, IDisposable
 		{
 			private readonly Stream stream;
-			private bool isStreamOwned;
+			private readonly bool isStreamOwned;
 			private long position;
 
 			public CodecIndexInput(FileInfo file, Func<Stream, Stream> applyCodecs)
@@ -144,18 +132,6 @@ namespace Raven.Database.Indexing
 
 				if (!isStreamOwned)
 					GC.SuppressFinalize(this);
-			}
-
-			public override void Close()
-			{
-				GC.SuppressFinalize(this);
-				if (isStreamOwned)
-					stream.Close();
-			}
-
-			public override long GetFilePointer()
-			{
-				return position;
 			}
 
 			public override long Length()
@@ -191,6 +167,13 @@ namespace Raven.Database.Indexing
 				}
 			}
 
+			protected override void Dispose(bool disposing)
+			{
+				GC.SuppressFinalize(this);
+				if (isStreamOwned)
+					stream.Close();
+			}
+
 			public override void Seek(long newPosition)
 			{
 				lock (stream)
@@ -202,6 +185,11 @@ namespace Raven.Database.Indexing
 			public override object Clone()
 			{
 				return new CodecIndexInput(stream, position, false);
+			}
+
+			public override long FilePointer
+			{
+				get { return position; }
 			}
 
 			public void Dispose()
@@ -236,30 +224,29 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			public override void Close()
-			{
-				GC.SuppressFinalize(this);
-				stream.Close();
-			}
-
 			public override void Flush()
 			{
 				stream.Flush();
 			}
 
-			public override long GetFilePointer()
+			protected override void Dispose(bool disposing)
 			{
-				return stream.Position;
-			}
-
-			public override long Length()
-			{
-				return stream.Length;
+				GC.SuppressFinalize(this);
+				stream.Close();
 			}
 
 			public override void Seek(long pos)
 			{
 				stream.Seek(pos, SeekOrigin.Begin);
+			}
+
+			public override long FilePointer
+			{
+				get { return stream.Position; }
+			}
+			public override long Length
+			{
+				get { return stream.Length; }
 			}
 
 			public override void WriteByte(byte b)
