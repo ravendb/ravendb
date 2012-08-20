@@ -90,7 +90,7 @@
 					<Image Source="{StaticResource Image_Error_Tiny}"/>
 				</HyperlinkButton>
 
-					<TextBlock Grid.Row="0" Text="Version Tag: " VerticalAlignment="Center"/>
+					<TextBlock Grid.Row="0" Text="Collection: " VerticalAlignment="Center"/>
 					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Id, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
 
 					<TextBlock Grid.Row="1" Text="Max Revisions: " VerticalAlignment="Center"/>
