@@ -13,11 +13,11 @@ namespace Raven.Tests
 		[Fact]
 		public void CanConcurrentlyUpdateSameDocument()
 		{
-			using (var store = NewDocumentStore("esent", false))
+			using (var store = NewDocumentStore())
 			{
-				using(var s = store.OpenSession())
+				using (var s = store.OpenSession())
 				{
-					s.Store(new Post{Comments = new List<Comment>()});
+					s.Store(new Post {Comments = new List<Comment>()});
 					s.SaveChanges();
 				}
 
@@ -25,15 +25,15 @@ namespace Raven.Tests
 				var patches = Enumerable.Range(0, numberOfComments).Select(x =>
 				                                                           new PatchRequest
 				                                                           {
-				                                                           	Name = "Comments",
-				                                                           	Type = PatchCommandType.Add,
-				                                                           	Value = RavenJToken.FromObject(new Comment
-				                                                           	{
-				                                                           		AuthorId = "ayende"
-				                                                           	})
+					                                                           Name = "Comments",
+					                                                           Type = PatchCommandType.Add,
+					                                                           Value = RavenJToken.FromObject(new Comment
+					                                                           {
+						                                                           AuthorId = "ayende"
+					                                                           })
 				                                                           });
 
-				Parallel.ForEach(patches, data => store.DatabaseCommands.Patch("posts/1", new[]{data}));
+				Parallel.ForEach(patches, data => store.DatabaseCommands.Patch("posts/1", new[] {data}));
 
 				using (var s = store.OpenSession())
 				{

@@ -16,7 +16,7 @@ using Xunit;
 
 namespace Raven.Tests.Spatial
 {
-	public class SpatialIndexTest : AbstractDocumentStorageTest
+	public class SpatialIndexTest : RavenTest
 	{
 		private readonly DocumentDatabase db;
 

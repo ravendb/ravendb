@@ -15,9 +15,9 @@ using Xunit;
 
 namespace Raven.Tests.Storage
 {
-	public class BackupRestore : AbstractDocumentStorageTest
+	public class BackupRestore : RavenTest
 	{
-		private DocumentDatabase db;
+		/*private DocumentDatabase db;
 
 		public BackupRestore()
 		{
@@ -144,6 +144,6 @@ namespace Raven.Tests.Storage
 			JsonDocument jsonDocument = db.Get(BackupStatus.RavenBackupStatusDocumentKey, null);
 			var backupStatus = jsonDocument.DataAsJson.JsonDeserialization<BackupStatus>();
 			return backupStatus.Messages.OrderByDescending(m => m.Timestamp).First();
-		}
+		}*/
 	}
 }

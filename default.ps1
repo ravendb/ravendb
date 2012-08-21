@@ -141,7 +141,12 @@ task Test -depends Compile {
 	
 	
 	$test_prjs | ForEach-Object { 
-		Write-Host "Testing $build_dir\$_"
+		$env:raventest_storage_engine = 'munin';
+		Write-Host "Testing $build_dir\$_ (munin)"
+		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
+
+		$env:raventest_storage_engine = 'esent';
+		Write-Host "Testing $build_dir\$_ (esent)"
 		exec { &"$build_dir\xunit.console.clr4.exe" "$build_dir\$_" }
 	}
 }

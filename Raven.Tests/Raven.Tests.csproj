@@ -100,6 +100,7 @@
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -556,7 +557,7 @@
     <Compile Include="Bundles\Versioning\Versioning.cs" />
     <Compile Include="Bundles\Versioning\VersioningTest.cs" />
     <Compile Include="ConcurrentPatching.cs" />
-    <Compile Include="Confclits\ConflictResolverTests.cs" />
+    <Compile Include="Conflicts\ConflictResolverTests.cs" />
     <Compile Include="ConnectionStrings.cs" />
     <Compile Include="CriticalCulturesAttribute.cs" />
     <Compile Include="Document\AsyncDocumentStoreServerTests.cs" />
@@ -753,8 +754,7 @@
     <Compile Include="MailingList\WallaceTurner.cs" />
     <Compile Include="Querying\UsingStronglyTypedDocumentQuery.cs" />
     <Compile Include="Shard\ShardingFailure.cs" />
-    <Compile Include="Storage\Lists\Munin.cs" />
-    <Compile Include="Storage\Lists\Esent.cs" />
+    <Compile Include="Storage\Lists.cs" />
     <Compile Include="TemporaryCulture.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />
@@ -828,31 +828,28 @@
     <Compile Include="MailingList\Vlad.cs" />
     <Compile Include="MailingList\Wallace.cs" />
     <Compile Include="MailingList\Weave.cs" />
-    <Compile Include="ManagedStorage\Attachments.cs">
+    <Compile Include="Storage\Attachments.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ManagedStorage\Bugs\OpenAfterCompaction.cs" />
-    <Compile Include="ManagedStorage\DocEtag.cs">
+    <Compile Include="Storage\Bugs\OpenAfterCompaction.cs" />
+    <Compile Include="Storage\DocEtag.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ManagedStorage\DocumentKeys.cs">
+    <Compile Include="Storage\DocumentKeys.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ManagedStorage\Documents.cs">
+    <Compile Include="Storage\Documents.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ManagedStorage\General.cs">
+    <Compile Include="Storage\General.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ManagedStorage\Indexes.cs" />
-    <Compile Include="ManagedStorage\MappedResults.cs" />
-    <Compile Include="ManagedStorage\Queues.cs" />
-    <Compile Include="ManagedStorage\Storage.cs" />
-    <Compile Include="ManagedStorage\Tasks.cs" />
-    <Compile Include="ManagedStorage\Transactions.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="ManagedStorage\TxStorageTest.cs">
+    <Compile Include="Storage\Indexes.cs" />
+    <Compile Include="Storage\MappedResults.cs" />
+    <Compile Include="Storage\Queues.cs" />
+    <Compile Include="Storage\Storage.cs" />
+    <Compile Include="Storage\Tasks.cs" />
+    <Compile Include="Storage\Transactions.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="MultiGet\Bugs.cs" />
@@ -934,7 +931,6 @@
     </Compile>
     <Compile Include="Spatial\SpatialIndexTestHelper.cs" />
     <Compile Include="Spatial\SpatialSearch.cs" />
-    <Compile Include="Storage\AbstractDocumentStorageTest.cs" />
     <Compile Include="Storage\BackupRestore.cs" />
     <Compile Include="Storage\CreateUpdateDeleteDocuments.cs" />
     <Compile Include="Storage\CreateIndexes.cs" />

@@ -31,11 +31,10 @@ namespace Raven.Tests.Bugs.MapRedue
 			configuration.MaxNumberOfParallelIndexTasks = 1;
 		}
 
-
 		[Fact]
 		public void MapReduceIndexTest()
 		{
-			using (var store = NewDocumentStore("esent", false))
+			using (var store = NewDocumentStore())
 			{
 				new VersionedDocuments().Execute(store);
 

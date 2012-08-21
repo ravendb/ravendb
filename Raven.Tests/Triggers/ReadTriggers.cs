@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Raven.Tests.Triggers
 {
-	public class ReadTriggers : AbstractDocumentStorageTest
+	public class ReadTriggers : RavenTest
 	{
 		private readonly DocumentDatabase db;
 

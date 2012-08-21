@@ -12,9 +12,9 @@ using Xunit;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 
-namespace Raven.Tests.ManagedStorage
+namespace Raven.Tests.Storage
 {
-	public class Attachments : TxStorageTest
+	public class Attachments : RavenTest
 	{
 		[Fact]
 		public void CanAddAndReadAttachments()

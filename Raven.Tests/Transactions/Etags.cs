@@ -6,6 +6,7 @@
 using System;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -15,18 +16,20 @@ using Xunit;
 
 namespace Raven.Tests.Transactions
 {
-	public class Etags : AbstractDocumentStorageTest
+	public class Etags : RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public Etags()
 		{
-			db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir, RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true });
+			store = NewDocumentStore();
+			db = store.DocumentDatabase;
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 

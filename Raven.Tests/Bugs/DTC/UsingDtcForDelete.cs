@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs.DTC
 		[Fact]
 		public void ShouldWork()
 		{
-			using (var store = NewDocumentStore("esent", false))
+			using (var store = NewDocumentStore())
 			{
 				documentKey = "tester123";
 

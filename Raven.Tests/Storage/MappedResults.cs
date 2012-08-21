@@ -9,9 +9,9 @@ using Raven.Database.Storage;
 using Xunit;
 using System.Linq;
 
-namespace Raven.Tests.ManagedStorage
+namespace Raven.Tests.Storage
 {
-	public class MappedResults : TxStorageTest
+	public class MappedResults : RavenTest
 	{
 		[Fact]
 		public void CanStoreAndGetMappedResult()

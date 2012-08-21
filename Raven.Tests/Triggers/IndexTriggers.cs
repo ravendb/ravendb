@@ -6,6 +6,7 @@
 using System.ComponentModel.Composition.Hosting;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
 using Raven.Database.Config;
@@ -15,25 +16,20 @@ using System.Linq;
 
 namespace Raven.Tests.Triggers
 {
-	public class IndexTriggers : AbstractDocumentStorageTest
+	public class IndexTriggers : RavenTest
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public IndexTriggers()
 		{
-			db = new DocumentDatabase(new RavenConfiguration
-			{
-				DataDirectory = DataDir,
-				Container = new CompositionContainer(new TypeCatalog(
-					typeof(IndexToDataTable))),
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
-			});
+			store = NewDocumentStore(new CompositionContainer(new TypeCatalog(typeof(IndexToDataTable))));
 			db.SpinBackgroundWorkers();
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 
