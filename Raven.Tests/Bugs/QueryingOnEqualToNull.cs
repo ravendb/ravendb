@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryingOnEqualToNull : LocalClientTest
+	public class QueryingOnEqualToNull : RavenTest
 	{
 		[Fact]
 		public void QueryingOnEqNull()

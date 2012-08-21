@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests
 {
-	public class ConcurrentPatching : LocalClientTest
+	public class ConcurrentPatching : RavenTest
 	{
 		[Fact]
 		public void CanConcurrentlyUpdateSameDocument()

@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ResettingIndex : LocalClientTest
+	public class ResettingIndex : RavenTest
 	{
 		[Fact]
 		public void CanResetIndex()

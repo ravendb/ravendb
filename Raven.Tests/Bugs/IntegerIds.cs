@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class IntegerIds : LocalClientTest
+	public class IntegerIds : RavenTest
 	{
 		[Fact]
 		public void CanSaveAndLoad()

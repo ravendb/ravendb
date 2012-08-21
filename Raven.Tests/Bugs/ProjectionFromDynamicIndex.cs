@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ProjectionFromDynamicIndex : LocalClientTest
+	public class ProjectionFromDynamicIndex : RavenTest
 	{
 		[Fact]
 		public void ShouldWork()

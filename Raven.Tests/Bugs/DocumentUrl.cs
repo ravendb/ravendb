@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class DocumentUrl : LocalClientTest
+	public class DocumentUrl : RavenTest
 	{
 		[Fact]
 		public void CanGetFullUrl()

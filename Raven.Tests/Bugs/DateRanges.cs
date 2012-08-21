@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class DateRanges : LocalClientTest
+	public class DateRanges : RavenTest
 	{
 		[Fact]
 		public void CanQueryByDate()

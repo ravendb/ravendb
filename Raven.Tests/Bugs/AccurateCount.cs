@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class AccurateCount : LocalClientTest
+	public class AccurateCount : RavenTest
 	{
 		[Fact]
 		public void QueryableCountIsAccurate()

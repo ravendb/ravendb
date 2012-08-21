@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class Etag : LocalClientTest
+	public class Etag : RavenTest
 	{
 		[Fact]
 		public void WhenSaving_ThenGetsEtag()

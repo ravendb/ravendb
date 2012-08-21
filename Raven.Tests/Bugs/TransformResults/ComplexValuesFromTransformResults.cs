@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.TransformResults
 {
-	public class ComplexValuesFromTransformResults : LocalClientTest
+	public class ComplexValuesFromTransformResults : RavenTest
 	{
 		[Fact]
 		public void CanCreateQueriesWithNestedSelected()

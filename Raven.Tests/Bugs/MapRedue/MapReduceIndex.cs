@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.MapRedue
 {
-	public class MapReduceIndex : LocalClientTest
+	public class MapReduceIndex : RavenTest
 	{
 		private readonly String[] m_documentIds;
 

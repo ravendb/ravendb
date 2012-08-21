@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Metadata
 {
-	public class LastModifiedLocal : LocalClientTest
+	public class LastModifiedLocal : RavenTest
 	{
 		[Fact]
 		public void CanAccessLastModifiedAsMetadata()

@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class AnonymousClasses : LocalClientTest
+	public class AnonymousClasses : RavenTest
 	{
 		[Fact]
 		public void WillNotCreateNastyIds()

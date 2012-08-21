@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryingOnValueWithMinusAnalyzed : LocalClientTest
+	public class QueryingOnValueWithMinusAnalyzed : RavenTest
 	{
 		[Fact]
 		public void CanQueryOnValuesContainingMinus()

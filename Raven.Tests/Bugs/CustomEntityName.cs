@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CustomEntityName : LocalClientTest
+	public class CustomEntityName : RavenTest
 	{
 		[Fact]
 		public void CanCustomizeEntityName()

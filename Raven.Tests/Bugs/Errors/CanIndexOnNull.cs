@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Errors
 {
-	public class CanIndexOnNull : LocalClientTest
+	public class CanIndexOnNull : RavenTest
 	{
 		[Fact]
 		public void CanIndexOnMissingProps()

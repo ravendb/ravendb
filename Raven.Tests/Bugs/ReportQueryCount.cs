@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class ReportQueryCount : LocalClientTest
+	public class ReportQueryCount : RavenTest
 	{
 		[Fact]
 		public void CanFindOutWhatTheQueryTotalCountIs()

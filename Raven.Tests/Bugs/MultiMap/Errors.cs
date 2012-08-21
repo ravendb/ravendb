@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.MultiMap
 {
-	public class Errors : LocalClientTest
+	public class Errors : RavenTest
 	{
 		[Fact]
 		public void MultiMapsMustHaveSameOutput()

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.MultiMap
 {
-	public class MultiMapReduce : LocalClientTest
+	public class MultiMapReduce : RavenTest
 	{
 		[Fact]
 		public void CanGetDataFromMultipleDocumentSources()

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class StaticDynamic : LocalClientTest
+	public class StaticDynamic : RavenTest
 	{
 		[Fact]
 		public void IfStaticQueryHasWhere_SeparateDynamicQueryCreated()

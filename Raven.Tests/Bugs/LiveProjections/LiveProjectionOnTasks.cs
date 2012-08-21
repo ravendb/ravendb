@@ -11,7 +11,7 @@ namespace Raven.Tests.Bugs.LiveProjections
 	using Raven.Tests.Bugs.LiveProjections.Views;
 	using Xunit;
 
-	public class LiveProjectionOnTasks : LocalClientTest
+	public class LiveProjectionOnTasks : RavenTest
 	{
 		[Fact]
 		public void TaskLiveProjection()

@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class LiveProjection : LocalClientTest, IDisposable
+	public class LiveProjection : RavenTest, IDisposable
 	{
 		public LiveProjection()
 		{

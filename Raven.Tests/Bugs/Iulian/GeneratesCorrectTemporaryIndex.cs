@@ -4,7 +4,7 @@ namespace Raven.Tests.Bugs.Iulian
 	using System.Linq;
 	using Xunit;
 
-	public class GeneratesCorrectTemporaryIndex : LocalClientTest
+	public class GeneratesCorrectTemporaryIndex : RavenTest
 	{
 		public class Inner
 		{

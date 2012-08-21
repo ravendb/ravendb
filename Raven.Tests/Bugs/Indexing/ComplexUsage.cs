@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class ComplexUsage : LocalClientTest
+	public class ComplexUsage : RavenTest
 	{
 		[Fact]
 		public void ShouldNotOutputNull()

@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class IndexNestedFields : LocalClientTest
+	public class IndexNestedFields : RavenTest
 	{
 		public class Outer
 		{

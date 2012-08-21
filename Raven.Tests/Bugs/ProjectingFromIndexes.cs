@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ProjectingFromIndexes : LocalClientTest
+	public class ProjectingFromIndexes : RavenTest
 	{
 		[Fact]
 		public void CanProjectFromIndex()

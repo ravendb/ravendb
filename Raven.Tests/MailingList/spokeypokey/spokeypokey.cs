@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList.spokeypokey
 {
-	public class spokeypokey : LocalClientTest
+	public class spokeypokey : RavenTest
 	{
 		public class BarnIndex : AbstractIndexCreationTask<Barn, Barn>
 		{

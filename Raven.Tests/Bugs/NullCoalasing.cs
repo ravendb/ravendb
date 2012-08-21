@@ -12,7 +12,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class NullCoalasing : LocalClientTest
+	public class NullCoalasing : RavenTest
 	{
 		[Fact]
 		public void ShouldWork()

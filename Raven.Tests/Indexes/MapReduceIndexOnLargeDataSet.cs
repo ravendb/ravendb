@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Raven.Tests.Indexes
 {
-	public class MapReduceIndexOnLargeDataSet : LocalClientTest
+	public class MapReduceIndexOnLargeDataSet : RavenTest
 	{
 		[Fact]
 		public void WillNotProduceAnyErrors()

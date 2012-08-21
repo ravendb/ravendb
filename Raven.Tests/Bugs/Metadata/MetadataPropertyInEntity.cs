@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Metadata
 {
-	public class MetadataPropertyInEntity : LocalClientTest
+	public class MetadataPropertyInEntity : RavenTest
 	{
 		public class Account
 		{

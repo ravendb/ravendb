@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class LukeQuerying : LocalClientTest
+	public class LukeQuerying : RavenTest
 	{
 		[Fact]
 		public void Can_query_on_not_equal()

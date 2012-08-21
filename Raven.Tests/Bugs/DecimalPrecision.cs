@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class DecimalPrecision : LocalClientTest
+	public class DecimalPrecision : RavenTest
 	{
 		[Fact]
 		public void CanDetectHighPrecision_Decimal()

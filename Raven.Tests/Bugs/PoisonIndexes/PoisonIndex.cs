@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.PoisonIndexes
 {
-	public class PoisonIndex : LocalClientTest
+	public class PoisonIndex : RavenTest
 	{
 		[Fact]
 		public void ShouldNotCauseFailures()

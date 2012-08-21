@@ -662,7 +662,6 @@
     <Compile Include="Linq\SampleGeoLocation.cs" />
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
-    <Compile Include="LocalClientTest.cs" />
     <Compile Include="MailingList\AddMapForAllTest.cs" />
     <Compile Include="MailingList\Asger2.cs" />
     <Compile Include="MailingList\AttachmentContentType.cs" />

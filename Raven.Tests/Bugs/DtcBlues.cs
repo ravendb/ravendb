@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class DtcBlues : LocalClientTest
+	public class DtcBlues : RavenTest
 	{
 		[Fact]
 		public void CanQueryDtcForUncommittedItem()

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class SelectManyTests : LocalClientTest
+	public class SelectManyTests : RavenTest
 	{
 		[Fact]
 		public void FindArticleByCategoryId()

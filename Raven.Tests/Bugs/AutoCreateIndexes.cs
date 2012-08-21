@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class AutoCreateIndexes : LocalClientTest
+	public class AutoCreateIndexes : RavenTest
 	{
 		[Fact]
 		public void CanAutomaticallyCreateIndexes()

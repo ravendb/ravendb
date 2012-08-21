@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class NullableDateTime : LocalClientTest
+	public class NullableDateTime : RavenTest
 	{
 		[Fact]
 		public void WillNotIncludeItemsWithNullDate()
