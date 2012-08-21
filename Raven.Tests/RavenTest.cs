@@ -45,35 +45,43 @@ namespace Raven.Tests
 			File.Delete("test.log");
 		}
 
-		public EmbeddableDocumentStore NewDocumentStoreRestart()
+		public EmbeddableDocumentStore NewDocumentStoreRestart(string requestedStorage = null)
 		{
-			return NewDocumentStoreInternal(deleteDirectory: false);
+			return NewDocumentStoreInternal(deleteDirectory: false, requestedStorage: requestedStorage);
 		}
 
-		public EmbeddableDocumentStore NewDocumentStore()
+		public EmbeddableDocumentStore NewDocumentStore(string requestedStorage = null)
 		{
-			return NewDocumentStoreInternal(deleteDirectory: true);
+			return NewDocumentStoreInternal(deleteDirectory: true, requestedStorage: requestedStorage);
 		}
 
-		public EmbeddableDocumentStore NewDocumentStore(CompositionContainer container)
+		public EmbeddableDocumentStore NewDocumentStore(CompositionContainer container, string requestedStorage = null)
 		{
-			return NewDocumentStoreInternal(deleteDirectory: true, container: container);
+			return NewDocumentStoreInternal(deleteDirectory: true, container: container, requestedStorage: requestedStorage);
 		}
 
-		public EmbeddableDocumentStore NewDocumentStore(AggregateCatalog catalog)
+		public EmbeddableDocumentStore NewDocumentStore(AggregateCatalog catalog, string requestedStorage = null)
 		{
-			return NewDocumentStoreInternal(deleteDirectory: true, catalog: catalog);
+			return NewDocumentStoreInternal(deleteDirectory: true, catalog: catalog, requestedStorage: requestedStorage);
 		}
 
-		private EmbeddableDocumentStore NewDocumentStoreInternal(bool deleteDirectory, CompositionContainer container = null, AggregateCatalog catalog = null)
+		private EmbeddableDocumentStore NewDocumentStoreInternal(bool deleteDirectory,
+			string requestedStorage,
+			 CompositionContainer container = null,
+			 AggregateCatalog catalog = null)
 		{
 			string defaultStorageType = null;
 
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof (DocumentStoreServerTests)).CodeBase);
+			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 
-			if(!string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("raventest_storage_engine")))
-				defaultStorageType = System.Environment.GetEnvironmentVariable("raventest_storage_engine");
+			var envVar = Environment.GetEnvironmentVariable("raventest_storage_engine");
+			if (string.IsNullOrEmpty(envVar) == false)
+				defaultStorageType = envVar;
+			else if (requestedStorage != null)
+				defaultStorageType = requestedStorage;
+			else
+				defaultStorageType = "munin";
 
 			var documentStore = new EmbeddableDocumentStore
 			{
@@ -87,7 +95,7 @@ namespace Raven.Tests
 				}
 			};
 
-			if(catalog != null)
+			if (catalog != null)
 				documentStore.Configuration.Catalog = catalog;
 
 			try
@@ -95,7 +103,7 @@ namespace Raven.Tests
 				ModifyStore(documentStore);
 				ModifyConfiguration(documentStore.Configuration);
 
-				if(deleteDirectory)
+				if (deleteDirectory)
 					IOExtensions.DeleteDirectory(path);
 
 				documentStore.Initialize();
@@ -118,12 +126,12 @@ namespace Raven.Tests
 			ITransactionalStorage newTransactionalStorage;
 			string storageType = null;
 
-			if(!string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("raventest_storage_engine")))
+			if (!string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("raventest_storage_engine")))
 				storageType = System.Environment.GetEnvironmentVariable("raventest_storage_engine");
 			else
 				storageType = System.Configuration.ConfigurationManager.AppSettings["Raven/StorageEngine"];
 
-			if(storageType == "munin")
+			if (storageType == "munin")
 				newTransactionalStorage = new Raven.Storage.Managed.TransactionalStorage(new RavenConfiguration { DataDirectory = DbDirectory, }, () => { });
 			else
 				newTransactionalStorage = new Raven.Storage.Esent.TransactionalStorage(new RavenConfiguration { DataDirectory = DbDirectory, }, () => { });
@@ -190,7 +198,7 @@ namespace Raven.Tests
 				do
 				{
 					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug  == false || Debugger.IsAttached));
+				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug == false || Debugger.IsAttached));
 			}
 		}
 
