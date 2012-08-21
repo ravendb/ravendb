@@ -21,7 +21,8 @@ namespace Raven.Database.Indexing
 {
 	public static class SpatialIndex
 	{
-		internal static readonly SpatialContext Context = new SpatialContext(DistanceUnits.MILES);// TODO: Support KM
+		// TODO: Support new SpatialContext(DistanceUnits.MILES) for backward compatibility through config
+		internal static readonly SpatialContext Context = SpatialContext.GEO_KM;
 		internal static readonly SpatialStrategy Strategy;
 		private static readonly int maxLength;
 
