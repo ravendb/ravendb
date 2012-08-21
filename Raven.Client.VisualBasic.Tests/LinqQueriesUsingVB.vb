@@ -6,7 +6,7 @@ Imports Xunit
 Imports Raven.Client.Linq
 
 Public Class LinqQueriesUsingVB
-	Inherits LocalClientTest
+	Inherits RavenTest
 
 	<Fact()> _
 	Public Sub CanUseWhereEntityIs()
