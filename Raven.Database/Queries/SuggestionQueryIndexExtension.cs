@@ -87,7 +87,7 @@ namespace Raven.Database.Queries
 			spellChecker.IndexDictionary(new EnumerableDictionary(documents, field));
 		}
 
-		public class EnumerableDictionary : Dictionary
+		public class EnumerableDictionary : SpellChecker.Net.Search.Spell.IDictionary
 		{
 			private readonly IEnumerable<Document> documents;
 			private readonly string field;
@@ -98,7 +98,7 @@ namespace Raven.Database.Queries
 				this.field = field;
 			}
 
-			public IEnumerator GetWordsIterator()
+			public IEnumerator<string> GetWordsIterator()
 			{
 				return (from document in documents 
 						from fieldable in document.GetFieldables(field) 
