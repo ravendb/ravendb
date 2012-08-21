@@ -7,7 +7,7 @@ using System;
 
 namespace Raven.Client.Indexes
 {
-	  /// <summary>
+	/// <summary>
 	/// Accessor for generating spatial queries on the client side
 	/// </summary>
 	public static class SpatialIndex
