@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "3.8";
+		public const string SchemaVersion = "3.9";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -696,12 +696,6 @@ namespace Raven.Storage.Esent
 				grbit = ColumnNotNullIfOnHigherThanWindowsXp()
 			}, null, 0, out columnid);
 
-			Api.JetAddColumn(session, tableid, "supports_merging", new JET_COLUMNDEF
-			{
-				coltyp = JET_coltyp.Bit,
-				grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed
-			}, null, 0, out columnid);
-
 			Api.JetAddColumn(session, tableid, "task_type", new JET_COLUMNDEF
 			{
 				cbMax = 255,
@@ -740,8 +734,8 @@ namespace Raven.Storage.Esent
 						  },
 						  new JET_INDEXCREATE
 						  {
-							  szIndexName = "mergables_by_task_type",
-							  szKey = "+supports_merging\0+for_index\0+task_type\0\0",
+							  szIndexName = "by_index_and_task_type",
+							  szKey = "+for_index\0+task_type\0\0",
 							  grbit = CreateIndexGrbit.IndexIgnoreNull,
 						  });
 		}

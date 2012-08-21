@@ -22,7 +22,10 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task"], task.AsBytes());
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["for_index"], task.Index, Encoding.Unicode);
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["task_type"], task.GetType().FullName, Encoding.Unicode);
-				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["supports_merging"], task.SupportsMerging);
+				if (tableColumnsCache.TasksColumns.ContainsKey("supports_merging"))
+				{
+					Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["supports_merging"], true);
+				}
 				Api.SetColumn(session, Tasks, tableColumnsCache.TasksColumns["added_at"], addedAt);
 
 				update.Save(bookmark, bookmark.Length, out actualBookmarkSize);
@@ -92,12 +95,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public void MergeSimilarTasks(Task task)
 		{
-			if (task.SupportsMerging == false)
-				return;
-
 			var expectedTaskType = task.GetType().FullName;
 
-			Api.JetSetCurrentIndex(session, Tasks, "mergables_by_task_type");
+			Api.JetSetCurrentIndex(session, Tasks, "by_index_and_task_type");
 			Api.MakeKey(session, Tasks, true, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
@@ -107,15 +107,12 @@ namespace Raven.Storage.Esent.StorageActions
 				return;
 			}
 
-			Api.MakeKey(session, Tasks, true, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.None);
+			Api.MakeKey(session, Tasks, task.Index, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
 			Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
 			do
 			{
 				// esent index ranges are approximate, and we need to check them ourselves as well
-				if (Api.RetrieveColumnAsBoolean(session, Tasks, tableColumnsCache.TasksColumns["supports_merging"]) == false)
-					continue;
 				if (Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["for_index"]) != task.Index)
 					continue;
 				if (Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"]) != expectedTaskType)
@@ -138,8 +135,7 @@ namespace Raven.Storage.Esent.StorageActions
 						Api.JetDelete(session, Tasks);
 						continue;
 					}
-					if (task.TryMerge(existingTask) == false)
-						continue;
+					task.Merge(existingTask);
 					Api.JetDelete(session, Tasks);
 				}
 				catch (EsentErrorException e)
@@ -148,10 +144,7 @@ namespace Raven.Storage.Esent.StorageActions
 						continue;
 					throw;
 				}
-			} while (
-					task.SupportsMerging &&
-					Api.TryMoveNext(session, Tasks)
-				);
+			} while (Api.TryMoveNext(session, Tasks));
 		}
 
 	}
