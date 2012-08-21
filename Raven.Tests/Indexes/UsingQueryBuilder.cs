@@ -153,10 +153,10 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void Can_parse_fixed_range_on_int()
 		{
-			var query = QueryBuilder.BuildQuery("Age_Range:{0x00000003 TO 0x00000009}", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
+			var query = QueryBuilder.BuildQuery("Age_Range:{0x00000003 TO 0x00000009}", new PerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_30)));
 
 			Assert.Equal("Age_Range:{3 TO 9}", query.ToString());
-			Assert.True(query is NumericRangeQuery<float>);
+			Assert.True(query is NumericRangeQuery<int>);
 		}
 
 		[Fact]
