@@ -143,15 +143,12 @@ namespace Raven.Client.Linq
 				case ExpressionType.MemberAccess:
 					value = GetMemberValue(((MemberExpression)expression));
 					return true;
+				case ExpressionType.MemberInit:
+					var memberInitExpression = ((MemberInitExpression) expression);
+					value = Expression.Lambda(memberInitExpression).Compile().DynamicInvoke();
+					return true;
 				case ExpressionType.New:
-					var newExpression = ((NewExpression)expression);
-					value = Activator.CreateInstance(newExpression.Type, newExpression.Arguments.Select(e =>
-					{
-						object o;
-						if (GetValueFromExpressionWithoutConversion(e, out o))
-							return o;
-						throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);
-					}).ToArray());
+					value = GetNewExpressionValue(expression);
 					return true;
 				case ExpressionType.Lambda:
 					value = ((LambdaExpression)expression).Compile().DynamicInvoke();
@@ -177,6 +174,19 @@ namespace Raven.Client.Linq
 					value = null;
 					return false;
 			}
+		}
+
+		private static object GetNewExpressionValue(Expression expression)
+		{
+			var newExpression = ((NewExpression) expression);
+			var instance = Activator.CreateInstance(newExpression.Type, newExpression.Arguments.Select(e =>
+			{
+				object o;
+				if (GetValueFromExpressionWithoutConversion(e, out o))
+					return o;
+				throw new InvalidOperationException("Can't extract value from expression of type: " + expression.NodeType);
+			}).ToArray());
+			return instance;
 		}
 
 
