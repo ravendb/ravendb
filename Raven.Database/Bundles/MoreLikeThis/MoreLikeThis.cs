@@ -752,7 +752,7 @@ namespace Similarity.Net
 		protected void AddTermFrequencies(System.IO.TextReader r, System.Collections.IDictionary termFreqMap, System.String fieldName)
 		{
 			TokenStream ts = analyzer.TokenStream(fieldName, r);
-			var termAtt = ts.AddAttribute<TermAttribute>();
+			var termAtt = ts.AddAttribute<ITermAttribute>();
 			int tokenCount = 0;
 			while (ts.IncrementToken())
 			{
