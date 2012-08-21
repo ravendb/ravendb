@@ -55,7 +55,6 @@ namespace Raven.Storage.Managed
 
 		public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit)
 		{
-			Console.WriteLine("munin");
 			this.configuration = configuration;
 			this.onCommit = onCommit;
 			documentCacher = new DocumentCacher(configuration);
