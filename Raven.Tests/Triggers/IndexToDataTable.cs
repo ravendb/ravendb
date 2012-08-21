@@ -47,7 +47,7 @@ namespace Raven.Tests.Triggers
 
 			public override void OnIndexEntryCreated(string entryKey, Lucene.Net.Documents.Document document)
 			{
-				parent.DataTable.Rows.Add(entryKey, document.GetField("Project").StringValue());
+				parent.DataTable.Rows.Add(entryKey, document.GetField("Project").StringValue);
 			}
 		}
 	}

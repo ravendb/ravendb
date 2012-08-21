@@ -28,10 +28,10 @@ namespace Raven.Tests.Bugs
 
 			var searcher = new IndexSearcher(dir, true);
 
-			var termEnum = searcher.GetIndexReader().Terms();
+			var termEnum = searcher.IndexReader.Terms();
 			while (termEnum.Next())
 			{
-				var buffer = termEnum.Term().Text();
+				var buffer = termEnum.Term.Text;
 				Console.WriteLine(buffer);
 			}
 

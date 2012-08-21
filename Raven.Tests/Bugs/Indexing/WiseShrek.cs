@@ -66,8 +66,8 @@ namespace Raven.Tests.Bugs.Indexing
 			var tokenStream = perFieldAnalyzerWrapper.TokenStream("f_name", new StringReader("hello Shrek"));
 			while (tokenStream.IncrementToken())
 			{
-				var attribute = (TermAttribute)tokenStream.GetAttribute(typeof(TermAttribute));
-				Assert.Equal("hello Shrek", attribute.Term());
+				var attribute = (TermAttribute) tokenStream.GetAttribute<ITermAttribute>();
+				Assert.Equal("hello Shrek", attribute.Term);
 			}
 		}
 
