@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -1551,13 +1552,18 @@ If you really want to do in memory filtering on the data returned from the query
 				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, typeof(T), false);
 			}
 
-			var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
-											whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+			if (whereParams.Value is string)
+				return RavenQuery.Escape(whereParams.Value.ToString(), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
-			if (whereParams.Value is string == false)
-				return escaped;
-
-			return whereParams.IsAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
+			var stringWriter = new StringWriter();
+			conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);
+			var sb = stringWriter.GetStringBuilder();
+			if (sb.Length > 1 && sb[0] == '"' && sb[sb.Length - 1] == '"')
+			{
+				sb.Remove(sb.Length - 1, 1);
+				sb.Remove(0, 1);
+			}
+			return RavenQuery.Escape(sb.ToString(), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 		}
 
 		private string TransformToRangeValue(WhereParams whereParams)
@@ -1586,9 +1592,19 @@ If you really want to do in memory filtering on the data returned from the query
 				return NumberUtil.NumberToString((double)whereParams.Value);
 			if (whereParams.Value is float)
 				return NumberUtil.NumberToString((float)whereParams.Value);
-		   
+		   if(whereParams.Value is string)
+				return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
+			var stringWriter = new StringWriter();
+			conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);
 
-			return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
+			var sb = stringWriter.GetStringBuilder();
+			if (sb.Length > 1 && sb[0] == '"' && sb[sb.Length - 1] == '"')
+			{
+				sb.Remove(sb.Length - 1, 1);
+				sb.Remove(0, 1);
+			}
+		
+			return RavenQuery.Escape(sb.ToString(), false, true);
 		}
 
 		/// <summary>

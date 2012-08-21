@@ -747,6 +747,7 @@
     <Compile Include="Notifications\MultiTenant.cs" />
     <Compile Include="Notifications\Security_Windows.cs" />
     <Compile Include="Notifications\WithIIS.cs" />
+    <Compile Include="Queries\CanQueryOnCustomClass.cs" />
     <Compile Include="Queries\CanQueryOnLargeXml.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="MailingList\TomCabanski.cs" />
