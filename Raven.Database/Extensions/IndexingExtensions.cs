@@ -29,7 +29,14 @@ namespace Raven.Database.Extensions
 				throw new InvalidOperationException("Cannot find analzyer type '" + analyzerTypeAsString + "' for field: " + name);
 			try
 			{
-				return (Analyzer)Activator.CreateInstance(analyzerType);
+				// try to get paramerless ctor
+				var ctors = analyzerType.GetConstructor(Type.EmptyTypes);
+				if (ctors != null)
+					return (Analyzer)Activator.CreateInstance(analyzerType);
+
+				ctors = analyzerType.GetConstructor(new[] {typeof (Lucene.Net.Util.Version)});
+				if (ctors != null)
+					return (Analyzer)Activator.CreateInstance(analyzerType, Lucene.Net.Util.Version.LUCENE_30);
 			}
 			catch (Exception e)
 			{
@@ -37,6 +44,9 @@ namespace Raven.Database.Extensions
 					"Could not create new analyzer instance '" + name + "' for field: " +
 						name, e);
 			}
+
+			throw new InvalidOperationException(
+				"Could not create new analyzer instance '" + name + "' for field: " + name + ". No recognizable constructor found.");
 		}
 
 		public static Field.Index GetIndex(this IndexDefinition self, string name, Field.Index? defaultIndex)
