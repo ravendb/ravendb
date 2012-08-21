@@ -17,6 +17,7 @@
 			</Grid.RowDefinitions>
 			<TextBlock Margin="10"
 					   TextWrapping="Wrap"
+					   FontWeight="Bold"
 					   Text="This is your encryption key.
 Save it in a safe place, 
 if you will loose this key you could loose access to your data!"/>
