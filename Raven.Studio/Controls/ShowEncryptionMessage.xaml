@@ -20,7 +20,7 @@
 					   FontWeight="Bold"
 					   Text="This is your encryption key.
 Save it in a safe place, 
-if you will loose this key you could loose access to your data!"/>
+if you will lose this key you could lose access to your data!"/>
 			
 			<TextBox x:Name="KeyValue" Grid.Row="1" Margin="5" TextChanged="KeyValue_TextChanged"/>
 		</Grid>

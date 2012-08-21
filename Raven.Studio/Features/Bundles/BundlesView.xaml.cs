@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Versioning.Data;
 using Raven.Studio.Infrastructure;
@@ -16,6 +17,21 @@ namespace Raven.Studio.Features.Bundles
 			WarnSize.Maximum = int.MaxValue;
 			MaxDocs.Maximum = int.MaxValue;
 			WarnDocs.Maximum = int.MaxValue;
+			KeyDown += (sender, args) =>
+			{
+				if(args.Key == Key.Enter)
+				{
+					SetDialogResult(true);
+				}
+			};
+		}
+
+		private void SetDialogResult(bool setToValue)
+		{
+			var parentWindow = Parent as ChildWindow;
+			if (parentWindow == null)
+				return;
+			parentWindow.DialogResult = setToValue;
 		}
 
 		private void UseConnectionCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -86,18 +102,12 @@ namespace Raven.Studio.Features.Bundles
 
 		private void CancelButton_Click(object sender, RoutedEventArgs e)
 		{
-			var parentWindow = this.Parent as ChildWindow;
-			if (parentWindow == null)
-				return;
-			parentWindow.DialogResult = false;
+			SetDialogResult(false);
 		}
 
 		private void OKButton_Click(object sender, RoutedEventArgs e)
 		{
-			var parentWindow = this.Parent as ChildWindow;
-			if (parentWindow == null)
-				return;
-			parentWindow.DialogResult = true;
+			SetDialogResult(true);
 		}
 
 		private void DeleteVersioning(object sender, RoutedEventArgs e)
