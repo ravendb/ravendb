@@ -26,11 +26,10 @@ namespace Raven.Database.Tasks
 			Keys = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 		}
 
-		public override bool TryMerge(Task task)
+		public override void Merge(Task task)
 		{
 			var removeFromIndexTask = ((RemoveFromIndexTask)task);
 			Keys.UnionWith(removeFromIndexTask.Keys);
-			return true;
 		}
 
 		public override void Execute(WorkContext context)
