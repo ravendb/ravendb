@@ -75,13 +75,7 @@ namespace Raven.Tests
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 
-			var envVar = Environment.GetEnvironmentVariable("raventest_storage_engine");
-			if (string.IsNullOrEmpty(envVar) == false)
-				defaultStorageType = envVar;
-			else if (requestedStorage != null)
-				defaultStorageType = requestedStorage;
-			else
-				defaultStorageType = "munin";
+			defaultStorageType = GetDefaultStorageType(requestedStorage);
 
 			var documentStore = new EmbeddableDocumentStore
 			{
@@ -119,6 +113,19 @@ namespace Raven.Tests
 					documentStore.Dispose();
 				throw;
 			}
+		}
+
+		public static string GetDefaultStorageType(string requestedStorage = null)
+		{
+			string defaultStorageType;
+			var envVar = Environment.GetEnvironmentVariable("raventest_storage_engine");
+			if (string.IsNullOrEmpty(envVar) == false)
+				defaultStorageType = envVar;
+			else if (requestedStorage != null)
+				defaultStorageType = requestedStorage;
+			else
+				defaultStorageType = "munin";
+			return defaultStorageType;
 		}
 
 		public ITransactionalStorage NewTransactionalStorage()
