@@ -12,12 +12,16 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Lucene.Net.Documents;
+using Lucene.Net.Spatial.Prefix;
+using Lucene.Net.Spatial.Prefix.Tree;
+using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using System.Linq;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
+using Spatial4n.Core.Shapes;
 
 namespace Raven.Database.Linq
 {
@@ -103,6 +107,16 @@ namespace Raven.Database.Linq
 			var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(indexDefinition);
 
 			return anonymousObjectToLuceneDocumentConverter.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO);
+		}
+
+		public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
+		{
+			var maxLength = GeohashPrefixTree.GetMaxLevelsPossible();
+			var strategy = new RecursivePrefixTreeStrategy(new GeohashPrefixTree(SpatialIndex.Context, maxLength), Constants.SpatialFieldName);
+
+			Shape shape = SpatialIndex.Context.MakePoint(lng ?? 0, lat ?? 0);
+			return strategy.CreateIndexableFields(shape)
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.Context.ToString(shape), Field.Store.YES, Field.Index.NO), });
 		}
 
 		public void AddQueryParameterForMap(string field)

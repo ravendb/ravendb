@@ -16,6 +16,7 @@ using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Spatial;
 using Lucene.Net.Store;
 using NLog;
 using Raven.Abstractions;
@@ -54,6 +55,8 @@ namespace Raven.Database.Indexing
 		private DateTime? lastQueryTime;
 
 		private int docCountSinceLastOptimization;
+
+		private SpatialStrategy spatialStrategy;
 
 		private readonly ConcurrentDictionary<string, IIndexExtension> indexExtensions =
 			new ConcurrentDictionary<string, IIndexExtension>();
@@ -966,7 +969,7 @@ namespace Raven.Database.Indexing
 				var spatialIndexQuery = indexQuery as SpatialIndexQuery;
 				if (spatialIndexQuery != null)
 				{
-					var dq = SpatialIndex.MakeQuery(spatialIndexQuery.Latitude, spatialIndexQuery.Longitude, spatialIndexQuery.Radius);
+					var dq = SpatialIndex.MakeQuery(parent.spatialStrategy, spatialIndexQuery.Latitude, spatialIndexQuery.Longitude, spatialIndexQuery.Radius);
 					if (q is MatchAllDocsQuery) return dq;
 
 					var bq = new BooleanQuery {{q, Occur.MUST}, {dq, Occur.MUST}};

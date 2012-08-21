@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Indexing;
 
 namespace Raven.Client.Indexes
 {
@@ -16,6 +17,11 @@ namespace Raven.Client.Indexes
 		/// Marker method for allowing generating spatial indexes on the client
 		/// </summary>
 		public static object Generate(double lat, double lng)
+		{
+			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+		}
+
+		public static object Generate(string shapeWKT, SpatialSearchStrategy strategy, int maxTreeLevel, double distanceErrorPct)
 		{
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
