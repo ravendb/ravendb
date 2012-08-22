@@ -68,7 +68,7 @@ namespace Raven.Studio.Commands
 		private Task ReadIndexes(int totalCount)
 		{
 			var url = ("/indexes/?start=" + totalCount + "&pageSize=" + BatchSize).NoCache();
-			var request = DatabaseCommands.CreateRequest( "GET", url);
+			var request = DatabaseCommands.CreateRequest(url, "GET");
 			return request.ReadResponseJsonAsync()
 				.ContinueOnSuccess(documents =>
 									{
@@ -101,7 +101,7 @@ namespace Raven.Studio.Commands
 		private Task ReadDocuments(Guid lastEtag, int totalCount)
 		{
 			var url = ("/docs/?pageSize=" + BatchSize + "&etag=" + lastEtag).NoCache();
-			var request = DatabaseCommands.CreateRequest("GET", url);
+			var request = DatabaseCommands.CreateRequest(url, "GET");
 			return request.ReadResponseJsonAsync()
 				.ContinueOnSuccess(docs =>
 									{

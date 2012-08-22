@@ -46,17 +46,6 @@ namespace Raven.Studio.Models
 			ModelUrl = "/home";
 		}
 
-        public override Task TimerTickedAsync()
-        {
-            if (ApplicationModel.Current.Server.Value.CreateNewDatabase)
-            {
-                ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
-                Command.ExecuteCommand(new CreateDatabaseCommand());
-            }
-            return base.TimerTickedAsync();
-        }
-
-
 	    private bool isGeneratingSampleData;
 		public bool IsGeneratingSampleData
 		{

@@ -27,6 +27,7 @@
 												 ValueWhenEmpty="0"
 												 ValueWhenNonEmpty="*" />
 	<Converters:SingleLineToAutoMultiLineToStarSizeConverter x:Key="AutoWhenSingleLineStarSizedWhenMultiLine" />
+	<Converters:DisableIfDefaultVersioning x:Key="DisableIfDefaultVersioning"/>
 	<Converters:CollectionCountToGridLengthConverter x:Key="HiddenWhenEmptyStarSizedWhenNonEmpty"/>
 	<Converters:StringToDefaultOperatorConverter x:Key="StringToDefaultOperator"/>
     <Converters:NegatingBoolConverter x:Key="NegatingBool"/>

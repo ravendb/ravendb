@@ -105,7 +105,7 @@ namespace Raven.Studio.Models
 					foreach (var replicationDestination in document.Destinations)
 					{
 						var destination = replicationDestination;
-						asyncServerClient.CreateRequest("GET", "/replication/info")
+						asyncServerClient.CreateRequest("/replication/info", "GET")
 							.ReadResponseJsonAsync()
 							.ContinueWith(task =>
 							{

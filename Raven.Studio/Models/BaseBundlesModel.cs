@@ -73,6 +73,5 @@ namespace Raven.Studio.Models
 		public ICommand DeleteVersioning { get { return new DeleteVersioningCommand(this); } }
 		public ICommand AddReplication { get { return new AddReplicationCommand(this); } }
 		public ICommand AddVersioning { get { return new AddVersioningCommand(this); } }
-		public ICommand AddDefaultVersioning { get { return new AddDefaultVersioningCommand(this); } }
 	}
 }

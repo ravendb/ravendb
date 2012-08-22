@@ -112,14 +112,17 @@ namespace Raven.Studio.Models
 				                   			CreateNewDatabase = true;
 				                   		}
 
-				                   		if (string.IsNullOrEmpty(Settings.Instance.SelectedDatabase))
-				                   			return;
+				                   		if (string.IsNullOrEmpty(Settings.Instance.SelectedDatabase)) 
+											return;
 
-				                   	    var url = new UrlParser(UrlUtil.Url);
-                                        url.SetQueryParam("database", Settings.Instance.SelectedDatabase);
-                                        SetCurrentDatabase(url);
+				                   		var url = new UrlParser(UrlUtil.Url);
 
-										UrlUtil.Navigate(Settings.Instance.LastUrl);
+										if (Settings.Instance.SelectedDatabase != null && names.Contains(Settings.Instance.SelectedDatabase))
+										{
+											url.SetQueryParam("database", Settings.Instance.SelectedDatabase);
+											SetCurrentDatabase(url);
+											UrlUtil.Navigate(Settings.Instance.LastUrl);
+										}
 				                   	})
 				.Catch();
 		}

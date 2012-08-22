@@ -50,20 +50,20 @@
 						<ColumnDefinition Width="Auto" MinWidth="125" MaxWidth="250" />
 					</Grid.ColumnDefinitions>
 
-					<TextBlock Grid.Row="0" Text="Password: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+					<TextBlock Grid.Row="0" Text="Database: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Database, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+					
+					<TextBlock Grid.Row="1" Text="Password: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Password, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
 
-					<TextBlock Grid.Row="1" Text="User Name: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding UserName, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+					<TextBlock Grid.Row="2" Text="User Name: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding UserName, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
 
-					<TextBlock Grid.Row="2" Text="Domain: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Domain, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+					<TextBlock Grid.Row="3" Text="Domain: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Domain, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
 
-					<TextBlock Grid.Row="3" Text="ApiKey: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ApiKey, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
-
-					<TextBlock Grid.Row="4" Text="Database: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Database, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+					<TextBlock Grid.Row="4" Text="ApiKey: " VerticalAlignment="Center"/>
+					<TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ApiKey, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
 				</Grid>
 
 				<TextBlock Grid.Row="3" Text="Replication Behavior: " VerticalAlignment="Center"/>
@@ -86,12 +86,12 @@
 					<ColumnDefinition Width="20" />
 				</Grid.ColumnDefinitions>
 				
-				<HyperlinkButton Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" Click="DeleteVersioning" VerticalAlignment="Center">
+				<HyperlinkButton Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" Click="DeleteVersioning" VerticalAlignment="Center" IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}">
 					<Image Source="{StaticResource Image_Error_Tiny}"/>
 				</HyperlinkButton>
 
-					<TextBlock Grid.Row="0" Text="Version Tag: " VerticalAlignment="Center"/>
-					<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Id, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
+					<TextBlock Grid.Row="0" Text="Collection: " VerticalAlignment="Center"/>
+				<TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Id, Mode=TwoWay}" Margin="5" MaxWidth="250" IsEnabled="{Binding Id, Converter={StaticResource DisableIfDefaultVersioning}}"/>
 
 					<TextBlock Grid.Row="1" Text="Max Revisions: " VerticalAlignment="Center"/>
 				<TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MaxRevisions, Mode=TwoWay}" Margin="5" MaxWidth="250"/>
@@ -174,7 +174,7 @@
 							<TextBlock Text="MB" VerticalAlignment="Center"/>
 						</StackPanel>
 
-						<TextBlock Text="Select warning size:" Margin="5" VerticalAlignment="Center" Grid.Row="1" />
+						<TextBlock Text="Select warning limit threshold:" Margin="5" VerticalAlignment="Center" Grid.Row="1" />
 						<StackPanel Grid.Column="1" Grid.Row="1" Orientation="Horizontal">
 							<toolkit:NumericUpDown x:Name="WarnSize" Margin="5" Grid.Column="1" Value="{Binding WarnSize, Mode=TwoWay}" Width="100"/>
 							<TextBlock Text="MB" VerticalAlignment="Center"/>
@@ -186,7 +186,7 @@
 							<TextBlock Text="docs" VerticalAlignment="Center"/>
 						</StackPanel>
 
-						<TextBlock Text="Select warning for docs:" Margin="5" VerticalAlignment="Center" Grid.Row="3"/>
+						<TextBlock Text="Select warning threshold for docs:" Margin="5" VerticalAlignment="Center" Grid.Row="3"/>
 						<StackPanel Grid.Column="1" Grid.Row="3" Orientation="Horizontal">
 							<toolkit:NumericUpDown x:Name="WarnDocs" Margin="5" Grid.Column="1" Value="{Binding WarnDocs, Mode=TwoWay}" Width="100"/>
 							<TextBlock Text="docs" VerticalAlignment="Center"/>
@@ -247,21 +247,14 @@
 						<RowDefinition Height="Auto" />
 					</Grid.RowDefinitions>
 					<Grid Margin="15">
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="Auto" />
-							<ColumnDefinition Width="Auto" />
-						</Grid.ColumnDefinitions>
+
 						<Grid.RowDefinitions>
-							<RowDefinition Height="Auto" />
 							<RowDefinition Height="Auto" />
 							<RowDefinition Height="Auto" />
 							<RowDefinition Height="10" />
 						</Grid.RowDefinitions>
-
-						<Button Content="Add Default Versioning" HorizontalAlignment="Left" Visibility="{Binding HasDefaultVersioning,Converter={StaticResource BooleanToOppositeVisibility}, Mode=TwoWay}"
-									Command="{Binding AddDefaultVersioning}"/>
-
-						<ListBox Grid.Row="1" Style="{StaticResource Databases_FluidList}"
+						
+						<ListBox Grid.Row="0" Style="{StaticResource Databases_FluidList}"
 										 ItemsSource="{Binding VersioningConfigurations}"
 										 SelectedItem="{Binding SeletedVersioning, Mode=TwoWay}"
 										 ItemContainerStyle="{StaticResource Style_ListBoxItem_Replication}"
@@ -273,7 +266,7 @@
 										 HorizontalAlignment="Left">
 						</ListBox>
 						<Button Content="Add"
-							Grid.Row="2"
+							Grid.Row="1"
 							Grid.ColumnSpan="2"
 							HorizontalAlignment="Left"
 							Command="{Binding AddVersioning}"/>
