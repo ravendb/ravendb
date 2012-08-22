@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition.Hosting;
+using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -55,27 +56,19 @@ namespace Raven.Tests
 			return NewDocumentStoreInternal(deleteDirectory: true, requestedStorage: requestedStorage);
 		}
 
-		public EmbeddableDocumentStore NewDocumentStore(CompositionContainer container, string requestedStorage = null)
-		{
-			return NewDocumentStoreInternal(deleteDirectory: true, container: container, requestedStorage: requestedStorage);
-		}
-
-		public EmbeddableDocumentStore NewDocumentStore(AggregateCatalog catalog, string requestedStorage = null)
+		public EmbeddableDocumentStore NewDocumentStore(ComposablePartCatalog catalog, string requestedStorage = null)
 		{
 			return NewDocumentStoreInternal(deleteDirectory: true, catalog: catalog, requestedStorage: requestedStorage);
 		}
 
 		private EmbeddableDocumentStore NewDocumentStoreInternal(bool deleteDirectory,
 			string requestedStorage,
-			 CompositionContainer container = null,
-			 AggregateCatalog catalog = null)
+			 ComposablePartCatalog catalog = null)
 		{
-			string defaultStorageType = null;
-
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
 
-			defaultStorageType = GetDefaultStorageType(requestedStorage);
+			string defaultStorageType = GetDefaultStorageType(requestedStorage);
 
 			var documentStore = new EmbeddableDocumentStore
 			{
@@ -85,12 +78,11 @@ namespace Raven.Tests
 					DataDirectory = path,
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = false,
-					Container = container,
 				}
 			};
 
 			if (catalog != null)
-				documentStore.Configuration.Catalog = catalog;
+				documentStore.Configuration.Catalog.Catalogs.Add(catalog);
 
 			try
 			{

@@ -19,12 +19,10 @@ namespace Raven.Tests.Triggers
 	public class IndexTriggers : RavenTest
 	{
 		private readonly EmbeddableDocumentStore store;
-		private readonly DocumentDatabase db;
 
 		public IndexTriggers()
 		{
-			store = NewDocumentStore(new CompositionContainer(new TypeCatalog(typeof(IndexToDataTable))));
-			db.SpinBackgroundWorkers();
+			store = NewDocumentStore((new TypeCatalog(typeof(IndexToDataTable))));
 		}
 
 		public override void Dispose()
@@ -36,20 +34,20 @@ namespace Raven.Tests.Triggers
 		[Fact]
 		public void CanReplicateValuesFromIndexToDataTable()
 		{
-			db.PutIndex("test", new IndexDefinition
+			store.DocumentDatabase.PutIndex("test", new IndexDefinition
 			{
 				Map = "from doc in docs from prj in doc.Projects select new{Project = prj}",
 				Stores = { { "Project", FieldStorage.Yes } }
 			});
-			db.Put("t", null, RavenJObject.Parse("{'Projects': ['RavenDB', 'NHibernate']}"), new RavenJObject(), null);
+			store.DocumentDatabase.Put("t", null, RavenJObject.Parse("{'Projects': ['RavenDB', 'NHibernate']}"), new RavenJObject(), null);
 
 			QueryResult queryResult;
 			do
 			{
-				queryResult = db.Query("test", new IndexQuery { Start = 0, PageSize = 2, Query = "Project:RavenDB" });
+				queryResult = store.DocumentDatabase.Query("test", new IndexQuery { Start = 0, PageSize = 2, Query = "Project:RavenDB" });
 			} while (queryResult.IsStale);
 
-			var indexToDataTable = db.IndexUpdateTriggers.OfType<IndexToDataTable>().Single();
+			var indexToDataTable = store.DocumentDatabase.IndexUpdateTriggers.OfType<IndexToDataTable>().Single();
 			Assert.Equal(2, indexToDataTable.DataTable.Rows.Count);
 		}
 	}

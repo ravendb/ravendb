@@ -22,7 +22,7 @@ namespace Raven.Tests.Triggers
 
 		public PutTriggers()
 		{
-			store = NewDocumentStore(new CompositionContainer(new TypeCatalog(typeof (VetoCapitalNamesPutTrigger), typeof(AuditPutTrigger))));
+			store = NewDocumentStore((new TypeCatalog(typeof (VetoCapitalNamesPutTrigger), typeof(AuditPutTrigger))));
 			db = store.DocumentDatabase;
 		}
 

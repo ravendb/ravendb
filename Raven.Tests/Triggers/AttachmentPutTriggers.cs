@@ -23,7 +23,7 @@ namespace Raven.Tests.Triggers
 
 		public AttachmentPutTriggers()
 		{
-			store = NewDocumentStore(new CompositionContainer(new TypeCatalog(typeof (AuditAttachmentPutTrigger), typeof(RefuseBigAttachmentPutTrigger))));
+			store = NewDocumentStore((new TypeCatalog(typeof (AuditAttachmentPutTrigger), typeof(RefuseBigAttachmentPutTrigger))));
 			db = store.DocumentDatabase;
 		}
 
