@@ -47,7 +47,11 @@ namespace Raven.Munin
 
 				while (value.TryDequeue(out result))
 				{
-					result.Dispose();
+					try
+					{
+						result.Dispose();
+					}
+					catch { }
 				}
 			}
 		}
