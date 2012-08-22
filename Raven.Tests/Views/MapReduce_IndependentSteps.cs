@@ -72,8 +72,6 @@ select new {
 				db.Put("docs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject(), null);
 			}
 
-			db.SpinBackgroundWorkers();
-
 			QueryResult q = null;
 			for (var i = 0; i < 5; i++)
 			{
