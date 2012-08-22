@@ -1553,7 +1553,11 @@ If you really want to do in memory filtering on the data returned from the query
 			}
 
 			if (whereParams.Value is string)
-				return RavenQuery.Escape(whereParams.Value.ToString(), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+			{
+				var value = RavenQuery.Escape(whereParams.Value.ToString(), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+				return whereParams.IsAnalyzed ? value : String.Concat("[[", value, "]]");
+
+			}
 
 			var stringWriter = new StringWriter();
 			conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);
