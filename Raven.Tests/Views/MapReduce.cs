@@ -42,7 +42,6 @@ select new {
 			store = NewDocumentStore();
 			db = store.DocumentDatabase;
 			db.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.NotAnalyzed}}});
-			db.SpinBackgroundWorkers();
 		}
 
 		public override void Dispose()
