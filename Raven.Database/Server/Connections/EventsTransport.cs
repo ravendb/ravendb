@@ -27,7 +27,7 @@ namespace Raven.Database.Server.Connections
 
 		public event Action Disconnected = delegate { };
 
-		private Task InitTask;
+		private Task initTask;
 
 		public EventsTransport(IHttpContext context)
 		{
@@ -44,11 +44,12 @@ namespace Raven.Database.Server.Connections
 		public Task ProcessAsync()
 		{
 			context.Response.ContentType = "text/event-stream";
-			InitTask = SendAsync(new { Type = "Initialized" });
+			initTask = SendAsync(new { Type = "Initialized" });
 			Thread.MemoryBarrier();
+
 			heartbeat.Change(TimeSpan.Zero, TimeSpan.FromSeconds(5));
 
-			return InitTask;
+			return initTask;
 
 		}
 
@@ -59,9 +60,9 @@ namespace Raven.Database.Server.Connections
 
 		public Task SendAsync(object data)
 		{
-			if (InitTask != null && // may be the very first time? 
-				InitTask.IsCompleted == false) // still pending on this...
-				return InitTask.ContinueWith(_ => SendAsync(data)).Unwrap();
+			if (initTask != null && // may be the very first time? 
+				initTask.IsCompleted == false) // still pending on this...
+				return initTask.ContinueWith(_ => SendAsync(data)).Unwrap();
 
 
 			return context.Response.WriteAsync("data: " + JsonConvert.SerializeObject(data,Formatting.None) + "\r\n\r\n")
@@ -70,8 +71,8 @@ namespace Raven.Database.Server.Connections
 
 		public Task SendManyAsync(IEnumerable<object> data)
 		{
-			if (InitTask.IsCompleted == false)
-				return InitTask.ContinueWith(_ => SendManyAsync(data)).Unwrap();
+			if (initTask.IsCompleted == false)
+				return initTask.ContinueWith(_ => SendManyAsync(data)).Unwrap();
 
 			var sb = new StringBuilder();
 
