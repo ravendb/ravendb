@@ -1552,11 +1552,14 @@ If you really want to do in memory filtering on the data returned from the query
 				return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, typeof(T), false);
 			}
 
-			if (whereParams.Value is string)
+			if (whereParams.Value is string || whereParams.Value is ValueType)
 			{
-				var value = RavenQuery.Escape(whereParams.Value.ToString(), whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
-				return whereParams.IsAnalyzed ? value : String.Concat("[[", value, "]]");
+				var escaped = RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
+												whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
 
+				if (whereParams.Value is string == false)
+					return escaped;
+				return whereParams.IsAnalyzed ? escaped : String.Concat("[[", escaped, "]]");
 			}
 
 			var stringWriter = new StringWriter();
@@ -1598,6 +1601,10 @@ If you really want to do in memory filtering on the data returned from the query
 				return NumberUtil.NumberToString((float)whereParams.Value);
 		   if(whereParams.Value is string)
 				return RavenQuery.Escape(whereParams.Value.ToString(), false, true);
+			if(whereParams.Value is ValueType)
+				return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture),
+				                         false, true);
+
 			var stringWriter = new StringWriter();
 			conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);
 
