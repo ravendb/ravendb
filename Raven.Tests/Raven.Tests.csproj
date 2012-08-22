@@ -628,6 +628,7 @@
     <Compile Include="MailingList\AccesscControlHeaders.cs" />
     <Compile Include="MailingList\Algirdas.cs" />
     <Compile Include="MailingList\Arun.cs" />
+    <Compile Include="MailingList\Bassler.cs" />
     <Compile Include="MailingList\Ben.cs" />
     <Compile Include="MailingList\Brett.cs" />
     <Compile Include="MailingList\BrianVallelunga.cs" />
