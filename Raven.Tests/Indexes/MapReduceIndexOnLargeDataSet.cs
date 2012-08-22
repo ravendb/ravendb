@@ -11,7 +11,7 @@ namespace Raven.Tests.Indexes
 		[Fact]
 		public void WillNotProduceAnyErrors()
 		{
-			using(var store = NewDocumentStore())
+			using(var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
