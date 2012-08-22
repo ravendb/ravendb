@@ -13,7 +13,9 @@ using ActiproSoftware.Text.Parsing;
 using ActiproSoftware.Text.Parsing.LLParser;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining;
 using Microsoft.Expression.Interactivity.Core;
+using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
+using Raven.Client.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -312,7 +314,91 @@ namespace Raven.Studio.Models
 
                     HandleDocumentChanged();
 				})
-				.Catch();
+				.Catch(exception =>
+				{
+					if(exception.GetBaseException() is ConflictException)
+					{
+						var conflictExeption = exception.GetBaseException() as ConflictException;
+						if (conflictExeption != null)
+							ApplicationModel.Current.Server.Value.SelectedDatabase.Value
+								.AsyncDatabaseCommands
+								.GetAsync(conflictExeption.ConflictedVersionIds, null)
+								.ContinueOnSuccessInTheUIThread(docs =>
+								{
+									var conflictsResolver = new ConflictsResolver(docs.Results.ToArray());
+									var conflictSections = conflictsResolver.Resolve().Split(new[] {"\"@metadata\":"},StringSplitOptions.None);
+
+									Key = url.GetQueryParam("id");
+									Etag = conflictExeption.Etag;
+									ResolvingConflict = true;
+
+									dataSection.Document.DeleteText(TextChangeTypes.Custom, 0, dataSection.Document.CurrentSnapshot.Length);
+									dataSection.Document.AppendText(TextChangeTypes.Custom, conflictSections[0].Insert(conflictSections[0].Length, "}"));
+
+									conflictSections[1] = ClearMetadata(conflictSections[1].Remove(conflictSections[1].Length - 1));
+
+									metaDataSection.Document.DeleteText(TextChangeTypes.Custom, 0, metaDataSection.Document.CurrentSnapshot.Length);
+									metaDataSection.Document.AppendText(TextChangeTypes.Custom, conflictSections[1]);
+
+									Etag = conflictExeption.Etag;
+
+									OnPropertyChanged(() => dataSection);
+									OnPropertyChanged(() => document);
+								});
+					}
+				});
+		}
+
+		private string ClearMetadata(string metadataToClear)
+		{
+			var lines = metadataToClear.Replace("\r", "").Split('\n');
+			var result = new List<string>();
+			var arrayCounter = 0;
+
+			for (var i = 0; i < lines.Length; i++)
+			{
+				if (lines[i].Contains("\"Raven-Replication-") || 
+					lines[i].Contains("@id") || 
+					lines[i].Contains("\"Last-Modified\"") || 
+					lines[i].Contains("@etag") || 
+					lines[i].Contains("\"Non-Authoritative-Information\""))
+				{
+					if (lines[i].Contains("["))
+					{
+						arrayCounter++;
+						var removeLine = true;
+						while (removeLine)
+						{
+							i++;
+							if (lines[i].Contains("["))
+								arrayCounter++;
+
+							if (lines[i].Contains("]"))
+							{
+								arrayCounter--;
+								if(arrayCounter == 0)
+									removeLine = false;
+							}
+						}
+					}
+				}
+				else
+				{
+					result.Add(lines[i]);
+				}
+			}
+
+			return string.Join("\r\n", result);
+		}
+
+		public bool ResolvingConflict
+		{
+			get { return resolvingConflict; }
+			set
+			{
+				resolvingConflict = value;
+				OnPropertyChanged(() => ResolvingConflict);
+			}
 		}
 
 		private void HandleDocumentNotFound()
@@ -793,7 +879,8 @@ namespace Raven.Studio.Models
 		private ICommand toggleExpansion;
 		private DocumentOutliningMode outliningMode;
 	    private DocumentReferencedIdManager documentIdManager;
-	    public static IList<DocumentOutliningMode> OutliningModes { get; private set; }
+		private bool resolvingConflict;
+		public static IList<DocumentOutliningMode> OutliningModes { get; private set; }
 
 
 		public IEnumerable<KeyValuePair<string, string>> Metadata
@@ -1018,12 +1105,14 @@ namespace Raven.Studio.Models
 				parentModel.UpdateMetadata(metadata);
 				ApplicationModel.Current.AddInfoNotification("Saving document " + parentModel.Key + " ...");
 
-				Guid? etag = string.Equals(parentModel.DocumentKey, parentModel.Key, StringComparison.InvariantCultureIgnoreCase) ?
+				Guid? etag = string.Equals(parentModel.DocumentKey, parentModel.Key, StringComparison.InvariantCultureIgnoreCase) || parentModel.ResolvingConflict ?
 					parentModel.Etag : Guid.Empty;
 
 				DatabaseCommands.PutAsync(parentModel.Key, etag, doc, metadata)
 					.ContinueOnSuccess(result =>
 					{
+						parentModel.ResolvingConflict = false;
+
                         ApplicationModel.Current.AddInfoNotification("Document " + result.Key + " saved");
 					    parentModel.HasUnsavedChanges = false;
                         parentModel.Etag = result.ETag;
