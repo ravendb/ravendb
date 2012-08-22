@@ -68,7 +68,7 @@ namespace Raven.Tests.Queries
 
 			public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 			{
-				var readAsString = reader.ReadAsString();
+				var readAsString = reader.Value.ToString();
 				var strings = readAsString.Split(':');
 				return new Money
 				{

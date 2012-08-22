@@ -29,7 +29,10 @@ namespace Raven.Tests.Storage
 					attachment = viewer.Attachments.GetAttachment("Ayende");
 				});
 
-				Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+				tx.Batch(_ =>
+				{
+					Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+				});
 			}
 		}
 
@@ -99,7 +102,10 @@ namespace Raven.Tests.Storage
 					attachment = viewer.Attachments.GetAttachment("Ayende");
 				});
 
-				Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+				tx.Batch(_ =>
+				{
+					Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());					
+				});
 			}
 		}
 
