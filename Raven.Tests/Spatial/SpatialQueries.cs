@@ -9,7 +9,7 @@ using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace Raven.Tests.Spatial
 {
 	public class SpatialQueries
 	{

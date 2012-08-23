@@ -3,7 +3,7 @@ using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace Raven.Tests.Spatial
 {
 	public class SpatialTest2 : RavenTest
 	{

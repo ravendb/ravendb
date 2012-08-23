@@ -5,11 +5,10 @@
 // -----------------------------------------------------------------------
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace Raven.Tests.Spatial
 {
 	public class TwoLocations : RavenTest
 	{

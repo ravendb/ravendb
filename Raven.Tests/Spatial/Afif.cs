@@ -4,13 +4,12 @@ using System.Linq;
 using FizzWare.NBuilder;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.MailingList
+namespace Raven.Tests.Spatial
 {
 	public class Afif
 	{
