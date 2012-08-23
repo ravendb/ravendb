@@ -432,7 +432,8 @@ namespace Raven.Database.Indexing
 		public IEnumerable<RavenJObject> IndexEntires(
 			string index,
 			IndexQuery query,
-			OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
+			OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers,
+			Reference<int> totalResults)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -442,7 +443,7 @@ namespace Raven.Database.Indexing
 			}
 
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null,AggregationOperation.None, null), indexQueryTriggers);
-			return indexQueryOperation.IndexEntries();
+			return indexQueryOperation.IndexEntries(totalResults);
 		}
 
 		protected internal static IDisposable EnsureInvariantCulture()

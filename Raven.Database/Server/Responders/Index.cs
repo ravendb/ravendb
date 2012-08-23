@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using System.Linq;
 using Raven.Database.Data;
@@ -125,14 +126,31 @@ namespace Raven.Database.Server.Responders
 		private void GetIndexEntries(IHttpContext context, string index)
 		{
 			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+			var totalResults = new Reference<int>();
 			var results = Database.IndexStorage
-								.IndexEntires(index, indexQuery,Database.IndexQueryTriggers)
+								.IndexEntires(index, indexQuery,Database.IndexQueryTriggers, totalResults )
 								.ToArray();
 
+
+			Tuple<DateTime, Guid> indexTimestamp = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				indexTimestamp = accessor.Staleness.IndexLastUpdatedAt(index);
+			});
+			var indexEtag = Database.GetIndexEtag(index, null);
+			context.WriteETag(indexEtag);
 			context.WriteJson(new
 			{
 				Count = results.Length,
-				Results = results
+				Results = results,
+				Includes = new string[0],
+				IndexTimestamp = indexTimestamp.Item1,
+				IndexEtag = indexTimestamp.Item2,
+				TotalResults = totalResults.Value,
+				SkippedResults = 0,
+				NonAuthoritativeInformation = false,
+				ResultEtag = indexEtag,
+				LastQueryTime = Database.IndexStorage.GetLastQueryTime(index)
 			});
 		}
 

@@ -274,7 +274,7 @@ namespace Raven.Database
 		{
 			foreach (var task in StartupTasks)
 			{
-				var disposable = task as IDisposable;
+				var disposable = task.Value as IDisposable;
 				if (disposable != null)
 					toDispose.Add(disposable);
 				task.Value.Execute(this);
@@ -950,7 +950,8 @@ namespace Raven.Database
 				IndexTimestamp = indexTimestamp.Item1,
 				IndexEtag = indexTimestamp.Item2,
 				ResultEtag = resultEtag,
-				IdsToInclude = idsToLoad
+				IdsToInclude = idsToLoad,
+				LastQueryTime = SystemTime.UtcNow
 			};
 		}
 

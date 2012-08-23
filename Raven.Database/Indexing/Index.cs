@@ -20,6 +20,7 @@ using Lucene.Net.Store;
 using NLog;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
 using Raven.Abstractions.MEF;
@@ -700,7 +701,7 @@ namespace Raven.Database.Indexing
 					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
 			}
 
-			public IEnumerable<RavenJObject> IndexEntries()
+			public IEnumerable<RavenJObject> IndexEntries(Reference<int> totalResults)
 			{
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
@@ -712,6 +713,7 @@ namespace Raven.Database.Indexing
 						var luceneQuery = ApplyIndexTriggers(GetLuceneQuery());
 
 						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
+						totalResults.Value = search.TotalHits;
 
 						var indexReader = indexSearcher.GetIndexReader();
 
