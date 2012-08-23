@@ -21,6 +21,7 @@ using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
+using Raven.Database.Indexing;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Linq.PrivateExtensions;
 using Raven.Database.Plugins;
@@ -232,6 +233,8 @@ namespace Raven.Database.Linq
 
 		public static Type Compile(string source, string name, string queryText, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string basePath)
 		{
+			source = source.Replace("AbstractIndexCreationTask.SpatialGenerate", "SpatialGenerate"); // HACK, should probably be on the client side
+
 			CacheEntry entry;
 			if (cacheEntries.TryGetValue(source, out entry))
 			{

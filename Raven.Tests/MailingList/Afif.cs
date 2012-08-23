@@ -22,7 +22,7 @@ namespace Raven.Tests.MailingList
 								  {
 									  vehicle.Model,
 									  vehicle.Make,
-									  _ = SpatialIndex.Generate(vehicle.Latitude, vehicle.Longitude)
+									  _ = SpatialGenerate(vehicle.Latitude, vehicle.Longitude)
 								  };
 			}
 		}

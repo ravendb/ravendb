@@ -85,7 +85,7 @@ namespace Raven.Tests.MailingList
 				      select new
 				      {
 				      	e.Name,
-				      	_ = e.Locations.Select(x => SpatialIndex.Generate(x.Lat, x.Lng))
+				      	_ = e.Locations.Select(x => SpatialGenerate(x.Lat, x.Lng))
 				      };
 			}
 		}

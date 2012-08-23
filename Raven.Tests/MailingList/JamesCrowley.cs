@@ -157,7 +157,7 @@ namespace Raven.Tests.MailingList
 											EventName = g.Select(x => x.EventName).FirstOrDefault(x => x != null),
 											Lat = latitude,
 											Long = longitude,
-											_ = SpatialIndex.Generate(latitude, longitude) 
+											_ = SpatialGenerate(latitude, longitude) 
 										};
 			}
 		}

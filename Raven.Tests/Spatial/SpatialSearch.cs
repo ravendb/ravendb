@@ -16,7 +16,7 @@ namespace Raven.Tests.Spatial
 			public SpatialIdx()
 			{
 				Map = docs => from e in docs
-							  select new {e.Capacity, e.Venue, e.Date, _ = SpatialIndex.Generate(e.Latitude, e.Longitude)};
+							  select new {e.Capacity, e.Venue, e.Date, _ = SpatialGenerate(e.Latitude, e.Longitude)};
 
 				Index(x => x.Venue, FieldIndexing.Analyzed);
 			}

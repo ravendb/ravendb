@@ -56,8 +56,6 @@ namespace Raven.Database.Indexing
 
 		private int docCountSinceLastOptimization;
 
-		private SpatialStrategy spatialStrategy;
-
 		private readonly ConcurrentDictionary<string, IIndexExtension> indexExtensions =
 			new ConcurrentDictionary<string, IIndexExtension>();
 
@@ -969,7 +967,12 @@ namespace Raven.Database.Indexing
 				var spatialIndexQuery = indexQuery as SpatialIndexQuery;
 				if (spatialIndexQuery != null)
 				{
-					var dq = SpatialIndex.MakeQuery(parent.spatialStrategy, spatialIndexQuery.Latitude, spatialIndexQuery.Longitude, spatialIndexQuery.Radius);
+					// if viewGenerator.SpatialStrategy is null, that means we didn't get around to indexing just yet,
+					// and there's no point in going any further with this
+					var spatialStrategy = parent.viewGenerator.SpatialStrategy;
+					if (spatialStrategy == null) return q; // TODO: return MatchNoDocsQuery instead
+
+					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.Latitude, spatialIndexQuery.Longitude, spatialIndexQuery.Radius);
 					if (q is MatchAllDocsQuery) return dq;
 
 					var bq = new BooleanQuery {{q, Occur.MUST}, {dq, Occur.MUST}};

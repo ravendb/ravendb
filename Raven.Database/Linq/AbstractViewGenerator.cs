@@ -4,23 +4,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Text;
-using System.Globalization;
 using System.Text.RegularExpressions;
-using System.Threading;
 using Lucene.Net.Documents;
+using Lucene.Net.Spatial;
 using Lucene.Net.Spatial.Prefix;
 using Lucene.Net.Spatial.Prefix.Tree;
 using Raven.Abstractions.Data;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Linq;
 using System.Linq;
 using Raven.Database.Indexing;
-using Raven.Json.Linq;
 using Spatial4n.Core.Shapes;
 
 namespace Raven.Database.Linq
@@ -109,16 +103,6 @@ namespace Raven.Database.Linq
 			return anonymousObjectToLuceneDocumentConverter.CreateFields(name, value, stored ? Field.Store.YES : Field.Store.NO);
 		}
 
-		public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
-		{
-			var maxLength = GeohashPrefixTree.GetMaxLevelsPossible();
-			var strategy = new RecursivePrefixTreeStrategy(new GeohashPrefixTree(SpatialIndex.Context, maxLength), Constants.SpatialFieldName);
-
-			Shape shape = SpatialIndex.Context.MakePoint(lng ?? 0, lat ?? 0);
-			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.Context.ToString(shape), Field.Store.YES, Field.Index.NO), });
-		}
-
 		public void AddQueryParameterForMap(string field)
 		{
 			mapFields.Add(field);
@@ -162,5 +146,48 @@ namespace Raven.Database.Linq
 		{
 			return new RecursiveFunction(item, func).Execute();
 		}
+
+		#region Spatial index
+
+		// TODO: Currently only one shape field is supported in an index
+		public SpatialStrategy SpatialStrategy { get; private set; }
+
+		private SpatialStrategy GetOrCreateSpatialStrategy(SpatialSearchStrategy spatialSearchStrategy, int maxTreeLevel)
+		{
+			if (SpatialStrategy == null)
+			{
+				lock (this)
+				{
+					if (SpatialStrategy == null)
+						SpatialStrategy = SpatialIndex.CreateStrategy(spatialSearchStrategy, maxTreeLevel);
+				}
+			}
+			return SpatialStrategy;
+		}
+
+		public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
+		{
+			var strategy = GetOrCreateSpatialStrategy(SpatialSearchStrategy.GeohashPrefixTree,
+			                                          GeohashPrefixTree.GetMaxLevelsPossible());
+
+// ReSharper disable CSharpWarnings::CS0612
+			Shape shape = SpatialIndex.Context.MakePoint(lng ?? 0, lat ?? 0);
+			return strategy.CreateIndexableFields(shape)
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.Context.ToString(shape), Field.Store.YES, Field.Index.NO), });
+// ReSharper restore CSharpWarnings::CS0612
+		}
+
+		public IEnumerable<IFieldable> SpatialGenerate(string shapeWKT, SpatialSearchStrategy spatialSearchStrategy, int maxTreeLevel, double distanceErrorPct = 0.025)
+		{
+			var strategy = GetOrCreateSpatialStrategy(spatialSearchStrategy, maxTreeLevel);
+
+// ReSharper disable CSharpWarnings::CS0612
+			var shape = SpatialIndex.Context.ReadShape(shapeWKT);
+			return strategy.CreateIndexableFields(shape)
+				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, SpatialIndex.Context.ToString(shape), Field.Store.YES, Field.Index.NO), });
+// ReSharper restore CSharpWarnings::CS0612
+		}
+
+		#endregion
 	}
 }

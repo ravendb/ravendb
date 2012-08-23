@@ -77,6 +77,16 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
+		public static object SpatialGenerate(double lat, double lng)
+		{
+			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+		}
+
+		public static object SpatialGenerate(string shapeWKT, SpatialSearchStrategy strategy, int maxTreeLevel, double distanceErrorPct)
+		{
+			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+		}
+
 #if !NET35
 		/// <summary>
 		/// Allows to use lambdas recursively

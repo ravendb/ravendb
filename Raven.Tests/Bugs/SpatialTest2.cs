@@ -18,7 +18,7 @@ namespace Raven.Tests.Bugs
 			public EntitiesByLocation()
 			{
 				Map = entities => from entity in entities
-								  select new { _ = SpatialIndex.Generate(entity.Latitude, entity.Longitude) };
+								  select new { _ = SpatialGenerate(entity.Latitude, entity.Longitude) };
 			}
 		}
 

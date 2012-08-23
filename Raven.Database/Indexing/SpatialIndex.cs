@@ -3,9 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections.Generic;
-using System.Linq;
-using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Lucene.Net.Spatial;
 using Lucene.Net.Spatial.Prefix;
@@ -16,7 +13,6 @@ using Raven.Abstractions.Indexing;
 using Spatial4n.Core.Context;
 using Spatial4n.Core.Shapes;
 
-
 namespace Raven.Database.Indexing
 {
 	public static class SpatialIndex
@@ -26,25 +22,6 @@ namespace Raven.Database.Indexing
 
 		static SpatialIndex()
 		{
-		}
-
-		public static IEnumerable<IFieldable> Generate(double? lat, double? lng)
-		{
-			var maxLength = GeohashPrefixTree.GetMaxLevelsPossible();
-			var strategy = new RecursivePrefixTreeStrategy(new GeohashPrefixTree(Context, maxLength), Constants.SpatialFieldName);
-
-			Shape shape = Context.MakePoint(lng ?? 0, lat ?? 0);
-			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, Context.ToString(shape), Field.Store.YES, Field.Index.NO), });
-		}
-
-		public static IEnumerable<IFieldable> Generate(string shapeWKT, SpatialSearchStrategy spatialSearchStrategy, int maxTreeLevel, double distanceErrorPct = 0.025)
-		{
-			var strategy = CreateStrategy(spatialSearchStrategy, maxTreeLevel);
-
-			var shape = Context.ReadShape(shapeWKT);
-			return strategy.CreateIndexableFields(shape)
-				.Concat(new[] {new Field(Constants.SpatialShapeFieldName, Context.ToString(shape), Field.Store.YES, Field.Index.NO),});
 		}
 
 		public static SpatialStrategy CreateStrategy(SpatialSearchStrategy spatialSearchStrategy, int maxTreeLevel)
