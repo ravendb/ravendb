@@ -41,8 +41,8 @@ namespace Raven.Client.Document
 	public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IRavenQueryInspector, IAbstractDocumentQuery<T>
 	{
 		protected bool isSpatialQuery;
-		protected double lat, lng, radius;
-		protected string spatialFieldName;
+		protected string spatialFieldName, queryShape;
+		protected SpatialRelation spatialRelation;
 		private readonly LinqPathProvider linqPathProvider;
 		/// <summary>
 		/// Whatever to negate the next operation
@@ -361,6 +361,12 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IDocumentQueryCustomization IDocumentQueryCustomization.RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel)
+		{
+			GenerateSpatialQueryData(fieldName, shapeWKT, rel);
+			return this;
+		}
+
 		/// <summary>
 		///   Filter matches to be inside the specified radius
 		/// </summary>
@@ -368,6 +374,8 @@ namespace Raven.Client.Document
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
 		protected abstract object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude);
+
+		protected abstract object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation);
 
 		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results.
@@ -1454,7 +1462,7 @@ If you really want to do in memory filtering on the data returned from the query
 					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 					FieldsToFetch = fieldsToFetch,
 					SpatialFieldName = spatialFieldName,
-					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
+					QueryShape = queryShape,
 					DefaultField = defaultField,
 					DefaultOperator = defaultOperator
 				};

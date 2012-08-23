@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Linq;
@@ -444,13 +445,22 @@ namespace Raven.Client.Document
 			return (IAsyncDocumentQuery<T>)GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);
 		}
 
+		public IAsyncDocumentQuery<T> RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel)
+		{
+			return (IAsyncDocumentQuery<T>)GenerateSpatialQueryData(fieldName, shapeWKT, rel);
+		}
+
 		protected override object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
+		{
+			return GenerateSpatialQueryData(fieldName, SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within);
+		}
+
+		protected override object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation)
 		{
 			isSpatialQuery = true;
 			spatialFieldName = fieldName;
-			this.radius = radius;
-			lat = latitude;
-			lng = longitude;
+			queryShape = shapeWKT;
+			spatialRelation = relation;
 			return this;
 		}
 

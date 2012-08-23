@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
+using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
@@ -169,6 +170,70 @@ namespace Raven.Tests.Spatial
 					var list = session.Query<Event, MultiLocationsCustomFieldName>()
 						.Customize(x => x.WaitForNonStaleResults())
 						.Customize(x => x.WithinRadiusOf("someField", 1, 32.1104641, 34.8417456))
+						.ToList();
+
+					Assert.NotEmpty(list);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanQueryByMultipleLocationsRaw()
+		{
+			using (var store = NewDocumentStore())
+			{
+				new MultiLocationsCustomFieldName().Execute(store);
+				Setup(store);
+
+				using (var session = store.OpenSession())
+				{
+					var list = session.Query<Event, MultiLocationsCustomFieldName>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Customize(x => x.RelatesToShape("someField", "Circle(34.770740 32.059029 d=1.000000)", SpatialRelation.Within))
+						.ToList();
+
+					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+
+					Assert.NotEmpty(list);
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var list = session.Query<Event, MultiLocationsCustomFieldName>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Customize(x => x.RelatesToShape("someField", "Circle(34.770740 32.059029 d=1.000000)", SpatialRelation.Within))
+						.ToList();
+
+					Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+
+					Assert.NotEmpty(list);
+				}
+			}
+		}
+
+		[Fact]
+		public void CanQueryByMultipleLocationsRawOverHttp()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				new MultiLocationsCustomFieldName().Execute(store);
+				Setup(store);
+
+				using (var session = store.OpenSession())
+				{
+					var list = session.Query<Event, MultiLocationsCustomFieldName>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Customize(x => x.RelatesToShape("someField", "Circle(34.770740 32.059029 d=1.000000)", SpatialRelation.Within))
+						.ToList();
+
+					Assert.NotEmpty(list);
+				}
+
+				using (var session = store.OpenSession())
+				{
+					var list = session.Query<Event, MultiLocationsCustomFieldName>()
+						.Customize(x => x.WaitForNonStaleResults())
+						.Customize(x => x.RelatesToShape("someField", "Circle(34.770740 32.059029 d=1.000000)", SpatialRelation.Within))
 						.ToList();
 
 					Assert.NotEmpty(list);
