@@ -151,7 +151,6 @@ namespace Raven.Database.Linq
 
 		#region Spatial index
 
-		// TODO: Currently only one shape field is supported in an index
 		public ConcurrentDictionary<string, SpatialStrategy> SpatialStrategies { get; private set; }
 
 		public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
