@@ -14,7 +14,6 @@ using Lucene.Net.Spatial.Queries;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Spatial4n.Core.Context;
-using Spatial4n.Core.Distance;
 using Spatial4n.Core.Shapes;
 
 
@@ -27,7 +26,6 @@ namespace Raven.Database.Indexing
 
 		static SpatialIndex()
 		{
-			
 		}
 
 		public static IEnumerable<IFieldable> Generate(double? lat, double? lng)
@@ -40,8 +38,24 @@ namespace Raven.Database.Indexing
 				.Concat(new[] { new Field(Constants.SpatialShapeFieldName, Context.ToString(shape), Field.Store.YES, Field.Index.NO), });
 		}
 
-		public static IEnumerable<IFieldable> Generate(string shapeWKT, SpatialSearchStrategy strategy, int maxTreeLevel, double distanceErrorPct = 0.025)
+		public static IEnumerable<IFieldable> Generate(string shapeWKT, SpatialSearchStrategy spatialSearchStrategy, int maxTreeLevel, double distanceErrorPct = 0.025)
 		{
+			var strategy = CreateStrategy(spatialSearchStrategy, maxTreeLevel);
+
+			var shape = Context.ReadShape(shapeWKT);
+			return strategy.CreateIndexableFields(shape)
+				.Concat(new[] {new Field(Constants.SpatialShapeFieldName, Context.ToString(shape), Field.Store.YES, Field.Index.NO),});
+		}
+
+		public static SpatialStrategy CreateStrategy(SpatialSearchStrategy spatialSearchStrategy, int maxTreeLevel)
+		{
+			switch (spatialSearchStrategy)
+			{
+				case SpatialSearchStrategy.GeohashPrefixTree:
+					return new RecursivePrefixTreeStrategy(new GeohashPrefixTree(Context, maxTreeLevel), Constants.SpatialFieldName);
+				case SpatialSearchStrategy.QuadPrefixTree:
+					return new RecursivePrefixTreeStrategy(new QuadPrefixTree(Context, maxTreeLevel), Constants.SpatialFieldName);
+			}
 			return null;
 		}
 
@@ -56,6 +70,11 @@ namespace Raven.Database.Indexing
 		public static Query MakeQuery(SpatialStrategy spatialStrategy, double lat, double lng, double radius)
 		{
 			return spatialStrategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, Context.MakeCircle(lng, lat, radius)));
+		}
+
+		public static Query MakeQuery(SpatialStrategy spatialStrategy, string shapeWKT, SpatialRelation relation)
+		{
+			return spatialStrategy.MakeQuery(new SpatialArgs(SpatialOperation.IsWithin, Context.ReadShape(shapeWKT)));
 		}
 
 		public static Filter MakeFilter(SpatialStrategy spatialStrategy, IndexQuery indexQuery)
