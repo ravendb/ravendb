@@ -429,6 +429,22 @@ namespace Raven.Database.Indexing
 			return indexQueryOperation.Query();
 		}
 
+		public IEnumerable<RavenJObject> IndexEntires(
+			string index,
+			IndexQuery query,
+			OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
+		{
+			Index value;
+			if (indexes.TryGetValue(index, out value) == false)
+			{
+				log.Debug("Query on non existing index '{0}'", index);
+				throw new InvalidOperationException("Index '" + index + "' does not exists");
+			}
+
+			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null,AggregationOperation.None, null), indexQueryTriggers);
+			return indexQueryOperation.IndexEntries();
+		}
+
 		protected internal static IDisposable EnsureInvariantCulture()
 		{
 			if (Thread.CurrentThread.CurrentCulture == CultureInfo.InvariantCulture)

@@ -29,6 +29,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using Version = Lucene.Net.Util.Version;
 
@@ -104,13 +105,13 @@ namespace Raven.Database.Indexing
 			try
 			{
 				// this is here so we can give good logs in the case of a long shutdown process
-				if(Monitor.TryEnter(writeLock, 100) == false)
+				if (Monitor.TryEnter(writeLock, 100) == false)
 				{
 					var localReason = waitReason;
-					if(localReason !=null)
+					if (localReason != null)
 						logIndexing.Warn("Waiting for {0} to complete before disposing of index {1}, that might take a while if the server is very busy",
 						 localReason, name);
-					
+
 					Monitor.Enter(writeLock);
 				}
 
@@ -171,10 +172,10 @@ namespace Raven.Database.Indexing
 					return;
 				if (indexWriter == null)
 					return;
-				
+
 				try
 				{
-					
+
 					waitReason = "Flush";
 					indexWriter.Commit();
 				}
@@ -699,6 +700,98 @@ namespace Raven.Database.Indexing
 					alreadyReturned = new HashSet<RavenJObject>(new RavenJTokenEqualityComparer());
 			}
 
+			public IEnumerable<RavenJObject> IndexEntries()
+			{
+				parent.MarkQueried();
+				using (IndexStorage.EnsureInvariantCulture())
+				{
+					AssertQueryDoesNotContainFieldsThatAreNotIndexes();
+					IndexSearcher indexSearcher;
+					using (parent.GetSearcher(out indexSearcher))
+					{
+						var luceneQuery = ApplyIndexTriggers(GetLuceneQuery());
+
+						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
+
+						var indexReader = indexSearcher.GetIndexReader();
+
+						var ids = search.ScoreDocs.Select(x => x.doc).ToArray();
+						foreach (var result in ReadEntriesFromIndex(indexReader, ids))
+						{
+							yield return result;
+						}
+					}
+				}
+			}
+
+			public IEnumerable<RavenJObject> ReadEntriesFromIndex(IndexReader reader, int[] ids)
+			{
+				var results = ids.ToDictionary(i => i, i => new RavenJObject());
+				var termDocs = reader.TermDocs();
+				try
+				{
+					var termEnum = reader.Terms();
+					try
+					{
+						while (termEnum.Next())
+						{
+							var term = termEnum.Term();
+							if (term == null)
+								break;
+
+							var text = term.Text();
+
+							termDocs.Seek(termEnum);
+							while (termDocs.Next())
+							{
+								RavenJObject result;
+								if (results.TryGetValue(termDocs.Doc(), out result) == false)
+									continue;
+								var propertyName = term.Field();
+								if (propertyName.EndsWith("_Range") ||
+									propertyName.EndsWith("_ConvertToJson") ||
+									propertyName.EndsWith("_IsArray"))
+									continue;
+
+								if (result.ContainsKey(propertyName))
+								{
+									switch (result[propertyName].Type)
+									{
+										case JTokenType.Array:
+											((RavenJArray)result[propertyName]).Add(text);
+											break;
+										case JTokenType.String:
+											result[propertyName] = new RavenJArray
+										{
+											result[propertyName],
+											text
+										};
+											break;
+										default:
+											throw new ArgumentException("No idea how to hanlde " + result[propertyName].Type);
+									}
+								}
+								else
+								{
+									result[propertyName] = text;
+								}
+							}
+						} 
+					}
+					finally
+					{
+						termEnum.Close();
+					}
+				}
+				finally
+				{
+					termDocs.Close();
+				}
+
+				return ids.Select(i => results[i]);
+			}
+
+
 			public IEnumerable<IndexQueryResult> Query()
 			{
 				parent.MarkQueried();
@@ -864,7 +957,7 @@ namespace Raven.Database.Indexing
 					{
 						var document = indexSearcher.Doc(search.ScoreDocs[i].doc);
 						var id = document.Get(Constants.DocumentIdFieldName);
-						if(documentsAlreadySeenInPreviousPage.Add(id) == false && adjustStart)
+						if (documentsAlreadySeenInPreviousPage.Add(id) == false && adjustStart)
 						{
 							// already seen this, need to expand the range we are scanning because the user
 							// didn't take this into account

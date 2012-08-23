@@ -109,6 +109,9 @@ namespace Raven.Database.Server.Responders
 				case "reduce":
 					GetIndexReducedResult(context, index);
 					break;
+				case "entries":
+					GetIndexEntries(context, index);
+					break;
 				default:
 					context.WriteJson(new
 					{
@@ -117,6 +120,20 @@ namespace Raven.Database.Server.Responders
 					context.SetStatusToBadRequest();
 					break;
 			}
+		}
+
+		private void GetIndexEntries(IHttpContext context, string index)
+		{
+			var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
+			var results = Database.IndexStorage
+								.IndexEntires(index, indexQuery,Database.IndexQueryTriggers)
+								.ToArray();
+
+			context.WriteJson(new
+			{
+				Count = results.Length,
+				Results = results
+			});
 		}
 
 		private void GetExplanation(IHttpContext context, string index)
