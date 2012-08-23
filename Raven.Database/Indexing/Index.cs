@@ -30,6 +30,7 @@ using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;
+using Raven.Database.Queries;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -970,7 +971,7 @@ namespace Raven.Database.Indexing
 					// if viewGenerator.SpatialStrategy is null, that means we didn't get around to indexing just yet,
 					// and there's no point in going any further with this
 					var spatialStrategy = parent.viewGenerator.SpatialStrategy;
-					if (spatialStrategy == null) return q; // TODO: return MatchNoDocsQuery instead
+					if (spatialStrategy == null) return MatchNoDocsQuery.INSTANCE;
 
 					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.Latitude, spatialIndexQuery.Longitude, spatialIndexQuery.Radius);
 					if (q is MatchAllDocsQuery) return dq;
