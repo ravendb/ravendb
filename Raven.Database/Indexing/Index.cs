@@ -683,6 +683,7 @@ namespace Raven.Database.Indexing
 			private readonly HashSet<RavenJObject> alreadyReturned;
 			private readonly FieldsToFetch fieldsToFetch;
 			private readonly HashSet<string> documentsAlreadySeenInPreviousPage = new HashSet<string>();
+			private int alreadyScannedPositions;
 			private readonly OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers;
 
 			public IndexQueryOperation(Index parent, IndexQuery indexQuery, Func<IndexQueryResult, bool> shouldIncludeInResults,
@@ -713,11 +714,13 @@ namespace Raven.Database.Indexing
 						int pageSize = indexQuery.PageSize;
 						int returnedResults = 0;
 						int skippedResultsInCurrentLoop = 0;
+						bool readAll;
+						bool adjustStart = true;
 						do
 						{
 							if (skippedResultsInCurrentLoop > 0)
 							{
-								start = start + pageSize;
+								start = start + pageSize - (start - indexQuery.Start); // need to "undo" the index adjustment
 								// trying to guesstimate how many results we will need to read from the index
 								// to get enough unique documents to match the page size
 								pageSize = skippedResultsInCurrentLoop * indexQuery.PageSize;
@@ -726,7 +729,8 @@ namespace Raven.Database.Indexing
 							TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 							indexQuery.TotalSize.Value = search.TotalHits;
 
-							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, start, pageSize);
+							RecordResultsAlreadySeenForDistinctQuery(indexSearcher, search, adjustStart, ref start);
+							adjustStart = false;
 
 							for (var i = start; (i - start) < pageSize && i < search.ScoreDocs.Length; i++)
 							{
@@ -744,7 +748,8 @@ namespace Raven.Database.Indexing
 								if (returnedResults == indexQuery.PageSize)
 									yield break;
 							}
-						} while (skippedResultsInCurrentLoop > 0 && returnedResults < indexQuery.PageSize);
+							readAll = search.TotalHits == search.ScoreDocs.Length;
+						} while (returnedResults < indexQuery.PageSize && readAll == false);
 					}
 				}
 			}
@@ -847,19 +852,27 @@ namespace Raven.Database.Indexing
 				return true;
 			}
 
-			private void RecordResultsAlreadySeenForDistinctQuery(IndexSearcher indexSearcher, TopDocs search, int start, int pageSize)
+			private void RecordResultsAlreadySeenForDistinctQuery(Searchable indexSearcher, TopDocs search, bool adjustStart, ref int start)
 			{
 				var min = Math.Min(start, search.TotalHits);
 
-				// we are paging, we need to check that we don't have duplicates in the previous page
+				// we are paging, we need to check that we don't have duplicates in the previous pages
 				// see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
-				if (parent.IsMapReduce == false && fieldsToFetch.IsProjection == false && start - pageSize >= 0 && start < search.TotalHits)
+				if (parent.IsMapReduce == false && fieldsToFetch.IsProjection == false)
 				{
-					for (int i = start - pageSize; i < min; i++)
+					for (int i = alreadyScannedPositions; i < min; i++)
 					{
 						var document = indexSearcher.Doc(search.ScoreDocs[i].doc);
-						documentsAlreadySeenInPreviousPage.Add(document.Get(Constants.DocumentIdFieldName));
+						var id = document.Get(Constants.DocumentIdFieldName);
+						if(documentsAlreadySeenInPreviousPage.Add(id) == false && adjustStart)
+						{
+							// already seen this, need to expand the range we are scanning because the user
+							// didn't take this into account
+							min = Math.Min(min + 1, search.TotalHits);
+							start++;
+						}
 					}
+					alreadyScannedPositions = min;
 				}
 
 				if (fieldsToFetch.IsDistinctQuery == false)
