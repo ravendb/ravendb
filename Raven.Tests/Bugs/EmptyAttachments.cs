@@ -11,7 +11,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanSaveAndLoad()
 		{
-			using (var store = NewDocumentStore("esent", true))
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				store.DatabaseCommands.PutAttachment("a", null, new MemoryStream(), new RavenJObject());
 
@@ -24,7 +24,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void CanSaveAndIterate()
 		{
-			using (var store = NewDocumentStore("esent", true))
+			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				store.DatabaseCommands.PutAttachment("a", null, new MemoryStream(), new RavenJObject());
 

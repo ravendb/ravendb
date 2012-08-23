@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class DeletingDynamics : LocalClientTest
+	public class DeletingDynamics : RavenTest
 	{
 		[Fact]
 		public void CanDeleteItemsUsingDynamic()

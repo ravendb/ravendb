@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Linq
 {
-	public class Any : LocalClientTest
+	public class Any : RavenTest
 	{
 		private class TestDoc
 		{

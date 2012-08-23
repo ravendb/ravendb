@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class QueryingFromIndex : LocalClientTest
+	public class QueryingFromIndex : RavenTest
 	{
 		[Fact]
 		public void LuceneQueryWithIndexIsCaseInsensitive()

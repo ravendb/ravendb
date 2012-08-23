@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class Stacey2 : LocalClientTest
+	public class Stacey2 : RavenTest
 	{
 		public class Root
 		{

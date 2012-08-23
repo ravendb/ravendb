@@ -2,12 +2,13 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Database.Util
 {
 	public class ConcurrentSet<T> : IEnumerable<T>
 	{
-		readonly ConcurrentDictionary<T,object> inner;
+		readonly ConcurrentDictionary<T, object> inner;
 
 		public ConcurrentSet()
 		{
@@ -53,6 +54,15 @@ namespace Raven.Database.Util
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
+		}
+
+		public void RemoveWhere(Func<T, bool> predicate)
+		{
+			foreach (var item in inner.Where(item => predicate(item.Key)))
+			{
+				object value;
+				inner.TryRemove(item.Key, out value);
+			}
 		}
 	}
 }

@@ -13,7 +13,7 @@ using Raven.Client.Indexes;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanProjectIdFromDocumentInQueries : LocalClientTest
+	public class CanProjectIdFromDocumentInQueries : RavenTest
 	{
 		[Fact]
 		public void CanProjectIdFromTransformResults()

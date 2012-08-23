@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class Floats : LocalClientTest
+	public class Floats : RavenTest
 	{
 		public class FloatValue
 		{

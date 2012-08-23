@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class FilterOnMissingProperty : LocalClientTest
+	public class FilterOnMissingProperty : RavenTest
 	{
 		[Fact]
 		public void CanFilter()

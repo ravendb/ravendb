@@ -69,10 +69,6 @@ namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
 		[InlineData("Name", null)] // exception on SaveChanges()
 		public void Test_Remote(string name, string realm)
 		{
-			using (var server = new database::Raven.Database.Server.HttpServer(new database::Raven.Database.Config.RavenConfiguration
-			                                                      	{
-			                                                      		Port = 8079
-			                                                      	}, DocumentStore.DocumentDatabase))
 			using(var ds = new DocumentStore
 			               	{
 			               		Url = "http://localhost:8079",
@@ -82,8 +78,6 @@ namespace Raven.Bundles.Tests.UniqueConstraints.Bugs
 									}
 			               	})
 			{
-				server.StartListening();
-
 				ds.RegisterListener(new UniqueConstraintsStoreListener());
 				ds.Initialize();
 

@@ -10,9 +10,9 @@ using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
 using Xunit;
 
-namespace Raven.Tests.ManagedStorage
+namespace Raven.Tests.Storage
 {
-	public class Transactions : TxStorageTest
+	public class Transactions : RavenTest
 	{
 		[Fact]
 		public void AddingDocInTxCannotBeReadOutside()

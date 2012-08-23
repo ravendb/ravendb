@@ -380,8 +380,9 @@ namespace Raven.Database.Server
 				}
 				var eventsTransport = new EventsTransport(context);
 				eventsTransport.Disconnected += onDisconnect;
+				var handleChangesRequest = eventsTransport.ProcessAsync();
 				CurrentDatabase.TransportState.Register(eventsTransport);
-				return eventsTransport.ProcessAsync();
+				return handleChangesRequest;
 			}
 			catch (Exception e)
 			{

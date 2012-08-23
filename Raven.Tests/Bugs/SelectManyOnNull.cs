@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class SelectManyOnNull : LocalClientTest
+	public class SelectManyOnNull : RavenTest
 	{
 		[Fact]
 		public void ShouldNotThrow()

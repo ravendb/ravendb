@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class TranslatingLinqQueryUsingNestedId : LocalClientTest
+	public class TranslatingLinqQueryUsingNestedId : RavenTest
 	{
 		[Fact]
 		public void Id_on_member_should_not_be_converted_to_document_id()

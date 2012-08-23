@@ -4,7 +4,7 @@ namespace Raven.Tests.Bugs.Iulian
 	using System.Linq;
 	using Xunit;
 
-	public class GeneratesCorrectTemporaryIndex : LocalClientTest
+	public class GeneratesCorrectTemporaryIndex : RavenTest
 	{
 		public class Inner
 		{
@@ -19,7 +19,7 @@ namespace Raven.Tests.Bugs.Iulian
 		[Fact]
 		public void Can_Generate_Correct_Temporary_Index()
 		{
-			using (var store = base.NewDocumentStore("munin", false))
+			using (var store = NewDocumentStore())
 			{
 				using (var s = store.OpenSession())
 				{

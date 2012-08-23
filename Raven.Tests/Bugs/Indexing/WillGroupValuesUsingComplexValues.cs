@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class WillGroupValuesUsingComplexValues : LocalClientTest
+	public class WillGroupValuesUsingComplexValues : RavenTest
 	{
 		[Fact]
 		public void CanGroupByComplexObject()

@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class KeysAreCaseInsensitive : LocalClientTest
+	public class KeysAreCaseInsensitive : RavenTest
 	{
 		[Fact]
 		public void WillNotGoToTheServerForLoadingDocumentWithSameIdDifferentCase()

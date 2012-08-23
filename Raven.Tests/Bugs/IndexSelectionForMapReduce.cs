@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class IndexSelectionForMapReduce : LocalClientTest
+	public class IndexSelectionForMapReduce : RavenTest
 	{
 		[Fact]
 		public void TestIndexSelectionForMapReduce()

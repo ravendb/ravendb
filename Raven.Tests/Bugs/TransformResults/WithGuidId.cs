@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.TransformResults
 {
-	public class WithGuidId : LocalClientTest
+	public class WithGuidId : RavenTest
 	{
 		[Fact]
 		public void CanBeUsedForTransformResultsWithDocumentId()

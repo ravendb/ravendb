@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Raven.Tests.Suggestions
 {
-	public class Suggestions : LocalClientTest, IDisposable
+	public class Suggestions : RavenTest, IDisposable
 	{
 		private readonly IDocumentStore documentStore;
 

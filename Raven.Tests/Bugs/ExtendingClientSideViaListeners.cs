@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ExtendingClientSideViaListeners : LocalClientTest
+	public class ExtendingClientSideViaListeners : RavenTest
 	{
 		[Fact]
 		public void CanFailSave()

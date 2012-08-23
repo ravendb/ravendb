@@ -11,6 +11,11 @@ namespace Raven.Database.Util
 	{
 		private readonly byte[] inner;
 
+		public ComparableByteArray(Guid etag) : this(etag.ToByteArray())
+		{
+			
+		}
+
 		public ComparableByteArray(byte[] inner)
 		{
 			this.inner = inner;
@@ -45,6 +50,11 @@ namespace Raven.Database.Util
 		public int CompareTo(object obj)
 		{
 			return CompareTo((ComparableByteArray)obj);
+		}
+
+		public int CompareTo(Guid obj)
+		{
+			return CompareTo(obj.ToByteArray());
 		}
 
 		public Guid ToGuid()

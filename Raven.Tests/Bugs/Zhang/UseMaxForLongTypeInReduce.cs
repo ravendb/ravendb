@@ -7,7 +7,7 @@ using System;
 
 namespace Raven.Tests.Bugs.Zhang
 {
-	public class UseMaxForLongTypeInReduce : LocalClientTest
+	public class UseMaxForLongTypeInReduce : RavenTest
 	{
 		private const string map = @"
 from doc in docs

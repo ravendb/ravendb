@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class WaitForNonStaleResultsAsOfLastWrite : LocalClientTest
+	public class WaitForNonStaleResultsAsOfLastWrite : RavenTest
 	{
 		[Fact]
 		public void WillRecordLastWrittenEtag()

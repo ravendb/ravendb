@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class ManyDocumentsViaDTC : LocalClientTest
+	public class ManyDocumentsViaDTC : RavenTest
 	{
 		protected override void ModifyConfiguration(Database.Config.RavenConfiguration configuration)
 		{

@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class AsyncCommit : LocalClientTest
+	public class AsyncCommit : RavenTest
 	{
 		[Fact]
 		public void DtcCommitWillGiveNewResultIfNonAuthoritativeIsSetToFalse()

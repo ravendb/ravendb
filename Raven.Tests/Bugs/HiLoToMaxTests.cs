@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class HiLoToMaxTests : LocalClientTest
+	public class HiLoToMaxTests : RavenTest
 	{
 		[Fact]
 		public void FromScratch()

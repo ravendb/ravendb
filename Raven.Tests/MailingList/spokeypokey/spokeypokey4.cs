@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList.spokeypokey
 {
-	public class spokeypokey4 : LocalClientTest
+	public class spokeypokey4 : RavenTest
 	{
 		public class Reference
 		{

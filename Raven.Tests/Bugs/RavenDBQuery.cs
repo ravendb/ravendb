@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class RavenDBQuery : LocalClientTest
+	public class RavenDBQuery : RavenTest
 	{
 		[Fact]
 		public void CanPerformQueryOnParameter()

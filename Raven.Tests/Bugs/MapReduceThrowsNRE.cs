@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class MapReduceThrowsNRE : LocalClientTest
+	public class MapReduceThrowsNRE : RavenTest
 	{
 		[Fact]
 		public void CanQueryWithoutGettingNullRefException()

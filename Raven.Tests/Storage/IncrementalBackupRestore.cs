@@ -6,9 +6,9 @@ using Xunit;
 
 namespace Raven.Tests.Storage
 {
-	public class IncrementalBackupRestore : AbstractDocumentStorageTest
+	public class IncrementalBackupRestore : RavenTest
 	{
-		private DocumentDatabase db;
+		/*private DocumentDatabase db;
 
 		public IncrementalBackupRestore()
 		{
@@ -60,6 +60,6 @@ namespace Raven.Tests.Storage
 			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 			jObject = db.Get("itamar", null).ToJson();
 			Assert.Equal("itamar@ayende.com", jObject.Value<string>("email"));
-		}
+		}*/
 	}
 }

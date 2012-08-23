@@ -16,15 +16,7 @@ namespace Raven.Database.Tasks
 	{
 		public string Index { get; set; }
 
-		public virtual bool SupportsMerging
-		{
-			get
-			{
-				return true;
-			}
-		}
-
-		public abstract bool TryMerge(Task task);
+		public abstract void Merge(Task task);
 		public abstract void Execute(WorkContext context);
 
 		public byte[] AsBytes()

@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class OfflineConcurrency : LocalClientTest
+	public class OfflineConcurrency : RavenTest
 	{
 		[Fact]
 		public void Successful()

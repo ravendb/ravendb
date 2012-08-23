@@ -11,7 +11,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class MetadataUpdates : LocalClientTest
+	public class MetadataUpdates : RavenTest
 	{
 
 		[Fact]

@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class UsingSortOptions : LocalClientTest
+	public class UsingSortOptions : RavenTest
 	{
 		[Fact]
 		public void CanCreateIndexWithSortOptionsOnStringVal()

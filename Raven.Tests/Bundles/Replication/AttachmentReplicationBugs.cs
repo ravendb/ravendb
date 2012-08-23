@@ -10,12 +10,6 @@ namespace Raven.Bundles.Tests.Replication
 {
 	public class AttachmentReplicationBugs : ReplicationBase
 	{
-		protected override void ConfigureServer(Raven.Database.Config.RavenConfiguration serverConfiguration)
-		{
-			serverConfiguration.RunInMemory = false;
-			serverConfiguration.DefaultStorageTypeName = "esent";
-		}
-
 		[Fact]
 		public void Can_replicate_documents_between_two_external_instances()
 		{

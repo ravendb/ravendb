@@ -13,7 +13,15 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 	{
 		protected UniqueConstraintsTest()
 		{
-			this.DocumentStore = new EmbeddableDocumentStore {RunInMemory = true};
+			this.DocumentStore = new EmbeddableDocumentStore
+				{
+					RunInMemory = true, 
+					UseEmbeddedHttpServer = true,
+					Configuration =
+						{
+							Port = 8079
+						}
+				};
 			this.DocumentStore.Configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(UniqueConstraintsPutTrigger).Assembly));
 			this.DocumentStore.RegisterListener(new UniqueConstraintsStoreListener());
 

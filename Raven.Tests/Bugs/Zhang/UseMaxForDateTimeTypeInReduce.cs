@@ -7,7 +7,7 @@ using System;
 
 namespace Raven.Tests.Bugs.Zhang
 {
-	public class UseMaxForDateTimeTypeInReduce : LocalClientTest
+	public class UseMaxForDateTimeTypeInReduce : RavenTest
 	{
 		private const string map = @"
 from doc in docs

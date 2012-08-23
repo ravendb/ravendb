@@ -2,7 +2,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class MixingIdentityAndAssignedIds : LocalClientTest
+	public class MixingIdentityAndAssignedIds : RavenTest
 	{
 		[Fact]
 		public void WillWork()

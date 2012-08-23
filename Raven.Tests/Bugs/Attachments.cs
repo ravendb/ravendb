@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class Attachments : LocalClientTest
+	public class Attachments : RavenTest
 	{
 		[Fact]
 		public void CanExportAttachments()

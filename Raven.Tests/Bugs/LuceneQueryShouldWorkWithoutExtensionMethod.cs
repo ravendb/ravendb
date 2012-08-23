@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class LuceneQueryShouldWorkWithoutExtensionMethod : LocalClientTest
+	public class LuceneQueryShouldWorkWithoutExtensionMethod : RavenTest
 	{
 		[Fact]
 		public void CanQueryByTypeUsingLuceneQuery()

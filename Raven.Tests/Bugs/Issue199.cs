@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class Issue199 : LocalClientTest
+	public class Issue199 : RavenTest
 	{
 		[Fact]
 		public void CanQueryStartingInH()

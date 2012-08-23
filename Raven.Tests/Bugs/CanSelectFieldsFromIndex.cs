@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanSelectFieldsFromIndex : LocalClientTest
+	public class CanSelectFieldsFromIndex : RavenTest
 	{
 		[Fact]
 		public void SelectFieldsFromIndex()

@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class WithStartWith : LocalClientTest
+	public class WithStartWith : RavenTest
 	{
 		[Fact]
 		public void CanQueryDocumentsFilteredByMap()

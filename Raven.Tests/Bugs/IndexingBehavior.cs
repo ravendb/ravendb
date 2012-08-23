@@ -6,6 +6,7 @@
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client.Indexes;
 using Raven.Database;
@@ -16,24 +17,21 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class IndexingBehavior : AbstractDocumentStorageTest 
+	public class IndexingBehavior : RavenTest 
 	{
+		private readonly EmbeddableDocumentStore store;
 		private readonly DocumentDatabase db;
 
 		public IndexingBehavior()
 		{
-			db =
-				new DocumentDatabase(new RavenConfiguration
-				{
-					DataDirectory = DataDir, 
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
-				});
+			store = NewDocumentStore();
+			db = store.DocumentDatabase;
 			db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
 		}
 
 		public override void Dispose()
 		{
-			db.Dispose();
+			store.Dispose();
 			base.Dispose();
 		}
 

@@ -12,7 +12,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class SortingOnLong : LocalClientTest
+	public class SortingOnLong : RavenTest
 	{
 		void UsingDatabaseOfFoos(Action<IDocumentSession> action)
 		{

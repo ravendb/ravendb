@@ -5,7 +5,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Tests.MailingList
 {
-	public class BAM : LocalClientTest
+	public class BAM : RavenTest
 	{
 		[Fact]
 		public void get_dbnames_test()

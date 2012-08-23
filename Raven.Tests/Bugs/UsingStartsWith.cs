@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class UsingStartsWith : LocalClientTest
+	public class UsingStartsWith : RavenTest
 	{
 		[Fact]
 		public void DefaultIndexingBehaviourAllowStartsWith()

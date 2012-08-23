@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class MultipleResultsPerDocumentAndPaging : LocalClientTest
+	public class MultipleResultsPerDocumentAndPaging : RavenTest
 	{
 		[Fact]
 		public void WhenOutputingMultipleResultsPerDocAndPagingWillGetCorrectSize()

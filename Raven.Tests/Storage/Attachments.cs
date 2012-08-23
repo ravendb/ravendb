@@ -12,9 +12,9 @@ using Xunit;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 
-namespace Raven.Tests.ManagedStorage
+namespace Raven.Tests.Storage
 {
-	public class Attachments : TxStorageTest
+	public class Attachments : RavenTest
 	{
 		[Fact]
 		public void CanAddAndReadAttachments()
@@ -29,7 +29,10 @@ namespace Raven.Tests.ManagedStorage
 					attachment = viewer.Attachments.GetAttachment("Ayende");
 				});
 
-				Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+				tx.Batch(_ =>
+				{
+					Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+				});
 			}
 		}
 
@@ -99,7 +102,10 @@ namespace Raven.Tests.ManagedStorage
 					attachment = viewer.Attachments.GetAttachment("Ayende");
 				});
 
-				Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());
+				tx.Batch(_ =>
+				{
+					Assert.Equal(new byte[] { 1, 2, 3 }, attachment.Data().ReadData());					
+				});
 			}
 		}
 

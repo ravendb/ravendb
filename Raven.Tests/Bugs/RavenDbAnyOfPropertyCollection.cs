@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class RavenDbAnyOfPropertyCollection : LocalClientTest
+	public class RavenDbAnyOfPropertyCollection : RavenTest
 	{
 		private readonly IDocumentStore store;
 		private readonly DateTime now = new DateTime(2010, 10, 31);

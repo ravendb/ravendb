@@ -7,9 +7,9 @@
 using Raven.Json.Linq;
 using Xunit;
 
-namespace Raven.Tests.ManagedStorage
+namespace Raven.Tests.Storage
 {
-	public class Documents : TxStorageTest
+	public class Documents : RavenTest
 	{
 		[Fact]
 		public void CanAddAndRead()

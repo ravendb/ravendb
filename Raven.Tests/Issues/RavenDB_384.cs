@@ -45,20 +45,5 @@ namespace Raven.Tests.Issues
 				Assert.Equal("test/1/b", attachments[1].Key);
 			}
 		}
-
-		[Fact]
-		public void Attachment_starts_with_local_esent()
-		{
-			using (var x = NewDocumentStore("esent"))
-			{
-				x.DatabaseCommands.PutAttachment("test/1/a", null, new MemoryStream(), new RavenJObject());
-				x.DatabaseCommands.PutAttachment("test/1/b", null, new MemoryStream(), new RavenJObject());
-
-				var attachments = x.DatabaseCommands.GetAttachmentHeadersStartingWith("test/1", 0, 10).ToList();
-				Assert.Equal(2, attachments.Count);
-				Assert.Equal("test/1/a", attachments[0].Key);
-				Assert.Equal("test/1/b", attachments[1].Key);
-			}
-		}
 	}
 }

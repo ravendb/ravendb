@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class JsonDeserialization : LocalClientTest
+	public class JsonDeserialization : RavenTest
 	{
 		private class MyEntity
 		{

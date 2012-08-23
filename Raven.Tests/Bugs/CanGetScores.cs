@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs
 {
-	public class CanGetScores : LocalClientTest
+	public class CanGetScores : RavenTest
 	{
 		[Fact]
 		public void FromQuery()

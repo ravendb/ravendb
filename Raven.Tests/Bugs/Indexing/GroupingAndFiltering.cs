@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class GroupingAndFiltering : LocalClientTest
+	public class GroupingAndFiltering : RavenTest
 	{
 		[Fact]
 		public void OnSameField()

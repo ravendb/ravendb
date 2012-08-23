@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs.Indexing
 {
-	public class TransactionIndexByMrn : LocalClientTest
+	public class TransactionIndexByMrn : RavenTest
 	{
 		[Fact]
 		public void CanCreateIndex()
