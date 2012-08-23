@@ -430,12 +430,24 @@ namespace Raven.Client.Document
 		/// <param name="longitude">The longitude.</param>
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(double radius, double latitude, double longitude)
 		{
-			return (IAsyncDocumentQuery<T>)GenerateQueryWithinRadiusOf(radius, latitude, longitude);
+			return (IAsyncDocumentQuery<T>)GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude);
 		}
 
-		protected override object GenerateQueryWithinRadiusOf(double radius, double latitude, double longitude)
+		/// <summary>
+		/// Filter matches to be inside the specified radius
+		/// </summary>
+		/// <param name="radius">The radius.</param>
+		/// <param name="latitude">The latitude.</param>
+		/// <param name="longitude">The longitude.</param>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
+		{
+			return (IAsyncDocumentQuery<T>)GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);
+		}
+
+		protected override object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
 		{
 			isSpatialQuery = true;
+			spatialFieldName = fieldName;
 			this.radius = radius;
 			lat = latitude;
 			lng = longitude;

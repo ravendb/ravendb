@@ -105,6 +105,7 @@ namespace Raven.Client.Document
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
 				isSpatialQuery = isSpatialQuery,
+				spatialFieldName = spatialFieldName,
 				lat = lat,
 				lng = lng,
 				radius = radius,
@@ -660,7 +661,12 @@ namespace Raven.Client.Document
 		/// <param name="longitude">The longitude.</param>
 		public IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude)
 		{
-			return (IDocumentQuery<T>) GenerateQueryWithinRadiusOf(radius, latitude, longitude);
+			return (IDocumentQuery<T>) GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude);
+		}
+
+		public IDocumentQuery<T> WithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
+		{
+			throw new NotImplementedException();
 		}
 
 		/// <summary>
@@ -669,9 +675,10 @@ namespace Raven.Client.Document
 		/// <param name = "radius">The radius.</param>
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
-		protected override object GenerateQueryWithinRadiusOf(double radius, double latitude, double longitude)
+		protected override object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
 		{
 			isSpatialQuery = true;
+			spatialFieldName = fieldName;
 			this.radius = radius;
 			lat = latitude;
 			lng = longitude;

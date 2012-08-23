@@ -42,6 +42,7 @@ namespace Raven.Client.Document
 	{
 		protected bool isSpatialQuery;
 		protected double lat, lng, radius;
+		protected string spatialFieldName;
 		private readonly LinqPathProvider linqPathProvider;
 		/// <summary>
 		/// Whatever to negate the next operation
@@ -350,7 +351,13 @@ namespace Raven.Client.Document
 		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude,
 																			   double longitude)
 		{
-			GenerateQueryWithinRadiusOf(radius, latitude, longitude);
+			GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude);
+			return this;
+		}
+
+		IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude)
+		{
+			GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude);
 			return this;
 		}
 
@@ -360,7 +367,7 @@ namespace Raven.Client.Document
 		/// <param name = "radius">The radius.</param>
 		/// <param name = "latitude">The latitude.</param>
 		/// <param name = "longitude">The longitude.</param>
-		protected abstract object GenerateQueryWithinRadiusOf(double radius, double latitude, double longitude);
+		protected abstract object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude);
 
 		/// <summary>
 		///   EXPERT ONLY: Instructs the query to wait for non stale results.
@@ -1446,6 +1453,7 @@ If you really want to do in memory filtering on the data returned from the query
 					CutoffEtag = cutoffEtag,
 					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 					FieldsToFetch = fieldsToFetch,
+					SpatialFieldName = spatialFieldName,
 					Latitude = lat,
 					Longitude = lng,
 					Radius = radius,

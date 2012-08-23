@@ -29,12 +29,18 @@ namespace Raven.Abstractions.Data
 		/// <value>The radius, in miles.</value>
 		public double Radius { get; set; }
 
+		private string spatialFieldName = Constants.DefaultSpatialFieldName;
+		public string SpatialFieldName
+		{
+			get { return spatialFieldName; }
+			set { spatialFieldName = value; }
+		}
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
 		/// </summary>
 		public SpatialIndexQuery()
 		{
-			
 		}
 
 		/// <summary>
@@ -57,10 +63,11 @@ namespace Raven.Abstractions.Data
 		/// <returns></returns>
 		protected override string GetCustomQueryStringVariables()
 		{
-			return string.Format("latitude={0}&longitude={1}&radius={2}",
+			return string.Format("latitude={0}&longitude={1}&radius={2}&spatialField={3}",
 				Uri.EscapeDataString(Latitude.ToString(CultureInfo.InvariantCulture)),
 				Uri.EscapeDataString(Longitude.ToString(CultureInfo.InvariantCulture)),
-				Uri.EscapeDataString(Radius.ToString(CultureInfo.InvariantCulture)));
+				Uri.EscapeDataString(Radius.ToString(CultureInfo.InvariantCulture)),
+				spatialFieldName);
 		}
 	}
 }

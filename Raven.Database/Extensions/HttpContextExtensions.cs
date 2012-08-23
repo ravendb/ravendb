@@ -83,10 +83,12 @@ namespace Raven.Database.Extensions
 			};
 
 			double lat = context.GetLat(), lng = context.GetLng(), radius = context.GetRadius();
+			string spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;
 			if (lat != 0 || lng != 0 || radius != 0)
 			{
 				return new SpatialIndexQuery(query)
 				{
+					SpatialFieldName = spatialFieldName,
 					Latitude = lat,
 					Longitude = lng,
 					Radius = radius,

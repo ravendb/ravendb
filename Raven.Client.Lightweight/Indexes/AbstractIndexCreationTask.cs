@@ -77,12 +77,61 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 
+		/// <summary>
+		/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordiates
+		/// </summary>
+		/// <param name="lat">Latitude</param>
+		/// <param name="lng">Longitude</param>
+		/// <returns></returns>
 		public static object SpatialGenerate(double lat, double lng)
 		{
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
-		public static object SpatialGenerate(string shapeWKT, SpatialSearchStrategy strategy, int maxTreeLevel, double distanceErrorPct)
+		/// <summary>
+		/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordiates
+		/// </summary>
+		/// <param name="fieldName">The field name, will be used for querying</param>
+		/// <param name="lat">Latitude</param>
+		/// <param name="lng">Longitude</param>
+		/// <returns></returns>
+		public static object SpatialGenerate(string fieldName, double lat, double lng)
+		{
+			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+		}
+
+		/// <summary>
+		/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordiates
+		/// </summary>
+		/// <param name="fieldName">The field name, will be uased for querying</param>
+		/// <param name="shapeWKT">The shape representatio in the WKT format</param>
+		/// <returns></returns>
+		public static object SpatialGenerate(string fieldName, string shapeWKT)
+		{
+			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+		}
+
+		/// <summary>
+		/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordiates
+		/// </summary>
+		/// <param name="fieldName">The field name, will be uased for querying</param>
+		/// <param name="shapeWKT">The shape representatio in the WKT format</param>
+		/// <param name="strategy">The spatial strategy to use</param>
+		/// <returns></returns>
+		public static object SpatialGenerate(string fieldName, string shapeWKT, SpatialSearchStrategy strategy)
+		{
+			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+		}
+
+		/// <summary>
+		/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordiates
+		/// </summary>
+		/// <param name="fieldName">The field name, will be uased for querying</param>
+		/// <param name="shapeWKT">The shape representatio in the WKT format</param>
+		/// <param name="strategy">The spatial strategy to use</param>
+		/// <param name="maxTreeLevel">Maximum number of levels to be used in the PrefixTree, controls the precision of shape representation.</param>
+		/// <returns></returns>
+		public static object SpatialGenerate(string fieldName, string shapeWKT, SpatialSearchStrategy strategy, int maxTreeLevel)
 		{
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}

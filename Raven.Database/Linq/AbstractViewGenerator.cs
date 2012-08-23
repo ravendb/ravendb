@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Text.RegularExpressions;
@@ -92,6 +93,7 @@ namespace Raven.Database.Linq
 			ForEntityNames = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
 			Stores = new Dictionary<string, FieldStorage>();
 			Indexes = new Dictionary<string, FieldIndexing>();
+			SpatialStrategies = new ConcurrentDictionary<string, SpatialStrategy>();
 		}
 
 		protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool analyzed = true)
@@ -150,25 +152,17 @@ namespace Raven.Database.Linq
 		#region Spatial index
 
 		// TODO: Currently only one shape field is supported in an index
-		public SpatialStrategy SpatialStrategy { get; private set; }
-
-		private SpatialStrategy GetOrCreateSpatialStrategy(SpatialSearchStrategy spatialSearchStrategy, int maxTreeLevel)
-		{
-			if (SpatialStrategy == null)
-			{
-				lock (this)
-				{
-					if (SpatialStrategy == null)
-						SpatialStrategy = SpatialIndex.CreateStrategy(spatialSearchStrategy, maxTreeLevel);
-				}
-			}
-			return SpatialStrategy;
-		}
+		public ConcurrentDictionary<string, SpatialStrategy> SpatialStrategies { get; private set; }
 
 		public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
 		{
-			var strategy = GetOrCreateSpatialStrategy(SpatialSearchStrategy.GeohashPrefixTree,
-			                                          GeohashPrefixTree.GetMaxLevelsPossible());
+			return SpatialGenerate(Constants.DefaultSpatialFieldName, lat, lng);
+		}
+
+		public IEnumerable<IFieldable> SpatialGenerate(string fieldName, double? lat, double? lng)
+		{
+			var strategy = SpatialStrategies.GetOrAdd(fieldName, s => SpatialIndex.CreateStrategy(fieldName, SpatialSearchStrategy.GeohashPrefixTree,
+				GeohashPrefixTree.GetMaxLevelsPossible()));
 
 // ReSharper disable CSharpWarnings::CS0612
 			Shape shape = SpatialIndex.Context.MakePoint(lng ?? 0, lat ?? 0);
@@ -177,9 +171,12 @@ namespace Raven.Database.Linq
 // ReSharper restore CSharpWarnings::CS0612
 		}
 
-		public IEnumerable<IFieldable> SpatialGenerate(string shapeWKT, SpatialSearchStrategy spatialSearchStrategy, int maxTreeLevel, double distanceErrorPct = 0.025)
+		public IEnumerable<IFieldable> SpatialGenerate(string fieldName, string shapeWKT,
+			SpatialSearchStrategy spatialSearchStrategy = SpatialSearchStrategy.GeohashPrefixTree,
+			int maxTreeLevel = 0, double distanceErrorPct = 0.025)
 		{
-			var strategy = GetOrCreateSpatialStrategy(spatialSearchStrategy, maxTreeLevel);
+			if (maxTreeLevel == 0) maxTreeLevel = GeohashPrefixTree.GetMaxLevelsPossible();
+			var strategy = SpatialStrategies.GetOrAdd(fieldName, s => SpatialIndex.CreateStrategy(fieldName, spatialSearchStrategy, maxTreeLevel));
 
 // ReSharper disable CSharpWarnings::CS0612
 			var shape = SpatialIndex.Context.ReadShape(shapeWKT);

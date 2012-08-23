@@ -24,14 +24,14 @@ namespace Raven.Database.Indexing
 		{
 		}
 
-		public static SpatialStrategy CreateStrategy(SpatialSearchStrategy spatialSearchStrategy, int maxTreeLevel)
+		public static SpatialStrategy CreateStrategy(string fieldName, SpatialSearchStrategy spatialSearchStrategy, int maxTreeLevel)
 		{
 			switch (spatialSearchStrategy)
 			{
 				case SpatialSearchStrategy.GeohashPrefixTree:
-					return new RecursivePrefixTreeStrategy(new GeohashPrefixTree(Context, maxTreeLevel), Constants.SpatialFieldName);
+					return new RecursivePrefixTreeStrategy(new GeohashPrefixTree(Context, maxTreeLevel), fieldName);
 				case SpatialSearchStrategy.QuadPrefixTree:
-					return new RecursivePrefixTreeStrategy(new QuadPrefixTree(Context, maxTreeLevel), Constants.SpatialFieldName);
+					return new RecursivePrefixTreeStrategy(new QuadPrefixTree(Context, maxTreeLevel), fieldName);
 			}
 			return null;
 		}

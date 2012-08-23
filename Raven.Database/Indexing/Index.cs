@@ -970,8 +970,9 @@ namespace Raven.Database.Indexing
 				{
 					// if viewGenerator.SpatialStrategy is null, that means we didn't get around to indexing just yet,
 					// and there's no point in going any further with this
-					var spatialStrategy = parent.viewGenerator.SpatialStrategy;
-					if (spatialStrategy == null) return MatchNoDocsQuery.INSTANCE;
+					SpatialStrategy spatialStrategy;
+					if (!parent.viewGenerator.SpatialStrategies.TryGetValue(spatialIndexQuery.SpatialFieldName, out spatialStrategy) || spatialStrategy == null)
+						return MatchNoDocsQuery.INSTANCE;
 
 					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.Latitude, spatialIndexQuery.Longitude, spatialIndexQuery.Radius);
 					if (q is MatchAllDocsQuery) return dq;
