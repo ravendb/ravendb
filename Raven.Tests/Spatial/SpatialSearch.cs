@@ -73,7 +73,7 @@ namespace Raven.Tests.Spatial
 						                	.WaitForNonStaleResultsAsOfNow()
 						);
 
-					Assert.Equal(" Lat: 38.9103 Lng: -77.3942 Radius: 5", matchingVenues.ToString());
+					Assert.Equal(" SpatialField: __spatial QueryShape: Circle(-77.394200 38.910300 d=5.000000) Relation: Within", matchingVenues.ToString());
 				}
 			}
 		}
@@ -93,7 +93,7 @@ namespace Raven.Tests.Spatial
 						                	.WaitForNonStaleResultsAsOfNow()
 						);
 
-					Assert.Equal(" Lat: 38.9103 Lng: -77.3942 Radius: 5", matchingVenues.ToString());
+					Assert.Equal(" SpatialField: __spatial QueryShape: Circle(-77.394200 38.910300 d=5.000000) Relation: Within", matchingVenues.ToString());
 				}
 			}
 		}
