@@ -133,8 +133,10 @@ namespace Raven.Database.Server.Responders
 
 
 			Tuple<DateTime, Guid> indexTimestamp = null;
+			bool isIndexStale = false;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
+				isIndexStale = accessor.Staleness.IsIndexStale(index, indexQuery.Cutoff, indexQuery.CutoffEtag);
 				indexTimestamp = accessor.Staleness.IndexLastUpdatedAt(index);
 			});
 			var indexEtag = Database.GetIndexEtag(index, null);
@@ -150,6 +152,8 @@ namespace Raven.Database.Server.Responders
 				SkippedResults = 0,
 				NonAuthoritativeInformation = false,
 				ResultEtag = indexEtag,
+				IsStale = isIndexStale,
+				IndexName = index,
 				LastQueryTime = Database.IndexStorage.GetLastQueryTime(index)
 			});
 		}
