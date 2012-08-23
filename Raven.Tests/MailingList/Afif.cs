@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FizzWare.NBuilder;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
@@ -77,9 +78,9 @@ namespace Raven.Tests.MailingList
 						index: index,
 						query: new SpatialIndexQuery()
 						{
-							Radius = 5,
-							Latitude = new Darwin().Latitude,
-							Longitude = new Darwin().Longitude
+							QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(new Darwin().Latitude, new Darwin().Longitude, 5),
+							SpatialRelation = SpatialRelation.Within,
+							SpatialFieldName = Constants.DefaultSpatialFieldName,
 						},
 						facetSetupDoc: "facets/Vehicle");
 				}

@@ -8,41 +8,41 @@ namespace Raven.Database.Indexing.Sorting
 {
 	public class SpatialDistanceSortField : SortField
 	{
-		private readonly double lng, lat;
+		private readonly Point center;
 
-		public SpatialDistanceSortField(string field, bool reverse, SpatialIndexQuery qry) : base(field, CUSTOM, reverse)
+		public SpatialDistanceSortField(string field, bool reverse, SpatialIndexQuery qry)
+			: base(field, CUSTOM, reverse)
 		{
-			lat = qry.Latitude;
-			lng = qry.Longitude;
+			var shape = SpatialIndex.Context.ReadShape(qry.QueryShape);
+			center = shape.GetCenter();
 		}
 
 		public override FieldComparator GetComparator(int numHits, int sortPos)
 		{
-			return new SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator(lat, lng, numHits);
+			return new SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator(center, numHits);
 		}
 
 		public override FieldComparatorSource ComparatorSource
 		{
 			get
 			{
-				return new SpatialDistanceFieldComparatorSource(lat, lng);
+				return new SpatialDistanceFieldComparatorSource(center);
 			}
 		} 
 	}
 
 	public class SpatialDistanceFieldComparatorSource : FieldComparatorSource
 	{
-		protected readonly double lng, lat;
+		private readonly Point center;
 
-		public SpatialDistanceFieldComparatorSource(double lat, double lng)
+		public SpatialDistanceFieldComparatorSource(Point center)
 		{
-			this.lat = lat;
-			this.lng = lng;
+			this.center = center;
 		}
 
 		public override FieldComparator NewComparator(string fieldname, int numHits, int sortPos, bool reversed)
 		{
-			return new SpatialDistanceFieldComparator(lat, lng, numHits);
+			return new SpatialDistanceFieldComparator(center, numHits);
 		}
 
 		public class SpatialDistanceFieldComparator : FieldComparator
@@ -51,13 +51,12 @@ namespace Raven.Database.Indexing.Sorting
 			private double bottom;
 			private readonly Point originPt;
 
-			private int currentDocBase;
 			private IndexReader currentIndexReader;
 
-			public SpatialDistanceFieldComparator(double lat, double lng, int numHits)
+			public SpatialDistanceFieldComparator(Point origin, int numHits)
 			{
 				values = new double[numHits];
-				originPt = SpatialIndex.Context.MakePoint(lng, lat);
+				originPt = origin;
 			}
 
 			public override int Compare(int slot1, int slot2)
@@ -123,7 +122,6 @@ namespace Raven.Database.Indexing.Sorting
 			public override void SetNextReader(IndexReader reader, int docBase)
 			{
 				currentIndexReader = reader;
-				currentDocBase = docBase;
 			}
 
 			public override IComparable this[int slot]

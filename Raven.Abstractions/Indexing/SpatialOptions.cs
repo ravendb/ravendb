@@ -5,4 +5,12 @@
 		GeohashPrefixTree,
 		QuadPrefixTree,
 	}
+
+	public enum SpatialRelation
+	{
+		Within,
+		Contains,
+		Disjoint,
+		Intersects,
+	}
 }

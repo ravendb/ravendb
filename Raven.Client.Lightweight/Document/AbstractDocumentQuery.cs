@@ -1454,9 +1454,7 @@ If you really want to do in memory filtering on the data returned from the query
 					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 					FieldsToFetch = fieldsToFetch,
 					SpatialFieldName = spatialFieldName,
-					Latitude = lat,
-					Longitude = lng,
-					Radius = radius,
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
 					DefaultField = defaultField,
 					DefaultOperator = defaultOperator
 				};

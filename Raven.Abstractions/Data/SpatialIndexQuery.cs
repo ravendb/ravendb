@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Globalization;
+using Raven.Abstractions.Indexing;
 
 namespace Raven.Abstractions.Data
 {
@@ -13,21 +14,17 @@ namespace Raven.Abstractions.Data
 	/// </summary>
 	public class SpatialIndexQuery : IndexQuery
 	{
-		/// <summary>
-		/// Gets or sets the latitude.
-		/// </summary>
-		/// <value>The latitude.</value>
-		public double Latitude { get; set; }
-		/// <summary>
-		/// Gets or sets the longitude.
-		/// </summary>
-		/// <value>The longitude.</value>
-		public double Longitude { get; set; }
-		/// <summary>
-		/// Gets or sets the radius.
-		/// </summary>
-		/// <value>The radius, in miles.</value>
-		public double Radius { get; set; }
+		public static string GetQueryShapeFromLatLon(double lat, double lng, double radius)
+		{
+			return "Circle(" +
+			       lng.ToString("F6", CultureInfo.InvariantCulture) + " " +
+			       lat.ToString("F6", CultureInfo.InvariantCulture) + " " +
+			       "d=" + radius.ToString("F6", CultureInfo.InvariantCulture) +
+			       ")";
+		}
+
+		public string QueryShape { get; set; }
+		public SpatialRelation SpatialRelation { get; set; }
 
 		private string spatialFieldName = Constants.DefaultSpatialFieldName;
 		public string SpatialFieldName
@@ -63,10 +60,9 @@ namespace Raven.Abstractions.Data
 		/// <returns></returns>
 		protected override string GetCustomQueryStringVariables()
 		{
-			return string.Format("latitude={0}&longitude={1}&radius={2}&spatialField={3}",
-				Uri.EscapeDataString(Latitude.ToString(CultureInfo.InvariantCulture)),
-				Uri.EscapeDataString(Longitude.ToString(CultureInfo.InvariantCulture)),
-				Uri.EscapeDataString(Radius.ToString(CultureInfo.InvariantCulture)),
+			return string.Format("queryShape={0}&spatialRelation={1}&spatialField={2}",
+				Uri.EscapeDataString(QueryShape),
+				SpatialRelation,
 				spatialFieldName);
 		}
 	}

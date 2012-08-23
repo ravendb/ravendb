@@ -12,6 +12,7 @@ using Lucene.Net.Documents;
 using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Database.Indexing;
 using Raven.Database.Indexing.Sorting;
 using Raven.Database.Server;
 using Constants = Raven.Abstractions.Data.Constants;
@@ -122,7 +123,8 @@ namespace Raven.Database.Extensions
 								}
 								if (spatialQuery != null && sortedField.Field == Constants.DistanceFieldName)
 								{
-									var dsort = new SpatialDistanceFieldComparatorSource(spatialQuery.Latitude, spatialQuery.Longitude);
+									var shape = SpatialIndex.Context.ReadShape(spatialQuery.QueryShape);
+									var dsort = new SpatialDistanceFieldComparatorSource(shape.GetCenter());
 									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
 								}
 								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Indexing;
 using Raven.Database.Server.Abstractions;
 
 namespace Raven.Database.Extensions
@@ -82,16 +83,17 @@ namespace Raven.Database.Extensions
 					.ToArray()
 			};
 
-			double lat = context.GetLat(), lng = context.GetLng(), radius = context.GetRadius();
-			string spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;
-			if (lat != 0 || lng != 0 || radius != 0)
+			var spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;
+			var queryShape = context.Request.QueryString["queryShape"];
+			SpatialRelation spatialRelation;
+			if (Enum.TryParse(context.Request.QueryString["spatialRelation"], false, out spatialRelation)
+				&& !string.IsNullOrWhiteSpace(queryShape))
 			{
 				return new SpatialIndexQuery(query)
 				{
 					SpatialFieldName = spatialFieldName,
-					Latitude = lat,
-					Longitude = lng,
-					Radius = radius,
+					QueryShape = queryShape,
+					SpatialRelation = spatialRelation,
 				};
 			}
 			return query;

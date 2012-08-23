@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Spatial4n.Core.Context;
 using Spatial4n.Core.Shapes;
+using SpatialRelation = Spatial4n.Core.Shapes.SpatialRelation;
 
 namespace Raven.Database.Indexing
 {
@@ -59,7 +60,7 @@ namespace Raven.Database.Indexing
 			var spatialQry = indexQuery as SpatialIndexQuery;
 			if (spatialQry == null) return null;
 
-			var args = new SpatialArgs(SpatialOperation.IsWithin, Context.MakeCircle(spatialQry.Longitude, spatialQry.Latitude, spatialQry.Radius));
+			var args = new SpatialArgs(SpatialOperation.IsWithin, Context.ReadShape(spatialQry.QueryShape));
 			return spatialStrategy.MakeFilter(args);
 		}
 

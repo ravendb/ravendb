@@ -34,6 +34,7 @@ using Raven.Database.Queries;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using SpatialRelation = Spatial4n.Core.Shapes.SpatialRelation;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -974,7 +975,10 @@ namespace Raven.Database.Indexing
 					if (!parent.viewGenerator.SpatialStrategies.TryGetValue(spatialIndexQuery.SpatialFieldName, out spatialStrategy) || spatialStrategy == null)
 						return MatchNoDocsQuery.INSTANCE;
 
-					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.Latitude, spatialIndexQuery.Longitude, spatialIndexQuery.Radius);
+					SpatialRelation rel;
+					if (!Enum.TryParse(spatialIndexQuery.SpatialRelation.ToString(), true, out rel))
+						return MatchNoDocsQuery.INSTANCE;
+					var dq = SpatialIndex.MakeQuery(spatialStrategy, spatialIndexQuery.QueryShape, rel);
 					if (q is MatchAllDocsQuery) return dq;
 
 					var bq = new BooleanQuery {{q, Occur.MUST}, {dq, Occur.MUST}};
