@@ -35,14 +35,20 @@ namespace Raven.Database.Indexing
 						while (termDocs.Next())
 						{
 							RavenJObject result = results[termDocs.Doc()];
-							if(result == null)
+							if (result == null)
 								results[termDocs.Doc()] = result = new RavenJObject();
 							var propertyName = term.Field();
-							if (propertyName.EndsWith("_Range") ||
-								propertyName.EndsWith("_ConvertToJson") ||
+							if (propertyName.EndsWith("_ConvertToJson") ||
 								propertyName.EndsWith("_IsArray"))
 								continue;
-
+							if (propertyName == ("Cost_Range") )
+							{
+								if( (term.Text().Length == 6 && (term.Text()[0] - 0x60) == 0)  == false && // integer, first level
+									(term.Text().Length == 11 && (term.Text()[0] - 0x20) == 0) == false)  // long, first level
+								{
+									continue;
+								}
+							}
 							if (result.ContainsKey(propertyName))
 							{
 								switch (result[propertyName].Type)
@@ -80,6 +86,6 @@ namespace Raven.Database.Indexing
 
 			return results;
 		}
-		 
+
 	}
 }

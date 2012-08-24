@@ -51,7 +51,7 @@ namespace Raven.Tests.Faceted
 					DateOfListing = new DateTime(1980 + random.Next(1, 30), random.Next(1, 12), random.Next(1, 27)),
 					Manufacturer = Manufacturers[(int)(random.NextDouble() * Manufacturers.Count)],
 					Model = Models[(int)(random.NextDouble() * Models.Count)],
-					Cost = (decimal)((random.NextDouble() * 900.0) + 100.0),    //100.0 to 1000.0
+					Cost = (int)(decimal)((random.NextDouble() * 900.0) + 100.0),    //100.0 to 1000.0
 					Zoom = (int)(random.NextDouble() * 12) + 2,                 //2.0 to 12.0
 					Megapixels = (decimal)((random.NextDouble() * 10.0) + 1.0), //1.0 to 11.0
 					ImageStabiliser = random.NextDouble() > 0.6,

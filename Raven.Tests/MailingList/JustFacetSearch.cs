@@ -48,18 +48,18 @@ namespace Raven.Tests.MailingList
 			public Advice_Search()
 			{
 				Map = articles =>
-					from article in articles
-					select new
-					{
-						article.Id,
-						SearchField = new object[]
-                            {
-                                article.Title,
-                                article.Description,
-                                article.Content
-                            },
-						article.Sections
-					};
+				      from article in articles
+				      select new
+				      {
+					      article.Id,
+					      SearchField = new object[]
+					      {
+						      article.Title,
+						      article.Description,
+						      article.Content
+					      },
+					      article.Sections
+				      };
 
 				Index(x => x.SearchField, FieldIndexing.Analyzed);
 			}
@@ -143,15 +143,16 @@ namespace Raven.Tests.MailingList
 		void generateData(IDocumentSession session)
 		{
 			var sections = new[]
-                {
-                    new Section { Id = 1, Name = "TV Articles", Slug = "tv-articles" },
-                    new Section { Id = 2, Name = "General Articles", Slug = "general" }
-                };
+			{
+				new Section {Id = 1, Name = "TV Articles", Slug = "tv-articles"},
+				new Section {Id = 2, Name = "General Articles", Slug = "general"}
+			};
 			var articles = new[]
-                {
-                    new Article { Id = 1, Title = "How to fix your TV", Description = "How to", Sections = new[] { "Sections/1", "Sections/2" }},
-                    new Article { Id = 2, Title = "How to do something", Description = "How to", Sections = new[] { "Sections/2" }}
-                };
+			{
+				new Article
+				{Id = 1, Title = "How to fix your TV", Description = "How to", Sections = new[] {"Sections/1", "Sections/2"}},
+				new Article {Id = 2, Title = "How to do something", Description = "How to", Sections = new[] {"Sections/2"}}
+			};
 			foreach (var section in sections) session.Store(section);
 			foreach (var article in articles) session.Store(article);
 		}
@@ -159,7 +160,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void JustReturnFacets()
 		{
-			using(var store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
 				new Advice_Search().Execute(store);
 				store.RegisterListener(new NoStaleQueriesListener());
