@@ -13,7 +13,7 @@ namespace Raven.Bundles.Quotas.Documents.Triggers
 		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata,
 		                                    TransactionInformation transactionInformation)
 		{
-			return SizeQuotaConfiguration.GetConfiguration(Database).AllowPut();
+			return DocQuotaConfiguration.GetConfiguration(Database).AllowPut();
 		}
 
 	}
